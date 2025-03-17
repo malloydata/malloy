@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ParserRuleContext} from 'antlr4ts';
-import {
+import type {ParserRuleContext} from 'antlr4ts';
+import type {
   StringContext,
   ShortStringContext,
   SqlStringContext,

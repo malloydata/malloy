@@ -22,12 +22,9 @@
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Expr,
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeDeltaExpr,
   TypecastExpr,
@@ -36,21 +33,19 @@ import {
   TimeLiteralNode,
   TimeExtractExpr,
   LeafAtomicTypeDef,
-  TD,
   RecordLiteralNode,
-  isAtomic,
 } from '../../model/malloy_types';
 import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {
-  DialectFieldList,
-  OrderByClauseType,
-  QueryInfo,
-  isDialectFieldStruct,
-} from '../dialect';
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
+  isAtomic,
+} from '../../model/malloy_types';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, OrderByClauseType, QueryInfo} from '../dialect';
+import {isDialectFieldStruct} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {
   PRESTO_DIALECT_FUNCTIONS,

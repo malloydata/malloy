@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
-import {InfoConnection, Connection, LookupConnection} from './connection';
-import {URLReader} from '../runtime_types';
-import {CacheManager} from '../malloy';
+import type {InfoConnection, Connection, LookupConnection} from './connection';
+import type {URLReader} from '../runtime_types';
+import type {CacheManager} from '../malloy';
+import {DEFAULT_LOG_RANGE} from './util';
 
 async function fetchNeeds(
   needs: Malloy.CompilerNeeds | undefined,
@@ -184,7 +185,7 @@ export async function runQuery(
           url: defaultURL,
           severity: 'error',
           message: 'Internal error: Compiler did not generate SQL',
-          range: Core.DEFAULT_LOG_RANGE,
+          range: DEFAULT_LOG_RANGE,
         },
       ],
     };
@@ -213,7 +214,7 @@ export async function runQuery(
           url: defaultURL,
           severity: 'error',
           message: `Error running SQL: ${error.message}`,
-          range: Core.DEFAULT_LOG_RANGE,
+          range: DEFAULT_LOG_RANGE,
         },
       ],
     };

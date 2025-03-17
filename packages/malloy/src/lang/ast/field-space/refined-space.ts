@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   AccessModifierLabel,
   Annotation,
   DocumentLocation,
   SourceDef,
 } from '../../../model/malloy_types';
-import {FieldListEdit} from '../source-properties/field-list-edit';
+import type {FieldListEdit} from '../source-properties/field-list-edit';
 import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';
-import {MalloyElement} from '../types/malloy-element';
-import {ParameterSpace} from './parameter-space';
-import {FieldReference} from '../query-items/field-references';
+import type {MalloyElement} from '../types/malloy-element';
+import type {ParameterSpace} from './parameter-space';
+import type {FieldReference} from '../query-items/field-references';
 import {RenameSpaceField} from './rename-space-field';
 import {SpaceField} from '../types/space-field';
 

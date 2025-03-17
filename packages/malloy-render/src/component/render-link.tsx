@@ -1,4 +1,4 @@
-import {Cell, Field} from '../data_tree';
+import type {Cell, Field} from '../data_tree';
 
 export function renderLink(f: Field, data: Cell) {
   const tag = f.tag;

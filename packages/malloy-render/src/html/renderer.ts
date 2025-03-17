@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {RendererOptions} from './renderer_types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {RendererOptions} from './renderer_types';
 export type ChildRenderers = {[fieldName: string]: Renderer};
-import {Cell} from '../data_tree';
+import type {Cell} from '../data_tree';
 
 export interface Renderer {
   render(value: Cell): Promise<HTMLElement>;

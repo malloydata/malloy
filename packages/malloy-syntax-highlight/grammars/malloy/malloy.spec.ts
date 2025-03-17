@@ -24,7 +24,7 @@
 import {generateTextmateTokenizations} from '../../test/generateTextmateTokenizations';
 import expectedTokenizations from './tokenizations/darkPlus';
 import testConfig from '../../test/config/textmate/malloyDarkPlusConfig';
-import {TestItem} from '../../test/testUtils';
+import type {TestItem} from '../../test/testUtils';
 
 let actualTokenizations: TestItem[][];
 

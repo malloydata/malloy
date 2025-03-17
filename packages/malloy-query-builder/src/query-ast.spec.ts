@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {flights_model} from './flights_model';
 import './expects';
-import {ASTOrderByViewOperation, ASTQuery} from './query-ast';
+import type {ASTOrderByViewOperation} from './query-ast';
+import {ASTQuery} from './query-ast';
 
 function dedent(strs: TemplateStringsArray) {
   const str = strs.join('');
@@ -559,11 +560,11 @@ describe('query builder', () => {
       malloy: dedent`
       run: flights -> {
         where:
-          carrier ~ f\`'\`
-          carrier ~ f\`'"\`
-          carrier ~ f'\`'
-          carrier ~ f"\`'"
-          carrier ~ f\`\\\`"\`
+          carrier ~ f\`'\`,
+          carrier ~ f\`'"\`,
+          carrier ~ f'\`',
+          carrier ~ f"\`'",
+          carrier ~ f\`\\\`"\`,
           carrier ~ f\`\\\`"""'''\`
       }`,
     });
@@ -2146,6 +2147,59 @@ describe('query builder', () => {
           ) -> { }
         `,
       });
+    });
+  });
+  test('add parameter twice overrides', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {kind: 'source_reference', name: 'foo'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const source = q.definition.as
+        .ArrowQueryDefinition()
+        .source.as.ReferenceQueryArrowSource();
+      source.setParameter('string_param', 'COOL');
+      source.setParameter('string_param', 'COOLER');
+    }).toModifyQuery({
+      source: {
+        name: 'foo',
+        schema: {fields: []},
+        parameters: [
+          {
+            name: 'string_param',
+            type: {kind: 'string_type'},
+          },
+        ],
+      },
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'foo',
+            parameters: [
+              {
+                name: 'string_param',
+                value: {kind: 'string_literal', string_value: 'COOLER'},
+              },
+            ],
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      },
+      malloy: dedent`
+        run: foo(string_param is "COOLER") -> { }
+      `,
     });
   });
 });

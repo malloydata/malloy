@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import {HTMLChartRenderer} from './chart';
 
 import {getColorScale} from './utils';
-import {StyleDefaults, VegaRenderOptions} from './data_styles';
-import {RendererOptions} from './renderer_types';
+import type {StyleDefaults, VegaRenderOptions} from './data_styles';
+import type {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
-import {Renderer} from './renderer';
+import type {Renderer} from './renderer';
 import {grayMedium, gridGray} from '../component/vega/base-vega-config';
-import {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
+import type {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 

@@ -20,7 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {PipeSegment, isQuerySegment} from '../../../model';
+import type {PipeSegment} from '../../../model';
+import {isQuerySegment} from '../../../model';
 import {ReduceBuilder} from './reduce-builder';
 
 export class PartialBuilder extends ReduceBuilder {

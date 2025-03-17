@@ -6,7 +6,7 @@
  */
 
 import {arg, spread, sql} from '../functions/util';
-import {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
+import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
 export const TRINO_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   byte_length: {sql: '(LENGTH(CAST(${value} AS VARBINARY)))'},

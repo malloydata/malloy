@@ -21,11 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model';
+import type {Annotation} from '../../../model';
 
-import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
-import {Noteable, extendNoteMethod} from '../types/noteable';
-import {SourceQueryElement} from '../source-query-elements/source-query-element';
+import type {DocStatement, Document} from '../types/malloy-element';
+import {MalloyElement} from '../types/malloy-element';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 
 export class AnonymousQuery
   extends MalloyElement

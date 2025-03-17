@@ -35,7 +35,10 @@ import {
   model,
 } from './test-translator';
 import './parse-expects';
-import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
+import type {
+  DocumentLocation,
+  DocumentPosition,
+} from '../../model/malloy_types';
 
 describe('source locations', () => {
   test('renamed source location', () => {

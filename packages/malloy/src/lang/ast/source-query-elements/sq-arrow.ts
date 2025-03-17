@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Source} from '../source-elements/source';
+import type {Source} from '../source-elements/source';
 import {SourceQueryElement} from './source-query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {QueryArrow} from '../query-elements/query-arrow';
-import {View} from '../view-elements/view';
-import {QueryElement} from '../types/query-element';
+import type {View} from '../view-elements/view';
+import type {QueryElement} from '../types/query-element';
 
 /**
  * An expression that adds a segment to a source or query.

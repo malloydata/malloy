@@ -22,10 +22,8 @@
  */
 
 import malloyTestInput from '../../../grammars/malloy/malloyTestInput';
-import {
-  TextmateTestConfig,
-  stubEmbeddedTextmateLanguage,
-} from '../../testUtils';
+import type {TextmateTestConfig} from '../../testUtils';
+import {stubEmbeddedTextmateLanguage} from '../../testUtils';
 
 const malloyDarkPlusConfig: TextmateTestConfig = {
   language: {

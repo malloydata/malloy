@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TemporalTypeDef, TimestampUnit} from '../../../model/malloy_types';
+import type {TemporalTypeDef, TimestampUnit} from '../../../model/malloy_types';
 
-import {ExprResult} from './expr-result';
+import type {ExprResult} from './expr-result';
 
 export type TimeResult = TemporalTypeDef &
   ExprResult & {

@@ -1,6 +1,7 @@
 import {createContext, useContext} from 'solid-js';
-import {createStore, SetStoreFunction, Store} from 'solid-js/store';
-import {TableLayout} from './table-layout';
+import type {SetStoreFunction, Store} from 'solid-js/store';
+import {createStore} from 'solid-js/store';
+import type {TableLayout} from './table-layout';
 
 type TableStore = {
   headerSizes: Record<string, number>;

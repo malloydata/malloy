@@ -6,7 +6,7 @@
  */
 
 import {getBarChartSettings} from './get-bar_chart-settings';
-import {
+import type {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
@@ -15,7 +15,7 @@ import {
   VegaSignalRef,
 } from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
-import {
+import type {
   Data,
   EncodeEntry,
   GroupMark,
@@ -31,12 +31,8 @@ import {renderNumericField} from '../render-numeric-field';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
-import {
-  CellValue,
-  Field,
-  RecordCell,
-  RepeatedRecordField,
-} from '../../data_tree';
+import type {CellValue, RecordCell, RepeatedRecordField} from '../../data_tree';
+import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 
 type BarDataRecord = {

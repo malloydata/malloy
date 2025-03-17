@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SourceProperty} from './source-property';
+import type {SourceProperty} from './source-property';
 import {ListOf} from './malloy-element';
 
 export class SourceDesc extends ListOf<SourceProperty> {

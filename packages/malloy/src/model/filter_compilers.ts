@@ -5,19 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   BooleanClause,
   ClauseBase,
   NumberClause,
   StringClause,
   TemporalClause,
+  NumberRangeOperator,
+} from '@malloydata/malloy-filter';
+import {
   isNumberClause,
   isStringClause,
   isTemporalClause,
   isBooleanClause,
-  NumberRangeOperator,
 } from '@malloydata/malloy-filter';
-import {Dialect} from '../dialect';
+import type {Dialect} from '../dialect';
 import {TemporalFilterCompiler} from './filter_temporal_compiler';
 
 function escapeForLike(v: string) {

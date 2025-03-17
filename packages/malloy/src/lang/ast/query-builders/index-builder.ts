@@ -21,27 +21,26 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   CompositeFieldUsage,
   FilterCondition,
   PipeSegment,
   Sampling,
-  isIndexSegment,
-  isPartialSegment,
 } from '../../../model/malloy_types';
+import {isIndexSegment, isPartialSegment} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, SourceFieldSpace} from '../types/field-space';
+import type {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {Index} from '../query-properties/indexing';
 import {Limit} from '../query-properties/limit';
 import {SampleProperty} from '../query-properties/sampling';
 import {IndexFieldSpace} from '../field-space/index-field-space';
-import {QueryProperty} from '../types/query-property';
-import {QueryBuilder} from '../types/query-builder';
-import {QueryInputSpace} from '../field-space/query-input-space';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {MalloyElement} from '../types/malloy-element';
+import type {QueryProperty} from '../types/query-property';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {MalloyElement} from '../types/malloy-element';
 import {
   emptyCompositeFieldUsage,
   mergeCompositeFieldUsage,

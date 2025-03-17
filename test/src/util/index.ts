@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   FilterCondition,
   QueryFieldDef,
   IndexFieldDef,
@@ -29,8 +29,8 @@ import {
   Result,
   Runtime,
   Expr,
-  composeSQLExpr,
 } from '@malloydata/malloy';
+import {composeSQLExpr} from '@malloydata/malloy';
 export * from '@malloydata/malloy/test';
 
 // these two helper functions are here just to make older hand built models

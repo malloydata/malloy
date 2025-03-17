@@ -22,15 +22,15 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {
   LegalRefinementStage,
   QueryClass,
-  QueryPropertyInterface,
 } from '../types/query-property-interface';
-import {QueryBuilder} from '../types/query-builder';
+import type {QueryBuilder} from '../types/query-builder';
 
 export class NestFieldDeclaration
   extends ViewFieldDeclaration

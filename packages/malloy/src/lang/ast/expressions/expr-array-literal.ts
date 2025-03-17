@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ArrayLiteralNode, ArrayTypeDef, Expr} from '../../../model';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {ArrayLiteralNode, ArrayTypeDef, Expr} from '../../../model';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import * as TDU from '../typedesc-utils';
 import {RecordLiteral} from './expr-record-literal';
 

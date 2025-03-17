@@ -21,21 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Expr,
-  isDateUnit,
-  mkTemporal,
-  TimestampUnit,
-  TD,
-} from '../../../model/malloy_types';
+import type {Expr, TimestampUnit} from '../../../model/malloy_types';
+import {isDateUnit, mkTemporal, TD} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {timeOffset} from '../time-utils';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {GranularResult} from '../types/granular-result';
+import type {FieldSpace} from '../types/field-space';
+import type {GranularResult} from '../types/granular-result';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
 

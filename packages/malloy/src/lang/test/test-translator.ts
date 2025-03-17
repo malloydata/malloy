@@ -23,7 +23,7 @@
  */
 
 import {inspect} from 'util';
-import {
+import type {
   DocumentLocation,
   FieldDef,
   ModelDef,
@@ -33,29 +33,35 @@ import {
   QueryFieldDef,
   StructDef,
   TurtleDef,
-  isQuerySegment,
-  isSourceDef,
   SourceDef,
   JoinBase,
   TableSourceDef,
   SQLSourceDef,
   NumberTypeDef,
+} from '../../model/malloy_types';
+import {
+  isQuerySegment,
+  isSourceDef,
   mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
-import {NameSpace} from '../ast/types/name-space';
-import {ModelEntry} from '../ast/types/model-entry';
+import type {NameSpace} from '../ast/types/name-space';
+import type {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
-import {
+import type {
   DataRequestResponse,
   SQLSourceRequest,
   TranslateResponse,
 } from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
-import {ExprValue} from '../ast/types/expr-value';
+import type {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
-import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
-import {EventStream} from '../../runtime_types';
+import type {
+  LogSeverity,
+  MessageCode,
+  MessageParameterType,
+} from '../parse-log';
+import type {EventStream} from '../../runtime_types';
 import {sqlKey} from '../../model/sql_block';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types

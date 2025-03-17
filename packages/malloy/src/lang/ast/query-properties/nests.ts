@@ -22,12 +22,12 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {
   QueryClass,
   LegalRefinementStage,
-  QueryPropertyInterface,
 } from '../types/query-property-interface';
-import {NestFieldDeclaration} from './nest';
+import type {NestFieldDeclaration} from './nest';
 
 export class Nests
   extends DefinitionList<NestFieldDeclaration>

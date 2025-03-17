@@ -28,7 +28,7 @@ type MalloyInterfaceType =
       fields: Record<string, MalloyInterfaceFieldType>;
     }
   | {name: string; type: 'union'; options: Record<string, string>}
-  | {name: string; type: 'enum'; values: string[]};
+  | {name: string; type: 'enum'; values: Record<string, number>};
 
 const types: Record<string, MalloyInterfaceType> = {};
 
@@ -46,10 +46,11 @@ for (const file of fs.readdirSync('./generated-types')) {
   );
   if (isAnEnum) {
     const name = isAnEnum[1];
-    const values: string[] = [];
-    const matches = actualTypes.matchAll(/ {4}([A-Z_]+) = \d+/g);
+    const values: Record<string, number> = {};
+    const matches = actualTypes.matchAll(/ {4}([A-Z_]+) = (\d+)/g);
     for (const match of matches) {
-      values.push(match[1].toLowerCase());
+      const [name, valueString] = [match[1].toLowerCase(), match[2]];
+      values[name] = parseInt(valueString);
     }
     types[name] = {
       type: 'enum',
@@ -152,7 +153,7 @@ type MalloyInterfaceType =
       fields: Record<string, MalloyInterfaceFieldType>;
     }
   | {name: string; type: 'union'; options: Record<string, string>}
-  | {name: string; type: 'enum'; values: string[]};
+  | {name: string; type: 'enum'; values: Record<string, number>};
 `);
 
 console.log(
@@ -172,7 +173,7 @@ for (const typeName in types) {
   const type = types[typeName];
   if (type.type === 'enum') {
     console.log(
-      `export type ${type.name} = ${type.values
+      `export type ${type.name} = ${Object.keys(type.values)
         .map(v => `'${v}'`)
         .join(' | ')};\n`
     );

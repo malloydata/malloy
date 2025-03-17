@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldDeclaration} from '../query-items/field-declaration';
-import {FieldReference} from '../query-items/field-references';
+import type {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import type {FieldReference} from '../query-items/field-references';
 
-import {NestFieldDeclaration} from '../query-properties/nest';
+import type {NestFieldDeclaration} from '../query-properties/nest';
 
 export type QueryItem =
   | AtomicFieldDeclaration

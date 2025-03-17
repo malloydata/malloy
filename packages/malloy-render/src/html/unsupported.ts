@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Renderer} from './renderer';
+import type {Renderer} from './renderer';
 import {createNullElement} from './utils';
 import {RendererFactory} from './renderer_factory';
-import {DataRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Cell, Field} from '../data_tree';
+import type {DataRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLUnsupportedRenderer implements Renderer {
   constructor(private readonly document: Document) {}

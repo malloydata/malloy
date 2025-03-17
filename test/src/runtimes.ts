@@ -21,17 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Connection,
   MalloyQueryData,
   QueryDataRow,
   Result,
   RunSQLOptions,
+  ModelCache,
+} from '@malloydata/malloy';
+import {
   SingleConnectionRuntime,
   InMemoryURLReader,
   InMemoryModelCache,
   CacheManager,
-  ModelCache,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';

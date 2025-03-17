@@ -22,16 +22,16 @@
  */
 
 import {HTMLTextRenderer} from './text';
-import {
+import type {
   DataVolumeRenderOptions,
-  DataVolumeUnit,
   NumberRenderOptions,
   StyleDefaults,
 } from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import {DataVolumeUnit} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import {Cell, Field} from '../data_tree';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
   constructor(

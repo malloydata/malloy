@@ -23,9 +23,9 @@
 
 import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import * as TDU from '../typedesc-utils';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';

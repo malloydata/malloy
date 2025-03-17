@@ -21,17 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Annotation,
   QueryFieldDef,
-  TD,
   TypeDesc,
-  mkFieldDef,
 } from '../../../model/malloy_types';
+import {TD, mkFieldDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
-import {FieldReference} from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
-import {SpaceEntry} from '../types/space-entry';
+import type {FieldReference} from '../query-items/field-references';
+import type {FieldSpace} from '../types/field-space';
+import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 

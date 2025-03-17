@@ -22,13 +22,8 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import {
-  Expr,
-  exprHasE,
-  exprHasKids,
-  ExprWithKids,
-  GenericSQLExpr,
-} from './malloy_types';
+import type {Expr, ExprWithKids, GenericSQLExpr} from './malloy_types';
+import {exprHasE, exprHasKids} from './malloy_types';
 
 /** simple indent function */
 export function indent(s: string): string {

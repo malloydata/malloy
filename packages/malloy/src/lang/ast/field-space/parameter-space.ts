@@ -5,12 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Dialect} from '../../../dialect';
-import {StructDef} from '../../../model';
-import {HasParameter} from '../parameters/has-parameter';
-import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
-import {LookupResult} from '../types/lookup-result';
-import {SpaceEntry} from '../types/space-entry';
+import type {Dialect} from '../../../dialect';
+import type {StructDef} from '../../../model';
+import type {HasParameter} from '../parameters/has-parameter';
+import type {
+  FieldName,
+  FieldSpace,
+  QueryFieldSpace,
+} from '../types/field-space';
+import type {LookupResult} from '../types/lookup-result';
+import type {SpaceEntry} from '../types/space-entry';
 import {AbstractParameter} from '../types/space-param';
 
 export class ParameterSpace implements FieldSpace {

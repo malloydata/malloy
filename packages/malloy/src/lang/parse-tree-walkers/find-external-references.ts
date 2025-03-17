@@ -21,19 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream} from 'antlr4ts';
+import type {CommonTokenStream} from 'antlr4ts';
 import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {ParseTree} from 'antlr4ts/tree';
-import * as parser from '../lib/Malloy/MalloyParser';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
-import {DocumentRange} from '../../model/malloy_types';
-import {MalloyTranslation} from '../parse-malloy';
-import {
-  HasString,
-  getId,
-  getStringIfShort,
-  getStringParts,
-} from '../parse-utils';
+import type {ParseTree} from 'antlr4ts/tree';
+import type * as parser from '../lib/Malloy/MalloyParser';
+import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import type {DocumentRange} from '../../model/malloy_types';
+import type {MalloyTranslation} from '../parse-malloy';
+import type {HasString} from '../parse-utils';
+import {getId, getStringIfShort, getStringParts} from '../parse-utils';
 
 type NeedImports = Record<string, DocumentRange>;
 type NeedTables = Record<

@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {LogMessage, MalloyError} from '@malloydata/malloy';
-import {MalloySQLParseErrorExpected} from './types';
+import type {LogMessage} from '@malloydata/malloy';
+import {MalloyError} from '@malloydata/malloy';
+import type {MalloySQLParseErrorExpected} from './types';
 
 export class MalloySQLParseError extends MalloyError {
   constructor(message: string, problems: LogMessage[] = []) {

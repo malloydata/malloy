@@ -28,7 +28,8 @@ import {
   generateMonarchTokenizations,
 } from '../../test/generateMonarchTokenizations.js';
 import {malloyDarkPlusConfig as testConfig} from '../../test/config/monaco/malloyDarkPlusConfig.js';
-import {TestItem, monarchTestMatchers} from '../../test/testUtils.js';
+import type {TestItem} from '../../test/testUtils.js';
+import {monarchTestMatchers} from '../../test/testUtils.js';
 
 let actualTokenizations: TestItem[][];
 

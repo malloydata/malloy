@@ -22,20 +22,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyTranslator, TranslateResponse} from '..';
-import {
+import type {MalloyTranslator, TranslateResponse} from '..';
+import type {
   CompositeFieldUsage,
   DocumentLocation,
   DocumentRange,
 } from '../../model';
 import {exprToStr} from './expr-to-str';
-import {
-  BetaExpression,
-  MarkedSource,
-  pretty,
-  TestTranslator,
-} from './test-translator';
-import {LogSeverity} from '../parse-log';
+import type {MarkedSource} from './test-translator';
+import {BetaExpression, pretty, TestTranslator} from './test-translator';
+import type {LogSeverity} from '../parse-log';
 
 type MessageProblemSpec = {
   severity: LogSeverity;

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 

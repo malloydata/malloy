@@ -21,20 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RunSQLOptions} from './run_sql_options';
-import {
+import type {RunSQLOptions} from './run_sql_options';
+import type {
   DocumentCompletion as DocumentCompletionDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
   LogMessage,
-  MalloyTranslator,
 } from './lang';
-import {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
-import {
+import {MalloyTranslator} from './lang';
+import type {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
+import type {
   CompiledQuery,
   DocumentLocation,
   DocumentReference,
   BooleanFieldDef,
-  fieldIsIntrinsic,
   JSONFieldDef,
   NumberFieldDef,
   StringFieldDef,
@@ -45,13 +44,11 @@ import {
   NamedQuery,
   QueryData,
   QueryDataRow,
-  QueryModel,
   QueryResult,
   SearchIndexResult,
   SearchValueMapResult,
   StructDef,
   TurtleDef,
-  expressionIsCalculation,
   NativeUnsupportedFieldDef,
   QueryRunStats,
   ImportLocation,
@@ -62,14 +59,19 @@ import {
   AtomicFieldDef,
   DateFieldDef,
   TimestampFieldDef,
-  isAtomicFieldType,
   SourceDef,
-  isSourceDef,
   QueryToMaterialize,
-  isJoined,
   DependencyTree,
 } from './model';
 import {
+  fieldIsIntrinsic,
+  QueryModel,
+  expressionIsCalculation,
+  isAtomicFieldType,
+  isSourceDef,
+  isJoined,
+} from './model';
+import type {
   EventStream,
   InvalidationKey,
   ModelString,
@@ -78,24 +80,24 @@ import {
   QueryURL,
   URLReader,
 } from './runtime_types';
-import {
+import type {
   Connection,
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
 } from './connection/types';
 import {DateTime} from 'luxon';
-import {Tag} from '@malloydata/malloy-tag';
-import {Dialect, getDialect} from './dialect';
-import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Dialect} from './dialect';
+import {getDialect} from './dialect';
+import type {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 import {MALLOY_VERSION} from './version';
 import {v5 as uuidv5} from 'uuid';
+import type {MalloyTagParse, TagParseSpec} from './annotation';
 import {
   addModelScope,
   annotationToTag,
   annotationToTaglines,
-  MalloyTagParse,
-  TagParseSpec,
 } from './annotation';
 import {sqlKey} from './model/sql_block';
 

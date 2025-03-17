@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MarkedSource, TestTranslator, markSource} from './test-translator';
-import {DocumentSymbol} from '../parse-tree-walkers/document-symbol-walker';
+import type {MarkedSource} from './test-translator';
+import {TestTranslator, markSource} from './test-translator';
+import type {DocumentSymbol} from '../parse-tree-walkers/document-symbol-walker';
 
 class MalloyExplore extends TestTranslator {
   constructor(src: string) {

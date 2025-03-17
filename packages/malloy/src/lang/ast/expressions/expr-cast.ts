@@ -21,11 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CastType, LeafAtomicTypeDef} from '../../../model';
+import type {CastType, LeafAtomicTypeDef} from '../../../model';
 import {castTo} from '../time-utils';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';

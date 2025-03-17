@@ -22,15 +22,15 @@
  */
 
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
-import {
+import type {
   LineChartRenderOptions,
   ScatterChartRenderOptions,
   StyleDefaults,
 } from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import {Cell, Field} from '../data_tree';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {

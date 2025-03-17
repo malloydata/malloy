@@ -23,41 +23,40 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
-import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
-import * as parse from './lib/Malloy/MalloyParser';
+import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
+import type * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
-import {
+import type {
   LogMessageOptions,
   LogSeverity,
   MessageCode,
   MessageLogger,
   MessageParameterType,
-  makeLogMessage,
 } from './parse-log';
-import {MalloyParseInfo} from './malloy-parse-info';
+import {makeLogMessage} from './parse-log';
+import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {FieldDeclarationConstructor, TableSource} from './ast';
+import type {FieldDeclarationConstructor} from './ast';
+import {TableSource} from './ast';
+import type {HasString, HasID} from './parse-utils';
 import {
   getId,
   getOptionalId,
-  HasString,
-  HasID,
   getStringParts,
   getShortString,
   idToStr,
   getPlainString,
 } from './parse-utils';
-import {CastType} from '../model';
-import {
+import type {CastType} from '../model';
+import type {
   AccessModifierLabel,
   DocumentLocation,
   DocumentRange,
-  isCastType,
-  isMatrixOperation,
   Note,
 } from '../model/malloy_types';
+import {isCastType, isMatrixOperation} from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {ConstantExpression} from './ast/expressions/constant-expression';
 import {isNotUndefined, rangeFromContext} from './utils';

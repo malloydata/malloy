@@ -31,10 +31,8 @@ import {
   error,
 } from './test-translator';
 import './parse-expects';
+import type {Query, QueryFieldDef, QuerySegment} from '../../model';
 import {
-  Query,
-  QueryFieldDef,
-  QuerySegment,
   expressionIsCalculation,
   isJoined,
   isQuerySegment,

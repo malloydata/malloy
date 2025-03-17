@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {IRawGrammar} from 'vscode-textmate';
-import {languages as Monarch, editor as Monaco} from 'monaco-editor';
+import type {IRawGrammar} from 'vscode-textmate';
+import type {languages as Monarch, editor as Monaco} from 'monaco-editor';
 
 export interface TextmateTestConfig {
   language: {

@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {BinaryMalloyOperator} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import type {ExprValue} from '../types/expr-value';
 import {applyBinary, ATNodeType, ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export class ExprParens extends ExpressionDef {
   elementType = '(expression)';

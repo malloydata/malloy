@@ -21,23 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import snowflake, {
+import type {
   SnowflakeError,
   RowStatement,
   Connection,
   ConnectionOptions,
 } from 'snowflake-sdk';
-import {Pool, Options as PoolOptions} from 'generic-pool';
+import snowflake from 'snowflake-sdk';
+import type {Pool, Options as PoolOptions} from 'generic-pool';
 import * as toml from 'toml';
 import * as fs from 'fs';
 import * as path from 'path';
-import {Readable} from 'stream';
-import {
-  toAsyncGenerator,
-  QueryData,
-  QueryDataRow,
-  RunSQLOptions,
-} from '@malloydata/malloy';
+import type {Readable} from 'stream';
+import type {QueryData, QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
+import {toAsyncGenerator} from '@malloydata/malloy';
 
 export interface ConnectionConfigFile {
   // a toml file with snowflake connection settings

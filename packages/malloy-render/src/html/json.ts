@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Renderer} from './renderer';
-import {JSONRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {JSONRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
-import {Cell, Field} from '../data_tree';
+import type {Cell, Field} from '../data_tree';
 
 function mapToJSON(cell: Cell): unknown {
   if (cell.isArray()) {

@@ -21,17 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {UngroupNode} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionIsUngroupedAggregate,
-  UngroupNode,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from '../field-space/query-spaces';
 import * as TDU from '../typedesc-utils';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldName, FieldSpace} from '../types/field-space';
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = TDU.anyAtomicT;

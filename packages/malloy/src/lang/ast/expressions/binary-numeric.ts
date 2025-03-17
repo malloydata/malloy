@@ -22,10 +22,10 @@
  */
 
 import * as TDU from '../typedesc-utils';
-import {ArithmeticMalloyOperator} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import type {ArithmeticMalloyOperator} from '../types/binary_operators';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export abstract class BinaryNumeric<
   opType extends ArithmeticMalloyOperator,

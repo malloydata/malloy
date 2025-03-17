@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentPosition, DocumentReference} from '../model';
+import type {DocumentPosition, DocumentReference} from '../model';
 import {locationContainsPosition} from './utils';
 
 export class ReferenceList {

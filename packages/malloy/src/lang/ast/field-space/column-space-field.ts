@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc, AtomicFieldDef} from '../../../model/malloy_types';
+import type {TypeDesc, AtomicFieldDef} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 

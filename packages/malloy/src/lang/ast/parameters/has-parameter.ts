@@ -21,9 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
+import type {Parameter, CastType} from '../../../model/malloy_types';
+import {isCastType} from '../../../model/malloy_types';
 
-import {ConstantExpression} from '../expressions/constant-expression';
+import type {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {

@@ -28,11 +28,8 @@
 //   qtz,
 //   DialectFunctionOverloadDef,
 // } from '..';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingRows,
-  isSamplingPercent,
   MeasureTimeExpr,
   TimeLiteralNode,
   RegexMatchExpr,
@@ -41,24 +38,21 @@ import {
   TimeExtractExpr,
   TypecastExpr,
   LeafAtomicTypeDef,
-  TD,
   AtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingRows,
+  isSamplingPercent,
+  TD,
+} from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {
-  Dialect,
-  DialectFieldList,
-  FieldReferenceType,
-  qtz,
-  QueryInfo,
-} from '../dialect';
-import {
-  DialectFunctionOverloadDef,
-  expandBlueprintMap,
-  expandOverrideMap,
-} from '../functions';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import {Dialect, qtz} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 

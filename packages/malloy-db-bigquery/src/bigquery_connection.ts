@@ -22,23 +22,21 @@
  */
 
 import * as crypto from 'crypto';
-import {
-  BigQuery as BigQuerySDK,
+import type {
   Job,
   PagedResponse,
   Query,
   QueryResultsOptions,
   RowMetadata,
 } from '@google-cloud/bigquery';
-import bigquery from '@google-cloud/bigquery/build/src/types';
-import {ResourceStream} from '@google-cloud/paginator';
+import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
+import type bigquery from '@google-cloud/bigquery/build/src/types';
+import type {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
-import {
-  mkArrayDef,
+import type {
   Connection,
   ConnectionConfig,
-  Malloy,
   MalloyQueryData,
   PersistSQLResults,
   QueryData,
@@ -46,16 +44,21 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  StandardSQLDialect,
   StreamingConnection,
   TableSourceDef,
-  toAsyncGenerator,
   StructDef,
   SQLSourceDef,
   SQLSourceRequest,
+} from '@malloydata/malloy';
+import {
+  mkArrayDef,
+  Malloy,
+  StandardSQLDialect,
+  toAsyncGenerator,
   sqlKey,
 } from '@malloydata/malloy';
-import {BaseConnection, TableMetadata} from '@malloydata/malloy/connection';
+import type {TableMetadata} from '@malloydata/malloy/connection';
+import {BaseConnection} from '@malloydata/malloy/connection';
 // eslint-disable-next-line no-restricted-imports
 
 export interface BigQueryManagerOptions {

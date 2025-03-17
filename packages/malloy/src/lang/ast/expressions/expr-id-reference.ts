@@ -22,9 +22,9 @@
  */
 
 import {expressionIsAggregate} from '../../../model/malloy_types';
-import {ExprValue} from '../types/expr-value';
-import {FieldReference} from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import type {FieldReference} from '../query-items/field-references';
+import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 

@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelDef} from '../../../model/malloy_types';
+import type {ModelDef} from '../../../model/malloy_types';
 
-import {ModelDataRequest} from '../../translate-response';
+import type {ModelDataRequest} from '../../translate-response';
 
 export interface DocumentCompileResult {
   modelDef: ModelDef;

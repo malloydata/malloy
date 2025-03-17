@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {JoinElementType, JoinType} from '../../../model';
-import {MessageCode} from '../../parse-log';
-import {SpaceEntry} from './space-entry';
+import type {JoinElementType, JoinType} from '../../../model';
+import type {MessageCode} from '../../parse-log';
+import type {SpaceEntry} from './space-entry';
 
 export interface JoinPathElement {
   name: string;

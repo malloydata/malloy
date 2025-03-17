@@ -23,10 +23,9 @@
 
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
 import {MalloyTagLexer} from './lib/Malloy/MalloyTagLexer';
-import {
+import type {
   ArrayElementContext,
   ArrayValueContext,
-  MalloyTagParser,
   PropNameContext,
   PropertiesContext,
   ReferenceContext,
@@ -39,14 +38,10 @@ import {
   TagSpecContext,
   TagUpdatePropertiesContext,
 } from './lib/Malloy/MalloyTagParser';
-import {MalloyTagVisitor} from './lib/Malloy/MalloyTagVisitor';
-import {
-  ANTLRErrorListener,
-  CharStreams,
-  CommonTokenStream,
-  ParserRuleContext,
-  Token,
-} from 'antlr4ts';
+import {MalloyTagParser} from './lib/Malloy/MalloyTagParser';
+import type {MalloyTagVisitor} from './lib/Malloy/MalloyTagVisitor';
+import type {ANTLRErrorListener, ParserRuleContext, Token} from 'antlr4ts';
+import {CharStreams, CommonTokenStream} from 'antlr4ts';
 import {parseString} from './util';
 
 export interface TagError {

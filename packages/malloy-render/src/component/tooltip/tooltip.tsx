@@ -1,10 +1,5 @@
-import {
-  createEffect,
-  createSignal,
-  JSXElement,
-  onCleanup,
-  Show,
-} from 'solid-js';
+import type {JSXElement} from 'solid-js';
+import {createEffect, createSignal, onCleanup, Show} from 'solid-js';
 import tooltipCss from './tooltip.css?raw';
 import {useConfig} from '../render';
 import {MalloyModal} from '../malloy-modal/malloy-modal';

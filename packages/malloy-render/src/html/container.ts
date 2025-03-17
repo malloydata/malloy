@@ -21,11 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {StyleDefaults} from './data_styles';
-import {ChildRenderers, RenderTree} from './renderer';
-import {RendererOptions} from './renderer_types';
-import {NestField} from '../data_tree';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {StyleDefaults} from './data_styles';
+import type {ChildRenderers} from './renderer';
+import {RenderTree} from './renderer';
+import type {RendererOptions} from './renderer_types';
+import type {NestField} from '../data_tree';
 
 export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {SQLSourceRequest} from '../lang/translate-response';
-import {
+import type {SQLSourceRequest} from '../lang/translate-response';
+import type {
   MalloyQueryData,
   QueryRunStats,
   SQLSourceDef,
@@ -14,8 +14,8 @@ import {
   TableSourceDef,
 } from '../model/malloy_types';
 import {sqlKey} from '../model/sql_block';
-import {RunSQLOptions} from '../run_sql_options';
-import {
+import type {RunSQLOptions} from '../run_sql_options';
+import type {
   Connection,
   FetchSchemaOptions,
   PersistSQLResults,

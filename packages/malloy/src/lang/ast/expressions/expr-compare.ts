@@ -22,14 +22,15 @@
  */
 
 import * as TDU from '../typedesc-utils';
-import {
+import type {
   BinaryMalloyOperator,
   CompareMalloyOperator,
   EqualityMalloyOperator,
 } from '../types/binary_operators';
-import {computedExprValue, ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {BinaryBoolean} from './binary-boolean';
 
 const compareTypes = {

@@ -25,17 +25,10 @@ import {join as pathJoin} from 'path';
 import {readFileSync} from 'fs';
 import {readFile as promiseReadFile} from 'fs/promises';
 import {parse as json5Parse} from 'json5';
-import {
-  Registry,
-  parseRawGrammar,
-  INITIAL,
-  IRawTheme,
-  IRawGrammar,
-  IGrammar,
-  IToken,
-} from 'vscode-textmate';
+import type {IRawTheme, IRawGrammar, IGrammar, IToken} from 'vscode-textmate';
+import {Registry, parseRawGrammar, INITIAL} from 'vscode-textmate';
 import {loadWASM, OnigScanner, OnigString} from 'vscode-oniguruma';
-import {
+import type {
   TextmateTestConfig,
   TestItem,
   TextmateLanguageDefinition,

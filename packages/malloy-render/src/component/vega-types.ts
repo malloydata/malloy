@@ -23,8 +23,8 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import {Spec} from 'vega';
-import {TopLevelSpec} from 'vega-lite';
+import type {Spec} from 'vega';
+import type {TopLevelSpec} from 'vega-lite';
 
 /**
  * TODO: create vega-lite-types package that exports types from vega-lite

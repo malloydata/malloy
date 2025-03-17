@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {Renderer} from './renderer';
-import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Field} from '../data_tree';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Renderer} from './renderer';
+import type {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Field} from '../data_tree';
 
 type TagPropertyExtractor<T extends DataRenderOptions> = (
   options: T,

@@ -8,7 +8,7 @@
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
 import fstring_grammar from '../lib/fexpr_string_parser';
-import {StringClause} from '../filter_clause';
+import type {StringClause} from '../filter_clause';
 import {StringFilterExpression} from '../string_filter_expression';
 import {inspect} from 'util';
 

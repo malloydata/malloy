@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
-  def,
 } from '../functions/util';
+import {def} from '../functions/util';
 
 /*
  * We are experimenting with the best way to make this file easy for someone

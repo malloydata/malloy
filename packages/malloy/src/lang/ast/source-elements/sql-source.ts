@@ -21,17 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   StructDef,
   InvokedStructRef,
   SourceDef,
 } from '../../../model/malloy_types';
 import {compileSQLInterpolation, sqlKey} from '../../../model/sql_block';
-import {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
+import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {SQLString} from '../sql-elements/sql-string';
-import {ModelEntryReference, Document} from '../types/malloy-element';
+import type {SQLString} from '../sql-elements/sql-string';
+import type {ModelEntryReference, Document} from '../types/malloy-element';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';

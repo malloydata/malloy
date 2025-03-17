@@ -21,21 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {FilterCondition} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
-  FilterCondition,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
 
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {ExpressionDef} from '../types/expression-def';
+import type {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import {QueryBuilder} from '../types/query-builder';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 export class FilterElement extends MalloyElement {
   elementType = 'filterElement';

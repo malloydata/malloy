@@ -1,7 +1,7 @@
 import {createStore, produce, unwrap} from 'solid-js/store';
-import {DrillData} from '../types';
-import {Cell} from '../../data_tree';
-import {RenderMetadata} from '../render-result-metadata';
+import type {DrillData} from '../types';
+import type {Cell} from '../../data_tree';
+import type {RenderMetadata} from '../render-result-metadata';
 
 interface BrushDataBase {
   fieldRefId: string;

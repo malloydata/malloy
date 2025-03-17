@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {Item, Spec, View} from 'vega';
-import {JSX} from 'solid-js';
-import {
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Item, Spec, View} from 'vega';
+import type {JSX} from 'solid-js';
+import type {
   Cell,
   DrillEntry,
   Field,

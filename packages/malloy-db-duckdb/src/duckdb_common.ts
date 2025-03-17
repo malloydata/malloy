@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
@@ -32,13 +32,11 @@ import {
   StreamingConnection,
   StructDef,
   TestableConnection,
-  DuckDBDialect,
   SQLSourceDef,
   TableSourceDef,
-  mkFieldDef,
   SQLSourceRequest,
-  sqlKey,
 } from '@malloydata/malloy';
+import {DuckDBDialect, mkFieldDef, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 export interface DuckDBQueryOptions {

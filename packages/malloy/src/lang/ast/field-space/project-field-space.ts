@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {TypeDesc} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionInvolvesAggregate,
   expressionIsAnalytic,
-  TypeDesc,
   TD,
 } from '../../../model/malloy_types';
 

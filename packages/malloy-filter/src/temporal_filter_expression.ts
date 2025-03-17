@@ -5,19 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  FilterParserReponse,
-  isTemporalClause,
+import type {
+  FilterParserResponse,
   Moment,
   TemporalClause,
   Duration,
 } from './filter_clause';
+import {isTemporalClause} from './filter_clause';
 import ftemporal_grammar from './lib/ftemporal_parser';
 import * as nearley from 'nearley';
 import {run_parser} from './nearley_parse';
 
 export const TemporalFilterExpression = {
-  parse(src: string): FilterParserReponse<TemporalClause> {
+  parse(src: string): FilterParserResponse<TemporalClause> {
     const ftemporal_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(ftemporal_grammar)
     );

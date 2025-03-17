@@ -22,17 +22,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   ModelMaterializer,
   QueryMaterializer,
   Result,
   Runtime,
-  MalloyError,
   LogMessage,
-  SingleConnectionRuntime,
-  API,
 } from '@malloydata/malloy';
-import {Tag} from '@malloydata/malloy-tag';
+import {MalloyError, SingleConnectionRuntime, API} from '@malloydata/malloy';
+import type {Tag} from '@malloydata/malloy-tag';
 import EventEmitter from 'events';
 import {inspect} from 'util';
 

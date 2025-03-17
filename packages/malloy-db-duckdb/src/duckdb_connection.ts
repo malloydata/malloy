@@ -23,8 +23,9 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
-import {Connection, Database, DuckDbError, TableData} from 'duckdb';
-import {
+import type {Connection, DuckDbError, TableData} from 'duckdb';
+import {Database} from 'duckdb';
+import type {
   ConnectionConfig,
   QueryDataRow,
   QueryOptionsReader,

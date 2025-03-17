@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
-import {SourceDef, StructDef} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {LookupResult} from './lookup-result';
+import type {Dialect} from '../../../dialect/dialect';
+import type {SourceDef, StructDef} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
-import {SpaceEntry} from './space-entry';
+import type {SpaceEntry} from './space-entry';
 
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes

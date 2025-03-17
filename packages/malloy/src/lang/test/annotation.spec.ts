@@ -31,7 +31,7 @@ import {
 } from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
-import {Annotation} from '../../model/malloy_types';
+import type {Annotation} from '../../model/malloy_types';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;

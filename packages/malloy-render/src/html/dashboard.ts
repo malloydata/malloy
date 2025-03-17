@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StyleDefaults} from './data_styles';
+import type {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {HTMLTextRenderer} from './text';
 import {
@@ -30,7 +30,7 @@ import {
   yieldTask,
   formatTitle,
 } from './utils';
-import {Cell} from '../data_tree';
+import type {Cell} from '../data_tree';
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
