@@ -560,11 +560,11 @@ describe('query builder', () => {
       malloy: dedent`
       run: flights -> {
         where:
-          carrier ~ f\`'\`
-          carrier ~ f\`'"\`
-          carrier ~ f'\`'
-          carrier ~ f"\`'"
-          carrier ~ f\`\\\`"\`
+          carrier ~ f\`'\`,
+          carrier ~ f\`'"\`,
+          carrier ~ f'\`',
+          carrier ~ f"\`'",
+          carrier ~ f\`\\\`"\`,
           carrier ~ f\`\\\`"""'''\`
       }`,
     });

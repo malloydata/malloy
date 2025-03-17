@@ -10,6 +10,29 @@ import * as Malloy from '@malloydata/malloy-interfaces';
 
 type QueryAndLogs = {query?: Malloy.Query; logs: Partial<Malloy.LogMessage>[]};
 
+// TODO put this into a malloy-common util file?
+function dedent(strs: TemplateStringsArray) {
+  const str = strs.join('');
+  let lines = str.split('\n');
+  const firstNonEmptyLine = lines.findIndex(l => l.trim().length > 0);
+  let lastNonEmptyLine = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim().length > 0) {
+      lastNonEmptyLine = i;
+      break;
+    }
+  }
+  lines = lines.slice(firstNonEmptyLine, lastNonEmptyLine + 1);
+  let minIndent: number | undefined = undefined;
+  for (const line of lines) {
+    if (line.trim().length === 0) continue;
+    const indent = line.length - line.trimStart().length;
+    if (minIndent === undefined || indent < minIndent) minIndent = indent;
+  }
+  if (!minIndent) return str;
+  return lines.map(l => l.slice(minIndent)).join('\n');
+}
+
 describe('Malloy to Stable Query', () => {
   describe('field exprs', () => {
     test('field reference (not renamed)', () => {
@@ -174,6 +197,89 @@ describe('Malloy to Stable Query', () => {
     });
   });
   describe('query combinations', () => {
+    describe('filters', () => {
+      test('where clause with one filter', () => {
+        idempotent('run: a -> { where: carrier ~ f`AA` }', {
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {
+                kind: 'source_reference',
+                name: 'a',
+              },
+              view: {
+                kind: 'segment',
+                operations: [
+                  {
+                    kind: 'where',
+                    filter: {
+                      kind: 'filter_string',
+                      field_reference: {
+                        name: 'carrier',
+                      },
+                      filter: 'AA',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          logs: [],
+        });
+      });
+      test('all different filter quotings', () => {
+        const where: Malloy.ViewOperationWithWhere = {
+          kind: 'where',
+          filter: {
+            kind: 'filter_string',
+            field_reference: {
+              name: 'carrier',
+            },
+            filter: 'AA',
+          },
+        };
+        simplified(
+          dedent`
+            run: a -> {
+              where:
+                carrier ~ f'AA',
+                carrier ~ f"AA",
+                carrier ~ f\`AA\`,
+                carrier ~ f\`\`\`AA\`\`\`,
+                carrier ~ f'''AA''',
+                carrier ~ f"""AA""",
+            }
+          `,
+          dedent`
+            run: a -> {
+              where:
+                carrier ~ f\`AA\`,
+                carrier ~ f\`AA\`,
+                carrier ~ f\`AA\`,
+                carrier ~ f\`AA\`,
+                carrier ~ f\`AA\`,
+                carrier ~ f\`AA\`
+            }
+          `,
+          {
+            query: {
+              definition: {
+                kind: 'arrow',
+                source: {
+                  kind: 'source_reference',
+                  name: 'a',
+                },
+                view: {
+                  kind: 'segment',
+                  operations: [where, where, where, where, where, where],
+                },
+              },
+            },
+            logs: [],
+          }
+        );
+      });
+    });
     test('a -> b -> c', () => {
       idempotent('run: a -> b -> c', {
         query: {

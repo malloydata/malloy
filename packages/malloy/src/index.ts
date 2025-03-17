@@ -140,6 +140,7 @@ export {
   composeSQLExpr,
 } from './model';
 export {
+  malloyToQuery,
   // Needed for tests only
   MalloyTranslator,
 } from './lang';
