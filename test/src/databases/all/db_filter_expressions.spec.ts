@@ -388,4 +388,5 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(times, [{n: 'y2k'}]);
     });
   });
+  // mtoy todo -- mock TemporalFilterCompiler.nowExpr to test all the relative computations
 });

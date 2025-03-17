@@ -55,7 +55,8 @@ export class TemporalFilterCompiler {
 
   constructor(
     readonly expr: string,
-    dialect: Dialect
+    dialect: Dialect,
+    readonly timetype: 'timestamp' | 'date' = 'timestamp'
   ) {
     this.d = dialect;
   }
@@ -127,20 +128,21 @@ export class TemporalFilterCompiler {
     let literal = tl.literal;
     switch (tl.units) {
       case 'year':
-        literal += '-01-01 00:00';
+        literal += '-01-01 00:00:00';
         break;
       case 'month':
-        literal += '-01 00:00';
+        literal += '-01 00:00:00';
         break;
       case 'day':
-        literal += ' 00:00';
+        literal += ' 00:00:00';
         break;
       case 'hour':
+        literal += ':00:00';
+        break;
+      case 'minute':
         literal += ':00';
         break;
       case 'second':
-        break;
-      case 'minute':
         break;
       case 'week':
         literal = literal.slice(0, 10);
