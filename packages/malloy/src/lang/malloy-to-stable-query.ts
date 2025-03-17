@@ -22,9 +22,9 @@ import {getId} from './parse-utils';
 import type {DocumentLocation} from '../model/malloy_types';
 import {isTimestampUnit} from '../model/malloy_types';
 import {runMalloyParser} from './run-malloy-parser';
-import {mapLogs} from '../api/core';
 import type {ParseInfo} from './utils';
 import {getSourceInfo, rangeFromContext} from './utils';
+import {mapLogs} from '../api/util';
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 

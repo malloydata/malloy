@@ -23,6 +23,7 @@ import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
 import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
+import {DEFAULT_LOG_RANGE, mapLogs} from './util';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -386,29 +387,6 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
     );
     return {compilerNeeds, logs: result.problems};
   }
-}
-
-export const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
-  start: {
-    line: 0,
-    character: 0,
-  },
-  end: {
-    line: 0,
-    character: 0,
-  },
-};
-
-export function mapLogs(
-  logs: LogMessage[],
-  defaultURL: string
-): Malloy.LogMessage[] {
-  return logs.map(log => ({
-    severity: log.severity,
-    message: log.message,
-    range: log.at?.range ?? DEFAULT_LOG_RANGE,
-    url: log.at?.url ?? defaultURL,
-  }));
 }
 
 function wrapResponse(

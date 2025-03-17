@@ -20,6 +20,7 @@ import {
 import type {Connection, InfoConnection} from './connection';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime} from 'luxon';
+import type {LogMessage} from '../lang';
 
 export function wrapLegacyInfoConnection(
   connection: LegacyInfoConnection
@@ -237,4 +238,27 @@ export function wrapResult(result: Result): Malloy.Result {
     annotations: annotations.length > 0 ? annotations : undefined,
     query_timezone: result.data.field.queryTimezone,
   };
+}
+
+export const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
+  start: {
+    line: 0,
+    character: 0,
+  },
+  end: {
+    line: 0,
+    character: 0,
+  },
+};
+
+export function mapLogs(
+  logs: LogMessage[],
+  defaultURL: string
+): Malloy.LogMessage[] {
+  return logs.map(log => ({
+    severity: log.severity,
+    message: log.message,
+    range: log.at?.range ?? DEFAULT_LOG_RANGE,
+    url: log.at?.url ?? defaultURL,
+  }));
 }
