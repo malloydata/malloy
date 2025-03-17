@@ -480,7 +480,7 @@ function limitToFragments(limits: Malloy.Limit[]): Fragment[] {
 }
 
 function whereToFragments(where: Malloy.Where[]): Fragment[] {
-  return formatBlock('where', where.map(whereItemToFragments));
+  return formatBlock('where', where.map(whereItemToFragments), ',');
 }
 
 const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly

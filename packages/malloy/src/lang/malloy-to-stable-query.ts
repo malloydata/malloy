@@ -637,10 +637,78 @@ export class MalloyToQuery
     return null;
   }
 
-  getWhere(_whereCx: parse.WhereStatementContext): Malloy.Where[] | null {
-    // const exprs = whereCx.filterClauseList().fieldExpr();
-    // TODO get filter expr...
+  stripQuote(s: string, q: string): string {
+    return s.slice(s.indexOf(q) + q.length, s.lastIndexOf(q));
+  }
+
+  getFilterString(cx: parse.FilterStringContext): string | null {
+    const trip = cx.tripFilterString();
+    const tick = cx.tickFilterString();
+    if (trip) {
+      const bq3 = trip.BQ3_FILTER();
+      const dq3 = trip.DQ3_FILTER();
+      const sq3 = trip.SQ3_FILTER();
+      if (bq3) {
+        return this.stripQuote(bq3.text, '```');
+      } else if (dq3) {
+        return this.stripQuote(dq3.text, '"""');
+      } else if (sq3) {
+        return this.stripQuote(sq3.text, "'''");
+      }
+    } else if (tick) {
+      const bq = tick.BQ_FILTER();
+      const dq = tick.DQ_FILTER();
+      const sq = tick.SQ_FILTER();
+      if (bq) {
+        return this.stripQuote(bq.text, '`');
+      } else if (dq) {
+        return this.stripQuote(dq.text, '"');
+      } else if (sq) {
+        return this.stripQuote(sq.text, "'");
+      }
+    }
     return null;
+  }
+
+  getWhereExpr(cx: parse.FieldExprContext): Malloy.Where | null {
+    if (cx instanceof parse.ExprCompareContext) {
+      if (cx.compareOp().MATCH()) {
+        const lhs = cx.fieldExpr()[0];
+        const rhs = cx.fieldExpr()[1];
+        if (
+          lhs instanceof parse.ExprFieldPathContext &&
+          rhs instanceof parse.ExprLiteralContext
+        ) {
+          const {path, name} = this.getFieldPath(lhs.fieldPath());
+          const literal = rhs.literal();
+          if (literal instanceof parse.FilterString_stubContext) {
+            const stringFilter = this.getFilterString(literal.filterString());
+            if (stringFilter === null) return null;
+            return {
+              filter: {
+                kind: 'filter_string',
+                field_reference: {
+                  name,
+                  path,
+                },
+                filter: stringFilter,
+              },
+            };
+          }
+        }
+      }
+    }
+    this.notAllowed(cx, 'Filters other than comparisons with filter strings');
+    return null;
+  }
+
+  getWhere(whereCx: parse.WhereStatementContext): Malloy.Where[] | null {
+    const exprs = whereCx.filterClauseList().fieldExpr();
+    const where = exprs.map(exprCx => this.getWhereExpr(exprCx));
+    if (where.some(w => w === null)) {
+      return null;
+    }
+    return where as Malloy.Where[];
   }
 
   protected combineAnnotations(
