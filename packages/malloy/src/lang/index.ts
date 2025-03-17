@@ -34,3 +34,4 @@ export type {ExploreClauseRef} from './parse-tree-walkers/explore-query-walker';
 export type {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
 export type {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
 export type {LogMessage} from './parse-log';
+export {malloyToQuery} from './malloy-to-stable-query';
