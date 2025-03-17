@@ -50,6 +50,7 @@ describe('expressions', () => {
       expect(tQuery).toBeDefined();
       const tField = getQueryFieldDef(tQuery!.pipeline[0], 'tts');
       expect(tField['timeframe']).toEqual(unit);
+      expect(`now.${unit}`).compilesTo(`{timeTrunc-${unit} {now}}`);
     });
 
     const dateTF = [['week', 'month', 'quarter', 'year']];
@@ -69,9 +70,6 @@ describe('expressions', () => {
     });
     test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
-    });
-    test('now.day', () => {
-      expect(expr`now.day`).compilesTo('now');
     });
   });
 
