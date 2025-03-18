@@ -526,6 +526,17 @@ describe('source:', () => {
         expect(foundAstr).toBeUndefined();
       }
     });
+    test('except quoted', () => {
+      const noAstr = new TestTranslator(
+        'source: c is a extend { except: `astr` }'
+      );
+      expect(noAstr).toTranslate();
+      const c = noAstr.getSourceDef('c');
+      if (c) {
+        const foundAstr = c.fields.find(f => f.name === 'astr');
+        expect(foundAstr).toBeUndefined();
+      }
+    });
     test('except multi', () => {
       expect('source: c is a extend { except: astr, af }').toTranslate();
     });
