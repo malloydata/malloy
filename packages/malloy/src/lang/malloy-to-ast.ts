@@ -1991,7 +1991,7 @@ export class MalloyToAST
       if (fieldNameCx) {
         return this.astAt(
           new ast.AccessModifierFieldReference([
-            this.astAt(new ast.FieldName(fcx.text), fcx),
+            this.astAt(this.getFieldName(fieldNameCx), fcx),
           ]),
           fieldNameCx
         );
