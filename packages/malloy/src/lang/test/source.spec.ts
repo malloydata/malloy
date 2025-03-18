@@ -468,11 +468,29 @@ describe('source:', () => {
           run: c -> { group_by: ${'af'} }
         `).toLog(errorMessage("'af' is private"));
       });
-      test('include and except list', () => {
+      test('include and except quoted', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
           source: c is a include {
-            ai
+            *
+            except: \`astr\`
+          }
+          run: c -> { group_by: astr }
+        `).toLog(errorMessage("'astr' is not defined"));
+      });
+      test('include and private quoted', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            private: \`astr\`
+          }
+          run: c -> { group_by: astr }
+        `).toLog(errorMessage("'astr' is private"));
+      });
+      test('include with except', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
             except: astr
           }
         `).toLog(
