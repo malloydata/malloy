@@ -487,10 +487,11 @@ describe('source:', () => {
           run: c -> { group_by: astr }
         `).toLog(errorMessage("'astr' is private"));
       });
-      test('include with except', () => {
+      test('include and except list', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
           source: c is a include {
+            ai
             except: astr
           }
         `).toLog(
