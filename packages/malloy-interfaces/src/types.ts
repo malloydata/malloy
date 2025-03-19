@@ -203,6 +203,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'compiled_models': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
+      },
     },
   },
   'CompileQueryRequest': {
@@ -244,6 +249,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'CompilerNeeds',
         'optional': true,
         'array': false,
+      },
+      'compiled_models': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
       },
     },
   },
@@ -291,6 +301,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'CompilerNeeds',
         'optional': true,
         'array': false,
+      },
+      'compiled_models': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
       },
     },
   },
@@ -1113,10 +1128,20 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'logs': {
+        'type': 'LogMessage',
+        'array': true,
+        'optional': true,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
         'array': false,
+      },
+      'compiled_models': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
       },
     },
   },
@@ -1159,6 +1184,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'CompilerNeeds',
         'optional': true,
         'array': false,
+      },
+      'compiled_models': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
       },
     },
   },
@@ -1627,6 +1657,7 @@ export type CompileModelResponse = {
   model?: ModelInfo;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  compiled_models?: Array<Translation>;
 };
 
 export type CompileQueryRequest = {
@@ -1639,6 +1670,7 @@ export type CompileQueryResponse = {
   result?: Result;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  compiled_models?: Array<Translation>;
 };
 
 export type CompileSourceRequest = {
@@ -1652,6 +1684,7 @@ export type CompileSourceResponse = {
   source?: SourceInfo;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  compiled_models?: Array<Translation>;
 };
 
 export type CompilerNeeds = {
@@ -2007,7 +2040,9 @@ export type RunIndexQueryRequest = {
 
 export type RunIndexQueryResponse = {
   result?: Result;
+  logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  compiled_models?: Array<Translation>;
 };
 
 export type RunQueryRequest = {
@@ -2020,6 +2055,7 @@ export type RunQueryResponse = {
   result?: Result;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  compiled_models?: Array<Translation>;
 };
 
 export type SQLNativeCell = {

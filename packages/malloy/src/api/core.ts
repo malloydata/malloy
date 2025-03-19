@@ -222,18 +222,21 @@ export type CompileResponse =
       modelDef: ModelDef;
       compilerNeeds?: undefined;
       logs?: LogMessage[];
+      newlyTranslatedModels?: Malloy.Translation[];
     }
   | {
       model?: undefined;
       modelDef?: undefined;
       compilerNeeds: Malloy.CompilerNeeds;
       logs?: LogMessage[];
+      newlyTranslatedModels?: Malloy.Translation[];
     }
   | {
       model?: undefined;
       modelDef?: undefined;
       compilerNeeds?: undefined;
       logs: LogMessage[];
+      newlyTranslatedModels?: Malloy.Translation[];
     };
 
 export function compileQuery(
@@ -367,9 +370,22 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
   if (result.final) {
     state.done = true;
     if (result.modelDef) {
+      const newlyTranslatedModels: Malloy.Translation[] = [
+        {
+          url: state.translator.sourceURL,
+          compiled_model_json: JSON.stringify(result.modelDef),
+        },
+      ];
+      for (const model of state.translator.newlyTranslatedDependencies()) {
+        newlyTranslatedModels.push({
+          url: model.url,
+          compiled_model_json: JSON.stringify(model.modelDef),
+        });
+      }
       return {
         model: modelDefToModelInfo(result.modelDef),
         modelDef: result.modelDef,
+        newlyTranslatedModels,
       };
     } else {
       if (result.problems === undefined || result.problems.length === 0) {
@@ -397,7 +413,11 @@ function wrapResponse(
   if (response.compilerNeeds) {
     return {compiler_needs: response.compilerNeeds, logs};
   } else {
-    return {model: response.model, logs};
+    return {
+      model: response.model,
+      logs,
+      compiled_models: response.newlyTranslatedModels,
+    };
   }
 }
 

@@ -398,4 +398,142 @@ ORDER BY 1 asc NULLS LAST
       expect(result).toMatchObject(expected);
     });
   });
+  describe('cached models', () => {
+    test('set and then use a cached model', () => {
+      let result = compileModel({
+        model_url: 'file://ext.malloy/',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://base.malloy/',
+              contents: "source: flights is connection.table('flights')",
+            },
+            {
+              url: 'file://ext.malloy/',
+              contents: `
+                import { flights } from 'file://base.malloy/'
+                source: flights_ext is flights extend { dimension: a is 1 }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      let expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights_ext',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'a',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+      expect(result.compiled_models).toBeDefined();
+      const extTranslation = result.compiled_models?.find(
+        t => t.url === 'file://ext.malloy/'
+      );
+      const baseTranslation = result.compiled_models?.find(
+        t => t.url === 'file://base.malloy/'
+      );
+      expect(extTranslation).toBeDefined();
+      expect(baseTranslation).toBeDefined();
+      result = compileModel({
+        model_url: 'file://ext_ext.malloy/',
+        compiler_needs: {
+          translations: [extTranslation!, baseTranslation!],
+          files: [
+            {
+              url: 'file://ext_ext.malloy/',
+              contents: `
+                import { flights } from 'file://base.malloy'
+                import { flights_ext } from 'file://ext.malloy'
+                source: flights_ext_ext is flights_ext extend { dimension: b is 1 }
+                source: flights_ext_2 is flights extend { dimension: c is 1 }
+              `,
+            },
+          ],
+        },
+      });
+      expected = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights_ext_ext',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'a',
+                    type: {kind: 'number_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'b',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+            {
+              kind: 'source',
+              name: 'flights_ext',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'c',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+    });
+  });
 });
