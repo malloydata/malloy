@@ -1461,6 +1461,88 @@ describe('query builder', () => {
         `,
       });
     });
+
+    test('repeatedly add a tag property to a query', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.setTagProperty(['a']);
+        q.setTagProperty(['b']);
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          annotations: [{value: '# a b\n'}],
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: dedent`
+             # a b
+             run: flights -> { }`,
+      });
+    });
+
+    test('remove then add a tag property to a query', () => {
+      const from: Malloy.Query = {
+        annotations: [{value: '# a\n'}],
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.removeTagProperty(['a']);
+        q.setTagProperty(['b']);
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          annotations: [{value: '# b\n'}],
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: dedent`
+             # b
+             run: flights -> { }`,
+      });
+    });
+
     test('clear an inherited tag', () => {
       const from: Malloy.Query = {
         definition: {
