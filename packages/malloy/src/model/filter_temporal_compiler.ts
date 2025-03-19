@@ -209,7 +209,7 @@ export class TemporalFilterCompiler {
     return {
       node: 'now',
       typeDef: {type: 'timestamp'},
-      sql: this.d.sqlNowExpr(),
+      sql: this.d.mockableNow(),
     };
   }
 

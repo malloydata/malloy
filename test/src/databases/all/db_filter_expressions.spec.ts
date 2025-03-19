@@ -360,6 +360,15 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const n = {node, typeDef, literal: t};
       return db.dialect.sqlLiteralTime({}, n);
     }
+
+    /*
+     * The filter compiler uses dialect.mockableNow to generate the sql for "now" used
+     * as the basis for all relative filter. Mocking "now" to a known time makes
+     * it possible to write tests for the majority of interesting filter expressions
+     * which are some offset from now. I need to be taught a better way to do this.
+     */
+    afterAll(() => db.dialect.mockNow());
+
     const times = db.loadModel(`
       source: times is ${dbName}.sql("""
         SELECT ${ts('2001-01-02 03:04:05')} as ${q`t`}, 'y2k' as ${q`n`}
@@ -414,6 +423,33 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           where: t ~ f'2000-12-31-WK'
           select: n; order_by: n asc
         }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('today', async () => {
+      db.dialect.mockNow('2001-01-02 12:00:00');
+      await expect(`
+        #! test.debug
+        run: times -> {
+        where: t ~ f'today',
+        select: n; order_by: n asc
+      }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('yesterday', async () => {
+      db.dialect.mockNow('2001-01-03 12:00:00');
+      await expect(`
+        #! test.debug
+        run: times -> {
+        where: t ~ f'yesterday',
+        select: n; order_by: n asc
+      }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('tomorrow', async () => {
+      db.dialect.mockNow('2001-01-01 12:00:00');
+      await expect(`
+        #! test.debug
+        run: times -> {
+        where: t ~ f'tomorrow',
+        select: n; order_by: n asc
+      }`).malloyResultMatches(times, [{n: 'y2k'}]);
     });
   });
   // mtoy todo -- mock TemporalFilterCompiler.nowExpr to test all the relative computations
