@@ -61,6 +61,8 @@ jobs:
           git push origin v$VERSION
           # Bump version
           npx lerna version patch --yes --no-push --no-git-tag-version
+          # Fix up package-lock.json
+          npm install
           npm run generate-version-file --workspace=packages/malloy
           VERSION=$(jq -r .version ./lerna.json)
           echo Updating to $VERSION
