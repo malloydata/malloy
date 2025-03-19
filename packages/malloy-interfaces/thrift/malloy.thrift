@@ -600,6 +600,8 @@ struct CompileModelResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  // TODO naming
+  10: optional list<Translation> compiled_models,
 }
 
 // Given the URL to a model and a name of a queryable thing, get a StableSourceDef
@@ -617,6 +619,8 @@ struct CompileSourceResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  // TODO naming
+  10: optional list<Translation> compiled_models,
 }
 
 // Given a StableQueryDef and the URL to a model, run it and return a StableResult
@@ -633,6 +637,8 @@ struct RunQueryResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  // TODO naming
+  10: optional list<Translation> compiled_models,
 }
 
 // Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
@@ -649,6 +655,8 @@ struct CompileQueryResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  // TODO naming
+  10: optional list<Translation> compiled_models,
 }
 
 // Given a URL to a model and the name of a source, run the indexing query
@@ -663,5 +671,8 @@ struct RunIndexQueryRequest {
 struct RunIndexQueryResponse {
   1: optional Result result,
 
+  8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  // TODO naming
+  10: optional list<Translation> compiled_models,
 }
