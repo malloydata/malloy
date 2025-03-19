@@ -387,6 +387,34 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: n; order_by: n asc
         }`).malloyResultMatches(times, [{n: 'y2k'}]);
     });
+    test('hour', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2001-01-02 03'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('minute', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2001-01-02 03:04'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('quarter', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2001-Q1'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('week', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2000-12-31-WK'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
   });
   // mtoy todo -- mock TemporalFilterCompiler.nowExpr to test all the relative computations
 });

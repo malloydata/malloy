@@ -22,22 +22,29 @@ export function run_parser(
     }
     return {parsed: null, log: []};
   } catch (e) {
-    const token = e.token;
-    const message = e.message;
-    const expected = message
-      .match(/(?<=A ).*(?= based on:)/g)
-      .map(s => s.replace(/\s+token/i, ''));
-    let newMessage = `Unexpected ${token.type} token "${token.value}"`;
-    if (expected && expected.length) {
-      newMessage += ` Tokens expected: ${[...new Set(expected)]}`;
+    let newMessage = e.message;
+    let col = 1;
+    let len = src.length;
+    if (e.token) {
+      const token = e.token;
+      col = token.col;
+      len = token.length;
+      const message = e.message;
+      const expected = message
+        .match(/(?<=A ).*(?= based on:)/g)
+        .map(s => s.replace(/\s+token/i, ''));
+      newMessage = `Unexpected ${token.type} token "${token.value}"`;
+      if (expected && expected.length) {
+        newMessage += ` Tokens expected: ${[...new Set(expected)]}`;
+      }
     }
     return {
       parsed: null,
       log: [
         {
           message: newMessage,
-          startIndex: token.col - 1,
-          endIndex: token.col - 1 + token.text.length - 1,
+          startIndex: col - 1,
+          endIndex: col - 1 + len - 1,
           severity: 'error',
         },
       ],

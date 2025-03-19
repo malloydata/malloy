@@ -5,25 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   Moment,
   TemporalClause,
   TemporalLiteral,
   TemporalUnit,
 } from '@malloydata/malloy-filter';
-import {Dialect} from '../dialect';
-import {
+import type {Dialect} from '../dialect';
+import type {
   TimeLiteralNode,
-  isTimestampUnit,
   TimeDeltaExpr,
   Expr,
   TimeTruncExpr,
   NowNode,
   NumberLiteralNode,
-  mkTemporal,
   TimestampUnit,
   TimeExtractExpr,
 } from './malloy_types';
+import {mkTemporal} from './malloy_types';
+import {DateTime as LuxonDateTime} from 'luxon';
 
 /*
  * The compilation from Expr to SQL string walks the expression tree, and I thought it was cute
@@ -43,6 +43,13 @@ interface MomentIs {
   begin: Translated<Expr>;
   end: string;
 }
+
+const fYear = 'yyyy';
+const fMonth = `${fYear}-LL`;
+const fDay = `${fMonth}-dd`;
+const fHour = `${fDay} HH`;
+const fMinute = `${fHour}:mm`;
+const fTimestamp = `${fMinute}:ss`;
 
 /**
  * I felt like there was enough "helpful functions needed to make everything
@@ -124,42 +131,72 @@ export class TemporalFilterCompiler {
     }
   }
 
-  private expandLiteral(tl: TemporalLiteral): Translated<TimeLiteralNode> {
+  private expandLiteral(tl: TemporalLiteral): MomentIs {
     let literal = tl.literal;
     switch (tl.units) {
-      case 'year':
-        literal += '-01-01 00:00:00';
-        break;
-      case 'month':
-        literal += '-01 00:00:00';
-        break;
-      case 'day':
-        literal += ' 00:00:00';
-        break;
-      case 'hour':
-        literal += ':00:00';
-        break;
-      case 'minute':
-        literal += ':00';
-        break;
-      case 'second':
-        break;
-      case 'week':
-        literal = literal.slice(0, 10);
-        break;
+      case 'year': {
+        const y = LuxonDateTime.fromFormat(literal, fYear);
+        const begin = this.literalNode(y.toFormat(fTimestamp));
+        const next = y.plus({year: 1});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
+      }
+      case 'month': {
+        const yyyymm = LuxonDateTime.fromFormat(literal, fMonth);
+        const begin = this.literalNode(yyyymm.toFormat(fTimestamp));
+        const next = yyyymm.plus({month: 1});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
+      }
+      case 'day': {
+        const yyyymmdd = LuxonDateTime.fromFormat(literal, fDay);
+        const begin = this.literalNode(yyyymmdd.toFormat(fTimestamp));
+        const next = yyyymmdd.plus({day: 1});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
+      }
+      case 'hour': {
+        const ymdh = LuxonDateTime.fromFormat(literal, fHour);
+        const begin = this.literalNode(ymdh.toFormat(fTimestamp));
+        const next = ymdh.plus({hour: 1});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
+      }
+      case 'minute': {
+        const ymdhm = LuxonDateTime.fromFormat(literal, fMinute);
+        const begin = this.literalNode(ymdhm.toFormat(fTimestamp));
+        const next = ymdhm.plus({minute: 1});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
+      }
+      case 'week': {
+        const ymd_wk = LuxonDateTime.fromFormat(literal.slice(0, 10), fDay)
+          .minus({day: 1}) // Luxon uses monday weeks
+          .startOf('week')
+          .plus({day: 1});
+        const begin = this.literalNode(ymd_wk.toFormat(fTimestamp));
+        const next = ymd_wk.plus({days: 8});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
+      }
       case 'quarter': {
         const yyyy = literal.slice(0, 4);
         const q = literal.slice(6);
         if (q === '1') {
-          literal = `${yyyy}-01-01`;
+          literal = `${yyyy}-01-01 00:00:00`;
         } else if (q === '2') {
-          literal = `${yyyy}-03-01`;
+          literal = `${yyyy}-03-01 00:00:00`;
         } else if (q === '3') {
-          literal = `${yyyy}-06-01`;
+          literal = `${yyyy}-06-01 00:00:00`;
+        } else {
+          literal = `${yyyy}-09-01 00:00:00`;
         }
-        literal = `${yyyy}-09-01`;
+        const begin = this.literalNode(literal);
+        const ymd_q = LuxonDateTime.fromFormat(literal, fTimestamp);
+        const next = ymd_q.plus({months: 3});
+        return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
       }
+      case undefined:
+      case 'second':
+        return {begin: this.literalNode(literal), end: literal};
     }
+  }
+
+  private literalNode(literal: string): Translated<TimeLiteralNode> {
     const literalNode: TimeLiteralNode = {
       node: 'timeLiteral',
       typeDef: {type: 'timestamp'},
@@ -246,17 +283,8 @@ export class TemporalFilterCompiler {
         const now = this.nowExpr();
         return {begin: now, end: now.sql};
       }
-      case 'literal': {
-        // begins on the literal, ends on the literal + 1 unit
-        // mtoy todo get the literal to timestamp code from the translator ...
-        const beginLiteral = this.expandLiteral(m);
-        const begin = beginLiteral.sql;
-        let end = begin;
-        if (m.units && isTimestampUnit(m.units)) {
-          end = this.delta(beginLiteral, '+', '1', m.units).sql;
-        }
-        return {begin: beginLiteral, end};
-      }
+      case 'literal':
+        return this.expandLiteral(m);
       case 'ago':
       case 'from_now': {
         // mtoy todo just pretending all units work, they don't

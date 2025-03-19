@@ -63,6 +63,7 @@ const temporal_lexer = moo.compile({
   literal: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d(?::\d\d(?:[.,]\d*))/,
   lit_week: /\d\d\d\d-\d\d-\d\d-[Ww][Kk]/,
   lit_quarter: /\d\d\d\d-[qQ][1234]/,
+  lit_min: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d/,
   lit_hour: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d/,
   lit_day: /\d\d\d\d-\d\d-\d\d/,
   lit_month: /\d\d\d\d-\d\d/,
@@ -132,6 +133,7 @@ moment ->
 timeLiteral ->
     %literal {% ([l]) => timeLiteral(l.text) %}
   | %lit_day {% ([l]) => timeLiteral(l.text, 'day') %}
+  | %lit_min {% ([l]) => timeLiteral(l.text, 'minute') %}
   | %lit_hour {% ([l]) => timeLiteral(l.text, 'hour') %}
   | %lit_month {% ([l]) => timeLiteral(l.text, 'month') %}
   | %lit_quarter {% ([l]) => timeLiteral(l.text, 'quarter') %}
