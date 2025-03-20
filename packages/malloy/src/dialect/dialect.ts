@@ -481,25 +481,4 @@ export abstract class Dialect {
     const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
     return escapeClause ? `${compare} ESCAPE '^'` : compare;
   }
-
-  /**
-   * The filter expression tests will set this, and the filter compiler will check this
-   * instead of sqlNowExpr. Please teach me a better way to do this.
-   */
-  mockNow(s?: string) {
-    this._mockNow = s
-      ? this.sqlLiteralTime(
-          {},
-          {
-            node: 'timeLiteral',
-            literal: s,
-            typeDef: {type: 'timestamp'},
-          }
-        )
-      : s;
-  }
-  _mockNow?: string;
-  mockableNow(): string {
-    return this._mockNow ?? this.sqlNowExpr();
-  }
 }

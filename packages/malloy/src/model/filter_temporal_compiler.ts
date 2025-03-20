@@ -165,12 +165,16 @@ export class TemporalFilterCompiler {
         return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
       }
       case 'week': {
-        const ymd_wk = LuxonDateTime.fromFormat(literal.slice(0, 10), fDay)
-          .minus({day: 1}) // Luxon uses monday weeks
-          .startOf('week')
-          .plus({day: 1});
+        const a = LuxonDateTime.fromFormat(literal.slice(0, 10), fDay);
+        // Luxon uses monday weeks, so look for the Monday week which contains
+        // the day after, which for all days except Sunday is the same as
+        // the sunday week, and on Sunday it is this monday week instead of
+        // last monday week.
+        const mondayWeek = a.plus({day: 1}).startOf('week');
+        // Now back that up by one day and we have the Sunday week
+        const ymd_wk = mondayWeek.minus({day: 1});
         const begin = this.literalNode(ymd_wk.toFormat(fTimestamp));
-        const next = ymd_wk.plus({days: 8});
+        const next = ymd_wk.plus({days: 7});
         return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
       }
       case 'quarter': {
@@ -209,7 +213,7 @@ export class TemporalFilterCompiler {
     return {
       node: 'now',
       typeDef: {type: 'timestamp'},
-      sql: this.d.mockableNow(),
+      sql: this.d.sqlNowExpr(),
     };
   }
 
@@ -255,20 +259,20 @@ export class TemporalFilterCompiler {
 
   private thisUnit(units: TimestampUnit): MomentIs {
     const thisUnit = this.nowDot(units);
-    const nextUnit = this.delta(thisUnit, '+', '1', 'day');
+    const nextUnit = this.delta(thisUnit, '+', '1', units);
     return {begin: thisUnit, end: nextUnit.sql};
   }
 
   private lastUnit(units: TimestampUnit): MomentIs {
     const thisUnit = this.nowDot(units);
-    const lastUnit = this.delta(thisUnit, '-', '1', 'day');
+    const lastUnit = this.delta(thisUnit, '-', '1', units);
     return {begin: lastUnit, end: thisUnit.sql};
   }
 
   private nextUnit(units: TimestampUnit): MomentIs {
     const thisUnit = this.nowDot(units);
-    const nextUnit = this.delta(thisUnit, '+', '1', 'day');
-    const next2Unit = this.delta(thisUnit, '+', '2', 'day');
+    const nextUnit = this.delta(thisUnit, '+', '1', units);
+    const next2Unit = this.delta(thisUnit, '+', '2', units);
     return {begin: nextUnit, end: next2Unit.sql};
   }
 
@@ -338,17 +342,19 @@ export class TemporalFilterCompiler {
       case 'saturday':
       case 'sunday': {
         const destDay = [
+          'sunday',
           'monday',
           'tuesday',
           'wednesday',
           'thursday',
           'friday',
           'saturday',
-          'sunday',
         ].indexOf(m.moment);
-        const dow = this.dayofWeek(this.nowExpr());
+        const dow = ` -- <dow>\n${
+          this.dayofWeek(this.nowExpr()).sql
+        } -- </dow>\n`;
         if (m.which === 'next') {
-          const nForwards = this.mod7(`${destDay}-${dow.sql}+7`);
+          const nForwards = this.mod7(`${destDay}-${dow}+7`);
           const begin = this.delta(
             this.thisUnit('day').begin,
             '+',
@@ -363,15 +369,28 @@ export class TemporalFilterCompiler {
           );
           return {begin, end: end.sql};
         }
-        const nBack = this.mod7(`${dow.sql}-${destDay}+7`);
+        // ok dow is 0-6, the day of week we are at
+        //
+        // if dow is tuesday (3), then the seven "last xday" days are ...
+        //
+        // 0- sunday    2 days ago
+        // 1- monday    1 days ago -- (7 + (2-1)) == 8 %7 == 1
+        // 2- tuesday   0 day ago
+        // 3- wednesday 6 days ago -- (7 +(2-3)) == 6 %7 == 6
+        // 4- thursday  5 days ago
+        // 5- friday    4 days ago
+        // 6- saturday  3 days ago
+        // (7 + (dstDay - dow)) % 7
+        const nBack =
+          '-- nback[\n' + this.mod7(`${dow}-${destDay}+6`) + ' -- nback]>\n';
         const begin = this.delta(this.thisUnit('day').begin, '-', nBack, 'day');
-        const end = this.delta(
-          this.thisUnit('day').begin,
-          '-',
-          `${nBack}-1`,
-          'day'
-        );
-        return {begin, end: end.sql};
+        begin.sql = `-- <begin>\n${begin.sql} -- </begin>\n`;
+        const end =
+          '-- <end>\n' +
+          this.delta(this.thisUnit('day').begin, '-', `(${nBack})-1`, 'day')
+            .sql +
+          '-- </end>\n';
+        return {begin, end: end};
       }
     }
   }
