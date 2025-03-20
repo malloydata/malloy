@@ -8,26 +8,26 @@
 import type {
   FilterParserResponse,
   Moment,
-  TemporalClause,
+  TemporalFilter,
   Duration,
-} from './filter_clause';
-import {isTemporalClause} from './filter_clause';
+} from './filter_interface';
+import {isTemporalFilter} from './filter_interface';
 import ftemporal_grammar from './lib/ftemporal_parser';
 import * as nearley from 'nearley';
 import {run_parser} from './nearley_parse';
 
 export const TemporalFilterExpression = {
-  parse(src: string): FilterParserResponse<TemporalClause> {
+  parse(src: string): FilterParserResponse<TemporalFilter> {
     const ftemporal_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(ftemporal_grammar)
     );
     const parse_result = run_parser(src, ftemporal_parser);
-    if (parse_result.parsed && isTemporalClause(parse_result.parsed)) {
+    if (parse_result.parsed && isTemporalFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }
     return {parsed: null, log: parse_result.log};
   },
-  unparse(tc: TemporalClause | null): string {
+  unparse(tc: TemporalFilter | null): string {
     if (tc === null) {
       return '';
     }
@@ -67,7 +67,7 @@ export const TemporalFilterExpression = {
   },
 };
 
-function notStr(tc: TemporalClause, s: string): string {
+function notStr(tc: TemporalFilter, s: string): string {
   if ('not' in tc && tc.not) {
     return 'not ' + s;
   }

@@ -7,7 +7,7 @@
 
 import type {
   Moment,
-  TemporalClause,
+  TemporalFilter,
   TemporalLiteral,
   TemporalUnit,
 } from '@malloydata/malloy-filter';
@@ -68,7 +68,7 @@ export class TemporalFilterCompiler {
     this.d = dialect;
   }
 
-  compile(tc: TemporalClause): string {
+  compile(tc: TemporalFilter): string {
     const x = this.expr;
     switch (tc.operator) {
       case 'after':

@@ -6,18 +6,18 @@
  */
 
 import type {Parser} from 'nearley';
-import type {ClauseBase, FilterLog} from './filter_clause';
-import {isClauseBase} from './filter_clause';
+import type {FilterExpressionBase, FilterLog} from './filter_interface';
+import {isFilterExpression} from './filter_interface';
 
 export function run_parser(
   src: string,
   parser: Parser
-): {parsed: ClauseBase | null; log: FilterLog[]} {
+): {parsed: FilterExpressionBase | null; log: FilterLog[]} {
   try {
     parser.feed(src);
     const results = parser.finish();
     const expr = results[0];
-    if (isClauseBase(expr)) {
+    if (isFilterExpression(expr)) {
       return {parsed: expr, log: []};
     }
     return {parsed: null, log: []};

@@ -9,10 +9,10 @@ import type {Expr} from '../../model/malloy_types';
 import {exprHasE, exprHasKids, exprIsLeaf} from '../../model/malloy_types';
 
 import type {
-  BooleanClause,
-  NumberClause,
-  StringClause,
-  TemporalClause,
+  BooleanFilter,
+  NumberFilter,
+  StringFilter,
+  TemporalFilter,
 } from '@malloydata/malloy-filter';
 import {
   BooleanFilterExpression,
@@ -113,20 +113,20 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
       let filterText = '';
       switch (e.dataType) {
         case 'string':
-          filterText = StringFilterExpression.unparse(e.filter as StringClause);
+          filterText = StringFilterExpression.unparse(e.filter as StringFilter);
           break;
         case 'number':
-          filterText = NumberFilterExpression.unparse(e.filter as NumberClause);
+          filterText = NumberFilterExpression.unparse(e.filter as NumberFilter);
           break;
         case 'date':
         case 'timestamp':
           filterText = TemporalFilterExpression.unparse(
-            e.filter as TemporalClause
+            e.filter as TemporalFilter
           );
           break;
         case 'boolean':
           filterText = BooleanFilterExpression.unparse(
-            e.filter as BooleanClause
+            e.filter as BooleanFilter
           );
           break;
         default:

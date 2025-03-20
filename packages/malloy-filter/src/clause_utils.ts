@@ -8,26 +8,26 @@
 import type {
   ChainOp,
   NumberRange,
-  StringClause,
-  NumberClause,
-  ClauseBase,
+  StringFilter,
+  NumberFilter,
+  FilterExpressionBase,
   TemporalUnit,
   TemporalLiteral,
-  TemporalClause,
-} from './filter_clause';
+  TemporalFilter,
+} from './filter_interface';
 import {
-  isNumberClause,
-  isStringClause,
+  isNumberFilter,
+  isStringFilter,
   isStringCondition,
-  isTemporalClause,
-} from './filter_clause';
+  isTemporalFilter,
+} from './filter_interface';
 
 /**
  * If there is a minus token, add "not:true" to the clause
  */
 export function maybeNot(data: (Object | undefined)[]) {
   const [isMinus, op] = data;
-  if (isMinus && op && isStringClause(op)) {
+  if (isMinus && op && isStringFilter(op)) {
     return {...op, not: true};
   }
   return op;
@@ -98,7 +98,7 @@ function describeString(s: string) {
  * Generate the correct match clause operator based on the contents
  * of the match string.
  */
-export function matchOp(matchSrc: string): StringClause {
+export function matchOp(matchSrc: string): StringFilter {
   let matchTxt = matchSrc.trimStart();
   const {hasLike, percentEnd, percentStart, endSpace} =
     describeString(matchTxt);
@@ -143,7 +143,10 @@ export function matchOp(matchSrc: string): StringClause {
   return {operator: '=', values: [unescape(matchTxt)]};
 }
 
-function sameAs<T extends ClauseBase>(a: T, b: ClauseBase): b is T {
+function sameAs<T extends FilterExpressionBase>(
+  a: T,
+  b: FilterExpressionBase
+): b is T {
   return (
     a.operator === b.operator && (a['not'] ?? false) === (b['not'] ?? false)
   );
@@ -153,8 +156,8 @@ export function conjoin(
   left: Object,
   op: string,
   right: Object
-): StringClause | null {
-  if (isStringClause(left) && isStringClause(right)) {
+): StringFilter | null {
+  if (isStringFilter(left) && isStringFilter(right)) {
     if (op === ',') {
       if (left.operator === '~' && sameAs(left, right)) {
         return {
@@ -182,10 +185,10 @@ export function joinNumbers(
   left: Object,
   op: string,
   right: Object
-): NumberClause | null {
-  if (isNumberClause(left) && isNumberClause(right)) {
+): NumberFilter | null {
+  if (isNumberFilter(left) && isNumberFilter(right)) {
     if (op === 'or' && left.operator === '=' && sameAs(left, right)) {
-      const ret: NumberClause = {
+      const ret: NumberFilter = {
         operator: '=',
         values: [...left.values, ...right.values],
       };
@@ -224,7 +227,7 @@ export function mkValues(n: string, nList: string[]) {
 }
 
 export function numNot(op: Object, notToken: unknown) {
-  if (isNumberClause(op) && notToken) {
+  if (isNumberFilter(op) && notToken) {
     if (op.operator === '=') return {operator: '!=', values: op.values};
     if (op.operator === '!=') return {operator: '=', values: op.values};
     return {...op, not: true};
@@ -233,7 +236,7 @@ export function numNot(op: Object, notToken: unknown) {
 }
 
 export function temporalNot(op: Object, notToken: unknown) {
-  if (isTemporalClause(op) && notToken) {
+  if (isTemporalFilter(op) && notToken) {
     return {...op, not: true};
   }
   return op;
@@ -243,8 +246,8 @@ export function joinTemporal(
   left: Object,
   op: string,
   right: Object
-): TemporalClause | null {
-  if (isTemporalClause(left) && isTemporalClause(right)) {
+): TemporalFilter | null {
+  if (isTemporalFilter(left) && isTemporalFilter(right)) {
     // if (
     //   (op === ',' || op === 'or') &&
     //   left.operator === '=' &&

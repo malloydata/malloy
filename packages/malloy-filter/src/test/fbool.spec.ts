@@ -6,7 +6,7 @@
  */
 
 import {diff} from 'jest-diff';
-import type {BooleanClause} from '../filter_clause';
+import type {BooleanFilter} from '../filter_interface';
 import {BooleanFilterExpression} from '../boolean_filter_expression';
 import {inspect} from 'util';
 
@@ -14,7 +14,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      isBooleanFilter(expected: BooleanClause, unparse?: string): R;
+      isBooleanFilter(expected: BooleanFilter, unparse?: string): R;
     }
   }
 }
@@ -22,7 +22,7 @@ declare global {
 expect.extend({
   isBooleanFilter(
     src: string,
-    expectedParse: BooleanClause,
+    expectedParse: BooleanFilter,
     expectedUnparse?: string
   ) {
     const boolC = BooleanFilterExpression.parse(src);

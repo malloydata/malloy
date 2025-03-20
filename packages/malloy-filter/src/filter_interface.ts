@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export interface ClauseBase {
+export interface FilterExpressionBase {
   operator: string;
 }
 
-export function isClauseBase(o: Object): o is ClauseBase {
+export function isFilterExpression(o: Object): o is FilterExpressionBase {
   return 'operator' in o;
 }
 
@@ -17,7 +17,7 @@ interface Negateable {
   not?: boolean;
 }
 
-export interface Null extends ClauseBase, Negateable {
+export interface Null extends FilterExpressionBase, Negateable {
   operator: 'null';
 }
 
@@ -26,66 +26,50 @@ export function isChainOp(s: string): s is ChainOp {
   return ['and', 'or', ','].includes(s);
 }
 
-interface ClauseChain<T> extends ClauseBase {
+interface ClauseChain<T> extends FilterExpressionBase {
   operator: ChainOp;
   members: T[];
 }
 
 type BooleanChainOp = 'and' | 'or';
-export interface BooleanChain<T> extends ClauseBase {
+export interface BooleanChain<T> extends FilterExpressionBase {
   operator: BooleanChainOp;
   members: T[];
 }
 
-interface ClauseGroup<T> extends ClauseBase, Negateable {
+interface ClauseGroup<T> extends FilterExpressionBase, Negateable {
   operator: '()';
   expr: T;
 }
 
 export type StringConditionOperator = 'starts' | 'ends' | 'contains' | '=';
-export function isStringCondition(sc: StringClause): sc is StringCondition {
+export function isStringCondition(sc: StringFilter): sc is StringCondition {
   return ['starts', 'ends', 'contains', '='].includes(sc.operator);
 }
 
-export interface StringCondition extends ClauseBase, Negateable {
+export interface StringCondition extends FilterExpressionBase, Negateable {
   operator: StringConditionOperator;
   values: string[];
 }
 
-export interface StringMatch extends ClauseBase, Negateable {
+export interface StringMatch extends FilterExpressionBase, Negateable {
   operator: '~';
   escaped_values: string[];
 }
 
-export interface StringEmpty extends ClauseBase, Negateable {
+export interface StringEmpty extends FilterExpressionBase, Negateable {
   operator: 'empty';
 }
 
-export type StringClause =
+export type StringFilter =
   | StringCondition
   | StringMatch
   | Null
   | StringEmpty
-  | ClauseChain<StringClause>
-  | ClauseGroup<StringClause>;
+  | ClauseChain<StringFilter>
+  | ClauseGroup<StringFilter>;
 
-export type BooleanOperator = 'true' | 'false' | 'false_or_null';
-
-export interface BooleanCondition extends Negateable {
-  operator: BooleanOperator;
-}
-
-export type BooleanClause = BooleanCondition | Null;
-
-export function isBooleanClause(bc: Object): bc is BooleanClause {
-  return (
-    'operator' in bc &&
-    typeof bc.operator === 'string' &&
-    ['null', 'true', 'false', 'false_or_null'].includes(bc.operator)
-  );
-}
-
-export function isStringClause(sc: Object): sc is StringClause {
+export function isStringFilter(sc: Object): sc is StringFilter {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&
@@ -105,16 +89,32 @@ export function isStringClause(sc: Object): sc is StringClause {
   );
 }
 
+export type BooleanOperator = 'true' | 'false' | 'false_or_null';
+
+export interface BooleanCondition extends Negateable {
+  operator: BooleanOperator;
+}
+
+export type BooleanFilter = BooleanCondition | Null;
+
+export function isBooleanFilter(bc: Object): bc is BooleanFilter {
+  return (
+    'operator' in bc &&
+    typeof bc.operator === 'string' &&
+    ['null', 'true', 'false', 'false_or_null'].includes(bc.operator)
+  );
+}
+
 export type NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<';
 
-export interface NumberCondition extends ClauseBase, Negateable {
+export interface NumberCondition extends FilterExpressionBase, Negateable {
   operator: NumberOperator;
   values: string[];
 }
 
 export type NumberRangeOperator = '<=' | '>=' | '>' | '<';
 
-export interface NumberRange extends ClauseBase, Negateable {
+export interface NumberRange extends FilterExpressionBase, Negateable {
   operator: 'range';
   startOperator: NumberRangeOperator;
   startValue: string;
@@ -122,14 +122,14 @@ export interface NumberRange extends ClauseBase, Negateable {
   endValue: string;
 }
 
-export type NumberClause =
+export type NumberFilter =
   | NumberCondition
   | NumberRange
   | Null
-  | ClauseGroup<NumberClause>
-  | BooleanChain<NumberClause>;
+  | ClauseGroup<NumberFilter>
+  | BooleanChain<NumberFilter>;
 
-export function isNumberClause(sc: Object): sc is NumberClause {
+export function isNumberFilter(sc: Object): sc is NumberFilter {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&
@@ -248,7 +248,7 @@ export interface InMoment extends Negateable {
   in: Moment;
 }
 
-export type TemporalClause =
+export type TemporalFilter =
   | Null
   | Before
   | After
@@ -257,10 +257,10 @@ export type TemporalClause =
   | JustUnits
   | in_last
   | InMoment
-  | BooleanChain<TemporalClause>
-  | ClauseGroup<TemporalClause>;
+  | BooleanChain<TemporalFilter>
+  | ClauseGroup<TemporalFilter>;
 
-export function isTemporalClause(sc: Object): sc is TemporalClause {
+export function isTemporalFilter(sc: Object): sc is TemporalFilter {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&
@@ -292,7 +292,17 @@ export interface FilterLog {
   severity: FilterLogSeverity;
 }
 
-export interface FilterParserResponse<T extends ClauseBase> {
+export interface FilterParserResponse<T extends FilterExpressionBase> {
   parsed: T | null;
   log: FilterLog[];
+}
+
+export type FilterableType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'timestamp'
+  | 'date';
+export function isFilterable(s: string): s is FilterableType {
+  return ['string', 'number', 'boolean', 'timestamp', 'date'].includes(s);
 }

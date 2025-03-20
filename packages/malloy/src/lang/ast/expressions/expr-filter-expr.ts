@@ -11,7 +11,10 @@ import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import type {FilterMatchExpr} from '../../../model';
-import type {FilterParserResponse, ClauseBase} from '@malloydata/malloy-filter';
+import type {
+  FilterParserResponse,
+  FilterExpressionBase,
+} from '@malloydata/malloy-filter';
 import {
   StringFilterExpression,
   BooleanFilterExpression,
@@ -44,7 +47,7 @@ export class ExprFilterExpression extends ExpressionDef {
       if (matchExpr.type === 'error') {
         return matchExpr;
       }
-      let fParse: FilterParserResponse<ClauseBase>;
+      let fParse: FilterParserResponse<FilterExpressionBase>;
       switch (matchExpr.type) {
         case 'string':
           fParse = StringFilterExpression.parse(this.filterText);

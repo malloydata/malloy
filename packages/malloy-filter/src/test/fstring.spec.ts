@@ -8,7 +8,7 @@
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
 import fstring_grammar from '../lib/fexpr_string_parser';
-import type {StringClause} from '../filter_clause';
+import type {StringFilter} from '../filter_interface';
 import {StringFilterExpression} from '../string_filter_expression';
 import {inspect} from 'util';
 
@@ -16,7 +16,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      isStringFilter(expected: StringClause, unparse?: string): R;
+      isStringFilter(expected: StringFilter, unparse?: string): R;
     }
   }
 }
@@ -24,7 +24,7 @@ declare global {
 expect.extend({
   isStringFilter(
     src: string,
-    expectedParse: StringClause,
+    expectedParse: StringFilter,
     expectedUnparse?: string
   ) {
     const fstring_parser = new nearley.Parser(
