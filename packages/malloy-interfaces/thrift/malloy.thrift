@@ -5,13 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// It isn't super clear to me what a '-Info' type object is vs. objects without Info.
+// It would be helpful to make that clear in code comments.
 struct ModelInfo {
-  1: required list<ModelEntryValue> entries,
+  1: required list<ModelEntry> entries,
   2: optional list<Annotation> annotations,
   3: required list<AnonymousQueryInfo> anonymous_queries,
 }
 
-union ModelEntryValue {
+// I wouldn't expect to see a `-Value` suffix on a union.
+union ModelEntry {
   1: required SourceInfo source,
   2: required QueryInfo query,
 }
@@ -67,6 +70,10 @@ struct AnonymousQueryInfo {
 }
 
 struct Location {
+  // The 'Required' field qualifier appears to be deprecated internally:
+  // https://www.internalfb.com/intern/staticdocs/thrift/docs/idl/field-qualifiers/#fields-marked-required
+  // but I don't see the same in external documentation. Probably fine for us, but wanted to make
+  // sure you thought about the forward and backward compatibility concerns.
   1: required string url,
   2: required Range range,
 }
@@ -85,6 +92,8 @@ struct Schema {
   1: required list<FieldInfo> fields,
 }
 
+// Question: Was there any thought given to pre-parsing tag annotations?
+// I assume that would be useful to tools like the Malloy Explorer
 struct Annotation {
   1: required string value,
 }
@@ -123,6 +132,7 @@ enum Relationship {
   CROSS = 3
 }
 
+// Question: Does this not require the source?
 struct JoinInfo {
   1: required string name,
   2: required Schema schema,
@@ -231,9 +241,13 @@ Generate typescript?
     - https://www.internalfb.com/diff/D68557062
 */
 
+// What do you think about renaming this to ViewStatement as we discussed?
+// I'm not opposed to the name 'Operation' but that isn't very consistent with
+// our terminology.
 union ViewOperation {
   1: required GroupBy group_by,
   2: required Aggregate aggregate,
+  // I see inconsistent usage of the 'required' keyword here.
   3: OrderBy order_by,
   4: required Limit limit,
   5: required Where where,
@@ -263,6 +277,9 @@ struct Field {
 }
 
 struct OrderBy {
+    // In the grammar, an order_by: can only be followed by an 'id'.
+    // What is the reason why this is a Reference which contains `path` and `parameters?
+    // The same question applies to most uses of the Reference construct.
   1: required Reference field_reference,
   2: optional OrderByDirection direction,
 }
@@ -330,7 +347,7 @@ struct QueryArrow {
 
 struct QueryRefinement {
   1: required QueryDefinition base,
-  2: required ViewDefinition refinement,
+  2: required ViewDefinition refining_view,
 }
 
 union ViewDefinition {
@@ -340,9 +357,10 @@ union ViewDefinition {
   4: ViewSegment segment,
 }
 
+// We discussed de-duplicating the term 'refinement' to refer only to the operation.
 struct ViewRefinement {
   1: required ViewDefinition base,
-  2: required ViewDefinition refinement,
+  2: required ViewDefinition refining_view,
 }
 
 struct ViewArrow {
@@ -350,6 +368,7 @@ struct ViewArrow {
   2: required ViewDefinition view,
 }
 
+// Did we want to consider calling this a ViewBlock?
 struct ViewSegment {
   1: required list<ViewOperation> operations,
 }
@@ -562,11 +581,13 @@ struct CompilerNeeds {
   5: optional list<Translation> translations,
 }
 
+// Does a DocumentPosition need to differ from a Position?
 struct DocumentPosition {
   1: required i32 line;
   2: required i32 character;
 }
 
+// Does a DocumentRange need to differ from a Range?
 struct DocumentRange {
   1: required DocumentPosition start;
   2: required DocumentPosition end;
@@ -599,6 +620,7 @@ struct CompileModelResponse {
   1: optional ModelInfo model,
 
   8: optional list<LogMessage> logs,
+  // Is there a reason why the compiler_needs are returned back in the response?
   9: optional CompilerNeeds compiler_needs,
 }
 
