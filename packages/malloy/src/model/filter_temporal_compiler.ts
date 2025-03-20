@@ -328,12 +328,6 @@ export class TemporalFilterCompiler {
         return this.lastUnit(m.units);
       case 'next':
         return this.nextUnit(m.units);
-      // ------ mtoy todo implement (next ? last) weekday
-      // daqy of week === 0-6
-      /*
-       * nextDow = (dow(today) + 7) % 7;
-       * next = today + nextDow days;
-       */
       case 'monday':
       case 'tuesday':
       case 'wednesday':
@@ -350,11 +344,9 @@ export class TemporalFilterCompiler {
           'friday',
           'saturday',
         ].indexOf(m.moment);
-        const dow = ` -- <dow>\n${
-          this.dayofWeek(this.nowExpr()).sql
-        } -- </dow>\n`;
+        const dow = this.dayofWeek(this.nowExpr()).sql;
         if (m.which === 'next') {
-          const nForwards = this.mod7(`${destDay}-${dow}+7`);
+          const nForwards = `${this.mod7(`${destDay}-(${dow}-1)+6`)}+1`;
           const begin = this.delta(
             this.thisUnit('day').begin,
             '+',
@@ -367,30 +359,34 @@ export class TemporalFilterCompiler {
             `${nForwards}+1`,
             'day'
           );
+          // console.log(
+          //   `SELECT ${
+          //     this.nowExpr().sql
+          //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nForwards} as nForwards,\n  ${
+          //     begin.sql
+          //   } as begin,\n   ${end.sql} as end`
+          // );
           return {begin, end: end.sql};
         }
-        // ok dow is 0-6, the day of week we are at
-        //
-        // if dow is tuesday (3), then the seven "last xday" days are ...
-        //
-        // 0- sunday    2 days ago
-        // 1- monday    1 days ago -- (7 + (2-1)) == 8 %7 == 1
-        // 2- tuesday   0 day ago
-        // 3- wednesday 6 days ago -- (7 +(2-3)) == 6 %7 == 6
-        // 4- thursday  5 days ago
-        // 5- friday    4 days ago
-        // 6- saturday  3 days ago
-        // (7 + (dstDay - dow)) % 7
-        const nBack =
-          '-- nback[\n' + this.mod7(`${dow}-${destDay}+6`) + ' -- nback]>\n';
+        // dacks back = mod((daw0 - dst) + 6, 7) + 1;
+        // dacks back = mod(((daw - 1) - dst) + 6, 7) + 1;
+        // dacks back = mod(((daw) - dst) + 7, 7) + 1;
+        const nBack = `${this.mod7(`(${dow}-1)-${destDay}+6`)}+1`;
         const begin = this.delta(this.thisUnit('day').begin, '-', nBack, 'day');
-        begin.sql = `-- <begin>\n${begin.sql} -- </begin>\n`;
-        const end =
-          '-- <end>\n' +
-          this.delta(this.thisUnit('day').begin, '-', `(${nBack})-1`, 'day')
-            .sql +
-          '-- </end>\n';
-        return {begin, end: end};
+        const end = this.delta(
+          this.thisUnit('day').begin,
+          '-',
+          `(${nBack})-1`,
+          'day'
+        );
+        // console.log(
+        //   `SELECT ${
+        //     this.nowExpr().sql
+        //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nBack} as nBack,\n  ${
+        //     begin.sql
+        //   } as begin,\n   ${end.sql} as end`
+        // );
+        return {begin, end: end.sql};
       }
     }
   }
