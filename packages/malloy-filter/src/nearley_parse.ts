@@ -28,7 +28,7 @@ export function run_parser(
     if (e.token) {
       const token = e.token;
       col = token.col;
-      len = token.length;
+      len = token.text.length;
       const message = e.message;
       const expected = message
         .match(/(?<=A ).*(?= based on:)/g)
