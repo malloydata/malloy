@@ -6,13 +6,13 @@
  */
 
 import type {Parser} from 'nearley';
-import type {FilterExpressionBase, FilterLog} from './filter_interface';
+import type {FilterExpression, FilterLog} from './filter_interface';
 import {isFilterExpression} from './filter_interface';
 
 export function run_parser(
   src: string,
   parser: Parser
-): {parsed: FilterExpressionBase | null; log: FilterLog[]} {
+): {parsed: FilterExpression | null; log: FilterLog[]} {
   try {
     parser.feed(src);
     const results = parser.finish();

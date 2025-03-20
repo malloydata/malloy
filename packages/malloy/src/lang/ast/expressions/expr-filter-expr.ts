@@ -13,7 +13,7 @@ import type {FieldSpace} from '../types/field-space';
 import type {FilterMatchExpr} from '../../../model';
 import type {
   FilterParserResponse,
-  FilterExpressionBase,
+  FilterExpression,
 } from '@malloydata/malloy-filter';
 import {
   StringFilterExpression,
@@ -47,7 +47,7 @@ export class ExprFilterExpression extends ExpressionDef {
       if (matchExpr.type === 'error') {
         return matchExpr;
       }
-      let fParse: FilterParserResponse<FilterExpressionBase>;
+      let fParse: FilterParserResponse<FilterExpression>;
       switch (matchExpr.type) {
         case 'string':
           fParse = StringFilterExpression.parse(this.filterText);

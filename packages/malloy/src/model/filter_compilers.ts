@@ -7,7 +7,7 @@
 
 import type {
   BooleanFilter,
-  FilterExpressionBase,
+  FilterExpression,
   NumberFilter,
   StringFilter,
   TemporalFilter,
@@ -50,7 +50,7 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
-  compile(t: string, c: FilterExpressionBase, x: string, d: Dialect) {
+  compile(t: string, c: FilterExpression, x: string, d: Dialect) {
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
     } else if (t === 'number' && isNumberFilter(c)) {

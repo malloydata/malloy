@@ -10,10 +10,10 @@ import type {
   NumberRange,
   StringFilter,
   NumberFilter,
-  FilterExpressionBase,
   TemporalUnit,
   TemporalLiteral,
   TemporalFilter,
+  FilterExpression,
 } from './filter_interface';
 import {
   isNumberFilter,
@@ -143,10 +143,7 @@ export function matchOp(matchSrc: string): StringFilter {
   return {operator: '=', values: [unescape(matchTxt)]};
 }
 
-function sameAs<T extends FilterExpressionBase>(
-  a: T,
-  b: FilterExpressionBase
-): b is T {
+function sameAs<T extends FilterExpression>(a: T, b: FilterExpression): b is T {
   return (
     a.operator === b.operator && (a['not'] ?? false) === (b['not'] ?? false)
   );

@@ -5,40 +5,31 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export interface FilterExpressionBase {
-  operator: string;
-}
-
-export function isFilterExpression(o: Object): o is FilterExpressionBase {
-  return 'operator' in o;
+interface FilterOperator<T extends string> {
+  operator: T;
 }
 
 interface Negateable {
   not?: boolean;
 }
 
-export interface Null extends FilterExpressionBase, Negateable {
-  operator: 'null';
-}
+export interface Null extends FilterOperator<'null'>, Negateable {}
 
 export type ChainOp = 'and' | 'or' | ',';
 export function isChainOp(s: string): s is ChainOp {
   return ['and', 'or', ','].includes(s);
 }
 
-interface ClauseChain<T> extends FilterExpressionBase {
-  operator: ChainOp;
+interface ClauseChain<T> extends FilterOperator<ChainOp> {
   members: T[];
 }
 
 type BooleanChainOp = 'and' | 'or';
-export interface BooleanChain<T> extends FilterExpressionBase {
-  operator: BooleanChainOp;
+export interface BooleanChain<T> extends FilterOperator<BooleanChainOp> {
   members: T[];
 }
 
-interface ClauseGroup<T> extends FilterExpressionBase, Negateable {
-  operator: '()';
+interface ClauseGroup<T> extends FilterOperator<'()'>, Negateable {
   expr: T;
 }
 
@@ -47,19 +38,17 @@ export function isStringCondition(sc: StringFilter): sc is StringCondition {
   return ['starts', 'ends', 'contains', '='].includes(sc.operator);
 }
 
-export interface StringCondition extends FilterExpressionBase, Negateable {
-  operator: StringConditionOperator;
+export interface StringCondition
+  extends FilterOperator<StringConditionOperator>,
+    Negateable {
   values: string[];
 }
 
-export interface StringMatch extends FilterExpressionBase, Negateable {
-  operator: '~';
+export interface StringMatch extends FilterOperator<'~'>, Negateable {
   escaped_values: string[];
 }
 
-export interface StringEmpty extends FilterExpressionBase, Negateable {
-  operator: 'empty';
-}
+export interface StringEmpty extends FilterOperator<'empty'>, Negateable {}
 
 export type StringFilter =
   | StringCondition
@@ -107,15 +96,15 @@ export function isBooleanFilter(bc: Object): bc is BooleanFilter {
 
 export type NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<';
 
-export interface NumberCondition extends FilterExpressionBase, Negateable {
-  operator: NumberOperator;
+export interface NumberCondition
+  extends FilterOperator<NumberOperator>,
+    Negateable {
   values: string[];
 }
 
 export type NumberRangeOperator = '<=' | '>=' | '>' | '<';
 
-export interface NumberRange extends FilterExpressionBase, Negateable {
-  operator: 'range';
+export interface NumberRange extends FilterOperator<'range'>, Negateable {
   startOperator: NumberRangeOperator;
   startValue: string;
   endOperator: NumberRangeOperator;
@@ -212,39 +201,36 @@ export type Moment =
   | WhichdayMoment
   | WeekdayMoment;
 
-export interface Before extends Negateable {
-  operator: 'before';
+export interface Before extends FilterOperator<'before'>, Negateable {
   before: Moment;
 }
 
-export interface After extends Negateable {
-  operator: 'after';
+export interface After extends FilterOperator<'after'>, Negateable {
   after: Moment;
 }
 
-export interface To extends Negateable {
-  operator: 'to';
+export interface To extends FilterOperator<'to'>, Negateable {
   fromMoment: Moment;
   toMoment: Moment;
 }
 
-export interface For extends Negateable, Duration {
-  operator: 'for';
+export interface For extends FilterOperator<'for'>, Negateable, Duration {
   begin: Moment;
 }
 
 // N units starting in the past, including this one
-export interface in_last extends Negateable, Duration {
-  operator: 'in_last';
-}
+export interface in_last
+  extends FilterOperator<'in_last'>,
+    Negateable,
+    Duration {}
 
 // Nunits starting in the past, not including this one
-export interface JustUnits extends Negateable, Duration {
-  operator: 'last' | 'next';
-}
+export interface JustUnits
+  extends FilterOperator<'last' | 'next'>,
+    Negateable,
+    Duration {}
 
-export interface InMoment extends Negateable {
-  operator: 'in';
+export interface InMoment extends FilterOperator<'in'>, Negateable {
   in: Moment;
 }
 
@@ -283,6 +269,16 @@ export function isTemporalFilter(sc: Object): sc is TemporalFilter {
   );
 }
 
+export type FilterExpression =
+  | BooleanFilter
+  | NumberFilter
+  | StringFilter
+  | TemporalFilter;
+
+export function isFilterExpression(obj: Object): obj is FilterExpression {
+  return 'operator' in obj;
+}
+
 export type FilterLogSeverity = 'error' | 'warn';
 
 export interface FilterLog {
@@ -292,7 +288,7 @@ export interface FilterLog {
   severity: FilterLogSeverity;
 }
 
-export interface FilterParserResponse<T extends FilterExpressionBase> {
+export interface FilterParserResponse<T extends FilterExpression> {
   parsed: T | null;
   log: FilterLog[];
 }
