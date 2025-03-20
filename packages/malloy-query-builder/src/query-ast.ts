@@ -675,6 +675,7 @@ export class ASTQuery
     this.edit();
     const annotations = new ASTAnnotationList([]);
     this.children.annotations = annotations;
+    annotations.parent = this;
     return annotations;
   }
 
@@ -3562,6 +3563,7 @@ export class ASTField
     this.edit();
     const annotations = new ASTAnnotationList([]);
     this.children.annotations = annotations;
+    annotations.parent = this;
     return annotations;
   }
 
@@ -4225,6 +4227,7 @@ export class ASTView
     this.edit();
     const annotations = new ASTAnnotationList([]);
     this.children.annotations = annotations;
+    annotations.parent = this;
     return annotations;
   }
 
