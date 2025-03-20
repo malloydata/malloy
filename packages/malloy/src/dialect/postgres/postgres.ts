@@ -320,7 +320,7 @@ export class PostgresDialect extends PostgresBase {
       timeframe = 'day';
       n = `${n}*7`;
     }
-    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>(${n})::integer)`;
     return `(${df.kids.base.sql})${df.op}${interval}`;
   }
 
