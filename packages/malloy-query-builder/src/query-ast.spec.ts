@@ -1461,7 +1461,6 @@ describe('query builder', () => {
         `,
       });
     });
-
     test('repeatedly add a tag property to a query', () => {
       const from: Malloy.Query = {
         definition: {
@@ -1497,8 +1496,9 @@ describe('query builder', () => {
           },
         },
         malloy: dedent`
-             # a b
-             run: flights -> { }`,
+          # a b
+          run: flights -> { }
+        `,
       });
     });
 
@@ -1538,8 +1538,9 @@ describe('query builder', () => {
           },
         },
         malloy: dedent`
-             # b
-             run: flights -> { }`,
+          # b
+          run: flights -> { }
+        `,
       });
     });
 
