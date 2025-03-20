@@ -35,7 +35,7 @@ export class ExprNow extends ExpressionDef {
       expressionType: 'scalar',
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',
-      value: {node: 'now'},
+      value: {node: 'now', typeDef: {type: 'timestamp'}},
       compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }

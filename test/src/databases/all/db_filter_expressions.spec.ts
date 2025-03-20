@@ -8,6 +8,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr} from '../../util';
+import {DateTime as LuxonDateTime} from 'luxon';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -347,6 +348,264 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           where: b ~ f'not null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
+    });
+  });
+
+  type TL = 'timeLiteral';
+  type TS = {type: 'timestamp'};
+
+  describe('temporal filters', () => {
+    function ts(t: string): string {
+      const node: TL = 'timeLiteral';
+      const typeDef: TS = {type: 'timestamp'};
+      const n = {node, typeDef, literal: t};
+      return db.dialect.sqlLiteralTime({}, n);
+    }
+
+    const fTimestamp = 'yyyy-LL-dd HH:mm:ss';
+
+    /**
+     * Create a source for testing a range. It will have five rows
+     * { t: 1 second before start, n: 'before' }
+     * { t: start,                 n: 'first' }
+     * { t: 1 second before end,   n: 'last' }
+     * { t: end,                   n: 'zend' }
+     * { t: NULL                   n: ' null ' }
+     * Use malloyResultMatches(range, inRange) or (range, notInRange)
+     */
+    const inRange = [{n: 'first'}, {n: 'last'}];
+    const notInRange = [{n: 'before'}, {n: 'zend'}];
+    function mkRange(start: string, end: string) {
+      const begin = LuxonDateTime.fromFormat(start, fTimestamp);
+      const b4 = begin.minus({second: 1});
+      const last = LuxonDateTime.fromFormat(end, fTimestamp).minus({second: 1});
+      const rangeModel = `
+        query: range is ${dbName}.sql("""
+          SELECT ${ts(b4.toFormat(fTimestamp))} AS ${q`t`}, 'before' AS ${q`n`}
+          UNION ALL SELECT ${ts(start)}, 'first'
+          UNION ALL SELECT ${ts(last.toFormat(fTimestamp))} , 'last'
+          UNION ALL SELECT ${ts(end)}, 'zend'
+          UNION ALL SELECT NULL, ' null '
+        """)
+        -> {select: *; order_by: n}`;
+      return db.loadModel(rangeModel);
+    }
+
+    /**
+     * All the relative time tests need a way to set what time it is now
+     */
+    function nowIs(timeStr: string) {
+      const spyNow = jest.spyOn(db.dialect, 'sqlNowExpr');
+      spyNow.mockImplementation(() => ts(timeStr));
+    }
+    afterEach(() => jest.restoreAllMocks());
+
+    test('null', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'null' }
+      `).malloyResultMatches(range, [{n: ' null '}]);
+    });
+    test('not null', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'not null' }
+      `).malloyResultMatches(range, [
+        {n: 'before'},
+        {n: 'first'},
+        {n: 'last'},
+        {n: 'zend'},
+      ]);
+    });
+    test('year literal', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('not month literal', async () => {
+      const range = mkRange('2001-06-01 00:00:00', '2001-07-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'not 2001-06' }
+      `).malloyResultMatches(range, notInRange);
+    });
+    test('day literal', async () => {
+      const range = mkRange('2001-06-15 00:00:00', '2001-06-16 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001-06-15' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('hour literal', async () => {
+      const range = mkRange('2001-02-03 04:00:00', '2001-02-03 05:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001-02-03 04' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('minute literal', async () => {
+      const range = mkRange('2001-02-03 04:05:00', '2001-02-03 04:06:00');
+      await expect(`
+        run: range + { where: t ~ f'2001-02-03 04:05' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('quarter literal', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-04-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001-Q1' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('week literal', async () => {
+      const range = mkRange('2023-01-01 00:00:00', '2023-01-08 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2023-01-01-WK' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('today', async () => {
+      nowIs('2001-02-03 12:00:00');
+      const range = mkRange('2001-02-03 00:00:00', '2001-02-04 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'today' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('yesterday', async () => {
+      nowIs('2001-02-03 12:00:00');
+      const range = mkRange('2001-02-02 00:00:00', '2001-02-03 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'yesterday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('tomorrow', async () => {
+      nowIs('2001-02-03 12:00:00');
+      const range = mkRange('2001-02-04 00:00:00', '2001-02-05 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'tomorrow' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('this week', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-01 00:00:00', '2023-01-08 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'this week' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last month', async () => {
+      nowIs('2001-02-01 12:00:00');
+      const range = mkRange('2001-01-01 00:00:00', '2001-02-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'last month' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next quarter', async () => {
+      nowIs('2001-01-02 12:00:00');
+      const range = mkRange('2001-04-01 00:00:00', '2001-07-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next quarter' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('this year', async () => {
+      nowIs('2001-01-02 12:00:00');
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'this year' }
+      `).malloyResultMatches(range, inRange);
+    });
+    // 2023-01-01 is a sunday
+    test('(last) sunday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-01 00:00:00', '2023-01-02 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'sunday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last monday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-02 00:00:00', '2023-01-03 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'last monday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last-tuesday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2022-12-27 00:00:00', '2022-12-28 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'tuesday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last-wednesday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2022-12-28 00:00:00', '2022-12-29 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'wednesday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last-thursday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2022-12-29 00:00:00', '2022-12-30 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'thursday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last-friday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2022-12-30 00:00:00', '2022-12-31 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'friday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last saturday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2022-12-31 00:00:00', '2023-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'last saturday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next sunday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-08 00:00:00', '2023-01-09 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next sunday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next monday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-09 00:00:00', '2023-01-10 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next monday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next tuesday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-10 00:00:00', '2023-01-11 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next tuesday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next wednesday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-04 00:00:00', '2023-01-05 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next wednesday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next thursday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-05 00:00:00', '2023-01-06 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next thursday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next friday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-06 00:00:00', '2023-01-07 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next friday' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next saturday', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-07 00:00:00', '2023-01-08 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next saturday' }
+      `).malloyResultMatches(range, inRange);
     });
   });
 });

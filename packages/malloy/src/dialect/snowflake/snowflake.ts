@@ -342,8 +342,9 @@ ${indent(sql)}
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    const interval = `INTERVAL '${df.kids.delta.sql} ${df.units}'`;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
+    const add = df.typeDef?.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
+    const n = df.op === '+' ? df.kids.delta.sql : `-(${df.kids.delta.sql})`;
+    return `${add}(${df.units},${n},${df.kids.base.sql})`;
   }
 
   private atTz(sqlExpr: string, tz: string | undefined): string {

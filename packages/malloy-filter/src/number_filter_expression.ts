@@ -5,24 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FilterParserResponse, NumberClause} from './filter_clause';
-import {isNumberClause} from './filter_clause';
+import type {FilterParserResponse, NumberFilter} from './filter_interface';
+import {isNumberFilter} from './filter_interface';
 import * as nearley from 'nearley';
 import fnumber_grammar from './lib/fexpr_number_parser';
 import {run_parser} from './nearley_parse';
 
 export const NumberFilterExpression = {
-  parse(src: string): FilterParserResponse<NumberClause> {
+  parse(src: string): FilterParserResponse<NumberFilter> {
     const fnumber_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fnumber_grammar)
     );
     const parse_result = run_parser(src, fnumber_parser);
-    if (parse_result.parsed && isNumberClause(parse_result.parsed)) {
+    if (parse_result.parsed && isNumberFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }
     return {parsed: null, log: parse_result.log};
   },
-  unparse(nc: NumberClause | null): string {
+  unparse(nc: NumberFilter | null): string {
     if (nc === null) {
       return '';
     }

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FilterParserResponse, StringClause} from './filter_clause';
-import {isStringClause} from './filter_clause';
+import type {FilterParserResponse, StringFilter} from './filter_interface';
+import {isStringFilter} from './filter_interface';
 import * as nearley from 'nearley';
 import fstring_grammar from './lib/fexpr_string_parser';
 import {escape} from './clause_utils';
@@ -18,17 +18,17 @@ import {run_parser} from './nearley_parse';
 // is not hand coded. Full apologies to the original author of the hand
 // coded parsers.
 export const StringFilterExpression = {
-  parse(src: string): FilterParserResponse<StringClause> {
+  parse(src: string): FilterParserResponse<StringFilter> {
     const fstring_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fstring_grammar)
     );
     const parse_result = run_parser(src, fstring_parser);
-    if (parse_result.parsed && isStringClause(parse_result.parsed)) {
+    if (parse_result.parsed && isStringFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }
     return {parsed: null, log: parse_result.log};
   },
-  unparse(sc: StringClause | null): string {
+  unparse(sc: StringFilter | null): string {
     if (sc === null) {
       return '';
     }

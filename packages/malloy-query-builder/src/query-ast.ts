@@ -9,12 +9,12 @@ import type {TagSetValue} from '@malloydata/malloy-tag';
 import {Tag} from '@malloydata/malloy-tag';
 import * as Filter from '@malloydata/malloy-filter';
 
-export type FilterType = 'string' | 'boolean' | 'number' | 'temporal';
 export type ParsedFilter =
-  | {kind: 'string'; parsed: Filter.StringClause | null}
-  | {kind: 'number'; parsed: Filter.NumberClause | null}
-  | {kind: 'boolean'; parsed: Filter.BooleanClause | null}
-  | {kind: 'temporal'; parsed: Filter.TemporalClause | null};
+  | {kind: 'string'; parsed: Filter.StringFilter | null}
+  | {kind: 'number'; parsed: Filter.NumberFilter | null}
+  | {kind: 'boolean'; parsed: Filter.BooleanFilter | null}
+  | {kind: 'date'; parsed: Filter.TemporalFilter | null}
+  | {kind: 'timestamp'; parsed: Filter.TemporalFilter | null};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -4124,7 +4124,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
     return field;
   }
 
-  getFilterType(): FilterType | 'other' {
+  getFilterType(): Filter.FilterableType | 'other' {
     const fieldInfo = this.getFieldInfo();
     return getFilterType(fieldInfo);
   }
@@ -4492,12 +4492,16 @@ function serializeFilter(filter: ParsedFilter) {
       return Filter.NumberFilterExpression.unparse(filter.parsed);
     case 'boolean':
       return Filter.BooleanFilterExpression.unparse(filter.parsed);
-    case 'temporal':
+    case 'timestamp':
+    case 'date':
       return Filter.TemporalFilterExpression.unparse(filter.parsed);
   }
 }
 
-function parseFilter(filterString: string, kind: FilterType | 'other') {
+function parseFilter(
+  filterString: string,
+  kind: Filter.FilterableType | 'other'
+) {
   function handleError(logs: Filter.FilterLog[]) {
     const errors = logs.filter(l => l.severity === 'error');
     if (errors.length === 0) return;
@@ -4519,7 +4523,8 @@ function parseFilter(filterString: string, kind: FilterType | 'other') {
       handleError(result.log);
       return {kind, parsed: result.parsed};
     }
-    case 'temporal': {
+    case 'timestamp':
+    case 'date': {
       const result = Filter.TemporalFilterExpression.parse(filterString);
       handleError(result.log);
       return {kind, parsed: result.parsed};
@@ -4583,7 +4588,7 @@ function pathsMatch(a: string[] | undefined, b: string[] | undefined): boolean {
 
 function getFilterType(
   fieldInfo: Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure
-): FilterType | 'other' {
+): Filter.FilterableType | 'other' {
   switch (fieldInfo.type.kind) {
     case 'string_type':
       return 'string';
@@ -4592,8 +4597,9 @@ function getFilterType(
     case 'number_type':
       return 'number';
     case 'date_type':
+      return 'date';
     case 'timestamp_type':
-      return 'temporal';
+      return 'timestamp';
     default:
       return 'other';
   }

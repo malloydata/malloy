@@ -132,6 +132,7 @@ import type {EventStream} from '../runtime_types';
 import type {Tag} from '@malloydata/malloy-tag';
 import {annotationToTag} from '../annotation';
 import {FilterCompilers} from './filter_compilers';
+import {isFilterExpression} from '@malloydata/malloy-filter';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1361,15 +1362,20 @@ class QueryField extends QueryNode {
         if (
           expr.dataType === 'string' ||
           expr.dataType === 'number' ||
+          expr.dataType === 'date' ||
+          expr.dataType === 'timestamp' ||
           expr.dataType === 'boolean'
         ) {
-          return FilterCompilers.compile(
-            expr.dataType,
-            expr.filter,
-            expr.e.sql || '',
-            this.parent.dialect
-          );
+          if (isFilterExpression(expr.filter)) {
+            return FilterCompilers.compile(
+              expr.dataType,
+              expr.filter,
+              expr.e.sql || '',
+              this.parent.dialect
+            );
+          }
         }
+        // mtoy todo no throw
         throw new Error(
           `Internal Error: Filter Compiler Undefined (FCU) ${expr.dataType}`
         );

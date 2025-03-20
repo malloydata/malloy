@@ -8,7 +8,7 @@
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
 import ftemporal_grammar from '../lib/ftemporal_parser';
-import type {TemporalClause} from '../filter_clause';
+import type {TemporalFilter} from '../filter_interface';
 import {TemporalFilterExpression} from '../temporal_filter_expression';
 import {inspect} from 'util';
 
@@ -16,7 +16,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      isTemporalFilter(expected: TemporalClause, unparse?: string): R;
+      isTemporalFilter(expected: TemporalFilter, unparse?: string): R;
     }
   }
 }
@@ -24,7 +24,7 @@ declare global {
 expect.extend({
   isTemporalFilter(
     src: string,
-    expectedParse: TemporalClause,
+    expectedParse: TemporalFilter,
     expectedUnparse?: string
   ) {
     const fstring_parser = new nearley.Parser(
@@ -103,6 +103,12 @@ describe('temporal filter expressions', () => {
       expect('2001-02-03-WK').isTemporalFilter({
         operator: 'in',
         in: {moment: 'literal', literal: '2001-02-03-WK', units: 'week'},
+      });
+    });
+    test('literal month', () => {
+      expect('2001-01').isTemporalFilter({
+        operator: 'in',
+        in: {moment: 'literal', literal: '2001-01', units: 'month'},
       });
     });
     test('literal quarter', () => {

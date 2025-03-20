@@ -11,7 +11,10 @@ import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import type {FilterMatchExpr} from '../../../model';
-import type {FilterParserResponse, ClauseBase} from '@malloydata/malloy-filter';
+import type {
+  FilterParserResponse,
+  FilterExpression,
+} from '@malloydata/malloy-filter';
 import {
   StringFilterExpression,
   BooleanFilterExpression,
@@ -44,7 +47,7 @@ export class ExprFilterExpression extends ExpressionDef {
       if (matchExpr.type === 'error') {
         return matchExpr;
       }
-      let fParse: FilterParserResponse<ClauseBase>;
+      let fParse: FilterParserResponse<FilterExpression>;
       switch (matchExpr.type) {
         case 'string':
           fParse = StringFilterExpression.parse(this.filterText);
@@ -53,6 +56,12 @@ export class ExprFilterExpression extends ExpressionDef {
           fParse = NumberFilterExpression.parse(this.filterText);
           break;
         case 'boolean':
+          if (fs.dialectObj()?.booleanAsNumbers) {
+            return this.loggedErrorExpr(
+              'filter-expression-type',
+              'Boolean filters not supported on this connection type'
+            );
+          }
           fParse = BooleanFilterExpression.parse(this.filterText);
           break;
         case 'date':

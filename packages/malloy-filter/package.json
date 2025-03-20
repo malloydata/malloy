@@ -24,7 +24,8 @@
   "dependencies": {
     "jest-diff": "^29.6.2",
     "moo": "^0.5.2",
-    "nearley": "^2.20.1"
+    "nearley": "^2.20.1",
+    "luxon":"^3.5.0"
   },
   "devDependencies": {
     "@types/moo": "^0.5.10",

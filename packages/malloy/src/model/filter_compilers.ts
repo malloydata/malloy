@@ -6,20 +6,21 @@
  */
 
 import type {
-  BooleanClause,
-  ClauseBase,
-  NumberClause,
-  StringClause,
-  TemporalClause,
+  BooleanFilter,
+  FilterExpression,
+  NumberFilter,
+  StringFilter,
+  TemporalFilter,
   NumberRangeOperator,
 } from '@malloydata/malloy-filter';
 import {
-  isNumberClause,
-  isStringClause,
-  isTemporalClause,
-  isBooleanClause,
+  isNumberFilter,
+  isStringFilter,
+  isTemporalFilter,
+  isBooleanFilter,
 } from '@malloydata/malloy-filter';
 import type {Dialect} from '../dialect';
+import {TemporalFilterCompiler} from './filter_temporal_compiler';
 
 function escapeForLike(v: string) {
   return v.replace(/([%_\\])/g, '\\$1');
@@ -49,19 +50,19 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
-  compile(t: string, c: ClauseBase, x: string, d: Dialect) {
-    if (t === 'string' && isStringClause(c)) {
+  compile(t: string, c: FilterExpression, x: string, d: Dialect) {
+    if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
-    } else if (t === 'number' && isNumberClause(c)) {
+    } else if (t === 'number' && isNumberFilter(c)) {
       return FilterCompilers.numberCompile(c, x, d);
-    } else if (t === 'boolean' && isBooleanClause(c)) {
+    } else if (t === 'boolean' && isBooleanFilter(c)) {
       return FilterCompilers.booleanCompile(c, x, d);
-    } else if ((t === 'date' || t === 'timestamp') && isTemporalClause(c)) {
+    } else if ((t === 'date' || t === 'timestamp') && isTemporalFilter(c)) {
       return FilterCompilers.temporalCompile(c, x, d);
     }
     throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
   },
-  numberCompile(nc: NumberClause, x: string, d: Dialect): string {
+  numberCompile(nc: NumberFilter, x: string, d: Dialect): string {
     switch (nc.operator) {
       case '!=':
       case '=': {
@@ -104,10 +105,10 @@ export const FilterCompilers = {
       case 'or':
         return nc.members
           .map(m => FilterCompilers.numberCompile(m, x, d))
-          .join(` ${nc.operator.toUpperCase()}`);
+          .join(` ${nc.operator.toUpperCase()} `);
     }
   },
-  booleanCompile(bc: BooleanClause, x: string, _d: Dialect): string {
+  booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
     switch (bc.operator) {
       case 'false':
         return `${x} = false`;
@@ -119,11 +120,7 @@ export const FilterCompilers = {
         return x;
     }
   },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  temporalCompile(tc: TemporalClause, x: string, d: Dialect): string {
-    return 'false';
-  },
-  stringCompile(sc: StringClause, x: string, d: Dialect): string {
+  stringCompile(sc: StringFilter, x: string, d: Dialect): string {
     switch (sc.operator) {
       case 'null':
         return sc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
@@ -200,9 +197,11 @@ export const FilterCompilers = {
         /*
          * Basic formula over all members
          * ALL INCLUDED THINGS OR TOGETHER AND ALL EXCLUDED THINGS ANDED TOGETHER
+         *
+         * mtoy todo write some tests to see if AND clauses are includes or excludes
          */
-        const includes: StringClause[] = [];
-        const excludes: StringClause[] = [];
+        const includes: StringFilter[] = [];
+        const excludes: StringFilter[] = [];
         let includeNull = false;
         let excludeNull = false;
         let includeEmpty = false;
@@ -273,5 +272,10 @@ export const FilterCompilers = {
         return excludeSQL !== '' ? excludeSQL : 'true';
       }
     }
+  },
+  // mtoy todo figure out what to do about dates
+  temporalCompile(tc: TemporalFilter, x: string, d: Dialect): string {
+    const c = new TemporalFilterCompiler(x, d);
+    return c.compile(tc);
   },
 };

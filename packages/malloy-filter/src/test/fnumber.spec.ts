@@ -7,7 +7,7 @@
 
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
-import type {NumberClause} from '../filter_clause';
+import type {NumberFilter} from '../filter_interface';
 import fnumber_grammar from '../lib/fexpr_number_parser';
 import {NumberFilterExpression} from '../number_filter_expression';
 import {inspect} from 'util';
@@ -16,7 +16,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      isNumberFilter(expected: NumberClause, unparse?: string): R;
+      isNumberFilter(expected: NumberFilter, unparse?: string): R;
     }
   }
 }
@@ -24,7 +24,7 @@ declare global {
 expect.extend({
   isNumberFilter(
     src: string,
-    expectedParse: NumberClause,
+    expectedParse: NumberFilter,
     expectedUnparse?: string
   ) {
     const fnumber_parser = new nearley.Parser(
