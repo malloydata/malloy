@@ -379,15 +379,16 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const begin = LuxonDateTime.fromFormat(start, fTimestamp);
       const b4 = begin.minus({second: 1});
       const last = LuxonDateTime.fromFormat(end, fTimestamp).minus({second: 1});
-      return db.loadModel(`
+      const rangeModel = `
         query: range is ${dbName}.sql("""
-          SELECT ${ts(b4.toFormat(fTimestamp))} as t, 'before' as n,
-          UNION ALL SELECT ${ts(start)}, 'first',
-          UNION ALL SELECT ${ts(last.toFormat(fTimestamp))} , 'last',
+          SELECT ${ts(b4.toFormat(fTimestamp))} AS ${q`t`}, 'before' AS ${q`n`}
+          UNION ALL SELECT ${ts(start)}, 'first'
+          UNION ALL SELECT ${ts(last.toFormat(fTimestamp))} , 'last'
           UNION ALL SELECT ${ts(end)}, 'zend'
           UNION ALL SELECT NULL, ' null '
         """)
-        -> {select: *; order_by: n}`);
+        -> {select: *; order_by: n}`;
+      return db.loadModel(rangeModel);
     }
 
     /**
