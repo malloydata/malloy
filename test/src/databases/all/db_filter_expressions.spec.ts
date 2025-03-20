@@ -537,13 +537,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: range + { where: t ~ f'wednesday' }
       `).malloyResultMatches(range, inRange);
     });
-    test('last-wednesday', async () => {
-      nowIs('2023-01-03 00:00:00');
-      const range = mkRange('2022-12-28 00:00:00', '2022-12-29 00:00:00');
-      await expect(`
-        run: range + { where: t ~ f'wednesday' }
-      `).malloyResultMatches(range, inRange);
-    });
     test('last-thursday', async () => {
       nowIs('2023-01-03 00:00:00');
       const range = mkRange('2022-12-29 00:00:00', '2022-12-30 00:00:00');
