@@ -74,7 +74,9 @@ export class TemporalFilterCompiler {
       case 'after':
         return `${x} ${tc.not ? '<' : '>='} ${this.moment(tc.after).end}`;
       case 'before':
-        return `${x} ${tc.not ? '>=' : '<'} ${this.moment(tc.before).begin}`;
+        return `${x} ${tc.not ? '>=' : '<'} ${
+          this.moment(tc.before).begin.sql
+        }`;
       case 'in': {
         // mtoy todo in now
         const m = this.moment(tc.in);
@@ -99,7 +101,7 @@ export class TemporalFilterCompiler {
       case 'to': {
         const firstMoment = this.moment(tc.fromMoment);
         const lastMoment = this.moment(tc.toMoment);
-        return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.end);
+        return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.begin.sql);
       }
       case 'last': {
         const thisUnit = this.nowDot(tc.units);
@@ -292,12 +294,7 @@ export class TemporalFilterCompiler {
       case 'ago':
       case 'from_now': {
         // mtoy todo just pretending all units work, they don't
-        const nowTruncExpr: TimeTruncExpr = {
-          node: 'trunc',
-          e: this.nowExpr(),
-          units: m.units,
-        };
-        nowTruncExpr.sql = this.d.sqlTruncExpr({}, nowTruncExpr);
+        const nowTruncExpr = this.nowDot(m.units);
         const nowTrunc = mkTemporal(nowTruncExpr, 'timestamp');
         const beginExpr = this.delta(
           nowTrunc,
@@ -309,7 +306,7 @@ export class TemporalFilterCompiler {
         if (m.moment === 'ago' && m.n === '1') {
           return {begin: beginExpr, end: nowTruncExpr.sql};
         }
-        const oneDifferent = Number(m.n) + m.moment === 'ago' ? -1 : 1;
+        const oneDifferent = Number(m.n) + (m.moment === 'ago' ? -1 : 1);
         const endExpr = {
           ...beginExpr,
           kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},

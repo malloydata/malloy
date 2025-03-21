@@ -400,6 +400,101 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     }
     afterEach(() => jest.restoreAllMocks());
 
+    test('2 days ago', async () => {
+      nowIs('2001-01-15 12:00:00');
+      const range = mkRange('2001-01-13 00:00:00', '2001-01-14 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2 days ago' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2 days', async () => {
+      nowIs('2001-01-15 12:00:00');
+      const range = mkRange('2001-01-14 00:00:00', '2001-01-16 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2 days' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2 days from now', async () => {
+      nowIs('2001-01-15 12:00:00');
+      const range = mkRange('2001-01-17 00:00:00', '2001-01-18 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2 days from now' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2000 to 2001', async () => {
+      const range = mkRange('2000-01-01 00:00:00', '2001-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2000 to 2001' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next 2 days', async () => {
+      nowIs('2001-01-01 12:00:00');
+      const range = mkRange('2001-01-02 00:00:00', '2001-01-04 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next 2 days' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last 2 months', async () => {
+      nowIs('2001-01-01 12:00:00');
+      const range = mkRange('2000-11-01 00:00:00', '2001-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'last 2 months' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('before y2k', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'before 2001' }
+      `).malloyResultMatches(range, [{n: 'before'}]);
+    });
+    test('after y2k', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'after 2001' }
+      `).malloyResultMatches(range, [{n: 'zend'}]);
+    });
+    test('y2k for 1 minute', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-01 00:01:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 minute' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 2 hour', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-01 02:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 2 hour' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 day', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-02 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 day' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 week', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-08 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 week' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 month', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-02-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 month' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 quarter', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-04-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 quarter' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 year', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 year' }
+      `).malloyResultMatches(range, inRange);
+    });
     test('null', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
