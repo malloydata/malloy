@@ -7,7 +7,13 @@ import {hideBin} from 'yargs/helpers';
 function fixImports(flow: string, target: string | undefined): string {
   if (target) {
     flow = flow.replace(/ from "\.\/([a-z_-]+)";/gm, ` from "./${target}-$1";`);
+    flow = flow.replace(
+      /\$Exports<"\.\/([a-z_]+)">/gm,
+      `$Exports<"./${target}-$1">`
+    );
   }
+  flow = flow.replace(/import type \* as /gm, 'import * as ');
+  flow = flow.replace(/declare export interface /gm, 'export interface ');
   return '// @flow\n' + flow;
 }
 
