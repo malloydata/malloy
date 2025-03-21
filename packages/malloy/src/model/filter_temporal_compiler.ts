@@ -69,21 +69,44 @@ export class TemporalFilterCompiler {
     this.d = dialect;
   }
 
+  time(timeSQL: string): string {
+    if (this.timetype === 'timestamp') {
+      return timeSQL;
+    }
+    return this.d.sqlCast(
+      {},
+      {
+        node: 'cast',
+        e: {
+          node: 'genericSQLExpr',
+          src: ['', timeSQL],
+          kids: {args: []},
+          sql: timeSQL,
+        },
+        srcType: {type: 'timestamp'},
+        dstType: {type: 'date'},
+        safe: false,
+      }
+    );
+  }
+
   compile(tc: TemporalFilter): string {
     const x = this.expr;
     switch (tc.operator) {
       case 'after':
-        return `${x} ${tc.not ? '<' : '>='} ${this.moment(tc.after).end}`;
+        return `${x} ${tc.not ? '<' : '>='} ${this.time(
+          this.moment(tc.after).end
+        )}`;
       case 'before':
-        return `${x} ${tc.not ? '>=' : '<'} ${
+        return `${x} ${tc.not ? '>=' : '<'} ${this.time(
           this.moment(tc.before).begin.sql
-        }`;
+        )}`;
       case 'in': {
         const m = this.moment(tc.in);
         if (m.begin.sql === m.end) {
           return tc.not
-            ? `${x} != ${m.end} OR ${x} IS NULL`
-            : `${x} = ${m.end}`;
+            ? `${x} != ${this.time(m.end)} OR ${x} IS NULL`
+            : `${x} = ${this.time(m.end)}`;
         }
         return this.isIn(tc.not, m.begin.sql, m.end);
       }
@@ -400,6 +423,8 @@ export class TemporalFilterCompiler {
       begOp = '<';
       endOp = '>=';
     }
+    begin = this.time(begin);
+    end = this.time(end);
     return `${this.expr} ${begOp} ${begin} ${joinOp} ${this.expr} ${endOp} ${end}`;
   }
 }
