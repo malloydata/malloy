@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-filter",
-  "version": "0.0.246",
+  "version": "0.0.247",
   "license": "MIT",
   "description": "Parsers for the Malloy filtering sub-languages",
   "main": "dist/index.js",
@@ -23,9 +23,9 @@
   "author": "",
   "dependencies": {
     "jest-diff": "^29.6.2",
+    "luxon": "^3.5.0",
     "moo": "^0.5.2",
-    "nearley": "^2.20.1",
-    "luxon":"^3.5.0"
+    "nearley": "^2.20.1"
   },
   "devDependencies": {
     "@types/moo": "^0.5.10",
