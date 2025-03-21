@@ -135,9 +135,12 @@ class SnowObject extends SnowField {
           field.walk(path.next, fieldType);
           return;
         }
-        throw new Error(
-          'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
-        );
+        // This happens if there is a field but we don't
+        // have the parent. Don't throw an error -- it can
+        // happen if the parent fields are not all the same.
+        // throw new Error(
+        //   'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
+        // );
       } else {
         // If we get multiple type for a field, ignore them, should
         // which will do until we support viarant data
