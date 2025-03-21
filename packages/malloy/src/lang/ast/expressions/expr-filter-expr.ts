@@ -26,7 +26,6 @@ export class ExprFilterExpression extends ExpressionDef {
   elementType = 'filter expression literal';
   constructor(readonly filterText: string) {
     super();
-    // mtoy todo parse the filter and reflect errors into the error stream
   }
 
   getExpression(): ExprValue {
@@ -75,11 +74,16 @@ export class ExprFilterExpression extends ExpressionDef {
           );
       }
       if (fParse.log.length > 0) {
-        for (const _err of fParse.log) {
-          // mtoy todo actuall get error and report correct position and error type
+        for (const err of fParse.log) {
+          // Current parser only ever returns one error, it doesn't recover
+          // Theoretically possible to user the startIndex to point to the
+          // error inside the filter string, but I don't know if this is an
+          // f' string or an f''' string, and I think the startOffset is from
+          // the first non blank space in the filter (it was at one point)
+          // so for now, we just flag the entire filter source token.
           return this.loggedErrorExpr(
-            'filter-expression-type',
-            `Filter parse error: ${fParse.log[0].message}`
+            'filter-expression-error',
+            `Filter parse error: ${err.message}`
           );
         }
       }

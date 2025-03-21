@@ -42,6 +42,7 @@ type Translated<T extends Expr> = T & {
 interface MomentIs {
   begin: Translated<Expr>;
   end: string;
+  momentary?: true;
 }
 
 const fYear = 'yyyy';
@@ -78,8 +79,12 @@ export class TemporalFilterCompiler {
           this.moment(tc.before).begin.sql
         }`;
       case 'in': {
-        // mtoy todo in now
         const m = this.moment(tc.in);
+        if (m.begin.sql === m.end) {
+          return tc.not
+            ? `${x} != ${m.end} OR ${x} IS NULL`
+            : `${x} = ${m.end}`;
+        }
         return this.isIn(tc.not, m.begin.sql, m.end);
       }
       case 'for': {
@@ -284,7 +289,6 @@ export class TemporalFilterCompiler {
 
   private moment(m: Moment): MomentIs {
     switch (m.moment) {
-      // mtoy todo moments which have no duration should have somethign in the interface?
       case 'now': {
         const now = this.nowExpr();
         return {begin: now, end: now.sql};
@@ -293,7 +297,6 @@ export class TemporalFilterCompiler {
         return this.expandLiteral(m);
       case 'ago':
       case 'from_now': {
-        // mtoy todo just pretending all units work, they don't
         const nowTruncExpr = this.nowDot(m.units);
         const nowTrunc = mkTemporal(nowTruncExpr, 'timestamp');
         const beginExpr = this.delta(

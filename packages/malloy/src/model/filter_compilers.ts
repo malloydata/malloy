@@ -196,9 +196,9 @@ export const FilterCompilers = {
       case ',': {
         /*
          * Basic formula over all members
-         * ALL INCLUDED THINGS OR TOGETHER AND ALL EXCLUDED THINGS ANDED TOGETHER
-         *
-         * mtoy todo write some tests to see if AND clauses are includes or excludes
+         *    (ALL INCLUDED THINGS OR TOGETHER)
+         * AND
+         *    (ALL EXCLUDED THINGS ANDED TOGETHER)
          */
         const includes: StringFilter[] = [];
         const excludes: StringFilter[] = [];

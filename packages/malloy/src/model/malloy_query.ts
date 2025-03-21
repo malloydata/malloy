@@ -1375,9 +1375,8 @@ class QueryField extends QueryNode {
             );
           }
         }
-        // mtoy todo no throw
         throw new Error(
-          `Internal Error: Filter Compiler Undefined (FCU) ${expr.dataType}`
+          `Internal Error: Filter Compiler Undefined Type '${expr.dataType}'`
         );
       default:
         throw new Error(

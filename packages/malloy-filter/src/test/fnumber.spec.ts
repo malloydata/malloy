@@ -82,8 +82,14 @@ describe('number filter expressions', () => {
   test('-N', () => {
     expect('-5').isNumberFilter({operator: '=', values: ['-5']});
   });
-  test('!= 5,6', () => {
+  test('just != 5,6', () => {
     expect('!= 5, 6').isNumberFilter({operator: '!=', values: ['5', '6']});
+  });
+  test('not != 5,6', () => {
+    expect('not != 5, 6').isNumberFilter(
+      {operator: '=', values: ['5', '6']},
+      '5,6'
+    );
   });
   test('N.N', () => {
     expect('4.2').isNumberFilter({operator: '=', values: ['4.2']});
@@ -96,6 +102,12 @@ describe('number filter expressions', () => {
   });
   test('= N', () => {
     expect('= 42').isNumberFilter({operator: '=', values: ['42']}, '42');
+  });
+  test('not = X', () => {
+    expect('not = 42').isNumberFilter(
+      {operator: '!=', values: ['42']},
+      '!= 42'
+    );
   });
   test('!= N', () => {
     expect('!= 42').isNumberFilter({operator: '!=', values: ['42']});
@@ -218,5 +230,4 @@ describe('number filter expressions', () => {
       '!= 1, 2, 3'
     );
   });
-  test.todo('all the ways that not can be applied');
 });
