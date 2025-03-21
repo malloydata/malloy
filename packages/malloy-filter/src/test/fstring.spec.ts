@@ -389,7 +389,6 @@ describe('string filter expressions', () => {
     expect(escapedBack.length).toBe(2);
     expect(escapedBack).isStringFilter({operator: '=', values: ['\\']});
   });
-  test.todo('starts/ends/contains backslash');
   // very hard to have syntax errors in strings ...
   test('syntax error in column 0', () => {
     const p = StringFilterExpression.parse(',');

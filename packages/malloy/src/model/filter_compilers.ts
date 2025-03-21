@@ -58,7 +58,7 @@ export const FilterCompilers = {
     } else if (t === 'boolean' && isBooleanFilter(c)) {
       return FilterCompilers.booleanCompile(c, x, d);
     } else if ((t === 'date' || t === 'timestamp') && isTemporalFilter(c)) {
-      return FilterCompilers.temporalCompile(c, x, d);
+      return FilterCompilers.temporalCompile(c, x, d, t);
     }
     throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
   },
@@ -196,9 +196,9 @@ export const FilterCompilers = {
       case ',': {
         /*
          * Basic formula over all members
-         * ALL INCLUDED THINGS OR TOGETHER AND ALL EXCLUDED THINGS ANDED TOGETHER
-         *
-         * mtoy todo write some tests to see if AND clauses are includes or excludes
+         *    (ALL INCLUDED THINGS OR TOGETHER)
+         * AND
+         *    (ALL EXCLUDED THINGS ANDED TOGETHER)
          */
         const includes: StringFilter[] = [];
         const excludes: StringFilter[] = [];
@@ -274,8 +274,13 @@ export const FilterCompilers = {
     }
   },
   // mtoy todo figure out what to do about dates
-  temporalCompile(tc: TemporalFilter, x: string, d: Dialect): string {
-    const c = new TemporalFilterCompiler(x, d);
+  temporalCompile(
+    tc: TemporalFilter,
+    x: string,
+    d: Dialect,
+    t: 'date' | 'timestamp'
+  ): string {
+    const c = new TemporalFilterCompiler(x, d, t);
     return c.compile(tc);
   },
 };

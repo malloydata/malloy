@@ -42,6 +42,7 @@ type Translated<T extends Expr> = T & {
 interface MomentIs {
   begin: Translated<Expr>;
   end: string;
+  momentary?: true;
 }
 
 const fYear = 'yyyy';
@@ -68,16 +69,45 @@ export class TemporalFilterCompiler {
     this.d = dialect;
   }
 
+  time(timeSQL: string): string {
+    if (this.timetype === 'timestamp') {
+      return timeSQL;
+    }
+    return this.d.sqlCast(
+      {},
+      {
+        node: 'cast',
+        e: {
+          node: 'genericSQLExpr',
+          src: ['', timeSQL],
+          kids: {args: []},
+          sql: timeSQL,
+        },
+        srcType: {type: 'timestamp'},
+        dstType: {type: 'date'},
+        safe: false,
+      }
+    );
+  }
+
   compile(tc: TemporalFilter): string {
     const x = this.expr;
     switch (tc.operator) {
       case 'after':
-        return `${x} ${tc.not ? '<' : '>='} ${this.moment(tc.after).end}`;
+        return `${x} ${tc.not ? '<' : '>='} ${this.time(
+          this.moment(tc.after).end
+        )}`;
       case 'before':
-        return `${x} ${tc.not ? '>=' : '<'} ${this.moment(tc.before).begin}`;
+        return `${x} ${tc.not ? '>=' : '<'} ${this.time(
+          this.moment(tc.before).begin.sql
+        )}`;
       case 'in': {
-        // mtoy todo in now
         const m = this.moment(tc.in);
+        if (m.begin.sql === m.end) {
+          return tc.not
+            ? `${x} != ${this.time(m.end)} OR ${x} IS NULL`
+            : `${x} = ${this.time(m.end)}`;
+        }
         return this.isIn(tc.not, m.begin.sql, m.end);
       }
       case 'for': {
@@ -99,7 +129,7 @@ export class TemporalFilterCompiler {
       case 'to': {
         const firstMoment = this.moment(tc.fromMoment);
         const lastMoment = this.moment(tc.toMoment);
-        return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.end);
+        return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.begin.sql);
       }
       case 'last': {
         const thisUnit = this.nowDot(tc.units);
@@ -282,7 +312,6 @@ export class TemporalFilterCompiler {
 
   private moment(m: Moment): MomentIs {
     switch (m.moment) {
-      // mtoy todo moments which have no duration should have somethign in the interface?
       case 'now': {
         const now = this.nowExpr();
         return {begin: now, end: now.sql};
@@ -291,13 +320,7 @@ export class TemporalFilterCompiler {
         return this.expandLiteral(m);
       case 'ago':
       case 'from_now': {
-        // mtoy todo just pretending all units work, they don't
-        const nowTruncExpr: TimeTruncExpr = {
-          node: 'trunc',
-          e: this.nowExpr(),
-          units: m.units,
-        };
-        nowTruncExpr.sql = this.d.sqlTruncExpr({}, nowTruncExpr);
+        const nowTruncExpr = this.nowDot(m.units);
         const nowTrunc = mkTemporal(nowTruncExpr, 'timestamp');
         const beginExpr = this.delta(
           nowTrunc,
@@ -309,7 +332,7 @@ export class TemporalFilterCompiler {
         if (m.moment === 'ago' && m.n === '1') {
           return {begin: beginExpr, end: nowTruncExpr.sql};
         }
-        const oneDifferent = Number(m.n) + m.moment === 'ago' ? -1 : 1;
+        const oneDifferent = Number(m.n) + (m.moment === 'ago' ? -1 : 1);
         const endExpr = {
           ...beginExpr,
           kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},
@@ -400,6 +423,8 @@ export class TemporalFilterCompiler {
       begOp = '<';
       endOp = '>=';
     }
+    begin = this.time(begin);
+    end = this.time(end);
     return `${this.expr} ${begOp} ${begin} ${joinOp} ${this.expr} ${endOp} ${end}`;
   }
 }

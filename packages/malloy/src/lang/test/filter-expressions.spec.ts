@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {expr, errorMessage} from './test-translator';
+import {expr, errorMessage, error} from './test-translator';
 import './parse-expects';
 import {ExprFilterExpression, ExprLogicalOp} from '../ast';
 
@@ -135,5 +135,7 @@ describe('Filter Expressions In Source', () => {
   test('contains percent', () => {
     expect('astr ~ f"%\\%%"').compilesTo('{filterString astr | %\\%%}');
   });
-  test.todo('parse erorrs from filters appear in logs');
+  test('get a syntax error', () => {
+    expect(expr`ai ~ f'7 adn <10'`).toLog(error('filter-expression-error'));
+  });
 });

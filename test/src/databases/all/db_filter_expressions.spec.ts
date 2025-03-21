@@ -352,17 +352,21 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   });
 
   type TL = 'timeLiteral';
-  type TS = {type: 'timestamp'};
 
   describe('temporal filters', () => {
-    function ts(t: string): string {
-      const node: TL = 'timeLiteral';
-      const typeDef: TS = {type: 'timestamp'};
-      const n = {node, typeDef, literal: t};
+    function lit(t: string, type: 'timestamp' | 'date'): string {
+      const typeDef: {type: 'timestamp' | 'date'} = {type};
+      const timeLiteral: TL = 'timeLiteral';
+      const n = {
+        node: timeLiteral,
+        typeDef,
+        literal: t,
+      };
       return db.dialect.sqlLiteralTime({}, n);
     }
 
     const fTimestamp = 'yyyy-LL-dd HH:mm:ss';
+    const fDate = 'yyyy-LL-dd';
 
     /**
      * Create a source for testing a range. It will have five rows
@@ -378,13 +382,37 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     function mkRange(start: string, end: string) {
       const begin = LuxonDateTime.fromFormat(start, fTimestamp);
       const b4 = begin.minus({second: 1});
-      const last = LuxonDateTime.fromFormat(end, fTimestamp).minus({second: 1});
+      const last = lit(
+        LuxonDateTime.fromFormat(end, fTimestamp)
+          .minus({second: 1})
+          .toFormat(fTimestamp),
+        'timestamp'
+      );
+      const before = lit(b4.toFormat(fTimestamp), 'timestamp');
       const rangeModel = `
         query: range is ${dbName}.sql("""
-          SELECT ${ts(b4.toFormat(fTimestamp))} AS ${q`t`}, 'before' AS ${q`n`}
-          UNION ALL SELECT ${ts(start)}, 'first'
-          UNION ALL SELECT ${ts(last.toFormat(fTimestamp))} , 'last'
-          UNION ALL SELECT ${ts(end)}, 'zend'
+          SELECT ${before} AS ${q`t`}, 'before' AS ${q`n`}
+          UNION ALL SELECT ${lit(start, 'timestamp')}, 'first'
+          UNION ALL SELECT ${last} , 'last'
+          UNION ALL SELECT ${lit(end, 'timestamp')}, 'zend'
+          UNION ALL SELECT NULL, ' null '
+        """)
+        -> {select: *; order_by: n}`;
+      return db.loadModel(rangeModel);
+    }
+    function mkDateRange(start: string, end: string) {
+      const begin = LuxonDateTime.fromFormat(start, fDate);
+      const b4 = begin.minus({day: 1});
+      const last = LuxonDateTime.fromFormat(end, fDate).minus({day: 1});
+      const rangeModel = `
+        query: range is ${dbName}.sql("""
+          SELECT ${lit(
+            b4.toFormat(fDate),
+            'date'
+          )} AS ${q`t`}, 'before' AS ${q`n`}
+          UNION ALL SELECT ${lit(start, 'date')}, 'first'
+          UNION ALL SELECT ${lit(last.toFormat(fDate), 'date')} , 'last'
+          UNION ALL SELECT ${lit(end, 'date')}, 'zend'
           UNION ALL SELECT NULL, ' null '
         """)
         -> {select: *; order_by: n}`;
@@ -396,10 +424,123 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
      */
     function nowIs(timeStr: string) {
       const spyNow = jest.spyOn(db.dialect, 'sqlNowExpr');
-      spyNow.mockImplementation(() => ts(timeStr));
+      spyNow.mockImplementation(() => lit(timeStr, 'timestamp'));
     }
     afterEach(() => jest.restoreAllMocks());
 
+    test('date after quarter', async () => {
+      const range = mkDateRange('2001-01-01', '2001-04-01');
+      await expect(`
+        run: range + { where: t ~ f'after 2001-Q1' }
+      `).malloyResultMatches(range, {n: 'zend'});
+    });
+    test('date before month', async () => {
+      const range = mkDateRange('2001-01-01', '2001-02-01');
+      await expect(`
+        run: range + { where: t ~ f'before 2001-01' }
+      `).malloyResultMatches(range, {n: 'before'});
+    });
+    test('date in year', async () => {
+      const range = mkDateRange('2001-01-01', '2002-01-01');
+      await expect(`
+        run: range + { where: t ~ f'2001' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2 days ago', async () => {
+      nowIs('2001-01-15 12:00:00');
+      const range = mkRange('2001-01-13 00:00:00', '2001-01-14 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2 days ago' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2 days', async () => {
+      nowIs('2001-01-15 12:00:00');
+      const range = mkRange('2001-01-14 00:00:00', '2001-01-16 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2 days' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2 days from now', async () => {
+      nowIs('2001-01-15 12:00:00');
+      const range = mkRange('2001-01-17 00:00:00', '2001-01-18 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2 days from now' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('2000 to 2001', async () => {
+      const range = mkRange('2000-01-01 00:00:00', '2001-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2000 to 2001' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('next 2 days', async () => {
+      nowIs('2001-01-01 12:00:00');
+      const range = mkRange('2001-01-02 00:00:00', '2001-01-04 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'next 2 days' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('last 2 months', async () => {
+      nowIs('2001-01-01 12:00:00');
+      const range = mkRange('2000-11-01 00:00:00', '2001-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'last 2 months' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('before y2k', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'before 2001' }
+      `).malloyResultMatches(range, [{n: 'before'}]);
+    });
+    test('after y2k', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'after 2001' }
+      `).malloyResultMatches(range, [{n: 'zend'}]);
+    });
+    test('y2k for 1 minute', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-01 00:01:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 minute' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 2 hour', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-01 02:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 2 hour' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 day', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-02 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 day' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 week', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-01-08 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 week' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 month', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-02-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 month' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 quarter', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2001-04-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 quarter' }
+      `).malloyResultMatches(range, inRange);
+    });
+    test('y2k for 1 year', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'2001 for 1 year' }
+      `).malloyResultMatches(range, inRange);
+    });
     test('null', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
