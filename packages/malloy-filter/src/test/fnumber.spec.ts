@@ -82,13 +82,13 @@ describe('number filter expressions', () => {
   test('-N', () => {
     expect('-5').isNumberFilter({operator: '=', values: ['-5']});
   });
-  test('just != 5,6', () => {
+  test(' != 5,6', () => {
     expect('!= 5, 6').isNumberFilter({operator: '!=', values: ['5', '6']});
   });
   test('not != 5,6', () => {
     expect('not != 5, 6').isNumberFilter(
       {operator: '=', values: ['5', '6']},
-      '5,6'
+      '5, 6'
     );
   });
   test('N.N', () => {
