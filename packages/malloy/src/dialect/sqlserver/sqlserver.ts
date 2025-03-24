@@ -90,10 +90,10 @@ const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
 };
 
 export class SqlServerDialect extends SqlServerBase {
-  name = 'postgres';
+  name = 'sqlserver';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
-  udfPrefix = 'pg_temp.__udf';
+  udfPrefix = 'mssql_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
