@@ -184,4 +184,84 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> foo
     `).malloyResultMatches(orderByModel, {});
   });
+
+  describe('null ordering', () => {
+    const q = runtime.getQuoter();
+    const a = runtime.dialect.sqlLiteralString('a');
+    const z = runtime.dialect.sqlLiteralString('z');
+    const az = `${databaseName}.sql("""
+      SELECT ${a} as ${q`l`}
+      UNION ALL SELECT ${z}
+      UNION ALL SELECT NULL
+    """)`;
+    test('null last in select string with ascending order', async () => {
+      await expect(
+        `run: ${az} -> { select: l; order_by: l asc }`
+      ).malloyResultMatches(runtime, [{l: 'a'}, {l: 'z'}, {l: null}]);
+    });
+    test('null last in select string with descending order', async () => {
+      await expect(
+        `run: ${az} -> { select: l; order_by: l desc }`
+      ).malloyResultMatches(runtime, [{l: 'z'}, {l: 'a'}, {l: null}]);
+    });
+    test('null last in aggregate strings with default ascending order', async () => {
+      await expect(
+        `run: ${az} -> { group_by: l;  aggregate: agg_l is string_agg(l)}`
+      ).malloyResultMatches(runtime, [{l: 'a'}, {l: 'z'}, {l: null}]);
+    });
+    const nums = `${databaseName}.sql("""
+      SELECT 0 as ${q`n`}
+      UNION ALL SELECT 9
+      UNION ALL SELECT NULL
+      """)`;
+    test('null last in numbers with ascending order', async () => {
+      await expect(
+        `run: ${nums} -> { select: n; order_by: n asc }`
+      ).malloyResultMatches(runtime, [{n: 0}, {n: 9}, {n: null}]);
+    });
+    test('null last in numbers with descending order', async () => {
+      await expect(
+        `run: ${nums} -> { select: n; order_by: n desc }`
+      ).malloyResultMatches(runtime, [{n: 9}, {n: 0}, {n: null}]);
+    });
+    test('null last in aggregate numbers with default descending order', async () => {
+      await expect(`run: ${nums} -> {
+        group_by: n
+        aggregate: nTotal is n.sum()
+      }`).malloyResultMatches(runtime, [{n: 9}, {n: 0}, {n: null}]);
+    });
+    const y2020 = runtime.dialect.sqlLiteralTime(
+      {},
+      {
+        node: 'timeLiteral',
+        literal: '2020-01-01 00:00:00',
+        typeDef: {type: 'timestamp'},
+      }
+    );
+    const d2020 = new Date('2020-01-01 00:00:00');
+    const d2025 = new Date('2025-01-01 00:00:00');
+    const y2025 = runtime.dialect.sqlLiteralTime(
+      {},
+      {
+        node: 'timeLiteral',
+        literal: '2025-01-01 00:00:00',
+        typeDef: {type: 'timestamp'},
+      }
+    );
+    const times = `${databaseName}.sql("""
+      SELECT ${y2020} as ${q`t`}
+      UNION ALL SELECT ${y2025}
+      UNION ALL SELECT NULL
+    """)`;
+    test('null last in timestamps with ascending order', async () => {
+      await expect(
+        `run: ${times} -> { select: t; order_by: t asc }`
+      ).malloyResultMatches(runtime, [{t: d2020}, {t: d2025}, {t: null}]);
+    });
+    test('null last in timestamps with descending order', async () => {
+      await expect(
+        `run: ${times} -> { select: t; order_by: t asc }`
+      ).malloyResultMatches(runtime, [{t: d2025}, {t: d2020}, {t: null}]);
+    });
+  });
 });
