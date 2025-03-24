@@ -40,7 +40,7 @@ describe('SqlServerConnection', () => {
   let getSQLBlockSchema: jest.SpyInstance;
 
   beforeAll(async () => {
-    connection = new SqlServerConnection('duckdb');
+    connection = new SqlServerConnection('test-sqlserver');
     await connection.runSQL('SELECT 1');
   });
 
@@ -54,10 +54,10 @@ describe('SqlServerConnection', () => {
       .spyOn(SqlServerConnection.prototype as any, 'fetchTableSchema')
       .mockResolvedValue({
         type: 'table',
-        dialect: 'SqlServer',
+        dialect: 'sqlserver',
         name: 'name',
         tablePath: 'test',
-        connection: 'SqlServer',
+        connection: 'sqlserver',
       });
 
     getSQLBlockSchema = jest
@@ -65,10 +65,10 @@ describe('SqlServerConnection', () => {
       .spyOn(SqlServerConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
         type: 'sql select',
-        dialect: 'SqlServer',
+        dialect: 'sqlserver',
         name: 'name',
         selectStr: SQL_BLOCK_1.selectStr,
-        connection: 'SqlServer',
+        connection: 'sqlserver',
         fields: [],
       });
   });
@@ -114,8 +114,8 @@ describe('SqlServerConnection', () => {
 const SQL_BLOCK_1: SQLSourceDef = {
   type: 'sql_select',
   name: 'block1',
-  dialect: 'SqlServer',
-  connection: 'SqlServer',
+  dialect: 'sqlserver',
+  connection: 'sqlserver',
   fields: [],
   selectStr: `
 SELECT
@@ -135,8 +135,8 @@ FROM "inventory_items.parquet"
 const SQL_BLOCK_2: SQLSourceDef = {
   type: 'sql_select',
   name: 'block2',
-  dialect: 'SqlServer',
-  connection: 'SqlServer',
+  dialect: 'sqlserver',
+  connection: 'sqlserver',
   fields: [],
   selectStr: `
 SELECT
