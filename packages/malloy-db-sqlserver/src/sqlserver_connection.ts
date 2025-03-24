@@ -57,6 +57,7 @@ interface SqlServerConnectionConfiguration {
   username?: string;
   password?: string;
   databaseName?: string;
+  connectionString?: string;
 }
 
 type SqlServerConnectionConfigurationReader =
@@ -153,8 +154,9 @@ export class SqlServerConnection
       databaseName: database,
       port,
       host = 'localhost',
+      connectionString,
     } = await this.readConfig();
-    return connect({
+    return connect(connectionString || {
       user,
       password,
       database,
@@ -309,11 +311,11 @@ export class SqlServerConnection
   ): AsyncIterableIterator<QueryDataRow> {
     const client = await this.getClient();
     const request = client.request();
-    request.stream = true;
-    await client.connect();
-    const rowStream = request.query(sqlCommand);
+    const readableStream = request.toReadableStream();
+    request.query(sqlCommand);
     let index = 0;
-    for await (const row of rowStream) {
+
+    for await (const row of readableStream){
       yield row.row as QueryDataRow;
       index += 1;
       if (
@@ -324,6 +326,7 @@ export class SqlServerConnection
         break;
       }
     }
+
     await client.close();
   }
 
@@ -388,15 +391,20 @@ export class PooledSqlServerConnection
         password,
         databaseName: database,
         port,
-        host,
+        host = 'localhost',
+        connectionString,
       } = await this.readConfig();
-      this._pool = new ConnectionPool({
-        user,
-        password,
-        database,
-        port,
-        server: host || 'localhost',
-      });
+      if(connectionString){
+        this._pool = new ConnectionPool(connectionString)
+      } else {
+        this._pool = new ConnectionPool({
+          user,
+          password,
+          database,
+          port,
+          server: host,
+        });
+      }
       this._pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
     }
     return this._pool;
@@ -437,9 +445,10 @@ export class PooledSqlServerConnection
     const pool = await this.getPool();
     const client = await pool.connect();
     const request = client.request();
-    request.stream = true;
-    const resultStream = request.query(sqlCommand);
-    for await (const row of resultStream) {
+    const readableStream = request.toReadableStream();
+    request.query(sqlCommand);
+
+    for await (const row of readableStream){
       yield row.row as QueryDataRow;
       index += 1;
       if (
@@ -450,7 +459,8 @@ export class PooledSqlServerConnection
         break;
       }
     }
-    client.close();
+
+    await client.close();
   }
 
   async close(): Promise<void> {

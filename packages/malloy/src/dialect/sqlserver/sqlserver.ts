@@ -89,7 +89,7 @@ const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'varchar': {type: 'string'},
 };
 
-export class SqlServerDialect extends PostgresBase {
+export class SqlServerDialect extends SqlServerBase {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
