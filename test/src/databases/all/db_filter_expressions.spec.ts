@@ -589,7 +589,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('not null', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
-        run: range + { where: t ~ f'not null' }
+        run: range + { where: t ~ f'not null'; order_by: n }
       `).malloyResultMatches(range, [
         {n: 'before'},
         {n: 'first'},
@@ -600,7 +600,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('empty temporal filter', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
-        run: range + { where: t ~ f'' }
+        run: range + { where: t ~ f''; order_by: n }
       `).malloyResultMatches(range, [
         {n: 'before'},
         {n: 'first'},
