@@ -36,8 +36,21 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       await expect(`
         run: abc -> {
           where: s ~ f'abc';
-          select: s
+          select: n
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
+    });
+    test('empty fitler expression', async () => {
+      await expect(`
+        run: abc -> {
+          where: s ~ f'';
+          select: s
+        }`).malloyResultMatches(abc, [
+        {nm: '0 - abc'},
+        {nm: '1 - def'},
+        {nm: '2 - null'},
+        {nm: '3 - empty'},
+        {nm: '4 - xback'},
+      ]);
     });
     test('abc,def', async () => {
       await expect(`
@@ -198,6 +211,20 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
+    test('empty numeric filter', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f''
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [
+        {t: '0'},
+        {t: '1'},
+        {t: '2'},
+        {t: '3'},
+        {t: '4'},
+        {t: 'null'},
+      ]);
+    });
     test('2', async () => {
       await expect(`
         run: nums -> {
@@ -299,6 +326,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   });
 
   // mysql doesn't have true booleans ...
+  const testBoolean = !db.dialect.booleanAsNumbers;
   describe('boolean filter expressions', () => {
     const facts = db.loadModel(`
       source: facts is ${dbName}.sql("""
@@ -307,47 +335,58 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
-    test.when(dbName !== 'mysql')('true', async () => {
+    test.when(testBoolean)('true', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
-    test.when(dbName !== 'mysql')('true', async () => {
+    test.when(testBoolean)('true', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
-    test.when(dbName !== 'mysql')('false', async () => {
+    test.when(testBoolean)('false', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'false'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
-    test.when(dbName !== 'mysql')('=false', async () => {
+    test.when(testBoolean)('=false', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'=false'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
-    test.when(dbName !== 'mysql')('null', async () => {
+    test.when(testBoolean)('null', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'null'}]);
     });
-    test.when(dbName !== 'mysql')('not null', async () => {
+    test.when(testBoolean)('not null', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'not null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
+    });
+    test.when(testBoolean)('empty boolean filter', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f''
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [
+        {t: 'false'},
+        {t: 'null'},
+        {t: 'true'},
+      ]);
     });
   });
 
@@ -552,6 +591,18 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       await expect(`
         run: range + { where: t ~ f'not null' }
       `).malloyResultMatches(range, [
+        {n: 'before'},
+        {n: 'first'},
+        {n: 'last'},
+        {n: 'zend'},
+      ]);
+    });
+    test('empty temporal filter', async () => {
+      const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
+      await expect(`
+        run: range + { where: t ~ f'' }
+      `).malloyResultMatches(range, [
+        {n: ' null '},
         {n: 'before'},
         {n: 'first'},
         {n: 'last'},

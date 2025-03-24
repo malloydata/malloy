@@ -13,6 +13,9 @@ import {run_parser} from './nearley_parse';
 
 export const NumberFilterExpression = {
   parse(src: string): FilterParserResponse<NumberFilter> {
+    if (src.match(/^\s*$/)) {
+      return {parsed: null, log: []};
+    }
     const fnumber_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fnumber_grammar)
     );
