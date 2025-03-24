@@ -32,6 +32,7 @@ export interface QueryBuilder {
   inputFS: QueryInputSpace;
   resultFS: QueryOperationSpace;
   alwaysJoins: string[];
+  requiredGroupBys: string[];
   execute(qp: QueryProperty): void;
   finalize(refineFrom: PipeSegment | undefined): PipeSegment;
 }

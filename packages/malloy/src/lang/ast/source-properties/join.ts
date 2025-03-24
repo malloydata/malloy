@@ -52,7 +52,7 @@ export abstract class Join
   implements Noteable, MakeEntry
 {
   abstract name: ModelEntryReference;
-  abstract structDef(parameterSpace: ParameterSpace): JoinFieldDef;
+  abstract getStructDef(parameterSpace: ParameterSpace): JoinFieldDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
@@ -94,7 +94,7 @@ export class KeyJoin extends Join {
     super({name, sourceExpr, keyExpr});
   }
 
-  structDef(parameterSpace: ParameterSpace): JoinFieldDef {
+  getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const sourceDef = this.getStructDefFromExpr(parameterSpace);
     if (!isJoinable(sourceDef)) {
       throw this.internalError(`Cannot join struct type '${sourceDef.type}'`);
@@ -131,11 +131,12 @@ export class KeyJoin extends Join {
               left: {
                 node: 'field',
                 path: [this.name.refString, inStruct.primaryKey],
+                at: this.keyExpr.location,
               },
               right: exprX.value,
             },
           };
-          inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
+          inStruct.onFieldUsage = exprX.fieldUsage;
           return;
         } else {
           this.logError(
@@ -192,10 +193,10 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
+    inStruct.onFieldUsage = exprX.fieldUsage;
   }
 
-  structDef(parameterSpace: ParameterSpace): JoinFieldDef {
+  getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog(

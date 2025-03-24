@@ -37,7 +37,7 @@ import type {
   TimeTruncExpr,
   TimeExtractExpr,
   TypecastExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   AtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
@@ -49,7 +49,12 @@ import {
   TD,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import type {
+  DialectFieldList,
+  FieldReferenceType,
+  OrderByClauseType,
+  QueryInfo,
+} from '../dialect';
 import {Dialect, qtz} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
@@ -69,7 +74,7 @@ const inSeconds: Record<string, number> = {
   week: 7 * 24 * 3600,
 };
 
-const mysqlToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // TODO: This assumes tinyint is always going to be a boolean.
   'tinyint': {type: 'boolean'},
   'smallint': {type: 'number', numberType: 'integer'},
@@ -122,13 +127,17 @@ export class MySQLDialect extends Dialect {
   supportsArraysInData = false;
   compoundObjectInSchema = false;
   booleanAsNumbers = true;
+  orderByClause: OrderByClauseType = 'ordinal';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
         return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
       case 'string':
-        return 'CHAR';
+        return 'TEXT';
+      case 'record':
+      case 'array':
+        return 'JSON';
       case 'date':
       case 'timestamp':
       default:
@@ -136,7 +145,7 @@ export class MySQLDialect extends Dialect {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return (
@@ -224,10 +233,18 @@ export class MySQLDialect extends Dialect {
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
+      let fType = this.malloyTypeToSQLType(f.typeDef);
+      if (
+        f.typeDef.type === 'sql native' &&
+        f.typeDef.rawType &&
+        f.typeDef.rawType?.match(/json/)
+      ) {
+        fType = f.typeDef.rawType.toUpperCase();
+      }
       fields.push(
-        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${this.malloyToSQL(
-          f.type
-        )} PATH "$.${f.rawName}"`
+        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH "$.${
+          f.rawName
+        }"`
       );
     }
     return fields.join(',\n');
@@ -501,15 +518,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return tableSQL;
-  }
-
-  sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms
-      .map(
-        t =>
-          `${t.trim().slice(0, t.trim().lastIndexOf(' '))} IS NULL DESC, ${t}`
-      )
-      .join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {

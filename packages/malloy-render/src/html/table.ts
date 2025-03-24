@@ -46,7 +46,7 @@ class PivotedField {
   ) {
     this.key = JSON.stringify({
       parentField: this.parentField.name,
-      values: this.values.map(v => (v.field.isAtomic() ? String(v.value) : '')),
+      values: this.values.map(v => (v.field.isBasic() ? String(v.value) : '')),
     });
     this.fieldValueMap = new Map();
     for (const value of this.values) {
@@ -199,8 +199,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
               const aValue = a.fieldValueMap.get(d.field.name);
               const bValue = b.fieldValueMap.get(d.field.name);
               if (
-                aValue?.field.isAtomic() &&
-                bValue?.field.isAtomic() &&
+                aValue?.field.isBasic() &&
+                bValue?.field.isBasic() &&
                 typeof aValue === typeof bValue
               ) {
                 if (aValue.isNull()) {
@@ -502,7 +502,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       }
     } else {
       dimensions = table.field.fieldsWithOrder.filter(
-        f => f.field.isAtomic() && f.field.wasDimension()
+        f => f.field.isBasic() && f.field.wasDimension()
       );
     }
 

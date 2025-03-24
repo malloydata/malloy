@@ -668,6 +668,19 @@ export const flights_model: Malloy.ModelInfo = {
         'fields': [
           {
             'kind': 'dimension',
+            'name': 'test_field_with_annotations',
+            'type': {'kind': 'string_type'},
+            'annotations': [
+              {value: '#" Flight counts by carrier as a function of time. \n'},
+              {value: '# line_chart\n'},
+              {
+                value:
+                  '#(malloy) limit = 10000 ordered_by = [{ dep_month = desc }]\n',
+              },
+            ],
+          },
+          {
+            'kind': 'dimension',
             'name': 'carrier',
             'type': {
               'kind': 'string_type',

@@ -43,7 +43,6 @@ defineSourceStatement
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
-  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
@@ -67,7 +66,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr CCURLY
   ;
 
 importStatement
@@ -118,8 +117,7 @@ sqlSource
   ;
 
 exploreTable
-  : TABLE OPAREN tableURI CPAREN                     # tableFunction
-  | connectionId DOT TABLE OPAREN tablePath CPAREN   # tableMethod
+  : connectionId DOT TABLE OPAREN tablePath CPAREN
   ;
 
 connectionId
@@ -148,8 +146,12 @@ sourceParameters
   | OPAREN sourceParameter (COMMA sourceParameter)* CPAREN
   ;
 
+legalParamType
+  : malloyType
+  | FILTER LT malloyType GT;
+
 sourceParameter
-  : parameterNameDef (DOUBLECOLON malloyType)? (IS fieldExpr)?
+  : parameterNameDef (DOUBLECOLON legalParamType)? (IS fieldExpr)?
   ;
 
 parameterNameDef: id;
@@ -162,14 +164,12 @@ exploreProperties
 exploreStatement
   : defDimensions                            # defExploreDimension_stub
   | defMeasures                              # defExploreMeasure_stub
-  | declareStatement                         # defDeclare_stub
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
   | accessLabel? RENAME renameList           # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
-  | tags accessLabel? (QUERY | VIEW) subQueryDefList
-                                             # defExploreQuery
+  | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
@@ -376,6 +376,7 @@ fieldPropertyStatement
   | partitionByStatement
   | aggregateOrderByStatement
   | fieldPropertyLimitStatement
+  | groupedByStatement
   ;
 
 filterClauseList
@@ -460,11 +461,15 @@ calculateStatement
   ;
 
 projectStatement
-  : tags (SELECT | PROJECT) fieldCollection
+  : tags SELECT fieldCollection
   ;
 
 partitionByStatement
   : PARTITION_BY id (COMMA id)* COMMA?
+  ;
+
+groupedByStatement
+  : GROUPED_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement
@@ -618,7 +623,7 @@ fieldExpr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
   | (SOURCE_KW DOT)? aggregate
-      OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
+      OPAREN fieldExpr? CPAREN                             # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
   | OPAREN fieldExpr CPAREN                                # exprExpr

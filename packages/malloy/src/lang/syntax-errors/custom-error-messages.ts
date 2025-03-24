@@ -6,6 +6,7 @@
  */
 
 import type {Parser, ParserRuleContext, RuleContext, Token} from 'antlr4ts';
+import distance from 'jaro-winkler';
 
 export interface ErrorCase {
   // The rule contexts in which to apply this error case.
@@ -66,6 +67,14 @@ export interface ErrorCase {
     This rule excludes all common ancestors of the match and the offendingSymbol.
   */
   predecessorHasAncestorRule?: number;
+
+  // If you would like to offer other choices, The error generator will do ${} replacement on "replace",
+  // then compare it to choices in "with" to select the most likely replacement, and then add
+  // "Did you mean 'XXX'?" to the error message.
+  alternatives?: {
+    replace: string;
+    with: string[];
+  };
 }
 
 export const checkCustomErrorMessage = (
@@ -159,15 +168,33 @@ export const checkCustomErrorMessage = (
         }
       }
 
+      const errReplace = (s: string) => {
+        const rs = s
+          .replace('${currentToken}', currentToken.text || '')
+          .replace('${offendingSymbol}', offendingSymbol?.text || '');
+        try {
+          const previousToken = parser.inputStream.LT(-1);
+          return rs.replace('${previousToken}', previousToken.text || '');
+        } catch (ex) {
+          // This shouldn't ever occur, but if it does, just leave the untokenized message.
+        }
+        return rs;
+      };
+
       // If all cases match, return the custom error message
-      let message = errorCase.errorMessage
-        .replace('${currentToken}', currentToken.text || '')
-        .replace('${offendingSymbol}', offendingSymbol?.text || '');
-      try {
-        const previousToken = parser.inputStream.LT(-1);
-        message = message.replace('${previousToken}', previousToken.text || '');
-      } catch (ex) {
-        // This shouldn't ever occur, but if it does, just leave the untokenized message.
+      let message = errReplace(errorCase.errorMessage);
+      if (errorCase.alternatives) {
+        const badWord = errReplace(errorCase.alternatives.replace);
+        let closest = errorCase.alternatives.with[0];
+        let close = distance(closest, badWord);
+        for (const w of errorCase.alternatives.with.slice(1)) {
+          const howClose = distance(w, badWord);
+          if (howClose > close) {
+            close = howClose;
+            closest = w;
+          }
+        }
+        message += ` Did you mean '${closest}'?`;
       }
       return message;
     }

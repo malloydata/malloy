@@ -357,13 +357,16 @@ describe('temporal filter expressions', () => {
       });
     });
     test('and', () => {
-      expect('not before tomorrow and after yesterday').isTemporalFilter({
-        operator: 'and',
-        members: [
-          {operator: 'before', not: true, before: {moment: 'tomorrow'}},
-          {operator: 'after', after: {moment: 'yesterday'}},
-        ],
-      });
+      expect('Not bEfore toMorrow anD aftEr yesterDay').isTemporalFilter(
+        {
+          operator: 'and',
+          members: [
+            {operator: 'before', not: true, before: {moment: 'tomorrow'}},
+            {operator: 'after', after: {moment: 'yesterday'}},
+          ],
+        },
+        'not before tomorrow and after yesterday'
+      );
     });
   });
 

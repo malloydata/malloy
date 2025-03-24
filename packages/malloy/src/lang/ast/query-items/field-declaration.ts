@@ -28,7 +28,6 @@ import type {
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
-  FieldDefType,
 } from '../../../model/malloy_types';
 import {
   isAtomicFieldType,
@@ -140,7 +139,8 @@ export abstract class AtomicFieldDeclaration
         value: exprValue.value,
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
-        compositeFieldUsage: exprValue.compositeFieldUsage,
+        fieldUsage: exprValue.fieldUsage,
+        requiresGroupBy: exprValue.requiresGroupBy,
       };
       exprValue = nullAsNumber;
     }
@@ -155,7 +155,9 @@ export abstract class AtomicFieldDeclaration
       }
       ret.location = this.location;
       ret.e = exprValue.value;
-      ret.compositeFieldUsage = exprValue.compositeFieldUsage;
+      ret.fieldUsage = exprValue.fieldUsage;
+      ret.ungroupings = exprValue.ungroupings;
+      ret.requiresGroupBy = exprValue.requiresGroupBy;
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;
       }
@@ -347,10 +349,5 @@ export class FieldDefinitionValue extends SpaceField {
       return this.fieldTypeFromFieldDef(typeFrom);
     }
     throw new Error(`Can't get typeDesc for ${typeFrom.type}`);
-  }
-
-  entryType(): FieldDefType {
-    const typeFrom = this.defInQuery || this.fieldDef();
-    return typeFrom.type;
   }
 }

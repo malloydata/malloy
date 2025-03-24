@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {CastType, LeafAtomicTypeDef} from '../../../model';
+import type {CastType, BasicAtomicTypeDef} from '../../../model';
 import {castTo} from '../time-utils';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
@@ -40,7 +40,7 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: LeafAtomicTypeDef = {type: 'error'};
+    let dataType: BasicAtomicTypeDef = {type: 'error'};
     if (typeof this.castType === 'string') {
       dataType = {type: this.castType};
     } else {

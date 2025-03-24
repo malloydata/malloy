@@ -1,4 +1,5 @@
 name: 'DB:DuckDB(WASM)'
+permissions: {}
 
 on: workflow_call
 

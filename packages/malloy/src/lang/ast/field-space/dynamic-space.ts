@@ -129,7 +129,7 @@ export abstract class DynamicSpace
       const parameterSpace = this.parameterSpace();
       for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
-          const joinStruct = field.join.structDef(parameterSpace);
+          const joinStruct = field.join.getStructDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
             fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);

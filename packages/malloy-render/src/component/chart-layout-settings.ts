@@ -84,6 +84,7 @@ export function getChartLayoutSettings(
     chartType: string;
     getXMinMax?: () => [number, number];
     getYMinMax?: () => [number, number];
+    independentY?: boolean;
   }
 ): ChartLayoutSettings {
   // TODO: improve logic for field extraction
@@ -132,10 +133,10 @@ export function getChartLayoutSettings(
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formattedMin = yField.isAtomic()
+    const formattedMin = yField.isBasic()
       ? renderNumericField(yField, minAxisVal)
       : l.format(',')(minAxisVal);
-    const formattedMax = yField.isAtomic()
+    const formattedMax = yField.isBasic()
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
     // const formattedMin = l.format(',')(minAxisVal);
@@ -243,7 +244,7 @@ export function getChartLayoutSettings(
       yTitleSize,
     },
     yScale: {
-      domain: chartTag.has('y', 'independent') ? null : yDomain,
+      domain: options.independentY ? null : yDomain,
     },
     padding: isSpark
       ? {top: 0, left: 0, bottom: 0, right: 0}

@@ -104,7 +104,22 @@ function typeDefFromField(type: Malloy.AtomicType): AtomicTypeDef {
 
 function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
   const typeDef = typeDefFromField(field.type);
-  return mkFieldDef(typeDef, field.name);
+  return {
+    ...mkFieldDef(typeDef, field.name),
+    annotation:
+      field.annotations && field.annotations.length
+        ? {
+            notes: field.annotations?.map(a => ({
+              text: a.value,
+              // TODO correctly map the location of the annotation to the location of the table call...
+              at: {
+                url: '~internal~',
+                range: DEFAULT_LOG_RANGE,
+              },
+            })),
+          }
+        : undefined,
+  };
 }
 
 function convertTableField(field: Malloy.FieldInfo): AtomicFieldDef {
@@ -238,7 +253,7 @@ export type CompileResponse =
 
 export function compileQuery(
   request: Malloy.CompileQueryRequest,
-  state?: CompileModelState
+  state?: CompileQueryState
 ): Malloy.CompileQueryResponse {
   state ??= newCompileQueryState(request);
   return statedCompileQuery(state);
@@ -262,7 +277,10 @@ export function updateCompileModelState(
     }
     if (!state.hasSource) {
       state.hasSource =
-        needs?.files?.some(f => f.url === state.translator.sourceURL) ?? false;
+        (needs?.files?.some(f => f.url === state.translator.sourceURL) ??
+          false) ||
+        (needs?.translations?.some(f => f.url === state.translator.sourceURL) ??
+          false);
     }
   }
   const update = compilerNeedsToUpdate(needs);
@@ -280,7 +298,8 @@ function _newCompileModelState(
     compilerNeedsToUpdate(compilerNeeds)
   );
   const hasSource =
-    compilerNeeds?.files?.some(f => f.url === modelURL) ?? false;
+    (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
+    (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
   if (extendURL) {
     return {
       extending: _newCompileModelState(extendURL, compilerNeeds),
@@ -363,6 +382,7 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       ),
     };
   }
+
   const result = state.translator.translate(extendingModel);
   if (result.final) {
     state.done = true;
@@ -397,7 +417,16 @@ function wrapResponse(
   if (response.compilerNeeds) {
     return {compiler_needs: response.compilerNeeds, logs};
   } else {
-    return {model: response.model, logs};
+    let translations: Array<Malloy.Translation> | undefined = undefined;
+    if (response.modelDef) {
+      translations = [
+        {
+          url: defaultURL,
+          compiled_model_json: JSON.stringify(response.modelDef),
+        },
+      ];
+    }
+    return {model: response.model, logs, translations};
   }
 }
 
@@ -467,9 +496,13 @@ export function hasErrors(log: Malloy.LogMessage[] | undefined) {
 
 // Given a URL to a model and the name of a source, run the indexing query
 
+export interface CompileQueryState extends CompileModelState {
+  defaultRowLimit?: number;
+}
+
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
-): CompileModelState {
+): CompileQueryState {
   const queryMalloy = Malloy.queryToMalloy(request.query);
   const needs = {
     ...(request.compiler_needs ?? {}),
@@ -482,11 +515,14 @@ export function newCompileQueryState(
     },
     ...(needs.files ?? []),
   ];
-  return _newCompileModelState(queryURL, needs, request.model_url);
+  return {
+    ..._newCompileModelState(queryURL, needs, request.model_url),
+    defaultRowLimit: request.default_row_limit,
+  };
 }
 
 export function statedCompileQuery(
-  state: CompileModelState
+  state: CompileQueryState
 ): Malloy.CompileQueryResponse {
   const result = _statedCompileModel(state);
   // TODO this can expose the internal URL... is there a better way to handle URL-less errors from the compiler?
@@ -513,7 +549,9 @@ export function statedCompileQuery(
     const annotations = result.model.anonymous_queries[index].annotations ?? [];
     try {
       const queryModel = new QueryModel(result.modelDef);
-      const translatedQuery = queryModel.compileQuery(query);
+      const translatedQuery = queryModel.compileQuery(query, {
+        defaultRowLimit: state.defaultRowLimit,
+      });
       const modelAnnotations = annotationToTaglines(
         result.modelDef.annotation
       ).map(l => ({
@@ -541,6 +579,7 @@ export function statedCompileQuery(
             modelAnnotations.length > 0 ? modelAnnotations : undefined,
           query_timezone: translatedQuery.queryTimezone,
         },
+        default_row_limit_added: translatedQuery.defaultRowLimitAdded,
       };
     } catch (error) {
       return {

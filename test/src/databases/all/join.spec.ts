@@ -28,6 +28,7 @@ import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
 function modelText(connectionName: string) {
   return `
   source: aircraft_models is ${connectionName}.table('malloytest.aircraft_models') extend {
@@ -302,4 +303,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `).malloyResultMatches(joinModel, {c: 0});
   });
+
+  it.when(runtime.dialect.nestedArrays)(
+    'finds join dependency in non basic atomic fields',
+    async () => {
+      await expect(`
+      run: ${databaseName}.sql("SELECT 1 as n")
+        extend { dimension: a1 is [[1]], a2 is [[2]] }
+        -> { select: pick_a1 is pick a1.each when true else a2.each }
+      `).matchesRows(runtime, {pick_a1: [1]});
+    }
+  );
 });

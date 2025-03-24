@@ -66,6 +66,8 @@ function escapeString(str: string): {contents: string; quoteCharacter: string} {
 
 function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
   switch (literal.kind) {
+    case 'filter_expression_literal':
+      return [quoteFilter(literal.filter_expression_value)];
     case 'boolean_literal':
       return [literal.boolean_value.toString()];
     case 'string_literal': {
@@ -94,67 +96,59 @@ function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
   }
 }
 
-function parseDate(date: string): Date {
-  return new Date(date);
-}
+function parseDate(date: string): string[] {
+  let parts: string[] | null;
 
-function digits(value: number, digits: number) {
-  return value.toString().padStart(digits, '0');
+  if ((parts = /(\d\d\d\d)-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/.exec(date))) {
+    const [_, year, month, day, hours, minutes, seconds] = parts;
+    return [year, month, day, hours, minutes, seconds];
+  } else if ((parts = /(\d\d\d\d)-(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(date))) {
+    const [_, year, month, day, hours, minutes] = parts;
+    return [year, month, day, hours, minutes, '00'];
+  } else if ((parts = /(\d\d\d\d)-(\d\d)-(\d\d) (\d\d)(?:00)?/.exec(date))) {
+    const [_, year, month, day, hours] = parts;
+    return [year, month, day, hours, '00', '00'];
+  } else if ((parts = /(\d\d\d\d)-(\d\d)-(\d\d)/.exec(date))) {
+    const [_, year, month, day] = parts;
+    return [year, month, day, '00', '00', '00'];
+  } else if ((parts = /(\d\d\d\d)-(\d\d)/.exec(date))) {
+    const [_, year, month] = parts;
+    return [year, month, '01', '00', '00', '00'];
+  } else if ((parts = /(\d\d\d\d)/.exec(date))) {
+    const [_, year] = parts;
+    return [year, '01', '01', '00', '00', '00'];
+  }
+  return ['1970', '01', '01', '00', '00', '00'];
 }
 
 function serializeDateAsLiteral(
-  date: Date,
+  [year, month, day, hour, minute, second]: string[],
   granularity: Malloy.TimestampTimeframe
 ): string {
   switch (granularity) {
     case 'year': {
-      const year = digits(date.getUTCFullYear(), 4);
       return `@${year}`;
     }
     case 'quarter': {
-      const year = digits(date.getUTCFullYear(), 4);
-      const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
+      const quarter = Math.floor(+month / 3) + 1;
       return `@${year}-Q${quarter}`;
     }
     case 'month': {
-      const year = digits(date.getUTCFullYear(), 2);
-      const month = digits(date.getUTCMonth() + 1, 2);
       return `@${year}-${month}`;
     }
     case 'week': {
-      const year = digits(date.getUTCFullYear(), 2);
-      const month = digits(date.getUTCMonth() + 1, 2);
-      const day = digits(date.getUTCDate(), 2);
       return `@WK${year}-${month}-${day}`;
     }
     case 'day': {
-      const year = digits(date.getUTCFullYear(), 2);
-      const month = digits(date.getUTCMonth() + 1, 2);
-      const day = digits(date.getUTCDate(), 2);
       return `@${year}-${month}-${day}`;
     }
     case 'hour': {
-      const year = digits(date.getUTCFullYear(), 2);
-      const month = digits(date.getUTCMonth() + 1, 2);
-      const day = digits(date.getUTCDate(), 2);
-      const hour = digits(date.getUTCHours(), 2);
       return `@${year}-${month}-${day} ${hour}`;
     }
     case 'minute': {
-      const year = digits(date.getUTCFullYear(), 2);
-      const month = digits(date.getUTCMonth() + 1, 2);
-      const day = digits(date.getUTCDate(), 2);
-      const hour = digits(date.getUTCHours(), 2);
-      const minute = digits(date.getUTCMinutes(), 2);
       return `@${year}-${month}-${day} ${hour}:${minute}`;
     }
     case 'second': {
-      const year = digits(date.getUTCFullYear(), 2);
-      const month = digits(date.getUTCMonth() + 1, 2);
-      const day = digits(date.getUTCDate(), 2);
-      const hour = digits(date.getUTCHours(), 2);
-      const minute = digits(date.getUTCMinutes(), 2);
-      const second = digits(date.getUTCSeconds(), 2);
       return `@${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
     default:
@@ -305,7 +299,9 @@ function groupedOperationsToFragments(
     case 'limit':
       return limitToFragments(operations as Malloy.Limit[]);
     case 'where':
-      return whereToFragments(operations as Malloy.Where[]);
+      return whereToFragments(operations as Malloy.FilterOperation[]);
+    case 'having':
+      return havingToFragments(operations as Malloy.FilterOperation[]);
   }
 }
 
@@ -479,8 +475,12 @@ function limitToFragments(limits: Malloy.Limit[]): Fragment[] {
   return fragments;
 }
 
-function whereToFragments(where: Malloy.Where[]): Fragment[] {
-  return formatBlock('where', where.map(whereItemToFragments), ',');
+function whereToFragments(where: Malloy.FilterOperation[]): Fragment[] {
+  return formatBlock('where', where.map(filterOperationItemToFragments), ',');
+}
+
+function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
+  return formatBlock('having', having.map(filterOperationItemToFragments), ',');
 }
 
 const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly
@@ -517,7 +517,9 @@ function escapeFilter(filter: string, quote: string): string {
   return result;
 }
 
-function whereItemToFragments(whereItem: Malloy.Where): Fragment[] {
+function filterOperationItemToFragments(
+  whereItem: Malloy.FilterOperation
+): Fragment[] {
   switch (whereItem.filter.kind) {
     case 'filter_string':
       return [

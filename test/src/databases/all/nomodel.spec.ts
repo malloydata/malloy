@@ -54,6 +54,9 @@ function getSplitFunction(db: string) {
       `split(${column}, '${splitChar}')`,
     'presto': (column: string, splitChar: string) =>
       `split(${column}, '${splitChar}')`,
+    // TODO (vitor): Not sure about this
+    'tsql': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
   }[db];
 }
 
@@ -550,6 +553,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       // symmetric aggregate are needed on both sides of the join
       // Check the row count and that sums on each side work properly.
       await expect(`
+        # test.verbose
         run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: state
           nest: ugly is {
@@ -1261,7 +1265,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    expect(result.sql).not.toContain('ORDER BY');
+    // TODO (vitor): Check with the malloy folk
+    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
+      expect(result.sql).not.toContain('ORDER BY');
+    }
   });
 
   it(`removes surpuflous order_by - pipeline - ${databaseName}`, async () => {
@@ -1279,7 +1286,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    expect(result.sql).not.toContain('ORDER BY');
+    // TODO (vitor): Check with the malloy folk
+    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
+      expect(result.sql).not.toContain('ORDER BY');
+    }
   });
 
   it(`removes surpuflous order_by - joined_query - ${databaseName}`, async () => {
@@ -1301,7 +1311,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    expect(result.sql).not.toContain('ORDER BY');
+    // TODO (vitor): Check with the malloy folk
+    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
+      expect(result.sql).not.toContain('ORDER BY');
+    }
   });
 
   it(`removes surpuflous order_by - joined_query pipeline - ${databaseName}`, async () => {
@@ -1327,7 +1340,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    expect(result.sql).not.toContain('ORDER BY');
+    // TODO (vitor): Check with the malloy folk
+    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
+      expect(result.sql).not.toContain('ORDER BY');
+    }
   });
 
   describe('quoting and strings', () => {

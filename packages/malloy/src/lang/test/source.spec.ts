@@ -90,21 +90,6 @@ describe('source:', () => {
         }
       `).toTranslate();
     });
-    test('single declare ok b4 m4', () => {
-      expect(
-        '##! -m4warnings\nsource: aa is a extend { declare: x is 1 }'
-      ).toTranslate();
-    });
-    test('multiple declare ok b4 m4', () => {
-      expect(`
-        ##! -m4warnings
-        source: aa is a extend {
-          declare:
-            x is 1
-            y is 2
-        }
-      `).toTranslate();
-    });
     test('single measure', () => {
       expect('source: aa is a extend { measure: x is count() }').toTranslate();
     });
@@ -563,13 +548,6 @@ describe('source:', () => {
       expect(
         'source: c is a extend {view: q is { group_by: astr } }'
       ).toTranslate();
-    });
-    test('turtle in source can be called query with m4 warning', () => {
-      expect(
-        `##! m4warnings=warn
-          source: c is a extend {query: q is { group_by: astr } }
-        `
-      ).toLog(warningMessage('Use view: inside of a source instead of query:'));
     });
     test('refined explore-query', () => {
       expect(`

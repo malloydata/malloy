@@ -18,6 +18,9 @@ import {run_parser} from './nearley_parse';
 
 export const TemporalFilterExpression = {
   parse(src: string): FilterParserResponse<TemporalFilter> {
+    if (src.match(/^\s*$/)) {
+      return {parsed: null, log: []};
+    }
     const ftemporal_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(ftemporal_grammar)
     );
