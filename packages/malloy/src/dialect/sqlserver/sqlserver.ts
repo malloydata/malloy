@@ -40,7 +40,7 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {PostgresBase} from '../pg_impl';
+import {SqlServerBase} from '../mssql_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -89,7 +89,7 @@ const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'varchar': {type: 'string'},
 };
 
-export class PostgresDialect extends PostgresBase {
+export class SqlServerDialect extends PostgresBase {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
