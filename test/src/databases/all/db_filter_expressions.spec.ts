@@ -36,14 +36,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       await expect(`
         run: abc -> {
           where: s ~ f'abc';
-          select: n
+          select: s
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
-    test('empty fitler expression', async () => {
+    test('empty string filter expression', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'';
-          select: s
+          select: nm
         }`).malloyResultMatches(abc, [
         {nm: '0 - abc'},
         {nm: '1 - def'},
