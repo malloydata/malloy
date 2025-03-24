@@ -184,7 +184,7 @@ export class SqlServerConnection
         result.rows[i] = result.rows[i].row;
       }
     }
-    await client.end();
+    await client.close();
     return {
       rows: result.rows as QueryData,
       totalRows: result.rows.length,
@@ -203,15 +203,15 @@ export class SqlServerConnection
     };
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
     const infoQuery = `
-      drop table if exists ${tempTableName};
-      create temp table ${tempTableName} as SELECT * FROM (
+      drop table if exists #${tempTableName};
+      create table #${tempTableName} as SELECT * FROM (
         ${sqlRef.selectStr}
       ) as x where false;
       SELECT column_name, c.data_type, e.data_type as element_type
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e
         ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-      where table_name='${tempTableName}';
+      where table_name='#${tempTableName}';
     `;
     try {
       await this.schemaFromQuery(infoQuery, structDef);
@@ -338,7 +338,7 @@ export class SqlServerConnection
     const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
     const tableName = `tt${hash}`;
 
-    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    const cmd = `CREATE TABLE IF NOT EXISTS #${tableName} AS (${sqlCommand});`;
     // console.log(cmd);
     await this.runSqlServerQuery(cmd, 1000, 0, false);
     return tableName;
