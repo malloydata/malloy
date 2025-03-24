@@ -316,7 +316,7 @@ export class SqlServerConnection
     let index = 0;
 
     for await (const row of readableStream){
-      yield row.row as QueryDataRow;
+      yield row as QueryDataRow;
       index += 1;
       if (
         (rowLimit !== undefined && index >= rowLimit) ||
@@ -451,7 +451,7 @@ export class PooledSqlServerConnection
     request.query(sqlCommand);
 
     for await (const row of readableStream){
-      yield row.row as QueryDataRow;
+      yield row as QueryDataRow;
       index += 1;
       if (
         (rowLimit !== undefined && index >= rowLimit) ||
