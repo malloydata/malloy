@@ -169,25 +169,24 @@ export class SqlServerConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    _deJSON: boolean
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
     await this.connectionSetup(client);
 
-    let result = await client.query(sqlCommand);
-    if (Array.isArray(result)) {
-      result = result.pop();
+    const result = await client.query(sqlCommand);
+    let rows: QueryData;
+    if (Array.isArray(result.recordsets)) {
+      rows = result.recordsets.flat();
+    } else {
+      throw new Error('SqlServer non-array output is not supported')
     }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
-      }
-    }
+
     await client.close();
     return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
+      rows,
+      totalRows: result.rowsAffected.reduce((acc, val) => acc + val, 0),
     };
   }
 
@@ -283,11 +282,12 @@ export class SqlServerConnection
   }
 
   public async test(): Promise<void> {
-    await this.runSQL('SELECT 1');
+    await this.runSQL('SELECT 1 AS one, 2 AS two');
   }
 
   public async connectionSetup(client: ConnectionPool): Promise<void> {
-    await client.query("SET TIME ZONE 'UTC'");
+    // TODO (Vitor): Discuss session timezone in SqlServer, this feature ins't straight forward
+    // await client.query("SET TIME ZONE 'UTC'");
   }
 
   public async runSQL(
@@ -414,22 +414,23 @@ export class PooledSqlServerConnection
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJSON: boolean
+    _deJSON: boolean
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    let result = await pool.query(sqlCommand);
+    const client = await pool.connect();
+    let result = await client.query(sqlCommand);
 
-    if (Array.isArray(result)) {
-      result = result.pop();
+    let rows: QueryData;
+    if (Array.isArray(result.recordsets)) {
+      rows = result.recordsets.flat();
+    } else {
+      throw new Error('SqlServer non-array output is not supported')
     }
-    if (deJSON) {
-      for (let i = 0; i < result.rows.length; i++) {
-        result.rows[i] = result.rows[i].row;
-      }
-    }
+
+    await client.close();
     return {
-      rows: result.rows as QueryData,
-      totalRows: result.rows.length,
+      rows,
+      totalRows: result.rowsAffected.reduce((acc, val) => acc + val, 0),
     };
   }
 
@@ -444,6 +445,7 @@ export class PooledSqlServerConnection
     // `client.query(query)`, which does what it's supposed to.
     const pool = await this.getPool();
     const client = await pool.connect();
+
     const request = client.request();
     const readableStream = request.toReadableStream();
     request.query(sqlCommand);
