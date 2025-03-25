@@ -27,8 +27,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         SELECT 'abc' as ${q`s`}, 'abc' as ${q`nm`}
         UNION ALL SELECT 'def', 'def'
         UNION ALL SELECT ${xbq}, 'xback'
-        UNION ALL SELECT '', '{empty}'
-        UNION ALL SELECT null, '{null}'
+        UNION ALL SELECT '', '{z-empty}'
+        UNION ALL SELECT null, '{z-null}'
       """)
     `);
 
@@ -49,8 +49,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {nm: 'abc'},
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
-        {nm: '{null}'},
+        {nm: '{z-empty}'},
+        {nm: '{z-null}'},
       ]);
     });
     test('abc,def', async () => {
@@ -69,8 +69,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
-        {nm: '{null}'},
+        {nm: '{z-empty}'},
+        {nm: '{z-null}'},
       ]);
     });
     test('-starts', async () => {
@@ -82,8 +82,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
-        {nm: '{null}'},
+        {nm: '{z-empty}'},
+        {nm: '{z-null}'},
       ]);
     });
     test('-contains', async () => {
@@ -95,8 +95,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
-        {nm: '{null}'},
+        {nm: '{z-empty}'},
+        {nm: '{z-null}'},
       ]);
     });
     test('-end', async () => {
@@ -108,8 +108,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
-        {nm: '{null}'},
+        {nm: '{z-empty}'},
+        {nm: '{z-null}'},
       ]);
     });
     test('unlike', async () => {
@@ -121,8 +121,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
-        {nm: '{null}'},
+        {nm: '{z-empty}'},
+        {nm: '{z-null}'},
       ]);
     });
     test('simple but not ___,-abc', async () => {
@@ -139,7 +139,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [{nm: '{empty}'}, {nm: '{null}'}]);
+        }`).malloyResultMatches(abc, [{nm: '{z-empty}'}, {nm: '{z-null}'}]);
     });
     test('-empty', async () => {
       await expect(`
@@ -147,7 +147,11 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [{nm: 'abc'}, {nm: 'def'}, {nm: 'xback'}]);
+        }`).malloyResultMatches(abc, [
+        {nm: 'abc'},
+        {nm: 'def'},
+        {nm: 'xback'},
+      ]);
     });
     test('null', async () => {
       await expect(`
@@ -155,7 +159,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'null'
           select: nm
-        }`).malloyResultMatches(abc, [{nm: '{null}'}]);
+        }`).malloyResultMatches(abc, [{nm: '{z-null}'}]);
     });
     test('-null', async () => {
       await expect(`
@@ -167,7 +171,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {nm: 'abc'},
         {nm: 'def'},
         {nm: 'xback'},
-        {nm: '{empty}'},
+        {nm: '{z-empty}'},
       ]);
     });
     test('starts', async () => {
@@ -424,9 +428,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
      * { t: start,                 n: 'first' }
      * { t: 1 second before end,   n: 'last' }
      * { t: end,                   n: '{end}' }
-     * { t: NULL                   n: '{null}' }
+     * { t: NULL                   n: '{z-null}' }
      * { t: end,                   n: '{end}' }
-     * { t: NULL                   n: '{null}' }
+     * { t: NULL                   n: '{z-null}' }
      * Use malloyResultMatches(range, inRange) or (range, notInRange)
      */
     const inRange = [{n: 'first'}, {n: 'last'}];
@@ -447,7 +451,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           UNION ALL SELECT ${lit(start, 'timestamp')}, 'first'
           UNION ALL SELECT ${last} , 'last'
           UNION ALL SELECT ${lit(end, 'timestamp')}, '{end}'
-          UNION ALL SELECT NULL, '{null}'
+          UNION ALL SELECT NULL, '{z-null}'
         """)
         -> {select: *; order_by: n}`;
       return db.loadModel(rangeModel);
@@ -465,7 +469,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           UNION ALL SELECT ${lit(start, 'date')}, 'first'
           UNION ALL SELECT ${lit(last.toFormat(fDate), 'date')} , 'last'
           UNION ALL SELECT ${lit(end, 'date')}, '{end}'
-          UNION ALL SELECT NULL, '{null}'
+          UNION ALL SELECT NULL, '{z-null}'
         """)
         -> {select: t,n; order_by: n}`;
       return db.loadModel(rangeModel);
@@ -597,7 +601,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
         run: range + { where: t ~ f'null' }
-      `).malloyResultMatches(range, [{n: '{null}'}]);
+      `).malloyResultMatches(range, [{n: '{z-null}'}]);
     });
     test('not null', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
@@ -620,7 +624,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'first'},
         {n: 'last'},
         {n: '{end}'},
-        {n: '{null}'},
+        {n: '{z-null}'},
       ]);
     });
     test('year literal', async () => {
