@@ -190,7 +190,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const a = runtime.dialect.sqlLiteralString('a');
     const b = runtime.dialect.sqlLiteralString('b');
     const az = `${databaseName}.sql("""
-      SELECT ${a} as ${q`l`}, 'a' as ln
+      SELECT ${a} as ${q`l`}, 'a' as ${q`ln`}
       UNION ALL SELECT ${b}, 'b'
       UNION ALL SELECT NULL, 'null'
     """)`;

@@ -487,4 +487,8 @@ ${indent(sql)}
     const array = lit.kids.values.map(val => val.sql);
     return '[' + array.join(',') + ']';
   }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
+  }
 }
