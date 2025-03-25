@@ -32,7 +32,6 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/db-duckdb": "^0.0.248",
     "@malloydata/malloy": "^0.0.248",
     "@malloydata/malloy-interfaces": "^0.0.248",
     "@malloydata/malloy-tag": "^0.0.248",
@@ -48,6 +47,7 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
+    "@malloydata/db-duckdb": "^0.0.248",
     "@storybook/addon-essentials": "^8.5.8",
     "@storybook/addon-interactions": "^8.5.8",
     "@storybook/addon-links": "^8.5.8",
