@@ -44,7 +44,7 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, QueryInfo} from '../dialect';
+import type {DialectFieldList, OrderByRequest, QueryInfo} from '../dialect';
 import {Dialect} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -141,7 +141,10 @@ export class StandardSQLDialect extends Dialect {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${fieldName} END)`;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
+  sqlOrderBy(orderTerms: string[], obr?: OrderByRequest): string {
+    if (obr === 'analytical' || obr === 'turtle') {
+      return `ORDER BY ${orderTerms.join(',')}`;
+    }
     return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
@@ -156,7 +159,6 @@ export class StandardSQLDialect extends Dialect {
     if (limit !== undefined) {
       tail += ` LIMIT ${limit}`;
     }
-    orderBy = (orderBy ?? '').replace(/ NULLS LAST/, '');
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');

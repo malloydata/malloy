@@ -1120,7 +1120,7 @@ class QueryField extends QueryNode {
       }
 
       if (obSQL.length > 0) {
-        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'analytical');
       }
     }
 
@@ -3189,7 +3189,7 @@ class QueryQuery extends QueryField {
       }
     }
     if (o.length > 0) {
-      s = this.parent.dialect.sqlOrderBy(o) + '\n';
+      s = this.parent.dialect.sqlOrderBy(o, 'query') + '\n';
     }
     return s;
   }
@@ -3801,7 +3801,7 @@ class QueryQuery extends QueryField {
     }
 
     if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'turtle');
     }
 
     const dialectFieldList = this.buildDialectFieldList(resultStruct);

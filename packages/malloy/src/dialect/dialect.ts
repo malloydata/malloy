@@ -110,6 +110,8 @@ export function qtz(qi: QueryInfo): string | undefined {
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 
+export type OrderByRequest = 'query' | 'turtle' | 'analytical';
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -384,7 +386,7 @@ export abstract class Dialect {
    * isBaseOrdering is a hack to allow the MySQL dialect to partially implement
    * NULLs last, but should go away once MySQL fully implements NULLs last.
    */
-  sqlOrderBy(orderTerms: string[], _isBaseOrdering = false): string {
+  sqlOrderBy(orderTerms: string[], _orderFor?: OrderByRequest): string {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 
