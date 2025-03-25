@@ -147,11 +147,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'abc'},
-        {nm: 'def'},
-        {nm: 'xback'},
-      ]);
+        }`).malloyResultMatches(abc, [{nm: 'abc'}, {nm: 'def'}, {nm: 'xback'}]);
     });
     test('null', async () => {
       await expect(`
