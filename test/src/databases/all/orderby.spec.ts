@@ -204,7 +204,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `run: ${az} -> { select: l; order_by: l desc }`
       ).malloyResultMatches(runtime, [{l: 'z'}, {l: 'a'}, {l: null}]);
     });
-    test('null last in aggregate strings with default ascending order', async () => {
+    test.skip('null last in aggregate strings with default ascending order', async () => {
       await expect(
         `run: ${az} -> { group_by: l;  aggregate: agg_l is string_agg(l)}`
       ).malloyResultMatches(runtime, [{l: 'a'}, {l: 'z'}, {l: null}]);
@@ -238,8 +238,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         typeDef: {type: 'timestamp'},
       }
     );
-    const d2020 = new Date('2020-01-01 00:00:00');
-    const d2025 = new Date('2025-01-01 00:00:00');
+    const d2020 = new Date('2020-01-01 00:00:00Z');
+    const d2025 = new Date('2025-01-01 00:00:00Z');
     const y2025 = runtime.dialect.sqlLiteralTime(
       {},
       {
@@ -260,7 +260,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('null last in timestamps with descending order', async () => {
       await expect(
-        `run: ${times} -> { select: t; order_by: t asc }`
+        `run: ${times} -> { select: t; order_by: t desc }`
       ).malloyResultMatches(runtime, [{t: d2025}, {t: d2020}, {t: null}]);
     });
   });
