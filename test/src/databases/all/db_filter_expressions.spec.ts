@@ -29,8 +29,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         SELECT 'abc' as ${q`s`}, 'abc' as ${q`nm`}
         UNION ALL SELECT 'def', 'def'
         UNION ALL SELECT ${xbq}, 'xback'
-        UNION ALL SELECT '', '{z-empty}'
-        UNION ALL SELECT null, '{z-null}'
+        UNION ALL SELECT '', 'z-empty'
+        UNION ALL SELECT null, 'z-null'
       """)
     `);
 
@@ -42,18 +42,23 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
     test('empty string filter expression', async () => {
+      /*
+        since the sql generated works when pasted into mysql
+        my next suggestion is that there is some funky re-ordering
+        happening in the result processing which will test tomorrow
+      */
       await expect(`
         # test.verbose
         run: abc -> {
           where: s ~ f'';
-          select: nm; order_by: nm
-        }`).malloyResultMatches(abc, got('abc,def,xback,{z-empty},{z-null}'));
+          select: *; order_by: nm asc
+        }`).malloyResultMatches(abc, got('abc,def,xback,z-empty,z-null'));
     });
     test('abc,def', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'abc,def';
-          select: nm; order_by: nm
+          select: nm; order_by: nm asc
         }`).malloyResultMatches(abc, got('abc,def'));
     });
     test('-abc', async () => {
@@ -62,7 +67,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-abc',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
+        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
     });
     test('-starts', async () => {
       await expect(`
@@ -70,7 +75,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-a%',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
+        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
     });
     test('-contains', async () => {
       await expect(`
@@ -78,7 +83,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-%b%',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
+        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
     });
     test('-end', async () => {
       await expect(`
@@ -86,7 +91,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-%c',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
+        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
     });
     test('unlike', async () => {
       await expect(`
@@ -94,7 +99,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-a%c',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
+        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
     });
     test('simple but not ___,-abc', async () => {
       await expect(`
@@ -110,7 +115,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('{z-empty},{z-null}'));
+        }`).malloyResultMatches(abc, got('z-empty,z-null'));
     });
     test('-empty', async () => {
       await expect(`
@@ -126,7 +131,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'null'
           select: nm
-        }`).malloyResultMatches(abc, got('{z-null}'));
+        }`).malloyResultMatches(abc, got('z-null'));
     });
     test('-null', async () => {
       await expect(`
@@ -134,7 +139,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-null'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('abc,def,xback,{z-empty}'));
+        }`).malloyResultMatches(abc, got('abc,def,xback,z-empty'));
     });
     test('starts', async () => {
       await expect(`
@@ -149,7 +154,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         # test.verbose
         run: abc -> {
           where: s ~ f'%b%,%e%';
-          select: s; order_by: s asc
+          select: *; order_by: nm asc
         }`).malloyResultMatches(abc, [{s: 'abc'}, {s: 'def'}]);
     });
     test('simple ends', async () => {
@@ -390,7 +395,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
      * { t: start,                 n: 'first' }
      * { t: 1 second before end,   n: 'last' }
      * { t: end,                   n: 'post-range' }
-     * { t: NULL                   n: '{z-null}' }
+     * { t: NULL                   n: 'z-null' }
      * Use malloyResultMatches(range, inRange) or (range, notInRange)
      */
     const inRange = [{n: 'first'}, {n: 'last'}];
@@ -411,7 +416,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           UNION ALL SELECT ${lit(start, 'timestamp')}, 'first'
           UNION ALL SELECT ${last} , 'last'
           UNION ALL SELECT ${lit(end, 'timestamp')}, 'post-range'
-          UNION ALL SELECT NULL, '{z-null}'
+          UNION ALL SELECT NULL, 'z-null'
         """)
         -> {select: *; order_by: n}`;
       return db.loadModel(rangeModel);
@@ -429,7 +434,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           UNION ALL SELECT ${lit(start, 'date')}, 'first'
           UNION ALL SELECT ${lit(last.toFormat(fDate), 'date')} , 'last'
           UNION ALL SELECT ${lit(end, 'date')}, 'post-range'
-          UNION ALL SELECT NULL, '{z-null}'
+          UNION ALL SELECT NULL, 'z-null'
         """)
         -> {select: t,n; order_by: n}`;
       return db.loadModel(rangeModel);
@@ -561,7 +566,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
         run: range + { where: t ~ f'null' }
-      `).malloyResultMatches(range, [{n: '{z-null}'}]);
+      `).malloyResultMatches(range, [{n: 'z-null'}]);
     });
     test('not null', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
@@ -584,7 +589,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'first'},
         {n: 'last'},
         {n: 'post-range'},
-        {n: '{z-null}'},
+        {n: 'z-null'},
       ]);
     });
     test('year literal', async () => {
