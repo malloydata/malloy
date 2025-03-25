@@ -188,47 +188,57 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   describe('null ordering', () => {
     const q = runtime.getQuoter();
     const a = runtime.dialect.sqlLiteralString('a');
-    const z = runtime.dialect.sqlLiteralString('z');
+    const b = runtime.dialect.sqlLiteralString('b');
     const az = `${databaseName}.sql("""
-      SELECT ${a} as ${q`l`}
-      UNION ALL SELECT ${z}
-      UNION ALL SELECT NULL
+      SELECT ${a} as ${q`l`}, 'a' as ln
+      UNION ALL SELECT ${b}, 'b'
+      UNION ALL SELECT NULL, 'null'
     """)`;
     test('null last in select string with ascending order', async () => {
       await expect(
-        `run: ${az} -> { select: l; order_by: l asc }`
-      ).malloyResultMatches(runtime, [{l: 'a'}, {l: 'z'}, {l: null}]);
+        `run: ${az} -> { select: *; order_by: l asc }`
+      ).malloyResultMatches(runtime, [{ln: 'a'}, {ln: 'b'}, {ln: 'null'}]);
     });
     test('null last in select string with descending order', async () => {
       await expect(
-        `run: ${az} -> { select: l; order_by: l desc }`
-      ).malloyResultMatches(runtime, [{l: 'z'}, {l: 'a'}, {l: null}]);
+        `run: ${az} -> { select: *; order_by: l desc }`
+      ).malloyResultMatches(runtime, [{ln: 'b'}, {ln: 'a'}, {ln: 'null'}]);
     });
-    test.skip('null last in aggregate strings with default ascending order', async () => {
-      await expect(
-        `run: ${az} -> { group_by: l;  aggregate: agg_l is string_agg(l)}`
-      ).malloyResultMatches(runtime, [{l: 'a'}, {l: 'z'}, {l: null}]);
+    test('null last in reduce string with default ascending order', async () => {
+      await expect(`
+        #! test.verbose
+        run: ${az} -> { group_by: l }`).malloyResultMatches(runtime, [
+        {l: 'a'},
+        {l: 'b'},
+        {l: null},
+      ]);
     });
     const nums = `${databaseName}.sql("""
-      SELECT 0 as ${q`n`}
+      SELECT 1 as ${q`n`}
       UNION ALL SELECT 9
       UNION ALL SELECT NULL
       """)`;
     test('null last in numbers with ascending order', async () => {
       await expect(
         `run: ${nums} -> { select: n; order_by: n asc }`
-      ).malloyResultMatches(runtime, [{n: 0}, {n: 9}, {n: null}]);
+      ).malloyResultMatches(runtime, [{n: 1}, {n: 9}, {n: null}]);
     });
     test('null last in numbers with descending order', async () => {
       await expect(
         `run: ${nums} -> { select: n; order_by: n desc }`
-      ).malloyResultMatches(runtime, [{n: 9}, {n: 0}, {n: null}]);
+      ).malloyResultMatches(runtime, [{n: 9}, {n: 1}, {n: null}]);
     });
-    test('null last in aggregate numbers with default descending order', async () => {
-      await expect(`run: ${nums} -> {
-        group_by: n
-        aggregate: nTotal is n.sum()
-      }`).malloyResultMatches(runtime, [{n: 9}, {n: 0}, {n: null}]);
+    test('null last in reduce measure with default descending order', async () => {
+      await expect(`
+        # test.verbose
+        run: ${nums} -> {
+          group_by: nstr is n ? pick 'null' when is null else concat('number', n::string)
+          aggregate: nTotal is n.sum()
+        }`).malloyResultMatches(runtime, [
+        {nstr: 'number9'},
+        {nstr: 'number1'},
+        {nstr: 'null'},
+      ]);
     });
     const y2020 = runtime.dialect.sqlLiteralTime(
       {},
@@ -239,6 +249,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     );
     const d2020 = new Date('2020-01-01 00:00:00Z');
+    const d2022 = new Date('2022-01-01 00:00:00Z');
     const d2025 = new Date('2025-01-01 00:00:00Z');
     const y2025 = runtime.dialect.sqlLiteralTime(
       {},
@@ -248,20 +259,45 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         typeDef: {type: 'timestamp'},
       }
     );
+    const y2022 = runtime.dialect.sqlLiteralTime(
+      {},
+      {
+        node: 'timeLiteral',
+        literal: '2022-01-01 00:00:00',
+        typeDef: {type: 'timestamp'},
+      }
+    );
     const times = `${databaseName}.sql("""
       SELECT ${y2020} as ${q`t`}
       UNION ALL SELECT ${y2025}
+      UNION ALL SELECT ${y2022}
       UNION ALL SELECT NULL
     """)`;
     test('null last in timestamps with ascending order', async () => {
       await expect(
         `run: ${times} -> { select: t; order_by: t asc }`
-      ).malloyResultMatches(runtime, [{t: d2020}, {t: d2025}, {t: null}]);
+      ).malloyResultMatches(runtime, [
+        {t: d2020},
+        {t: d2022},
+        {t: d2025},
+        {t: null},
+      ]);
     });
     test('null last in timestamps with descending order', async () => {
       await expect(
         `run: ${times} -> { select: t; order_by: t desc }`
-      ).malloyResultMatches(runtime, [{t: d2025}, {t: d2020}, {t: null}]);
+      ).malloyResultMatches(runtime, [
+        {t: d2025},
+        {t: d2022},
+        {t: d2020},
+        {t: null},
+      ]);
+    });
+    test('null last in reduce timestamps with default descending order', async () => {
+      await expect(`run: ${times} -> { group_by: t }`).malloyResultMatches(
+        runtime,
+        [{t: d2025}, {t: d2022}, {t: d2020}, {t: null}]
+      );
     });
   });
 });
