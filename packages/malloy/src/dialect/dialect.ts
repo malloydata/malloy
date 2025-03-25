@@ -108,7 +108,7 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type OrderByClauseType = 'output_name' | 'ordinal';
+export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 
 export abstract class Dialect {
   abstract name: string;
@@ -379,7 +379,7 @@ export abstract class Dialect {
     return tableSQL;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
+  sqlOrderBy(orderTerms: string[], _isBaseOrdering = false): string {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 

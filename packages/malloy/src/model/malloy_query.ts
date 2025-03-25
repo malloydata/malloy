@@ -3178,11 +3178,15 @@ class QueryQuery extends QueryField {
               orderingField.name
             )} ${f.dir || 'ASC'}`
           );
+        } else if (this.parent.dialect.orderByClause === 'expression') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          const fieldExpr = orderingField.fif.getSQL();
+          o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
         }
       }
     }
     if (o.length > 0) {
-      s = this.parent.dialect.sqlOrderBy(o) + '\n';
+      s = this.parent.dialect.sqlOrderBy(o, true) + '\n';
     }
     return s;
   }
