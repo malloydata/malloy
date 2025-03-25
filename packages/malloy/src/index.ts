@@ -25,6 +25,7 @@ export {
   StandardSQLDialect,
   TrinoDialect,
   PostgresDialect,
+  SqlServerDialect,
   SnowflakeDialect,
   MySQLDialect,
   registerDialect,
