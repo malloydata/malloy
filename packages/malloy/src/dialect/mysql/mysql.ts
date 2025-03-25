@@ -514,7 +514,7 @@ export class MySQLDialect extends Dialect {
       return `ORDER BY ${orderTerms
         .map(t => {
           const dirIndex = t.trim().lastIndexOf(' ');
-          return `(${t.slice(0, dirIndex)} IS NULL) DESC,${t}`;
+          return `(${t.slice(0, dirIndex)}) IS NULL ASC,${t}`;
         })
         .join(',')}`;
     }

@@ -3164,6 +3164,9 @@ class QueryQuery extends QueryField {
                 f.dir || 'ASC'
               }`
             );
+          } else if (this.parent.dialect.orderByClause === 'expression') {
+            const fieldExpr = fi.getSQL();
+            o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
