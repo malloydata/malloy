@@ -423,12 +423,12 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
      * { t: 1 second before start, n: 'before' }
      * { t: start,                 n: 'first' }
      * { t: 1 second before end,   n: 'last' }
-     * { t: end,                   n: 'end' }
+     * { t: end,                   n: 'post-range' }
      * { t: NULL                   n: '{z-null}' }
      * Use malloyResultMatches(range, inRange) or (range, notInRange)
      */
     const inRange = [{n: 'first'}, {n: 'last'}];
-    const notInRange = [{n: 'before'}, {n: 'end'}];
+    const notInRange = [{n: 'before'}, {n: 'post-range'}];
     function mkRange(start: string, end: string) {
       const begin = LuxonDateTime.fromFormat(start, fTimestamp);
       const b4 = begin.minus({second: 1});
@@ -444,7 +444,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           SELECT ${before} AS ${q`t`}, 'before' AS ${q`n`}
           UNION ALL SELECT ${lit(start, 'timestamp')}, 'first'
           UNION ALL SELECT ${last} , 'last'
-          UNION ALL SELECT ${lit(end, 'timestamp')}, 'end'
+          UNION ALL SELECT ${lit(end, 'timestamp')}, 'post-range'
           UNION ALL SELECT NULL, '{z-null}'
         """)
         -> {select: *; order_by: n}`;
@@ -462,7 +462,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           )} AS ${q`t`}, 'before' AS ${q`n`}
           UNION ALL SELECT ${lit(start, 'date')}, 'first'
           UNION ALL SELECT ${lit(last.toFormat(fDate), 'date')} , 'last'
-          UNION ALL SELECT ${lit(end, 'date')}, 'end'
+          UNION ALL SELECT ${lit(end, 'date')}, 'post-range'
           UNION ALL SELECT NULL, '{z-null}'
         """)
         -> {select: t,n; order_by: n}`;
@@ -482,7 +482,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const range = mkDateRange('2001-01-01', '2001-04-01');
       await expect(`
         run: range + { where: t ~ f'after 2001-Q1' }
-      `).malloyResultMatches(range, {n: 'end'});
+      `).malloyResultMatches(range, {n: 'post-range'});
     });
     test('date before month', async () => {
       const range = mkDateRange('2001-01-01', '2001-02-01');
@@ -547,7 +547,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
         run: range + { where: t ~ f'after 2001' }
-      `).malloyResultMatches(range, [{n: 'end'}]);
+      `).malloyResultMatches(range, [{n: 'post-range'}]);
     });
     test('y2k for 1 minute', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2001-01-01 00:01:00');
@@ -605,7 +605,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'before'},
         {n: 'first'},
         {n: 'last'},
-        {n: 'end'},
+        {n: 'post-range'},
       ]);
     });
     test('empty temporal filter', async () => {
@@ -617,7 +617,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'before'},
         {n: 'first'},
         {n: 'last'},
-        {n: 'end'},
+        {n: 'post-range'},
         {n: '{z-null}'},
       ]);
     });
