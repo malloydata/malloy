@@ -1120,7 +1120,7 @@ class QueryField extends QueryNode {
       }
 
       if (obSQL.length > 0) {
-        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'analytical');
       }
     }
 
@@ -3164,6 +3164,9 @@ class QueryQuery extends QueryField {
                 f.dir || 'ASC'
               }`
             );
+          } else if (this.parent.dialect.orderByClause === 'expression') {
+            const fieldExpr = fi.getSQL();
+            o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
@@ -3178,11 +3181,15 @@ class QueryQuery extends QueryField {
               orderingField.name
             )} ${f.dir || 'ASC'}`
           );
+        } else if (this.parent.dialect.orderByClause === 'expression') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          const fieldExpr = orderingField.fif.getSQL();
+          o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
         }
       }
     }
     if (o.length > 0) {
-      s = this.parent.dialect.sqlOrderBy(o) + '\n';
+      s = this.parent.dialect.sqlOrderBy(o, 'query') + '\n';
     }
     return s;
   }
@@ -3794,7 +3801,7 @@ class QueryQuery extends QueryField {
     }
 
     if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'turtle');
     }
 
     const dialectFieldList = this.buildDialectFieldList(resultStruct);
