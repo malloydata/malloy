@@ -3189,7 +3189,7 @@ class QueryQuery extends QueryField {
       }
     }
     if (o.length > 0) {
-      s = this.parent.dialect.sqlOrderBy(o, true) + '\n';
+      s = this.parent.dialect.sqlOrderBy(o) + '\n';
     }
     return s;
   }
