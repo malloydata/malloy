@@ -194,7 +194,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const a = runtime.dialect.sqlLiteralString('a');
     const b = runtime.dialect.sqlLiteralString('b');
     const c = runtime.dialect.sqlLiteralString('c');
-    const az = `${databaseName}.sql("""
+    const abc = `${databaseName}.sql("""
       SELECT ${a} as ${q`l`}, 'a' as ${q`ln`}
       UNION ALL SELECT ${c}, 'c'
       UNION ALL SELECT ${b}, 'b'
@@ -204,7 +204,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'null last in select string with ascending order',
       async () => {
         await expect(
-          `run: ${az} -> { select: *; order_by: l asc }`
+          `run: ${abc} -> { select: *; order_by: l asc }`
         ).malloyResultMatches(runtime, [
           {ln: 'a'},
           {ln: 'b'},
@@ -217,7 +217,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'null last in select string with descending order',
       async () => {
         await expect(
-          `run: ${az} -> { select: *; order_by: l desc }`
+          `run: ${abc} -> { select: *; order_by: l desc }`
         ).malloyResultMatches(runtime, [
           {ln: 'c'},
           {ln: 'b'},
@@ -231,7 +231,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`
         #! test.verbose
-        run: ${az} -> { group_by: l }`).malloyResultMatches(runtime, [
+        run: ${abc} -> { group_by: l }`).malloyResultMatches(runtime, [
           {l: 'a'},
           {l: 'b'},
           {l: 'c'},
