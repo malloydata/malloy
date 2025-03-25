@@ -187,7 +187,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // There's a problem with null ordering in MySQL which we are ignoring for now
   const testNullOrdering = databaseName !== 'mysql';
-  const testTimes = testNullOrdering && databaseName !== 'presto';
+  const testTimes =
+    testNullOrdering && !['presto', 'trino'].includes(databaseName);
   describe('null ordering', () => {
     const q = runtime.getQuoter();
     const a = runtime.dialect.sqlLiteralString('a');
