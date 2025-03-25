@@ -21,6 +21,10 @@ afterAll(async () => {
 describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   const q = db.getQuoter();
   describe('string filter expressions', () => {
+    function got(s: string) {
+      const zipMe = s.split(',');
+      return zipMe.map(s => ({nm: s}));
+    }
     const xbq = db.dialect.sqlLiteralString('x\\');
     const abc = db.loadModel(`
       source: abc is ${dbName}.sql("""
@@ -45,20 +49,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'';
           select: nm; order_by: nm
-        }`).malloyResultMatches(abc, [
-        {nm: 'abc'},
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-        {nm: '{z-null}'},
-      ]);
+        }`).malloyResultMatches(abc, got('abc,def,xback,{z-empty},{z-null}'));
     });
     test('abc,def', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'abc,def';
           select: nm; order_by: nm
-        }`).malloyResultMatches(abc, [{nm: 'abc'}, {nm: 'def'}]);
+        }`).malloyResultMatches(abc, got('abc,def'));
     });
     test('-abc', async () => {
       await expect(`
@@ -66,12 +64,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-abc',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-        {nm: '{z-null}'},
-      ]);
+        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
     });
     test('-starts', async () => {
       await expect(`
@@ -79,12 +72,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-a%',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-        {nm: '{z-null}'},
-      ]);
+        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
     });
     test('-contains', async () => {
       await expect(`
@@ -92,12 +80,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-%b%',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-        {nm: '{z-null}'},
-      ]);
+        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
     });
     test('-end', async () => {
       await expect(`
@@ -105,12 +88,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-%c',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-        {nm: '{z-null}'},
-      ]);
+        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
     });
     test('unlike', async () => {
       await expect(`
@@ -118,12 +96,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-a%c',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-        {nm: '{z-null}'},
-      ]);
+        }`).malloyResultMatches(abc, got('def,xback,{z-empty},{z-null}'));
     });
     test('simple but not ___,-abc', async () => {
       await expect(`
@@ -139,7 +112,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [{nm: '{z-empty}'}, {nm: '{z-null}'}]);
+        }`).malloyResultMatches(abc, got('{z-empty},{z-null}'));
     });
     test('-empty', async () => {
       await expect(`
@@ -147,7 +120,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [{nm: 'abc'}, {nm: 'def'}, {nm: 'xback'}]);
+        }`).malloyResultMatches(abc, got('abc,def,xback'));
     });
     test('null', async () => {
       await expect(`
@@ -155,7 +128,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'null'
           select: nm
-        }`).malloyResultMatches(abc, [{nm: '{z-null}'}]);
+        }`).malloyResultMatches(abc, got('{z-null}'));
     });
     test('-null', async () => {
       await expect(`
@@ -163,12 +136,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-null'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, [
-        {nm: 'abc'},
-        {nm: 'def'},
-        {nm: 'xback'},
-        {nm: '{z-empty}'},
-      ]);
+        }`).malloyResultMatches(abc, got('abc,def,xback,{z-empty}'));
     });
     test('starts', async () => {
       await expect(`
@@ -200,7 +168,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'%\\\\'
           select: nm
-        }`).malloyResultMatches(abc, [{nm: 'xback'}]);
+        }`).malloyResultMatches(abc, got('xback'));
     });
     test('= x backslash', async () => {
       await expect(`
@@ -208,7 +176,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'x\\\\'
           select: nm
-        }`).malloyResultMatches(abc, [{nm: 'xback'}]);
+        }`).malloyResultMatches(abc, got('xback'));
     });
   });
 
