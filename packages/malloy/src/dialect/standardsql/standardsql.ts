@@ -140,6 +140,11 @@ export class StandardSQLDialect extends Dialect {
   sqlAnyValue(groupSet: number, fieldName: string): string {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${fieldName} END)`;
   }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
+  }
+
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
     groupSet: number,
@@ -487,9 +492,5 @@ ${indent(sql)}
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
     return '[' + array.join(',') + ']';
-  }
-
-  sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 }

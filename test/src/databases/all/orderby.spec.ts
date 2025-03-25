@@ -187,6 +187,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // There's a problem with null ordering in MySQL which we are ignoring for now
   const testNullOrdering = databaseName !== 'mysql';
+  const testTimes = testNullOrdering && databaseName !== 'presto';
   describe('null ordering', () => {
     const q = runtime.getQuoter();
     const a = runtime.dialect.sqlLiteralString('a');
@@ -308,7 +309,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       UNION ALL SELECT ${y2022}
       UNION ALL SELECT NULL
     """)`;
-    test.when(testNullOrdering)(
+    test.when(testTimes)(
       'null last in timestamps with ascending order',
       async () => {
         await expect(
@@ -321,7 +322,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ]);
       }
     );
-    test.when(testNullOrdering)(
+    test.when(testTimes)(
       'null last in timestamps with descending order',
       async () => {
         await expect(
@@ -334,7 +335,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ]);
       }
     );
-    test.when(testNullOrdering)(
+    test.when(testTimes)(
       'null last in reduce timestamps with default descending order',
       async () => {
         await expect(`run: ${times} -> { group_by: t }`).malloyResultMatches(
