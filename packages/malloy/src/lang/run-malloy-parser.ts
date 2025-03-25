@@ -18,7 +18,7 @@ import {MalloyParserErrorListener} from './syntax-errors/malloy-parser-error-lis
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
  * but it let's us parse }%
  */
-class HandlesOverpoppingLexer extends MalloyLexer {
+export class HandlesOverpoppingLexer extends MalloyLexer {
   popMode(): number {
     if (this._modeStack.isEmpty) {
       return this._mode;
