@@ -151,6 +151,7 @@ export class StandardSQLDialect extends Dialect {
     if (limit !== undefined) {
       tail += ` LIMIT ${limit}`;
     }
+    orderBy = (orderBy ?? '').replace(/ NULLS LAST/, '');
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
