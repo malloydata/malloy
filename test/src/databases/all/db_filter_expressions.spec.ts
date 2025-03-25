@@ -16,8 +16,6 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
-// mtoy todo sit down with each parser and compiler and make sure there is a test for every case
-
 describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   const q = db.getQuoter();
   describe('string filter expressions', () => {
