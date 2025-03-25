@@ -49,7 +49,12 @@ import {
   TD,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import type {
+  DialectFieldList,
+  FieldReferenceType,
+  OrderByClauseType,
+  QueryInfo,
+} from '../dialect';
 import {Dialect, qtz} from '../dialect';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
@@ -122,6 +127,7 @@ export class MySQLDialect extends Dialect {
   supportsArraysInData = false;
   compoundObjectInSchema = false;
   booleanAsNumbers = true;
+  orderByClause: OrderByClauseType = 'output_name';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
