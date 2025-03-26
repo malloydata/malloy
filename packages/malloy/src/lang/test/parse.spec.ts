@@ -938,20 +938,7 @@ describe('extend and refine', () => {
   });
 });
 
-describe('miscellaneous m4 warnings', () => {
-  test('query leading arrow', () => {
-    expect(`
-      query: x is a -> { select: * }
-      run: x
-    `).toTranslate();
-    expect(`
-      query: x is a -> { select: * }
-      run: x -> { select: * }
-    `).toTranslate();
-  });
-});
-
-describe('m3/m4 source query sentences', () => {
+describe('source query sentences', () => {
   const srcExtend = '{accept:ai}';
   const qryRefine = '{limit:1}';
   const query = '{select:*}';
@@ -966,14 +953,11 @@ describe('m3/m4 source query sentences', () => {
     );
   });
   test('legal sqexpressions', () => {
-    // some things that are m4 warnings are commented out
     expect(`
       source: s is a
       query: q is s -> ${query}
 
       source: s0 is a;
-      // source: s0_extbare is s ${srcExtend};
-      // source: s0_extplus is s + ${srcExtend};
       source: s0_ext is s extend ${srcExtend};
       source: qs is q;
       source: qs0 is q extend ${srcExtend};
@@ -982,12 +966,9 @@ describe('m3/m4 source query sentences', () => {
       source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
       source: s3 is s extend ${srcExtend};
       source: s4 is q extend ${srcExtend};
-      // source: s5 is from(s -> ${query})
 
       query: q0 is q;
-      // query: q0_refbare is q ${qryRefine};
       query: q0_refplus is q + ${qryRefine};
-      // query: q1_bare is ab -> aturtle ${qryRefine};
       query: q1_plus is ab -> aturtle + ${qryRefine};
       query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
 
