@@ -108,7 +108,9 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type OrderByClauseType = 'output_name' | 'ordinal';
+export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+
+export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 
 export abstract class Dialect {
   abstract name: string;
@@ -379,7 +381,12 @@ export abstract class Dialect {
     return tableSQL;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
+  /**
+   * MySQL is NULLs first, all other dialects have a way to make NULLs last.
+   * isBaseOrdering is a hack to allow the MySQL dialect to partially implement
+   * NULLs last, but should go away once MySQL fully implements NULLs last.
+   */
+  sqlOrderBy(orderTerms: string[], _orderFor?: OrderByRequest): string {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 

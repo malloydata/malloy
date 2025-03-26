@@ -127,7 +127,7 @@ export class MySQLDialect extends Dialect {
   supportsArraysInData = false;
   compoundObjectInSchema = false;
   booleanAsNumbers = true;
-  orderByClause: OrderByClauseType = 'output_name';
+  orderByClause: OrderByClauseType = 'ordinal';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
@@ -507,15 +507,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return tableSQL;
-  }
-
-  sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms
-      .map(
-        t =>
-          `${t.trim().slice(0, t.trim().lastIndexOf(' '))} IS NULL DESC, ${t}`
-      )
-      .join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {
