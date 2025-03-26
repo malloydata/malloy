@@ -84,18 +84,6 @@ class DocumentSymbolWalker implements MalloyParserListener {
     });
   }
 
-  enterAnonymousQuery(pcx: parser.AnonymousQueryContext) {
-    this.symbols.push({
-      range: this.translator.rangeFromContext(
-        pcx.topLevelAnonQueryDef().sqExpr()
-      ),
-      name: 'unnamed_query',
-      type: 'unnamed_query',
-      children: [],
-      lensRange: this.translator.rangeFromContext(pcx),
-    });
-  }
-
   enterDefineSourceStatement(pcx: parser.DefineSourceStatementContext) {
     const blockRange = this.translator.rangeFromContext(pcx);
     const sourcePl = pcx.sourcePropertyList();

@@ -29,7 +29,6 @@ import {
   getSelectOneStruct,
   errorMessage,
   error,
-  warningMessage,
 } from './test-translator';
 import './parse-expects';
 import {sqlKey} from '../../model/sql_block';
@@ -62,15 +61,6 @@ describe('model statements', () => {
     test('cannot refine table', () => {
       expect(markSource`run: \`_db_\`.table('aTable') + { limit: 10 }`).toLog(
         errorMessage('Cannot add view refinements to a source')
-      );
-    });
-    test('table function is deprecated', () => {
-      expect(`##! m4warnings=warn
-      source: testA is table('_db_:aTable')
-    `).toLog(
-        warningMessage(
-          "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
-        )
       );
     });
     test('cannot run table', () => {
@@ -241,10 +231,6 @@ describe('error handling', () => {
     }
     `).toTranslate();
   });
-  test('popping out of embedding when not embedded', () => {
-    expect('}%').toLog(errorMessage(/extraneous input '}%' expecting/));
-  });
-
   test('bad sql in sql block', () => {
     const badSelect = model`source: someName is _db_.sql(")")`;
     const badTrans = badSelect.translator;
@@ -849,36 +835,22 @@ describe('extend and refine', () => {
     describe('query name with ambiguous refinements', () => {
       test('adding segment to ambuguously refined query', () => {
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 } -> { select: b.* }
         `).toLog(errorMessage("No such field as 'b'"));
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }
-        `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 } -> { select: * }
         `).toTranslate();
       });
       test('automatically recognize this as a query refinement without new stage', () => {
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 }
-        `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 }
         `).toTranslate();
       });
       test('can extend a query into a source', () => {
@@ -891,28 +863,19 @@ describe('extend and refine', () => {
         // Of course, number 1 and 3 are actually useless because you're defining
         // something and then not using it...
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on b.ai = ai } -> { select: * }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }
         `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 } -> { select: * }
-        `).toTranslate();
         // Alternatively, fix 1 and 3 by actually using the declared thing
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { extend: {dimension: three is 3} group_by: three }
         `).toTranslate();
@@ -976,20 +939,12 @@ describe('extend and refine', () => {
 });
 
 describe('miscellaneous m4 warnings', () => {
-  test('project is deprecated', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { project: * }
-    `).toLog(warningMessage('project: keyword is deprecated, use select:'));
-  });
   test('query leading arrow', () => {
     expect(`
-      ##! m4warnings=warn
       query: x is a -> { select: * }
       run: x
     `).toTranslate();
     expect(`
-      ##! m4warnings=warn
       query: x is a -> { select: * }
       run: x -> { select: * }
     `).toTranslate();
