@@ -41,7 +41,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: s
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
-    test.skip('empty string filter expression', async () => {
+    test('empty string filter expression', async () => {
       /*
         since the sql generated works when pasted into mysql
         my next suggestion is that there is some funky re-ordering
@@ -194,7 +194,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
-    test.skip('empty numeric filter', async () => {
+    test('empty numeric filter', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f''
@@ -359,17 +359,17 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
-    // test.when(testBoolean)('empty boolean filter', async () => {
-    //   await expect(`
-    //     run: facts -> {
-    //       where: b ~ f''
-    //       select: t; order_by: t asc
-    //     }`).malloyResultMatches(facts, [
-    //     {t: 'false'},
-    //     {t: 'null'},
-    //     {t: 'true'},
-    //   ]);
-    // });
+    test.when(testBoolean)('empty boolean filter', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f''
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [
+        {t: 'false'},
+        {t: 'null'},
+        {t: 'true'},
+      ]);
+    });
   });
 
   type TL = 'timeLiteral';
@@ -579,7 +579,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'post-range'},
       ]);
     });
-    test.skip('empty temporal filter', async () => {
+    test('empty temporal filter', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
         # test.verbose

@@ -1366,7 +1366,7 @@ class QueryField extends QueryNode {
           expr.dataType === 'timestamp' ||
           expr.dataType === 'boolean'
         ) {
-          if (isFilterExpression(expr.filter)) {
+          if (expr.filter === null || isFilterExpression(expr.filter)) {
             return FilterCompilers.compile(
               expr.dataType,
               expr.filter,

@@ -138,4 +138,16 @@ describe('Filter Expressions In Source', () => {
   test('get a syntax error', () => {
     expect(expr`ai ~ f'7 adn <10'`).toLog(error('filter-expression-error'));
   });
+  test('empty string filter', () => {
+    expect('astr ~ f""').compilesTo('{filterString astr | }');
+  });
+  test('empty boolean filter', () => {
+    expect('abool ~ f""').compilesTo('{filterBoolean abool | }');
+  });
+  test('empty numeric filter', () => {
+    expect('ai ~ f""').compilesTo('{filterNumber ai | }');
+  });
+  test('empty temporal filter', () => {
+    expect('ats ~ f""').compilesTo('{filterTimestamp ats | }');
+  });
 });

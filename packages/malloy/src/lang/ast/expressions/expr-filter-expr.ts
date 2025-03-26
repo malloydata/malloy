@@ -87,12 +87,6 @@ export class ExprFilterExpression extends ExpressionDef {
           );
         }
       }
-      if (!fParse.parsed) {
-        return this.loggedErrorExpr(
-          'filter-expression-type',
-          'FJKLD:JDKSL: expression parsed to null'
-        );
-      }
       const filterMatch: FilterMatchExpr = {
         node: 'filterMatch',
         dataType: matchExpr.type,

@@ -325,7 +325,7 @@ export interface FilterMatchExpr extends ExprE {
   node: 'filterMatch';
   dataType: FilterExprType;
   notMatch?: true;
-  filter: {operator: string};
+  filter: {operator: string} | null;
 }
 
 export interface TimeLiteralNode extends ExprLeaf {
