@@ -28,7 +28,7 @@ import type {QueryBuilder} from '../types/query-builder';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
 
-export class DeclareFields
+export abstract class DeclareFields
   extends DefinitionList<AtomicFieldDeclaration>
   implements QueryPropertyInterface
 {

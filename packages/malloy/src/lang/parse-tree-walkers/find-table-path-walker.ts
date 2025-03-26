@@ -43,7 +43,7 @@ class FindTablePathWalker implements MalloyParserListener {
     readonly tokens: CommonTokenStream
   ) {}
 
-  enterTableMethod(pcx: parser.TableMethodContext): void {
+  enterExploreTable(pcx: parser.ExploreTableContext): void {
     const connectionId = getId(pcx.connectionId());
     const [tablePath, _errorList] = getPlainString(pcx.tablePath(), true);
     if (tablePath !== undefined) {

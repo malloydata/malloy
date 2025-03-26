@@ -47,7 +47,7 @@ function testSymbol(
   path.forEach(segment => {
     current = current.children[segment];
   });
-  expect(doc.logger.hasErrors()).toBeFalsy();
+  expect(doc.logger.getLog().map(m => m.message)).toEqual([]);
   expect(current).toMatchObject({
     name,
     range: source.locations[0].range,
@@ -63,7 +63,7 @@ function testLens(source: MarkedSource, path: number[]) {
   path.forEach(segment => {
     current = current.children[segment];
   });
-  expect(doc.logger.hasErrors()).toBeFalsy();
+  expect(doc.logger.getLog().map(m => m.message)).toEqual([]);
   const expectedLensRange = source.locations[0].range;
   const expected =
     'lensRange' in current && current.lensRange !== undefined
@@ -152,7 +152,7 @@ test('turtle fields are included', () => {
   testSymbol(
     markSource`
       source: flights is DB.table('my.table.flights') extend {
-        query: ${'my_turtle is { group_by: a }'}
+        view: ${'my_turtle is { group_by: a }'}
       }
     `,
     'my_turtle',
@@ -165,7 +165,7 @@ test('turtle children fields are included', () => {
   testSymbol(
     markSource`
       source: flights is DB.table('my.table.flights') extend {
-        query: my_turtle is { group_by: ${'a'} }
+        view: my_turtle is { group_by: ${'a'} }
       }
     `,
     'a',
@@ -178,7 +178,7 @@ test('turtle children turtles are included', () => {
   testSymbol(
     markSource`
       source: flights is DB.table('my.table.flights') extend {
-        query: my_turtle is { nest: ${'inner_turtle is { group_by: a }'} }
+        view: my_turtle is { nest: ${'inner_turtle is { group_by: a }'} }
       }
     `,
     'inner_turtle',
@@ -191,7 +191,7 @@ test('refinement chain gets name correctly', () => {
   testSymbol(
     markSource`
       source: flights is DB.table('my.table.flights') extend {
-        query: my_turtle is { nest: ${'something + something_else'} }
+        view: my_turtle is { nest: ${'something + something_else'} }
       }
     `,
     'something',
@@ -204,7 +204,7 @@ test('arrow in nest infers name correctly', () => {
   testSymbol(
     markSource`
       source: flights is DB.table('my.table.flights') extend {
-        query: my_turtle is { nest: ${'thingy -> something + something_else'} }
+        view: my_turtle is { nest: ${'thingy -> something + something_else'} }
       }
     `,
     'something',
@@ -285,17 +285,6 @@ test('query lenses go before individual annotations when more than one source', 
   );
 });
 
-test('anonymous query lenses go before block annotations', () => {
-  testLens(
-    markSource`${`# tag
-    # tag2
-    query:
-    # tag3
-    flights -> by_carrier`}`,
-    [0]
-  );
-});
-
 test('run lenses go before block annotations', () => {
   testLens(
     markSource`${`# tag
@@ -330,7 +319,7 @@ test('multiline named queries include last line', () => {
 test('(regression) query does not use source block range', () => {
   testLens(
     markSource`source: a is DB.table('b') extend {
-      query:
+      view:
         ${'x is {select: *}'}
         y is {select: *}
     }`,

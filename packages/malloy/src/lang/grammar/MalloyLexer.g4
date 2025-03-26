@@ -243,7 +243,6 @@ COMMENT_TO_EOL: ('--' | '//') F_TO_EOL -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);
-CLOSE_CODE: '}%' -> popMode;
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;
