@@ -276,7 +276,7 @@ export type FilterExpression =
   | TemporalFilter;
 
 export function isFilterExpression(obj: Object): obj is FilterExpression {
-  return 'operator' in obj;
+  return obj && 'operator' in obj;
 }
 
 export type FilterLogSeverity = 'error' | 'warn';

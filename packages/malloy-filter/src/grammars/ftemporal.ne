@@ -60,7 +60,7 @@ const temporal_lexer = moo.compile({
   oparen: '(',
   cparen: ')',
   comma: ',',
-  literal: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d(?::\d\d(?:[.,]\d*))/,
+  literal: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d(?::\d\d(?:[.,]\d*)?)/,
   lit_week: /\d\d\d\d-\d\d-\d\d-[Ww][Kk]/,
   lit_quarter: /\d\d\d\d-[qQ][1234]/,
   lit_min: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d/,
