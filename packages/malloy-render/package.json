@@ -13,9 +13,18 @@
     "node": ">=20"
   },
   "exports": {
-    ".": "./dist/module/index.umd.js",
-    "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
-    "./webcomponent/register": "./dist/register/register.umd.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/module/index.umd.js"
+    },
+    "./webcomponent": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/webcomponent/malloy-render.umd.js"
+    },
+    "./webcomponent/register": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/register/register.umd.js"
+    }
   },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",
