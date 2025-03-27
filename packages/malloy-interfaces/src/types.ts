@@ -203,6 +203,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'translations': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
+      },
     },
   },
   'CompileQueryRequest': {
@@ -244,6 +249,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'CompilerNeeds',
         'optional': true,
         'array': false,
+      },
+      'translations': {
+        'type': 'Translation',
+        'array': true,
+        'optional': true,
       },
     },
   },
