@@ -225,8 +225,10 @@ export class TemporalFilterCompiler {
         return {begin, end: this.literalNode(next.toFormat(fTimestamp)).sql};
       }
       case undefined:
-      case 'second':
-        return {begin: this.literalNode(literal), end: literal};
+      case 'second': {
+        const begin = this.literalNode(literal);
+        return {begin, end: begin.sql};
+      }
     }
   }
 
