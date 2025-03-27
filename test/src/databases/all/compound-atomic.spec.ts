@@ -396,6 +396,19 @@ describe.each(runtimes.runtimeList)(
         `).malloyResultMatches(runtime, {b: 'b'});
       });
       test.todo('array or record where first entries are null');
+      // https://github.com/malloydata/malloy/issues/2206
+      test.skip('dereference of literal record (causes stack overflow at one point)', async () => {
+        await expect(`
+          run: ${conName}.sql("""
+            SELECT ${runtime.dialect.sqlLiteralString('Mark')} as first_name,
+                   ${runtime.dialect.sqlLiteralString('Toy')} as last_name
+          """) extend {
+            dimension: owner is {first_name, last_name}
+          } -> {
+            group_by: x is owner.first_name
+          }
+        `).malloyResultMatches(runtime, {x: 'Mark'});
+      });
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {
@@ -537,19 +550,6 @@ describe.each(runtimes.runtimeList)(
           -> { nest: gab is {group_by: ab} }
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
-    });
-    // https://github.com/malloydata/malloy/issues/2206
-    test.skip('dereference of literal record (causes stack overflow at one point)', async () => {
-      await expect(`
-        run: ${conName}.sql("""
-          SELECT ${runtime.dialect.sqlLiteralString('Mark')} as first_name,
-                 ${runtime.dialect.sqlLiteralString('Toy')} as last_name
-        """) extend {
-          dimension: owner is {first_name, last_name}
-        } -> {
-          group_by: x is owner.first_name
-        }
-      `).malloyResultMatches(runtime, {x: 'Mark'});
     });
   }
 );
