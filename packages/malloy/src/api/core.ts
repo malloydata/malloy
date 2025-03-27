@@ -397,7 +397,16 @@ function wrapResponse(
   if (response.compilerNeeds) {
     return {compiler_needs: response.compilerNeeds, logs};
   } else {
-    return {model: response.model, logs};
+    let translations: Array<Malloy.Translation> | undefined = undefined;
+    if (response.modelDef) {
+      translations = [
+        {
+          url: defaultURL,
+          compiled_model_json: JSON.stringify(response.modelDef),
+        },
+      ];
+    }
+    return {model: response.model, logs, translations};
   }
 }
 

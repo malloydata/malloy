@@ -1627,6 +1627,7 @@ export type CompileModelResponse = {
   model?: ModelInfo;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  translations?: Array<Translation>;
 };
 
 export type CompileQueryRequest = {
@@ -1639,6 +1640,7 @@ export type CompileQueryResponse = {
   result?: Result;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  translations?: Array<Translation>;
 };
 
 export type CompileSourceRequest = {
