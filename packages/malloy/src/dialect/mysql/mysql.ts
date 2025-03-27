@@ -28,11 +28,8 @@
 //   qtz,
 //   DialectFunctionOverloadDef,
 // } from '..';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingRows,
-  isSamplingPercent,
   MeasureTimeExpr,
   TimeLiteralNode,
   RegexMatchExpr,
@@ -41,24 +38,26 @@ import {
   TimeExtractExpr,
   TypecastExpr,
   LeafAtomicTypeDef,
-  TD,
   AtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
-import {indent} from '../../model/utils';
 import {
-  Dialect,
+  isSamplingEnable,
+  isSamplingRows,
+  isSamplingPercent,
+  TD,
+} from '../../model/malloy_types';
+import {indent} from '../../model/utils';
+import type {
   DialectFieldList,
   FieldReferenceType,
-  qtz,
+  OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {
-  DialectFunctionOverloadDef,
-  expandBlueprintMap,
-  expandOverrideMap,
-} from '../functions';
+import {Dialect, qtz} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -107,7 +106,7 @@ export class MySQLDialect extends Dialect {
   defaultDecimalType = 'DECIMAL';
   udfPrefix = 'ms_temp.__udf';
   hasFinalStage = false;
-  // TODO: this may not be enough for lager casts.
+  // TODO: this may not be enough for larger casts.
   stringTypeName = 'VARCHAR(255)';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
@@ -121,13 +120,14 @@ export class MySQLDialect extends Dialect {
   supportsQualify = false;
   supportsNesting = true;
   experimental = false;
-  nativeBoolean = false;
   supportsFullJoin = false;
   supportsPipelinesInViews = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
   compoundObjectInSchema = false;
+  booleanAsNumbers = true;
+  orderByClause: OrderByClauseType = 'ordinal';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
@@ -507,15 +507,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return tableSQL;
-  }
-
-  sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms
-      .map(
-        t =>
-          `${t.trim().slice(0, t.trim().lastIndexOf(' '))} IS NULL DESC, ${t}`
-      )
-      .join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {

@@ -22,9 +22,9 @@
  */
 
 import {ExprCompare} from './expr-compare';
-import {ExpressionDef} from '../types/expression-def';
-import {ExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExpressionDef} from '../types/expression-def';
+import type {ExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {ExprGranularTime} from './expr-granular-time';
 

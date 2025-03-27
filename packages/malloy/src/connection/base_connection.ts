@@ -5,15 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {SQLSourceRequest} from '../lang/translate-response';
+import type {
   MalloyQueryData,
   QueryRunStats,
   SQLSourceDef,
   StructDef,
   TableSourceDef,
 } from '../model/malloy_types';
-import {RunSQLOptions} from '../run_sql_options';
-import {
+import {sqlKey} from '../model/sql_block';
+import type {RunSQLOptions} from '../run_sql_options';
+import type {
   Connection,
   FetchSchemaOptions,
   PersistSQLResults,
@@ -54,7 +56,7 @@ export abstract class BaseConnection implements Connection {
   ): Promise<TableSourceDef | string>;
 
   abstract fetchSelectSchema(
-    sqlSource: SQLSourceDef
+    sqlSource: SQLSourceRequest
   ): Promise<SQLSourceDef | string>;
 
   protected schemaCache: Record<string, CachedSchema<StructDef>> = {};
@@ -121,14 +123,15 @@ export abstract class BaseConnection implements Connection {
   }
 
   public async fetchSchemaForSQLStruct(
-    sqlRef: SQLSourceDef,
+    sqlRef: SQLSourceRequest,
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<
     | {structDef: SQLSourceDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
+    const key = sqlKey(sqlRef.connection, sqlRef.selectStr);
     const inCache = await this.checkSchemaCache<SQLSourceDef>(
-      sqlRef.name,
+      key,
       'sql_select',
       async () => await this.fetchSelectSchema(sqlRef),
       refreshTimestamp

@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Sampling} from '../../../model/malloy_types';
+import type {Sampling} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {
   LegalRefinementStage,
   QueryClass,
-  QueryPropertyInterface,
 } from '../types/query-property-interface';
 
 export class SampleProperty

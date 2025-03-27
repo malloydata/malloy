@@ -6,14 +6,8 @@
  */
 
 import {isNotUndefined} from '../lang/utils';
-import {
-  CompositeFieldUsage,
-  FieldDef,
-  isJoinable,
-  isJoined,
-  isSourceDef,
-  SourceDef,
-} from './malloy_types';
+import type {CompositeFieldUsage, FieldDef, SourceDef} from './malloy_types';
+import {isJoinable, isJoined, isSourceDef} from './malloy_types';
 
 type CompositeError =
   | {code: 'not_a_composite_source'; data: {path: string[]}}
@@ -127,6 +121,7 @@ function _resolveCompositeSources(
       return {error: {code: 'not_a_composite_source', data: {path}}};
     }
   }
+  base.arguments = source.arguments;
   const fieldsByName: {[name: string]: FieldDef} = {};
   const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
   for (const field of base.fields) {

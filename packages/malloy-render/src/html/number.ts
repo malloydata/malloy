@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
-import {NumberRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {NumberRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
   constructor(
@@ -37,21 +37,21 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(data: Cell): string | null {
+    if (!data.isNumber()) {
       return null;
     }
 
     if (this.options.value_format) {
       try {
-        return format(this.options.value_format, data.number.value);
+        return format(this.options.value_format, data.value);
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
         throw new Error(`Invalid value format: ${this.options.value_format}`);
       }
     }
 
-    return data.number.value.toLocaleString();
+    return data.value.toLocaleString();
   }
 }
 
@@ -69,19 +69,15 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
     );
   }
 
-  activates(field: Field | Explore): boolean {
-    return (
-      field.hasParentExplore() &&
-      field.isAtomicField() &&
-      field.type === AtomicFieldType.Number
-    );
+  activates(field: Field): boolean {
+    return field.isNumber();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: NumberRenderOptions
   ): Renderer {
     return new HTMLNumberRenderer(document, options);

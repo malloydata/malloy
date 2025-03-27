@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Item, SignalListenerHandler, View} from 'vega';
+import type {Item, SignalListenerHandler, View} from 'vega';
 
 function viewHasSignal(view: View, signal: string) {
   const viewSignals = view.getState().signals;

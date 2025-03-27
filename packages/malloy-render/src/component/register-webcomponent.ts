@@ -1,10 +1,9 @@
 import {compose, register} from 'component-register';
 import {withSolid} from 'solid-element';
-import {MalloyRender, MalloyRenderProps} from './render';
-import {
-  MalloyModalWC,
-  MalloyModalWCProps,
-} from './malloy-modal/malloy-modal-wc';
+import type {MalloyRenderProps} from './render';
+import {MalloyRender} from './render';
+import type {MalloyModalWCProps} from './malloy-modal/malloy-modal-wc';
+import {MalloyModalWC} from './malloy-modal/malloy-modal-wc';
 
 export default function registerWebComponent({
   customElements = window.customElements,
@@ -15,6 +14,7 @@ export default function registerWebComponent({
       register(
         'malloy-render',
         {
+          malloyResult: undefined,
           result: undefined,
           queryResult: undefined,
           modelDef: undefined,

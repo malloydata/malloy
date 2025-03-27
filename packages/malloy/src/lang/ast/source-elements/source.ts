@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   InvokedStructRef,
   Parameter,
   SourceDef,
 } from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
-import {HasParameter} from '../parameters/has-parameter';
-import {ParameterSpace} from '../field-space/parameter-space';
+import type {HasParameter} from '../parameters/has-parameter';
+import type {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A "Source" is a thing which you can run queries against. The main

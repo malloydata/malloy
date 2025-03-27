@@ -2,7 +2,9 @@
   "extends": "../tsconfig.packages.json",
   "compilerOptions": {
     "noEmit": true,
-    "composite": true
+    "composite": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "solid-js",
   },
   "include": ["src", "bin", "./jest.setup.ts", "./types/jest.d.ts"],
   "references": [
@@ -31,7 +33,16 @@
       "path": "../packages/malloy-db-duckdb"
     },
     {
+      "path": "../packages/malloy-filter"
+    },
+    {
       "path": "../packages/malloy-malloy-sql"
+    },
+    {
+      "path": "../packages/malloy-query-builder"
+    },
+    {
+      "path": "../packages/malloy-tag"
     }
   ]
 }

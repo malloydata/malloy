@@ -22,9 +22,9 @@
  */
 
 import * as TDU from '../typedesc-utils';
-import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import type {ExpressionDef} from '../types/expression-def';
+import type {FieldSpace} from '../types/field-space';
 import {Unary} from './unary';
 
 export class ExprNot extends Unary {
@@ -36,6 +36,11 @@ export class ExprNot extends Unary {
 
   getExpression(fs: FieldSpace): ExprValue {
     const notThis = this.expr.getExpression(fs);
+    if (fs.dialectObj()?.booleanAsNumbers) {
+      if (this.legalChildTypes.find(t => t.type === 'number') === undefined) {
+        this.legalChildTypes.push(TDU.numberT);
+      }
+    }
     const doNot = this.typeCheck(this.expr, notThis);
     return {
       ...notThis,

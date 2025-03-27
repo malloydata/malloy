@@ -21,17 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  expressionIsAnalytic,
-  OrderBy as ModelOrderBy,
-} from '../../../model/malloy_types';
+import type {OrderBy as ModelOrderBy} from '../../../model/malloy_types';
+import {expressionIsAnalytic} from '../../../model/malloy_types';
 
-import {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
+import {FieldName} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 export class OrderBy extends MalloyElement {
   elementType = 'orderBy';

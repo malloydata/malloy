@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.225",
+  "version": "0.0.249",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "exports": {
     ".": "./dist/module/index.umd.js",
@@ -28,10 +28,13 @@
     "build-storybook": "storybook build",
     "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
     "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",
-    "build-types": "tsc --build --declaration --emitDeclarationOnly"
+    "build-types": "tsc --build --declaration --emitDeclarationOnly",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.225",
+    "@malloydata/malloy": "^0.0.249",
+    "@malloydata/malloy-interfaces": "^0.0.249",
+    "@malloydata/malloy-tag": "^0.0.249",
     "@tanstack/solid-virtual": "^3.10.4",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",
@@ -44,20 +47,21 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^8.3.5",
-    "@storybook/addon-interactions": "^8.3.5",
-    "@storybook/addon-links": "^8.3.5",
-    "@storybook/blocks": "^8.3.5",
-    "@storybook/builder-vite": "^8.3.5",
-    "@storybook/html": "^8.3.5",
-    "@storybook/html-vite": "^8.3.5",
-    "@storybook/manager-api": "^8.3.5",
-    "@storybook/test": "^8.3.5",
-    "@storybook/theming": "^8.3.5",
-    "@storybook/types": "^8.3.5",
+    "@malloydata/db-duckdb": "^0.0.249",
+    "@storybook/addon-essentials": "^8.5.8",
+    "@storybook/addon-interactions": "^8.5.8",
+    "@storybook/addon-links": "^8.5.8",
+    "@storybook/blocks": "^8.5.8",
+    "@storybook/builder-vite": "^8.5.8",
+    "@storybook/html": "^8.5.8",
+    "@storybook/html-vite": "^8.5.8",
+    "@storybook/manager-api": "^8.5.8",
+    "@storybook/test": "^8.5.8",
+    "@storybook/theming": "^8.5.8",
+    "@storybook/types": "^8.5.8",
     "@types/luxon": "^2.4.0",
     "esbuild": "0.19.11",
-    "storybook": "^8.3.5",
+    "storybook": "^8.5.8",
     "vite": "^5.1.5",
     "vite-plugin-solid": "^2.10.1"
   }

@@ -21,17 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
+import type {
+  LogMessage,
+  DocumentRange,
+  DocumentPosition,
+} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
-import {
+import type {
   MalloySQLStatementConfig,
   MalloySQLStatementBase,
   MalloySQLStatement,
   MalloySQLParseResults,
-  MalloySQLStatementType,
   MalloySQLParseRange,
   MalloySQLParseLocation,
 } from './types';
+import {MalloySQLStatementType} from './types';
 import {MalloySQLSQLParser} from './malloySQLSQLParser';
 import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 

@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
-import {DynamicSpace} from '../field-space/dynamic-space';
-import {MalloyElement} from './malloy-element';
+import type {TypeDesc} from '../../../model';
+import type {DynamicSpace} from '../field-space/dynamic-space';
+import type {MalloyElement} from './malloy-element';
 
 export abstract class SpaceEntry {
   abstract typeDesc(): TypeDesc;

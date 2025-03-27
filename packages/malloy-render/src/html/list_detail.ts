@@ -21,15 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore, Field} from '@malloydata/malloy';
 import {HTMLListRenderer} from './list';
+import type {RecordOrRepeatedRecordField, Field} from '../data_tree';
 
 export class HTMLListDetailRenderer extends HTMLListRenderer {
-  getDetailField(explore: Explore): Field | undefined {
+  getDetailField(explore: RecordOrRepeatedRecordField): Field | undefined {
     // Get the second non-hidden field as the description
-    return explore.allFields.filter(field => {
-      const {tag} = field.tagParse();
-      return !tag.has('hidden');
-    })[1];
+    return explore.fields.filter(field => !field.isHidden())[1];
   }
 }

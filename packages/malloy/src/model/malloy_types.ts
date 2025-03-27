@@ -84,6 +84,7 @@ export type Expr =
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
+  | FilterMatchExpr
   | StringLiteralNode
   | NumberLiteralNode
   | BooleanLiteralNode
@@ -221,12 +222,14 @@ export interface ParameterNode extends ExprLeaf {
 
 export interface NowNode extends ExprLeaf {
   node: 'now';
+  typeDef: {type: 'timestamp'};
 }
 
 interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
-type TimeExpr = Expr & HasTimeValue;
+export type TimeExpr = Expr & HasTimeValue;
+
 /**
  * Return true if this node can be turned into a temporal node by simply
  * appending a time type to the typedef. The type systsem makes this hard
@@ -248,9 +251,12 @@ export function mkTemporal(
   e: Expr,
   timeType: TemporalTypeDef | TemporalFieldType
 ): TimeExpr {
-  const ttd = typeof timeType === 'string' ? {type: timeType} : timeType;
-  if (canMakeTemporal(e)) {
-    return {...e, typeDef: {...ttd}};
+  if (!('typeDef' in e)) {
+    const ttd: TemporalTypeDef =
+      typeof timeType === 'string' ? {type: timeType} : timeType;
+    if (canMakeTemporal(e)) {
+      return {...e, typeDef: {...ttd}};
+    }
   }
   return e as TimeExpr;
 }
@@ -303,6 +309,23 @@ export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
 export interface RegexMatchExpr extends ExprWithKids {
   node: 'regexpMatch';
   kids: {expr: Expr; regex: Expr};
+}
+
+export type FilterExprType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'timestamp';
+export function isFilterExprType(s: string): s is FilterExprType {
+  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
+}
+
+export interface FilterMatchExpr extends ExprE {
+  node: 'filterMatch';
+  dataType: FilterExprType;
+  notMatch?: true;
+  filter: {operator: string} | null;
 }
 
 export interface TimeLiteralNode extends ExprLeaf {
@@ -1120,11 +1143,6 @@ export interface CompositeSourceDef extends SourceDefBase {
  * Malloy has a kind of "strings" which is a list of segments. Each segment
  * is either a string, or a query, which is meant to be replaced
  * by the text of the query when the query is compiled to SQL.
- *
- * The data types for this are:
- *  SQLPhrase -- A phrase, used to make a sentence
- *  SQLSentence -- Used to request a schema from the connection
- *  SQLSelectSource -- Returned from a query, contains the scehma
  */
 export interface SQLStringSegment {
   sql: string;
@@ -1132,12 +1150,6 @@ export interface SQLStringSegment {
 export type SQLPhraseSegment = Query | SQLStringSegment;
 export function isSegmentSQL(f: SQLPhraseSegment): f is SQLStringSegment {
   return 'sql' in f;
-}
-
-export interface SQLSentence {
-  name: string;
-  connection: string;
-  select: SQLPhraseSegment[];
 }
 
 export interface SQLSourceDef extends SourceDefBase {
@@ -1215,7 +1227,8 @@ export type NonAtomicType =
   | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
-  | 'regular expression';
+  | 'regular expression'
+  | 'filter expression';
 export interface NonAtomicTypeDef {
   type: NonAtomicType;
 }
@@ -1459,12 +1472,18 @@ export type NamedModelObject =
   | FunctionDef
   | ConnectionDef;
 
+export interface DependencyTree {
+  [url: string]: DependencyTree;
+}
+
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
   annotation?: ModelAnnotation;
+  queryList: Query[];
+  dependencies: DependencyTree;
 }
 
 /** Very common record type */
@@ -1614,6 +1633,7 @@ export interface SearchValueMapResult {
 export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
   materializedTablePrefix?: string;
+  defaultRowLimit?: number;
 }
 
 type UTD =

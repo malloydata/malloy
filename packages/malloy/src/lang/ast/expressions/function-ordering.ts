@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {FunctionOrderBy as ModelFunctionOrderBy} from '../../../model/malloy_types';
 import {
-  FunctionOrderBy as ModelFunctionOrderBy,
   expressionIsAggregate,
   expressionIsScalar,
 } from '../../../model/malloy_types';
-import {ExpressionDef} from '../types/expression-def';
+import type {ExpressionDef} from '../types/expression-def';
 
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {ExprIdReference} from './expr-id-reference';
 

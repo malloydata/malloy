@@ -23,36 +23,37 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameFromDef} from '../../field-utils';
-import {
-  FieldName,
+import type {
   FieldSpace,
   QueryFieldSpace,
   SourceFieldSpace,
 } from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
+import {FieldName} from '../types/field-space';
+import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
 import {WildcardFieldReference} from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
-import {LookupResult} from '../types/lookup-result';
+import type {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
-import {SpaceEntry} from '../types/space-entry';
-import {
+import type {SpaceEntry} from '../types/space-entry';
+import type {
   LogMessageOptions,
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
+import type {NarrowedCompositeFieldResolution} from '../../../model/composite_source_utils';
 import {
   compositeFieldUsageDifference,
   compositeFieldUsageJoinPaths,
   emptyCompositeFieldUsage,
   emptyNarrowedCompositeFieldResolution,
   isEmptyCompositeFieldUsage,
+  joinedCompositeFieldUsage,
   mergeCompositeFieldUsage,
   narrowCompositeFieldResolution,
-  NarrowedCompositeFieldResolution,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 
@@ -220,9 +221,10 @@ export abstract class QueryOperationSpace
     const lookup = this.exprSpace.lookup(reference);
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return (
+      return joinedCompositeFieldUsage(
+        joinPath.slice(0, -1),
         lookup.found.fieldDef().onCompositeFieldUsage ??
-        emptyCompositeFieldUsage()
+          emptyCompositeFieldUsage()
       );
     }
     throw new Error('Unexpected join lookup was not found or not a struct');

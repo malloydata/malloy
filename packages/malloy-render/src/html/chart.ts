@@ -23,12 +23,12 @@
 
 import * as lite from 'vega-lite';
 import * as vega from 'vega';
-import {DataArray, DataColumn, Field} from '@malloydata/malloy';
-import {Renderer} from './renderer';
-import {RendererOptions} from './renderer_types';
-import {ChartRenderOptions, StyleDefaults} from './data_styles';
+import type {Renderer} from './renderer';
+import type {RendererOptions} from './renderer_types';
+import type {ChartRenderOptions, StyleDefaults} from './data_styles';
 import {normalizeToTimezone} from '../html/utils';
 import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
+import type {Cell, Field, RecordCell} from '../data_tree';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
@@ -39,23 +39,21 @@ export abstract class HTMLChartRenderer implements Renderer {
     field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal';
 
-  abstract getDataValue(
-    value: DataColumn
-  ): Date | string | number | null | undefined;
+  abstract getDataValue(data: Cell): Date | string | number | null | undefined;
 
-  mapData(data: DataArray): MappedRow[] {
+  mapData(data: RecordCell[]): MappedRow[] {
     const mappedRows: MappedRow[] = [];
     for (const row of data) {
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;
       } = {};
-      for (const field of data.field.allFields) {
-        let dataValue = this.getDataValue(row.cell(field));
+      for (const f of row.field.fields) {
+        let dataValue = this.getDataValue(row.column(f.name));
         if (dataValue instanceof Date) {
           dataValue = normalizeToTimezone(dataValue, this.timezone);
         }
 
-        mappedRow[field.name] = dataValue;
+        mappedRow[f.name] = dataValue;
       }
       mappedRows.push(mappedRow);
     }
@@ -81,10 +79,10 @@ export abstract class HTMLChartRenderer implements Renderer {
     this.chartOptions = chartOptions;
   }
 
-  abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
+  abstract getVegaLiteSpec(data: Cell): lite.TopLevelSpec;
 
-  async render(table: DataColumn): Promise<HTMLElement> {
-    if (!table.isArray()) {
+  async render(table: Cell): Promise<HTMLElement> {
+    if (!table.isRepeatedRecord()) {
       throw new Error('Invalid type for chart renderer');
     }
 

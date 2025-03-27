@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   ModelDef,
   StructDef,
   TableSourceDef,
@@ -893,6 +893,8 @@ export const testModel: ModelDef = {
     'medicare_state_facts',
     // "aircraft",
   ],
+  queryList: [],
+  dependencies: {},
   contents: {
     flights: FLIGHTS_EXPLORE,
     table_airports: tableAirports,

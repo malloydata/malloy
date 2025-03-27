@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SourceDef} from '../../../model/malloy_types';
+import type {SourceDef} from '../../../model/malloy_types';
 import {
   constructTableKey,
   deprecatedParseTableURI,
 } from '../../parse-tree-walkers/find-external-references';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {ModelEntryReference} from '../types/malloy-element';
+import type {ModelEntryReference} from '../types/malloy-element';
 
 type TableInfo = {tablePath: string; connectionName?: string | undefined};
 export abstract class TableSource extends Source {

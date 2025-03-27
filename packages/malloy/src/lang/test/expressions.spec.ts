@@ -50,6 +50,7 @@ describe('expressions', () => {
       expect(tQuery).toBeDefined();
       const tField = getQueryFieldDef(tQuery!.pipeline[0], 'tts');
       expect(tField['timeframe']).toEqual(unit);
+      expect(`now.${unit}`).compilesTo(`{timeTrunc-${unit} {now}}`);
     });
 
     const dateTF = [['week', 'month', 'quarter', 'year']];
@@ -80,7 +81,7 @@ describe('expressions', () => {
   });
   test('raw function call codegen', () => {
     expect(expr`special_function!(aweird, 'foo')`).compilesTo(
-      'special_function({aweird},{"foo"})'
+      'special_function({aweird},{{"foo"}})'
     );
   });
 
@@ -135,27 +136,27 @@ describe('expressions', () => {
     });
     test('match', () => {
       expect("'forty-two' ~ 'fifty-four'").compilesTo(
-        '{"forty-two" like "fifty-four"}'
+        '{{"forty-two"} like {"fifty-four"}}'
       );
     });
     test('not match', () => {
       expect("'forty-two' !~ 'fifty-four'").compilesTo(
-        '{"forty-two" !like "fifty-four"}'
+        '{{"forty-two"} !like {"fifty-four"}}'
       );
     });
     test('regexp-match', () => {
       expect("'forty-two' ~ r'fifty-four'").compilesTo(
-        '{"forty-two" regex-match /fifty-four/}'
+        '{{"forty-two"} regex-match /fifty-four/}'
       );
     });
     test('not regexp-match', () => {
       expect("'forty-two' !~ r'fifty-four'").compilesTo(
-        '{not {"forty-two" regex-match /fifty-four/}}'
+        '{not {{"forty-two"} regex-match /fifty-four/}}'
       );
     });
     test('apply as equality', () => {
       expect("'forty-two' ? 'fifty-four'").compilesTo(
-        '{"forty-two" = "fifty-four"}'
+        '{{"forty-two"} = {"fifty-four"}}'
       );
     });
     test('not', () => {
@@ -169,6 +170,18 @@ describe('expressions', () => {
     });
     test('null-check (??)', () => {
       expect('ai ?? 7').compilesTo('{ai coalesce 7}');
+    });
+    test('normal is-null', () => {
+      expect('ai is null').compilesTo('{is-null ai}');
+    });
+    test('normal is-not-null', () => {
+      expect('ai is not null').compilesTo('{is-not-null ai}');
+    });
+    test('apply is-null', () => {
+      expect('ai ? is null').compilesTo('{is-null ai}');
+    });
+    test('apply is-not-null', () => {
+      expect('ai ? is not null').compilesTo('{is-not-null ai}');
     });
     test('coalesce type mismatch', () => {
       expect(new BetaExpression('ai ?? @2003')).toLog(
@@ -208,6 +221,16 @@ describe('expressions', () => {
         '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
       );
     });
+    test('apply followed by another condition', () => {
+      expect('ai ? (10 | 20) and ai is not null').toLog(
+        errorMessage("no viable alternative at input 'ai'")
+      );
+    });
+    test('apply followed by another condition, with parenthesis', () => {
+      expect('(ai ? (10 | 20)) and ai is not null').compilesTo(
+        '{({ai in {10,20}}) and {is-not-null ai}}'
+      );
+    });
     test('apply or-tree granular-literal doesnt turn into IN', () => {
       expect('ad ? @2020 | @2022').compilesTo(
         '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
@@ -230,32 +253,32 @@ describe('expressions', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
     });
     describe('sql friendly warnings', () => {
-      test('is null with warning', () => {
-        const warnSrc = expr`ai is null`;
+      test('= null with warning', () => {
+        const warnSrc = expr`${'ai = null'}`;
         expect(warnSrc).toLog(
-          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
+          warningMessage("Use 'is null' to check for NULL instead of '= null'")
         );
         expect(warnSrc).compilesTo('{is-null ai}');
         const warning = warnSrc.translator.problems()[0];
-        expect(warning.replacement).toEqual('ai = null');
+        expect(warning.replacement).toEqual('ai is null');
       });
       test('is not null with warning', () => {
-        const warnSrc = expr`ai is not null`;
+        const warnSrc = expr`${'ai != null'}`;
         expect(warnSrc).toLog(
           warningMessage(
-            "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+            "Use 'is not null' to check for NULL instead of '!= null'"
           )
         );
         expect(warnSrc).compilesTo('{is-not-null ai}');
         const warning = warnSrc.translator.problems()[0];
-        expect(warning.replacement).toEqual('ai != null');
+        expect(warning.replacement).toEqual('ai is not null');
       });
       test('like with warning', () => {
         const warnSrc = expr`astr like 'a'`;
         expect(warnSrc).toLog(
           warningMessage("Use Malloy operator '~' instead of 'LIKE'")
         );
-        expect(warnSrc).compilesTo('{astr like "a"}');
+        expect(warnSrc).compilesTo('{astr like {"a"}}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr ~ 'a'");
       });
@@ -264,33 +287,15 @@ describe('expressions', () => {
         expect(warnSrc).toLog(
           warningMessage("Use Malloy operator '!~' instead of 'NOT LIKE'")
         );
-        expect(warnSrc).compilesTo('{astr !like "a"}');
+        expect(warnSrc).compilesTo('{astr !like {"a"}}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr !~ 'a'");
-      });
-      test('is is-null in a model', () => {
-        const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
-        expect(isNullSrc).toLog(
-          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
-        );
-      });
-      test('is not-null in a model', () => {
-        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null }`;
-        expect(isNullSrc).toTranslate();
-      });
-      test('is not-null is in a model', () => {
-        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
-        expect(isNullSrc).toLog(
-          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
-        );
-        const warning = isNullSrc.translator.problems()[0];
-        expect(warning.replacement).toEqual('null = null');
       });
       test('x is expr y is not null', () => {
         const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
         expect(isNullSrc).toTranslate();
-        const xaModel = isNullSrc.translator.translate().translated;
-        const xa = getExplore(xaModel!.modelDef, 'xa');
+        const xaModel = isNullSrc.translator.translate().modelDef;
+        const xa = getExplore(xaModel!, 'xa');
         const x = getFieldDef(xa, 'x');
         expect(x).toMatchObject({e: {node: 'numberLiteral'}});
         const y = getFieldDef(xa, 'y');
@@ -1013,7 +1018,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer" else "random"}'
+        '{case when {ai = 42} then {"the answer"} when {ai = 54} then {"the questionable answer"} else {"random"}}'
       );
     });
     test('with value', () => {
@@ -1026,7 +1031,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case ai when 42 then "the answer" when 54 then "the questionable answer" else "random"}'
+        '{case ai when 42 then {"the answer"} when 54 then {"the questionable answer"} else {"random"}}'
       );
     });
     test('no else', () => {
@@ -1038,7 +1043,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer"}'
+        '{case when {ai = 42} then {"the answer"} when {ai = 54} then {"the questionable answer"}}'
       );
     });
     test('wrong then type', () => {
@@ -1324,7 +1329,7 @@ describe('expressions', () => {
     ['astr', 'string'],
     ['abool', 'boolean'],
   ])('Can compare field %s (type %s) to NULL', (name, _datatype) => {
-    expect(expr`${name} = NULL`).toTranslate();
+    expect(expr`${name} IS NULL`).toTranslate();
   });
 });
 describe('alternations as in', () => {
@@ -1385,7 +1390,7 @@ describe('sql native fields in schema', () => {
   });
   test('sql native reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
-      'run: a->{ where: aun != NULL; select: * }'
+      'run: a->{ where: aun is not null; select: * }'
     );
     expect(uModel).toTranslate();
   });

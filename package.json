@@ -6,6 +6,9 @@
   "workspaces": {
     "packages": [
       "packages/malloy-interfaces",
+      "packages/malloy-tag",
+      "packages/malloy-filter",
+      "packages/malloy-query-builder",
       "packages/malloy",
       "packages/malloy-db-bigquery",
       "packages/malloy-db-trino",
@@ -23,7 +26,7 @@
     "samples"
   ],
   "engines": {
-    "node": ">=18",
+    "node": ">=20",
     "npm": ">=9"
   },
   "scripts": {
@@ -35,8 +38,10 @@
     "test": "jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
-    "test-duckdb": "JEST_SILENT_REPORTER_SHOW_PATHS=true MALLOY_DATABASE=duckdb jest --runInBand --reporters jest-silent-reporter",
-    "ci-snowflake": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.snowflake.config.ts --reporters jest-silent-reporter --reporters summary",
+    "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter",
+    "ci-snowflake": "MALLOY_DATABASE=snowflake JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.snowflake.config.ts --reporters jest-silent-reporter --reporters summary",
+    "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.trino.config.ts --reporters jest-silent-reporter --reporters summary",
+    "ci-presto": "MALLOY_DATABASE=presto JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.presto.config.ts --reporters jest-silent-reporter --reporters summary",
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
@@ -55,8 +60,9 @@
     "@types/fs-extra": "^9.0.13",
     "@types/jest": "^29.0.3",
     "@types/jest-expect-message": "^1.0.3",
-    "@types/node": "^18.15.3",
+    "@types/node": "^20.14.8",
     "@types/uuid": "^8.3.2",
+    "@types/yargs": "^17.0.33",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
     "axios": "^1.4.0",
@@ -67,6 +73,7 @@
     "eslint": "^8.49.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
+    "flow-api-translator": "^0.26.0",
     "fs-extra": "^10.1.0",
     "gts": "^5.0.1",
     "jest": "^29.0.3",
@@ -79,6 +86,7 @@
     "ts-node": "^10.9.1",
     "typescript": "5.3.3",
     "unified": "^10.1.2",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "yargs": "^17.7.2"
   }
 }

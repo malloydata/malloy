@@ -23,20 +23,21 @@
 
 import {DateTime as LuxonDateTime} from 'luxon';
 
-import {
+import type {
   TemporalFieldType,
   TimestampUnit,
-  isTemporalType,
   TimeLiteralNode,
 } from '../../../model/malloy_types';
+import {isTemporalType} from '../../../model/malloy_types';
 
-import {ExprValue, literalTimeResult} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {literalTimeResult} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
-import {TimeResult} from '../types/time-result';
-import {BinaryMalloyOperator} from '../types/binary_operators';
+import type {TimeResult} from '../types/time-result';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
 
 export class TimeFormatError extends Error {}
 

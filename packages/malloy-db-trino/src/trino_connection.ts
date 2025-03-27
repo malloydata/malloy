@@ -21,8 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Connection,
+import type {
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
@@ -32,26 +31,31 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  TrinoDialect,
   StructDef,
   TableSourceDef,
   SQLSourceDef,
   AtomicTypeDef,
-  mkFieldDef,
-  isScalarArray,
-  RepeatedRecordTypeDef,
   RecordTypeDef,
   Dialect,
-  ArrayTypeDef,
   FieldDef,
+  TestableConnection,
+  SQLSourceRequest,
+} from '@malloydata/malloy';
+import {
+  TrinoDialect,
+  mkFieldDef,
+  isScalarArray,
   TinyParser,
   isRepeatedRecord,
+  sqlKey,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {PrestoClient, PrestoQuery} from '@prestodb/presto-js-client';
+import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
+import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
+import type {ConnectionOptions} from 'trino-client';
 import {Trino, BasicAuth} from 'trino-client';
 
 export interface TrinoManagerOptions {
@@ -71,6 +75,9 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
+  extraConfig?: Partial<
+    Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>
+  >;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
@@ -78,18 +85,20 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    limit: number | undefined
+    limit: number | undefined,
+    abortSignal?: AbortSignal
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
     error?: string;
+    profilingUrl?: string;
   }>;
 }
 
 class PrestoRunner implements BaseRunner {
   client: PrestoClient;
   constructor(config: TrinoConnectionConfiguration) {
-    this.client = new PrestoClient({
+    const prestoClientConfig: PrestoClientConfig = {
       catalog: config.catalog,
       host: config.server,
       port: config.port,
@@ -97,9 +106,20 @@ class PrestoRunner implements BaseRunner {
       timezone: 'America/Costa_Rica',
       user: config.user || 'anyone',
       extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
-    });
+    };
+    if (config.user && config.password) {
+      prestoClientConfig.basicAuthentication = {
+        user: config.user,
+        password: config.password,
+      };
+    }
+    this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(sql: string, limit: number | undefined) {
+  async runSQL(
+    sql: string,
+    limit: number | undefined,
+    _abortSignal?: AbortSignal
+  ) {
     let ret: PrestoQuery | undefined = undefined;
     const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
     let error: string | undefined = undefined;
@@ -125,13 +145,18 @@ class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     this.client = Trino.create({
+      ...config.extraConfig,
       catalog: config.catalog,
       server: config.server,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(sql: string, limit: number | undefined) {
+  async runSQL(
+    sql: string,
+    limit: number | undefined,
+    _abortSignal?: AbortSignal
+  ) {
     const result = await this.client.query(sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -165,7 +190,7 @@ class TrinoRunner implements BaseRunner {
 
 export abstract class TrinoPrestoConnection
   extends BaseConnection
-  implements Connection, PersistSQLResults
+  implements TestableConnection, PersistSQLResults
 {
   protected readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
@@ -211,13 +236,13 @@ export abstract class TrinoPrestoConnection
     throw new Error('not implemented 1');
   }
 
-  unpackArray(data: unknown): unknown[] {
+  unpackArray(_fields: FieldDef[], data: unknown): unknown[] {
     return data as unknown[];
   }
 
   convertRow(fields: FieldDef[], rawRow: unknown) {
     const retRow = {};
-    const row = this.unpackArray(rawRow);
+    const row = this.unpackArray(fields, rawRow);
     for (let i = 0; i < fields.length; i++) {
       const field = fields[i];
 
@@ -237,7 +262,7 @@ export abstract class TrinoPrestoConnection
   }
 
   convertNest(fields: FieldDef[], _data: unknown) {
-    const data = this.unpackArray(_data);
+    const data = this.unpackArray(fields, _data);
     const ret: unknown[] = [];
     const rows = (data === null || data === undefined ? [] : data) as unknown[];
     for (const row of rows) {
@@ -252,16 +277,20 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const r = await this.client.runSQL(sqlCommand, options.rowLimit);
+    const r = await this.client.runSQL(
+      sqlCommand,
+      options.rowLimit,
+      options.abortSignal
+    );
 
     if (r.error) {
       throw new Error(r.error);
     }
-    const inputRows = r.rows;
-    const columns = r.columns;
+
+    const {rows: inputRows, columns, profilingUrl} = r;
 
     const malloyColumns = columns.map(c =>
-      this.malloyTypeFromTrinoType(c.name, c.type)
+      mkFieldDef(this.malloyTypeFromTrinoType(c.type), c.name)
     );
 
     const malloyRows: QueryDataRow[] = [];
@@ -277,7 +306,7 @@ export abstract class TrinoPrestoConnection
       malloyRows.push(malloyRow);
     }
 
-    return {rows: malloyRows, totalRows: malloyRows.length};
+    return {rows: malloyRows, totalRows: malloyRows.length, profilingUrl};
   }
 
   private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
@@ -287,7 +316,7 @@ export abstract class TrinoPrestoConnection
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
     } else if (isScalarArray(colSchema)) {
       const elType = colSchema.elementTypeDef;
-      let theArray = this.unpackArray(rawRow);
+      let theArray = this.unpackArray([], rawRow);
       if (elType.type === 'array') {
         theArray = theArray.map(el => this.resultRow(elType, el));
       }
@@ -332,8 +361,14 @@ export abstract class TrinoPrestoConnection
     return structDef;
   }
 
-  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
-    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+  async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     await this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
     return structDef;
   }
@@ -349,101 +384,16 @@ export abstract class TrinoPrestoConnection
     //while (!(await result.next()).done);
   }
 
-  splitColumns(s: string) {
-    const columns: string[] = [];
-    let parens = 0;
-    let column = '';
-    let eatSpaces = true;
-    for (let idx = 0; idx < s.length; idx++) {
-      const c = s.charAt(idx);
-      if (eatSpaces && c === ' ') {
-        // Eat space
-      } else {
-        eatSpaces = false;
-        if (!parens && c === ',') {
-          columns.push(column);
-          column = '';
-          eatSpaces = true;
-        } else {
-          column += c;
-        }
-        if (c === '(') {
-          parens += 1;
-        } else if (c === ')') {
-          parens -= 1;
-        }
-      }
-    }
-    columns.push(column);
-    return columns;
-  }
-
-  public malloyTypeFromTrinoType(
-    name: string,
-    trinoType: string
-  ): AtomicTypeDef {
-    // Arrays look like `array(type)`
-    const arrayMatch = trinoType.match(/^(([^,])+\s)?array\((.*)\)$/);
-
-    // Structs look like `row(name type, name type)`
-    const structMatch = trinoType.match(/^(([^,])+\s)?row\((.*)\)$/);
-
-    if (arrayMatch) {
-      const arrayType = arrayMatch[3];
-      const innerType = this.malloyTypeFromTrinoType(name, arrayType);
-      if (innerType.type === 'record') {
-        const complexStruct: RepeatedRecordTypeDef = {
-          type: 'array',
-          elementTypeDef: {type: 'record_element'},
-          fields: innerType.fields,
-        };
-        return complexStruct;
-      } else {
-        const arrayStruct: ArrayTypeDef = {
-          type: 'array',
-          elementTypeDef: innerType,
-        };
-        return arrayStruct;
-      }
-    } else if (structMatch) {
-      // TODO: Trino doesn't quote or escape commas in field names,
-      // so some magic is going to need to be applied before we get here
-      // to avoid confusion if a field name contains a comma
-      const innerTypes = this.splitColumns(structMatch[3]);
-      const recordType: RecordTypeDef = {
-        type: 'record',
-        fields: [],
-      };
-      for (let innerType of innerTypes) {
-        // TODO: Handle time zone type annotation, which is an
-        // exception to the types not containing spaces assumption
-        innerType = innerType.replace(/ with time zone$/, '');
-        let parts = innerType.match(/^(.+?)\s((array\(|row\().*)$/);
-        if (parts === null) {
-          parts = innerType.match(/^(.+)\s(\S+)$/);
-        }
-        if (parts) {
-          // remove quotes from the name
-          const innerName = parts[1].replace(/^"(.+(?="$))"$/, '$1');
-          const innerTrinoType = parts[2];
-          const innerMalloyType = this.malloyTypeFromTrinoType(
-            innerName,
-            innerTrinoType
-          );
-          recordType.fields.push(mkFieldDef(innerMalloyType, innerName));
-        }
-      }
-      return recordType;
-    }
-    return this.dialect.sqlTypeToMalloyType(trinoType);
+  public malloyTypeFromTrinoType(trinoType: string): AtomicTypeDef {
+    const typeParse = new TrinoPrestoSchemaParser(trinoType, this.dialect);
+    return typeParse.typeDef();
   }
 
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
       const name = row[0];
       const type = row[4] || row[1];
-      const malloyType = this.malloyTypeFromTrinoType(name, type);
-      // console.log('>', row, '\n<', malloyType);
+      const malloyType = mkFieldDef(this.malloyTypeFromTrinoType(type), name);
       structDef.fields.push(mkFieldDef(malloyType, name));
     }
   }
@@ -496,7 +446,7 @@ export abstract class TrinoPrestoConnection
   }
 
   public async test(): Promise<void> {
-    // await this.dryRunSQLQuery('SELECT 1');
+    await this.runSQL('SELECT 1');
   }
 
   async close(): Promise<void> {
@@ -526,17 +476,14 @@ export class PrestoConnection extends TrinoPrestoConnection {
     );
   }
 
-  protected async fillStructDefForSqlBlockSchema(
-    sql: string,
-    structDef: StructDef
-  ): Promise<void> {
-    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
-    this.schemaFromExplain(explainResult, structDef);
+  override get dialectName(): string {
+    return 'presto';
   }
 
-  private schemaFromExplain(
+  static schemaFromExplain(
     explainResult: MalloyQueryData,
-    structDef: StructDef
+    structDef: StructDef,
+    dialect: Dialect
   ) {
     if (explainResult.rows.length === 0) {
       throw new Error(
@@ -561,11 +508,19 @@ export class PrestoConnection extends TrinoPrestoConnection {
       );
     }
 
-    const schemaDesc = new PrestoExplainParser(lines[0], this.dialect);
-    structDef.fields = schemaDesc.parseExplain();
+    const schemaDesc = new TrinoPrestoSchemaParser(lines[0], dialect);
+    structDef.fields = schemaDesc.parseQueryPlan();
   }
 
-  unpackArray(data: unknown): unknown[] {
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
+    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
+    PrestoConnection.schemaFromExplain(explainResult, structDef, this.dialect);
+  }
+
+  unpackArray(_fields: FieldDef[], data: unknown): unknown[] {
     return JSON.parse(data as string);
   }
 }
@@ -592,6 +547,10 @@ export class TrinoConnection extends TrinoPrestoConnection {
     );
   }
 
+  override get dialectName(): string {
+    return 'trino';
+  }
+
   protected async fillStructDefForSqlBlockSchema(
     sql: string,
     structDef: StructDef
@@ -607,16 +566,19 @@ export class TrinoConnection extends TrinoPrestoConnection {
 }
 
 /**
- * A hand built parser for schema lines, roughly this grammar
+ * A hand built parser for schema lines, it parses two things ...
+ * A presto query plan
  * SCHEMA_LINE: - Output [PlanName N] [NAME_LIST] => [TYPE_LIST]
  * NAME_LIST: NAME (, NAME)*
  * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
  * TYPE_SPEC: exprN ':' TYPE
+ *
+ * And a presto/trino type
  * TYPE: REC_TYPE | ARRAY_TYPE | SQL_TYPE
  * ARRAY_TYPE: ARRAY '(' TYPE ')'
  * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
  */
-export class PrestoExplainParser extends TinyParser {
+class TrinoPrestoSchemaParser extends TinyParser {
   constructor(
     readonly input: string,
     readonly dialect: Dialect
@@ -626,7 +588,7 @@ export class PrestoExplainParser extends TinyParser {
       arrow: /^=>/,
       char: /^[,:[\]()-]/,
       id: /^\w+/,
-      quoted_name: /^"\w+"/,
+      quoted_name: /^"(\\"|[^"])*"/,
     });
   }
 
@@ -651,7 +613,7 @@ export class PrestoExplainParser extends TinyParser {
     return fieldNames;
   }
 
-  parseExplain(): FieldDef[] {
+  parseQueryPlan(): FieldDef[] {
     const fieldNames = this.fieldNameList();
     const fields: FieldDef[] = [];
     this.next('arrow', '[');
@@ -686,7 +648,10 @@ export class PrestoExplainParser extends TinyParser {
     } else if (typToken.text === 'row' && this.next('(')) {
       const fields: FieldDef[] = [];
       for (;;) {
-        const name = this.next('quoted_name');
+        const name = this.next();
+        if (name.type !== 'id' && name.type !== 'quoted_name') {
+          throw this.parseError(`Expected property name, got '${name.type}'`);
+        }
         const getDef = this.typeDef();
         fields.push(mkFieldDef(getDef, name.text));
         const sep = this.next();
@@ -713,17 +678,34 @@ export class PrestoExplainParser extends TinyParser {
           }
         : {type: 'array', elementTypeDef: elType};
     } else if (typToken.type === 'id') {
-      const sqlType = typToken.text;
-      const def = this.dialect.sqlTypeToMalloyType(sqlType);
-      if (def === undefined) {
-        throw this.parseError(`Can't parse presto type ${sqlType}`);
-      }
+      const sqlType = typToken.text.toLowerCase();
       if (sqlType === 'varchar') {
         if (this.peek().type === '(') {
           this.next('(', 'id', ')');
         }
+      } else if (sqlType === 'timestamp') {
+        if (this.peek().text === '(') {
+          this.next('(', 'id', ')');
+        }
+        if (this.peek().text === 'with') {
+          this.nextText('with', 'time', 'zone');
+        }
       }
-      return def;
+      const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
+      if (typeDef.type === 'number' && sqlType === 'decimal') {
+        this.next('(', 'id');
+        if (this.peek().type === ',') {
+          this.next(',', 'id');
+          typeDef.numberType = 'float';
+        } else {
+          typeDef.numberType = 'integer';
+        }
+        this.next(')');
+      }
+      if (typeDef === undefined) {
+        throw this.parseError(`Can't parse presto type ${sqlType}`);
+      }
+      return typeDef;
     }
     throw this.parseError(
       `'${typToken.text}' unexpected while looking for a type`

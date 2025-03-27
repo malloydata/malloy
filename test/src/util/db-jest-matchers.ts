@@ -22,16 +22,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   ModelMaterializer,
   QueryMaterializer,
   Result,
   Runtime,
-  MalloyError,
   LogMessage,
-  SingleConnectionRuntime,
-  Tag,
 } from '@malloydata/malloy';
+import {MalloyError, SingleConnectionRuntime, API} from '@malloydata/malloy';
+import type {Tag} from '@malloydata/malloy-tag';
 import EventEmitter from 'events';
 import {inspect} from 'util';
 
@@ -141,7 +140,8 @@ expect.extend({
     } catch (e) {
       return {
         pass: false,
-        message: () => `Could not prepare query to run: ${e.message}`,
+        message: () =>
+          `Could not prepare query to run: ${e.message}\nQuery:\n${querySrc}`,
       };
     }
 
@@ -164,6 +164,16 @@ expect.extend({
         failMsg += e.stack;
       }
       return {pass: false, message: () => failMsg};
+    }
+
+    try {
+      API.util.wrapResult(result);
+    } catch (error) {
+      return {
+        pass: false,
+        message: () =>
+          `Result could not be wrapped into new style result: ${error}\n${error.stack}`,
+      };
     }
 
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];

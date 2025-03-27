@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-snowflake",
-  "version": "0.0.225",
+  "version": "0.0.249",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +9,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
@@ -21,9 +21,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.225",
+    "@malloydata/malloy": "^0.0.249",
     "generic-pool": "^3.9.0",
-    "snowflake-sdk": "1.14.0",
+    "snowflake-sdk": "2.0.2",
     "toml": "^3.0.0"
   }
 }

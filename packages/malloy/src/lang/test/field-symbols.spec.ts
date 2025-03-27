@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from '../../model/malloy_types';
+import type * as model from '../../model/malloy_types';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ColumnSpaceField} from '../ast/field-space/column-space-field';
 import {FieldName} from '../ast/types/field-space';

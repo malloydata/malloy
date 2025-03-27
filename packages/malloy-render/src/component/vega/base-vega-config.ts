@@ -1,4 +1,4 @@
-import {Config} from 'vega';
+import type {Config} from 'vega';
 
 export const grayMedium = '#727883';
 export const gridGray = '#E5E7EB';

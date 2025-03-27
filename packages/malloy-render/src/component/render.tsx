@@ -5,15 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Accessor} from 'solid-js';
 import {
-  ExploreField,
-  ModelDef,
-  QueryResult,
-  Result,
-  Tag,
-} from '@malloydata/malloy';
-import {
-  Accessor,
   Show,
   createContext,
   createEffect,
@@ -21,21 +15,26 @@ import {
   useContext,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
-import {ResultContext} from './result-context';
 import './render.css';
-import {ComponentOptions, ICustomElement} from 'component-register';
+import type {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
-import {
+import type {
   DashboardConfig,
   DrillData,
   MalloyClickEventPayload,
   TableConfig,
   VegaConfigHandler,
 } from './types';
-export type {DimensionContextEntry, DrillData} from './types';
+export type {DrillData} from './types';
 import css from './render.css?raw';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {ModelDef, QueryResult} from '@malloydata/malloy';
+import {Result, API} from '@malloydata/malloy';
+import {getDataTree} from '../data_tree';
+import {ResultContext} from './result-context';
 
 export type MalloyRenderProps = {
+  malloyResult?: Malloy.Result;
   result?: Result;
   queryResult?: QueryResult;
   modelDef?: ModelDef;
@@ -75,10 +74,18 @@ export function MalloyRender(
   {element}: ComponentOptions
 ) {
   const result = createMemo(() => {
-    if (props.result) return props.result;
-    else if (props.queryResult && props.modelDef)
-      return new Result(props.queryResult, props.modelDef);
-    else return null;
+    if (props.malloyResult) {
+      return props.malloyResult;
+    }
+    const result =
+      props.result ??
+      (props.queryResult && props.modelDef
+        ? new Result(props.queryResult, props.modelDef)
+        : null);
+    if (result) {
+      return API.util.wrapResult(result);
+    }
+    return null;
   });
 
   // Create one stylesheet for web component to use for all styles
@@ -167,19 +174,20 @@ export function MalloyRender(
 }
 
 export function MalloyRenderInner(props: {
-  result: Result;
+  result: Malloy.Result;
   element: ICustomElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
 }) {
+  const rootCell = createMemo(() => getDataTree(props.result));
   const metadata = createMemo(() =>
-    getResultMetadata(props.result, {
+    getResultMetadata(rootCell(), {
       getVegaConfigOverride: props.vegaConfigOverride,
     })
   );
   const tags = () => {
-    const modelTag = metadata().modelTag;
-    const resultTag = metadata().resultTag;
+    const modelTag = rootCell().field.modelTag;
+    const resultTag = rootCell().field.tag;
     const modelTheme = modelTag.tag('theme');
     const localTheme = resultTag.tag('theme');
     return {
@@ -200,12 +208,10 @@ export function MalloyRenderInner(props: {
   });
 
   const rendering = () => {
+    const data = rootCell();
     return applyRenderer({
-      // TODO: figure out what to do about the diffs between top level Explore vs. ExploreFields/AtomicFields
-      field: props.result.resultExplore as ExploreField,
-      dataColumn: props.result.data,
-      resultMetadata: metadata(),
-      tag: tags().resultTag,
+      dataColumn: data,
+      tag: data.field.tag,
       customProps: {
         table: {
           scrollEl: props.scrollEl,

@@ -31,10 +31,8 @@ import {
   error,
 } from './test-translator';
 import './parse-expects';
+import type {Query, QueryFieldDef, QuerySegment} from '../../model';
 import {
-  Query,
-  QueryFieldDef,
-  QuerySegment,
   expressionIsCalculation,
   isJoined,
   isQuerySegment,
@@ -66,16 +64,6 @@ describe('query:', () => {
   describe('basic query syntax', () => {
     test('run:anonymous query', () =>
       expect('run: a -> { group_by: astr }').toTranslate());
-    test('query:anonymous query m4 warning', () => {
-      expect(
-        markSource`##! m4warnings=warn
-          query: ${'a  -> { group_by: astr }'}`
-      ).toLog(
-        warningMessage(
-          'Anonymous `query:` statements are deprecated, use `run:` instead'
-        )
-      );
-    });
     test('named query:', () =>
       expect('query: aq is a -> { group_by: astr }').toTranslate());
     test('run query ref', () =>
@@ -112,7 +100,7 @@ describe('query:', () => {
       ).toTranslate();
     });
     test('query with shortcut filtered turtle', () => {
-      expect(`##! -m4warnings
+      expect(`
         query: allA is ab -> aturtle + {where: astr ~ 'a%' }`).toTranslate();
     });
     test('query with filtered turtle', () => {
@@ -350,16 +338,6 @@ describe('query:', () => {
         expect('run: a -> { select: s is row_number() }').toLog(
           errorMessage(
             'Cannot use an analytic field in a select operation, did you mean to use a calculate operation instead?'
-          )
-        );
-      });
-      test('cannot use analytic in extended source', () => {
-        expect(
-          `##! -m4warnings
-          run: a -> { group_by: a is 1; declare: s is row_number() }`
-        ).toLog(
-          errorMessage(
-            'Analytic expressions can not be used in a declare block'
           )
         );
       });
@@ -776,6 +754,19 @@ describe('query:', () => {
         extend: { join_one: b with astr }
         group_by: b.ai
       }`).toTranslate();
+    });
+    test('reference field in double nested join inside nest', () => {
+      expect(`
+        source: a_2 is a extend { join_one: b is b extend {
+          join_one: c is b on 1 = c.ai
+        } with astr }
+
+        run: a_2 -> {
+          nest: x is {
+            group_by: ai is b.c.ai
+          }
+        }
+      `).toTranslate();
     });
     test.skip('reference join as field', () => {
       expect(`run: a -> {
@@ -1234,26 +1225,6 @@ describe('query:', () => {
       });
     });
     describe('declare/query join warnings', () => {
-      test('declare warning in query', () => {
-        expect(
-          markSource`##! m4warnings=warn
-          run: a -> { ${'declare: x is 1'}; group_by: x }`
-        ).toLog(
-          warningMessage(
-            '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-          )
-        );
-      });
-      test('declare warning in source', () => {
-        expect(
-          markSource`##! m4warnings=warn
-          source: a2 is a extend { ${'declare: x is 1'} }`
-        ).toLog(
-          warningMessage(
-            '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-          )
-        );
-      });
       test('joins in query', () => {
         expect(
           markSource`
@@ -1276,8 +1247,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         expect(q).toBeDefined();
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
@@ -1300,8 +1271,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
           const f = q.extendSource[0];
@@ -1323,8 +1294,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
           expect(isJoined(q.extendSource[0])).toBeTruthy();

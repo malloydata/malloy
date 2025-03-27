@@ -22,18 +22,21 @@
  */
 
 import {HTMLSparkLineRenderer} from './sparkline';
-import {DataArray, Explore, Field} from '@malloydata/malloy';
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {RendererFactory} from './renderer_factory';
-import {Renderer} from './renderer';
-import {SparkLineRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {SparkLineRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
-  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.allFields;
+  override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
+      throw new Error('Area sparkline requires repeated record');
+    }
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -89,7 +92,7 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       config: {
         view: {
@@ -116,7 +119,7 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
 export class AreaSparkLineRendererFactory extends RendererFactory<SparkLineRenderOptions> {
   public static readonly instance = new AreaSparkLineRendererFactory();
 
-  isValidMatch(field: Field | Explore): boolean {
+  isValidMatch(field: Field): boolean {
     return field.name.endsWith('area');
   }
 
@@ -124,7 +127,7 @@ export class AreaSparkLineRendererFactory extends RendererFactory<SparkLineRende
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: SparkLineRenderOptions,
     timezone?: string
   ): Renderer {

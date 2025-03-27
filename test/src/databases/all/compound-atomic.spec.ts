@@ -8,13 +8,13 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
-import {
+import type {
   RecordLiteralNode,
   ArrayLiteralNode,
   ArrayTypeDef,
   FieldDef,
   Expr,
-  SQLSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -220,13 +220,9 @@ describe.each(runtimes.runtimeList)(
             kids: {values: [aOne, aTwo]},
           };
           const sql_aoa = runtime.dialect.sqlLiteralArray(aoa);
-          const asStruct: SQLSourceDef = {
-            name: 'select_with_aoa',
-            type: 'sql_select',
+          const asStruct: SQLSourceRequest = {
             connection: conName,
-            dialect: runtime.dialect.name,
             selectStr: `SELECT ${sql_aoa} AS aoa`,
-            fields: [],
           };
           const ret = await runtime.connection.fetchSchemaForSQLStruct(
             asStruct,
@@ -541,6 +537,19 @@ describe.each(runtimes.runtimeList)(
           -> { nest: gab is {group_by: ab} }
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
+    });
+    // https://github.com/malloydata/malloy/issues/2206
+    test.skip('dereference of literal record (causes stack overflow at one point)', async () => {
+      await expect(`
+        run: ${conName}.sql("""
+          SELECT ${runtime.dialect.sqlLiteralString('Mark')} as first_name,
+                 ${runtime.dialect.sqlLiteralString('Toy')} as last_name
+        """) extend {
+          dimension: owner is {first_name, last_name}
+        } -> {
+          group_by: x is owner.first_name
+        }
+      `).malloyResultMatches(runtime, {x: 'Mark'});
     });
   }
 );

@@ -21,32 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
-  TD,
   RecordLiteralNode,
   OrderBy,
+} from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
   mkFieldDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType} from '../dialect';
+import {inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
-import {TinyParseError, TinyParser, TinyToken} from '../tiny_parser';
+import type {TinyToken} from '../tiny_parser';
+import {TinyParseError, TinyParser} from '../tiny_parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -488,7 +489,6 @@ class DuckDBTypeParser extends TinyParser {
   }
 
   typeDef(): AtomicTypeDef {
-    const unknownStart = this.parseCursor;
     const wantID = this.next('id');
     const id = this.sqlID(wantID);
     let baseType: AtomicTypeDef;
@@ -536,20 +536,18 @@ class DuckDBTypeParser extends TinyParser {
       }
     } else {
       if (wantID.type === 'id') {
-        for (;;) {
-          const next = this.peek();
-          // Might be WEIRDTYP(a,b)[] ... stop at the []
-          if (next.type === 'arrayOf' || next.type === 'eof') {
-            break;
-          }
+        // unknown field type, strip all type decorations, there was a regex for this
+        // in the pre-parser code, but no tests, so this is also untested
+        let idEnd = wantID.cursor + wantID.text.length;
+        if (this.peek().type === 'precision') {
           this.next();
+        }
+        if (this.peek().type === 'eof') {
+          idEnd = this.input.length;
         }
         baseType = {
           type: 'sql native',
-          rawType: this.input.slice(
-            unknownStart,
-            this.parseCursor - unknownStart + 1
-          ),
+          rawType: this.input.slice(wantID.cursor, idEnd),
         };
       } else {
         throw this.parseError('Could not understand type');

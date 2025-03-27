@@ -234,7 +234,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: aircraft->{
         top: 10
         order_by: 1
-        where: region != NULL
+        where: region is not null
         group_by: region
         nest: by_state is {
           top: 10
@@ -291,6 +291,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             aggregate: aircraft_model_count
           }
       }`).malloyResultMatches(runtime, {aircraft_model_count: 448});
+    }
+  );
+
+  test.when(runtime.supportsNesting)(
+    'model: having on just aggregation with a nest',
+    async () => {
+      await expect(`${modelText(databaseName)}
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+          having: count(airport_count) > 0
+          aggregate: row_count is count()
+          nest: state
+      }`).malloyResultMatches(runtime, {row_count: 51});
     }
   );
 
@@ -754,6 +766,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       dimension: satDay is 6
     }`,
   });
+  test('basic like', async () => {
+    const result = await sqlEq("'abz' ~ '%z'", true);
+    expect(result).isSqlEq();
+  });
+  test('basic like with string', async () => {
+    const result = await sqlEq("'%' ~ '\\\\%'", true);
+    expect(result).isSqlEq();
+  });
+  test('basic like with raw string', async () => {
+    const result = await sqlEq("'%' ~ s'\\%'", true);
+    expect(result).isSqlEq();
+  });
 
   describe.skip('alternations with not-eq', () => {
     /*
@@ -823,7 +847,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           SELECT '' as ${q`null_value`}, '' as ${q`string_value`}
           UNION ALL SELECT null, 'correct'
       """) -> {
-        where: null_value = null
+        where: null_value is null
         select:
           found_null is  null_value ?? 'correct',
           else_pass is string_value ?? 'incorrect'
@@ -833,6 +857,58 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       found_null: 'correct',
       else_pass: 'correct',
       literal_null: 'correct',
+    });
+  });
+
+  describe('null safe booleans', () => {
+    const nulls = `${databaseName}.sql("""
+      SELECT
+        0 as ${q`n`},
+        1 as ${q`x`}, 2 as ${q`y`},
+        'a' as ${q`a`}, 'b' as ${q`b`},
+        (1 = 1) as ${q`tf`}
+      UNION ALL SELECT
+        5,
+        null, null, null, null, null
+    """) extend { where: n > 0 }`;
+    const is_true = databaseName === 'mysql' ? 1 : true;
+
+    it('select boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          null_boolean is tf
+      }`).malloyResultMatches(runtime, {null_boolean: null});
+    });
+    it('not boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          not_null_boolean is not tf
+      }`).malloyResultMatches(runtime, {not_null_boolean: is_true});
+    });
+    it('numeric != non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is x != 9 }`
+      ).malloyResultMatches(runtime, {val_ne_null: is_true});
+    });
+    it('string !~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
+      ).malloyResultMatches(runtime, {val_ne_null: is_true});
+    });
+    it('regex !~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
+      ).malloyResultMatches(runtime, {val_ne_null: is_true});
+    });
+    it('numeric != null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_ne_null is x != y }`
+      ).malloyResultMatches(runtime, {null_ne_null: is_true});
+    });
+    it('string !~ null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_ne_null is a !~ b }`
+      ).malloyResultMatches(runtime, {null_ne_null: is_true});
     });
   });
 

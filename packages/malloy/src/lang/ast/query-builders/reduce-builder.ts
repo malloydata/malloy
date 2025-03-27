@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   CompositeFieldUsage,
   FilterCondition,
   PartialSegment,
@@ -29,6 +29,8 @@ import {
   QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+} from '../../../model/malloy_types';
+import {
   canOrderBy,
   expressionIsAggregate,
   expressionIsAnalytic,
@@ -40,18 +42,17 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, SourceFieldSpace} from '../types/field-space';
+import type {SourceFieldSpace} from '../types/field-space';
+import {FieldName} from '../types/field-space';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
-import {QueryProperty} from '../types/query-property';
-import {QueryBuilder} from '../types/query-builder';
-import {
-  QueryOperationSpace,
-  ReduceFieldSpace,
-} from '../field-space/query-spaces';
+import type {QueryProperty} from '../types/query-property';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
-import {QueryInputSpace} from '../field-space/query-input-space';
-import {MalloyElement} from '../types/malloy-element';
+import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {MalloyElement} from '../types/malloy-element';
 import {
   emptyCompositeFieldUsage,
   mergeCompositeFieldUsage,

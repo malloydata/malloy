@@ -23,44 +23,42 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
-import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
-import * as parse from './lib/Malloy/MalloyParser';
+import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
+import type * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
-import {
+import type {
   LogMessageOptions,
-  LogSeverity,
   MessageCode,
   MessageLogger,
   MessageParameterType,
-  makeLogMessage,
 } from './parse-log';
-import {MalloyParseInfo} from './malloy-parse-info';
+import {makeLogMessage} from './parse-log';
+import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {FieldDeclarationConstructor, TableSource} from './ast';
+import type {FieldDeclarationConstructor} from './ast';
+import {TableSource} from './ast';
+import type {HasString, HasID} from './parse-utils';
 import {
   getId,
   getOptionalId,
-  HasString,
-  HasID,
   getStringParts,
   getShortString,
   idToStr,
   getPlainString,
 } from './parse-utils';
-import {CastType} from '../model';
-import {
+import type {CastType} from '../model';
+import type {
   AccessModifierLabel,
   DocumentLocation,
   DocumentRange,
-  isCastType,
-  isMatrixOperation,
   Note,
 } from '../model/malloy_types';
-import {Tag} from '../tags';
+import {isCastType, isMatrixOperation} from '../model/malloy_types';
+import {Tag} from '@malloydata/malloy-tag';
 import {ConstantExpression} from './ast/expressions/constant-expression';
-import {isNotUndefined} from './utils';
+import {isNotUndefined, rangeFromContext} from './utils';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -75,7 +73,7 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
-const DEFAULT_COMPILER_FLAGS = ['##! m4warnings=error'];
+const DEFAULT_COMPILER_FLAGS = [];
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
@@ -94,7 +92,7 @@ export class MalloyToAST
   ) {
     super();
     for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = Tag.fromTagline(flag, this.compilerFlags);
+      const withNewTag = Tag.fromTagLine(flag, 0, this.compilerFlags);
       this.compilerFlags = withNewTag.tag;
     }
   }
@@ -124,10 +122,14 @@ export class MalloyToAST
     this.msgLog.log(makeLogMessage(code, data, {at: el.location, ...options}));
   }
 
+  protected rangeFromContext(cx: ParserRuleContext) {
+    return rangeFromContext(this.parseInfo.sourceInfo, cx);
+  }
+
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
     return {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.rangeFromContext(cx),
     };
   }
 
@@ -184,25 +186,6 @@ export class MalloyToAST
     return false;
   }
 
-  protected m4Severity(): LogSeverity | false {
-    const m4severityTag = this.compilerFlags.tag('m4warnings');
-    if (m4severityTag) {
-      return m4severityTag.text() === 'warn' ? 'warn' : 'error';
-    }
-    return false;
-  }
-
-  protected m4advisory<T extends MessageCode>(
-    cx: ParserRuleContext,
-    code: T,
-    data: MessageParameterType<T>
-  ): void {
-    const m4 = this.m4Severity();
-    if (m4) {
-      this.contextError(cx, code, data, {severity: m4});
-    }
-  }
-
   protected only<T extends ast.MalloyElement>(
     els: ast.MalloyElement[],
     isGood: (el: ast.MalloyElement) => T | false,
@@ -246,7 +229,7 @@ export class MalloyToAST
   ): MT {
     el.location = {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.rangeFromContext(cx),
     };
     return el;
   }
@@ -300,15 +283,6 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
-    for (const part of pcx.sqlInterpolation()) {
-      if (part.CLOSE_CODE()) {
-        this.m4advisory(
-          part,
-          'percent-terminated-query-interpolation',
-          'Use %{ ... } instead of %{ ... }%'
-        );
-      }
-    }
     for (const part of getStringParts(pcx)) {
       if (part instanceof ParserRuleContext) {
         sqlStr.push(this.visit(part));
@@ -443,18 +417,7 @@ export class MalloyToAST
     return propList;
   }
 
-  visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableURI = this.getPlainStringFrom(pcx.tableURI());
-    const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
-    this.m4advisory(
-      pcx,
-      'table-function',
-      "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
-    );
-    return el;
-  }
-
-  visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
+  visitExploreTable(pcx: parse.ExploreTableContext): ast.TableSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const tablePath = this.getPlainStringFrom(pcx.tablePath());
@@ -694,22 +657,6 @@ export class MalloyToAST
     return this.astAt(el, pcx);
   }
 
-  visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
-    const accessLabel = this.getAccessLabel(pcx.accessLabel());
-    const defs = this.getFieldDefs(
-      pcx.defList().fieldDef(),
-      ast.DeclareFieldDeclaration
-    );
-    const stmt = new ast.DeclareFields(defs, accessLabel);
-    const result = this.astAt(stmt, pcx);
-    this.m4advisory(
-      pcx,
-      'declare',
-      '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-    );
-    return result;
-  }
-
   visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0);
     const oldName = pcx.fieldName(1);
@@ -753,13 +700,6 @@ export class MalloyToAST
     const queryDefs = new ast.Views(babyTurtles, accessLabel);
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
-    if (pcx.QUERY()) {
-      this.m4advisory(
-        pcx,
-        'query-in-source',
-        'Use view: inside of a source instead of query:'
-      );
-    }
     return queryDefs;
   }
 
@@ -1011,13 +951,6 @@ export class MalloyToAST
   visitProjectStatement(
     pcx: parse.ProjectStatementContext
   ): ast.ProjectStatement {
-    if (pcx.PROJECT()) {
-      this.m4advisory(
-        pcx,
-        'project',
-        'project: keyword is deprecated, use select:'
-      );
-    }
     const stmt = this.visitFieldCollection(pcx.fieldCollection());
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return stmt;
@@ -1150,21 +1083,6 @@ export class MalloyToAST
     );
   }
 
-  visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const defCx = pcx.topLevelAnonQueryDef();
-    const query = this.getSqExpr(defCx.sqExpr());
-    const theQuery = this.astAt(new ast.AnonymousQuery(query), defCx);
-    const notes = this.getNotes(pcx.topLevelAnonQueryDef().tags());
-    const blockNotes = this.getNotes(pcx.tags());
-    theQuery.extendNote({notes, blockNotes});
-    this.m4advisory(
-      defCx,
-      'anonymous-query',
-      'Anonymous `query:` statements are deprecated, use `run:` instead'
-    );
-    return this.astAt(theQuery, pcx);
-  }
-
   visitRunStatement(pcx: parse.RunStatementContext) {
     const defCx = pcx.topLevelAnonQueryDef();
     const query = this.getSqExpr(defCx.sqExpr());
@@ -1273,26 +1191,60 @@ export class MalloyToAST
     return this.astAt(new ast.ExprCoalesce(left, right), pcx);
   }
 
+  visitPartialCompare(pcx: parse.PartialCompareContext): ast.PartialCompare {
+    const partialOp = pcx.compareOp().text;
+    if (ast.isComparison(partialOp)) {
+      return this.astAt(
+        new ast.PartialCompare(partialOp, this.getFieldExpr(pcx.fieldExpr())),
+        pcx
+      );
+    }
+    throw this.internalError(
+      pcx,
+      `partial comparison '${partialOp}' not recognized`
+    );
+  }
+
+  visitPartialTest(pcx: parse.PartialTestContext): ast.ExpressionDef {
+    const cmp = pcx.partialCompare();
+    if (cmp) {
+      return this.visitPartialCompare(cmp);
+    }
+    return this.astAt(new ast.PartialIsNull(pcx.NOT() ? '!=' : '='), pcx);
+  }
+
   visitPartialAllowedFieldExpr(
     pcx: parse.PartialAllowedFieldExprContext
   ): ast.ExpressionDef {
-    const fieldExpr = this.getFieldExpr(pcx.fieldExpr());
-    const partialOp = pcx.compareOp()?.text;
-    if (partialOp) {
-      if (ast.isComparison(partialOp)) {
-        return this.astAt(new ast.PartialCompare(partialOp, fieldExpr), pcx);
-      }
-      throw this.internalError(
-        pcx,
-        `partial comparison '${partialOp}' not recognized`
-      );
+    const exprCx = pcx.fieldExpr();
+    if (exprCx) {
+      return this.getFieldExpr(exprCx);
     }
-    return fieldExpr;
+    const partialCx = pcx.partialTest();
+    if (partialCx) {
+      return this.visitPartialTest(partialCx);
+    }
+    throw this.internalError(pcx, 'impossible partial');
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
     const str = this.getPlainStringFrom(pcx);
     return new ast.ExprString(str);
+  }
+
+  visitRawString(pcx: parse.RawStringContext): ast.ExprString {
+    const str = pcx.text.slice(1).trimStart();
+    const lastChar = str[str.length - 1];
+    if (lastChar === '\n') {
+      const t = str[0] === "'" ? '"' : "'";
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        `Missing ${t}${str[0]}${t} before end-of-line`
+      );
+    }
+    const astStr = new ast.ExprString(str.slice(1, -1));
+    return this.astAt(astStr, pcx);
   }
 
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
@@ -1348,6 +1300,24 @@ export class MalloyToAST
     const left = this.getFieldExpr(pcx.fieldExpr(0));
     const right = this.getFieldExpr(pcx.fieldExpr(1));
     if (ast.isEquality(op)) {
+      const wholeRange = this.rangeFromContext(pcx);
+      if (right instanceof ast.ExprNULL) {
+        if (op === '=') {
+          this.warnWithReplacement(
+            'sql-is-null',
+            "Use 'is null' to check for NULL instead of '= null'",
+            wholeRange,
+            `${this.getSourceCode(pcx.fieldExpr(0))} is null`
+          );
+        } else if (op === '!=') {
+          this.warnWithReplacement(
+            'sql-is-not-null',
+            "Use 'is not null' to check for NULL instead of '!= null'",
+            wholeRange,
+            `${this.getSourceCode(pcx.fieldExpr(0))} is not null`
+          );
+        }
+      }
       return this.astAt(new ast.ExprEquality(left, op, right), pcx);
     } else if (ast.isComparison(op)) {
       return this.astAt(new ast.ExprCompare(left, op, right), pcx);
@@ -1444,13 +1414,6 @@ export class MalloyToAST
     const source = undefined;
     const aggFunc = pcx.aggregate().text.toLowerCase();
 
-    if (pcx.STAR()) {
-      this.m4advisory(
-        pcx,
-        'wildcard-in-aggregate',
-        `* illegal inside ${aggFunc}()`
-      );
-    }
     if (aggFunc === 'count') {
       return this.astAt(
         expr ? new ast.ExprCountDistinct(expr) : new ast.ExprCount(),
@@ -1642,7 +1605,7 @@ export class MalloyToAST
     this.warnWithReplacement(
       'sql-case',
       'Use a `pick` statement instead of `case`',
-      this.parseInfo.rangeFromContext(pcx),
+      this.rangeFromContext(pcx),
       `${[
         ...(valueCx ? [`${this.getSourceCode(valueCx)} ?`] : []),
         ...whenCxs.map(
@@ -1936,7 +1899,7 @@ export class MalloyToAST
       if (fieldNameCx) {
         return this.astAt(
           new ast.AccessModifierFieldReference([
-            this.astAt(new ast.FieldName(fcx.text), fcx),
+            this.astAt(this.getFieldName(fieldNameCx), fcx),
           ]),
           fieldNameCx
         );
@@ -2097,7 +2060,7 @@ export class MalloyToAST
     let op: ast.CompareMalloyOperator = '~';
     const left = pcx.fieldExpr(0);
     const right = pcx.fieldExpr(1);
-    const wholeRange = this.parseInfo.rangeFromContext(pcx);
+    const wholeRange = this.rangeFromContext(pcx);
     if (pcx.NOT()) {
       op = '!~';
       this.warnWithReplacement(
@@ -2124,29 +2087,10 @@ export class MalloyToAST
     );
   }
 
-  visitExprWarnNullCmp(pcx: parse.ExprWarnNullCmpContext): ast.ExprCompare {
-    let op: ast.CompareMalloyOperator = '=';
+  visitExprNullCheck(pcx: parse.ExprNullCheckContext): ast.ExprIsNull {
     const expr = pcx.fieldExpr();
-    const wholeRange = this.parseInfo.rangeFromContext(pcx);
-    if (pcx.NOT()) {
-      op = '!=';
-      this.warnWithReplacement(
-        'sql-is-not-null',
-        "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
-        wholeRange,
-        `${this.getSourceCode(expr)} != null`
-      );
-    } else {
-      this.warnWithReplacement(
-        'sql-is-null',
-        "Use '= NULL' to check for NULL instead of 'IS NULL'",
-        wholeRange,
-        `${this.getSourceCode(expr)} = null`
-      );
-    }
-    const nullExpr = new ast.ExprNULL();
     return this.astAt(
-      new ast.ExprCompare(this.getFieldExpr(expr), op, nullExpr),
+      new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() ? '!=' : '='),
       pcx
     );
   }
@@ -2166,11 +2110,38 @@ export class MalloyToAST
     this.warnWithReplacement(
       'sql-in',
       `Use = (a|b|c) instead of${isNot ? ' NOT' : ''} IN (a,b,c)`,
-      this.parseInfo.rangeFromContext(pcx),
+      this.rangeFromContext(pcx),
       `${this.getSourceCode(pcx.fieldExpr())} ${isNot ? '!=' : '='} (${from
         .map(f => this.getSourceCode(f))
         .join(' | ')})`
     );
     return inStmt;
+  }
+
+  visitTickFilterString(
+    pcx: parse.TickFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart(); // remove fSPACE
+    const lastChar = fString[fString.length - 1];
+    if (lastChar === '\n') {
+      const t = fString[0] === "'" ? '"' : "'";
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        `Missing $${t}${fString[0]}${t} before end-of-line`
+      );
+    }
+    const filterText = fString.slice(1, -1);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
+  }
+
+  visitTripFilterString(
+    pcx: parse.TripFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart();
+    const filterText = fString.slice(3, -3);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
   }
 }

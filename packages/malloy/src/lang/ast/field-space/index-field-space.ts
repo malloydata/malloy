@@ -25,22 +25,21 @@ import {
   emptyCompositeFieldUsage,
   emptyNarrowedCompositeFieldResolution,
 } from '../../../model/composite_source_utils';
-import {
+import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  expressionIsScalar,
-  TD,
   CompositeFieldUsage,
 } from '../../../model/malloy_types';
+import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {
   FieldReference,
   IndexFieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
-import {SpaceEntry} from '../types/space-entry';
+import type {FieldSpace} from '../types/field-space';
+import type {MalloyElement} from '../types/malloy-element';
+import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
 import {ReferenceField} from './reference-field';

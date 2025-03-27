@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Axis, GroupMark, RectMark} from 'vega';
-import {ChartLayoutSettings} from '../chart-layout-settings';
+import type {Axis, GroupMark, RectMark} from 'vega';
+import type {ChartLayoutSettings} from '../chart-layout-settings';
 import {grayMedium} from './base-vega-config';
 
 type MeasureAxisOptions = {
@@ -15,7 +15,7 @@ type MeasureAxisOptions = {
   tickCount: string | number;
   labelLimit: number;
   fieldPath: string;
-  fieldRef: string | null;
+  fieldRef: string | undefined;
   brushMeasureRangeSourceId: string;
   showBrushes?: boolean;
   axisSettings: ChartLayoutSettings['yAxis'];

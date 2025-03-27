@@ -154,7 +154,7 @@ describe.each(runtimes.runtimeList)(
     test(`search_index - ${databaseName}`, async () => {
       await expect(`
         run: ga_sessions->search_index -> {
-          where: fieldName != null
+          where: fieldName is not null
           select: *
           order_by: fieldName, weight desc
           limit: 10

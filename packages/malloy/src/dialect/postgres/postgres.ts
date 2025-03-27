@@ -22,11 +22,8 @@
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeDeltaExpr,
   TypecastExpr,
@@ -36,11 +33,13 @@ import {
   ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+} from '../../model/malloy_types';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -111,6 +110,7 @@ export class PostgresDialect extends PostgresBase {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
+  likeEscape = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -320,7 +320,7 @@ export class PostgresDialect extends PostgresBase {
       timeframe = 'day';
       n = `${n}*7`;
     }
-    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>(${n})::integer)`;
     return `(${df.kids.base.sql})${df.op}${interval}`;
   }
 

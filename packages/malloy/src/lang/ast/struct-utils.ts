@@ -24,11 +24,13 @@
 import {inspect} from 'util';
 
 import {Segment} from '../../model/malloy_query';
-import {
+import type {
   FieldDef,
   PipeSegment,
   SourceDef,
   StructDef,
+} from '../../model/malloy_types';
+import {
   isPartialSegment,
   isSourceDef,
   segmentHasErrors,
@@ -36,7 +38,7 @@ import {
 } from '../../model/malloy_types';
 
 import {ErrorFactory} from './error-factory';
-import {MalloyElement} from './types/malloy-element';
+import type {MalloyElement} from './types/malloy-element';
 
 export function opOutputStruct(
   logTo: MalloyElement,

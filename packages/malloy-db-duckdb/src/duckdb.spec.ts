@@ -23,7 +23,8 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLSourceDef, StructDef, mkArrayDef} from '@malloydata/malloy';
+import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
+import {mkArrayDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb']);
@@ -167,6 +168,22 @@ describe('DuckDBConnection', () => {
         ],
       });
     });
+    it('parses struct with sql native field', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: PROFESSOR_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'join': 'many',
+        'fields': [
+          {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
+          {'name': 'name', 'type': 'string'},
+          {'name': 'age', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'total_sections', 'numberType': 'integer', 'type': 'number'},
+        ],
+      });
+    });
 
     it('parses a simple type', () => {
       const structDef = makeStructDef();
@@ -174,6 +191,16 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'string',
+      });
+    });
+
+    it('parses unknown type', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: 'UUID'});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'sql native',
+        'rawType': 'UUID',
       });
     });
   });
@@ -202,12 +229,8 @@ const makeStructDef = (): StructDef => {
 //
 
 // Uses string value for table
-const SQL_BLOCK_1: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block1',
-  dialect: 'duckdb',
+const SQL_BLOCK_1: SQLSourceRequest = {
   connection: 'duckdb',
-  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -224,12 +247,8 @@ FROM "inventory_items.parquet"
 };
 
 // Uses read_parquet() for table
-const SQL_BLOCK_2: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block2',
-  dialect: 'duckdb',
+const SQL_BLOCK_2: SQLSourceRequest = {
   connection: 'duckdb',
-  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -261,3 +280,6 @@ const NESTED_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))[]';
 const intTyp = {type: 'number', numberType: 'integer'};
 const strTyp = {type: 'string'};
 const dblType = {type: 'number', numberType: 'float'};
+
+const PROFESSOR_SCHEMA =
+  'STRUCT(professor_id UUID, "name" VARCHAR, age BIGINT, total_sections BIGINT)[]';

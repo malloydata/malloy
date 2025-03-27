@@ -21,16 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   AtomicTypeDef,
   EvalSpace,
-  expressionIsScalar,
   ExpressionType,
   ExpressionValueType,
-  isRepeatedRecord,
-  TD,
   TypeDesc,
 } from '../../model';
+import {expressionIsScalar, isRepeatedRecord, TD} from '../../model';
 import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 
 function mkTypeDesc(

@@ -74,7 +74,6 @@ export type {
   Expr,
   // Needed for drills in render
   FilterCondition,
-  SQLSentence,
   // Used in Composer
   Argument,
   Parameter,
@@ -141,6 +140,7 @@ export {
   composeSQLExpr,
 } from './model';
 export {
+  malloyToQuery,
   // Needed for tests only
   MalloyTranslator,
 } from './lang';
@@ -168,6 +168,8 @@ export {
   Parse,
   DataWriter,
   Explore,
+  InMemoryModelCache,
+  CacheManager,
 } from './malloy';
 export type {
   PreparedQuery,
@@ -185,10 +187,13 @@ export type {
   DocumentTablePath,
   DocumentSymbol,
   ResultJSON,
+  PreparedResultJSON,
   PreparedResultMaterializer,
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
+  ModelCache,
+  CachedModel,
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
@@ -201,6 +206,7 @@ export type {
   QueryString,
   QueryURL,
   URLReader,
+  InvalidationKey,
 } from './runtime_types';
 export type {
   Connection,
@@ -218,4 +224,8 @@ export type {
   StreamingConnection,
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
-export {type TagParse, Tag, type TagDict} from './tags';
+export {modelDefToModelInfo} from './to_stable';
+export * as API from './api';
+export type {SQLSourceRequest} from './lang/translate-response';
+export {sqlKey} from './model/sql_block';
+export {annotationToTag, annotationToTaglines} from './annotation';

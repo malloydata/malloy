@@ -21,13 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, isRawSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {PipeSegment} from '../../../model/malloy_types';
+import {isRawSegment} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
 import {getFinalStruct} from '../struct-utils';
-import {SourceFieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {View} from './view';
 

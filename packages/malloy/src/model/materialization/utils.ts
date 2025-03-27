@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '../../tags';
-import {Annotation, QueryToMaterialize} from '../malloy_types';
+import type {Annotation, QueryToMaterialize} from '../malloy_types';
 import {generateHash} from '../utils';
+import {annotationToTag} from '../../annotation';
 
 export function shouldMaterialize(annotation?: Annotation): boolean {
   const clonedAnnotation = structuredClone(annotation);
@@ -16,7 +16,7 @@ export function shouldMaterialize(annotation?: Annotation): boolean {
     clonedAnnotation.inherits = undefined;
   }
 
-  const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
+  const sourceTag = annotationToTag(clonedAnnotation).tag;
 
   return sourceTag.has('materialize');
 }

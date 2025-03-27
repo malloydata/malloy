@@ -21,10 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore, Field, Tag} from '@malloydata/malloy';
-import {Renderer} from './renderer';
-import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Renderer} from './renderer';
+import type {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Field} from '../data_tree';
 
 type TagPropertyExtractor<T extends DataRenderOptions> = (
   options: T,
@@ -43,12 +44,12 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     }
   }
 
-  activates(_field: Field | Explore): boolean {
+  activates(_field: Field): boolean {
     // Does not activate by default.
     return false;
   }
 
-  isValidMatch(_field: Field | Explore): boolean {
+  isValidMatch(_field: Field): boolean {
     return true;
   }
 
@@ -73,7 +74,7 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Field | Explore,
+    field: Field,
     renderOptions: T,
     timezone?: string
   ): Renderer;

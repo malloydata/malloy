@@ -21,32 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Annotation,
   JoinFieldDef,
-  isSourceDef,
   JoinType,
   MatrixOperation,
   SourceDef,
-  isJoinable,
   AccessModifierLabel,
 } from '../../../model/malloy_types';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import {isSourceDef, isJoinable} from '../../../model/malloy_types';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
-import {QueryBuilder} from '../types/query-builder';
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-import {extendNoteMethod, Noteable} from '../types/noteable';
-import {MakeEntry} from '../types/space-entry';
-import {SourceQueryElement} from '../source-query-elements/source-query-element';
+import type {QueryBuilder} from '../types/query-builder';
+import type {ExpressionDef} from '../types/expression-def';
+import type {FieldSpace} from '../types/field-space';
+import type {ModelEntryReference} from '../types/malloy-element';
+import {MalloyElement} from '../types/malloy-element';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {MakeEntry} from '../types/space-entry';
+import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {ErrorFactory} from '../error-factory';
-import {ParameterSpace} from '../field-space/parameter-space';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {ParameterSpace} from '../field-space/parameter-space';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 export abstract class Join
   extends MalloyElement

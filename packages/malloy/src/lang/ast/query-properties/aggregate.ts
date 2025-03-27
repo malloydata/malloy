@@ -22,11 +22,11 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {QueryItem} from '../types/query-item';
+import type {QueryItem} from '../types/query-item';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {
   LegalRefinementStage,
   QueryClass,
-  QueryPropertyInterface,
 } from '../types/query-property-interface';
 
 export class Aggregate

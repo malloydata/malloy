@@ -21,22 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {Renderer} from './renderer';
-import {createErrorElement, createNullElement, getDynamicValue} from './utils';
-import {LinkRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import {createErrorElement, createNullElement} from './utils';
+import type {LinkRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(data: DataColumn): Promise<HTMLElement> {
+  async render(data: Cell): Promise<HTMLElement> {
     if (data.isNull()) {
       return createNullElement(this.document);
     }
 
-    const {tag} = data.field.tagParse();
+    const tag = data.field.tag;
     const linkTag = tag.tag('link');
 
     if (!linkTag) {
@@ -51,8 +51,13 @@ export class HTMLLinkRenderer implements Renderer {
     }
 
     // Read href component from field value or override with field tag if it exists
-    const hrefComponent =
-      getDynamicValue<string>({tag: linkTag, data}) ?? data.value;
+    const dynamicRef = linkTag.text('field');
+    let hrefCell: Cell | undefined;
+    if (dynamicRef) {
+      hrefCell = data.getRelativeCell(dynamicRef);
+    }
+    hrefCell ??= data;
+    const hrefComponent = String(hrefCell.value);
 
     // if a URL template is provided, replace the data were '$$$' appears.
     const urlTemplate = linkTag.text('url_template');
@@ -81,7 +86,7 @@ export class LinkRendererFactory extends RendererFactory<LinkRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     _options: LinkRenderOptions
   ): Renderer {
     return new HTMLLinkRenderer(document);

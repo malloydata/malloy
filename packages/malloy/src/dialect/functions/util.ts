@@ -22,15 +22,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   FunctionParameterDef,
   TypeDesc,
   Expr,
   FunctionParamTypeDesc,
   GenericSQLExpr,
   LeafExpressionType,
-  TD,
-  mkFieldDef,
   FieldDef,
   FunctionReturnTypeDesc,
   FunctionParameterTypeDef,
@@ -40,7 +38,8 @@ import {
   TypedDef,
   FunctionGenericTypeDef,
 } from '../../model/malloy_types';
-import {SQLExprElement} from '../../model/utils';
+import {TD, mkFieldDef} from '../../model/malloy_types';
+import type {SQLExprElement} from '../../model/utils';
 
 export interface DialectFunctionOverloadDef {
   // The expression type here is the MINIMUM return type

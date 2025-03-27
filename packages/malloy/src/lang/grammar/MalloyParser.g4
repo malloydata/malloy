@@ -43,7 +43,6 @@ defineSourceStatement
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
-  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
@@ -67,7 +66,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (closeCurly | CLOSE_CODE)
+  : OPEN_CODE sqExpr CCURLY
   ;
 
 importStatement
@@ -77,7 +76,7 @@ importStatement
 importSelect
   : OCURLY
     importItem (COMMA importItem)*
-    closeCurly FROM
+    CCURLY FROM
   ;
 
 importItem
@@ -118,15 +117,14 @@ sqlSource
   ;
 
 exploreTable
-  : TABLE OPAREN tableURI CPAREN                     # tableFunction
-  | connectionId DOT TABLE OPAREN tablePath CPAREN   # tableMethod
+  : connectionId DOT TABLE OPAREN tablePath CPAREN
   ;
 
 connectionId
   : id;
 
 queryProperties
-  : OCURLY (queryStatement | SEMI)* closeCurly
+  : OCURLY (queryStatement | SEMI)* CCURLY
   ;
 
 queryName : id;
@@ -156,20 +154,18 @@ parameterNameDef: id;
 sourceNameDef: id;
 
 exploreProperties
-  : OCURLY (exploreStatement | SEMI)* closeCurly
+  : OCURLY (exploreStatement | SEMI)* CCURLY
   ;
 
 exploreStatement
   : defDimensions                            # defExploreDimension_stub
   | defMeasures                              # defExploreMeasure_stub
-  | declareStatement                         # defDeclare_stub
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
   | accessLabel? RENAME renameList           # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
-  | tags accessLabel? (QUERY | VIEW) subQueryDefList
-                                             # defExploreQuery
+  | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
@@ -260,7 +256,7 @@ sqExpr
   ;
 
 includeBlock
-  : OCURLY (includeItem | SEMI)* closeCurly
+  : OCURLY (includeItem | SEMI)* CCURLY
   ;
 
 includeItem
@@ -350,7 +346,7 @@ filterStatement
   ;
 
 fieldProperties
-  : OCURLY (fieldPropertyStatement | SEMI)* closeCurly
+  : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
   ;
 
 aggregateOrdering
@@ -460,7 +456,7 @@ calculateStatement
   ;
 
 projectStatement
-  : tags (SELECT | PROJECT) fieldCollection
+  : tags SELECT fieldCollection
   ;
 
 partitionByStatement
@@ -537,17 +533,24 @@ shortString
   : (SQ_STRING | DQ_STRING)
   ;
 
+rawString
+  : RAW_SQ
+  | RAW_DQ
+  ;
+
 numericLiteral
   : (NUMERIC_LITERAL | INTEGER_LITERAL)
   ;
 
 literal
   : string                                      # exprString
+  | rawString                                   # stub_rawString
   | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
   | (TRUE | FALSE)                              # exprBool
   | HACKY_REGEX                                 # exprRegex
+  | filterString                                # filterString_stub
   | NOW                                         # exprNow
   ;
 
@@ -602,7 +605,7 @@ fieldExpr
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
-  | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
+  | fieldExpr IS NOT? NULL                                 # exprNullCheck
   | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
@@ -611,7 +614,7 @@ fieldExpr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
   | (SOURCE_KW DOT)? aggregate
-      OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
+      OPAREN fieldExpr? CPAREN                             # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
   | OPAREN fieldExpr CPAREN                                # exprExpr
@@ -624,9 +627,19 @@ fieldExpr
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
+partialCompare
+  : compareOp fieldExpr
+  ;
+
+partialTest
+  : partialCompare
+  | IS NOT? NULL
+  ;
+
 partialAllowedFieldExpr
-  : OPAREN compareOp? fieldExpr CPAREN
-  | compareOp? fieldExpr
+  : partialTest
+  | OPAREN partialTest CPAREN
+  | fieldExpr
   ;
 
 fieldExprList
@@ -704,6 +717,21 @@ sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
 
+tripFilterString
+  : SQ3_FILTER
+  | BQ3_FILTER
+  | DQ3_FILTER
+  ;
+
+tickFilterString
+  : SQ_FILTER
+  | BQ_FILTER
+  | DQ_FILTER;
+
+filterString
+  : tripFilterString
+  | tickFilterString;
+
 // These are for debug launch configs. Without the EOF a parse can stop without
 // parsing the entire input, if it is legal up to some token, for the debuger
 // we want to make sure the entire expression parses.
@@ -712,14 +740,4 @@ debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK
-  ;
-
-// Try to show a nice error for a missing }.  Only use this when the next
-// legal symbols after the curly are things which would be illegal inside
-// the curly brackets.
-closeCurly
-  : CCURLY
-  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
-  // even in the error string below
-  | { this.notifyErrorListeners("'{' missing a '}'"); }
   ;

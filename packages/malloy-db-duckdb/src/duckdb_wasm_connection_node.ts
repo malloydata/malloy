@@ -22,7 +22,7 @@
  */
 
 import crypto from 'crypto';
-import {DuckDBBundles} from '@duckdb/duckdb-wasm';
+import type {DuckDBBundles} from '@duckdb/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {

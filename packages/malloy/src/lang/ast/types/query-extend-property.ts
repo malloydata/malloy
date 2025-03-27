@@ -24,7 +24,7 @@
 import {Dimensions} from '../source-properties/dimensions';
 import {JoinStatement} from '../source-properties/join';
 import {Measures} from '../source-properties/measures';
-import {MalloyElement} from './malloy-element';
+import type {MalloyElement} from './malloy-element';
 
 export type QueryExtendProperty = Dimensions | Measures;
 export function isQueryExtendProperty(

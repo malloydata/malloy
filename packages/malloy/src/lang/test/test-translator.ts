@@ -23,7 +23,7 @@
  */
 
 import {inspect} from 'util';
-import {
+import type {
   DocumentLocation,
   FieldDef,
   ModelDef,
@@ -33,27 +33,36 @@ import {
   QueryFieldDef,
   StructDef,
   TurtleDef,
-  isQuerySegment,
-  isSegmentSQL,
-  isSourceDef,
   SourceDef,
   JoinBase,
   TableSourceDef,
   SQLSourceDef,
-  SQLSentence,
   NumberTypeDef,
+} from '../../model/malloy_types';
+import {
+  isQuerySegment,
+  isSourceDef,
   mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
-import {NameSpace} from '../ast/types/name-space';
-import {ModelEntry} from '../ast/types/model-entry';
+import type {NameSpace} from '../ast/types/name-space';
+import type {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
-import {DataRequestResponse, TranslateResponse} from '../translate-response';
+import type {
+  DataRequestResponse,
+  SQLSourceRequest,
+  TranslateResponse,
+} from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
-import {ExprValue} from '../ast/types/expr-value';
+import type {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
-import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
-import {EventStream} from '../../runtime_types';
+import type {
+  LogSeverity,
+  MessageCode,
+  MessageParameterType,
+} from '../parse-log';
+import type {EventStream} from '../../runtime_types';
+import {sqlKey} from '../../model/sql_block';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -273,6 +282,8 @@ export class TestTranslator extends MalloyTranslator {
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
+    queryList: [],
+    dependencies: {},
     contents: {
       _db_: {type: 'connection', name: '_db_'},
       a: {...aTableDef, primaryKey: 'astr', as: 'a'},
@@ -386,7 +397,7 @@ export class TestTranslator extends MalloyTranslator {
 
   get nameSpace(): Record<string, NamedModelObject> {
     const gotModel = this.translate();
-    return gotModel?.translated?.modelDef.contents || {};
+    return gotModel?.modelDef?.contents || {};
   }
 
   exploreFor(exploreName: string): StructDef {
@@ -400,9 +411,8 @@ export class TestTranslator extends MalloyTranslator {
   static inspectCompile = false;
   compile(): void {
     const compileTo = this.translate();
-    if (compileTo.translated && TestTranslator.inspectCompile) {
-      console.log('MODEL: ', pretty(compileTo.translated.modelDef));
-      console.log('QUERIES: ', pretty(compileTo.translated.queryList));
+    if (compileTo.modelDef && TestTranslator.inspectCompile) {
+      console.log('MODEL: ', pretty(compileTo.modelDef));
     }
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
@@ -412,8 +422,8 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   getSourceDef(srcName: string): SourceDef | undefined {
-    const t = this.translate().translated;
-    const s = t?.modelDef?.contents[srcName];
+    const t = this.translate().modelDef;
+    const s = t?.contents[srcName];
     if (s && isSourceDef(s)) {
       return s;
     }
@@ -421,11 +431,11 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   getQuery(queryName: string | number): Query | undefined {
-    const t = this.translate().translated;
+    const t = this.translate().modelDef;
     if (t) {
       const s =
         typeof queryName === 'string'
-          ? t.modelDef.contents[queryName]
+          ? t.contents[queryName]
           : t.queryList[queryName];
       if (s?.type === 'query') {
         return s;
@@ -629,18 +639,19 @@ export function markSource(
   return {code, locations};
 }
 
-export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceDef {
-  const selectThis = sqlBlock.select[0];
-  if (!isSegmentSQL(selectThis)) {
-    throw new Error('weird test support error sorry');
-  }
+export function getSelectOneStruct(sqlBlock: SQLSourceRequest): {
+  [key: string]: SQLSourceDef;
+} {
+  const key = sqlKey(sqlBlock.connection, sqlBlock.selectStr);
   return {
-    type: 'sql_select',
-    name: sqlBlock.name,
-    dialect: 'standardsql',
-    connection: 'bigquery',
-    selectStr: selectThis.sql,
-    fields: [{type: 'number', name: 'one'}],
+    [key]: {
+      type: 'sql_select',
+      name: key,
+      dialect: 'standardsql',
+      connection: 'bigquery',
+      selectStr: sqlBlock.selectStr,
+      fields: [{type: 'number', name: 'one'}],
+    },
   };
 }
 

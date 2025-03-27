@@ -5,17 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   ArrayLiteralNode,
   RecordLiteralNode,
   RegexMatchExpr,
-  TD,
   TimeExtractExpr,
   TimeLiteralNode,
   TimeTruncExpr,
   TypecastExpr,
 } from '../model/malloy_types';
-import {Dialect, qtz, QueryInfo} from './dialect';
+import {TD} from '../model/malloy_types';
+import type {QueryInfo} from './dialect';
+import {Dialect, qtz} from './dialect';
 
 export const timeExtractMap: Record<string, string> = {
   'day_of_week': 'dow',
@@ -63,7 +64,7 @@ export abstract class PostgresBase extends Dialect {
       }
     }
     const extracted = `EXTRACT(${units} FROM ${extractFrom})`;
-    return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+    return from.units === 'day_of_week' ? `(${extracted}+1)` : extracted;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {

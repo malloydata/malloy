@@ -21,19 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Annotation,
-  ModelDef,
-  Query,
-  SQLSentence,
-  SQLSourceDef,
-} from '../model/malloy_types';
-import {MalloyElement} from './ast';
-import {LogMessage} from './parse-log';
-import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
-import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
-import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
-import {PathInfo} from './parse-tree-walkers/find-table-path-walker';
+import type {Annotation, ModelDef} from '../model/malloy_types';
+import type {MalloyElement} from './ast';
+import type {LogMessage} from './parse-log';
+import type {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
+import type {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
+import type {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
+import type {PathInfo} from './parse-tree-walkers/find-table-path-walker';
 
 /**
  * The translation interface is essentially a request/response protocol, and
@@ -61,9 +55,13 @@ export interface NeedURLData {
   urls: string[];
 }
 
+export interface SQLSourceRequest {
+  connection: string;
+  selectStr: string;
+}
+
 export interface NeedCompileSQL {
-  compileSQL: SQLSentence;
-  partialModel: ModelDef | undefined;
+  compileSQL: SQLSourceRequest;
 }
 interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
 export type DataRequestResponse = Partial<NeededData> | null;
@@ -93,16 +91,13 @@ export type CompletionsResponse = Partial<Completions>;
 interface HelpContext extends NeededData, ProblemResponse, FinalResponse {
   helpContext: DocumentHelpContext | undefined;
 }
+
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
   extends NeededData,
     ProblemResponse,
     FinalResponse {
-  translated: {
-    modelDef: ModelDef;
-    queryList: Query[];
-    sqlBlocks: SQLSourceDef[];
-  };
+  modelDef: ModelDef;
   fromSources: string[];
 }
 

@@ -26,7 +26,7 @@ async function createConnection() {
 async function getMaterializedModel(fileName: string) {
   const connection = await createConnection();
   const modelCode = fs.readFileSync(fileName, 'utf-8');
-  const runtime = new SingleConnectionRuntime(connection);
+  const runtime = new SingleConnectionRuntime({connection});
   const model = runtime.loadModel(modelCode);
 
   const materializedModel = await model.getModel();
@@ -96,7 +96,7 @@ export const malloyStoriesIndexer: Indexer = {
         return contents;
       },
     };
-    const runtime = new SingleConnectionRuntime(urlReader, connection);
+    const runtime = new SingleConnectionRuntime({urlReader, connection});
     const model = runtime.loadModel(modelCode);
     const materializedModel = await model.getModel();
     const modelStories = getModelStories(materializedModel, fileName).stories;
@@ -152,7 +152,7 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               parent.style.position = 'relative';
               const el = document.createElement('malloy-render');
               if (classes) el.classList.add(classes);
-              el.result = context.loaded['result'];
+              el.malloyResult = context.loaded['result'];
               el.tableConfig = {
                 enableDrill: true
               };

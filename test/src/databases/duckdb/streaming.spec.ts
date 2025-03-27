@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {WriteStream, CSVWriter} from '@malloydata/malloy';
+import type {WriteStream} from '@malloydata/malloy';
+import {CSVWriter} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import {RuntimeList} from '../../runtimes';
 
@@ -56,7 +57,7 @@ function modelText(databaseName: string) {
   }
 
   view: by_county is {
-    where: county != null
+    where: county is not null
     group_by: county
     aggregate: airport_count
     limit: 2
@@ -64,7 +65,7 @@ function modelText(databaseName: string) {
   }
 
   view: by_state is {
-    where: state != null
+    where: state is not null
     group_by: state
     aggregate: airport_count
     limit: 2

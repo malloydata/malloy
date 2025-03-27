@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   Sampling,
   AtomicTypeDef,
@@ -35,11 +35,10 @@ import {
   RecordLiteralNode,
   ArrayLiteralNode,
   LeafAtomicTypeDef,
-  isRawCast,
-  isLeafAtomic,
   OrderBy,
 } from '../model/malloy_types';
-import {DialectFunctionOverloadDef} from './functions';
+import {isRawCast, isLeafAtomic} from '../model/malloy_types';
+import type {DialectFunctionOverloadDef} from './functions';
 
 type DialectFieldTypes = string | 'struct';
 
@@ -109,7 +108,9 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type OrderByClauseType = 'output_name' | 'ordinal';
+export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+
+export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 
 export abstract class Dialect {
   abstract name: string;
@@ -173,12 +174,16 @@ export abstract class Dialect {
   // MYSQL doesn't have full join, maybe others.
   supportsFullJoin = true;
 
-  nativeBoolean = true;
-
   // Can have arrays of arrays
   nestedArrays = true;
   // An array or record will reveal type of contents on schema read
   compoundObjectInSchema = true;
+
+  // No true boolean type, e.g. true=1 and false=0, set this to true
+  booleanAsNumbers = false;
+
+  // Like characters are escaped with ESCAPE clause
+  likeEscape = true;
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
@@ -291,11 +296,11 @@ export abstract class Dialect {
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
   abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
+  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
+
   abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
   abstract sqlLiteralString(literal: string): string;
   abstract sqlLiteralRegexp(literal: string): string;
-
-  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
   abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
   abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
 
@@ -376,7 +381,12 @@ export abstract class Dialect {
     return tableSQL;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
+  /**
+   * MySQL is NULLs first, all other dialects have a way to make NULLs last.
+   * isBaseOrdering is a hack to allow the MySQL dialect to partially implement
+   * NULLs last, but should go away once MySQL fully implements NULLs last.
+   */
+  sqlOrderBy(orderTerms: string[], _orderFor?: OrderByRequest): string {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 
@@ -441,5 +451,41 @@ export abstract class Dialect {
       dstTypeDef: cast.dstType,
       dstSQLType: this.malloyTypeToSQLType(cast.dstType),
     };
+  }
+
+  /**
+   * Write a LIKE expression. Malloy like strings are escaped with \\% and \\_
+   * but some SQL dialects use an ESCAPE clause.
+   */
+  sqlLike(likeOp: 'LIKE' | 'NOT LIKE', left: string, likeStr: string): string {
+    let escaped = '';
+    let escapeActive = false;
+    let escapeClause = false;
+    for (const c of likeStr) {
+      if (c === '\\' && !escapeActive) {
+        escapeActive = true;
+      } else if (this.likeEscape && c === '^') {
+        escaped += '^^';
+        escapeActive = false;
+        escapeClause = true;
+      } else {
+        if (escapeActive) {
+          if (this.likeEscape) {
+            if (c === '%' || c === '_') {
+              escaped += '^';
+              escapeClause = true;
+            }
+          } else {
+            if (c === '%' || c === '_' || c === '\\') {
+              escaped += '\\';
+            }
+          }
+        }
+        escaped += c;
+        escapeActive = false;
+      }
+    }
+    const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
+    return escapeClause ? `${compare} ESCAPE '^'` : compare;
   }
 }

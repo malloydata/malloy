@@ -5,9 +5,10 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, Tag} from '@malloydata/malloy';
-import {getFieldPathBetweenFields, walkFields} from '../plot/util';
-import {Channel} from '../types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Channel} from '../types';
+import type {NestField} from '../../data_tree';
+import {walkFields} from '../../util';
 
 export type LineChartSettings = {
   xChannel: Channel;
@@ -18,10 +19,10 @@ export type LineChartSettings = {
 };
 
 export function getLineChartSettings(
-  explore: Explore,
+  explore: NestField,
   tagOverride?: Tag
 ): LineChartSettings {
-  const tag = tagOverride ?? explore.tagParse().tag;
+  const tag = tagOverride ?? explore.tag;
   const chart = tag.tag('line_chart');
   if (!chart) {
     throw new Error(
@@ -51,17 +52,21 @@ export function getLineChartSettings(
     type: null,
   };
 
+  function getField(ref: string) {
+    return explore.pathTo(explore.fieldAt([ref]));
+  }
+
   // Parse top level tags
   if (chart.text('x')) {
-    xChannel.fields.push(chart.text('x')!);
+    xChannel.fields.push(getField(chart.text('x')!));
   }
   if (chart.text('y')) {
-    yChannel.fields.push(chart.text('y')!);
+    yChannel.fields.push(getField(chart.text('y')!));
   } else if (chart.textArray('y')) {
-    yChannel.fields.push(...chart.textArray('y')!);
+    yChannel.fields.push(...chart.textArray('y')!.map(getField));
   }
   if (chart.text('series')) {
-    seriesChannel.fields.push(chart.text('series')!);
+    seriesChannel.fields.push(getField(chart.text('series')!));
   }
 
   // Parse embedded tags
@@ -69,15 +74,16 @@ export function getLineChartSettings(
   const embeddedY: string[] = [];
   const embeddedSeries: string[] = [];
   walkFields(explore, field => {
-    const {tag} = field.tagParse();
+    const tag = field.tag;
+    const pathTo = explore.pathTo(field);
     if (tag.has('x')) {
-      embeddedX.push(getFieldPathBetweenFields(explore, field));
+      embeddedX.push(pathTo);
     }
     if (tag.has('y')) {
-      embeddedY.push(getFieldPathBetweenFields(explore, field));
+      embeddedY.push(pathTo);
     }
     if (tag.has('series')) {
-      embeddedSeries.push(getFieldPathBetweenFields(explore, field));
+      embeddedSeries.push(pathTo);
     }
   });
 
@@ -96,33 +102,32 @@ export function getLineChartSettings(
     seriesChannel.fields.push(path);
   });
 
-  const dimensions = explore.allFields.filter(
-    f => f.isAtomicField() && f.sourceWasDimension()
+  const dimensions = explore.fields.filter(
+    f => f.isAtomic() && f.wasDimension()
   );
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     // Pick first dimension field for x
     if (dimensions.length > 0) {
-      xChannel.fields.push(getFieldPathBetweenFields(explore, dimensions[0]));
+      xChannel.fields.push(explore.pathTo(dimensions[0]));
     }
   }
   if (yChannel.fields.length === 0) {
     // Pick first numeric measure field
-    const numberField = explore.allFields.find(
-      f => f.isAtomicField() && f.sourceWasMeasureLike() && f.isNumber()
+    const numberField = explore.fields.find(
+      f => f.wasCalculation() && f.isNumber()
     );
-    if (numberField)
-      yChannel.fields.push(getFieldPathBetweenFields(explore, numberField));
+    if (numberField) yChannel.fields.push(explore.pathTo(numberField));
   }
   // If no series defined and multiple dimensions, use leftover dimension
   if (seriesChannel.fields.length === 0 && dimensions.length > 1) {
     const dimension = dimensions.find(d => {
-      const path = getFieldPathBetweenFields(explore, d);
+      const path = explore.pathTo(d);
       return !xChannel.fields.includes(path);
     });
     if (dimension) {
-      seriesChannel.fields.push(getFieldPathBetweenFields(explore, dimension));
+      seriesChannel.fields.push(explore.pathTo(dimension));
     }
   }
 

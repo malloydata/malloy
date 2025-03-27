@@ -23,7 +23,7 @@
 
 /* eslint-disable no-console */
 
-import {ModelDef, Query, StructDef} from '@malloydata/malloy';
+import type {ModelDef, Query, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable, fStringLike, fToQF} from '../../util';
 
 import * as malloy from '@malloydata/malloy';
@@ -266,6 +266,8 @@ describe('BigQuery hand-built expression test', () => {
     contents: {
       aircraft: aircraftHandBase,
     },
+    queryList: [],
+    dependencies: {},
   };
 
   // BigQuery tests only on the Hand Coded models.
@@ -719,6 +721,8 @@ describe('BigQuery hand-built expression test', () => {
     contents: {
       model_aircraft: joinModelAircraftHandStructDef,
     },
+    queryList: [],
+    dependencies: {},
   };
 
   const handJoinModel = bqRuntime._loadModelFromModelDef(joinModel);

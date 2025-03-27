@@ -21,35 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {v4 as uuidv4} from 'uuid';
-import {
-  Dialect,
-  DialectFieldList,
-  FieldReferenceType,
-  getDialect,
-} from '../dialect';
+import type {Dialect, DialectFieldList, FieldReferenceType} from '../dialect';
+import {getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
-import {
+import type {
   AggregateFunctionType,
   Annotation,
   CompiledQuery,
   Expr,
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsCalculation,
-  expressionIsScalar,
   FieldDef,
   Filtered,
   FunctionOverloadDef,
   FunctionParameterDef,
-  getIdentifier,
-  hasExpression,
   IndexFieldDef,
   IndexSegment,
-  isLiteral,
-  isAtomic,
-  isIndexSegment,
-  isQuerySegment,
-  isRawSegment,
   JoinRelationship,
   ModelDef,
   OrderBy,
@@ -72,9 +57,6 @@ import {
   Argument,
   AggregateExpr,
   FilterCondition,
-  exprHasE,
-  exprHasKids,
-  isAsymmetricExpr,
   GenericSQLExpr,
   FieldnameNode,
   FunctionCallNode,
@@ -84,8 +66,6 @@ import {
   SpreadExpr,
   FilteredExpr,
   SourceDef,
-  isSourceDef,
-  fieldIsIntrinsic,
   StringFieldDef,
   NumberFieldDef,
   BooleanFieldDef,
@@ -94,13 +74,9 @@ import {
   DateFieldDef,
   DateUnit,
   TimestampUnit,
-  isBaseTable,
   NestSourceDef,
   TimestampFieldDef,
-  isJoined,
-  isJoinedSource,
   QueryResultDef,
-  isScalarArray,
   RecordDef,
   FinalizeSourceDef,
   QueryToMaterialize,
@@ -108,13 +84,36 @@ import {
   RepeatedRecordDef,
   CaseExpr,
   TemporalTypeDef,
-  mkTemporal,
   JoinFieldDef,
   LeafAtomicDef,
   Expression,
 } from './malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsCalculation,
+  expressionIsScalar,
+  getIdentifier,
+  hasExpression,
+  isLiteral,
+  isAtomic,
+  isIndexSegment,
+  isQuerySegment,
+  isRawSegment,
+  exprHasE,
+  exprHasKids,
+  isAsymmetricExpr,
+  isSourceDef,
+  fieldIsIntrinsic,
+  isBaseTable,
+  isJoined,
+  isJoinedSource,
+  isScalarArray,
+  mkTemporal,
+} from './malloy_types';
 
-import {Connection} from '../connection/types';
+import type {Connection} from '../connection/types';
+import type {SQLExprElement} from './utils';
 import {
   AndChain,
   exprMap,
@@ -123,15 +122,17 @@ import {
   indent,
   composeSQLExpr,
   range,
-  SQLExprElement,
 } from './utils';
-import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import type {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
 import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
 } from './materialization/utils';
-import {EventStream} from '../runtime_types';
-import {Tag} from '../tags';
+import type {EventStream} from '../runtime_types';
+import type {Tag} from '@malloydata/malloy-tag';
+import {annotationToTag} from '../annotation';
+import {FilterCompilers} from './filter_compilers';
+import {isFilterExpression} from '@malloydata/malloy-filter';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1119,7 +1120,7 @@ class QueryField extends QueryNode {
       }
 
       if (obSQL.length > 0) {
-        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'analytical');
       }
     }
 
@@ -1308,16 +1309,22 @@ class QueryField extends QueryNode {
         return `${expr.kids.left.sql} ${expr.node} ${expr.kids.right.sql}`;
       case 'coalesce':
         return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
-      case 'like':
-        return `${expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
       case 'in': {
         const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
         return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
       }
-      // Malloy inequality comparisons always return a boolean
+      case 'like':
       case '!like': {
-        const notLike = `${expr.kids.left.sql} NOT LIKE ${expr.kids.right.sql}`;
-        return `COALESCE(${notLike},true)`;
+        const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
+        const compare =
+          expr.kids.right.node === 'stringLiteral'
+            ? this.parent.dialect.sqlLike(
+                likeIt,
+                expr.kids.left.sql ?? '',
+                expr.kids.right.literal
+              )
+            : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
+        return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
       }
       case '()':
         return `(${expr.e.sql})`;
@@ -1351,6 +1358,26 @@ class QueryField extends QueryNode {
         return '';
       case 'compositeField':
         return '{COMPOSITE_FIELD}';
+      case 'filterMatch':
+        if (
+          expr.dataType === 'string' ||
+          expr.dataType === 'number' ||
+          expr.dataType === 'date' ||
+          expr.dataType === 'timestamp' ||
+          expr.dataType === 'boolean'
+        ) {
+          if (expr.filter === null || isFilterExpression(expr.filter)) {
+            return FilterCompilers.compile(
+              expr.dataType,
+              expr.filter,
+              expr.e.sql || '',
+              this.parent.dialect
+            );
+          }
+        }
+        throw new Error(
+          `Internal Error: Filter Compiler Undefined Type '${expr.dataType}'`
+        );
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
@@ -2248,6 +2275,36 @@ export class Segment {
   }
 }
 
+export function getResultStructDefForView(
+  source: SourceDef,
+  view: TurtleDef
+): SourceDef {
+  const qs = new QueryStruct(
+    source,
+    undefined,
+    {
+      model: new QueryModel(undefined),
+    },
+    {}
+  );
+  const queryQueryQuery = QueryQuery.makeQuery(
+    view,
+    qs,
+    new StageWriter(true, undefined), // stage write indicates we want to get a result.
+    false
+  );
+  return queryQueryQuery.getResultStructDef();
+}
+
+export function getResultStructDefForQuery(
+  model: ModelDef,
+  query: Query
+): SourceDef {
+  const queryModel = new QueryModel(model);
+  const compiled = queryModel.compileQuery(query);
+  return compiled.structs[compiled.structs.length - 1];
+}
+
 type StageGroupMaping = {fromGroup: number; toGroup: number};
 
 type StageOutputContext = {
@@ -2751,13 +2808,13 @@ class QueryQuery extends QueryField {
     for (const [name, fi] of resultStruct.allFields) {
       const resultMetadata = this.getResultMetadata(fi);
       if (fi instanceof FieldInstanceResult) {
-        const {structDef} = this.generateTurtlePipelineSQL(
+        const {structDef, repeatedResultType} = this.generateTurtlePipelineSQL(
           fi,
           new StageWriter(true, undefined),
           '<nosource>'
         );
 
-        if (fi.getRepeatedResultType() === 'nested') {
+        if (repeatedResultType === 'nested') {
           const multiLineNest: RepeatedRecordDef = {
             ...structDef,
             type: 'array',
@@ -3107,6 +3164,9 @@ class QueryQuery extends QueryField {
                 f.dir || 'ASC'
               }`
             );
+          } else if (this.parent.dialect.orderByClause === 'expression') {
+            const fieldExpr = fi.getSQL();
+            o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
@@ -3121,11 +3181,15 @@ class QueryQuery extends QueryField {
               orderingField.name
             )} ${f.dir || 'ASC'}`
           );
+        } else if (this.parent.dialect.orderByClause === 'expression') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          const fieldExpr = orderingField.fif.getSQL();
+          o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
         }
       }
     }
     if (o.length > 0) {
-      s = this.parent.dialect.sqlOrderBy(o) + '\n';
+      s = this.parent.dialect.sqlOrderBy(o, 'query') + '\n';
     }
     return s;
   }
@@ -3367,14 +3431,20 @@ class QueryQuery extends QueryField {
           }
           r = r.parent;
         }
+
+        let partition = '';
+        if (dimensions.length > 0) {
+          partition = 'partition by ';
+          partition += dimensions
+            .map(this.parent.dialect.castToString)
+            .join(',');
+        }
         fields.push(
           `MAX(CASE WHEN group_set IN (${result.childGroups.join(
             ','
           )}) THEN __delete__${
             result.groupSet
-          } END) OVER(partition by ${dimensions
-            .map(this.parent.dialect.castToString)
-            .join(',')}) as __shaving__${result.groupSet}`
+          } END) OVER(${partition}) as __shaving__${result.groupSet}`
         );
       }
     }
@@ -3731,7 +3801,7 @@ class QueryQuery extends QueryField {
     }
 
     if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'turtle');
     }
 
     const dialectFieldList = this.buildDialectFieldList(resultStruct);
@@ -3802,6 +3872,7 @@ class QueryQuery extends QueryField {
     const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
     let pipeOut;
+    let outputRepeatedResultType = repeatedResultType;
     if (hasPipeline) {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
       pipeline.shift();
@@ -3835,6 +3906,7 @@ class QueryQuery extends QueryField {
         this.isJoinedSubquery
       );
       pipeOut = q.generateSQLFromPipeline(stageWriter);
+      outputRepeatedResultType = q.rootResult.getRepeatedResultType();
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
@@ -3842,6 +3914,7 @@ class QueryQuery extends QueryField {
     return {
       structDef,
       pipeOut,
+      repeatedResultType: outputRepeatedResultType,
     };
   }
 
@@ -4321,7 +4394,7 @@ class QueryStruct {
   modelCompilerFlags(): Tag {
     if (this._modelTag === undefined) {
       const annotation = this.structDef.modelAnnotation;
-      const {tag} = Tag.annotationToTag(annotation, {prefix: /^##!\s*/});
+      const {tag} = annotationToTag(annotation, {prefix: /^##!\s*/});
       this._modelTag = tag;
     }
     return this._modelTag;
@@ -5004,12 +5077,33 @@ export class QueryModel {
     };
   }
 
+  addDefaultRowLimit(query: Query, defaultRowLimit?: number): Query {
+    if (defaultRowLimit === undefined) return query;
+    const lastSegment = query.pipeline[query.pipeline.length - 1];
+    if (lastSegment.type === 'raw') return query;
+    if (lastSegment.limit !== undefined) return query;
+    return {
+      ...query,
+      pipeline: [
+        ...query.pipeline.slice(0, -1),
+        {
+          ...lastSegment,
+          limit: defaultRowLimit,
+        },
+      ],
+    };
+  }
+
   compileQuery(
     query: Query,
     prepareResultOptions?: PrepareResultOptions,
     finalize = true
   ): CompiledQuery {
     let newModel: QueryModel | undefined;
+    query = this.addDefaultRowLimit(
+      query,
+      prepareResultOptions?.defaultRowLimit
+    );
     const m = newModel || this;
     const ret = m.loadQuery(
       query,
@@ -5048,6 +5142,7 @@ export class QueryModel {
       queryName: query.name,
       connectionName: ret.connectionName,
       annotation: query.annotation,
+      queryTimezone: ret.structs[0].queryTimezone,
     };
   }
 

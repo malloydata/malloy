@@ -6,13 +6,14 @@
  */
 
 import {MalloyElement} from '../types/malloy-element';
-import {
+import type {
   AccessModifierFieldReference,
   FieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import {Annotation} from '../../../model';
-import {extendNoteMethod, Noteable} from '../types/noteable';
+import type {Annotation} from '../../../model';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
 
 // type RenameSpec = {
 //   as: string;

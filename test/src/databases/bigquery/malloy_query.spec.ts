@@ -23,9 +23,10 @@
 
 import {test} from '@jest/globals';
 import * as malloy from '@malloydata/malloy';
-import {Query} from '@malloydata/malloy';
+import type {Query} from '@malloydata/malloy';
 import {testModel} from '../../models/faa_model';
-import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
+import type {BigQueryTestConnection} from '../../runtimes';
+import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable, fStringEq, fToQF} from '../../util';
 import '../../util/db-jest-matchers';
 
@@ -486,7 +487,7 @@ describe('BigQuery expression tests', () => {
         }
       }
       -> {
-        where: state.code.code != null
+        where: state.code.code is not null
         group_by: state.code.code
       }
     `
@@ -639,7 +640,7 @@ describe('airport_tests', () => {
       `
       run: airports-> {
         nest: zero is {
-          nest: by_faa_region_i is { where: county ~'I%' and  state != NULL
+          nest: by_faa_region_i is { where: county ~'I%' and  state is not null
             group_by: faa_region
             aggregate: airport_count
             nest: by_state is {

@@ -5,13 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {TD, RecordLiteralNode, mkFieldDef} from '../../../model';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {RecordLiteralNode} from '../../../model';
+import {TD, mkFieldDef} from '../../../model';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
-import {ExprIdReference} from './expr-id-reference';
+import type {ExprIdReference} from './expr-id-reference';
 
 export type ElementDetails =
   | {path: ExprIdReference}

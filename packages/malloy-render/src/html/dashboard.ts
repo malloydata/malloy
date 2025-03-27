@@ -21,9 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArrayOrRecord} from '@malloydata/malloy';
-import {StyleDefaults} from './data_styles';
-import {getDrillQuery} from './drill';
+import type {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {HTMLTextRenderer} from './text';
 import {
@@ -32,32 +30,32 @@ import {
   yieldTask,
   formatTitle,
 } from './utils';
-import {isFieldHidden} from '../tags_utils';
+import type {Cell} from '../data_tree';
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: 'medium',
   };
 
-  async render(table: DataArrayOrRecord): Promise<HTMLElement> {
-    if (!table.isArrayOrRecord()) {
+  async render(table: Cell): Promise<HTMLElement> {
+    if (!table.isRecordOrRepeatedRecord()) {
       return createErrorElement(
         this.document,
         'Invalid data for dashboard renderer.'
       );
     }
 
-    const fields = table.field.allFields;
+    const fields = table.field.fields;
 
     const dimensions = fields.filter(
-      field => field.isAtomicField() && field.sourceWasDimension()
+      field => field.isAtomic() && field.wasDimension()
     );
     const measures = fields.filter(
-      field => !field.isAtomicField() || field.sourceWasMeasureLike()
+      field => !field.isAtomic() || field.wasCalculation()
     );
 
     const body = this.document.createElement('div');
-    for (const row of table) {
+    for (const row of table.rows) {
       const dimensionsContainer = this.document.createElement('div');
       dimensionsContainer.classList.add('dimensions');
       dimensionsContainer.style.display = 'flex';
@@ -66,11 +64,11 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       rowElement.style.position = 'relative';
 
       for (const field of dimensions) {
-        if (isFieldHidden(field)) {
+        if (field.isHidden()) {
           continue;
         }
         const renderer = this.childRenderers[field.name];
-        const rendered = await renderer.render(row.cell(field));
+        const rendered = await renderer.render(row.column(field.name));
         const renderedDimension = this.document.createElement('div');
         renderedDimension.style.cssText = DIMENSION_BOX;
         const dimensionTitle = this.document.createElement('div');
@@ -103,12 +101,12 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       const measuresContainer = this.document.createElement('div');
       measuresContainer.style.cssText = MEASURE_BOXES;
       for (const field of measures) {
-        if (isFieldHidden(field)) {
+        if (field.isHidden()) {
           continue;
         }
         const childRenderer = this.childRenderers[field.name];
         await yieldTask();
-        const rendered = await childRenderer.render(row.cell(field));
+        const rendered = await childRenderer.render(row.column(field.name));
         if (childRenderer instanceof HTMLDashboardRenderer) {
           measuresContainer.appendChild(rendered);
         } else if (childRenderer instanceof HTMLTextRenderer) {
@@ -168,7 +166,8 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           'padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;';
         drillElement.onclick = () => {
           if (this.options.onDrill) {
-            const {drillQuery, drillFilters} = getDrillQuery(row);
+            const drillQuery = row.getDrillQuery();
+            const drillFilters = row.getDrillExpressions();
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }
         };

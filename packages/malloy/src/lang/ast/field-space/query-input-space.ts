@@ -29,11 +29,11 @@
  * specialized QuerySpace for each type of query operation.
  */
 
-import {SourceDef} from '../../../model';
-import {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import type {SourceDef} from '../../../model';
+import type {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {Join} from '../source-properties/join';
-import {QueryFieldSpace} from '../types/field-space';
-import {QueryOperationSpace} from './query-spaces';
+import type {QueryFieldSpace} from '../types/field-space';
+import type {QueryOperationSpace} from './query-spaces';
 import {RefinedSpace} from './refined-space';
 
 export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {

@@ -1,6 +1,6 @@
-import {DataRecord, ExploreField} from '@malloydata/malloy';
 import {For} from 'solid-js';
-import {applyRenderer, RendererProps} from './apply-renderer';
+import {applyRenderer} from './apply-renderer';
+import type {RendererProps} from './types';
 
 export function renderList(props: RendererProps) {
   if (props.dataColumn.isNull()) return '∅';
@@ -8,26 +8,19 @@ export function renderList(props: RendererProps) {
   const listDetailTag = props.tag.tag('list_detail');
   if (!listTag && !listDetailTag)
     throw new Error('Missing tag for List renderer');
-  if (!props.field.isExplore())
+  if (!props.dataColumn.field.isNest())
     throw new Error('List renderer: Field must be ExploreField');
-  if (!props.dataColumn.isArray())
-    throw new Error('List renderer: DataColumn must be DataArray');
-  const valueField = props.field.allFields.filter(field => {
-    const {tag} = field.tagParse();
-    return !tag.has('hidden');
-  })[0];
+  // TODO make this work for Arrays as well using `dataColumn.values`
+  if (!props.dataColumn.isRepeatedRecord())
+    throw new Error('List renderer: DataColumn must be RepeatedRecord');
+  const nonHiddenFields = props.dataColumn.field.fields.filter(field => {
+    return !field.isHidden();
+  });
+  const valueField = nonHiddenFields[0];
 
   const isListDetail = !!listDetailTag;
-  const descriptionField = (props.field as ExploreField).allFields.filter(
-    field => {
-      const {tag} = field.tagParse();
-      return !tag.has('hidden');
-    }
-  )[1];
-  const rows: DataRecord[] = [];
-  for (const row of props.dataColumn) {
-    rows.push(row);
-  }
+  const descriptionField = nonHiddenFields[1];
+  const rows = props.dataColumn.rows;
 
   return (
     <div
@@ -39,20 +32,16 @@ export function renderList(props: RendererProps) {
           <span>
             {
               applyRenderer({
-                field: valueField,
-                dataColumn: row.cell(valueField),
-                resultMetadata: props.resultMetadata,
-                tag: valueField.tagParse().tag,
+                dataColumn: row.column(valueField.name),
+                tag: valueField.tag,
               }).renderValue
             }
             {isListDetail &&
               descriptionField &&
               '(' +
                 applyRenderer({
-                  field: descriptionField,
-                  dataColumn: row.cell(descriptionField),
-                  resultMetadata: props.resultMetadata,
-                  tag: descriptionField.tagParse().tag,
+                  dataColumn: row.column(descriptionField.name),
+                  tag: descriptionField.tag,
                 }).renderValue +
                 ')'}
             {idx() < rows.length - 1 && ', '}

@@ -1,12 +1,12 @@
 {
   "name": "@malloydata/malloy-interfaces",
-  "version": "0.0.225",
+  "version": "0.0.249",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "repository": {
     "type": "git",
@@ -14,8 +14,19 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "clean": "tsc --build --clean",
-    "build": "tsc --build",
-    "prepublishOnly": "npm run clean && npm run build"
+    "clean": "tsc --build --clean && rimraf @flowtyped",
+    "build": "tsc --build && npm run generate-flow",
+    "prepublishOnly": "npm run clean && npm run build",
+    "verify-types": "thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift",
+    "generate-types": "rm -f generated-types/* && thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift && ts-node scripts/hacky_gen_types.ts > src/types.ts && cd ../.. && eslint 'packages/malloy-interfaces/src/types.ts' --fix",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
+  },
+  "devDependencies": {
+    "@creditkarma/thrift-typescript": "^3.7.6",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@creditkarma/thrift-server-core": "^1.0.4"
   }
 }

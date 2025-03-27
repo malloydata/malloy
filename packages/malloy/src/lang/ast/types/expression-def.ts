@@ -21,36 +21,36 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   TimestampUnit,
+  LeafExpressionType,
+} from '../../../model/malloy_types';
+import {
   isDateUnit,
   isTemporalType,
   expressionIsAggregate,
   TD,
-  LeafExpressionType,
 } from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import {errorFor} from '../ast-utils';
+import type {ExprValue} from './expr-value';
 import {
-  ExprValue,
   computedErrorExprValue,
   computedExprValue,
   computedTimeResult,
 } from './expr-value';
 import {timeOffset} from '../time-utils';
-import {FieldSpace} from './field-space';
+import type {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';
-import {
+import type {
   ArithmeticMalloyOperator,
   BinaryMalloyOperator,
   CompareMalloyOperator,
   EqualityMalloyOperator,
-  getExprNode,
-  isComparison,
-  isEquality,
 } from './binary_operators';
+import {getExprNode, isComparison, isEquality} from './binary_operators';
 
 class TypeMismatch extends Error {}
 
@@ -300,25 +300,6 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   return undefined;
 }
 
-function nullCompare(
-  left: ExprValue,
-  op: string,
-  right: ExprValue
-): Expr | undefined {
-  const not = op === '!=' || op === '!~';
-  const nullCmp = not ? 'is-not-null' : 'is-null';
-  if (left.type === 'null' || right.type === 'null') {
-    if (left.type !== 'null') {
-      return {node: nullCmp, e: left.value};
-    }
-    if (right.type !== 'null') {
-      return {node: nullCmp, e: right.value};
-    }
-    return {node: not ? 'false' : 'true'};
-  }
-  return undefined;
-}
-
 function equality(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -349,30 +330,21 @@ function equality(
     kids: {left: lhs.value, right: rhs.value},
   };
 
-  if (lhs.type !== 'error' && rhs.type !== 'error') {
-    switch (op) {
-      case '~':
-      case '!~': {
-        if (lhs.type !== 'string' || rhs.type !== 'string') {
-          let regexCmp = regexEqual(lhs, rhs);
-          if (regexCmp) {
-            if (op[0] === '!') {
-              regexCmp = {node: 'not', e: {...regexCmp}};
-            }
-          } else {
-            throw new TypeMismatch(
-              "Incompatible types for match('~') operator"
-            );
-          }
-          value = regexCmp;
+  if (
+    lhs.type !== 'error' &&
+    rhs.type !== 'error' &&
+    (op === '~' || op === '!~')
+  ) {
+    if (lhs.type !== 'string' || rhs.type !== 'string') {
+      let regexCmp = regexEqual(lhs, rhs);
+      if (regexCmp) {
+        if (op[0] === '!') {
+          regexCmp = {node: 'not', e: {...regexCmp}};
         }
-        break;
+      } else {
+        throw new TypeMismatch("Incompatible types for match('~') operator");
       }
-      case '=':
-      case '!=': {
-        value = nullCompare(lhs, op, rhs) ?? value;
-        break;
-      }
+      value = regexCmp;
     }
   }
 

@@ -25,7 +25,7 @@ import {FunctionOrdering} from '../expressions/function-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from '../expressions/partition_by';
-import {MalloyElement} from './malloy-element';
+import type {MalloyElement} from './malloy-element';
 
 export type FieldPropStatement =
   | Filter

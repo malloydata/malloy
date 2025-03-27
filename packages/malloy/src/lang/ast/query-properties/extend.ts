@@ -21,13 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryBuilder} from '../types/query-builder';
+import type {QueryBuilder} from '../types/query-builder';
 import {ListOf} from '../types/malloy-element';
-import {QueryExtendProperty} from '../types/query-extend-property';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryExtendProperty} from '../types/query-extend-property';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 export class ExtendBlock
   extends ListOf<QueryExtendProperty>

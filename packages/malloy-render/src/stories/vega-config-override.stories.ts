@@ -1,4 +1,4 @@
-import {Meta} from '@storybook/html';
+import type {Meta} from '@storybook/html';
 import script from './vega-config-override.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
@@ -12,7 +12,7 @@ const meta: Meta = {
     parent.style.position = 'relative';
     const el = document.createElement('malloy-render');
     if (classes) el.classList.add(classes);
-    el.result = context.loaded['result'];
+    el.malloyResult = context.loaded['result'];
     el.vegaConfigOverride = () => {
       return {
         'range': {

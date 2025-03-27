@@ -22,7 +22,7 @@
  */
 
 import {getDialect} from '../../../dialect';
-import {
+import type {
   Annotation,
   DocumentLocation,
   DocumentReference,
@@ -30,28 +30,28 @@ import {
   ModelAnnotation,
   NamedModelObject,
   Query,
-  SQLSourceDef,
   StructDef,
-  isSourceDef,
 } from '../../../model/malloy_types';
-import {Tag} from '../../../tags';
-import {
+import {isSourceDef} from '../../../model/malloy_types';
+import {Tag} from '@malloydata/malloy-tag';
+import type {
   LogMessageOptions,
   MessageLogger,
   MessageParameterType,
-  makeLogMessage,
   MessageCode,
 } from '../../parse-log';
-import {MalloyTranslation} from '../../parse-malloy';
-import {ModelDataRequest} from '../../translate-response';
+import {makeLogMessage} from '../../parse-log';
+import type {MalloyTranslation} from '../../parse-malloy';
+import type {ModelDataRequest} from '../../translate-response';
 import {errorFor} from '../ast-utils';
 import {DialectNameSpace} from './dialect-name-space';
-import {DocumentCompileResult} from './document-compile-result';
-import {ExprValue} from './expr-value';
+import type {DocumentCompileResult} from './document-compile-result';
+import type {ExprValue} from './expr-value';
 import {GlobalNameSpace} from './global-name-space';
-import {ModelEntry} from './model-entry';
-import {NameSpace} from './name-space';
-import {Noteable, isNoteable, extendNoteMethod} from './noteable';
+import type {ModelEntry} from './model-entry';
+import type {NameSpace} from './name-space';
+import type {Noteable} from './noteable';
+import {isNoteable, extendNoteMethod} from './noteable';
 import {v5 as uuidv5} from 'uuid';
 
 export abstract class MalloyElement {
@@ -500,7 +500,6 @@ export class Document extends MalloyElement implements NameSpace {
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
-  sqlBlocks: SQLSourceDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
   annotation: Annotation = {};
@@ -518,7 +517,6 @@ export class Document extends MalloyElement implements NameSpace {
     }
     this.documentModel = {};
     this.queryList = [];
-    this.sqlBlocks = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
         this.annotation.inherits = extendingModelDef.annotation;
@@ -547,11 +545,6 @@ export class Document extends MalloyElement implements NameSpace {
           q.modelAnnotation = modelDef.annotation;
         }
       }
-      for (const q of this.sqlBlocks) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
-        }
-      }
     }
     if (modelDef.annotation) {
       for (const sd of this.modelAnnotationTodoList) {
@@ -559,9 +552,10 @@ export class Document extends MalloyElement implements NameSpace {
       }
     }
     const ret: DocumentCompileResult = {
-      modelDef,
-      queryList: this.queryList,
-      sqlBlocks: this.sqlBlocks,
+      modelDef: {
+        ...modelDef,
+        queryList: this.queryList,
+      },
       needs,
     };
     return ret;
@@ -588,7 +582,13 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   modelDef(): ModelDef {
-    const def: ModelDef = {name: '', exports: [], contents: {}};
+    const def: ModelDef = {
+      name: '',
+      exports: [],
+      contents: {},
+      queryList: [],
+      dependencies: {},
+    };
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }
@@ -606,22 +606,6 @@ export class Document extends MalloyElement implements NameSpace {
       }
     }
     return def;
-  }
-
-  defineSQL(sql: SQLSourceDef, name?: string): boolean {
-    const ret = {
-      ...sql,
-      as: `$${this.sqlBlocks.length}`,
-    };
-    if (name) {
-      if (this.getEntry(name)) {
-        return false;
-      }
-      ret.as = name;
-      this.setEntry(name, {entry: ret});
-    }
-    this.sqlBlocks.push(ret);
-    return true;
   }
 
   getEntry(str: string): ModelEntry {

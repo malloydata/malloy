@@ -24,13 +24,14 @@
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {castTo, resolution, timeOffset} from '../time-utils';
-import {BinaryMalloyOperator} from '../types/binary_operators';
-import {ExprValue, computedErrorExprValue} from '../types/expr-value';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import type {ExprValue} from '../types/expr-value';
+import {computedErrorExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
-import {Timeframe} from './time-frame';
+import type {Timeframe} from './time-frame';
 
 export class ForRange extends ExpressionDef {
   elementType = 'forRange';

@@ -49,7 +49,10 @@ describe('db:Snowflake', () => {
         return await util.promisify(fs.readFile)(filePath, 'utf8');
       },
     };
-    runtime = new malloy.Runtime(files, conn);
+    runtime = new malloy.Runtime({
+      urlReader: files,
+      connection: conn,
+    });
   });
 
   afterAll(async () => {
@@ -66,7 +69,7 @@ describe('db:Snowflake', () => {
       .loadModel("source: aircraft is snowflake.table('malloytest.aircraft')")
       .loadQuery(
         `run:  aircraft -> {
-        where: state != null
+        where: state is not null
         aggregate: cnt is count()
         group_by:  state}`
       )

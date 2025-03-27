@@ -1,5 +1,5 @@
 import {Portal} from 'solid-js/web';
-import {JSX, JSXElement} from 'solid-js';
+import type {JSX, JSXElement} from 'solid-js';
 import {useConfig} from '../render';
 
 export function MalloyModal(props: {

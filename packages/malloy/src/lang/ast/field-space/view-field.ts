@@ -22,10 +22,10 @@
  */
 
 import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 
 export abstract class ViewField extends SpaceField {

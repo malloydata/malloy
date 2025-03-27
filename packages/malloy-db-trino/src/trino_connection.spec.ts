@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
+import type {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
 import {TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array
@@ -63,39 +63,58 @@ describe('Trino connection', () => {
 
   describe('schema parser', () => {
     it('parses arrays', () => {
-      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
+      expect(connection.malloyTypeFromTrinoType(ARRAY_SCHEMA)).toEqual({
         type: 'array',
         elementTypeDef: intType,
       });
     });
 
     it('parses inline', () => {
-      expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
-        {
-          'type': 'record',
-          'fields': recordSchema,
-        }
-      );
+      expect(connection.malloyTypeFromTrinoType(INLINE_SCHEMA)).toEqual({
+        'type': 'record',
+        'fields': recordSchema,
+      });
     });
 
     it('parses nested', () => {
-      expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
-        {
-          'type': 'array',
-          'elementTypeDef': {type: 'record_element'},
-          'fields': recordSchema,
-        }
-      );
+      expect(connection.malloyTypeFromTrinoType(NESTED_SCHEMA)).toEqual({
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'fields': recordSchema,
+      });
     });
 
     it('parses a simple type', () => {
-      expect(connection.malloyTypeFromTrinoType('test', 'varchar(60)')).toEqual(
+      expect(connection.malloyTypeFromTrinoType('varchar(60)')).toEqual(
         stringType
       );
     });
 
+    it('parses a decimal integer type', () => {
+      expect(connection.malloyTypeFromTrinoType('decimal(10)')).toEqual({
+        type: 'number',
+        numberType: 'integer',
+      });
+    });
+
+    it('parses a decimal float type', () => {
+      expect(connection.malloyTypeFromTrinoType('decimal(10,10)')).toEqual({
+        type: 'number',
+        numberType: 'float',
+      });
+    });
+
+    it('parses row with timestamp(3)', () => {
+      expect(
+        connection.malloyTypeFromTrinoType('row(la_time timestamp(3))')
+      ).toEqual({
+        type: 'record',
+        fields: [{name: 'la_time', type: 'timestamp'}],
+      });
+    });
+
     it('parses deep nesting', () => {
-      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
+      expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
         'type': 'array',
         'elementTypeDef': {type: 'record_element'},
         'fields': [
@@ -112,19 +131,6 @@ describe('Trino connection', () => {
           },
         ],
       });
-    });
-  });
-
-  describe('splitColumns', () => {
-    it('handles internal rows', () => {
-      const nested =
-        'popular_name varchar, airport_count double, by_state array(row(state varchar, airport_count double))';
-
-      expect(connection.splitColumns(nested)).toEqual([
-        'popular_name varchar',
-        'airport_count double',
-        'by_state array(row(state varchar, airport_count double))',
-      ]);
     });
   });
 });

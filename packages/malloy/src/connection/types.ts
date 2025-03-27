@@ -1,5 +1,5 @@
-import {RunSQLOptions} from '../run_sql_options';
-import {
+import type {RunSQLOptions} from '../run_sql_options';
+import type {
   Annotation,
   MalloyQueryData,
   QueryDataRow,
@@ -7,7 +7,8 @@ import {
   SQLSourceDef,
   TableSourceDef,
 } from '../model/malloy_types';
-import {Dialect} from '../dialect';
+import type {Dialect} from '../dialect';
+import type {SQLSourceRequest} from '../lang/translate-response';
 
 /**
  * Options passed to fetchSchema methods.
@@ -48,7 +49,7 @@ export interface InfoConnection {
    */
 
   fetchSchemaForSQLStruct(
-    sentence: SQLSourceDef,
+    sentence: SQLSourceRequest,
     options: FetchSchemaOptions
   ): Promise<
     | {structDef: SQLSourceDef; error?: undefined}

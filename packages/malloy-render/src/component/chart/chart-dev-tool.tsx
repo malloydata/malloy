@@ -7,32 +7,37 @@ import {
   createMemo,
   createSignal,
 } from 'solid-js';
-import {Chart, ChartProps} from './chart';
-import {View, parse} from 'vega';
+import type {ChartProps} from './chart';
+import {Chart} from './chart';
+import type {View} from 'vega';
+import {parse} from 'vega';
 import {createStore} from 'solid-js/store';
 import {addSignalListenerIfExists} from '../vega/vega-utils';
+import {useResultContext} from '../result-context';
 
 type ChartDevToolProps = {
   onClose: () => void;
 } & ChartProps;
 
 function stripMalloyRecord(record: Record<string, unknown>) {
+  const result = {};
   for (const [key, value] of Object.entries(record)) {
-    if (key === '__malloyDataRecord') {
-      delete record['__malloyDataRecord'];
-    } else {
-      if (value === null || typeof value !== 'object') continue;
-      if (Array.isArray(value)) {
-        value.forEach(stripMalloyRecord);
+    if (key !== '__values' && key !== '__row') {
+      if (value === null || typeof value !== 'object') {
+        result[key] = value;
+      } else if (Array.isArray(value)) {
+        result[key] = value.map(stripMalloyRecord);
       } else {
-        stripMalloyRecord(value as Record<string, unknown>);
+        result[key] = stripMalloyRecord(value as Record<string, unknown>);
       }
     }
   }
+  return result;
 }
 
 export default function ChartDevTool(props: ChartDevToolProps) {
-  const chartProps = props.metadata.field(props.field).vegaChartProps!;
+  const metadata = useResultContext();
+  const chartProps = metadata.vega[props.data.field.key].props;
   const [specString, setSpecString] = createSignal(
     JSON.stringify(chartProps.spec, null, 2)
   );
@@ -85,8 +90,7 @@ export default function ChartDevTool(props: ChartDevToolProps) {
         } else {
           dataValues = valueEntry?.map(v => v.datum ?? {}) ?? [];
         }
-        const clonedValues = structuredClone(dataValues);
-        clonedValues.forEach(stripMalloyRecord);
+        const clonedValues = structuredClone(dataValues.map(stripMalloyRecord));
 
         setVegaData(state => ({
           ...state,

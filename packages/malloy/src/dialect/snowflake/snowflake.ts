@@ -22,11 +22,8 @@
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeTruncExpr,
   TimeExtractExpr,
@@ -36,25 +33,22 @@ import {
   MeasureTimeExpr,
   RegexMatchExpr,
   LeafAtomicTypeDef,
-  TD,
   ArrayLiteralNode,
   RecordLiteralNode,
+} from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
   isAtomic,
   isRepeatedRecord,
   isScalarArray,
 } from '../../model/malloy_types';
-import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {
-  Dialect,
-  DialectFieldList,
-  FieldReferenceType,
-  QueryInfo,
-  qtz,
-} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import {Dialect, qtz} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -240,7 +234,7 @@ export class SnowflakeDialect extends Dialect {
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
     const scale = 100000000.0;
-    const v = `(COALESCE(${value},0)*${scale})`;
+    const v = `(CAST (COALESCE(${value},0)*${scale} as INT))`;
 
     const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
     if (funcName === 'SUM') {
@@ -348,8 +342,9 @@ ${indent(sql)}
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    const interval = `INTERVAL '${df.kids.delta.sql} ${df.units}'`;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
+    const add = df.typeDef?.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
+    const n = df.op === '+' ? df.kids.delta.sql : `-(${df.kids.delta.sql})`;
+    return `${add}(${df.units},${n},${df.kids.base.sql})`;
   }
 
   private atTz(sqlExpr: string, tz: string | undefined): string {

@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldReference} from '../query-items/field-references';
-import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import type {FieldReference} from '../query-items/field-references';
+import type {ExprValue} from '../types/expr-value';
+import type {ExpressionDef} from '../types/expression-def';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 
 export abstract class ExprAsymmetric extends ExprAggregateFunction {

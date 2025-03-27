@@ -21,14 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
+import type {Query, StructDef} from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
 import {StaticSourceSpace} from '../field-space/static-space';
-import {FieldSpace} from '../types/field-space';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
+import type {FieldSpace} from '../types/field-space';
+import type {QueryComp} from '../types/query-comp';
+import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
-import {View} from '../view-elements/view';
+import type {View} from '../view-elements/view';
 
 /**
  * A query operation that adds segments to a LHS source or query.

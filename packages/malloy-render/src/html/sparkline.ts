@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field} from '@malloydata/malloy';
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import {HTMLLineChartRenderer} from './line_chart';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
-import {SparkLineRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {SparkLineRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -40,8 +40,11 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.allFields;
+  override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRecordOrRepeatedRecord()) {
+      throw new Error('Sparkline only supports nests');
+    }
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -97,7 +100,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       config: {
         view: {
@@ -125,7 +128,7 @@ export class SparkLineRendererFactory extends RendererFactory<SparkLineRenderOpt
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: SparkLineRenderOptions,
     timezone?: string
   ): Renderer {

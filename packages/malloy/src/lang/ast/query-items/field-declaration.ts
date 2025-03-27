@@ -21,27 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
-import {
+import type {Dialect} from '../../../dialect/dialect';
+import type {
   Annotation,
-  isAtomicFieldType,
   StructDef,
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
-  isAtomic,
   FieldDefType,
+} from '../../../model/malloy_types';
+import {
+  isAtomicFieldType,
+  isAtomic,
   mkFieldDef,
 } from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
-import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import type {ExpressionDef} from '../types/expression-def';
+import type {
+  FieldName,
+  FieldSpace,
+  QueryFieldSpace,
+} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
-import {LookupResult} from '../types/lookup-result';
+import type {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
-import {MakeEntry, SpaceEntry} from '../types/space-entry';
+import type {MakeEntry, SpaceEntry} from '../types/space-entry';
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -51,8 +57,9 @@ import {
   typecheckMeasure,
   typecheckProject,
 } from './typecheck_utils';
-import {extendNoteMethod, Noteable} from '../types/noteable';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
 
 export type FieldDeclarationConstructor = new (

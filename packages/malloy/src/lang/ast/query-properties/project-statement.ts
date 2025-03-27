@@ -22,12 +22,12 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {QueryBuilder} from '../types/query-builder';
-import {FieldCollectionMember} from '../types/field-collection-member';
+import type {QueryBuilder} from '../types/query-builder';
+import type {FieldCollectionMember} from '../types/field-collection-member';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {
   LegalRefinementStage,
   QueryClass,
-  QueryPropertyInterface,
 } from '../types/query-property-interface';
 
 export class ProjectStatement

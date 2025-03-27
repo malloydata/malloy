@@ -21,14 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Connection,
-  EmptyURLReader,
   MalloyQueryData,
   QueryDataRow,
   Result,
   RunSQLOptions,
+  ModelCache,
+} from '@malloydata/malloy';
+import {
   SingleConnectionRuntime,
+  InMemoryURLReader,
+  InMemoryModelCache,
+  CacheManager,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
@@ -144,7 +149,27 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
-const files = new EmptyURLReader();
+export class TestCacheManager extends CacheManager {
+  constructor(readonly _modelCache: ModelCache) {
+    super(_modelCache);
+  }
+}
+
+export class TestURLReader extends InMemoryURLReader {
+  constructor() {
+    super(new Map());
+  }
+
+  setFile(url: URL, contents: string) {
+    this.files.set(url.toString(), contents);
+  }
+
+  deleteFile(url: URL) {
+    this.files.delete(url.toString());
+  }
+}
+
+const files = new TestURLReader();
 
 export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
@@ -222,7 +247,12 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection, new EventEmitter());
+  return new SingleConnectionRuntime({
+    urlReader: files,
+    connection,
+    eventStream: new EventEmitter(),
+    cacheManager: new TestCacheManager(new InMemoryModelCache()),
+  });
 }
 
 /**

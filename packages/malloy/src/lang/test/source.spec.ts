@@ -90,21 +90,6 @@ describe('source:', () => {
         }
       `).toTranslate();
     });
-    test('single declare ok b4 m4', () => {
-      expect(
-        '##! -m4warnings\nsource: aa is a extend { declare: x is 1 }'
-      ).toTranslate();
-    });
-    test('multiple declare ok b4 m4', () => {
-      expect(`
-        ##! -m4warnings
-        source: aa is a extend {
-          declare:
-            x is 1
-            y is 2
-        }
-      `).toTranslate();
-    });
     test('single measure', () => {
       expect('source: aa is a extend { measure: x is count() }').toTranslate();
     });
@@ -468,6 +453,25 @@ describe('source:', () => {
           run: c -> { group_by: ${'af'} }
         `).toLog(errorMessage("'af' is private"));
       });
+      test('include and except quoted', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            *
+            except: \`astr\`
+          }
+          run: c -> { group_by: astr }
+        `).toLog(errorMessage("'astr' is not defined"));
+      });
+      test('include and private quoted', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            private: \`astr\`
+          }
+          run: c -> { group_by: astr }
+        `).toLog(errorMessage("'astr' is private"));
+      });
       test('include and except list', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
@@ -526,6 +530,17 @@ describe('source:', () => {
         expect(foundAstr).toBeUndefined();
       }
     });
+    test('except quoted', () => {
+      const noAstr = new TestTranslator(
+        'source: c is a extend { except: `astr` }'
+      );
+      expect(noAstr).toTranslate();
+      const c = noAstr.getSourceDef('c');
+      if (c) {
+        const foundAstr = c.fields.find(f => f.name === 'astr');
+        expect(foundAstr).toBeUndefined();
+      }
+    });
     test('except multi', () => {
       expect('source: c is a extend { except: astr, af }').toTranslate();
     });
@@ -533,13 +548,6 @@ describe('source:', () => {
       expect(
         'source: c is a extend {view: q is { group_by: astr } }'
       ).toTranslate();
-    });
-    test('turtle in source can be called query with m4 warning', () => {
-      expect(
-        `##! m4warnings=warn
-          source: c is a extend {query: q is { group_by: astr } }
-        `
-      ).toLog(warningMessage('Use view: inside of a source instead of query:'));
     });
     test('refined explore-query', () => {
       expect(`

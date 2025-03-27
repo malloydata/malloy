@@ -21,14 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ParserRuleContext} from 'antlr4ts';
-import {AbstractParseTreeVisitor, ParseTree} from 'antlr4ts/tree';
-import {
+import type {ParserRuleContext} from 'antlr4ts';
+import type {ParseTree} from 'antlr4ts/tree';
+import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
+import type {
   ExplorePropertiesContext,
   MalloyDocumentContext,
   QueryPropertiesContext,
 } from '../lib/Malloy/MalloyParser';
-import {MalloyParserVisitor} from '../lib/Malloy/MalloyParserVisitor';
+import type {MalloyParserVisitor} from '../lib/Malloy/MalloyParserVisitor';
 
 export interface DocumentHelpContext {
   type: string;

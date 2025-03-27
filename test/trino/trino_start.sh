@@ -1,4 +1,7 @@
 #! /bin/bash
+
+set -e
+
 rm -rf .tmp
 mkdir .tmp
 
@@ -8,8 +11,8 @@ if [ "x${BQ_CREDENTIALS_KEY}" = x ]; then
   exit 1
 fi
 # generate config file
-> ./.tmp/bigquery.properties
-cat << EOF > ./.tmp/bigquery.properties
+> ./.tmp/bigquery-trino.properties
+cat << EOF > ./.tmp/bigquery-trino.properties
 connector.name=bigquery
 bigquery.project-id=advance-lacing-417917
 bigquery.credentials-key=$BQ_CREDENTIALS_KEY
@@ -17,7 +20,7 @@ bigquery.arrow-serialization.enabled=false
 EOF
 
 # run docker
-docker run -p 8080:8080 -d -v ./.tmp/bigquery.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
+docker run -p ${TRINO_PORT:-8080}:8080 -d -v ./.tmp/bigquery-trino.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
 
 # wait for server to start
 counter=0
