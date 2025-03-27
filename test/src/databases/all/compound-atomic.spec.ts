@@ -526,6 +526,19 @@ describe.each(runtimes.runtimeList)(
         ]);
       });
     });
+    // https://github.com/malloydata/malloy/issues/2206
+    test.skip('dereference of literal record (causes stack overflow at one point)', async () => {
+      await expect(`
+        run: ${conName}.sql("""
+          SELECT ${runtime.dialect.sqlLiteralString('Mark')} as first_name,
+                 ${runtime.dialect.sqlLiteralString('Toy')} as last_name
+        """) extend {
+          dimension: owner is {first_name, last_name}
+        } -> {
+          group_by: x is owner.first_name
+        }
+      `).malloyResultMatches(runtime, {x: 'Mark'});
+    });
   }
 );
 
