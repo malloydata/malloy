@@ -600,6 +600,7 @@ struct CompileModelResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  10: optional list<Translation> translations;
 }
 
 // Given the URL to a model and a name of a queryable thing, get a StableSourceDef
@@ -649,6 +650,7 @@ struct CompileQueryResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  10: optional list<Translation> translations;
 }
 
 // Given a URL to a model and the name of a source, run the indexing query
