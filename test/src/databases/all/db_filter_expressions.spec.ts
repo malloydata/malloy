@@ -439,6 +439,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         -> {select: t,n; order_by: n}`;
       return db.loadModel(rangeModel);
     }
+    function mkEqTime(exact: string) {
+      return db.loadModel(
+        `query: eqtime is ${dbName}.sql("""
+          SELECT ${lit(exact, 'timestamp')} AS ${q`t`}, 'exact' as ${q`n`}
+        """) -> {select: t, n}`
+      );
+    }
 
     /**
      * All the relative time tests need a way to set what time it is now
@@ -633,6 +640,18 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       await expect(`
         run: range + { where: t ~ f'2023-01-01-WK' }
       `).malloyResultMatches(range, inRange);
+    });
+    test('full second literal', async () => {
+      const eqtime = mkEqTime('2023-01-01 01:02:03');
+      await expect(`
+        run: eqtime + { where: t ~ f'2023-01-01 01:02:03' }
+      `).malloyResultMatches(eqtime, [{n: 'exact'}]);
+    });
+    test('subsecond literal', async () => {
+      const eqtime = mkEqTime('2023-01-01 01:02:03.04');
+      await expect(`
+        run: eqtime + { where: t ~ f'2023-01-01 01:02:03.04' }
+      `).malloyResultMatches(eqtime, [{n: 'exact'}]);
     });
     test('today', async () => {
       nowIs('2001-02-03 12:00:00');
