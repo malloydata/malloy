@@ -545,15 +545,14 @@ describe.each(runtimes.runtimeList)(
       });
       // test for https://github.com/malloydata/malloy/issues/2065
       // mtoy todo delete test.when
-      test.when(conName === 'postgre')(
-        'nest a group_by repeated record',
-        async () => {
-          await expect(`
+      test.when(
+        conName === 'postgres' || conName === 'duckdb' || conName === 'bigquery'
+      )('nest a group_by repeated record', async () => {
+        await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """)
           -> { nest: gab is {group_by: ab} }
         `).malloyResultMatches(runtime, {ab: ab_eq});
-        }
-      );
+      });
     });
   }
 );
