@@ -3285,7 +3285,7 @@ class QueryQuery extends QueryField {
     const scalarFields: [string, FieldInstanceField][] = [];
     const otherFields: [string, FieldInstance][] = [];
     for (const [name, fi] of resultSet.allFields) {
-      if (fi instanceof FieldInstanceField && isScalarField(fi.f)) {
+      if (fi instanceof FieldInstanceField && fi.f.isAtomic()) {
         scalarFields.push([name, fi]);
       } else {
         otherFields.push([name, fi]);
@@ -3300,7 +3300,7 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           const exp = fi.getSQL();
-          if (isScalarField(fi.f)) {
+          if (fi.f.isAtomic()) {
             if (
               this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
               this.rootResult.queryUsesPartitioning
@@ -3711,7 +3711,7 @@ class QueryQuery extends QueryField {
 
     for (const [name, field] of resultStruct.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-      //
+
       if (
         resultStruct.firstSegment.type === 'reduce' &&
         field instanceof FieldInstanceResult
@@ -3732,14 +3732,31 @@ class QueryQuery extends QueryField {
         field instanceof FieldInstanceField &&
         field.fieldUsage.type === 'result'
       ) {
-        dialectFieldList.push({
-          type: field.f.fieldDef.type,
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
-            `${name}__${resultStruct.groupSet}`
-          ),
-          rawName: name,
-          sqlOutputName: sqlName,
-        });
+        if (isScalarField(field.f)) {
+          dialectFieldList.push({
+            type: field.f.fieldDef.type,
+            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+              `${name}__${resultStruct.groupSet}`
+            ),
+            rawName: name,
+            sqlOutputName: sqlName,
+          });
+        } else {
+          const d: DialectFieldTypeStruct = {
+            type: 'struct',
+            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+              `${name}__${resultStruct.groupSet}`
+            ),
+            rawName: name,
+            sqlOutputName: sqlName,
+            isArray: isScalarArray(field.f.fieldDef),
+            nestedStruct: [], // Don't have a FieldInstanceResult here
+          };
+          throw new Error(
+            'Missing FieldInstanceResult in buildDialectFieldList'
+          );
+          dialectFieldList.push(d);
+        }
       } else if (
         resultStruct.firstSegment.type === 'project' &&
         field instanceof FieldInstanceField &&
