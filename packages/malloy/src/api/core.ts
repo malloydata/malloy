@@ -262,7 +262,9 @@ export function updateCompileModelState(
     }
     if (!state.hasSource) {
       state.hasSource =
-        needs?.files?.some(f => f.url === state.translator.sourceURL) ?? false;
+        needs?.files?.some(f => f.url === state.translator.sourceURL) ??
+        needs?.translations?.some(f => f.url === state.translator.sourceURL) ??
+        false;
     }
   }
   const update = compilerNeedsToUpdate(needs);
