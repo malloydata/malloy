@@ -17,7 +17,7 @@ export function run_parser(
     parser.feed(src);
     const results = parser.finish();
     const expr = results[0];
-    if (expr && isFilterExpression(expr)) {
+    if (isFilterExpression(expr)) {
       return {parsed: expr, log: []};
     }
     return {parsed: null, log: []};
