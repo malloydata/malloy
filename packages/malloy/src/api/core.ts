@@ -357,7 +357,6 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
     extendingModel = state.extending.translator!.modelDef;
   }
   if (!state.hasSource) {
-    console.log('I think it should get here <<<==========');
     return {
       compilerNeeds: convertCompilerNeeds(
         undefined,
@@ -367,7 +366,6 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
     };
   }
 
-  console.log('Nah!');
   const result = state.translator.translate(extendingModel);
   if (result.final) {
     state.done = true;
