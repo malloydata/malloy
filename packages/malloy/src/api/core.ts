@@ -280,7 +280,9 @@ function _newCompileModelState(
     compilerNeedsToUpdate(compilerNeeds)
   );
   const hasSource =
-    compilerNeeds?.files?.some(f => f.url === modelURL) ?? false;
+    compilerNeeds?.files?.some(f => f.url === modelURL) ??
+    compilerNeeds?.translations?.some(t => t.url === modelURL) ??
+    false;
   if (extendURL) {
     return {
       extending: _newCompileModelState(extendURL, compilerNeeds),
@@ -363,6 +365,7 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       ),
     };
   }
+
   const result = state.translator.translate(extendingModel);
   if (result.final) {
     state.done = true;

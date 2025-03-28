@@ -504,5 +504,41 @@ ORDER BY 1 asc NULLS LAST
       expect(result).toMatchObject(expected);
       expect(result.session_id).not.toBe(session_id);
     });
+
+    test('sessions that provide translation in compiler needs compiles model correctly', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          translations: [
+            {
+              url: 'file://test.malloy',
+              compiled_model_json:
+                '{"name":"","exports":["flights"],"contents":{"flights":{"type":"table","tablePath":"flights","connection":"connection","dialect":"duckdb","fields":[{"type":"string","name":"carrier","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":19},"end":{"line":0,"character":46}}}}],"name":"connection:flights","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":8},"end":{"line":0,"character":46}}},"parameters":{},"as":"flights"}},"queryList":[],"dependencies":{}}',
+            },
+          ],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
   });
 });
