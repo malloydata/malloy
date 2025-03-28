@@ -262,9 +262,10 @@ export function updateCompileModelState(
     }
     if (!state.hasSource) {
       state.hasSource =
-        needs?.files?.some(f => f.url === state.translator.sourceURL) ??
-        needs?.translations?.some(f => f.url === state.translator.sourceURL) ??
-        false;
+        (needs?.files?.some(f => f.url === state.translator.sourceURL) ??
+          false) ||
+        (needs?.translations?.some(f => f.url === state.translator.sourceURL) ??
+          false);
     }
   }
   const update = compilerNeedsToUpdate(needs);
@@ -282,9 +283,8 @@ function _newCompileModelState(
     compilerNeedsToUpdate(compilerNeeds)
   );
   const hasSource =
-    compilerNeeds?.files?.some(f => f.url === modelURL) ??
-    compilerNeeds?.translations?.some(t => t.url === modelURL) ??
-    false;
+    (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
+    (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
   if (extendURL) {
     return {
       extending: _newCompileModelState(extendURL, compilerNeeds),

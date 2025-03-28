@@ -509,6 +509,7 @@ ORDER BY 1 asc NULLS LAST
       const result = compileModel({
         model_url: 'file://test.malloy',
         compiler_needs: {
+          files: [],
           translations: [
             {
               url: 'file://test.malloy',
@@ -562,6 +563,7 @@ ORDER BY 1 asc NULLS LAST
         {
           model_url: 'file://test.malloy',
           compiler_needs: {
+            files: [],
             translations: [
               {
                 url: 'file://test.malloy',
