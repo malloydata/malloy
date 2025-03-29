@@ -197,9 +197,9 @@ export class TrinoDialect extends PostgresBase {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `\n '${f.sqlOutputName}' VALUE ${f.sqlExpression}`)
+      .map(f => `\n ${f.sqlOutputName} VALUE ${f.sqlExpression}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}) END)`;
   }
 
   sqlAnyValueLastTurtle(
