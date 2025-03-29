@@ -42,6 +42,7 @@
     "ci-snowflake": "MALLOY_DATABASE=snowflake JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.snowflake.config.ts --reporters jest-silent-reporter --reporters summary",
     "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.trino.config.ts --reporters jest-silent-reporter --reporters summary",
     "ci-presto": "MALLOY_DATABASE=presto JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.presto.config.ts --reporters jest-silent-reporter --reporters summary",
+    "ci-postgres": "MALLOY_DATABASE=postgres JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.postgres.config.ts --reporters jest-silent-reporter --reporters summary",
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",

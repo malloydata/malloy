@@ -3732,6 +3732,11 @@ class QueryQuery extends QueryField {
         field instanceof FieldInstanceField &&
         field.fieldUsage.type === 'result'
       ) {
+        if (!(field.f instanceof AbstractQueryAtomic)) {
+          // eslint-disable-next-line no-console
+          // console.log(name, field.f.fieldDef.type);
+          throw new Error('NOT A LEAF');
+        }
         dialectFieldList.push({
           type: field.f.fieldDef.type,
           sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
