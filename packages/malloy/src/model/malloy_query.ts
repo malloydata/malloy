@@ -87,6 +87,7 @@ import type {
   JoinFieldDef,
   LeafAtomicDef,
   Expression,
+  AtomicFieldDef,
 } from './malloy_types';
 import {
   expressionIsAggregate,
@@ -1044,7 +1045,7 @@ class QueryField extends QueryNode {
     let p = resultStruct.parent;
     while (p !== undefined) {
       const scalars = p.fields(
-        fi => isScalarField(fi.f) && fi.fieldUsage.type === 'result'
+        fi => isSimpleScalar(fi.f) && fi.fieldUsage.type === 'result'
       );
       const partitionSQLs = scalars.map(fi => fi.getAnalyticalSQL(true));
       ret.push(...partitionSQLs);
@@ -1453,22 +1454,36 @@ class QueryField extends QueryNode {
   }
 }
 
-function isCalculatedField(f: QueryField): f is QueryFieldAtomic {
-  return f instanceof AbstractQueryAtomic && f.isCalculated();
+function isSimpleCalculation(f: QueryField): f is QuerySimpleField {
+  return f instanceof QueryAtomicField && f.isCalculated();
 }
 
-function isAggregateField(f: QueryField): f is QueryFieldAtomic {
-  return f instanceof AbstractQueryAtomic && f.isAggregate();
+function isSimpleAggregate(f: QueryField): f is QuerySimpleField {
+  return f instanceof QueryAtomicField && f.isAggregate();
 }
 
-function isScalarField(f: QueryField): f is QueryFieldAtomic {
-  return (
-    f instanceof AbstractQueryAtomic && !f.isCalculated() && !f.isAggregate()
-  );
+function isSimpleScalar(f: QueryField): f is QuerySimpleField {
+  return f instanceof QueryAtomicField && !f.isCalculated() && !f.isAggregate();
 }
 
-type QueryFieldAtomic = AbstractQueryAtomic<LeafAtomicDef>;
-class AbstractQueryAtomic<T extends LeafAtomicDef> extends QueryField {
+function isScalarField(f: QueryField) {
+  if (f instanceof QueryAtomicField) {
+    return isSimpleScalar(f);
+  }
+  if (f instanceof QueryFieldCompound && f.isAtomic()) {
+    if (hasExpression(f.fieldDef)) {
+      const et = f.fieldDef.expressionType;
+      if (expressionIsCalculation(et) || expressionIsAggregate(et)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+type QuerySimpleField = QueryAtomicField<LeafAtomicDef>;
+abstract class QueryAtomicField<T extends AtomicFieldDef> extends QueryField {
   fieldDef: T;
 
   constructor(fieldDef: T, parent: QueryStruct, refId?: string) {
@@ -1509,13 +1524,13 @@ class AbstractQueryAtomic<T extends LeafAtomicDef> extends QueryField {
 
 // class QueryMeasure extends QueryField {}
 
-class QueryFieldString extends AbstractQueryAtomic<StringFieldDef> {}
-class QueryFieldNumber extends AbstractQueryAtomic<NumberFieldDef> {}
-class QueryFieldBoolean extends AbstractQueryAtomic<BooleanFieldDef> {}
-class QueryFieldJSON extends AbstractQueryAtomic<JSONFieldDef> {}
-class QueryFieldUnsupported extends AbstractQueryAtomic<NativeUnsupportedFieldDef> {}
+class QueryFieldString extends QueryAtomicField<StringFieldDef> {}
+class QueryFieldNumber extends QueryAtomicField<NumberFieldDef> {}
+class QueryFieldBoolean extends QueryAtomicField<BooleanFieldDef> {}
+class QueryFieldJSON extends QueryAtomicField<JSONFieldDef> {}
+class QueryFieldUnsupported extends QueryAtomicField<NativeUnsupportedFieldDef> {}
 
-class QueryFieldDate extends AbstractQueryAtomic<DateFieldDef> {
+class QueryFieldDate extends QueryAtomicField<DateFieldDef> {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef;
     const superExpr = super.generateExpression(resultSet);
@@ -1545,7 +1560,7 @@ class QueryFieldDate extends AbstractQueryAtomic<DateFieldDef> {
   }
 }
 
-class QueryFieldTimestamp extends AbstractQueryAtomic<TimestampFieldDef> {
+class QueryFieldTimestamp extends QueryAtomicField<TimestampFieldDef> {
   // clone ourselves on demand as a timeframe.
   getChildByName(name: TimestampUnit): QueryFieldTimestamp {
     const fieldDef = {
@@ -1557,7 +1572,7 @@ class QueryFieldTimestamp extends AbstractQueryAtomic<TimestampFieldDef> {
   }
 }
 
-class QueryFieldDistinctKey extends AbstractQueryAtomic<StringFieldDef> {
+class QueryFieldDistinctKey extends QueryAtomicField<StringFieldDef> {
   generateExpression(resultSet: FieldInstanceResult): string {
     if (this.parent.primaryKey()) {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
@@ -1648,7 +1663,7 @@ class FieldInstanceField implements FieldInstance {
 
   getSQL() {
     let exp = this.f.generateExpression(this.parent);
-    if (isScalarField(this.f)) {
+    if (isSimpleScalar(this.f)) {
       exp = this.f.caseGroup(
         this.parent.groupSet > 0
           ? this.parent.childGroups.concat(this.additionalGroupSets)
@@ -1861,10 +1876,10 @@ class FieldInstanceResult implements FieldInstance {
     let ret: RepeatedResultType = 'inline_all_numbers';
     for (const f of this.fields()) {
       if (f.fieldUsage.type === 'result') {
-        if (isScalarField(f.f)) {
+        if (isSimpleScalar(f.f)) {
           return 'nested';
         }
-        if (f.f instanceof QueryFieldStruct) {
+        if (f.f instanceof QueryFieldCompound) {
           ret = 'inline';
         }
       }
@@ -1915,7 +1930,7 @@ class FieldInstanceResult implements FieldInstance {
           firstField ||= fi.fieldUsage.resultIndex;
           if (['date', 'timestamp'].indexOf(fi.f.fieldDef.type) > -1) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
-          } else if (isAggregateField(fi.f)) {
+          } else if (isSimpleAggregate(fi.f)) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
           }
         }
@@ -1978,7 +1993,7 @@ class FieldInstanceResult implements FieldInstance {
 
   findJoins(query: QueryQuery) {
     for (const dim of this.fields()) {
-      if (!(dim.f instanceof QueryFieldStruct)) {
+      if (!(dim.f instanceof QueryFieldCompound)) {
         this.addStructToJoin(
           dim.f.getJoinableParent(),
           query,
@@ -2014,7 +2029,7 @@ class FieldInstanceResult implements FieldInstance {
       // convert an All into the equivalent exclude
       excludeFields = this.fields(
         fi =>
-          isScalarField(fi.f) &&
+          isSimpleScalar(fi.f) &&
           fi.fieldUsage.type === 'result' &&
           allFields.indexOf(fi.f.getIdentifier()) === -1
       ).map(fi => fi.f.getIdentifier());
@@ -2028,7 +2043,7 @@ class FieldInstanceResult implements FieldInstance {
         inScopeFieldNames = inScopeFieldNames.concat(
           p
             .fields(
-              fi => isScalarField(fi.f) && fi.fieldUsage.type === 'result'
+              fi => isSimpleScalar(fi.f) && fi.fieldUsage.type === 'result'
             )
             .map(fi => fi.f.getIdentifier())
         );
@@ -2036,7 +2051,7 @@ class FieldInstanceResult implements FieldInstance {
       ret = ret.concat(
         p.fields(
           fi =>
-            isScalarField(fi.f) &&
+            isSimpleScalar(fi.f) &&
             fi.fieldUsage.type === 'result' &&
             excludeFields.indexOf(fi.f.getIdentifier()) === -1
         )
@@ -2455,7 +2470,7 @@ class QueryQuery extends QueryField {
     }
     const node = context.getFieldByName(path);
     const joinableParent =
-      node instanceof QueryFieldStruct
+      node instanceof QueryFieldCompound
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
     resultStruct
@@ -2466,7 +2481,7 @@ class QueryQuery extends QueryField {
   findRecordAliases(context: QueryStruct, path: string[]) {
     for (const seg of path) {
       const field = context.getFieldByName([seg]);
-      if (field instanceof QueryFieldStruct) {
+      if (field instanceof QueryFieldCompound) {
         const qs = field.queryStruct;
         if (
           qs.structDef.type === 'record' &&
@@ -2617,21 +2632,21 @@ class QueryQuery extends QueryField {
         );
         this.expandFields(fir);
         resultStruct.add(as, fir);
-      } else if (field instanceof AbstractQueryAtomic) {
+      } else if (field instanceof QueryAtomicField) {
         resultStruct.addField(as, field, {
           resultIndex,
           type: 'result',
         });
         this.addDependancies(resultStruct, field);
 
-        if (isAggregateField(field)) {
+        if (isSimpleAggregate(field)) {
           if (this.firstSegment.type === 'project') {
             throw new Error(
               `Aggregate Fields cannot be used in select - '${field.fieldDef.name}'`
             );
           }
         }
-      } else if (field instanceof QueryFieldStruct) {
+      } else if (field instanceof QueryFieldCompound) {
         resultStruct.addField(as, field, {
           resultIndex,
           type: 'result',
@@ -2719,7 +2734,7 @@ class QueryQuery extends QueryField {
       const alwaysJoins = stage.alwaysJoins ?? [];
       for (const joinName of alwaysJoins) {
         const qs = this.parent.getChildByName(joinName);
-        if (qs instanceof QueryFieldStruct) {
+        if (qs instanceof QueryFieldCompound) {
           rootResult.addStructToJoin(qs.queryStruct, this, undefined, []);
         }
       }
@@ -2749,7 +2764,7 @@ class QueryQuery extends QueryField {
           sourceClasses,
           referenceId,
         };
-        if (isCalculatedField(fi.f)) {
+        if (isSimpleCalculation(fi.f)) {
           filterList = fi.f.getFilterList();
           return {
             ...base,
@@ -2757,7 +2772,7 @@ class QueryQuery extends QueryField {
             fieldKind: 'measure',
           };
         }
-        if (isScalarField(fi.f)) {
+        if (isSimpleScalar(fi.f)) {
           return {
             ...base,
             filterList,
@@ -2838,7 +2853,7 @@ class QueryQuery extends QueryField {
         if (fi.fieldUsage.type === 'result') {
           // if there is only one dimension, it is the primaryKey
           //  if there are more, primaryKey is undefined.
-          if (isScalarField(fi.f)) {
+          if (isSimpleScalar(fi.f)) {
             if (dimCount === 0 && isRoot) {
               primaryKey = name;
             } else {
@@ -3218,7 +3233,7 @@ class QueryQuery extends QueryField {
       const n: string[] = [];
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
-        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+        if (fi.fieldUsage.type === 'result' && isSimpleScalar(fi.f)) {
           n.push(fi.fieldUsage.resultIndex.toString());
         }
       }
@@ -3330,7 +3345,7 @@ class QueryQuery extends QueryField {
               output.sql.push(`${exp} as ${outputName}`);
             }
             output.dimensionIndexes.push(output.fieldIndex++);
-          } else if (isCalculatedField(fi.f)) {
+          } else if (isSimpleCalculation(fi.f)) {
             output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
@@ -3422,7 +3437,7 @@ class QueryQuery extends QueryField {
         const dimensions: string[] = [];
         let r: FieldInstanceResult | undefined = result;
         while (r) {
-          for (const name of r.fieldNames(fi => isScalarField(fi.f))) {
+          for (const name of r.fieldNames(fi => isSimpleScalar(fi.f))) {
             dimensions.push(
               this.parent.dialect.sqlMaybeQuoteIdentifier(
                 `${name}__${r.groupSet}`
@@ -3532,14 +3547,14 @@ class QueryQuery extends QueryField {
       );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          if (isScalarField(fi.f)) {
+          if (isSimpleScalar(fi.f)) {
             const exp = this.caseGroup(
               resultSet.groupSet > 0 ? resultSet.childGroups : [],
               sqlFieldName
             );
             output.sql.push(`${exp} as ${sqlFieldName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
-          } else if (isCalculatedField(fi.f)) {
+          } else if (isSimpleCalculation(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
               sqlFieldName
@@ -3628,14 +3643,14 @@ class QueryQuery extends QueryField {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          if (isScalarField(fi.f)) {
+          if (isSimpleScalar(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlMaybeQuoteIdentifier(
                 `${name}__${this.rootResult.groupSet}`
               ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex++);
-          } else if (isCalculatedField(fi.f)) {
+          } else if (isSimpleCalculation(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
                 this.parent.dialect.sqlMaybeQuoteIdentifier(
@@ -3732,19 +3747,30 @@ class QueryQuery extends QueryField {
         field instanceof FieldInstanceField &&
         field.fieldUsage.type === 'result'
       ) {
-        if (!(field.f instanceof AbstractQueryAtomic)) {
-          // eslint-disable-next-line no-console
-          // console.log(name, field.f.fieldDef.type);
-          throw new Error('NOT A LEAF');
+        if (field.f instanceof QueryFieldCompound) {
+          // Ok, field we are generating is Field but it is not
+          const subFields = getDialectFieldList(field.f.fieldDef);
+          const ret: DialectFieldTypeStruct = {
+            type: 'struct',
+            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+              `${name}__${resultStruct.groupSet}`
+            ),
+            rawName: name,
+            sqlOutputName: sqlName,
+            isArray: isScalarArray(field.f.fieldDef),
+            nestedStruct: subFields,
+          };
+          dialectFieldList.push(ret);
+        } else {
+          dialectFieldList.push({
+            type: field.f.fieldDef.type,
+            sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+              `${name}__${resultStruct.groupSet}`
+            ),
+            rawName: name,
+            sqlOutputName: sqlName,
+          });
         }
-        dialectFieldList.push({
-          type: field.f.fieldDef.type,
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
-            `${name}__${resultStruct.groupSet}`
-          ),
-          rawName: name,
-          sqlOutputName: sqlName,
-        });
       } else if (
         resultStruct.firstSegment.type === 'project' &&
         field instanceof FieldInstanceField &&
@@ -4036,7 +4062,7 @@ class QueryQueryIndexStage extends QueryQuery {
         resultIndex,
         type: 'result',
       });
-      if (field instanceof AbstractQueryAtomic) {
+      if (field instanceof QueryAtomicField) {
         this.addDependancies(resultStruct, field);
       }
       resultIndex++;
@@ -4077,7 +4103,7 @@ class QueryQueryIndexStage extends QueryQuery {
     }> = [];
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+      if (fi.fieldUsage.type === 'result' && isSimpleScalar(fi.f)) {
         const expression = fi.f.generateExpression(this.rootResult);
         const path = this.indexPaths[name] || [];
         fields.push({name, path, type: fi.f.fieldDef.type, expression});
@@ -4230,7 +4256,7 @@ class QueryQueryIndex extends QueryQuery {
         if (stage === undefined) {
           const f = this.parent.nameMap.get(fref.path[0]);
           if (
-            f instanceof QueryFieldStruct &&
+            f instanceof QueryFieldCompound &&
             f.fieldDef.join === 'many' &&
             f.fieldDef.fields.length > 1
           ) {
@@ -4313,12 +4339,12 @@ class QueryQueryIndex extends QueryQuery {
 
 /*
  * The input to a query will always be a QueryStruct. A QueryStruct is also a namespace
- * for tracking joins, and so a QueryFieldStruct is a QueryField which has a QueryStruct.
+ * for tracking joins, and so a QUeryFieldCompound is a QueryField which has a QueryStruct.
  *
  * This is a result of it being impossible to inherit both from QueryStruct and QueryField
  * for array and record types.
  */
-class QueryFieldStruct extends QueryField {
+class QueryFieldCompound extends QueryField {
   queryStruct: QueryStruct;
   fieldDef: JoinFieldDef;
   constructor(
@@ -4650,7 +4676,7 @@ class QueryStruct {
   }
 
   /** the the primary key or throw an error. */
-  getPrimaryKeyField(fieldDef: FieldDef): QueryFieldAtomic {
+  getPrimaryKeyField(fieldDef: FieldDef): QuerySimpleField {
     let pk;
     if ((pk = this.primaryKey())) {
       return pk;
@@ -4689,7 +4715,7 @@ class QueryStruct {
       }
     }
     for (const [, v] of this.nameMap) {
-      if (v instanceof QueryFieldStruct) {
+      if (v instanceof QueryFieldCompound) {
         v.queryStruct.resolveQueryFields();
       }
     }
@@ -4732,7 +4758,7 @@ class QueryStruct {
       case 'table':
       case 'sql_select':
       case 'composite':
-        return new QueryFieldStruct(
+        return new QueryFieldCompound(
           field,
           undefined,
           this,
@@ -4808,7 +4834,7 @@ class QueryStruct {
     return this.parent ? this.parent.root() : this;
   }
 
-  primaryKey(): QueryFieldAtomic | undefined {
+  primaryKey(): QuerySimpleField | undefined {
     if (isSourceDef(this.structDef) && this.structDef.primaryKey) {
       return this.getDimensionByName([this.structDef.primaryKey]);
     } else {
@@ -4832,7 +4858,7 @@ class QueryStruct {
         break;
       }
       lookIn =
-        found instanceof QueryFieldStruct ? found.queryStruct : undefined;
+        found instanceof QueryFieldCompound ? found.queryStruct : undefined;
     }
     if (found === undefined) {
       const pathErr = path.length > 1 ? ` in ${path.join('.')}` : '';
@@ -4844,7 +4870,7 @@ class QueryStruct {
   // structs referenced in queries are converted to fields.
   getQueryFieldByName(name: string[]): QueryField {
     const field = this.getFieldByName(name);
-    if (field instanceof QueryFieldStruct) {
+    if (field instanceof QueryFieldCompound) {
       throw new Error(`Cannot reference ${name.join('.')} as a scalar'`);
     }
     return field;
@@ -4863,9 +4889,9 @@ class QueryStruct {
       }
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
-      if (field instanceof QueryFieldStruct) {
+      if (field instanceof QueryFieldCompound) {
         const newDef = {...field.fieldDef, annotation};
-        return new QueryFieldStruct(
+        return new QueryFieldCompound(
           newDef,
           undefined,
           field.parent,
@@ -4889,10 +4915,10 @@ class QueryStruct {
   }
 
   /** returns a query object for the given name */
-  getDimensionByName(name: string[]): QueryFieldAtomic {
+  getDimensionByName(name: string[]): QuerySimpleField {
     const field = this.getFieldByName(name);
 
-    if (field.isAtomic() && isScalarField(field)) {
+    if (field.isAtomic() && isSimpleScalar(field)) {
       return field;
     }
     throw new Error(`${name} is not an atomic scalar field? Inconceivable!`);
@@ -4904,13 +4930,13 @@ class QueryStruct {
       return this;
     }
     const struct = this.getFieldByName(name);
-    if (struct instanceof QueryFieldStruct) {
+    if (struct instanceof QueryFieldCompound) {
       return struct.queryStruct;
     }
     throw new Error(`Error: Path to structure not found '${name.join('.')}'`);
   }
 
-  getDistinctKey(): QueryFieldAtomic {
+  getDistinctKey(): QuerySimpleField {
     if (this.structDef.type !== 'record') {
       return this.getDimensionByName(['__distinct_key']);
     } else if (this.parent) {
@@ -5167,8 +5193,8 @@ export class QueryModel {
     const struct = this.getStructByName(explore);
     let indexStar: RefToField[] = [];
     for (const [fn, fv] of struct.nameMap) {
-      if (!(fv instanceof QueryFieldStruct)) {
-        if (isScalarField(fv) && fv.includeInWildcard()) {
+      if (!(fv instanceof QueryFieldCompound)) {
+        if (isSimpleScalar(fv) && fv.includeInWildcard()) {
           indexStar.push({type: 'fieldref', path: [fn]});
         }
       }
