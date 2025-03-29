@@ -169,7 +169,7 @@ export class StandardSQLDialect extends Dialect {
     const fields = fieldList
       .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END)`;
   }
 
   sqlAnyValueLastTurtle(
