@@ -138,9 +138,9 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlOutputName}:=${f.sqlExpression}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}) END)`;
   }
 
   sqlAnyValueLastTurtle(
