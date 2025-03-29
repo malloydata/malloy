@@ -549,8 +549,11 @@ describe.each(runtimes.runtimeList)(
           run: ${conName}.sql(""" ${selectAB('ab')} """)
           -> {
             nest: gab is {group_by: ab }
+          } -> {
+            // mtoy todo fix malloyResultMatches, this un-nest should not be needed
+            select: gab.ab
           }
-        `).malloyResultMatches(runtime, {'gab.ab': ab_eq});
+        `).malloyResultMatches(runtime, {ab: ab_eq});
       });
     });
   }
