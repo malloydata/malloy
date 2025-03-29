@@ -1452,25 +1452,26 @@ class QueryField extends QueryNode {
         : undefined
     );
   }
+
+  includeInWildcard() {
+    return false;
+  }
 }
 
 function isSimpleCalculation(f: QueryField): f is QuerySimpleField {
-  return f instanceof QueryAtomicField && f.isCalculated();
+  return f instanceof QueryAtomicField && isCalculatedField(f);
 }
 
 function isSimpleAggregate(f: QueryField): f is QuerySimpleField {
-  return f instanceof QueryAtomicField && f.isAggregate();
+  return f instanceof QueryAtomicField && isAggregateField(f);
 }
 
 function isSimpleScalar(f: QueryField): f is QuerySimpleField {
-  return f instanceof QueryAtomicField && !f.isCalculated() && !f.isAggregate();
+  return f instanceof QueryAtomicField && isScalarField(f);
 }
 
 function isScalarField(f: QueryField) {
-  if (f instanceof QueryAtomicField) {
-    return isSimpleScalar(f);
-  }
-  if (f instanceof QueryFieldStruct && f.isAtomic()) {
+  if (f.isAtomic()) {
     if (hasExpression(f.fieldDef)) {
       const et = f.fieldDef.expressionType;
       if (expressionIsCalculation(et) || expressionIsAggregate(et)) {
@@ -1478,6 +1479,20 @@ function isScalarField(f: QueryField) {
       }
     }
     return true;
+  }
+  return false;
+}
+
+function isCalculatedField(f: QueryField) {
+  if (f.isAtomic() && hasExpression(f.fieldDef)) {
+    return expressionIsCalculation(f.fieldDef.expressionType);
+  }
+  return false;
+}
+
+function isAggregateField(f: QueryField) {
+  if (f.isAtomic() && hasExpression(f.fieldDef)) {
+    return expressionIsAggregate(f.fieldDef.expressionType);
   }
   return false;
 }
@@ -1507,30 +1522,8 @@ abstract class QueryAtomicField<T extends AtomicFieldDef> extends QueryField {
     return true;
   }
 
-  isCalculated(): boolean {
-    return (
-      hasExpression(this.fieldDef) &&
-      expressionIsCalculation(this.fieldDef.expressionType)
-    );
-  }
-
-  isAggregate(): boolean {
-    return (
-      hasExpression(this.fieldDef) &&
-      expressionIsAggregate(this.fieldDef.expressionType)
-    );
-  }
-
   getFilterList(): FilterCondition[] {
     return [];
-  }
-
-  hasExpression(): boolean {
-    return hasExpression(this.fieldDef);
-  }
-
-  isAtomic() {
-    return true;
   }
 }
 
@@ -4382,18 +4375,16 @@ class QueryFieldStruct extends QueryField {
    * but maybe it isn't, it doesn't fix the problem I am working on ...
    */
 
-  // mtoy todo review with lloyd if any of these are needed, had to NOT
-  // do getIdentifier to pass a test, didn't stop to think why.
-  // getIdentifier() {
-  //   return this.queryStruct.getIdentifier();
-  // }
-
   getJoinableParent() {
     return this.queryStruct.getJoinableParent();
   }
 
   getFullOutputName() {
     return this.queryStruct.getFullOutputName();
+  }
+
+  includeInWildcard(): boolean {
+    return this.isAtomic();
   }
 }
 
@@ -5205,10 +5196,8 @@ export class QueryModel {
     const struct = this.getStructByName(explore);
     let indexStar: RefToField[] = [];
     for (const [fn, fv] of struct.nameMap) {
-      if (!(fv instanceof QueryFieldStruct)) {
-        if (isSimpleScalar(fv) && fv.includeInWildcard()) {
-          indexStar.push({type: 'fieldref', path: [fn]});
-        }
+      if (isScalarField(fv) && fv.includeInWildcard()) {
+        indexStar.push({type: 'fieldref', path: [fn]});
       }
     }
     indexStar = indexStar.sort((a, b) => a.path[0].localeCompare(b.path[0]));
