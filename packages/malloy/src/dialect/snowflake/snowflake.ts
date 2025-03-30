@@ -43,7 +43,7 @@ import {
   TD,
   isAtomic,
   isRepeatedRecord,
-  isScalarArray,
+  isSimpleArray,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
@@ -499,7 +499,7 @@ ${indent(sql)}
       return malloyType.type === 'record'
         ? recordScehma
         : `ARRAY(${recordScehma})`;
-    } else if (isScalarArray(malloyType)) {
+    } else if (isSimpleArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;

@@ -112,7 +112,7 @@ describe('structdef comprehension', () => {
   });
 
   test('import repeated record', () => {
-    const field: model.ScalarArrayDef = {
+    const field: model.SimpleArrayDef = {
       name: 't',
       type: 'array',
       elementTypeDef: {type: 'string'},

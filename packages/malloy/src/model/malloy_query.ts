@@ -109,7 +109,7 @@ import {
   isBaseTable,
   isJoined,
   isJoinedSource,
-  isScalarArray,
+  isSimpleArray,
   mkTemporal,
 } from './malloy_types';
 
@@ -3069,7 +3069,7 @@ class QueryQuery extends QueryField {
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey,
-        isScalarArray(qsDef),
+        isSimpleArray(qsDef),
         this.inNestedPipeline()
       )}\n`;
     } else if (qsDef.type === 'record') {
@@ -3762,7 +3762,7 @@ class QueryQuery extends QueryField {
             ),
             rawName: name,
             sqlOutputName: sqlName,
-            isArray: isScalarArray(field.f.fieldDef),
+            isArray: isSimpleArray(field.f.fieldDef),
             nestedStruct: subFields,
           };
           dialectFieldList.push(ret);

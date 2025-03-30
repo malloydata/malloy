@@ -714,12 +714,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface ScalarArrayTypeDef {
+export interface SimpleArrayTypeDef {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
 }
-export interface ScalarArrayDef
-  extends ScalarArrayTypeDef,
+export interface SimpleArrayDef
+  extends SimpleArrayTypeDef,
     StructDefBase,
     JoinBase,
     FieldBase {
@@ -728,7 +728,7 @@ export interface ScalarArrayDef
 }
 
 export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
-  if (isScalarArray(atd)) {
+  if (isSimpleArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name);
   }
   if (isRepeatedRecord(atd)) {
@@ -808,8 +808,8 @@ export interface RepeatedRecordDef
   type: 'array';
   join: 'many';
 }
-export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
-export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
+export type ArrayTypeDef = SimpleArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = SimpleArrayDef | RepeatedRecordDef;
 
 export function isRepeatedRecordFunctionParam(
   paramT: FunctionParameterTypeDef
@@ -825,9 +825,9 @@ export function isRepeatedRecord(
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
-export function isScalarArray(
+export function isSimpleArray(
   td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
-): td is ScalarArrayTypeDef {
+): td is SimpleArrayTypeDef {
   return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
 }
 
@@ -1255,7 +1255,7 @@ export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   evalSpace: EvalSpace;
 };
 
-interface ScalarArrayExtTypeDef<TypeExtensions> {
+interface SimpleArrayExtTypeDef<TypeExtensions> {
   type: 'array';
   elementTypeDef: Exclude<
     ExpressionValueExtTypeDef<TypeExtensions>,
@@ -1266,7 +1266,7 @@ interface ScalarArrayExtTypeDef<TypeExtensions> {
 type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
-  | ScalarArrayExtTypeDef<TypeExtensions>
+  | SimpleArrayExtTypeDef<TypeExtensions>
   | RecordExtTypeDef<TypeExtensions>
   | RepeatedRecordExtTypeDef<TypeExtensions>
   | TypeExtensions;
@@ -1286,8 +1286,8 @@ interface RepeatedRecordExtTypeDef<TypeExtensions> {
 
 type FunctionReturnTypeExtensions = GenericTypeDef;
 
-export type ScalarArrayFunctionReturnTypeDef =
-  ScalarArrayExtTypeDef<FunctionReturnTypeExtensions>;
+export type SimpleArrayFunctionReturnTypeDef =
+  SimpleArrayExtTypeDef<FunctionReturnTypeExtensions>;
 
 export type FunctionReturnFieldDef = ExtFieldDef<FunctionReturnTypeExtensions>;
 
@@ -1299,8 +1299,8 @@ export type RepeatedRecordFunctionReturnTypeDef =
 
 type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
 
-export type ScalarArrayFunctionParameterTypeDef =
-  ScalarArrayExtTypeDef<FunctionParameterTypeExtensions>;
+export type SimpleArrayFunctionParameterTypeDef =
+  SimpleArrayExtTypeDef<FunctionParameterTypeExtensions>;
 
 export type FunctionParameterFieldDef =
   ExtFieldDef<FunctionParameterTypeExtensions>;
@@ -1313,8 +1313,8 @@ export type RepeatedRecordFunctionParameterTypeDef =
 
 type FunctionGenericTypeExtensions = AnyTypeDef;
 
-export type ScalarArrayFunctionGenericTypeDef =
-  ScalarArrayExtTypeDef<FunctionGenericTypeExtensions>;
+export type SimpleArrayFunctionGenericTypeDef =
+  SimpleArrayExtTypeDef<FunctionGenericTypeExtensions>;
 
 export type FunctionGenericFieldDef =
   ExtFieldDef<FunctionGenericTypeExtensions>;
@@ -1414,12 +1414,12 @@ export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
 
 export type AtomicTypeDef =
   | LeafAtomicTypeDef
-  | ScalarArrayTypeDef
+  | SimpleArrayTypeDef
   | RecordTypeDef
   | RepeatedRecordTypeDef;
 export type AtomicFieldDef =
   | LeafAtomicDef
-  | ScalarArrayDef
+  | SimpleArrayDef
   | RecordDef
   | RepeatedRecordDef;
 

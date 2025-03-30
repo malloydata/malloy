@@ -123,7 +123,7 @@ interface ArrayTypeDef extends NamedObject {
 }
 
 // If an array is joined, so it un-nests, is a StructDef, it will look like this
-interface ScalarArrayStruct extends ArrayTypeDef, StructDefBase, JoinBase {
+interface SimpleArrayStruct extends ArrayTypeDef, StructDefBase, JoinBase {
     type: 'array'
     dataType: AtomicFieldType;
     join: 'many'
@@ -144,7 +144,7 @@ const table3: TableSourceDef {
     fields: [
         {name: 'un_joined_ints', ...arrayOfInts}, // Just a name and a type, not a struct, no fields
         {
-            name: 'joined_ints',                  // This will be a ScalarArrayStruct
+            name: 'joined_ints',                  // This will be a SimpleArrayStruct
             ...arrayOfInts,
             join: 'many',
             dialect: 'standardsql',
@@ -162,7 +162,7 @@ definition in the `dataType:` field. Which is a little weird, but a side effect 
 treated like a join in the compiler.
 
 ```TypeScript
-interface RepeatedRecordStruct extends ScalarArrayStruct {
+interface RepeatedRecordStruct extends SimpleArrayStruct {
     type: 'array'
     dataType: {type: 'record_element'}
 }
@@ -191,7 +191,7 @@ const table4: TableSourceDef {
 };
 ```
 
-## All the struct defs
+## All the structdefs
 
 ```TypeScript
 type SourceDef =
@@ -205,7 +205,7 @@ type SourceDef =
 type StructDef =
     | SourceDef
     | NonRepeatedRecordStruct
-    | ScalarArrayStruct
+    | SimpleArrayStruct
     | RepeatedRecordStruct;
 ```
 
@@ -216,4 +216,4 @@ type StructDef =
 * `isJoined` -- Is this NOT the FROM clause structdef
 * `isJoinable` -- Is the something which could be joined
 * `isJoinedSource` --- Is this joined AND a SourceDef
-* `isScalarArray` -- Is this an array, and is this an array of non-records
+* `isSimpleArray` -- Is this an array, and is this an array of non-records
