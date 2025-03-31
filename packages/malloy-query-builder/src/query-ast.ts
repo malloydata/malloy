@@ -4462,7 +4462,7 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 
   setTagProperty(path: Path, value: TagSetValue) {
-    this.value = this.getTag().set(path, value).toString();
+    this.value = this.getIntrinsicTag().set(path, value).toString();
   }
 
   removeTagProperty(path: Path) {

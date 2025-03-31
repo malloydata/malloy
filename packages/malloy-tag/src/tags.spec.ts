@@ -102,15 +102,15 @@ describe('tagParse to Tag', () => {
       'name.prop={prop2}',
       {name: {properties: {prop: {properties: {prop2: {}}}}}},
     ],
-    ['no yes -no', {yes: {}}],
+    ['no yes -no', {yes: {}, no: {deleted: true}}],
 
     // TODO interesting behavior that removing a non-existant element, or the last element,
     // does not remove the `properties`.
-    ['x -x.y', {x: {properties: {}}}],
-    ['x={y} -x.y', {x: {properties: {}}}],
+    ['x -x.y', {x: {properties: {y: {deleted: true}}}}],
+    ['x={y} -x.y', {x: {properties: {y: {deleted: true}}}}],
 
-    ['x={y z} -x.y', {x: {properties: {z: {}}}}],
-    ['x={y z} x {-y}', {x: {properties: {z: {}}}}],
+    ['x={y z} -x.y', {x: {properties: {z: {}, y: {deleted: true}}}}],
+    ['x={y z} x {-y}', {x: {properties: {z: {}, y: {deleted: true}}}}],
     ['x=1 x {xx=11}', {x: {eq: '1', properties: {xx: {eq: '11'}}}}],
     ['x.y=xx x=1 {...}', {x: {eq: '1', properties: {y: {eq: 'xx'}}}}],
     ['a {b c} a=1', {a: {eq: '1'}}],
@@ -335,6 +335,7 @@ describe('Tag access', () => {
       a: {properties: {dieu: {deleted: true}}},
     });
     expect(ext.toString()).toBe('# hello -goodbye a { -dieu }\n');
+    idempotent(ext);
   });
   test('set with different prefix', () => {
     const base = Tag.withPrefix('#(docs) ');

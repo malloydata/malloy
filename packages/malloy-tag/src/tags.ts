@@ -759,7 +759,7 @@ class TagLineParser
     const path = this.getPropName(ctx.propName());
     const [writeKey, writeInto] = buildAccessPath(buildOn, path);
     if (ctx.MINUS()) {
-      delete writeInto[writeKey];
+      writeInto[writeKey] = {deleted: true};
     } else {
       writeInto[writeKey] = new Tag({});
     }
