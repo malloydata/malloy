@@ -49,7 +49,7 @@ import {
   isAtomicFieldType,
   isExpressionTypeLEQ,
   isRepeatedRecordFunctionParam,
-  isScalarArray,
+  isBasicArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
   TD,
@@ -660,7 +660,7 @@ function isDataTypeMatch(
     return {dataTypeMatch: true, genericsSet: []};
   }
   if (paramT.type === 'array' && arg.type === 'array') {
-    if (isScalarArray(arg)) {
+    if (isBasicArray(arg)) {
       if (!isRepeatedRecordFunctionParam(paramT)) {
         return isDataTypeMatch(
           genericsAlreadySelected,

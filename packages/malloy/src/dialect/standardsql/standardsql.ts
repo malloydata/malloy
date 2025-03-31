@@ -32,7 +32,7 @@ import type {
   RegexMatchExpr,
   TimeLiteralNode,
   MeasureTimeExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
 } from '../../model/malloy_types';
@@ -85,7 +85,7 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
-const bqToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const bqToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
   'INTEGER': {type: 'number', numberType: 'integer'},
@@ -169,7 +169,7 @@ export class StandardSQLDialect extends Dialect {
     const fields = fieldList
       .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END)`;
   }
 
   sqlAnyValueLastTurtle(
@@ -454,7 +454,7 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return (

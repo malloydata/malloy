@@ -17,7 +17,7 @@ if (!expressionFunction('renderMalloyNumber')) {
     (explore: NestField, fieldPath: string, value: number) => {
       if (explore) {
         const field = explore.fieldAt(fieldPath);
-        return field.isAtomic()
+        return field.isBasic()
           ? renderNumericField(field, value)
           : String(value);
       }

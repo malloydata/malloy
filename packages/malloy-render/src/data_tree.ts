@@ -69,8 +69,7 @@ export type Field =
   | SQLNativeField;
 export type NestField = RepeatedRecordField | RecordField | ArrayField;
 export type RecordOrRepeatedRecordField = RepeatedRecordField | RecordField;
-// TODO should be renamed LeafAtomicField
-export type AtomicField =
+export type BasicAtomicField =
   | NumberField
   | DateField
   | JSONField
@@ -460,7 +459,7 @@ export abstract class FieldBase {
     return this instanceof JSONField;
   }
 
-  isAtomic(): this is AtomicField {
+  isBasic(): this is BasicAtomicField {
     return !this.isNest();
   }
 
@@ -1118,7 +1117,7 @@ export abstract class CellBase {
       if (current && current.isRecord()) {
         const parentRecord = current;
         const dimensions = current.field.fields.filter(
-          f => f.isAtomic() && f.wasDimension()
+          f => f.isBasic() && f.wasDimension()
         );
         result.unshift(
           ...dimensions.map(dim => ({

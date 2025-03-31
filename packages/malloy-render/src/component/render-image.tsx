@@ -3,7 +3,7 @@ import type {RendererProps} from './types';
 export function renderImage(props: RendererProps) {
   const imgTag = props.tag.tag('image');
   if (!imgTag) throw new Error('Missing tag for Image renderer');
-  if (!props.dataColumn.field.isAtomic())
+  if (!props.dataColumn.field.isBasic())
     throw new Error('Image renderer: Field must be AtomicField');
   if (!props.dataColumn.isString() && !props.dataColumn.isNull())
     throw new Error('Image renderer: DataColumn must be StringCell');

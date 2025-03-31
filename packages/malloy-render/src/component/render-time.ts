@@ -9,7 +9,7 @@ import {renderTimeString} from '../util';
 import type {RendererProps} from './types';
 
 export function renderTime({dataColumn}: RendererProps) {
-  if (!dataColumn.field.isAtomic())
+  if (!dataColumn.field.isBasic())
     throw new Error(
       `Time renderer error: field ${dataColumn.field.name} is not an atomic field`
     );
