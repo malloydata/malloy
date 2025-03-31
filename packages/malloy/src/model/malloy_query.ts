@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {v4 as uuidv4} from 'uuid';
-import type {Dialect, DialectFieldList, FieldReferenceType} from '../dialect';
+import type {
+  QueryInfo,
+  Dialect,
+  DialectFieldList,
+  FieldReferenceType,
+} from '../dialect';
 import {getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import type {
@@ -124,7 +129,6 @@ import {
   composeSQLExpr,
   range,
 } from './utils';
-import type {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
 import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
@@ -171,13 +175,27 @@ function getDialectFieldList(structDef: StructDef): DialectFieldList {
 
   for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
     dialectFieldList.push({
-      type: f.type,
+      typeDef: f,
       sqlExpression: getIdentifier(f),
       rawName: getIdentifier(f),
       sqlOutputName: getIdentifier(f),
     });
   }
   return dialectFieldList;
+}
+
+interface DialectFieldArg {
+  fieldDef: FieldDef;
+  sqlExpression: string;
+  sqlOutputName: string;
+  rawName: string;
+}
+
+function pushDialectField(dl: DialectFieldList, f: DialectFieldArg) {
+  const {sqlExpression, sqlOutputName, rawName} = f;
+  if (isAtomic(f.fieldDef)) {
+    dl.push({typeDef: f.fieldDef, sqlExpression, sqlOutputName, rawName});
+  }
 }
 
 // Track the times we might need a unique key
@@ -3736,39 +3754,36 @@ class QueryQuery extends QueryField {
         resultStruct.firstSegment.type === 'reduce' &&
         field instanceof FieldInstanceResult
       ) {
-        const d: DialectFieldTypeStruct = {
-          type: 'struct',
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
-            `${name}__${resultStruct.groupSet}`
-          ),
-          rawName: name,
-          sqlOutputName: sqlName,
-          isArray: field.getRepeatedResultType() === 'nested',
-          nestedStruct: this.buildDialectFieldList(field),
-        };
-        dialectFieldList.push(d);
-      } else if (
-        resultStruct.firstSegment.type === 'reduce' &&
-        field instanceof FieldInstanceField &&
-        field.fieldUsage.type === 'result'
-      ) {
-        if (field.f instanceof QueryFieldStruct) {
-          // Ok, field we are generating is Field but it is not
-          const subFields = getDialectFieldList(field.f.fieldDef);
-          const ret: DialectFieldTypeStruct = {
-            type: 'struct',
+        const {structDef, repeatedResultType} = this.generateTurtlePipelineSQL(
+          field,
+          new StageWriter(true, undefined),
+          '<nosource>'
+        );
+        if (repeatedResultType === 'nested') {
+          const multiLineNest: RepeatedRecordDef = {
+            ...structDef,
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            join: 'many',
+            name,
+          };
+          dialectFieldList.push({
+            typeDef: multiLineNest,
             sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
               `${name}__${resultStruct.groupSet}`
             ),
             rawName: name,
             sqlOutputName: sqlName,
-            isArray: isSimpleArray(field.f.fieldDef),
-            nestedStruct: subFields,
-          };
-          dialectFieldList.push(ret);
+          });
         } else {
+          const oneLineNest: RecordDef = {
+            ...structDef,
+            type: 'record',
+            join: 'one',
+            name,
+          };
           dialectFieldList.push({
-            type: field.f.fieldDef.type,
+            typeDef: oneLineNest,
             sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
               `${name}__${resultStruct.groupSet}`
             ),
@@ -3777,12 +3792,25 @@ class QueryQuery extends QueryField {
           });
         }
       } else if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        pushDialectField(dialectFieldList, {
+          fieldDef: field.f.fieldDef,
+          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
+          rawName: name,
+          sqlOutputName: sqlName,
+        });
+      } else if (
         resultStruct.firstSegment.type === 'project' &&
         field instanceof FieldInstanceField &&
         field.fieldUsage.type === 'result'
       ) {
-        dialectFieldList.push({
-          type: field.f.fieldDef.type,
+        pushDialectField(dialectFieldList, {
+          fieldDef: field.f.fieldDef,
           sqlExpression: field.f.generateExpression(resultStruct),
           rawName: name,
           sqlOutputName: sqlName,

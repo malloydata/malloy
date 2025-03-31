@@ -40,27 +40,14 @@ import type {
 import {isRawCast, isLeafAtomic} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 
-type DialectFieldTypes = string | 'struct';
-
 interface DialectField {
-  type: DialectFieldTypes;
+  typeDef: AtomicTypeDef;
   sqlExpression: string;
   rawName: string;
   sqlOutputName: string;
 }
-
-export interface DialectFieldTypeStruct extends DialectField {
-  type: 'struct';
-  nestedStruct: DialectFieldList;
-  isArray: boolean;
-}
-
-export function isDialectFieldStruct(
-  d: DialectField
-): d is DialectFieldTypeStruct {
-  return d.type === 'struct';
-}
 export type DialectFieldList = DialectField[];
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface

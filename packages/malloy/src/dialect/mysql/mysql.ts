@@ -231,9 +231,9 @@ export class MySQLDialect extends Dialect {
     const fields: string[] = [];
     for (const f of fieldList) {
       fields.push(
-        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${this.malloyToSQL(
-          f.type
-        )} PATH "$.${f.rawName}"`
+        `${this.sqlMaybeQuoteIdentifier(
+          f.sqlOutputName
+        )} ${this.malloyTypeToSQLType(f.typeDef)} PATH "$.${f.rawName}"`
       );
     }
     return fields.join(',\n');

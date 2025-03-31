@@ -41,11 +41,11 @@ import {
   isSamplingRows,
   TD,
   isAtomic,
+  isRepeatedRecord,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {DialectFieldList, OrderByClauseType, QueryInfo} from '../dialect';
-import {isDialectFieldStruct} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {
   PRESTO_DIALECT_FUNCTIONS,
@@ -79,11 +79,6 @@ declare interface TimeMeasure {
   use: string;
   ratio: number;
 }
-
-const trinoTypeMap = {
-  'string': 'VARCHAR',
-  'number': 'DOUBLE',
-};
 
 const trinoToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'varchar': {type: 'string'},
@@ -165,19 +160,11 @@ export class TrinoDialect extends PostgresBase {
   }
 
   buildTypeExpression(fieldList: DialectFieldList): string {
-    const fields: string[] = [];
-    for (const f of fieldList) {
-      if (isDialectFieldStruct(f)) {
-        let s = `ROW(${this.buildTypeExpression(f.nestedStruct)})`;
-        if (f.isArray) {
-          s = `array(${s})`;
-        }
-        fields.push(`${f.sqlOutputName} ${s}`);
-      } else {
-        fields.push(`${f.sqlOutputName} ${trinoTypeMap[f.type] || f.type}`);
-      }
-    }
-    return fields.join(', \n');
+    return fieldList
+      .map(
+        dlf => `${dlf.sqlOutputName} ${this.malloyTypeToSQLType(dlf.typeDef)}`
+      )
+      .join(', \n');
   }
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
@@ -196,10 +183,9 @@ export class TrinoDialect extends PostgresBase {
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
-    const fields = fieldList
-      .map(f => `\n ${f.sqlOutputName} VALUE ${f.sqlExpression}`)
-      .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}) END)`;
+    const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
+    const definitions = this.buildTypeExpression(fieldList);
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN CAST(ROW(${expressions}) AS ROW(${definitions})) END)`;
   }
 
   sqlAnyValueLastTurtle(
@@ -554,12 +540,16 @@ ${indent(sql)}
       case 'sql native':
         return malloyType.rawType || 'UNKNOWN-NATIVE';
       case 'array': {
-        if (malloyType.elementTypeDef.type !== 'record_element') {
-          return `ARRAY<${this.malloyTypeToSQLType(
-            malloyType.elementTypeDef
-          )}>`;
+        if (isRepeatedRecord(malloyType)) {
+          const typeSpec: string[] = [];
+          for (const f of malloyType.fields) {
+            if (isAtomic(f)) {
+              typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+            }
+          }
+          return `ARRAY<ROW(${typeSpec.join(',')})>`;
         }
-        return malloyType.type.toUpperCase();
+        return `ARRAY<${this.malloyTypeToSQLType(malloyType.elementTypeDef)}>`;
       }
       default:
         return malloyType.type.toUpperCase();

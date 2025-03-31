@@ -680,7 +680,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
 }
 
 // this field definition represents something in the database.
-export function fieldIsIntrinsic(f: FieldDef): boolean {
+export function fieldIsIntrinsic(f: FieldDef): f is AtomicFieldDef {
   return isAtomicFieldType(f.type) && !hasExpression(f);
 }
 
