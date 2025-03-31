@@ -32,7 +32,7 @@ import type {
   TimeLiteralNode,
   MeasureTimeExpr,
   RegexMatchExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -43,7 +43,7 @@ import {
   TD,
   isAtomic,
   isRepeatedRecord,
-  isSimpleArray,
+  isBasicArray,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
@@ -57,7 +57,7 @@ const extractionMap: Record<string, string> = {
   'day_of_year': 'dayofyear',
 };
 
-const snowflakeToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // string
   'varchar': {type: 'string'},
   'text': {type: 'string'},
@@ -499,13 +499,13 @@ ${indent(sql)}
       return malloyType.type === 'record'
         ? recordScehma
         : `ARRAY(${recordScehma})`;
-    } else if (isSimpleArray(malloyType)) {
+    } else if (isBasicArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

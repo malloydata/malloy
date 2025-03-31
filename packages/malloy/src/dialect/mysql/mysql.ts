@@ -37,7 +37,7 @@ import type {
   TimeTruncExpr,
   TimeExtractExpr,
   TypecastExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   AtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
@@ -74,7 +74,7 @@ const inSeconds: Record<string, number> = {
   week: 7 * 24 * 3600,
 };
 
-const mysqlToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // TODO: This assumes tinyint is always going to be a boolean.
   'tinyint': {type: 'boolean'},
   'smallint': {type: 'number', numberType: 'integer'},
@@ -145,7 +145,7 @@ export class MySQLDialect extends Dialect {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return (

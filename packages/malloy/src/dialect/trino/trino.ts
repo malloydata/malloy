@@ -32,7 +32,7 @@ import type {
   MeasureTimeExpr,
   TimeLiteralNode,
   TimeExtractExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
@@ -80,7 +80,7 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
-const trinoToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const trinoToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'varchar': {type: 'string'},
   'integer': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
@@ -556,7 +556,7 @@ ${indent(sql)}
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return (
       trinoToMalloyTypes[baseSqlType] ?? {

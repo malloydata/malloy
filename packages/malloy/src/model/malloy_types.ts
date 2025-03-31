@@ -290,8 +290,8 @@ export interface MalloyTypecastExpr extends ExprE {
   node: 'cast';
   safe: boolean;
   e: Expr;
-  dstType: LeafAtomicTypeDef;
-  srcType?: LeafAtomicTypeDef;
+  dstType: BasicAtomicTypeDef;
+  srcType?: BasicAtomicTypeDef;
 }
 
 interface RawTypeCastExpr extends ExprE {
@@ -299,7 +299,7 @@ interface RawTypeCastExpr extends ExprE {
   safe: boolean;
   e: Expr;
   dstSQLType: string;
-  srcType?: LeafAtomicTypeDef;
+  srcType?: BasicAtomicTypeDef;
 }
 export type TypecastExpr = MalloyTypecastExpr | RawTypeCastExpr;
 export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
@@ -714,12 +714,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface SimpleArrayTypeDef {
+export interface BasicArrayTypeDef {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
 }
-export interface SimpleArrayDef
-  extends SimpleArrayTypeDef,
+export interface BasicArrayDef
+  extends BasicArrayTypeDef,
     StructDefBase,
     JoinBase,
     FieldBase {
@@ -728,7 +728,7 @@ export interface SimpleArrayDef
 }
 
 export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
-  if (isSimpleArray(atd)) {
+  if (isBasicArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name);
   }
   if (isRepeatedRecord(atd)) {
@@ -808,8 +808,8 @@ export interface RepeatedRecordDef
   type: 'array';
   join: 'many';
 }
-export type ArrayTypeDef = SimpleArrayTypeDef | RepeatedRecordTypeDef;
-export type ArrayDef = SimpleArrayDef | RepeatedRecordDef;
+export type ArrayTypeDef = BasicArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = BasicArrayDef | RepeatedRecordDef;
 
 export function isRepeatedRecordFunctionParam(
   paramT: FunctionParameterTypeDef
@@ -825,9 +825,9 @@ export function isRepeatedRecord(
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
-export function isSimpleArray(
+export function isBasicArray(
   td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
-): td is SimpleArrayTypeDef {
+): td is BasicArrayTypeDef {
   return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
 }
 
@@ -1235,7 +1235,7 @@ export interface NonAtomicTypeDef {
 
 export type ExpressionValueType = AtomicFieldType | NonAtomicType;
 export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
-export type LeafExpressionType = Exclude<
+export type BasicExpressionType = Exclude<
   ExpressionValueType,
   JoinElementType | 'turtle'
 >;
@@ -1255,7 +1255,7 @@ export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   evalSpace: EvalSpace;
 };
 
-interface SimpleArrayExtTypeDef<TypeExtensions> {
+interface BasicArrayExtTypeDef<TypeExtensions> {
   type: 'array';
   elementTypeDef: Exclude<
     ExpressionValueExtTypeDef<TypeExtensions>,
@@ -1266,7 +1266,7 @@ interface SimpleArrayExtTypeDef<TypeExtensions> {
 type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
-  | SimpleArrayExtTypeDef<TypeExtensions>
+  | BasicArrayExtTypeDef<TypeExtensions>
   | RecordExtTypeDef<TypeExtensions>
   | RepeatedRecordExtTypeDef<TypeExtensions>
   | TypeExtensions;
@@ -1286,8 +1286,8 @@ interface RepeatedRecordExtTypeDef<TypeExtensions> {
 
 type FunctionReturnTypeExtensions = GenericTypeDef;
 
-export type SimpleArrayFunctionReturnTypeDef =
-  SimpleArrayExtTypeDef<FunctionReturnTypeExtensions>;
+export type BasicArrayFunctionReturnTypeDef =
+  BasicArrayExtTypeDef<FunctionReturnTypeExtensions>;
 
 export type FunctionReturnFieldDef = ExtFieldDef<FunctionReturnTypeExtensions>;
 
@@ -1299,8 +1299,8 @@ export type RepeatedRecordFunctionReturnTypeDef =
 
 type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
 
-export type SimpleArrayFunctionParameterTypeDef =
-  SimpleArrayExtTypeDef<FunctionParameterTypeExtensions>;
+export type BasicArrayFunctionParameterTypeDef =
+  BasicArrayExtTypeDef<FunctionParameterTypeExtensions>;
 
 export type FunctionParameterFieldDef =
   ExtFieldDef<FunctionParameterTypeExtensions>;
@@ -1313,8 +1313,8 @@ export type RepeatedRecordFunctionParameterTypeDef =
 
 type FunctionGenericTypeExtensions = AnyTypeDef;
 
-export type SimpleArrayFunctionGenericTypeDef =
-  SimpleArrayExtTypeDef<FunctionGenericTypeExtensions>;
+export type BasicArrayFunctionGenericTypeDef =
+  BasicArrayExtTypeDef<FunctionGenericTypeExtensions>;
 
 export type FunctionGenericFieldDef =
   ExtFieldDef<FunctionGenericTypeExtensions>;
@@ -1402,7 +1402,7 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type LeafAtomicTypeDef =
+export type BasicAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
@@ -1410,22 +1410,22 @@ export type LeafAtomicTypeDef =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
+export type BasicAtomicDef = BasicAtomicTypeDef & FieldBase;
 
 export type AtomicTypeDef =
-  | LeafAtomicTypeDef
-  | SimpleArrayTypeDef
+  | BasicAtomicTypeDef
+  | BasicArrayTypeDef
   | RecordTypeDef
   | RepeatedRecordTypeDef;
 export type AtomicFieldDef =
-  | LeafAtomicDef
-  | SimpleArrayDef
+  | BasicAtomicDef
+  | BasicArrayDef
   | RecordDef
   | RepeatedRecordDef;
 
-export function isLeafAtomic(
+export function isBasicAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
-): fd is LeafAtomicDef {
+): fd is BasicAtomicDef {
   return (
     fd.type === 'string' ||
     isTemporalType(fd.type) ||
@@ -1438,7 +1438,7 @@ export function isLeafAtomic(
 }
 
 // Sources have fields like this ...
-export type FieldDef = LeafAtomicDef | JoinFieldDef | TurtleDef;
+export type FieldDef = BasicAtomicDef | JoinFieldDef | TurtleDef;
 export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
@@ -1650,8 +1650,8 @@ export const TD = {
   isAtomic(td: UTD): td is AtomicTypeDef {
     return td !== undefined && isAtomicFieldType(td.type);
   },
-  isLeafAtomic(td: UTD): td is LeafAtomicTypeDef {
-    return td !== undefined && isLeafAtomic({type: td.type} as AtomicTypeDef);
+  isBasicAtomic(td: UTD): td is BasicAtomicTypeDef {
+    return td !== undefined && isBasicAtomic({type: td.type} as AtomicTypeDef);
   },
   isString: (td: UTD): td is StringTypeDef => td?.type === 'string',
   isNumber: (td: UTD): td is NumberTypeDef => td?.type === 'number',

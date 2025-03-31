@@ -69,7 +69,7 @@ export type Field =
   | SQLNativeField;
 export type NestField = RepeatedRecordField | RecordField | ArrayField;
 export type RecordOrRepeatedRecordField = RepeatedRecordField | RecordField;
-// TODO should be renamed LeafAtomicField
+// TODO should be renamed BasicAtomicField
 export type AtomicField =
   | NumberField
   | DateField

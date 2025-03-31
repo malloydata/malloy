@@ -25,7 +25,7 @@ import {
   expressionIsScalar,
   isAtomic,
   isJoinedSource,
-  isLeafAtomic,
+  isBasicAtomic,
   isRepeatedRecord,
   isSourceDef,
   isTurtle,
@@ -259,7 +259,7 @@ export function getResultStructMetadataAnnotation(
 }
 
 function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
-  if (isLeafAtomic(field)) {
+  if (isBasicAtomic(field)) {
     switch (field.type) {
       case 'string':
         return {kind: 'string_type'};

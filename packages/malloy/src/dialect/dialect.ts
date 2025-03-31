@@ -34,10 +34,10 @@ import type {
   TimeLiteralNode,
   RecordLiteralNode,
   ArrayLiteralNode,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   OrderBy,
 } from '../model/malloy_types';
-import {isRawCast, isLeafAtomic} from '../model/malloy_types';
+import {isRawCast, isBasicAtomic} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {
@@ -403,7 +403,7 @@ export abstract class Dialect {
     )`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef;
+  abstract sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef;
   abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
@@ -415,13 +415,13 @@ export abstract class Dialect {
    */
   sqlCastPrep(cast: TypecastExpr): {
     op: string;
-    srcTypeDef: LeafAtomicTypeDef | undefined;
-    dstTypeDef: LeafAtomicTypeDef | undefined;
+    srcTypeDef: BasicAtomicTypeDef | undefined;
+    dstTypeDef: BasicAtomicTypeDef | undefined;
     dstSQLType: string;
   } {
     let srcTypeDef = cast.srcType || cast.e.typeDef;
     const src = srcTypeDef?.type || 'unknown';
-    if (srcTypeDef && !isLeafAtomic(srcTypeDef)) {
+    if (srcTypeDef && !isBasicAtomic(srcTypeDef)) {
       srcTypeDef = undefined;
     }
     if (isRawCast(cast)) {
