@@ -135,6 +135,9 @@ export class MySQLDialect extends Dialect {
         return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
       case 'string':
         return 'CHAR';
+      case 'record':
+      case 'array':
+        return 'JSON';
       case 'date':
       case 'timestamp':
       default:
@@ -230,12 +233,14 @@ export class MySQLDialect extends Dialect {
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
-      const fType =
+      let fType = this.malloyTypeToSQLType(f.typeDef);
+      if (
         f.typeDef.type === 'sql native' &&
         f.typeDef.rawType &&
         f.typeDef.rawType?.match(/json/)
-          ? f.typeDef.rawType.toUpperCase()
-          : this.malloyTypeToSQLType(f.typeDef);
+      ) {
+        fType = f.typeDef.rawType.toUpperCase();
+      }
       fields.push(
         `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH "$.${
           f.rawName
