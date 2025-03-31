@@ -30,7 +30,7 @@ Note: The Malloy VSCode Extension tracks a small amount of anonymous usage data.
 
 Documentation:
 
-- [Malloy Language](https://docs.malloydata.dev/documentation/language/basic.html) - A quick introduction to the language
+- [Malloy Language](https://docs.malloydata.dev/documentation/) - A quick introduction to the language
 - [eCommerce Example Analysis](https://docs.malloydata.dev/documentation/examples/ecommerce.html) - a walkthrough of the basics on an ecommerce dataset (BigQuery public dataset)
 - [Modeling Walkthrough](https://docs.malloydata.dev/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set (BigQuery public dataset)
 
