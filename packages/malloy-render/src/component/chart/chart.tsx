@@ -160,7 +160,7 @@ export function Chart(props: ChartProps) {
   // Pass relevant brushes from store into the vega view
   createEffect(() => {
     const fieldRefIds = field.fields.map(f =>
-      f.isAtomic() ? f.referenceId : null
+      f.isBasic() ? f.referenceId : null
     );
     const relevantBrushes = metadata.store.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)

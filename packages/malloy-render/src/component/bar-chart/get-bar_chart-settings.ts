@@ -103,7 +103,7 @@ export function getBarChartSettings(
   });
 
   const dimensions = explore.fields.filter(
-    f => f.isAtomic() && f.wasDimension()
+    f => f.isBasic() && f.wasDimension()
   );
 
   // If still no x or y, attempt to pick the best choice
