@@ -227,6 +227,7 @@ export class PostgresDialect extends PostgresBase {
         case 'array':
         case 'record':
         case 'array[record]':
+        case 'sql native':
           ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }

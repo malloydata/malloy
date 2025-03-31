@@ -230,10 +230,16 @@ export class MySQLDialect extends Dialect {
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
+      const fType =
+        f.typeDef.type === 'sql native' &&
+        f.typeDef.rawType &&
+        f.typeDef.rawType?.match(/json/)
+          ? f.typeDef.rawType.toUpperCase()
+          : this.malloyTypeToSQLType(f.typeDef);
       fields.push(
-        `${this.sqlMaybeQuoteIdentifier(
-          f.sqlOutputName
-        )} ${this.malloyTypeToSQLType(f.typeDef)} PATH "$.${f.rawName}"`
+        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH "$.${
+          f.rawName
+        }"`
       );
     }
     return fields.join(',\n');
