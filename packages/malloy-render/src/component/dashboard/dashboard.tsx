@@ -102,7 +102,7 @@ export function Dashboard(props: {
 
   const dimensions = () =>
     field.fields.filter(f => {
-      return !f.isHidden() && f.isAtomic() && f.wasDimension();
+      return !f.isHidden() && f.isBasic() && f.wasDimension();
     });
 
   const nonDimensions = () => {
@@ -111,9 +111,9 @@ export function Dashboard(props: {
 
     for (const f of field.fields) {
       if (f.isHidden()) continue;
-      if (f.isAtomic() && f.wasCalculation()) {
+      if (f.isBasic() && f.wasCalculation()) {
         measureFields.push(f);
-      } else if (!f.isAtomic() || !f.wasDimension()) otherFields.push(f);
+      } else if (!f.isBasic() || !f.wasDimension()) otherFields.push(f);
     }
     return [...measureFields, ...otherFields];
   };

@@ -172,7 +172,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         const eTypeDesc = entry.typeDesc();
         // Don't index arrays and records
         if (
-          TD.isLeafAtomic(eTypeDesc) &&
+          TD.isBasicAtomic(eTypeDesc) &&
           expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {

@@ -24,7 +24,7 @@
 import type {
   Expr,
   TimestampUnit,
-  LeafExpressionType,
+  BasicExpressionType,
 } from '../../../model/malloy_types';
 import {
   isDateUnit,
@@ -523,7 +523,7 @@ export function applyBinary(
 }
 
 function errorCascade(
-  type: LeafExpressionType,
+  type: BasicExpressionType,
   ...es: ExprValue[]
 ): ExprValue | undefined {
   if (es.some(e => e.type === 'error')) {

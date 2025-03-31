@@ -822,7 +822,7 @@ export function generateBarChartVegaSpec(
             );
 
         const value = rec.y;
-        return field.isAtomic()
+        return field.isBasic()
           ? renderNumericField(field, value)
           : String(value);
       };
