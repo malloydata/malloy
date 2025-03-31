@@ -1422,6 +1422,70 @@ describe('query builder', () => {
           }`,
       });
     });
+    test('remove and add complex tag', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'test_field_with_annotations',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const gb = q
+          .getOrAddDefaultSegment()
+          .getGroupBy('test_field_with_annotations')!;
+        gb.removeTagProperty(['line_chart']);
+        gb.setTagProperty(['bar_chart']);
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    annotations: [{value: '# -line_chart bar_chart\n'}],
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'test_field_with_annotations',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            # -line_chart bar_chart
+            group_by: test_field_with_annotations
+          }`,
+      });
+    });
     test('add tag to query', () => {
       const from: Malloy.Query = {
         definition: {
