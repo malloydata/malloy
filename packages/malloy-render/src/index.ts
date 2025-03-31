@@ -23,6 +23,8 @@
 
 export {HTMLView, JSONView} from './html/html_view';
 export * from './html/data_styles';
+export type {DrillData} from './component/types';
+export type {DrillEntry} from './data_tree';
 export type {MalloyRenderProps} from './component/render';
 export {getDataTree} from './data_tree';
 export {
