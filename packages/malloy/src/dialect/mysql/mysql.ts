@@ -134,7 +134,7 @@ export class MySQLDialect extends Dialect {
       case 'number':
         return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
       case 'string':
-        return 'CHAR';
+        return 'TEXT';
       case 'record':
       case 'array':
         return 'JSON';
