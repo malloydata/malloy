@@ -398,4 +398,61 @@ ORDER BY 1 asc NULLS LAST
       expect(result).toMatchObject(expected);
     });
   });
+  describe('annotations in schemas', () => {
+    test('annotations should be carried through the schema', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                    annotations: [{value: '# hello'}],
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                    annotations: [{value: '# hello'}],
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test.todo(
+      'locations of annotations should match the location of the table call'
+    );
+  });
 });
