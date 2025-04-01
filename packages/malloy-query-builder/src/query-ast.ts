@@ -2701,7 +2701,7 @@ export class ASTSegmentViewDefinition
       kind: 'where',
       filter: {
         kind: 'filter_string',
-        field_reference: {name},
+        field_reference: {name, path},
         filter: filterString,
       },
     });
@@ -3463,7 +3463,7 @@ export class ASTAggregateViewOperation
     const where: Malloy.Where = {
       filter: {
         kind: 'filter_string',
-        field_reference: {name},
+        field_reference: {name, path},
         filter: filterString,
       },
     };
