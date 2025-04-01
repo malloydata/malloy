@@ -417,6 +417,50 @@ describe('query builder', () => {
       malloy: 'run: flights -> { where: carrier ~ f`WN, AA` }',
     });
   });
+  test('add a where with a path', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addWhere('state', ['origin'], 'TX');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'state', path: ['origin']},
+                  filter: 'TX',
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: 'run: flights -> { where: origin.state ~ f`TX` }',
+    });
+  });
   test('add a parsed where', () => {
     const from: Malloy.Query = {
       definition: {
