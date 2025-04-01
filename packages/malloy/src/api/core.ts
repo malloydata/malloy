@@ -106,16 +106,19 @@ function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
   const typeDef = typeDefFromField(field.type);
   return {
     ...mkFieldDef(typeDef, field.name),
-    annotation: {
-      notes: field.annotations?.map(a => ({
-        text: a.value,
-        // TODO correctly map the location of the annotation to the location of the table call...
-        at: {
-          url: '~internal~',
-          range: DEFAULT_LOG_RANGE,
-        },
-      })),
-    },
+    annotation:
+      field.annotations && field.annotations.length
+        ? {
+            notes: field.annotations?.map(a => ({
+              text: a.value,
+              // TODO correctly map the location of the annotation to the location of the table call...
+              at: {
+                url: '~internal~',
+                range: DEFAULT_LOG_RANGE,
+              },
+            })),
+          }
+        : undefined,
   };
 }
 
