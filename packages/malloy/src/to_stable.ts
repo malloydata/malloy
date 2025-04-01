@@ -9,6 +9,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   AtomicTypeDef,
   DateUnit,
+  Expr,
   FieldDef,
   JoinType,
   ModelDef,
@@ -45,12 +46,21 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   for (const [name, entry] of Object.entries(modelDef.contents)) {
     if (!modelDef.exports.includes(name)) continue;
     if (isSourceDef(entry)) {
+      const parameters: Malloy.ParameterInfo[] | undefined =
+        entry.parameters && Object.entries(entry.parameters).length > 0
+          ? Object.entries(entry.parameters).map(([name, parameter]) => ({
+              name,
+              type: typeDefToType(parameter),
+              default_value: convertParameterDefaultValue(parameter.value),
+            }))
+          : undefined;
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
         kind: 'source',
         name,
         schema: {
           fields: convertFieldInfos(entry, entry.fields),
         },
+        parameters,
       };
       modelInfo.entries.push(sourceInfo);
     } else if (entry.type === 'query') {
@@ -99,6 +109,32 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
     modelInfo.anonymous_queries.push(queryInfo);
   }
   return modelInfo;
+}
+
+function convertParameterDefaultValue(
+  value: Expr | null
+): Malloy.LiteralValue | undefined {
+  if (value === null) return undefined;
+  switch (value.node) {
+    case 'numberLiteral':
+      // TODO handle all kinds of number literals?
+      return {kind: 'number_literal', number_value: parseFloat(value.literal)};
+    case 'stringLiteral':
+      return {kind: 'string_literal', string_value: value.literal};
+    case 'timeLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: value.literal,
+      };
+    case 'true':
+      return {kind: 'boolean_literal', boolean_value: true};
+    case 'false':
+      return {kind: 'boolean_literal', boolean_value: false};
+    case 'null':
+      return {kind: 'null_literal'};
+    default:
+      throw new Error('Invalid parameter default value');
+  }
 }
 
 function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
