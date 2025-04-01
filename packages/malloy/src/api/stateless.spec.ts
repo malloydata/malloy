@@ -178,6 +178,196 @@ describe('api', () => {
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile model with parameterized source', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.parameters
+                source: flights(
+                  string_no_value::string,
+                  string_1 is "foo",
+                  string_2 is "\\"bar\\"",
+                  number_1 is 1,
+                  number_2 is 2.5,
+                  number_3 is 2.5e10,
+                  number_4 is 2.5e-10,
+                  boolean_1 is true,
+                  boolean_2 is false,
+                  null_1::string is null,
+                  timestamp_1 is @2020-01-01 10:00,
+                  date_1 is @2020-01-01
+                ) is connection.table('flights')
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+              parameters: [
+                {
+                  default_value: undefined,
+                  name: 'string_no_value',
+                  type: {
+                    kind: 'string_type',
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'string_literal',
+                    string_value: 'foo',
+                  },
+                  name: 'string_1',
+                  type: {
+                    kind: 'string_type',
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'string_literal',
+                    string_value: '"bar"',
+                  },
+                  name: 'string_2',
+                  type: {
+                    kind: 'string_type',
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'number_literal',
+                    number_value: 1,
+                  },
+                  name: 'number_1',
+                  type: {
+                    kind: 'number_type',
+                    subtype: undefined,
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'number_literal',
+                    number_value: 2.5,
+                  },
+                  name: 'number_2',
+                  type: {
+                    kind: 'number_type',
+                    subtype: undefined,
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'number_literal',
+                    number_value: 25000000000,
+                  },
+                  name: 'number_3',
+                  type: {
+                    kind: 'number_type',
+                    subtype: undefined,
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'number_literal',
+                    number_value: 2.5e-10,
+                  },
+                  name: 'number_4',
+                  type: {
+                    kind: 'number_type',
+                    subtype: undefined,
+                  },
+                },
+                {
+                  default_value: {
+                    boolean_value: true,
+                    kind: 'boolean_literal',
+                  },
+                  name: 'boolean_1',
+                  type: {
+                    kind: 'boolean_type',
+                  },
+                },
+                {
+                  default_value: {
+                    boolean_value: false,
+                    kind: 'boolean_literal',
+                  },
+                  name: 'boolean_2',
+                  type: {
+                    kind: 'boolean_type',
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'null_literal',
+                  },
+                  name: 'null_1',
+                  type: {
+                    kind: 'string_type',
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'timestamp_literal',
+                    timestamp_value: '2020-01-01 10:00:00',
+                  },
+                  name: 'timestamp_1',
+                  type: {
+                    kind: 'timestamp_type',
+                    timeframe: undefined,
+                  },
+                },
+                {
+                  default_value: {
+                    kind: 'timestamp_literal',
+                    timestamp_value: '2020-01-01',
+                  },
+                  name: 'date_1',
+                  type: {
+                    kind: 'date_type',
+                    timeframe: undefined,
+                  },
+                },
+              ],
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
   });
   test('compile model with turducken sql dependency', () => {
     const sql =
