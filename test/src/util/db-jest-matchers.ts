@@ -34,6 +34,11 @@ import type {Tag} from '@malloydata/malloy-tag';
 import EventEmitter from 'events';
 import {inspect} from 'util';
 
+type MatcherResult = {
+  pass: boolean;
+  message(): string;
+};
+
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
 type Runner = Runtime | ModelMaterializer;
@@ -131,48 +136,15 @@ expect.extend({
       }
     }
 
-    let query: QueryMaterializer;
-    let queryTestTag: Tag | undefined = undefined;
-    try {
-      query = runtime.loadQuery(querySrc);
-      const queryTags = (await query.getPreparedQuery()).tagParse().tag;
-      queryTestTag = queryTags.tag('test');
-    } catch (e) {
+    const {fail, result, queryTestTag, query} = await runQuery({
+      runner: runtime,
+      src: querySrc,
+    });
+    if (fail) return fail;
+    if (!result) {
       return {
         pass: false,
-        message: () =>
-          `Could not prepare query to run: ${e.message}\nQuery:\n${querySrc}`,
-      };
-    }
-
-    let result: Result;
-    try {
-      result = await query.run();
-    } catch (e) {
-      let failMsg = `query.run failed: ${e.message}\n`;
-      if (e instanceof MalloyError) {
-        failMsg = `Error in query compilation\n${errorLogToString(
-          querySrc,
-          e.problems
-        )}`;
-      } else {
-        try {
-          failMsg += `SQL: ${await query.getSQL()}\n`;
-        } catch (e2) {
-          // we could not show the SQL for unknown reasons
-        }
-        failMsg += e.stack;
-      }
-      return {pass: false, message: () => failMsg};
-    }
-
-    try {
-      API.util.wrapResult(result);
-    } catch (error) {
-      return {
-        pass: false,
-        message: () =>
-          `Result could not be wrapped into new style result: ${error}\n${error.stack}`,
+        message: () => 'runQuery returned no results and no errors',
       };
     }
 
@@ -229,11 +201,13 @@ expect.extend({
     }
 
     if (fails.length > 0) {
-      const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
       if (debugFail && !failedTest) {
         fails.push('\nTest forced failure (# test.debug)');
       }
-      const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
+      const fromSQL = query
+        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
+        : 'SQL Missing';
+      const failMsg = `${fromSQL}\n${fails.join('\n')}`;
       return {pass: false, message: () => failMsg};
     }
 
@@ -242,6 +216,7 @@ expect.extend({
       message: () => 'All rows matched expected results',
     };
   },
+
   async toEmitDuringCompile(
     querySrc: string,
     runtime: Runtime,
@@ -379,4 +354,71 @@ function objectsMatch(a: unknown, b: unknown): boolean {
     }
     return true;
   }
+}
+
+interface TestQuery {
+  runner: Runner;
+  src: string;
+}
+
+export function query(runner: Runner, querySource: string): TestQuery {
+  return {runner, src: querySource};
+}
+
+interface QueryRunResult {
+  fail: MatcherResult;
+  result: Result;
+  query: QueryMaterializer;
+  queryTestTag: Tag;
+}
+
+async function runQuery(tq: TestQuery): Promise<Partial<QueryRunResult>> {
+  let query: QueryMaterializer;
+  let queryTestTag: Tag | undefined = undefined;
+  try {
+    query = tq.runner.loadQuery(tq.src);
+    const queryTags = (await query.getPreparedQuery()).tagParse().tag;
+    queryTestTag = queryTags.tag('test');
+  } catch (e) {
+    return {
+      fail: {
+        pass: false,
+        message: () =>
+          `Could not prepare query to run: ${e.message}\nQuery:\n${tq.src}`,
+      },
+    };
+  }
+
+  let result: Result;
+  try {
+    result = await query.run();
+  } catch (e) {
+    let failMsg = `query.run failed: ${e.message}\n`;
+    if (e instanceof MalloyError) {
+      failMsg = `Error in query compilation\n${errorLogToString(
+        tq.src,
+        e.problems
+      )}`;
+    } else {
+      try {
+        failMsg += `SQL: ${await query.getSQL()}\n`;
+      } catch (e2) {
+        failMsg += `SQL FOR FAILING QUERY COULD NOT BE COMPUTED: ${e2.message}\n`;
+      }
+      failMsg += e.stack;
+    }
+    return {fail: {pass: false, message: () => failMsg}, query};
+  }
+  try {
+    API.util.wrapResult(result);
+  } catch (error) {
+    return {
+      fail: {
+        pass: false,
+        message: () =>
+          `Result could not be wrapped into new style result: ${error}\n${error.stack}`,
+      },
+    };
+  }
+  return {result, queryTestTag, query};
 }
