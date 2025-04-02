@@ -130,6 +130,11 @@ function convertParameterDefaultValue(
       return {kind: 'number_literal', number_value: parseFloat(value.literal)};
     case 'stringLiteral':
       return {kind: 'string_literal', string_value: value.literal};
+    case 'filterLiteral':
+      return {
+        kind: 'filter_expression_literal',
+        filter_expression_value: value.filterSrc,
+      };
     case 'timeLiteral':
       return {
         kind: 'timestamp_literal',
