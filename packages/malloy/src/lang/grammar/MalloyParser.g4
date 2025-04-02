@@ -146,8 +146,12 @@ sourceParameters
   | OPAREN sourceParameter (COMMA sourceParameter)* CPAREN
   ;
 
+legalParamType
+  : malloyType
+  | FILTERLANG;
+
 sourceParameter
-  : parameterNameDef (DOUBLECOLON malloyType)? (IS fieldExpr)?
+  : parameterNameDef (DOUBLECOLON legalParamType)? (IS fieldExpr)?
   ;
 
 parameterNameDef: id;

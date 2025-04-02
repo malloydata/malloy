@@ -348,9 +348,4 @@ export class FieldDefinitionValue extends SpaceField {
     }
     throw new Error(`Can't get typeDesc for ${typeFrom.type}`);
   }
-
-  entryType(): FieldDefType {
-    const typeFrom = this.defInQuery || this.fieldDef();
-    return typeFrom.type;
-  }
 }

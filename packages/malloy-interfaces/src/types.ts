@@ -840,7 +840,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'type': {
-        'type': 'AtomicType',
+        'type': 'ParameterType',
         'optional': false,
         'array': false,
       },
@@ -1540,6 +1540,10 @@ export type AtomicTypeType =
   | 'array_type'
   | 'record_type';
 
+type ParameterTypeWithFilterExpressionType = {kind: 'filter_expression_type'};
+
+export type ParameterType = AtomicType | ParameterTypeWithFilterExpressionType;
+
 export type AtomicType =
   | AtomicTypeWithStringType
   | AtomicTypeWithBooleanType
@@ -1582,6 +1586,10 @@ export type BooleanLiteral = {
 };
 
 export type BooleanType = {};
+
+export type FilterExpressionLiteral = {
+  filter_expression_value: string;
+};
 
 export type CellType =
   | 'string_cell'
@@ -1813,6 +1821,7 @@ export type LiteralValueType =
   | 'date_literal'
   | 'timestamp_literal'
   | 'boolean_literal'
+  | 'filter_expression_literal'
   | 'null_literal';
 
 export type LiteralValue =
@@ -1821,6 +1830,7 @@ export type LiteralValue =
   | LiteralValueWithDateLiteral
   | LiteralValueWithTimestampLiteral
   | LiteralValueWithBooleanLiteral
+  | LiteralValueWithFilterExpressionLiteral
   | LiteralValueWithNullLiteral;
 
 export type LiteralValueWithStringLiteral = {
@@ -1840,6 +1850,10 @@ export type LiteralValueWithTimestampLiteral = {
 export type LiteralValueWithBooleanLiteral = {
   kind: 'boolean_literal';
 } & BooleanLiteral;
+
+export type LiteralValueWithFilterExpressionLiteral = {
+  kind: 'filter_expression';
+} & FilterExpressionLiteral;
 
 export type LiteralValueWithNullLiteral = {kind: 'null_literal'} & NullLiteral;
 
@@ -1911,7 +1925,7 @@ export type OrderByDirection = 'asc' | 'desc';
 
 export type ParameterInfo = {
   name: string;
-  type: AtomicType;
+  type: ParameterType;
   default_value?: LiteralValue;
 };
 

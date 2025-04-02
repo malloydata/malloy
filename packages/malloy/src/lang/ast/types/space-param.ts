@@ -21,10 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  FieldDefType,
-  Parameter,
-  TypeDesc,
+import {
+  type FieldDefType,
+  type Parameter,
+  type TypeDesc,
+  isAtomicFieldType,
 } from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
@@ -50,16 +51,15 @@ export class AbstractParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
+    const p = this.parameter();
+    const t = p.type;
+    const theType = t === 'filter expression' ? {type: t} : TDU.atomicDef(p);
     return {
-      ...TDU.atomicDef(this.parameter()),
+      ...theType,
       expressionType: 'scalar',
       evalSpace: 'constant',
       compositeFieldUsage: emptyCompositeFieldUsage(),
     };
-  }
-
-  entryType(): FieldDefType {
-    return this.parameter().type;
   }
 }
 
@@ -73,17 +73,16 @@ export class DefinedParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
+    const p = this.parameter();
+    const t = p.type;
+    const theType = t === 'filter expression' ? {type: t} : TDU.atomicDef(p);
     return {
-      ...TDU.atomicDef(this.paramDef),
+      ...theType,
       expressionType: 'scalar',
       // TODO Not sure whether params are considered "input space". It seems like they
       // could be input or constant, depending on usage (same as above).
       evalSpace: 'input',
       compositeFieldUsage: emptyCompositeFieldUsage(),
     };
-  }
-
-  entryType(): FieldDefType {
-    return this.paramDef.type;
   }
 }

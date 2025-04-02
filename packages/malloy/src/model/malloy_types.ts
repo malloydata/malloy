@@ -85,6 +85,7 @@ export type Expr =
   | RegexMatchExpr
   | RegexLiteralNode
   | FilterMatchExpr
+  | FilterLiteralExpr
   | StringLiteralNode
   | NumberLiteralNode
   | BooleanLiteralNode
@@ -328,6 +329,11 @@ export interface FilterMatchExpr extends ExprE {
   filter: {operator: string} | null;
 }
 
+export interface FilterLiteralExpr extends ExprLeaf {
+  node: 'filterLiteral';
+  filterSrc: string;
+}
+
 export interface TimeLiteralNode extends ExprLeaf {
   node: 'timeLiteral';
   literal: string;
@@ -421,7 +427,13 @@ interface ParameterInfo {
   name: string;
   value: ConstantExpr | null;
 }
-export type Parameter = AtomicTypeDef & ParameterInfo;
+
+export interface FilterExpressionDef {
+  type: 'filter expression';
+}
+
+export type ParameterTypeDef = AtomicTypeDef | FilterExpressionDef;
+export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
 export function paramHasValue(p: Parameter): boolean {

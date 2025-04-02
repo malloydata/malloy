@@ -36,7 +36,8 @@ interface HasInit {
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  readonly type?: CastType;
+  // mtoy todo LegalParameterType
+  readonly type?: CastType | 'filter expression';
   readonly default?: ConstantExpression;
 
   constructor(init: HasInit) {
