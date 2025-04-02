@@ -147,6 +147,8 @@ function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
 export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
   const result: Malloy.FieldInfo[] = [];
   for (const field of fields) {
+    const isPublic = field.accessModifier === undefined;
+    if (!isPublic) continue;
     const taglines = annotationToTaglines(field.annotation);
     const rawAnnotations: Malloy.Annotation[] = taglines.map(tagline => ({
       value: tagline,
