@@ -368,6 +368,57 @@ describe('api', () => {
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile model with private and internal fields', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.parameters
+                source: flights is connection.table('flights') extend {
+                  private dimension: private_field is 1
+                  internal dimension: internal_field is 2
+                  public dimension: public_field is 3
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'public_field',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
   });
   test('compile model with turducken sql dependency', () => {
     const sql =
