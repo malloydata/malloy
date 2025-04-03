@@ -9,7 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
-import {mkSQLSource} from '../../util/db-matcher-support';
+import {mkSQLSource, query} from '../../util/db-matcher-support';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -632,9 +632,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('today', async () => {
       nowIs('2001-02-03 12:00:00');
       const range = mkRange('2001-02-03 00:00:00', '2001-02-04 00:00:00');
-      await expect(`
-        run: range + { where: t ~ f'today' }
-      `).malloyResultMatches(range, inRange);
+      await expect(
+        query(range, "run: range + { where: t ~ f'today' }")
+      ).matchesResult(...inRange);
     });
     test('yesterday', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -696,9 +696,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('last-tuesday', async () => {
       nowIs('2023-01-03 00:00:00');
       const range = mkRange('2022-12-27 00:00:00', '2022-12-28 00:00:00');
-      await expect(`
-        run: range + { where: t ~ f'tuesday' }
-      `).malloyResultMatches(range, inRange);
+      await expect(
+        query(range, "run: range + { where: t ~ f'tuesday' }")
+      ).matchesResult(...inRange);
     });
     test('last-wednesday', async () => {
       nowIs('2023-01-03 00:00:00');

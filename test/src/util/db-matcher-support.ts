@@ -148,7 +148,7 @@ export function mkSQLSource(
     for (const colName of Object.keys(schema)) {
       const val = oneRow[colNum];
       colNum += 1;
-      let valStr = `ERROR BAD TYPE FOR STRING ${typeof val}`;
+      let valStr = `ERROR BAD TYPE FOR ${schema[colName]}: ${typeof val}`;
       if (schema[colName] === 'string' && typeof val === 'string') {
         valStr = dialect.sqlLiteralString(val);
       } else if (schema[colName] === 'number' && typeof val === 'number') {

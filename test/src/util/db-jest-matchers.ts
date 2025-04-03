@@ -26,12 +26,7 @@ import type {Result, Runtime} from '@malloydata/malloy';
 import {SingleConnectionRuntime} from '@malloydata/malloy';
 import EventEmitter from 'events';
 import {inspect} from 'util';
-import type {
-  ExpectedResult,
-  TestRunner,
-  TestQuery,
-  ExpectedResultRow,
-} from './db-matcher-support';
+import type {ExpectedResult, TestRunner, TestQuery} from './db-matcher-support';
 import {runQuery} from './db-matcher-support';
 
 interface ExpectedEvent {
@@ -73,6 +68,31 @@ declare global {
         runtime: TestRunner,
         matchVals: ExpectedResult
       ): Promise<R>;
+      /**
+       * Jest matcher for running a Malloy query, checks that each row
+       * contains the values matching the template. The argument list
+       * at the end will be matched for each row of the query.
+       *
+       * To see if the first row of a query contains a field called num with a value of 7
+       *
+       *     await expect(query(runtimeOrModel, 'run: ...')).matchesResult({num: 7});
+       *
+       * To see if the first two rows of a query contains a field called num with a values 7 and 8
+       *
+       *     await expect(query(runtimeOrModel, 'run: ...')).matchesResult({num: 7}, {num:8});
+       *
+       * Every symbol in the expect match must be in the row, however there can be columns in the row
+       * which are not in the match.
+       *
+       * In addition, the query is checked for the tags, preceed your run statement with ...
+       *
+       *   * test.debug -- Force test failure, and the result data will be printed
+       *
+       * @param querySrc Malloy source, last query in source will be run
+       * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
+       * @param expected Key value pairs or array of key value pairs
+       */
+      matchesResult(...matchVals: unknown[]): Promise<R>;
       toEmitDuringCompile(
         runtime: Runtime,
         ...events: ExpectedEvent[]
@@ -208,7 +228,7 @@ expect.extend({
     };
   },
 
-  async rowMatches(tq: TestQuery, _expected: ExpectedResultRow) {
+  async matchesResult(tq: TestQuery, ...expected: unknown[]) {
     const {fail, result, queryTestTag, query} = await runQuery(tq);
     if (fail) return fail;
     if (!result) {
@@ -219,16 +239,48 @@ expect.extend({
     }
 
     const fails: string[] = [];
-    const failedTest = fails.length > 0;
-    const debugFail = queryTestTag?.has('debug');
-    if (debugFail || (failedTest && queryTestTag?.has('verbose'))) {
-      fails.unshift(`Result Data: ${humanReadable(result.data.toObject())}\n`);
+    const got = result.data.toObject();
+    const expectStr = this.utils.EXPECTED_COLOR(humanReadable(expected));
+
+    if (!Array.isArray(got)) {
+      fails.push(`!!! Expected: ${expectStr}`);
+      fails.push(
+        `??? NonArray: ${this.utils.RECEIVED_COLOR(humanReadable(got))}`
+      );
+    } else {
+      // compare each row in the result to each row in the expectation
+      // This is more useful than a straight diff
+      const diffs: string[] = [];
+      let unMatched = false;
+      for (let expectNum = 0; expectNum < expected.length; expectNum += 1) {
+        const eStr = this.utils.EXPECTED_COLOR(
+          humanReadable(expected[expectNum])
+        );
+        if (objectsMatch(got[expectNum], expected[expectNum])) {
+          diffs.push(`     Matched: ${eStr}`);
+        } else {
+          diffs.push(`<<< Expected: ${eStr}`);
+          diffs.push(
+            `>>> Received: ${this.utils.RECEIVED_COLOR(
+              humanReadable(got[expectNum])
+            )}`
+          );
+          unMatched = true;
+        }
+      }
+      if (unMatched) {
+        fails.push(...diffs);
+      }
+    }
+
+    if (queryTestTag?.has('debug') && fails.length === 0) {
+      fails.push(
+        `\n${this.utils.RECEIVED_COLOR('Test forced failure (# test.debug)')}`
+      );
+      fails.push(`Received: ${this.utils.RECEIVED_COLOR(humanReadable(got))}`);
     }
 
     if (fails.length > 0) {
-      if (debugFail && !failedTest) {
-        fails.push('\nTest forced failure (# test.debug)');
-      }
       const fromSQL = query
         ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
         : 'SQL Missing';
@@ -236,10 +288,7 @@ expect.extend({
       return {pass: false, message: () => failMsg};
     }
 
-    return {
-      pass: true,
-      message: () => 'All rows matched expected results',
-    };
+    return {pass: true, message: () => `Matched: ${expectStr}`};
   },
 
   async toEmitDuringCompile(
@@ -322,23 +371,24 @@ function humanReadable(thing: unknown): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
 
-// b is "expected"
-// a is "actual"
 // If expected is an object, all of the keys should also match,
 // but the expected is allowed to have other keys that are not matched
-function objectsMatch(a: unknown, b: unknown): boolean {
+function objectsMatch(a: unknown, mustHave: unknown): boolean {
   if (
-    typeof b === 'string' ||
-    typeof b === 'number' ||
-    typeof b === 'boolean' ||
-    typeof b === 'bigint' ||
-    b === undefined ||
-    b === null
+    typeof mustHave === 'string' ||
+    typeof mustHave === 'number' ||
+    typeof mustHave === 'boolean' ||
+    typeof mustHave === 'bigint' ||
+    mustHave === undefined ||
+    mustHave === null
   ) {
-    return b === a;
-  } else if (Array.isArray(b)) {
+    return mustHave === a;
+  } else if (Array.isArray(mustHave)) {
     if (Array.isArray(a)) {
-      return a.length === b.length && a.every((v, i) => objectsMatch(v, b[i]));
+      return (
+        a.length === mustHave.length &&
+        a.every((v, i) => objectsMatch(v, mustHave[i]))
+      );
     }
     return false;
   } else {
@@ -353,9 +403,9 @@ function objectsMatch(a: unknown, b: unknown): boolean {
       return false;
     }
     if (Array.isArray(a)) return false;
-    const keys = Object.keys(b);
+    const keys = Object.keys(mustHave);
     for (const key of keys) {
-      if (!objectsMatch(a[key], b[key])) {
+      if (!objectsMatch(a[key], mustHave[key])) {
         return false;
       }
     }
