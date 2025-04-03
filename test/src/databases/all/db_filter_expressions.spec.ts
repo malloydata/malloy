@@ -43,13 +43,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
     test('empty string filter expression', async () => {
-      /*
-        since the sql generated works when pasted into mysql
-        my next suggestion is that there is some funky re-ordering
-        happening in the result processing which will test tomorrow
-      */
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'';
           select: *; order_by: nm asc
@@ -64,7 +58,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-abc', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-abc',
           select: nm; order_by: nm asc
@@ -72,7 +65,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-starts', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-a%',
           select: nm; order_by: nm asc
@@ -80,7 +72,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-contains', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-%b%',
           select: nm; order_by: nm asc
@@ -88,7 +79,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-end', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-%c',
           select: nm; order_by: nm asc
@@ -96,7 +86,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('unlike', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-a%c',
           select: nm; order_by: nm asc
@@ -104,7 +93,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('simple but not ___,-abc', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'___,-abc';
           select: s
@@ -112,7 +100,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('empty', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
@@ -120,7 +107,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-empty', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-empty'
           select: nm; order_by: nm asc
@@ -128,7 +114,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('null', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'null'
           select: nm
@@ -136,7 +121,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-null', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-null'
           select: nm; order_by: nm asc
@@ -144,7 +128,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('starts', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'a%';
           select: s
@@ -152,7 +135,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('contains', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'%b%,%e%';
           select: *; order_by: nm asc
@@ -160,7 +142,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('simple ends', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'%c';
           select: s
@@ -168,7 +149,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('ends in backslash', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'%\\\\'
           select: nm
@@ -176,7 +156,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('= x backslash', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'x\\\\'
           select: nm
@@ -587,7 +566,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('empty temporal filter', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
-        # test.verbose
         run: range + { where: t ~ f''; order_by: n }
       `).malloyResultMatches(range, [
         {n: 'before'},
