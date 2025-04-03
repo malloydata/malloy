@@ -9,6 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
+import {mkSQLSource} from '../../util/db-matcher-support';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -403,48 +404,45 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     function mkRange(start: string, end: string) {
       const begin = LuxonDateTime.fromFormat(start, fTimestamp);
       const b4 = begin.minus({second: 1});
-      const last = lit(
-        LuxonDateTime.fromFormat(end, fTimestamp)
-          .minus({second: 1})
-          .toFormat(fTimestamp),
-        'timestamp'
+      const last = LuxonDateTime.fromFormat(end, fTimestamp).minus({second: 1});
+      const rangeSQL = mkSQLSource(
+        db.dialect,
+        dbName,
+        {t: 'timestamp', n: 'string'},
+        [b4.toFormat(fTimestamp), 'before'],
+        [start, 'first'],
+        [last.toFormat(fTimestamp), 'last'],
+        [end, 'post-range'],
+        [null, 'z-null']
       );
-      const before = lit(b4.toFormat(fTimestamp), 'timestamp');
-      const rangeModel = `
-        query: range is ${dbName}.sql("""
-          SELECT ${before} AS ${q`t`}, 'before' AS ${q`n`}
-          UNION ALL SELECT ${lit(start, 'timestamp')}, 'first'
-          UNION ALL SELECT ${last} , 'last'
-          UNION ALL SELECT ${lit(end, 'timestamp')}, 'post-range'
-          UNION ALL SELECT NULL, 'z-null'
-        """)
-        -> {select: *; order_by: n}`;
+      const rangeModel = `query: range is ${rangeSQL} -> {select: *; order_by: n}`;
       return db.loadModel(rangeModel);
     }
     function mkDateRange(start: string, end: string) {
       const begin = LuxonDateTime.fromFormat(start, fDate);
       const b4 = begin.minus({day: 1});
       const last = LuxonDateTime.fromFormat(end, fDate).minus({day: 1});
-      const rangeModel = `
-        query: range is ${dbName}.sql("""
-          SELECT ${lit(
-            b4.toFormat(fDate),
-            'date'
-          )} AS ${q`t`}, 'before' AS ${q`n`}
-          UNION ALL SELECT ${lit(start, 'date')}, 'first'
-          UNION ALL SELECT ${lit(last.toFormat(fDate), 'date')} , 'last'
-          UNION ALL SELECT ${lit(end, 'date')}, 'post-range'
-          UNION ALL SELECT NULL, 'z-null'
-        """)
-        -> {select: t,n; order_by: n}`;
+      const rangeSQL = mkSQLSource(
+        db.dialect,
+        dbName,
+        {t: 'date', n: 'string'},
+        [b4.toFormat(fDate), 'before'],
+        [start, 'first'],
+        [last.toFormat(fDate), 'last'],
+        [end, 'post-range'],
+        [null, 'z-null']
+      );
+      const rangeModel = `query: range is ${rangeSQL} -> {select: *; order_by: n}`;
       return db.loadModel(rangeModel);
     }
     function mkEqTime(exact: string) {
-      return db.loadModel(
-        `query: eqtime is ${dbName}.sql("""
-          SELECT ${lit(exact, 'timestamp')} AS ${q`t`}, 'exact' as ${q`n`}
-        """) -> {select: t, n}`
+      const eqSQL = mkSQLSource(
+        db.dialect,
+        dbName,
+        {t: 'timestamp', n: 'string'},
+        [exact, 'exact']
       );
+      return db.loadModel(`query: eqtime is ${eqSQL} -> {select: t,n}`);
     }
 
     /**

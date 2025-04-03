@@ -22,26 +22,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  ModelMaterializer,
-  QueryMaterializer,
-  Result,
-  Runtime,
-  LogMessage,
-} from '@malloydata/malloy';
-import {MalloyError, SingleConnectionRuntime, API} from '@malloydata/malloy';
-import type {Tag} from '@malloydata/malloy-tag';
+import type {Result, Runtime} from '@malloydata/malloy';
+import {SingleConnectionRuntime} from '@malloydata/malloy';
 import EventEmitter from 'events';
 import {inspect} from 'util';
-
-type MatcherResult = {
-  pass: boolean;
-  message(): string;
-};
-
-type ExpectedResultRow = Record<string, unknown>;
-type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
-type Runner = Runtime | ModelMaterializer;
+import type {
+  ExpectedResult,
+  TestRunner,
+  TestQuery,
+  ExpectedResultRow,
+} from './db-matcher-support';
+import {runQuery} from './db-matcher-support';
 
 interface ExpectedEvent {
   id: string;
@@ -79,7 +70,7 @@ declare global {
        * @param expected Key value pairs or array of key value pairs
        */
       malloyResultMatches(
-        runtime: Runner,
+        runtime: TestRunner,
         matchVals: ExpectedResult
       ): Promise<R>;
       toEmitDuringCompile(
@@ -119,7 +110,7 @@ expect.extend({
 
   async malloyResultMatches(
     querySrc: string,
-    runtime: Runner,
+    runtime: TestRunner,
     shouldEqual: ExpectedResult
   ) {
     // TODO -- THIS IS NOT OK BUT I AM NOT FIXING IT NOW
@@ -194,6 +185,40 @@ expect.extend({
       }
       matchRow += 1;
     }
+    const failedTest = fails.length > 0;
+    const debugFail = queryTestTag?.has('debug');
+    if (debugFail || (failedTest && queryTestTag?.has('verbose'))) {
+      fails.unshift(`Result Data: ${humanReadable(result.data.toObject())}\n`);
+    }
+
+    if (fails.length > 0) {
+      if (debugFail && !failedTest) {
+        fails.push('\nTest forced failure (# test.debug)');
+      }
+      const fromSQL = query
+        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
+        : 'SQL Missing';
+      const failMsg = `${fromSQL}\n${fails.join('\n')}`;
+      return {pass: false, message: () => failMsg};
+    }
+
+    return {
+      pass: true,
+      message: () => 'All rows matched expected results',
+    };
+  },
+
+  async rowMatches(tq: TestQuery, _expected: ExpectedResultRow) {
+    const {fail, result, queryTestTag, query} = await runQuery(tq);
+    if (fail) return fail;
+    if (!result) {
+      return {
+        pass: false,
+        message: () => 'runQuery returned no results and no errors',
+      };
+    }
+
+    const fails: string[] = [];
     const failedTest = fails.length > 0;
     const debugFail = queryTestTag?.has('debug');
     if (debugFail || (failedTest && queryTestTag?.has('verbose'))) {
@@ -293,24 +318,6 @@ async function toEmit(
   };
 }
 
-function errorLogToString(src: string, msgs: LogMessage[]) {
-  let lovely = '';
-  let lineNo = 0;
-  for (const line of src.split('\n')) {
-    lovely += `    | ${line}\n`;
-    for (const entry of msgs) {
-      if (entry.at) {
-        if (entry.at.range.start.line === lineNo) {
-          const charFrom = entry.at.range.start.character;
-          lovely += `!!!!! ${' '.repeat(charFrom)}^ ${entry.message}\n`;
-        }
-      }
-    }
-    lineNo += 1;
-  }
-  return lovely;
-}
-
 function humanReadable(thing: unknown): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
@@ -354,71 +361,4 @@ function objectsMatch(a: unknown, b: unknown): boolean {
     }
     return true;
   }
-}
-
-interface TestQuery {
-  runner: Runner;
-  src: string;
-}
-
-export function query(runner: Runner, querySource: string): TestQuery {
-  return {runner, src: querySource};
-}
-
-interface QueryRunResult {
-  fail: MatcherResult;
-  result: Result;
-  query: QueryMaterializer;
-  queryTestTag: Tag;
-}
-
-async function runQuery(tq: TestQuery): Promise<Partial<QueryRunResult>> {
-  let query: QueryMaterializer;
-  let queryTestTag: Tag | undefined = undefined;
-  try {
-    query = tq.runner.loadQuery(tq.src);
-    const queryTags = (await query.getPreparedQuery()).tagParse().tag;
-    queryTestTag = queryTags.tag('test');
-  } catch (e) {
-    return {
-      fail: {
-        pass: false,
-        message: () =>
-          `Could not prepare query to run: ${e.message}\nQuery:\n${tq.src}`,
-      },
-    };
-  }
-
-  let result: Result;
-  try {
-    result = await query.run();
-  } catch (e) {
-    let failMsg = `query.run failed: ${e.message}\n`;
-    if (e instanceof MalloyError) {
-      failMsg = `Error in query compilation\n${errorLogToString(
-        tq.src,
-        e.problems
-      )}`;
-    } else {
-      try {
-        failMsg += `SQL: ${await query.getSQL()}\n`;
-      } catch (e2) {
-        failMsg += `SQL FOR FAILING QUERY COULD NOT BE COMPUTED: ${e2.message}\n`;
-      }
-      failMsg += e.stack;
-    }
-    return {fail: {pass: false, message: () => failMsg}, query};
-  }
-  try {
-    API.util.wrapResult(result);
-  } catch (error) {
-    return {
-      fail: {
-        pass: false,
-        message: () =>
-          `Result could not be wrapped into new style result: ${error}\n${error.stack}`,
-      },
-    };
-  }
-  return {result, queryTestTag, query};
 }
