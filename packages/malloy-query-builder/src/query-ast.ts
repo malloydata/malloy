@@ -2267,10 +2267,13 @@ export class ASTSegmentViewDefinition
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTAggregateViewOperation ||
-        operation instanceof ASTGroupByViewOperation ||
-        operation instanceof ASTNestViewOperation
+        operation instanceof ASTGroupByViewOperation
       ) {
         return true;
+      } else if (operation instanceof ASTNestViewOperation) {
+        if (!operation.view.definition.isRunnable()) {
+          return false;
+        }
       }
     }
     return false;
