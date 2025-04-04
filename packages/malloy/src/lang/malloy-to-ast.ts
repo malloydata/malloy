@@ -365,8 +365,15 @@ export class MalloyToAST
           defaultCx
         )
       : undefined;
-    const typeCx = pcx.malloyType();
-    const type = typeCx ? this.getMalloyType(typeCx) : undefined;
+    const typeCx = pcx.legalParamType();
+    let type;
+    if (typeCx) {
+      type = typeCx.text.toLowerCase();
+      // mtoy todo "legal parameter type"
+      if (type !== 'filterlang' && !isCastType(type)) {
+        throw this.internalError(typeCx, `Unknown parameter type ${type}`);
+      }
+    }
     return this.astAt(
       new ast.HasParameter({
         name: getId(pcx.parameterNameDef()),

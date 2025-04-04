@@ -29,10 +29,13 @@ export class ExprFilterExpression extends ExpressionDef {
   }
 
   getExpression(): ExprValue {
-    return this.loggedErrorExpr(
-      'filter-expression-type',
-      'Filter expression illegal here'
-    );
+    return {
+      type: 'filter expression',
+      value: {node: 'filterLiteral', filterSrc: this.filterText},
+      expressionType: 'scalar',
+      evalSpace: 'constant',
+      compositeFieldUsage: {fields: [], joinedUsage: {}},
+    };
   }
 
   apply(
