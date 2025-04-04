@@ -9,6 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
+import {mkSQLSource, query} from '../../util/db-matcher-support';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -42,13 +43,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
     test('empty string filter expression', async () => {
-      /*
-        since the sql generated works when pasted into mysql
-        my next suggestion is that there is some funky re-ordering
-        happening in the result processing which will test tomorrow
-      */
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'';
           select: *; order_by: nm asc
@@ -63,7 +58,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-abc', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-abc',
           select: nm; order_by: nm asc
@@ -71,7 +65,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-starts', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-a%',
           select: nm; order_by: nm asc
@@ -79,7 +72,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-contains', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-%b%',
           select: nm; order_by: nm asc
@@ -87,7 +79,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-end', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-%c',
           select: nm; order_by: nm asc
@@ -95,7 +86,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('unlike', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-a%c',
           select: nm; order_by: nm asc
@@ -103,7 +93,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('simple but not ___,-abc', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'___,-abc';
           select: s
@@ -111,7 +100,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('empty', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
@@ -119,7 +107,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-empty', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-empty'
           select: nm; order_by: nm asc
@@ -127,7 +114,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('null', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'null'
           select: nm
@@ -135,7 +121,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('-null', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'-null'
           select: nm; order_by: nm asc
@@ -143,7 +128,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('starts', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'a%';
           select: s
@@ -151,7 +135,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('contains', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'%b%,%e%';
           select: *; order_by: nm asc
@@ -159,7 +142,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('simple ends', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'%c';
           select: s
@@ -167,7 +149,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('ends in backslash', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'%\\\\'
           select: nm
@@ -175,7 +156,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('= x backslash', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'x\\\\'
           select: nm
@@ -403,48 +383,45 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     function mkRange(start: string, end: string) {
       const begin = LuxonDateTime.fromFormat(start, fTimestamp);
       const b4 = begin.minus({second: 1});
-      const last = lit(
-        LuxonDateTime.fromFormat(end, fTimestamp)
-          .minus({second: 1})
-          .toFormat(fTimestamp),
-        'timestamp'
+      const last = LuxonDateTime.fromFormat(end, fTimestamp).minus({second: 1});
+      const rangeSQL = mkSQLSource(
+        db.dialect,
+        dbName,
+        {t: 'timestamp', n: 'string'},
+        [b4.toFormat(fTimestamp), 'before'],
+        [start, 'first'],
+        [last.toFormat(fTimestamp), 'last'],
+        [end, 'post-range'],
+        [null, 'z-null']
       );
-      const before = lit(b4.toFormat(fTimestamp), 'timestamp');
-      const rangeModel = `
-        query: range is ${dbName}.sql("""
-          SELECT ${before} AS ${q`t`}, 'before' AS ${q`n`}
-          UNION ALL SELECT ${lit(start, 'timestamp')}, 'first'
-          UNION ALL SELECT ${last} , 'last'
-          UNION ALL SELECT ${lit(end, 'timestamp')}, 'post-range'
-          UNION ALL SELECT NULL, 'z-null'
-        """)
-        -> {select: *; order_by: n}`;
+      const rangeModel = `query: range is ${rangeSQL} -> {select: *; order_by: n}`;
       return db.loadModel(rangeModel);
     }
     function mkDateRange(start: string, end: string) {
       const begin = LuxonDateTime.fromFormat(start, fDate);
       const b4 = begin.minus({day: 1});
       const last = LuxonDateTime.fromFormat(end, fDate).minus({day: 1});
-      const rangeModel = `
-        query: range is ${dbName}.sql("""
-          SELECT ${lit(
-            b4.toFormat(fDate),
-            'date'
-          )} AS ${q`t`}, 'before' AS ${q`n`}
-          UNION ALL SELECT ${lit(start, 'date')}, 'first'
-          UNION ALL SELECT ${lit(last.toFormat(fDate), 'date')} , 'last'
-          UNION ALL SELECT ${lit(end, 'date')}, 'post-range'
-          UNION ALL SELECT NULL, 'z-null'
-        """)
-        -> {select: t,n; order_by: n}`;
+      const rangeSQL = mkSQLSource(
+        db.dialect,
+        dbName,
+        {t: 'date', n: 'string'},
+        [b4.toFormat(fDate), 'before'],
+        [start, 'first'],
+        [last.toFormat(fDate), 'last'],
+        [end, 'post-range'],
+        [null, 'z-null']
+      );
+      const rangeModel = `query: range is ${rangeSQL} -> {select: *; order_by: n}`;
       return db.loadModel(rangeModel);
     }
     function mkEqTime(exact: string) {
-      return db.loadModel(
-        `query: eqtime is ${dbName}.sql("""
-          SELECT ${lit(exact, 'timestamp')} AS ${q`t`}, 'exact' as ${q`n`}
-        """) -> {select: t, n}`
+      const eqSQL = mkSQLSource(
+        db.dialect,
+        dbName,
+        {t: 'timestamp', n: 'string'},
+        [exact, 'exact']
       );
+      return db.loadModel(`query: eqtime is ${eqSQL} -> {select: t,n}`);
     }
 
     /**
@@ -589,7 +566,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('empty temporal filter', async () => {
       const range = mkRange('2001-01-01 00:00:00', '2002-01-01 00:00:00');
       await expect(`
-        # test.verbose
         run: range + { where: t ~ f''; order_by: n }
       `).malloyResultMatches(range, [
         {n: 'before'},
@@ -656,9 +632,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('today', async () => {
       nowIs('2001-02-03 12:00:00');
       const range = mkRange('2001-02-03 00:00:00', '2001-02-04 00:00:00');
-      await expect(`
-        run: range + { where: t ~ f'today' }
-      `).malloyResultMatches(range, inRange);
+      await expect(
+        query(range, "run: range + { where: t ~ f'today' }")
+      ).matchesResult(...inRange);
     });
     test('yesterday', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -720,9 +696,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('last-tuesday', async () => {
       nowIs('2023-01-03 00:00:00');
       const range = mkRange('2022-12-27 00:00:00', '2022-12-28 00:00:00');
-      await expect(`
-        run: range + { where: t ~ f'tuesday' }
-      `).malloyResultMatches(range, inRange);
+      await expect(
+        query(range, "run: range + { where: t ~ f'tuesday' }")
+      ).matchesResult(...inRange);
     });
     test('last-wednesday', async () => {
       nowIs('2023-01-03 00:00:00');
