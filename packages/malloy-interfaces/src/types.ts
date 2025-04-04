@@ -524,6 +524,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'filter_string': 'FilterStringApplication',
     },
   },
+  'FilterExpressionLiteral': {
+    'type': 'struct',
+    'name': 'FilterExpressionLiteral',
+    'fields': {
+      'filter_expression_value': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
+  'FilterExpressionType': {
+    'type': 'struct',
+    'name': 'FilterExpressionType',
+    'fields': {},
+  },
   'FilterStringApplication': {
     'type': 'struct',
     'name': 'FilterStringApplication',
@@ -635,6 +651,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'timestamp_literal': 'TimestampLiteral',
       'boolean_literal': 'BooleanLiteral',
       'null_literal': 'NullLiteral',
+      'filter_expression_literal': 'FilterExpressionLiteral',
     },
   },
   'Location': {
@@ -849,6 +866,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+    },
+  },
+  'ParameterType': {
+    'type': 'union',
+    'name': 'ParameterType',
+    'options': {
+      'string_type': 'StringType',
+      'boolean_type': 'BooleanType',
+      'number_type': 'NumberType',
+      'json_type': 'JSONType',
+      'sql_native_type': 'SQLNativeType',
+      'date_type': 'DateType',
+      'timestamp_type': 'TimestampType',
+      'array_type': 'ArrayType',
+      'record_type': 'RecordType',
+      'filter_expression_type': 'FilterExpressionType',
     },
   },
   'ParameterValue': {
@@ -1540,10 +1573,6 @@ export type AtomicTypeType =
   | 'array_type'
   | 'record_type';
 
-type ParameterTypeWithFilterExpressionType = {kind: 'filter_expression_type'};
-
-export type ParameterType = AtomicType | ParameterTypeWithFilterExpressionType;
-
 export type AtomicType =
   | AtomicTypeWithStringType
   | AtomicTypeWithBooleanType
@@ -1586,10 +1615,6 @@ export type BooleanLiteral = {
 };
 
 export type BooleanType = {};
-
-export type FilterExpressionLiteral = {
-  filter_expression_value: string;
-};
 
 export type CellType =
   | 'string_cell'
@@ -1783,6 +1808,12 @@ export type FilterWithFilterString = {
   kind: 'filter_string';
 } & FilterStringApplication;
 
+export type FilterExpressionLiteral = {
+  filter_expression_value: string;
+};
+
+export type FilterExpressionType = {};
+
 export type FilterStringApplication = {
   field_reference: Reference;
   filter: string;
@@ -1821,8 +1852,8 @@ export type LiteralValueType =
   | 'date_literal'
   | 'timestamp_literal'
   | 'boolean_literal'
-  | 'filter_expression_literal'
-  | 'null_literal';
+  | 'null_literal'
+  | 'filter_expression_literal';
 
 export type LiteralValue =
   | LiteralValueWithStringLiteral
@@ -1830,8 +1861,8 @@ export type LiteralValue =
   | LiteralValueWithDateLiteral
   | LiteralValueWithTimestampLiteral
   | LiteralValueWithBooleanLiteral
-  | LiteralValueWithFilterExpressionLiteral
-  | LiteralValueWithNullLiteral;
+  | LiteralValueWithNullLiteral
+  | LiteralValueWithFilterExpressionLiteral;
 
 export type LiteralValueWithStringLiteral = {
   kind: 'string_literal';
@@ -1851,11 +1882,11 @@ export type LiteralValueWithBooleanLiteral = {
   kind: 'boolean_literal';
 } & BooleanLiteral;
 
-export type LiteralValueWithFilterExpressionLiteral = {
-  kind: 'filter_expression';
-} & FilterExpressionLiteral;
-
 export type LiteralValueWithNullLiteral = {kind: 'null_literal'} & NullLiteral;
+
+export type LiteralValueWithFilterExpressionLiteral = {
+  kind: 'filter_expression_literal';
+} & FilterExpressionLiteral;
 
 export type Location = {
   url: string;
@@ -1928,6 +1959,56 @@ export type ParameterInfo = {
   type: ParameterType;
   default_value?: LiteralValue;
 };
+
+export type ParameterTypeType =
+  | 'string_type'
+  | 'boolean_type'
+  | 'number_type'
+  | 'json_type'
+  | 'sql_native_type'
+  | 'date_type'
+  | 'timestamp_type'
+  | 'array_type'
+  | 'record_type'
+  | 'filter_expression_type';
+
+export type ParameterType =
+  | ParameterTypeWithStringType
+  | ParameterTypeWithBooleanType
+  | ParameterTypeWithNumberType
+  | ParameterTypeWithJSONType
+  | ParameterTypeWithSQLNativeType
+  | ParameterTypeWithDateType
+  | ParameterTypeWithTimestampType
+  | ParameterTypeWithArrayType
+  | ParameterTypeWithRecordType
+  | ParameterTypeWithFilterExpressionType;
+
+export type ParameterTypeWithStringType = {kind: 'string_type'} & StringType;
+
+export type ParameterTypeWithBooleanType = {kind: 'boolean_type'} & BooleanType;
+
+export type ParameterTypeWithNumberType = {kind: 'number_type'} & NumberType;
+
+export type ParameterTypeWithJSONType = {kind: 'json_type'} & JSONType;
+
+export type ParameterTypeWithSQLNativeType = {
+  kind: 'sql_native_type';
+} & SQLNativeType;
+
+export type ParameterTypeWithDateType = {kind: 'date_type'} & DateType;
+
+export type ParameterTypeWithTimestampType = {
+  kind: 'timestamp_type';
+} & TimestampType;
+
+export type ParameterTypeWithArrayType = {kind: 'array_type'} & ArrayType;
+
+export type ParameterTypeWithRecordType = {kind: 'record_type'} & RecordType;
+
+export type ParameterTypeWithFilterExpressionType = {
+  kind: 'filter_expression_type';
+} & FilterExpressionType;
 
 export type ParameterValue = {
   name: string;
