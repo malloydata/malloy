@@ -244,6 +244,20 @@ describe.each(runtimes.runtimeList)(
           run: ${empty} extend { dimension: aoa is [[1,2]] } -> { select: aoa.each.each }
         `).malloyResultMatches(runtime, [{each: 1}, {each: 2}]);
       });
+      test('group by an array', async () => {
+        const oddsSQL = arraySelectVal(1, 3, 5, 7);
+        const two_evens = `${conName}.sql("""
+          SELECT ${evensSQL} AS ${quote('num_array')}, 100 as ${quote('x')}
+          UNION ALL SELECT ${evensSQL} , 10
+          UNION ALL SELECT ${oddsSQL}, 1
+        """)`;
+        await expect(
+          query(
+            runtime,
+            `run: ${two_evens} -> { group_by: num_array; aggregate: allx is sum(x) }`
+          )
+        ).matchesResult({allx: 110}, {allx: 1});
+      });
     });
     describe('record', () => {
       function rec_eq(as?: string): Record<string, Number> {

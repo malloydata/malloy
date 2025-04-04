@@ -74,23 +74,23 @@ declare global {
        * at the end will be matched for each row of the query.
        *
        * To see if the first row of a query contains a field called num with a value of 7
+       * ( a "runtime"  can be a Runtime, or a Model from load/extend of a Model)
        *
-       *     await expect(query(runtimeOrModel, 'run: ...')).matchesResult({num: 7});
+       *     await expect(query(runtime, 'run: ...')).matchesResult({num: 7});
        *
        * To see if the first two rows of a query contains a field called num with a values 7 and 8
        *
-       *     await expect(query(runtimeOrModel, 'run: ...')).matchesResult({num: 7}, {num:8});
+       *     await expect(query(runtime, 'run: ...')).matchesResult({num: 7}, {num:8});
        *
        * Every symbol in the expect match must be in the row, however there can be columns in the row
        * which are not in the match.
        *
+       * mtoy todo maybe this should be "debug_query()" instead of a tag ... ?
        * In addition, the query is checked for the tags, preceed your run statement with ...
        *
        *   * test.debug -- Force test failure, and the result data will be printed
        *
-       * @param querySrc Malloy source, last query in source will be run
-       * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
-       * @param expected Key value pairs or array of key value pairs
+       * @param matchVals ... list of row objects containing key-value pairs
        */
       matchesResult(...matchVals: unknown[]): Promise<R>;
       toEmitDuringCompile(
