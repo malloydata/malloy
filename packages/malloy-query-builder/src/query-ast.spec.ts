@@ -2393,4 +2393,36 @@ describe('query builder', () => {
       `,
     });
   });
+
+  describe('isRunnable', () => {
+    const from: Malloy.Query = {
+      'definition': {
+        'kind': 'arrow',
+        'source': {
+          'kind': 'source_reference',
+          'name': 'flights',
+        },
+        'view': {
+          'kind': 'segment',
+          'operations': [
+            {
+              'kind': 'nest',
+              'name': 'Nest',
+              'view': {
+                'definition': {
+                  'kind': 'segment',
+                  'operations': [],
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+    const query = new ASTQuery({
+      query: from,
+      source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+    });
+    expect(query.isRunnable()).toBe(false);
+  });
 });
