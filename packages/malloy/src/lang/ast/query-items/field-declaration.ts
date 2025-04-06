@@ -28,7 +28,6 @@ import type {
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
-  FieldDefType,
 } from '../../../model/malloy_types';
 import {
   isAtomicFieldType,
