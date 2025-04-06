@@ -55,7 +55,11 @@ import type {
   DocumentRange,
   Note,
 } from '../model/malloy_types';
-import {isCastType, isMatrixOperation} from '../model/malloy_types';
+import {
+  isCastType,
+  isMatrixOperation,
+  isParameterType,
+} from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {ConstantExpression} from './ast/expressions/constant-expression';
 import {isNotUndefined, rangeFromContext} from './utils';
@@ -369,8 +373,8 @@ export class MalloyToAST
     let type;
     if (typeCx) {
       type = typeCx.text.toLowerCase();
-      // mtoy todo "legal parameter type"
-      if (type !== 'filterlang' && !isCastType(type)) {
+      if (type === 'filterlang') type = 'filter expression';
+      if (!isParameterType(type)) {
         throw this.internalError(typeCx, `Unknown parameter type ${type}`);
       }
     }

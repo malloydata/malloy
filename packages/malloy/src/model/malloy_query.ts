@@ -93,6 +93,7 @@ import type {
   BasicAtomicDef,
   Expression,
   AtomicFieldDef,
+  FilterMatchExpr,
 } from './malloy_types';
 import {
   expressionIsAggregate,
@@ -137,7 +138,16 @@ import type {EventStream} from '../runtime_types';
 import type {Tag} from '@malloydata/malloy-tag';
 import {annotationToTag} from '../annotation';
 import {FilterCompilers} from './filter_compilers';
-import {isFilterExpression} from '@malloydata/malloy-filter';
+import type {
+  FilterExpression,
+  FilterParserResponse,
+} from '@malloydata/malloy-filter';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
+  TemporalFilterExpression,
+} from '@malloydata/malloy-filter';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1378,25 +1388,9 @@ class QueryField extends QueryNode {
       case 'compositeField':
         return '{COMPOSITE_FIELD}';
       case 'filterMatch':
-        if (
-          expr.dataType === 'string' ||
-          expr.dataType === 'number' ||
-          expr.dataType === 'date' ||
-          expr.dataType === 'timestamp' ||
-          expr.dataType === 'boolean'
-        ) {
-          if (expr.filter === null || isFilterExpression(expr.filter)) {
-            return FilterCompilers.compile(
-              expr.dataType,
-              expr.filter,
-              expr.e.sql || '',
-              this.parent.dialect
-            );
-          }
-        }
-        throw new Error(
-          `Internal Error: Filter Compiler Undefined Type '${expr.dataType}'`
-        );
+        return this.generateAppliedFilter(context, expr);
+      case 'filterLiteral':
+        return 'INTERNAL ERROR FILTER EXPRESSION VALUE SHOULD NOT BE USED';
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
@@ -1404,6 +1398,63 @@ class QueryField extends QueryNode {
           }' ${JSON.stringify(expr, undefined, 2)}`
         );
     }
+  }
+
+  generateAppliedFilter(
+    context: QueryStruct,
+    filterMatchExpr: FilterMatchExpr
+  ): string {
+    let filterExpr = filterMatchExpr.kids.filterExpr;
+    if (filterExpr.node === 'parameter') {
+      const name = filterExpr.path[0];
+      context.eventStream?.emit('source-argument-compiled', {name});
+      const argument = context.arguments()[name];
+      if (argument.value) {
+        filterExpr = argument.value;
+      } else {
+        throw new Error(
+          `Parameter ${name} was expected to be a filter expression`
+        );
+      }
+    }
+    if (filterExpr.node !== 'filterLiteral') {
+      throw new Error(
+        'Can only use filter expression literals or parameters as filter expressions'
+      );
+    }
+    const filterSrc = filterExpr.filterSrc;
+    let fParse: FilterParserResponse<FilterExpression>;
+    switch (filterMatchExpr.dataType) {
+      case 'string':
+        fParse = StringFilterExpression.parse(filterSrc);
+        break;
+      case 'number':
+        fParse = NumberFilterExpression.parse(filterSrc);
+        break;
+      case 'boolean':
+        if (context.dialect.booleanAsNumbers) {
+          throw new Error(
+            'Boolean filter expression not supported on this connection type'
+          );
+        }
+        fParse = BooleanFilterExpression.parse(filterSrc);
+        break;
+      case 'date':
+      case 'timestamp':
+        fParse = TemporalFilterExpression.parse(filterSrc);
+        break;
+    }
+
+    if (fParse.log.length > 0) {
+      throw new Error(`Filter expression parse error: ${fParse.log[0]}`);
+    }
+
+    return FilterCompilers.compile(
+      filterMatchExpr.dataType,
+      fParse.parsed,
+      filterMatchExpr.kids.expr.sql || '',
+      context.dialect
+    );
   }
 
   isNestedInParent(parentDef: FieldDef) {

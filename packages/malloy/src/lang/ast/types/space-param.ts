@@ -21,12 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  type FieldDefType,
-  type Parameter,
-  type TypeDesc,
-  isAtomicFieldType,
-} from '../../../model/malloy_types';
+import {type Parameter, type TypeDesc} from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
 import type {HasParameter} from '../parameters/has-parameter';

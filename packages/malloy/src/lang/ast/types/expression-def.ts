@@ -25,6 +25,7 @@ import type {
   Expr,
   TimestampUnit,
   BasicExpressionType,
+  FilterMatchExpr,
 } from '../../../model/malloy_types';
 import {
   isDateUnit,
@@ -51,6 +52,7 @@ import type {
   EqualityMalloyOperator,
 } from './binary_operators';
 import {getExprNode, isComparison, isEquality} from './binary_operators';
+import {isFilterable} from '@malloydata/malloy-filter';
 
 class TypeMismatch extends Error {}
 
@@ -325,26 +327,54 @@ function equality(
       }
     }
   }
-  let value = timeCompare(left, lhs, op, rhs) || {
-    node,
-    kids: {left: lhs.value, right: rhs.value},
-  };
 
-  if (
-    lhs.type !== 'error' &&
-    rhs.type !== 'error' &&
-    (op === '~' || op === '!~')
-  ) {
-    if (lhs.type !== 'string' || rhs.type !== 'string') {
-      let regexCmp = regexEqual(lhs, rhs);
-      if (regexCmp) {
-        if (op[0] === '!') {
-          regexCmp = {node: 'not', e: {...regexCmp}};
-        }
-      } else {
-        throw new TypeMismatch("Incompatible types for match('~') operator");
+  let value: Expr;
+
+  if (rhs.type === 'filter expression') {
+    if (op !== '~' && op !== '!~') {
+      return right.loggedErrorExpr(
+        'filter-expression-error',
+        `Cannot use the '${op}' operator with a filter expression`
+      );
+    }
+    if (isFilterable(lhs.type)) {
+      const filterMatch: FilterMatchExpr = {
+        node: 'filterMatch',
+        dataType: lhs.type,
+        kids: {filterExpr: rhs.value, expr: lhs.value},
+      };
+      if (op === '!~') {
+        filterMatch.notMatch = true;
       }
-      value = regexCmp;
+      value = filterMatch;
+    } else {
+      return left.loggedErrorExpr(
+        'filter-expression-type',
+        `Cannot use filter expressions with type '${lhs.type}'`
+      );
+    }
+  } else {
+    value = timeCompare(left, lhs, op, rhs) || {
+      node,
+      kids: {left: lhs.value, right: rhs.value},
+    };
+
+    if (
+      lhs.type !== 'error' &&
+      rhs.type !== 'error' &&
+      (op === '~' || op === '!~')
+    ) {
+      if (lhs.type !== 'string' || rhs.type !== 'string') {
+        let regexCmp = regexEqual(lhs, rhs);
+        if (regexCmp) {
+          if (op[0] === '!') {
+            regexCmp = {node: 'not', e: {...regexCmp}};
+          }
+        } else {
+          throw new TypeMismatch("Incompatible types for match('~') operator");
+        }
+        value = regexCmp;
+      }
     }
   }
 

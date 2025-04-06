@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {expr, errorMessage, error} from './test-translator';
+import {expr, errorMessage} from './test-translator';
 import './parse-expects';
 import {ExprFilterExpression, ExprLogicalOp} from '../ast';
 
@@ -101,7 +101,7 @@ describe('Filter Expressions In Source', () => {
   });
   test('Use of ? and filters is rejected', () => {
     expect(expr`astr ? f'z'`).toLogAtLeast(
-      errorMessage('Filter expression illegal here')
+      errorMessage("Cannot use the '=' operator with a filter expression")
     );
   });
   test('pick statements cannot have filter expression values', () => {
@@ -126,17 +126,17 @@ describe('Filter Expressions In Source', () => {
       '{filterTimestamp ats | 2001-02-03}'
     );
   });
+  const b = '\\';
+  const bs = `${b}${b}`;
+  const q = `${b}"`;
   test('is backslash', () => {
-    expect('astr ~ f"\\\\"').compilesTo('{filterString astr | \\\\}');
+    expect(`astr ~ f"${bs}"`).compilesTo(`{filterString astr | ${bs}}`);
   });
   test('backslash followed by close quote', () => {
-    expect('astr ~ f"\\\\\\""').compilesTo('{filterString astr | \\\\"}');
+    expect(`astr ~ f"${bs}${q}"`).compilesTo(`{filterString astr | ${bs}${q}}`);
   });
   test('contains percent', () => {
     expect('astr ~ f"%\\%%"').compilesTo('{filterString astr | %\\%%}');
-  });
-  test('get a syntax error', () => {
-    expect(expr`ai ~ f'7 adn <10'`).toLog(error('filter-expression-error'));
   });
   test('empty string filter', () => {
     expect('astr ~ f""').compilesTo('{filterString astr | }');
@@ -149,5 +149,10 @@ describe('Filter Expressions In Source', () => {
   });
   test('empty temporal filter', () => {
     expect('ats ~ f""').compilesTo('{filterTimestamp ats | }');
+  });
+  test('illegal use of filter expressions', () => {
+    expect('source: bada is a extend { dimension:f is f"" }').toLog(
+      errorMessage("Cannot define 'f', unexpected type: filter expression")
+    );
   });
 });

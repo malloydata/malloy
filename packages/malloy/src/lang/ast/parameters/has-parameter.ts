@@ -21,15 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Parameter, CastType} from '../../../model/malloy_types';
-import {isCastType} from '../../../model/malloy_types';
+import type {
+  Parameter,
+  CastType,
+  ParameterType,
+} from '../../../model/malloy_types';
+import {isCastType, isParameterType} from '../../../model/malloy_types';
 
 import type {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {
   name: string;
-  type?: CastType;
+  type?: ParameterType;
   default?: ConstantExpression;
 }
 
@@ -43,7 +47,7 @@ export class HasParameter extends MalloyElement {
   constructor(init: HasInit) {
     super();
     this.name = init.name;
-    if (init.type && isCastType(init.type)) {
+    if (init.type && isParameterType(init.type)) {
       this.type = init.type;
     }
     if (init.default) {
@@ -84,6 +88,13 @@ export class HasParameter extends MalloyElement {
             type: 'error',
           };
         }
+      }
+      if (constant.type === 'filter expression') {
+        return {
+          value: constant.value,
+          name: this.name,
+          type: constant.type,
+        };
       }
       if (!isCastType(constant.type) && constant.type !== 'error') {
         this.default.logError(

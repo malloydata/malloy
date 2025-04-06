@@ -322,11 +322,11 @@ export function isFilterExprType(s: string): s is FilterExprType {
   return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
 }
 
-export interface FilterMatchExpr extends ExprE {
+export interface FilterMatchExpr extends ExprWithKids {
   node: 'filterMatch';
   dataType: FilterExprType;
   notMatch?: true;
-  filter: {operator: string} | null;
+  kids: {filterExpr: Expr; expr: Expr};
 }
 
 export interface FilterLiteralExpr extends ExprLeaf {
@@ -432,6 +432,10 @@ export interface FilterExpressionDef {
   type: 'filter expression';
 }
 
+export type ParameterType = CastType | 'filter expression';
+export function isParameterType(t: string): t is ParameterType {
+  return isCastType(t) || t === 'filter expression';
+}
 export type ParameterTypeDef = AtomicTypeDef | FilterExpressionDef;
 export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
