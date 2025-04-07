@@ -1405,6 +1405,9 @@ class QueryField extends QueryNode {
     filterMatchExpr: FilterMatchExpr
   ): string {
     let filterExpr = filterMatchExpr.kids.filterExpr;
+    while (filterExpr.node === '()') {
+      filterExpr = filterExpr.e;
+    }
     if (filterExpr.node === 'parameter') {
       const name = filterExpr.path[0];
       context.eventStream?.emit('source-argument-compiled', {name});
