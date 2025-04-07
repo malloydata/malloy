@@ -21,28 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  Parameter,
-  CastType,
-  ParameterType,
-} from '../../../model/malloy_types';
+import type {FilterableType} from '@malloydata/malloy-filter';
+import type {Parameter, ParameterType} from '../../../model/malloy_types';
 import {isCastType, isParameterType} from '../../../model/malloy_types';
 
 import type {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
+import {checkFilterExpression} from '../types/expression-def';
 
 interface HasInit {
   name: string;
   type?: ParameterType;
+  filterType?: FilterableType;
   default?: ConstantExpression;
 }
 
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  // mtoy todo LegalParameterType
-  readonly type?: CastType | 'filter expression';
+  readonly type?: ParameterType;
   readonly default?: ConstantExpression;
+  readonly filterType?: FilterableType;
 
   constructor(init: HasInit) {
     super();
@@ -54,6 +53,7 @@ export class HasParameter extends MalloyElement {
       this.default = init.default;
       this.has({default: this.default});
     }
+    if (init.filterType) this.filterType = init.filterType;
   }
 
   parameter(): Parameter {
@@ -95,6 +95,9 @@ export class HasParameter extends MalloyElement {
             'parameter-missing-default-or-type',
             `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>'`
           );
+        }
+        if (this.filterType) {
+          checkFilterExpression(this, this.filterType, constant.value);
         }
         return {
           value: constant.value,

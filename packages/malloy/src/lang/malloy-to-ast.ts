@@ -63,6 +63,8 @@ import {
 } from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {isNotUndefined, rangeFromContext} from './utils';
+import type {FilterableType} from '@malloydata/malloy-filter';
+import {isFilterable} from '@malloydata/malloy-filter';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -367,8 +369,22 @@ export class MalloyToAST
     const name = getId(pcx.parameterNameDef());
 
     let pType: ParameterType | undefined;
+    let filterType: FilterableType | undefined;
     const typeCx = pcx.legalParamType();
     if (typeCx) {
+      const fTypeCx = typeCx.malloyType();
+      if (fTypeCx) {
+        const t = this.getMalloyType(fTypeCx);
+        if (isFilterable(t)) {
+          filterType = t;
+        } else {
+          this.contextError(
+            typeCx,
+            'parameter-illegal-default-type',
+            `Unknown filter type ${t}`
+          );
+        }
+      }
       const parseType = typeCx.FILTER()
         ? 'filter expression'
         : typeCx.text.toLowerCase();
@@ -393,7 +409,7 @@ export class MalloyToAST
     }
 
     return this.astAt(
-      new ast.HasParameter({name, type: pType, default: defVal}),
+      new ast.HasParameter({name, type: pType, default: defVal, filterType}),
       pcx
     );
   }

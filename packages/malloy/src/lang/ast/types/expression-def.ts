@@ -52,7 +52,13 @@ import type {
   EqualityMalloyOperator,
 } from './binary_operators';
 import {getExprNode, isComparison, isEquality} from './binary_operators';
-import {isFilterable} from '@malloydata/malloy-filter';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
+  TemporalFilterExpression,
+  isFilterable,
+} from '@malloydata/malloy-filter';
 
 class TypeMismatch extends Error {}
 
@@ -338,6 +344,14 @@ function equality(
       );
     }
     if (isFilterable(lhs.type)) {
+      let actualFilter = rhs.value;
+      while (actualFilter.node === '()') {
+        actualFilter = actualFilter.e;
+      }
+      if (actualFilter.node !== 'parameter') {
+        // Parameters are checked when parameter value is parsed
+        checkFilterExpression(right, lhs.type, actualFilter);
+      }
       const filterMatch: FilterMatchExpr = {
         node: 'filterMatch',
         dataType: lhs.type,
@@ -589,4 +603,40 @@ function unsupportError(
     return ret;
   }
   return undefined;
+}
+
+export function checkFilterExpression(
+  logTo: MalloyElement,
+  ft: string,
+  fexpr: Expr
+) {
+  while (fexpr.node === '()') {
+    fexpr = fexpr.e;
+  }
+  if (fexpr.node !== 'filterLiteral') {
+    logTo.logError(
+      'filter-expression-error',
+      'Expected a filter expression literal here'
+    );
+    return;
+  }
+  const fsrc = fexpr.filterSrc;
+  let err: string | undefined;
+  if (ft === 'date' || ft === 'timestamp') {
+    err = TemporalFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'string') {
+    err = StringFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'number') {
+    err = NumberFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'boolean') {
+    err = BooleanFilterExpression.parse(fsrc).log[0]?.message;
+  } else {
+    logTo.logError(
+      'filter-expression-type',
+      `Cannot apply filter expression to type ${ft}`
+    );
+  }
+  if (err !== undefined) {
+    logTo.logError('filter-expression-error', `Filter syntax error: ${err}`);
+  }
 }
