@@ -389,18 +389,6 @@ export class MalloyToAST
       const defaultExpr = new ast.ConstantExpression(
         this.getFieldExpr(defaultCx)
       );
-      // mtoy todo talk to chris, i think it would be better if this test happened in a translation pass
-      if (
-        defaultExpr.expr instanceof ast.ExprFilterExpression &&
-        pType === undefined
-      ) {
-        this.contextError(
-          pcx,
-          'parameter-missing-default-or-type',
-          `Filter expression parameters must have expicit type, for example '${name}::filter<string>'`
-        );
-        return null;
-      }
       defVal = this.astAt(defaultExpr, defaultCx);
     }
 

@@ -90,6 +90,12 @@ export class HasParameter extends MalloyElement {
         }
       }
       if (constant.type === 'filter expression') {
+        if (this.type !== 'filter expression') {
+          this.logError(
+            'parameter-missing-default-or-type',
+            `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>`
+          );
+        }
         return {
           value: constant.value,
           name: this.name,
@@ -107,6 +113,7 @@ export class HasParameter extends MalloyElement {
           type: 'error',
         };
       }
+
       return {
         value: constant.value,
         name: this.name,

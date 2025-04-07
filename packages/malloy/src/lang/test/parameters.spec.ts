@@ -709,7 +709,7 @@ describe('parameters', () => {
       source: ab_new(goodNumbers is f'[25 to 50]') is ab
     `).toLog(
       errorMessage(
-        "Filter expression parameters must have expicit type, for example 'goodNumbers::filter<string>'"
+        "Filter expression parameters must have expicit filter type, for example 'goodNumbers::filter<string>'"
       )
     );
   });
