@@ -699,7 +699,7 @@ describe('parameters', () => {
   test('can declare and use a filter expression type as a parameter type', () => {
     expect(`
       ##! experimental.parameters
-      source: ab_new(goodNumbers::filterlang) is ab extend { where: ai ? goodNumbers }
+      source: ab_new(goodNumbers::filterlang) is ab extend { where: ai ~ goodNumbers }
       source: single_digits is ab_new(goodNumbers is f'>=0 and <= 9')
     `).toTranslate();
   });
@@ -707,7 +707,7 @@ describe('parameters', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(goodNumbers is f'[25 to 50]') is ab extend {
-        where: ai ? goodNumbers
+        where: ai ~ goodNumbers
       }
     `).toTranslate();
   });
@@ -717,6 +717,8 @@ describe('parameters', () => {
       source: abx(param is f'x') is ab extend {
         dimension: param_plus_one is sql_number("\${param} + 1")
       }
-    `).not.toTranslate();
+    `).toLog(
+      errorMessage('Filter expressions cannot be used in sql_ functions')
+    );
   });
 });
