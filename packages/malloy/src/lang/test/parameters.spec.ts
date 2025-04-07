@@ -699,22 +699,24 @@ describe('parameters', () => {
   test('can declare and use a filter expression type as a parameter type', () => {
     expect(`
       ##! experimental.parameters
-      source: ab_new(goodNumbers::filterlang) is ab extend { where: ai ~ goodNumbers }
+      source: ab_new(goodNumbers::filter<number>) is ab extend { where: ai ~ goodNumbers }
       source: single_digits is ab_new(goodNumbers is f'>=0 and <= 9')
     `).toTranslate();
   });
-  test('can declare a default valued filter expression as a parameter', () => {
+  test('filter expression parameters must have types with default values', () => {
     expect(`
       ##! experimental.parameters
-      source: ab_new(goodNumbers is f'[25 to 50]') is ab extend {
-        where: ai ~ goodNumbers
-      }
-    `).toTranslate();
+      source: ab_new(goodNumbers is f'[25 to 50]') is ab
+    `).toLog(
+      errorMessage(
+        "Filter expression parameters must have expicit type, for example 'goodNumbers::filter<string>'"
+      )
+    );
   });
   test('filter expression param used in sql function', () => {
     expect(`
       ##! experimental { parameters sql_functions }
-      source: abx(param is f'x') is ab extend {
+      source: abx(param::filter<string> is f'x') is ab extend {
         dimension: param_plus_one is sql_number("\${param} + 1")
       }
     `).toLog(

@@ -45,7 +45,7 @@ describe('parameters', () => {
   it('can filter on filter expression param', async () => {
     await expect(`
       ##! experimental.parameters
-      source: state_facts(param::filterlang) is duckdb.table('malloytest.state_facts') extend {
+      source: state_facts(param::filter<string>) is duckdb.table('malloytest.state_facts') extend {
         where: state ~ param
       }
       run: state_facts(param is f'CA') -> { select: state }

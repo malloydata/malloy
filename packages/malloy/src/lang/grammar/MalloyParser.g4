@@ -148,7 +148,7 @@ sourceParameters
 
 legalParamType
   : malloyType
-  | FILTERLANG;
+  | FILTER LT malloyType GT;
 
 sourceParameter
   : parameterNameDef (DOUBLECOLON legalParamType)? (IS fieldExpr)?
