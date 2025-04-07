@@ -390,7 +390,7 @@ export class MalloyToAST
         this.getFieldExpr(defaultCx)
       );
       if (
-        defaultExpr.constantValue().type === 'filter expression' &&
+        defaultExpr.expr instanceof ast.ExprFilterExpression &&
         pType === undefined
       ) {
         this.contextError(
