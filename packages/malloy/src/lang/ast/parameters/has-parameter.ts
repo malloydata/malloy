@@ -93,7 +93,7 @@ export class HasParameter extends MalloyElement {
         if (this.type !== 'filter expression') {
           this.logError(
             'parameter-missing-default-or-type',
-            `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>`
+            `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>'`
           );
         }
         return {
