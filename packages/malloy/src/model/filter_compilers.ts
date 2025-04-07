@@ -302,8 +302,6 @@ export const FilterCompilers = {
   },
 };
 
-
-
 /*
  * The compilation from Expr to SQL string walks the expression tree, and I thought it was cute
  * to walk the children, stash each child compilation in each child node in ".sql" rather
