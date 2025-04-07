@@ -106,7 +106,7 @@ describe('Filter Expressions In Source', () => {
   });
   test('pick statements cannot have filter expression values', () => {
     expect(expr`pick f'yes' when true else f'no'`).toLogAtLeast(
-      errorMessage('Filter expression illegal here')
+      errorMessage('Pick statments cannot have filter expression values')
     );
   });
   test('simple numeric filter', () => {
