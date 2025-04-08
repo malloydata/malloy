@@ -31,7 +31,8 @@ describe('api', () => {
             files: [
               {
                 url: 'file://test.malloy',
-                contents: "source: flights is connection.table('flights')",
+                contents:
+                  "# someannotation=foo\n source: flights is connection.table('flights')",
               },
             ],
           },
@@ -90,6 +91,11 @@ describe('api', () => {
                   },
                 ],
               },
+              annotations: [
+                {
+                  value: '# someannotation=foo\n',
+                },
+              ],
             },
           ],
           anonymous_queries: [],
