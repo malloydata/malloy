@@ -23,6 +23,7 @@ describe('api', () => {
           ],
         },
       };
+
       expect(result).toMatchObject(expected);
       result = compileModel(
         {
