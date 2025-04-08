@@ -54,6 +54,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
               default_value: convertParameterDefaultValue(parameter.value),
             }))
           : undefined;
+
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
         kind: 'source',
         name,
@@ -61,6 +62,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
           fields: convertFieldInfos(entry, entry.fields),
         },
         parameters,
+        annotations: getAnnotationsFromField(entry),
       };
       modelInfo.entries.push(sourceInfo);
     } else if (entry.type === 'query') {
@@ -137,7 +139,9 @@ function convertParameterDefaultValue(
   }
 }
 
-function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
+function getAnnotationsFromField(
+  field: FieldDef | Query | SourceDef
+): Malloy.Annotation[] {
   const taglines = annotationToTaglines(field.annotation);
   return taglines.map(tagline => ({
     value: tagline,
