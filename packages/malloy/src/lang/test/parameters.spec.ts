@@ -723,4 +723,11 @@ describe('parameters', () => {
       errorMessage('Filter expressions cannot be used in sql_ functions')
     );
   });
+  test('filter expression parameters are syntax checked', () => {
+    expect(`
+      ##! experimental { parameters sql_functions }
+      source: abx(param::filter<number>) is ab extend { where: ai ~ param }
+      source: ab7 is abx(param is f'dog%')
+    `).toLog(errorMessage(/Filter syntax error:/));
+  });
 });

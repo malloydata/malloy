@@ -57,6 +57,7 @@ export class HasParameter extends MalloyElement {
   }
 
   parameter(): Parameter {
+    let paramReturn: Parameter;
     if (this.default !== undefined) {
       const constant = this.default.constantValue();
       if (
@@ -117,22 +118,23 @@ export class HasParameter extends MalloyElement {
         };
       }
 
-      return {
+      paramReturn = {
         value: constant.value,
         name: this.name,
         type: constant.type,
       };
+    } else {
+      if (this.type === undefined) {
+        this.logError(
+          'parameter-missing-default-or-type',
+          'Parameter must have default value or declared type'
+        );
+      }
+      paramReturn = {value: null, name: this.name, type: this.type ?? 'error'};
     }
-    if (this.type === undefined) {
-      this.logError(
-        'parameter-missing-default-or-type',
-        'Parameter must have default value or declared type'
-      );
+    if (paramReturn.type === 'filter expression' && this.filterType) {
+      paramReturn.filterType = this.filterType;
     }
-    return {
-      value: null,
-      name: this.name,
-      type: this.type ?? 'error',
-    };
+    return paramReturn;
   }
 }

@@ -155,4 +155,9 @@ describe('Filter Expressions In Source', () => {
       errorMessage("Cannot define 'f', unexpected type: filter expression")
     );
   });
+  test('filter expressions with errors', () => {
+    expect(expr`ai ~ f'dooby dooby'`).toLog(
+      errorMessage(/Filter syntax error:/)
+    );
+  });
 });

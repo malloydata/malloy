@@ -430,6 +430,7 @@ interface ParameterInfo {
 
 export interface FilterExpressionDef {
   type: 'filter expression';
+  filterType?: FilterExprType;
 }
 
 export type ParameterType = CastType | 'filter expression';

@@ -47,6 +47,7 @@ import type {
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
 import type {HasParameter} from '../parameters/has-parameter';
+import {checkFilterExpression} from '../types/expression-def';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
@@ -196,6 +197,14 @@ export class NamedSource extends Source {
           parameterSpace ?? new ParameterSpace(parametersOut ?? []);
         const pVal = argument.value.getExpression(paramSpace);
         let value = pVal.value;
+        if (
+          pVal.type === 'filter expression' &&
+          parameter.type === 'filter expression' &&
+          parameter.filterType
+        ) {
+          // mtoy todo ask chris how to get a better error reporting object
+          checkFilterExpression(this, parameter.filterType, value);
+        }
         if (pVal.type !== parameter.type && isCastType(parameter.type)) {
           value = castTo(parameter.type, pVal.value, pVal.type, true);
         }
