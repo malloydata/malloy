@@ -162,8 +162,9 @@ describe.each(runtimes.runtimeList)(
           {die_roll: 4},
         ]);
       });
-      test('cross join two arrays', async () => {
-        await expect(`run: ${conName}.sql("""
+      test.when(canReadCompoundSchema)('cross join two arrays', async () => {
+        await expect(`
+          run: ${conName}.sql("""
             SELECT ${d4SQL} as ${quote('d1')}, ${d4SQL} as ${quote('d2')}
           """) -> { select: roll is d1.each + d2.each }
           -> {
