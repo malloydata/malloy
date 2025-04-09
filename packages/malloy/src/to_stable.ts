@@ -55,6 +55,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
             }))
           : undefined;
 
+
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
         kind: 'source',
         name,
