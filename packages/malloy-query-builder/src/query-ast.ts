@@ -1491,7 +1491,7 @@ export class ASTRefinementQueryDefinition
   }
 
   isRunnable(): boolean {
-    return this.refinement.isRunnable();
+    return true;
   }
 
   /**
@@ -2127,7 +2127,8 @@ export class ASTRefinementViewDefinition
   }
 
   isRunnable(): boolean {
-    return this.base.isRunnable() && this.refinement.isRunnable();
+    const schema = this.getOutputSchema();
+    return schema.fields.length > 0;
   }
 
   get refinement() {
