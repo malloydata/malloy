@@ -205,6 +205,12 @@ describe('custom error messages', () => {
         errorMessage("Expected ':' following 'order_by'")
       );
     });
+
+    test('mis-spelled keyword in query', () => {
+      expect('run: a -> { groop_by: astr }').toLog(
+        errorMessage("Expected a query statement, 'groop_by:' is not a keyword")
+      );
+    });
   });
 
   describe('run', () => {

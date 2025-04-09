@@ -153,6 +153,13 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     ],
     ruleContextOptions: ['queryStatement'],
   },
+  {
+    errorMessage:
+      "Expected a query statement, '${offendingSymbol}:' is not a keyword",
+    ruleContextOptions: ['queryStatement'],
+    offendingSymbol: MalloyParser.IDENTIFIER,
+    lookAheadOptions: [[MalloyParser.COLON, MalloyParser.IDENTIFIER]],
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
