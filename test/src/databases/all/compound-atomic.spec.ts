@@ -91,6 +91,8 @@ describe.each(runtimes.runtimeList)(
     const evens = `${conName}.sql("""
       SELECT ${evensSQL} AS ${quote('evens')}
     """)`;
+    const d4 = [1, 2, 3, 4];
+    const d4SQL = arraySelectVal(...d4);
 
     describe('simple arrays', () => {
       test('array literal dialect function', async () => {
@@ -160,24 +162,25 @@ describe.each(runtimes.runtimeList)(
           {die_roll: 4},
         ]);
       });
-      test.skip('cross join arrays', async () => {
-        await expect(`
-          run: ${empty} extend {
-            dimension: d1 is [1,2,3,4]
-            join_cross: d2 is [1,2,3,4]
-          } -> {
-            group_by: roll is d1.each + d2.each
-            aggregate: rolls is count()
+      test('cross join two arrays', async () => {
+        await expect(`run: ${conName}.sql("""
+            SELECT ${d4SQL} as ${quote('d1')}, ${d4SQL} as ${quote('d2')}
+          """) -> { select: roll is d1.each + d2.each }
+          -> {
+            group_by: roll
+            aggregate: n is count()
+            order_by: roll asc
           }
-        `).malloyResultMatches(runtime, [
-          {roll: 2, rolls: 1},
-          {roll: 3, rolls: 2},
-          {roll: 4, rolls: 3},
-          {roll: 5, rolls: 4},
-          {roll: 6, rolls: 3},
-          {roll: 7, rolls: 2},
-          {roll: 8, rolls: 1},
-        ]);
+          `).matchesResult(
+          runtime,
+          {roll: 2, n: 1},
+          {roll: 3, n: 2},
+          {roll: 4, n: 3},
+          {roll: 5, n: 4},
+          {roll: 6, n: 3},
+          {roll: 7, n: 2},
+          {roll: 8, n: 1}
+        );
       });
       // can't use special chars in column names in bq
       test.when(conName !== 'bigquery')(
@@ -258,8 +261,7 @@ describe.each(runtimes.runtimeList)(
             group_by: nums
             aggregate: addem is n.sum()
             order_by: addem asc
-          }
-          `).matchesResult(
+          }`).matchesResult(
           runtime,
           {nums: evensObj, addem: 11},
           {nums: oddsObj, addem: 1100}
