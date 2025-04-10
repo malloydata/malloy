@@ -67,6 +67,10 @@ export interface ErrorCase {
     This rule excludes all common ancestors of the match and the offendingSymbol.
   */
   predecessorHasAncestorRule?: number;
+
+  // If you would like to offer other choices, The error generator will do ${} replacement on "replace",
+  // then compare it to choices in "with" to select the most likely replacement, and then add
+  // "Did you mean 'XXX'?" to the error message.
   alternatives?: {
     replace: string;
     with: string[];
@@ -181,14 +185,16 @@ export const checkCustomErrorMessage = (
       let message = errReplace(errorCase.errorMessage);
       if (errorCase.alternatives) {
         const badWord = errReplace(errorCase.alternatives.replace);
-        const distances: Record<string, number> = {};
-        for (const w of errorCase.alternatives.with) {
-          distances[w] = distance(w, badWord);
+        let closest = errorCase.alternatives.with[0];
+        let close = distance(closest, badWord);
+        for (const w of errorCase.alternatives.with.slice(1)) {
+          const howClose = distance(w, badWord);
+          if (howClose > close) {
+            close = howClose;
+            closest = w;
+          }
         }
-        const picks = errorCase.alternatives.with.sort(
-          (a, b) => distances[b] - distances[a]
-        );
-        message += ` Did you mean '${picks[0]}'?`;
+        message += ` Did you mean '${closest}'?`;
       }
       return message;
     }
