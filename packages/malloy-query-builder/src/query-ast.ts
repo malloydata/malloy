@@ -1026,7 +1026,7 @@ export class ASTReference
     }
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -1068,7 +1068,7 @@ export class ASTFieldReference extends ASTReference {
     }
   }
 
-  private getReferenceSchema() {
+  private getReferenceSchema(): Malloy.Schema {
     if (this.parent instanceof ASTOrderByViewOperation) {
       return this.segment.getOutputSchema();
     }
@@ -1414,11 +1414,11 @@ export class ASTArrowQueryDefinition
     return this.view.getOrAddDefaultSegment();
   }
 
-  getSourceInfo() {
+  getSourceInfo(): Malloy.SourceInfo {
     return this.source.getSourceInfo();
   }
 
-  getOutputSchema() {
+  getOutputSchema(): Malloy.Schema {
     return this.view.getRefinementSchema();
   }
 
@@ -1505,7 +1505,7 @@ export class ASTRefinementQueryDefinition
     return this.refinement.getOrAddDefaultSegment();
   }
 
-  getOutputSchema() {
+  getOutputSchema(): Malloy.Schema {
     const base = this.base.getOutputSchema();
     const refinement = this.refinement.getRefinementSchema();
     return ASTQuery.schemaMerge(base, refinement);
@@ -1530,7 +1530,7 @@ export class ASTRefinementQueryDefinition
     this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
   }
 
-  getSourceInfo() {
+  getSourceInfo(): Malloy.SourceInfo {
     return this.base.getSourceInfo();
   }
 }
@@ -1612,7 +1612,7 @@ export class ASTReferenceQueryDefinition
     this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -1624,11 +1624,11 @@ export class ASTReferenceQueryDefinition
     return ASTReference.tryGetParameter(this, name);
   }
 
-  public getOutputSchema() {
+  public getOutputSchema(): Malloy.Schema {
     return this.getSourceInfo().schema;
   }
 
-  getSourceInfo() {
+  getSourceInfo(): Malloy.SourceInfo {
     const model = this.query.model;
     const query = model.entries.find(e => e.name === this.name);
     if (query === undefined) {
@@ -1728,7 +1728,7 @@ export class ASTReferenceQueryArrowSource
     return;
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -1987,7 +1987,7 @@ export class ASTReferenceViewDefinition
     return view.annotations ?? [];
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -3695,7 +3695,7 @@ export class ASTReferenceExpression
     return field.annotations ?? [];
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -4191,11 +4191,11 @@ export class ASTView
     return this.parent.as.NestViewOperation();
   }
 
-  getInputSchema() {
+  getInputSchema(): Malloy.Schema {
     return this.nest.list.segment.getInputSchema();
   }
 
-  getOutputSchema() {
+  getOutputSchema(): Malloy.Schema {
     return this.definition.getRefinementSchema();
   }
 
