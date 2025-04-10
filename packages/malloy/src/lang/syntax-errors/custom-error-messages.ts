@@ -164,8 +164,7 @@ export const checkCustomErrorMessage = (
         }
       }
 
-      // eslint-disable-next-line no-inner-declarations
-      function errReplace(s: string): string {
+      const errReplace = (s: string) => {
         const rs = s
           .replace('${currentToken}', currentToken.text || '')
           .replace('${offendingSymbol}', offendingSymbol?.text || '');
@@ -176,7 +175,7 @@ export const checkCustomErrorMessage = (
           // This shouldn't ever occur, but if it does, just leave the untokenized message.
         }
         return rs;
-      }
+      };
 
       // If all cases match, return the custom error message
       let message = errReplace(errorCase.errorMessage);
