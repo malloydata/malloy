@@ -75,6 +75,7 @@ export class SqlServerExecutor {
       const port = Number(process.env['SQLSERVER_PORT']);
       const password = process.env['SQLSERVER_PASSWORD'];
       const database = process.env['SQLSERVER_DATABASE'];
+
       return {
         host,
         port,
