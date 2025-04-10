@@ -29,8 +29,7 @@ async function testMalloyConnection() {
     'Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;';
   const conn = new SqlServerConnection({
     name: 'test-sqlserver',
-    connectionString:
-      'Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;',
+    connectionString,
   });
 
   const resGen = conn.runSQLStream('SELECT 1');
