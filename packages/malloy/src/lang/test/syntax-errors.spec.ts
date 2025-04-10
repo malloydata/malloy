@@ -17,6 +17,15 @@ import './parse-expects';
  * for a good reason.
  */
 describe('custom error messages', () => {
+  test('mis-spelled keyword in top-level', () => {
+    expect(
+      'sourc: aplus is a extend { dimension: one_more is ai + 1 }'
+    ).toLogAtLeast(
+      errorMessage(
+        "Expected a statement, 'sourc:' is not a keyword. Did you mean 'source:'?"
+      )
+    );
+  });
   describe('source', () => {
     test('missing alias', () => {
       expect('source: x extend { }').toLogAtLeast(
@@ -61,6 +70,15 @@ describe('custom error messages', () => {
   });
 
   describe('exploreProperties', () => {
+    test('mis-spelled keyword in extends block', () => {
+      expect(
+        'source: aplus is a extend { dinemsion: one_more is ai + 1 }'
+      ).toLogAtLeast(
+        errorMessage(
+          "Expected a source statement, 'dinemsion:' is not a keyword. Did you mean 'dimension:'?"
+        )
+      );
+    });
     test('misspelled "join"', () => {
       expect(`source: x is a extend {
         join: data is y on dataId = data.id
@@ -203,6 +221,14 @@ describe('custom error messages', () => {
       );
       expect('source: x is a -> { order_by name desc, 2 asc}').toLogAtLeast(
         errorMessage("Expected ':' following 'order_by'")
+      );
+    });
+
+    test('mis-spelled keyword in query', () => {
+      expect('run: a -> { groop_by: astr }').toLog(
+        errorMessage(
+          "Expected a query statement, 'groop_by:' is not a keyword. Did you mean 'group_by:'?"
+        )
       );
     });
   });
