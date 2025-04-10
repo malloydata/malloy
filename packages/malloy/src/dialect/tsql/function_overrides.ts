@@ -16,11 +16,13 @@ function greatestOrLeastSQL(name: string) {
 }
 
 export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
-  byte_length: {function: 'OCTET_LENGTH'},
-  // There's no ENDS_WITH function in Postgres, so we do a hacky check that the last
+  // TODO (vitor): Done-ish. remove this comment after tests
+  byte_length: {function: 'DATALENGTH'},
+  // TODO (vitor): Done-ish. remove this comment after tests
+  // There's no ENDS_WITH function in TSQL, so we do a hacky check that the last
   // N characters, where N is the length of the suffix, are equal to the suffix.
   ends_with: {
-    sql: 'COALESCE(RIGHT(${value}, LENGTH(${suffix})) = ${suffix}, false)',
+    sql: 'COALESCE(RIGHT(${value}, LENGTH(${suffix})) = ${suffix}, CAST(0 AS BIT))',
   },
   greatest: {sql: greatestOrLeastSQL('GREATEST')},
   least: {sql: greatestOrLeastSQL('LEAST')},
