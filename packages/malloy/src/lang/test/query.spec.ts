@@ -64,16 +64,6 @@ describe('query:', () => {
   describe('basic query syntax', () => {
     test('run:anonymous query', () =>
       expect('run: a -> { group_by: astr }').toTranslate());
-    test('query:anonymous query m4 warning', () => {
-      expect(
-        markSource`##! m4warnings=warn
-          query: ${'a  -> { group_by: astr }'}`
-      ).toLog(
-        warningMessage(
-          'Anonymous `query:` statements are deprecated, use `run:` instead'
-        )
-      );
-    });
     test('named query:', () =>
       expect('query: aq is a -> { group_by: astr }').toTranslate());
     test('run query ref', () =>
@@ -110,7 +100,7 @@ describe('query:', () => {
       ).toTranslate();
     });
     test('query with shortcut filtered turtle', () => {
-      expect(`##! -m4warnings
+      expect(`
         query: allA is ab -> aturtle + {where: astr ~ 'a%' }`).toTranslate();
     });
     test('query with filtered turtle', () => {
@@ -348,16 +338,6 @@ describe('query:', () => {
         expect('run: a -> { select: s is row_number() }').toLog(
           errorMessage(
             'Cannot use an analytic field in a select operation, did you mean to use a calculate operation instead?'
-          )
-        );
-      });
-      test('cannot use analytic in extended source', () => {
-        expect(
-          `##! -m4warnings
-          run: a -> { group_by: a is 1; declare: s is row_number() }`
-        ).toLog(
-          errorMessage(
-            'Analytic expressions can not be used in a declare block'
           )
         );
       });
@@ -1245,26 +1225,6 @@ describe('query:', () => {
       });
     });
     describe('declare/query join warnings', () => {
-      test('declare warning in query', () => {
-        expect(
-          markSource`##! m4warnings=warn
-          run: a -> { ${'declare: x is 1'}; group_by: x }`
-        ).toLog(
-          warningMessage(
-            '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-          )
-        );
-      });
-      test('declare warning in source', () => {
-        expect(
-          markSource`##! m4warnings=warn
-          source: a2 is a extend { ${'declare: x is 1'} }`
-        ).toLog(
-          warningMessage(
-            '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-          )
-        );
-      });
       test('joins in query', () => {
         expect(
           markSource`

@@ -104,7 +104,22 @@ function typeDefFromField(type: Malloy.AtomicType): AtomicTypeDef {
 
 function convertDimension(field: Malloy.DimensionInfo): AtomicFieldDef {
   const typeDef = typeDefFromField(field.type);
-  return mkFieldDef(typeDef, field.name);
+  return {
+    ...mkFieldDef(typeDef, field.name),
+    annotation:
+      field.annotations && field.annotations.length
+        ? {
+            notes: field.annotations?.map(a => ({
+              text: a.value,
+              // TODO correctly map the location of the annotation to the location of the table call...
+              at: {
+                url: '~internal~',
+                range: DEFAULT_LOG_RANGE,
+              },
+            })),
+          }
+        : undefined,
+  };
 }
 
 function convertTableField(field: Malloy.FieldInfo): AtomicFieldDef {
@@ -262,7 +277,10 @@ export function updateCompileModelState(
     }
     if (!state.hasSource) {
       state.hasSource =
-        needs?.files?.some(f => f.url === state.translator.sourceURL) ?? false;
+        (needs?.files?.some(f => f.url === state.translator.sourceURL) ??
+          false) ||
+        (needs?.translations?.some(f => f.url === state.translator.sourceURL) ??
+          false);
     }
   }
   const update = compilerNeedsToUpdate(needs);
@@ -280,7 +298,8 @@ function _newCompileModelState(
     compilerNeedsToUpdate(compilerNeeds)
   );
   const hasSource =
-    compilerNeeds?.files?.some(f => f.url === modelURL) ?? false;
+    (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
+    (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
   if (extendURL) {
     return {
       extending: _newCompileModelState(extendURL, compilerNeeds),
@@ -363,6 +382,7 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       ),
     };
   }
+
   const result = state.translator.translate(extendingModel);
   if (result.final) {
     state.done = true;
@@ -397,7 +417,16 @@ function wrapResponse(
   if (response.compilerNeeds) {
     return {compiler_needs: response.compilerNeeds, logs};
   } else {
-    return {model: response.model, logs};
+    let translations: Array<Malloy.Translation> | undefined = undefined;
+    if (response.modelDef) {
+      translations = [
+        {
+          url: defaultURL,
+          compiled_model_json: JSON.stringify(response.modelDef),
+        },
+      ];
+    }
+    return {model: response.model, logs, translations};
   }
 }
 

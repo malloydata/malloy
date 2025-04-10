@@ -96,7 +96,7 @@ describe('connection sql()', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       expect(compileSql.selectStr).toEqual(
-        'SELECT * FROM (SELECT \n   base.`astr` as `astr`\nFROM `aTable` as base\nGROUP BY 1\nORDER BY 1 asc\n) WHERE 1=1'
+        'SELECT * FROM (SELECT \n   base.`astr` as `astr`\nFROM `aTable` as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n) WHERE 1=1'
       );
     }
   });

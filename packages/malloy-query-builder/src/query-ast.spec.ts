@@ -417,6 +417,50 @@ describe('query builder', () => {
       malloy: 'run: flights -> { where: carrier ~ f`WN, AA` }',
     });
   });
+  test('add a where with a path', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addWhere('state', ['origin'], 'TX');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'state', path: ['origin']},
+                  filter: 'TX',
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: 'run: flights -> { where: origin.state ~ f`TX` }',
+    });
+  });
   test('add a parsed where', () => {
     const from: Malloy.Query = {
       definition: {
@@ -1422,6 +1466,70 @@ describe('query builder', () => {
           }`,
       });
     });
+    test('remove and add complex tag', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'test_field_with_annotations',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const gb = q
+          .getOrAddDefaultSegment()
+          .getGroupBy('test_field_with_annotations')!;
+        gb.removeTagProperty(['line_chart']);
+        gb.setTagProperty(['bar_chart']);
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    annotations: [{value: '# -line_chart bar_chart\n'}],
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'test_field_with_annotations',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            # -line_chart bar_chart
+            group_by: test_field_with_annotations
+          }`,
+      });
+    });
     test('add tag to query', () => {
       const from: Malloy.Query = {
         definition: {
@@ -2283,6 +2391,190 @@ describe('query builder', () => {
       malloy: dedent`
         run: foo(string_param is "COOLER") -> { }
       `,
+    });
+  });
+
+  describe('isRunnable', () => {
+    test('empty arrow segment is not runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'nest',
+                name: 'Nest',
+                view: {
+                  definition: {
+                    kind: 'segment',
+                    operations: [],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(false);
+    });
+    test('view with refinement with no fields is runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'view_reference',
+              name: 'top_carriers',
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'order_by',
+                  field_reference: {
+                    name: 'carrier',
+                  },
+                },
+              ],
+            },
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(true);
+    });
+    test('view with base as partial view and refinement with fields is runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'limit',
+                  limit: 10,
+                },
+              ],
+            },
+            refinement: {
+              kind: 'view_reference',
+              name: 'top_carriers',
+            },
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(true);
+    });
+    test('view refinement with no fields anywhere is not runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'limit',
+                  limit: 10,
+                },
+              ],
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'limit',
+                  limit: 2,
+                },
+              ],
+            },
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(false);
+    });
+    test('query with empty refinement is runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'refinement',
+          base: {
+            kind: 'query_reference',
+            name: 'flights_by_carrier',
+          },
+          refinement: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'limit',
+                limit: 10,
+              },
+            ],
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        model: {
+          entries: [
+            {
+              kind: 'query',
+              name: 'flights_by_carrier',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'flight_count',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      });
+      expect(query.isRunnable()).toBe(true);
     });
   });
 });

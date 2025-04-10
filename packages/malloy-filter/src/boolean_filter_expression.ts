@@ -9,6 +9,9 @@ import type {BooleanFilter, FilterParserResponse} from './filter_interface';
 
 export const BooleanFilterExpression = {
   parse(srcText: string): FilterParserResponse<BooleanFilter> {
+    if (srcText.match(/^\s*$/)) {
+      return {parsed: null, log: []};
+    }
     const ret: FilterParserResponse<BooleanFilter> = {parsed: null, log: []};
     let src = srcText.toLowerCase().trim().replace(/\s\s+/, ' ');
     let negate = false;

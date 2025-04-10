@@ -31,14 +31,14 @@ function testHelpContext(
   token: string
 ) {
   const doc = new TestTranslator(source.code);
-  expect(doc.logger.hasErrors()).toBeFalsy();
+  expect(doc.logger.getLog().map(m => m.message)).toEqual([]);
   const helpContext = doc.helpContext(position).helpContext;
   expect(helpContext).toEqual({type, token});
 }
 
 const source = `source: foo is DB.table('bar') extend {
   where: bazz ~ 'biff'
-  query: foo is {
+  view: foo is {
     group_by: bazz
     where: bop ~ 'blat'
   }
@@ -76,7 +76,7 @@ test('Supports source properties', () => {
     markSource`${source}`,
     {line: 2, character: 3},
     'explore_property',
-    'query:'
+    'view:'
   );
 });
 

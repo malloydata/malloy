@@ -19,6 +19,9 @@ import {run_parser} from './nearley_parse';
 // coded parsers.
 export const StringFilterExpression = {
   parse(src: string): FilterParserResponse<StringFilter> {
+    if (src.match(/^\s*$/)) {
+      return {parsed: null, log: []};
+    }
     const fstring_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fstring_grammar)
     );

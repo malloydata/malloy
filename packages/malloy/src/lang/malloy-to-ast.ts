@@ -30,7 +30,6 @@ import type * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import type {
   LogMessageOptions,
-  LogSeverity,
   MessageCode,
   MessageLogger,
   MessageParameterType,
@@ -74,7 +73,7 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
-const DEFAULT_COMPILER_FLAGS = ['##! m4warnings=error'];
+const DEFAULT_COMPILER_FLAGS = [];
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
@@ -187,25 +186,6 @@ export class MalloyToAST
     return false;
   }
 
-  protected m4Severity(): LogSeverity | false {
-    const m4severityTag = this.compilerFlags.tag('m4warnings');
-    if (m4severityTag) {
-      return m4severityTag.text() === 'warn' ? 'warn' : 'error';
-    }
-    return false;
-  }
-
-  protected m4advisory<T extends MessageCode>(
-    cx: ParserRuleContext,
-    code: T,
-    data: MessageParameterType<T>
-  ): void {
-    const m4 = this.m4Severity();
-    if (m4) {
-      this.contextError(cx, code, data, {severity: m4});
-    }
-  }
-
   protected only<T extends ast.MalloyElement>(
     els: ast.MalloyElement[],
     isGood: (el: ast.MalloyElement) => T | false,
@@ -303,15 +283,6 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
-    for (const part of pcx.sqlInterpolation()) {
-      if (part.CLOSE_CODE()) {
-        this.m4advisory(
-          part,
-          'percent-terminated-query-interpolation',
-          'Use %{ ... } instead of %{ ... }%'
-        );
-      }
-    }
     for (const part of getStringParts(pcx)) {
       if (part instanceof ParserRuleContext) {
         sqlStr.push(this.visit(part));
@@ -446,18 +417,7 @@ export class MalloyToAST
     return propList;
   }
 
-  visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableURI = this.getPlainStringFrom(pcx.tableURI());
-    const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
-    this.m4advisory(
-      pcx,
-      'table-function',
-      "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
-    );
-    return el;
-  }
-
-  visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
+  visitExploreTable(pcx: parse.ExploreTableContext): ast.TableSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const tablePath = this.getPlainStringFrom(pcx.tablePath());
@@ -697,22 +657,6 @@ export class MalloyToAST
     return this.astAt(el, pcx);
   }
 
-  visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
-    const accessLabel = this.getAccessLabel(pcx.accessLabel());
-    const defs = this.getFieldDefs(
-      pcx.defList().fieldDef(),
-      ast.DeclareFieldDeclaration
-    );
-    const stmt = new ast.DeclareFields(defs, accessLabel);
-    const result = this.astAt(stmt, pcx);
-    this.m4advisory(
-      pcx,
-      'declare',
-      '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-    );
-    return result;
-  }
-
   visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0);
     const oldName = pcx.fieldName(1);
@@ -756,13 +700,6 @@ export class MalloyToAST
     const queryDefs = new ast.Views(babyTurtles, accessLabel);
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
-    if (pcx.QUERY()) {
-      this.m4advisory(
-        pcx,
-        'query-in-source',
-        'Use view: inside of a source instead of query:'
-      );
-    }
     return queryDefs;
   }
 
@@ -1014,13 +951,6 @@ export class MalloyToAST
   visitProjectStatement(
     pcx: parse.ProjectStatementContext
   ): ast.ProjectStatement {
-    if (pcx.PROJECT()) {
-      this.m4advisory(
-        pcx,
-        'project',
-        'project: keyword is deprecated, use select:'
-      );
-    }
     const stmt = this.visitFieldCollection(pcx.fieldCollection());
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return stmt;
@@ -1151,21 +1081,6 @@ export class MalloyToAST
       pcx,
       `Expected query definition, got a '${queryExpr.elementType}'`
     );
-  }
-
-  visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const defCx = pcx.topLevelAnonQueryDef();
-    const query = this.getSqExpr(defCx.sqExpr());
-    const theQuery = this.astAt(new ast.AnonymousQuery(query), defCx);
-    const notes = this.getNotes(pcx.topLevelAnonQueryDef().tags());
-    const blockNotes = this.getNotes(pcx.tags());
-    theQuery.extendNote({notes, blockNotes});
-    this.m4advisory(
-      defCx,
-      'anonymous-query',
-      'Anonymous `query:` statements are deprecated, use `run:` instead'
-    );
-    return this.astAt(theQuery, pcx);
   }
 
   visitRunStatement(pcx: parse.RunStatementContext) {
@@ -1499,13 +1414,6 @@ export class MalloyToAST
     const source = undefined;
     const aggFunc = pcx.aggregate().text.toLowerCase();
 
-    if (pcx.STAR()) {
-      this.m4advisory(
-        pcx,
-        'wildcard-in-aggregate',
-        `* illegal inside ${aggFunc}()`
-      );
-    }
     if (aggFunc === 'count') {
       return this.astAt(
         expr ? new ast.ExprCountDistinct(expr) : new ast.ExprCount(),

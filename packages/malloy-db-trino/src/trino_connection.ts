@@ -44,7 +44,7 @@ import type {
 import {
   TrinoDialect,
   mkFieldDef,
-  isScalarArray,
+  isBasicArray,
   TinyParser,
   isRepeatedRecord,
   sqlKey,
@@ -314,7 +314,7 @@ export abstract class TrinoPrestoConnection
       return this.convertRow(colSchema.fields, rawRow);
     } else if (isRepeatedRecord(colSchema)) {
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
-    } else if (isScalarArray(colSchema)) {
+    } else if (isBasicArray(colSchema)) {
       const elType = colSchema.elementTypeDef;
       let theArray = this.unpackArray([], rawRow);
       if (elType.type === 'array') {

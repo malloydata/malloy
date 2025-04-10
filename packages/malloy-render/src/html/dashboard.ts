@@ -48,10 +48,10 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
     const fields = table.field.fields;
 
     const dimensions = fields.filter(
-      field => field.isAtomic() && field.wasDimension()
+      field => field.isBasic() && field.wasDimension()
     );
     const measures = fields.filter(
-      field => !field.isAtomic() || field.wasCalculation()
+      field => !field.isBasic() || field.wasCalculation()
     );
 
     const body = this.document.createElement('div');

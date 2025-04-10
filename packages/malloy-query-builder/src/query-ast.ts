@@ -1491,7 +1491,7 @@ export class ASTRefinementQueryDefinition
   }
 
   isRunnable(): boolean {
-    return this.refinement.isRunnable();
+    return true;
   }
 
   /**
@@ -2127,7 +2127,8 @@ export class ASTRefinementViewDefinition
   }
 
   isRunnable(): boolean {
-    return this.base.isRunnable() && this.refinement.isRunnable();
+    const schema = this.getOutputSchema();
+    return schema.fields.length > 0;
   }
 
   get refinement() {
@@ -2267,10 +2268,13 @@ export class ASTSegmentViewDefinition
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTAggregateViewOperation ||
-        operation instanceof ASTGroupByViewOperation ||
-        operation instanceof ASTNestViewOperation
+        operation instanceof ASTGroupByViewOperation
       ) {
         return true;
+      } else if (operation instanceof ASTNestViewOperation) {
+        if (!operation.view.definition.isRunnable()) {
+          return false;
+        }
       }
     }
     return false;
@@ -2701,7 +2705,7 @@ export class ASTSegmentViewDefinition
       kind: 'where',
       filter: {
         kind: 'filter_string',
-        field_reference: {name},
+        field_reference: {name, path},
         filter: filterString,
       },
     });
@@ -3463,7 +3467,7 @@ export class ASTAggregateViewOperation
     const where: Malloy.Where = {
       filter: {
         kind: 'filter_string',
-        field_reference: {name},
+        field_reference: {name, path},
         filter: filterString,
       },
     };
@@ -4462,7 +4466,7 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 
   setTagProperty(path: Path, value: TagSetValue) {
-    this.value = this.getTag().set(path, value).toString();
+    this.value = this.getIntrinsicTag().set(path, value).toString();
   }
 
   removeTagProperty(path: Path) {

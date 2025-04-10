@@ -9,6 +9,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   AtomicTypeDef,
   DateUnit,
+  Expr,
   FieldDef,
   JoinType,
   ModelDef,
@@ -25,7 +26,7 @@ import {
   expressionIsScalar,
   isAtomic,
   isJoinedSource,
-  isLeafAtomic,
+  isBasicAtomic,
   isRepeatedRecord,
   isSourceDef,
   isTurtle,
@@ -45,12 +46,23 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   for (const [name, entry] of Object.entries(modelDef.contents)) {
     if (!modelDef.exports.includes(name)) continue;
     if (isSourceDef(entry)) {
+      const parameters: Malloy.ParameterInfo[] | undefined =
+        entry.parameters && Object.entries(entry.parameters).length > 0
+          ? Object.entries(entry.parameters).map(([name, parameter]) => ({
+              name,
+              type: typeDefToType(parameter),
+              default_value: convertParameterDefaultValue(parameter.value),
+            }))
+          : undefined;
+
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
         kind: 'source',
         name,
         schema: {
           fields: convertFieldInfos(entry, entry.fields),
         },
+        parameters,
+        annotations: getAnnotationsFromField(entry),
       };
       modelInfo.entries.push(sourceInfo);
     } else if (entry.type === 'query') {
@@ -101,7 +113,35 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   return modelInfo;
 }
 
-function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
+function convertParameterDefaultValue(
+  value: Expr | null
+): Malloy.LiteralValue | undefined {
+  if (value === null) return undefined;
+  switch (value.node) {
+    case 'numberLiteral':
+      // TODO handle all kinds of number literals?
+      return {kind: 'number_literal', number_value: parseFloat(value.literal)};
+    case 'stringLiteral':
+      return {kind: 'string_literal', string_value: value.literal};
+    case 'timeLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: value.literal,
+      };
+    case 'true':
+      return {kind: 'boolean_literal', boolean_value: true};
+    case 'false':
+      return {kind: 'boolean_literal', boolean_value: false};
+    case 'null':
+      return {kind: 'null_literal'};
+    default:
+      throw new Error('Invalid parameter default value');
+  }
+}
+
+function getAnnotationsFromField(
+  field: FieldDef | Query | SourceDef
+): Malloy.Annotation[] {
   const taglines = annotationToTaglines(field.annotation);
   return taglines.map(tagline => ({
     value: tagline,
@@ -111,6 +151,8 @@ function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
 export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
   const result: Malloy.FieldInfo[] = [];
   for (const field of fields) {
+    const isPublic = field.accessModifier === undefined;
+    if (!isPublic) continue;
     const taglines = annotationToTaglines(field.annotation);
     const rawAnnotations: Malloy.Annotation[] = taglines.map(tagline => ({
       value: tagline,
@@ -259,7 +301,7 @@ export function getResultStructMetadataAnnotation(
 }
 
 function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
-  if (isLeafAtomic(field)) {
+  if (isBasicAtomic(field)) {
     switch (field.type) {
       case 'string':
         return {kind: 'string_type'};

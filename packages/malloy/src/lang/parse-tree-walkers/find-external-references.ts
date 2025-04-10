@@ -86,20 +86,11 @@ class FindExternalReferences implements MalloyParserListener {
     }
   }
 
-  enterTableMethod(pcx: parser.TableMethodContext) {
+  enterExploreTable(pcx: parser.ExploreTableContext) {
     const connId = getId(pcx.connectionId());
     const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connId, tablePath, reference);
-  }
-
-  enterTableFunction(pcx: parser.TableFunctionContext) {
-    const tableURI = getPlainString(pcx.tableURI());
-    // This use of `deprecatedParseTableURI` is ok because it is for handling the
-    // old, soon-to-be-deprecated table syntax.
-    const {connectionName, tablePath} = deprecatedParseTableURI(tableURI);
-    const reference = this.trans.rangeFromContext(pcx);
-    this.registerTableReference(connectionName, tablePath, reference);
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {

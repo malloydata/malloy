@@ -34,33 +34,20 @@ import type {
   TimeLiteralNode,
   RecordLiteralNode,
   ArrayLiteralNode,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   OrderBy,
 } from '../model/malloy_types';
-import {isRawCast, isLeafAtomic} from '../model/malloy_types';
+import {isRawCast, isBasicAtomic} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 
-type DialectFieldTypes = string | 'struct';
-
 interface DialectField {
-  type: DialectFieldTypes;
+  typeDef: AtomicTypeDef;
   sqlExpression: string;
   rawName: string;
   sqlOutputName: string;
 }
-
-export interface DialectFieldTypeStruct extends DialectField {
-  type: 'struct';
-  nestedStruct: DialectFieldList;
-  isArray: boolean;
-}
-
-export function isDialectFieldStruct(
-  d: DialectField
-): d is DialectFieldTypeStruct {
-  return d.type === 'struct';
-}
 export type DialectFieldList = DialectField[];
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -108,7 +95,9 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type OrderByClauseType = 'output_name' | 'ordinal';
+export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+
+export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 
 export abstract class Dialect {
   abstract name: string;
@@ -379,7 +368,12 @@ export abstract class Dialect {
     return tableSQL;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
+  /**
+   * MySQL is NULLs first, all other dialects have a way to make NULLs last.
+   * isBaseOrdering is a hack to allow the MySQL dialect to partially implement
+   * NULLs last, but should go away once MySQL fully implements NULLs last.
+   */
+  sqlOrderBy(orderTerms: string[], _orderFor?: OrderByRequest): string {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 
@@ -409,7 +403,7 @@ export abstract class Dialect {
     )`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef;
+  abstract sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef;
   abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
@@ -421,13 +415,13 @@ export abstract class Dialect {
    */
   sqlCastPrep(cast: TypecastExpr): {
     op: string;
-    srcTypeDef: LeafAtomicTypeDef | undefined;
-    dstTypeDef: LeafAtomicTypeDef | undefined;
+    srcTypeDef: BasicAtomicTypeDef | undefined;
+    dstTypeDef: BasicAtomicTypeDef | undefined;
     dstSQLType: string;
   } {
     let srcTypeDef = cast.srcType || cast.e.typeDef;
     const src = srcTypeDef?.type || 'unknown';
-    if (srcTypeDef && !isLeafAtomic(srcTypeDef)) {
+    if (srcTypeDef && !isBasicAtomic(srcTypeDef)) {
       srcTypeDef = undefined;
     }
     if (isRawCast(cast)) {
