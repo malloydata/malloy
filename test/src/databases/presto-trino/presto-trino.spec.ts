@@ -22,7 +22,6 @@ describe.each(runtimes.runtimeList)(
       throw new Error("Couldn't build runtime");
     }
     const presto = databaseName === 'presto';
-
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`

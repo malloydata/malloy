@@ -41,6 +41,23 @@ async function getError<T>(fn: () => Promise<T>) {
 }
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  it(`properly quotes nested field names in ${databaseName}`, async () => {
+    const one = runtime.dialect.sqlMaybeQuoteIdentifier('one');
+    await expect(`
+      run: ${databaseName}.sql(""" SELECT 1 as ${one} """) -> {
+        nest: foo is {
+          group_by: one
+          aggregate: \`#\` is count(one)
+          nest: deepfoo is {
+            group_by: one
+            aggregate: \`#\` is count(one)
+          }
+        }
+      }`).matchesRows(runtime, {
+      foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
+    });
+  });
+
   describe('warnings', () => {
     // NOTE: This test generates SQL errors on the console because of
     // a hard-coded console.log() in the duckdb-wasm worker
