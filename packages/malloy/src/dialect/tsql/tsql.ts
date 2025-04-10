@@ -106,7 +106,7 @@ export class TSQLDialect extends PostgresBase {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
-  experimental = false;
+  experimental = true;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
