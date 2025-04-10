@@ -156,13 +156,15 @@ export class SqlServerConnection
       host = 'localhost',
       connectionString,
     } = await this.readConfig();
-    return connect(connectionString || {
-      user,
-      password,
-      database,
-      port,
-      server: host,
-    });
+    return connect(
+      connectionString || {
+        user,
+        password,
+        database,
+        port,
+        server: host,
+      }
+    );
   }
 
   protected async runSqlServerQuery(
@@ -180,7 +182,7 @@ export class SqlServerConnection
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
     } else {
-      throw new Error('SqlServer non-array output is not supported')
+      throw new Error('SqlServer non-array output is not supported');
     }
 
     await client.close();
@@ -315,7 +317,7 @@ export class SqlServerConnection
     request.query(sqlCommand);
     let index = 0;
 
-    for await (const row of readableStream){
+    for await (const row of readableStream) {
       yield row as QueryDataRow;
       index += 1;
       if (
@@ -394,8 +396,8 @@ export class PooledSqlServerConnection
         host = 'localhost',
         connectionString,
       } = await this.readConfig();
-      if(connectionString){
-        this._pool = new ConnectionPool(connectionString)
+      if (connectionString) {
+        this._pool = new ConnectionPool(connectionString);
       } else {
         this._pool = new ConnectionPool({
           user,
@@ -418,13 +420,13 @@ export class PooledSqlServerConnection
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
     const client = await pool.connect();
-    let result = await client.query(sqlCommand);
+    const result = await client.query(sqlCommand);
 
     let rows: QueryData;
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
     } else {
-      throw new Error('SqlServer non-array output is not supported')
+      throw new Error('SqlServer non-array output is not supported');
     }
 
     await client.close();
@@ -450,7 +452,7 @@ export class PooledSqlServerConnection
     const readableStream = request.toReadableStream();
     request.query(sqlCommand);
 
-    for await (const row of readableStream){
+    for await (const row of readableStream) {
       yield row as QueryDataRow;
       index += 1;
       if (

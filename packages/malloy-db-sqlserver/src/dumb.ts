@@ -24,22 +24,22 @@ async function testOwnConnection() {
   }
 }
 
-
-async function testMalloyConnection(){
-  const connectionString = "Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;";
+async function testMalloyConnection() {
+  const connectionString =
+    'Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;';
   const conn = new SqlServerConnection({
     name: 'test-sqlserver',
-    connectionString: "Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;"
+    connectionString:
+      'Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;',
   });
 
   const resGen = conn.runSQLStream('SELECT 1');
   console.log(resGen);
   const res1 = await resGen.next();
-  console.log(res1)
+  console.log(res1);
   const res2 = await resGen.next();
-  console.log(res2)
+  console.log(res2);
 }
-
 
 (async () => {
   await testOwnConnection();
