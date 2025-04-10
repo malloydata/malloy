@@ -28,7 +28,7 @@ import type {
   TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
 } from '../../model/malloy_types';
@@ -40,7 +40,7 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {SqlServerBase} from '../mssql_impl';
+import {PostgresBase} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -62,7 +62,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
@@ -89,11 +89,11 @@ const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'varchar': {type: 'string'},
 };
 
-export class SqlServerDialect extends SqlServerBase {
-  name = 'sqlserver';
+export class SqlServerDialect extends PostgresBase {
+  name = 'sqlServer';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
-  udfPrefix = 'mssql_temp.__udf';
+  udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
@@ -132,9 +132,8 @@ export class SqlServerDialect extends SqlServerBase {
       .map(
         f =>
           `\n  ${f.sqlExpression}${
-            f.type === 'number' ? `::${this.defaultNumberType}` : ''
+            f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
           } as ${f.sqlOutputName}`
-        //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
       )
       .join(', ');
   }
@@ -150,7 +149,6 @@ export class SqlServerDialect extends SqlServerBase {
       tail += `[1:${limit}]`;
     }
     const fields = this.mapFields(fieldList);
-    // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
     return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
   }
 
@@ -176,41 +174,6 @@ export class SqlServerDialect extends SqlServerBase {
     const fields = this.mapFields(fieldList);
     return `TO_JSONB((ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x)) FILTER (WHERE group_set=${groupSet}))[1])`;
   }
-
-  // UNNEST((select ARRAY((SELECT ROW(gen_random_uuid()::text, state, airport_count) FROM UNNEST(base.by_state) as by_state(state text, airport_count numeric, by_fac_type record[]))))) as by_state(__distinct_key text, state text, airport_count numeric)
-
-  // sqlUnnestAlias(
-  //   source: string,
-  //   alias: string,
-  //   fieldList: DialectFieldList,
-  //   needDistinctKey: boolean
-  // ): string {
-  //   const fields = [];
-  //   for (const f of fieldList) {
-  //     let t = undefined;
-  //     switch (f.type) {
-  //       case "string":
-  //         t = "text";
-  //         break;
-  //       case "number":
-  //         t = this.defaultNumberType;
-  //         break;
-  //       case "struct":
-  //         t = "record[]";
-  //         break;
-  //     }
-  //     fields.push(`${f.sqlOutputName} ${t || f.type}`);
-  //   }
-  //   if (needDistinctKey) {
-  //     return `UNNEST((select ARRAY((SELECT ROW(gen_random_uuid()::text, ${fieldList
-  //       .map((f) => f.sqlOutputName)
-  //       .join(", ")}) FROM UNNEST(${source}) as ${alias}(${fields.join(
-  //       ", "
-  //     )}))))) as ${alias}(__distinct_key text, ${fields.join(", ")})`;
-  //   } else {
-  //     return `UNNEST(${source}) as ${alias}(${fields.join(", ")})`;
-  //   }
-  // }
 
   sqlUnnestAlias(
     source: string,
@@ -264,6 +227,7 @@ export class SqlServerDialect extends SqlServerBase {
         case 'array':
         case 'record':
         case 'array[record]':
+        case 'sql native':
           ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }
@@ -304,7 +268,7 @@ export class SqlServerDialect extends SqlServerBase {
   }
 
   // The simple way to do this is to add a comment on the table
-  //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html
+  //  with the expiration time. https://www.sqlServerql.org/docs/current/sql-comment.html
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error('Not implemented Yet');
@@ -326,7 +290,7 @@ export class SqlServerDialect extends SqlServerBase {
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     if (cast.safe) {
-      throw new Error("Postgres dialect doesn't support Safe Cast");
+      throw new Error("SqlServer dialect doesn't support Safe Cast");
     }
     return super.sqlCast(qi, cast);
   }
@@ -344,7 +308,7 @@ export class SqlServerDialect extends SqlServerBase {
         ? `FLOOR(${duration})`
         : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
     }
-    throw new Error(`Unknown or unhandled postgres time unit: ${df.units}`);
+    throw new Error(`Unknown or unhandled sqlServer time unit: ${df.units}`);
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
@@ -359,7 +323,7 @@ export class SqlServerDialect extends SqlServerBase {
 
   // TODO this does not preserve the types of the arguments, meaning we have to hack
   // around this in the definitions of functions that use this to cast back to the correct
-  // type (from text). See the postgres implementation of stddev.
+  // type (from text). See the sqlServer implementation of stddev.
   sqlAggDistinct(
     key: string,
     values: string[],
@@ -424,11 +388,11 @@ export class SqlServerDialect extends SqlServerBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (
-      postgresToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
+      sqlServerToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
         type: 'sql native',
         rawType: sqlType,
       }
