@@ -43,7 +43,10 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
-import {PooledSqlServerConnection} from '@malloydata/db-sqlserver/src/sqlserver_connection';
+import {
+  PooledSqlServerConnection,
+  SqlServerExecutor,
+} from '@malloydata/db-sqlserver/src/sqlserver_connection';
 
 import {
   MySQLConnection,
@@ -255,7 +258,11 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         );
         break;
       case 'sqlserver':
-        connection = new SqlServerTestConnection(dbName);
+        connection = new SqlServerTestConnection(
+          dbName,
+          {},
+          SqlServerExecutor.getConnectionOptionsFromEnv()
+        );
         break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);

@@ -51,6 +51,9 @@ import {BaseConnection} from '@malloydata/malloy/connection';
 import {connect, ConnectionPool} from 'mssql';
 import {randomUUID} from 'crypto';
 
+const DEFAULT_PAGE_SIZE = 1000;
+const SCHEMA_PAGE_SIZE = 1000;
+
 interface SqlServerConnectionConfiguration {
   host?: string;
   port?: number;
@@ -64,8 +67,25 @@ type SqlServerConnectionConfigurationReader =
   | SqlServerConnectionConfiguration
   | (() => Promise<SqlServerConnectionConfiguration>);
 
-const DEFAULT_PAGE_SIZE = 1000;
-const SCHEMA_PAGE_SIZE = 1000;
+export class SqlServerExecutor {
+  public static getConnectionOptionsFromEnv(): SqlServerConnectionConfiguration {
+    const user = process.env['SQLSERVER_USER'];
+    if (user) {
+      const host = process.env['SQLSERVER_HOST'];
+      const port = Number(process.env['SQLSERVER_PORT']);
+      const password = process.env['SQLSERVER_PASSWORD'];
+      const database = process.env['SQLSERVER_DATABASE'];
+      return {
+        host,
+        port,
+        username: user,
+        password,
+        databaseName: database,
+      };
+    }
+    return {};
+  }
+}
 
 export interface SqlServerConnectionOptions
   extends ConnectionConfig,
