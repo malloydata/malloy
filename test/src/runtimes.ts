@@ -43,6 +43,8 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {PooledSqlServerConnection} from '@malloydata/db-sqlserver/src/sqlserver_connection';
+
 import {
   MySQLConnection,
   MySQLExecutor,
@@ -149,6 +151,23 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
+export class SqlServerTestConnection extends PooledSqlServerConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
 export class TestCacheManager extends CacheManager {
   constructor(readonly _modelCache: ModelCache) {
     super(_modelCache);
@@ -234,6 +253,9 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           {},
           TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
         );
+        break;
+      case 'sqlserver':
+        connection = new SqlServerTestConnection(dbName);
         break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);
