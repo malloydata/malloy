@@ -148,7 +148,7 @@ export class SqlServerConnection
   }
 
   get dialectName(): string {
-    return 'SqlServer';
+    return 'tsql';
   }
 
   public isPool(): this is PooledConnection {
@@ -277,7 +277,7 @@ export class SqlServerConnection
     const structDef: StructDef = {
       type: 'table',
       name: tableKey,
-      dialect: 'SqlServer',
+      dialect: 'tsql',
       tablePath,
       connection: this.name,
       fields: [],

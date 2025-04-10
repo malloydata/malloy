@@ -27,7 +27,7 @@ export const timeExtractMap: Record<string, string> = {
  * Many SQL implementations started with the PostGres source, and therefore can use the
  * same implementations for the much of the SQL code generation
  */
-export abstract class SqlServerBase extends Dialect {
+export abstract class TSQLBase extends Dialect {
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
     // adjusting for monday/sunday weeks
     const week = df.units === 'week';
