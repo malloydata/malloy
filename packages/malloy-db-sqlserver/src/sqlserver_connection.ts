@@ -287,7 +287,7 @@ export class SqlServerConnection
     await this.runSQL('SELECT 1 AS one, 2 AS two');
   }
 
-  public async connectionSetup(client: ConnectionPool): Promise<void> {
+  public async connectionSetup(_client: ConnectionPool): Promise<void> {
     // TODO (Vitor): Discuss session timezone in SqlServer, this feature ins't straight forward
     // await client.query("SET TIME ZONE 'UTC'");
   }
