@@ -71,7 +71,7 @@ export interface ErrorCase {
     replace: string;
     with: string[];
   };
-};
+}
 
 export const checkCustomErrorMessage = (
   parser: Parser,
