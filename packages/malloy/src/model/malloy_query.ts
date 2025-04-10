@@ -170,7 +170,10 @@ interface OutputPipelinedSQL {
   pipelineSQL: string;
 }
 
-function getDialectFieldList(structDef: StructDef): DialectFieldList {
+function getDialectFieldList(
+  structDef: StructDef,
+  d: Dialect
+): DialectFieldList {
   const dialectFieldList: DialectFieldList = [];
 
   for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
@@ -178,7 +181,7 @@ function getDialectFieldList(structDef: StructDef): DialectFieldList {
       typeDef: f,
       sqlExpression: getIdentifier(f),
       rawName: getIdentifier(f),
-      sqlOutputName: getIdentifier(f),
+      sqlOutputName: d.sqlMaybeQuoteIdentifier(getIdentifier(f)),
     });
   }
   return dialectFieldList;
@@ -269,7 +272,7 @@ class StageWriter {
     }
     sql += dialect.sqlCreateFunctionCombineLastStage(
       lastStageName,
-      getDialectFieldList(structDef),
+      getDialectFieldList(structDef, dialect),
       (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
     );
 
@@ -361,7 +364,7 @@ class StageWriter {
     if (!this.useCTE) {
       return dialect.sqlCreateFunctionCombineLastStage(
         `(${this.withs[0]})`,
-        getDialectFieldList(structDef),
+        getDialectFieldList(structDef, dialect),
         (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
       );
     } else {
@@ -369,7 +372,7 @@ class StageWriter {
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
           this.getName(this.withs.length - 1),
-          getDialectFieldList(structDef),
+          getDialectFieldList(structDef, dialect),
           (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
         )
       );
@@ -2275,7 +2278,10 @@ class JoinInstance {
 
   // postgres unnest needs to know the names of the physical fields.
   getDialectFieldList(): DialectFieldList {
-    return getDialectFieldList(this.queryStruct.structDef);
+    return getDialectFieldList(
+      this.queryStruct.structDef,
+      this.queryStruct.dialect
+    );
   }
 }
 
@@ -3044,7 +3050,10 @@ class QueryQuery extends QueryField {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias,
-            getDialectFieldList(childJoin.queryStruct.structDef)
+            getDialectFieldList(
+              childJoin.queryStruct.structDef,
+              childJoin.queryStruct.dialect
+            )
           )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
@@ -3951,7 +3960,7 @@ class QueryQuery extends QueryField {
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
           repeatedResultType === 'inline_all_numbers',
           sourceSQLExpression,
-          getDialectFieldList(structDef)
+          getDialectFieldList(structDef, this.parent.dialect)
         ),
         fields: structDef.fields,
         connection: structDef.connection,
