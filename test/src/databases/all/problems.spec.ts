@@ -42,8 +42,9 @@ async function getError<T>(fn: () => Promise<T>) {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`properly quotes nested field names in ${databaseName}`, async () => {
-    expect(`
-      run: ${databaseName}.sql("SELECT 1 as one") -> {
+    const one = runtime.dialect.sqlMaybeQuoteIdentifier('one');
+    await expect(`
+      run: ${databaseName}.sql(""" SELECT 1 as ${one} """) -> {
         nest: foo is {
           group_by: one
           aggregate: \`#\` is count(one)
