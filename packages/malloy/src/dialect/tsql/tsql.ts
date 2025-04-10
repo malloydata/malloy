@@ -41,8 +41,8 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
-import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
-import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import {TSQL_DIALECT_FUNCTIONS} from './dialect_functions';
+import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
@@ -62,7 +62,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
+const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
@@ -89,8 +89,8 @@ const sqlServerToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'varchar': {type: 'string'},
 };
 
-export class SqlServerDialect extends PostgresBase {
-  name = 'sqlServer';
+export class TSQLDialect extends PostgresBase {
+  name = 'tsql';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
   udfPrefix = 'pg_temp.__udf';
@@ -268,7 +268,7 @@ export class SqlServerDialect extends PostgresBase {
   }
 
   // The simple way to do this is to add a comment on the table
-  //  with the expiration time. https://www.sqlServerql.org/docs/current/sql-comment.html
+  //  with the expiration time. https://www.tsqlql.org/docs/current/sql-comment.html
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error('Not implemented Yet');
@@ -290,7 +290,7 @@ export class SqlServerDialect extends PostgresBase {
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     if (cast.safe) {
-      throw new Error("SqlServer dialect doesn't support Safe Cast");
+      throw new Error("TSQL dialect doesn't support Safe Cast");
     }
     return super.sqlCast(qi, cast);
   }
@@ -308,7 +308,7 @@ export class SqlServerDialect extends PostgresBase {
         ? `FLOOR(${duration})`
         : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
     }
-    throw new Error(`Unknown or unhandled sqlServer time unit: ${df.units}`);
+    throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
@@ -323,7 +323,7 @@ export class SqlServerDialect extends PostgresBase {
 
   // TODO this does not preserve the types of the arguments, meaning we have to hack
   // around this in the definitions of functions that use this to cast back to the correct
-  // type (from text). See the sqlServer implementation of stddev.
+  // type (from text). See the tsql implementation of stddev.
   sqlAggDistinct(
     key: string,
     values: string[],
@@ -368,11 +368,11 @@ export class SqlServerDialect extends PostgresBase {
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
-    return expandOverrideMap(POSTGRES_MALLOY_STANDARD_OVERLOADS);
+    return expandOverrideMap(TSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
+    return expandBlueprintMap(TSQL_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
@@ -392,7 +392,7 @@ export class SqlServerDialect extends PostgresBase {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (
-      sqlServerToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
+      tsqlToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
         type: 'sql native',
         rawType: sqlType,
       }

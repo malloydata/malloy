@@ -15,7 +15,7 @@ function greatestOrLeastSQL(name: string) {
   );
 }
 
-export const POSTGRES_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
+export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   byte_length: {function: 'OCTET_LENGTH'},
   // There's no ENDS_WITH function in Postgres, so we do a hacky check that the last
   // N characters, where N is the length of the suffix, are equal to the suffix.

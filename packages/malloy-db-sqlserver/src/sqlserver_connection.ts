@@ -144,7 +144,7 @@ export class SqlServerConnection
   }
 
   public get supportsNesting(): boolean {
-    return true;
+    return false;
   }
 
   protected async getClient(): Promise<ConnectionPool> {
