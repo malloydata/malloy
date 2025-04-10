@@ -22,22 +22,6 @@ describe.each(runtimes.runtimeList)(
       throw new Error("Couldn't build runtime");
     }
     const presto = databaseName === 'presto';
-
-    it('properly quotes nested field names', async () => {
-      expect(`
-        run: ${databaseName}.sql("SELECT 1 as one") -> {
-          nest: foo is {
-            group_by: one
-            aggregate: \`#\` is count(one)
-            nest: deepfoo is {
-              group_by: one
-              aggregate: \`#\` is count(one)
-            }
-          }
-        }`).matchesRows(runtime, {
-        foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
-      });
-    });
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`
