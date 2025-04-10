@@ -6,6 +6,7 @@
  */
 
 import type {Parser, ParserRuleContext, RuleContext, Token} from 'antlr4ts';
+import distance from 'jaro-winkler';
 
 export interface ErrorCase {
   // The rule contexts in which to apply this error case.
@@ -66,7 +67,11 @@ export interface ErrorCase {
     This rule excludes all common ancestors of the match and the offendingSymbol.
   */
   predecessorHasAncestorRule?: number;
-}
+  alternatives?: {
+    replace: string;
+    with: string[];
+  };
+};
 
 export const checkCustomErrorMessage = (
   parser: Parser,
@@ -159,15 +164,32 @@ export const checkCustomErrorMessage = (
         }
       }
 
+      // eslint-disable-next-line no-inner-declarations
+      function errReplace(s: string): string {
+        const rs = s
+          .replace('${currentToken}', currentToken.text || '')
+          .replace('${offendingSymbol}', offendingSymbol?.text || '');
+        try {
+          const previousToken = parser.inputStream.LT(-1);
+          return rs.replace('${previousToken}', previousToken.text || '');
+        } catch (ex) {
+          // This shouldn't ever occur, but if it does, just leave the untokenized message.
+        }
+        return rs;
+      }
+
       // If all cases match, return the custom error message
-      let message = errorCase.errorMessage
-        .replace('${currentToken}', currentToken.text || '')
-        .replace('${offendingSymbol}', offendingSymbol?.text || '');
-      try {
-        const previousToken = parser.inputStream.LT(-1);
-        message = message.replace('${previousToken}', previousToken.text || '');
-      } catch (ex) {
-        // This shouldn't ever occur, but if it does, just leave the untokenized message.
+      let message = errReplace(errorCase.errorMessage);
+      if (errorCase.alternatives) {
+        const badWord = errReplace(errorCase.alternatives.replace);
+        const distances: Record<string, number> = {};
+        for (const w of errorCase.alternatives.with) {
+          distances[w] = distance(w, badWord);
+        }
+        const picks = errorCase.alternatives.with.sort(
+          (a, b) => distances[b] - distances[a]
+        );
+        message += ` Did you mean '${picks[0]}'?`;
       }
       return message;
     }
