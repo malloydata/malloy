@@ -45,7 +45,7 @@ import type {
   StructDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {SqlServerDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
+import {TSQLDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {connect, ConnectionPool} from 'mssql';
@@ -79,7 +79,7 @@ export class SqlServerConnection
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: SqlServerConnectionConfigurationReader = {};
 
-  private readonly dialect = new SqlServerDialect();
+  private readonly dialect = new TSQLDialect();
 
   constructor(
     options: SqlServerConnectionOptions,
