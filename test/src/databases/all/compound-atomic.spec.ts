@@ -169,7 +169,7 @@ describe.each(runtimes.runtimeList)(
           """) -> { select: roll is d1.each + d2.each }
           -> {
             group_by: roll
-            agggregate: n is count()
+            aggregate: n is count()
             order_by: roll asc
           }
           `).matchesRows(
