@@ -572,6 +572,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
     },
   },
+  'Having': {
+    'type': 'struct',
+    'name': 'Having',
+    'fields': {
+      'filter': {
+        'type': 'Filter',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
   'JSONCell': {
     'type': 'struct',
     'name': 'JSONCell',
@@ -1461,6 +1472,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'order_by': 'OrderBy',
       'limit': 'Limit',
       'where': 'Where',
+      'having': 'Having',
       'nest': 'Nest',
     },
   },
@@ -1782,7 +1794,7 @@ export type FilterStringApplication = {
 
 export type FilteredField = {
   field_reference: Reference;
-  where: Array<Where>;
+  where: Array<FilterOperation>;
 };
 
 export type GroupBy = {
@@ -2155,6 +2167,7 @@ export type ViewOperationType =
   | 'order_by'
   | 'limit'
   | 'where'
+  | 'having'
   | 'nest';
 
 export type ViewOperation =
@@ -2163,6 +2176,7 @@ export type ViewOperation =
   | ViewOperationWithOrderBy
   | ViewOperationWithLimit
   | ViewOperationWithWhere
+  | ViewOperationWithHaving
   | ViewOperationWithNest;
 
 export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
@@ -2173,7 +2187,9 @@ export type ViewOperationWithOrderBy = {kind: 'order_by'} & OrderBy;
 
 export type ViewOperationWithLimit = {kind: 'limit'} & Limit;
 
-export type ViewOperationWithWhere = {kind: 'where'} & Where;
+export type ViewOperationWithWhere = {kind: 'where'} & FilterOperation;
+
+export type ViewOperationWithHaving = {kind: 'having'} & FilterOperation;
 
 export type ViewOperationWithNest = {kind: 'nest'} & Nest;
 
@@ -2186,6 +2202,6 @@ export type ViewSegment = {
   operations: Array<ViewOperation>;
 };
 
-export type Where = {
+export type FilterOperation = {
   filter: Filter;
 };
