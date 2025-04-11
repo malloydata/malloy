@@ -4020,11 +4020,12 @@ class QueryQuery extends QueryField {
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
-    if (this.fieldDef.pipeline.length > 1) {
+    const pipeline = [...this.fieldDef.pipeline];
+    if (pipeline.length > 1) {
       // console.log(pretty(outputStruct));
-      const pipeline = [...this.fieldDef.pipeline];
       let structDef: FinalizeSourceDef = {
         ...outputStruct,
+        name: lastStageName,
         type: 'finalize',
       };
       pipeline.shift();
@@ -4049,6 +4050,7 @@ class QueryQuery extends QueryField {
         outputStruct = q.getResultStructDef();
         structDef = {
           ...outputStruct,
+          name: lastStageName,
           type: 'finalize',
         };
       }
