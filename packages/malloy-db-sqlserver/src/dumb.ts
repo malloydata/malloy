@@ -1,5 +1,7 @@
-import {SqlServerConnection} from './sqlserver_connection';
+import {SqlServerConnection, SqlServerExecutor} from './sqlserver_connection';
 import sql from 'mssql';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const config: sql.config = {
   user: 'sa',
@@ -25,12 +27,11 @@ async function testOwnConnection() {
 }
 
 async function testMalloyConnection() {
-  const connectionString =
-    'Server=localhost;Database=banana;User Id=sa;Password=saTEST_0pword;Encrypt=True;TrustServerCertificate=True;';
-  const conn = new SqlServerConnection({
-    name: 'test-sqlserver',
-    connectionString,
-  });
+  const conn = new SqlServerConnection(
+    'sqlserver',
+    {},
+    SqlServerExecutor.getConnectionOptionsFromEnv()
+  );
 
   const resGen = conn.runSQLStream('SELECT 1');
   console.log(resGen);
@@ -42,5 +43,8 @@ async function testMalloyConnection() {
 
 (async () => {
   await testOwnConnection();
+  console.log('ok');
+  console.log( process.env);
+  console.log( SqlServerExecutor.getConnectionOptionsFromEnv());
   await testMalloyConnection();
 })();
