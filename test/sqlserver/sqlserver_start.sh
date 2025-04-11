@@ -8,7 +8,7 @@ mkdir .tmp
 SCRIPTDIR=$(cd $(dirname $0); pwd)
 DATADIR=$(dirname $SCRIPTDIR)/data/sqlserver
 docker run \
-  -p 1433:1433 -d -v $DATADIR:/init_data --name sqlserver-malloy --hostname sqlserver-malloy -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=saTEST_0pword" -d mcr.microsoft.com/mssql/server:2022-latest
+  -p 1433:1433 -d -v $DATADIR:/init_data --name sqlserver-malloy --hostname sqlserver-malloy -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=saTEST_0pword" -d vitorelourenco/sqlserver:v0
 
 # wait for server to start
 counter=0
