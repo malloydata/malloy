@@ -471,9 +471,9 @@ export class MalloyToQuery
       }));
     } else if (cx.havingStatement()) {
       const hvcx = cx.havingStatement()!;
-      const where = this.getHaving(hvcx);
-      if (where === null) return null;
-      return where.map(h => ({
+      const having = this.getHaving(hvcx);
+      if (having === null) return null;
+      return having.map(h => ({
         kind: 'having',
         ...h,
       }));
