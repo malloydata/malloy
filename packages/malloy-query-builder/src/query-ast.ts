@@ -1141,6 +1141,7 @@ export type ASTLiteralValue =
   | ASTBooleanLiteralValue
   | ASTDateLiteralValue
   | ASTTimestampLiteralValue
+  | ASTFilterExpressionLiteralValue
   | ASTNullLiteralValue;
 export const ASTLiteralValue = {
   from(value: Malloy.LiteralValue) {
@@ -1157,6 +1158,8 @@ export const ASTLiteralValue = {
         return new ASTTimestampLiteralValue(value);
       case 'null_literal':
         return new ASTNullLiteralValue(value);
+      case 'filter_expression_literal':
+        return new ASTFilterExpressionLiteralValue(value);
     }
   },
   makeLiteral(value: RawLiteralValue): Malloy.LiteralValue {
@@ -1299,6 +1302,23 @@ export class ASTTimestampLiteralValue extends ASTObjectNode<
       kind: node.kind,
       timestamp_value: node.timestamp_value,
       granularity: node.granularity,
+    });
+  }
+}
+
+export class ASTFilterExpressionLiteralValue extends ASTObjectNode<
+  Malloy.LiteralValueWithFilterExpressionLiteral,
+  {
+    kind: 'filter_expression_literal';
+    filter_expression_value: string;
+  }
+> {
+  readonly kind: Malloy.LiteralValueType = 'filter_expression_literal';
+
+  constructor(public node: Malloy.LiteralValueWithFilterExpressionLiteral) {
+    super(node, {
+      kind: node.kind,
+      filter_expression_value: node.filter_expression_value,
     });
   }
 }

@@ -54,11 +54,17 @@ import type {
   DocumentLocation,
   DocumentRange,
   Note,
+  ParameterType,
 } from '../model/malloy_types';
-import {isCastType, isMatrixOperation} from '../model/malloy_types';
+import {
+  isCastType,
+  isMatrixOperation,
+  isParameterType,
+} from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
-import {ConstantExpression} from './ast/expressions/constant-expression';
 import {isNotUndefined, rangeFromContext} from './utils';
+import type {FilterableType} from '@malloydata/malloy-filter';
+import {isFilterable} from '@malloydata/malloy-filter';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -357,22 +363,53 @@ export class MalloyToAST
     return defList;
   }
 
-  getSourceParameter(pcx: parse.SourceParameterContext): ast.HasParameter {
+  getSourceParameter(
+    pcx: parse.SourceParameterContext
+  ): ast.HasParameter | null {
+    const name = getId(pcx.parameterNameDef());
+
+    let pType: ParameterType | undefined;
+    let filterType: FilterableType | undefined;
+    const typeCx = pcx.legalParamType();
+    if (typeCx) {
+      const fTypeCx = typeCx.malloyType();
+      if (fTypeCx) {
+        const t = this.getMalloyType(fTypeCx);
+        if (isFilterable(t)) {
+          filterType = t;
+        } else {
+          this.contextError(
+            typeCx,
+            'parameter-illegal-default-type',
+            `Unknown filter type ${t}`
+          );
+        }
+      }
+      const parseType = typeCx.FILTER()
+        ? 'filter expression'
+        : typeCx.text.toLowerCase();
+      if (!isParameterType(parseType)) {
+        this.contextError(
+          typeCx,
+          'parameter-illegal-default-type',
+          `Unknown parameter type ${parseType}`
+        );
+        return null;
+      }
+      pType = parseType;
+    }
+
     const defaultCx = pcx.fieldExpr();
-    const defaultValue = defaultCx
-      ? this.astAt(
-          new ConstantExpression(this.getFieldExpr(defaultCx)),
-          defaultCx
-        )
-      : undefined;
-    const typeCx = pcx.malloyType();
-    const type = typeCx ? this.getMalloyType(typeCx) : undefined;
+    let defVal;
+    if (defaultCx) {
+      const defaultExpr = new ast.ConstantExpression(
+        this.getFieldExpr(defaultCx)
+      );
+      defVal = this.astAt(defaultExpr, defaultCx);
+    }
+
     return this.astAt(
-      new ast.HasParameter({
-        name: getId(pcx.parameterNameDef()),
-        type,
-        default: defaultValue,
-      }),
+      new ast.HasParameter({name, type: pType, default: defVal, filterType}),
       pcx
     );
   }
@@ -382,7 +419,13 @@ export class MalloyToAST
   ): ast.HasParameter[] {
     if (pcx === undefined) return [];
     this.inExperiment('parameters', pcx);
-    return pcx.sourceParameter().map(param => this.getSourceParameter(param));
+    function notNullParam(p: ast.HasParameter | null): p is ast.HasParameter {
+      return p !== null;
+    }
+    return pcx
+      .sourceParameter()
+      .map(param => this.getSourceParameter(param))
+      .filter(notNullParam);
   }
 
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {

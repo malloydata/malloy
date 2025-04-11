@@ -85,6 +85,7 @@ export type Expr =
   | RegexMatchExpr
   | RegexLiteralNode
   | FilterMatchExpr
+  | FilterLiteralExpr
   | StringLiteralNode
   | NumberLiteralNode
   | BooleanLiteralNode
@@ -321,11 +322,16 @@ export function isFilterExprType(s: string): s is FilterExprType {
   return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
 }
 
-export interface FilterMatchExpr extends ExprE {
+export interface FilterMatchExpr extends ExprWithKids {
   node: 'filterMatch';
   dataType: FilterExprType;
   notMatch?: true;
-  filter: {operator: string} | null;
+  kids: {filterExpr: Expr; expr: Expr};
+}
+
+export interface FilterLiteralExpr extends ExprLeaf {
+  node: 'filterLiteral';
+  filterSrc: string;
 }
 
 export interface TimeLiteralNode extends ExprLeaf {
@@ -421,7 +427,18 @@ interface ParameterInfo {
   name: string;
   value: ConstantExpr | null;
 }
-export type Parameter = AtomicTypeDef & ParameterInfo;
+
+export interface FilterExpressionDef {
+  type: 'filter expression';
+  filterType?: FilterExprType;
+}
+
+export type ParameterType = CastType | 'filter expression';
+export function isParameterType(t: string): t is ParameterType {
+  return isCastType(t) || t === 'filter expression';
+}
+export type ParameterTypeDef = AtomicTypeDef | FilterExpressionDef;
+export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
 export function paramHasValue(p: Parameter): boolean {

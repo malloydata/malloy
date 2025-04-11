@@ -25,6 +25,7 @@ import type {
   Expr,
   TimestampUnit,
   BasicExpressionType,
+  FilterMatchExpr,
 } from '../../../model/malloy_types';
 import {
   isDateUnit,
@@ -51,6 +52,13 @@ import type {
   EqualityMalloyOperator,
 } from './binary_operators';
 import {getExprNode, isComparison, isEquality} from './binary_operators';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
+  TemporalFilterExpression,
+  isFilterable,
+} from '@malloydata/malloy-filter';
 
 class TypeMismatch extends Error {}
 
@@ -325,26 +333,62 @@ function equality(
       }
     }
   }
-  let value = timeCompare(left, lhs, op, rhs) || {
-    node,
-    kids: {left: lhs.value, right: rhs.value},
-  };
 
-  if (
-    lhs.type !== 'error' &&
-    rhs.type !== 'error' &&
-    (op === '~' || op === '!~')
-  ) {
-    if (lhs.type !== 'string' || rhs.type !== 'string') {
-      let regexCmp = regexEqual(lhs, rhs);
-      if (regexCmp) {
-        if (op[0] === '!') {
-          regexCmp = {node: 'not', e: {...regexCmp}};
-        }
-      } else {
-        throw new TypeMismatch("Incompatible types for match('~') operator");
+  let value: Expr;
+
+  if (rhs.type === 'filter expression') {
+    if (op !== '~' && op !== '!~') {
+      return right.loggedErrorExpr(
+        'filter-expression-error',
+        `Cannot use the '${op}' operator with a filter expression`
+      );
+    }
+    if (isFilterable(lhs.type)) {
+      let actualFilter = rhs.value;
+      while (actualFilter.node === '()') {
+        actualFilter = actualFilter.e;
       }
-      value = regexCmp;
+      if (actualFilter.node !== 'parameter') {
+        // Parameters are checked when parameter value is parsed
+        checkFilterExpression(right, lhs.type, actualFilter);
+      }
+      const filterMatch: FilterMatchExpr = {
+        node: 'filterMatch',
+        dataType: lhs.type,
+        kids: {filterExpr: rhs.value, expr: lhs.value},
+      };
+      if (op === '!~') {
+        filterMatch.notMatch = true;
+      }
+      value = filterMatch;
+    } else {
+      return left.loggedErrorExpr(
+        'filter-expression-type',
+        `Cannot use filter expressions with type '${lhs.type}'`
+      );
+    }
+  } else {
+    value = timeCompare(left, lhs, op, rhs) || {
+      node,
+      kids: {left: lhs.value, right: rhs.value},
+    };
+
+    if (
+      lhs.type !== 'error' &&
+      rhs.type !== 'error' &&
+      (op === '~' || op === '!~')
+    ) {
+      if (lhs.type !== 'string' || rhs.type !== 'string') {
+        let regexCmp = regexEqual(lhs, rhs);
+        if (regexCmp) {
+          if (op[0] === '!') {
+            regexCmp = {node: 'not', e: {...regexCmp}};
+          }
+        } else {
+          throw new TypeMismatch("Incompatible types for match('~') operator");
+        }
+        value = regexCmp;
+      }
     }
   }
 
@@ -559,4 +603,40 @@ function unsupportError(
     return ret;
   }
   return undefined;
+}
+
+export function checkFilterExpression(
+  logTo: MalloyElement,
+  ft: string,
+  fexpr: Expr
+) {
+  while (fexpr.node === '()') {
+    fexpr = fexpr.e;
+  }
+  if (fexpr.node !== 'filterLiteral') {
+    logTo.logError(
+      'filter-expression-error',
+      'Expected a filter expression literal here'
+    );
+    return;
+  }
+  const fsrc = fexpr.filterSrc;
+  let err: string | undefined;
+  if (ft === 'date' || ft === 'timestamp') {
+    err = TemporalFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'string') {
+    err = StringFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'number') {
+    err = NumberFilterExpression.parse(fsrc).log[0]?.message;
+  } else if (ft === 'boolean') {
+    err = BooleanFilterExpression.parse(fsrc).log[0]?.message;
+  } else {
+    logTo.logError(
+      'filter-expression-type',
+      `Cannot apply filter expression to type ${ft}`
+    );
+  }
+  if (err !== undefined) {
+    logTo.logError('filter-expression-error', `Filter syntax error: ${err}`);
+  }
 }

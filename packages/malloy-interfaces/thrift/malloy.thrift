@@ -25,7 +25,7 @@ struct SourceInfo {
 
 struct ParameterInfo {
   1: required string name,
-  2: required AtomicType type,
+  2: required ParameterType type,
   3: optional LiteralValue default_value,
 }
 
@@ -176,6 +176,10 @@ struct RecordType {
   1: required list<DimensionInfo> fields
 }
 
+struct FilterExpressionType {
+}
+
+
 union AtomicType {
   1: required StringType string_type,
   2: required BooleanType boolean_type,
@@ -186,6 +190,19 @@ union AtomicType {
   7: required TimestampType timestamp_type,
   9: required ArrayType array_type,
   10: required RecordType record_type,
+}
+
+union ParameterType {
+  1: required StringType string_type,
+  2: required BooleanType boolean_type,
+  3: required NumberType number_type,
+  4: required JSONType json_type,
+  5: required SQLNativeType sql_native_type,
+  6: required DateType date_type,
+  7: required TimestampType timestamp_type,
+  9: required ArrayType array_type,
+  10: required RecordType record_type,
+  11: required FilterExpressionType filter_expression_type,
 }
 
 struct SQLNativeType {
@@ -372,6 +389,7 @@ union LiteralValue {
   4: required TimestampLiteral timestamp_literal,
   5: required BooleanLiteral boolean_literal,
   6: required NullLiteral null_literal,
+  7: required FilterExpressionLiteral filter_expression_literal,
 }
 
 struct StringLiteral {
@@ -397,6 +415,10 @@ struct TimestampLiteral {
 }
 
 struct NullLiteral {
+}
+
+struct FilterExpressionLiteral {
+  1: required string filter_expression_value,
 }
 
 union Expression {
