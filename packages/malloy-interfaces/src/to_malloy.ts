@@ -305,7 +305,9 @@ function groupedOperationsToFragments(
     case 'limit':
       return limitToFragments(operations as Malloy.Limit[]);
     case 'where':
-      return whereToFragments(operations as Malloy.Where[]);
+      return whereToFragments(operations as Malloy.FilterOperation[]);
+    case 'having':
+      return havingToFragments(operations as Malloy.FilterOperation[]);
   }
 }
 
@@ -479,8 +481,12 @@ function limitToFragments(limits: Malloy.Limit[]): Fragment[] {
   return fragments;
 }
 
-function whereToFragments(where: Malloy.Where[]): Fragment[] {
-  return formatBlock('where', where.map(whereItemToFragments), ',');
+function whereToFragments(where: Malloy.FilterOperation[]): Fragment[] {
+  return formatBlock('where', where.map(filterOperationItemToFragments), ',');
+}
+
+function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
+  return formatBlock('having', having.map(filterOperationItemToFragments), ',');
 }
 
 const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly
@@ -517,7 +523,9 @@ function escapeFilter(filter: string, quote: string): string {
   return result;
 }
 
-function whereItemToFragments(whereItem: Malloy.Where): Fragment[] {
+function filterOperationItemToFragments(
+  whereItem: Malloy.FilterOperation
+): Fragment[] {
   switch (whereItem.filter.kind) {
     case 'filter_string':
       return [

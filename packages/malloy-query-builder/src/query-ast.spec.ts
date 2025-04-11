@@ -613,6 +613,50 @@ describe('query builder', () => {
       }`,
     });
   });
+  test('add a having', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addHaving('flight_count', '>100');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'having',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'flight_count'},
+                  filter: '>100',
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: 'run: flights -> { having: flight_count ~ f`>100` }',
+    });
+  });
   test('add a date group by', () => {
     const from: Malloy.Query = {
       definition: {

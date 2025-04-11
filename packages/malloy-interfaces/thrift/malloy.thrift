@@ -236,8 +236,9 @@ union ViewOperation {
   2: required Aggregate aggregate,
   3: OrderBy order_by,
   4: required Limit limit,
-  5: required Where where,
+  5: required FilterOperation where,
   6: required Nest nest,
+  7: required FilterOperation having,
 }
 
 struct GroupBy {
@@ -276,6 +277,10 @@ struct Limit {
 // into an intersection type of `{__type: } & Where`. If Where is also a union, then
 // there would be two `__type` fields...
 struct Where {
+  1: required Filter filter,
+}
+
+struct FilterOperation {
   1: required Filter filter,
 }
 
