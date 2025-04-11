@@ -470,7 +470,13 @@ export class MalloyToQuery
         ...w,
       }));
     } else if (cx.havingStatement()) {
-      this.notAllowed(cx, 'Having statements');
+      const hvcx = cx.havingStatement()!;
+      const where = this.getHaving(hvcx);
+      if (where === null) return null;
+      return where.map(h => ({
+        kind: 'having',
+        ...h,
+      }));
     } else if (cx.nestStatement()) {
       const obcx = cx.nestStatement()!;
       return this.getNestStatement(obcx);
@@ -615,7 +621,7 @@ export class MalloyToQuery
         return null;
       }
       const props = cx.fieldProperties().fieldPropertyStatement();
-      const where: Malloy.Where[] = [];
+      const where: Malloy.FilterOperation[] = [];
       for (const prop of props) {
         const whereCx = prop.whereStatement();
         if (whereCx) {
@@ -670,7 +676,7 @@ export class MalloyToQuery
     return null;
   }
 
-  getWhereExpr(cx: parse.FieldExprContext): Malloy.Where | null {
+  getFilterExpr(cx: parse.FieldExprContext): Malloy.FilterOperation | null {
     if (cx instanceof parse.ExprCompareContext) {
       if (cx.compareOp().MATCH()) {
         const lhs = cx.fieldExpr()[0];
@@ -702,13 +708,26 @@ export class MalloyToQuery
     return null;
   }
 
-  getWhere(whereCx: parse.WhereStatementContext): Malloy.Where[] | null {
+  getWhere(
+    whereCx: parse.WhereStatementContext
+  ): Malloy.FilterOperation[] | null {
     const exprs = whereCx.filterClauseList().fieldExpr();
-    const where = exprs.map(exprCx => this.getWhereExpr(exprCx));
+    const where = exprs.map(exprCx => this.getFilterExpr(exprCx));
     if (where.some(w => w === null)) {
       return null;
     }
-    return where as Malloy.Where[];
+    return where as Malloy.FilterOperation[];
+  }
+
+  getHaving(
+    havingCx: parse.HavingStatementContext
+  ): Malloy.FilterOperation[] | null {
+    const exprs = havingCx.filterClauseList().fieldExpr();
+    const having = exprs.map(exprCx => this.getFilterExpr(exprCx));
+    if (having.some(h => h === null)) {
+      return null;
+    }
+    return having as Malloy.FilterOperation[];
   }
 
   protected combineAnnotations(

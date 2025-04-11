@@ -2713,6 +2713,44 @@ export class ASTSegmentViewDefinition
     return item;
   }
 
+  public addHaving(name: string, filter: ParsedFilter): ASTHavingViewOperation;
+  public addHaving(name: string, filterString: string): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    path: string[],
+    filter: ParsedFilter
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    path: string[],
+    filterString: string
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    arg2: string[] | string | ParsedFilter,
+    arg3?: string | ParsedFilter
+  ): ASTHavingViewOperation {
+    const path = Array.isArray(arg2) ? arg2 : [];
+    const filter = arg3 === undefined ? (arg2 as string | ParsedFilter) : arg3;
+    const filterString =
+      typeof filter === 'string' ? filter : serializeFilter(filter);
+    const schema = this.getInputSchema();
+    // Validate name
+    const field = ASTQuery.schemaGet(schema, name, path);
+    // Validate filter
+    validateFilter(field, filter);
+    const item = new ASTHavingViewOperation({
+      kind: 'having',
+      filter: {
+        kind: 'filter_string',
+        field_reference: {name, path},
+        filter: filterString,
+      },
+    });
+    this.addOperation(item);
+    return item;
+  }
+
   private addTimeGroupBy(
     name: string,
     path: string[],
@@ -2889,6 +2927,7 @@ export class ASTSegmentViewDefinition
       | ASTAggregateViewOperation
       | ASTNestViewOperation
       | ASTWhereViewOperation
+      | ASTHavingViewOperation
       | ASTOrderByViewOperation
   ) {
     if (
@@ -3047,7 +3086,8 @@ export type ASTViewOperation =
   | ASTOrderByViewOperation
   | ASTNestViewOperation
   | ASTLimitViewOperation
-  | ASTWhereViewOperation;
+  | ASTWhereViewOperation
+  | ASTHavingViewOperation;
 export const ASTViewOperation = {
   from(value: Malloy.ViewOperation): ASTViewOperation {
     switch (value.kind) {
@@ -3063,6 +3103,8 @@ export const ASTViewOperation = {
         return new ASTLimitViewOperation(value);
       case 'where':
         return new ASTWhereViewOperation(value);
+      case 'having':
+        return new ASTHavingViewOperation(value);
     }
   },
   isLimit(x: ASTViewOperation): x is ASTLimitViewOperation {
@@ -3464,7 +3506,7 @@ export class ASTAggregateViewOperation
     const field = ASTQuery.schemaGet(schema, name, path);
     // Validate filter
     validateFilter(field, filter);
-    const where: Malloy.Where = {
+    const where: Malloy.FilterOperation = {
       filter: {
         kind: 'filter_string',
         field_reference: {name, path},
@@ -3777,8 +3819,11 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
   }
 }
 
-export class ASTWhere extends ASTObjectNode<Malloy.Where, {filter: ASTFilter}> {
-  constructor(node: Malloy.Where) {
+export class ASTWhere extends ASTObjectNode<
+  Malloy.FilterOperation,
+  {filter: ASTFilter}
+> {
+  constructor(node: Malloy.FilterOperation) {
     super(node, {
       filter: ASTFilter.from(node.filter),
     });
@@ -3797,8 +3842,11 @@ export class ASTWhere extends ASTObjectNode<Malloy.Where, {filter: ASTFilter}> {
   }
 }
 
-export class ASTWhereList extends ASTListNode<Malloy.Where, ASTWhere> {
-  constructor(wheres: Malloy.Where[]) {
+export class ASTWhereList extends ASTListNode<
+  Malloy.FilterOperation,
+  ASTWhere
+> {
+  constructor(wheres: Malloy.FilterOperation[]) {
     super(
       wheres,
       wheres.map(p => new ASTWhere(p))
@@ -4046,7 +4094,7 @@ export class ASTNestViewOperation
   }
 }
 
-export class ASTWhereViewOperation extends ASTObjectNode<
+class ASTWhereViewOperation extends ASTObjectNode<
   Malloy.ViewOperationWithWhere,
   {
     kind: 'where';
@@ -4057,6 +4105,37 @@ export class ASTWhereViewOperation extends ASTObjectNode<
   constructor(public node: Malloy.ViewOperationWithWhere) {
     super(node, {
       kind: 'where',
+      filter: ASTFilter.from(node.filter),
+    });
+  }
+
+  get filter() {
+    return this.children.filter;
+  }
+
+  /**
+   * @internal
+   */
+  get list() {
+    return this.parent.as.ViewOperationList();
+  }
+
+  delete() {
+    this.list.remove(this);
+  }
+}
+
+class ASTHavingViewOperation extends ASTObjectNode<
+  Malloy.ViewOperationWithHaving,
+  {
+    kind: 'having';
+    filter: ASTFilter;
+  }
+> {
+  readonly kind: Malloy.ViewOperationType = 'nest';
+  constructor(public node: Malloy.ViewOperationWithHaving) {
+    super(node, {
+      kind: 'having',
       filter: ASTFilter.from(node.filter),
     });
   }
