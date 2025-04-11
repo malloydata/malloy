@@ -61,6 +61,8 @@ interface SqlServerConnectionConfiguration {
   password?: string;
   databaseName?: string;
   connectionString?: string;
+  encrypt?: boolean;
+  trustServerCertificate?: boolean;
 }
 
 type SqlServerConnectionConfigurationReader =
@@ -75,6 +77,12 @@ export class SqlServerExecutor {
       const port = Number(process.env['SQLSERVER_PORT']);
       const password = process.env['SQLSERVER_PASSWORD'];
       const database = process.env['SQLSERVER_DATABASE'];
+      const encrypt =
+        process.env['SQLSERVER_OPTIONS__ENCRYPT']?.toLowerCase() === 'true';
+      const trustServerCertificate =
+        process.env[
+          'SQLSERVER_OPTIONS__TRUST_SERVER_CERTIFICATE'
+        ]?.toLowerCase() === 'true';
 
       return {
         host,
@@ -82,6 +90,8 @@ export class SqlServerExecutor {
         username: user,
         password,
         databaseName: database,
+        encrypt,
+        trustServerCertificate,
       };
     }
     return {};
@@ -176,6 +186,8 @@ export class SqlServerConnection
       port,
       host = 'localhost',
       connectionString,
+      encrypt,
+      trustServerCertificate,
     } = await this.readConfig();
     return connect(
       connectionString || {
@@ -184,6 +196,10 @@ export class SqlServerConnection
         database,
         port,
         server: host,
+        options: {
+          encrypt,
+          trustServerCertificate,
+        },
       }
     );
   }
@@ -416,6 +432,8 @@ export class PooledSqlServerConnection
         port,
         host = 'localhost',
         connectionString,
+        encrypt,
+        trustServerCertificate,
       } = await this.readConfig();
       if (connectionString) {
         this._pool = new ConnectionPool(connectionString);
@@ -426,6 +444,10 @@ export class PooledSqlServerConnection
           database,
           port,
           server: host,
+          options: {
+            encrypt,
+            trustServerCertificate,
+          },
         });
       }
       this._pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
