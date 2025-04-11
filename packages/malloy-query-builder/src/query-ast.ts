@@ -4094,7 +4094,7 @@ export class ASTNestViewOperation
   }
 }
 
-class ASTWhereViewOperation extends ASTObjectNode<
+export class ASTWhereViewOperation extends ASTObjectNode<
   Malloy.ViewOperationWithWhere,
   {
     kind: 'where';
@@ -4125,7 +4125,7 @@ class ASTWhereViewOperation extends ASTObjectNode<
   }
 }
 
-class ASTHavingViewOperation extends ASTObjectNode<
+export class ASTHavingViewOperation extends ASTObjectNode<
   Malloy.ViewOperationWithHaving,
   {
     kind: 'having';
