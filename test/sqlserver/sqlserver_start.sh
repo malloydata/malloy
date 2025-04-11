@@ -4,10 +4,11 @@ set -e
 rm -rf .tmp
 mkdir .tmp
 
+USERNAME=SA
 PASSWORD=saTEST_0pword
 CONTAINER_NAME=sqlserver-malloy
 SERVER_NAME=$CONTAINER_NAME
-DATABASE_NAME=malloytest
+DATABASE_NAME=malloytest-db
 
 # check if the container exists
 if [ "$(docker ps -a -q -f name=^/${CONTAINER_NAME}$)" ]; then
@@ -51,7 +52,8 @@ done
 echo
 echo Loading Test Data
 docker exec $CONTAINER_NAME tar -xzvf /init_data/malloytest-sqlserver.tar.gz -C /tmp
-docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P "$PASSWORD" -Q "IF EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE_NAME') BEGIN DROP DATABASE [$DATABASE_NAME]; END; CREATE DATABASE [$DATABASE_NAME];"
-docker exec $CONTAINER_NAME sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U SA -P $PASSWORD -i "/tmp/malloytest-sqlserver.sql"
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S localhost -U $USERNAME -P "$PASSWORD" -Q "IF EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE_NAME') BEGIN DROP DATABASE [$DATABASE_NAME]; END; CREATE DATABASE [$DATABASE_NAME];"
+docker exec $CONTAINER_NAME sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P $PASSWORD -i "/tmp/malloytest-sqlserver.sql"
+docker exec $CONTAINER_NAME /tmp/seed/seed.sh
 
 echo "SQL Server running on port 1433"
