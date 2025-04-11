@@ -4,25 +4,43 @@ set -e
 rm -rf .tmp
 mkdir .tmp
 
+PASSWORD=saTEST_0pword
+CONTAINER_NAME=sqlserver-malloy
+SERVER_NAME=$CONTAINER_NAME
+DATABASE_NAME=malloytest
+
+# check if the container exists
+if [ "$(docker ps -a -q -f name=^/${CONTAINER_NAME}$)" ]; then
+    echo "Container '${CONTAINER_NAME}' exists. Removing it..."
+    # remove the container forcefully (even if running)
+    docker rm -f "${CONTAINER_NAME}"
+else
+    echo "Container '${CONTAINER_NAME}' does not exist."
+fi
+
 # run docker
 SCRIPTDIR=$(cd $(dirname $0); pwd)
+echo "SCRIPTDIR is $SCRIPTDIR"
 DATADIR=$(dirname $SCRIPTDIR)/data/sqlserver
+echo "DATADIR is $DATADIR"
+
 docker run \
-  -p 1433:1433 -d -v $DATADIR:/init_data --name sqlserver-malloy --hostname sqlserver-malloy -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=saTEST_0pword" -d vitorelourenco/sqlserver:v0
+  -p 1433:1433 -v $DATADIR:/init_data --name $CONTAINER_NAME --hostname $CONTAINER_NAME -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$PASSWORD" -d vitorelourenco/sqlserver:v0
 
 # wait for server to start
 counter=0
-echo -n Starting Docker ...
-while ! docker logs sqlserver-malloy 2>&1 | grep -q "SQLServer: ready for connections"
+echo -n Starting SQL Server Docker...
+
+while ! docker logs $CONTAINER_NAME 2>&1 | grep -q "SQL Server is now ready for client connections"
 do
   sleep 10
   counter=$((counter+1))
   # if doesn't start after 2 minutes, output logs and kill process
-  if [ $counter -eq 120 ]
+  if [ $counter -eq 12 ]
   then
-    docker logs sqlserver-malloy >& ./.tmp/sqlserver-malloy.logs
-    docker rm -f sqlserver-malloy
-    echo "SQLServer did not start successfully, check .tmp/sqlserver-malloy.logs"
+    docker logs $CONTAINER_NAME >& "./.tmp/$CONTAINER_NAME.logs"
+    docker rm -f $CONTAINER_NAME
+    echo "SQL Server did not start successfully, check .tmp/$CONTAINER_NAME.logs"
     exit 1
     break
   fi
@@ -32,8 +50,8 @@ done
 # load the test data.
 echo
 echo Loading Test Data
-docker exec sqlserver-malloy cp /init_data/malloytest.sqlserver.gz /tmp
-docker exec sqlserver-malloy gunzip /tmp/malloytest.sqlserver.gz
-docker exec sqlserver-malloy sqlserver -P1433 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.sqlserver;'
+docker exec $CONTAINER_NAME tar -xzvf /init_data/malloytest-sqlserver.tar.gz -C /tmp
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P "$PASSWORD" -Q "IF EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE_NAME') BEGIN DROP DATABASE [$DATABASE_NAME]; END; CREATE DATABASE [$DATABASE_NAME];"
+docker exec $CONTAINER_NAME sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U SA -P $PASSWORD -i "/tmp/malloytest-sqlserver.sql"
 
-echo "SQLServer running on port 1433"
+echo "SQL Server running on port 1433"

@@ -1,3 +1,4 @@
+# Including sqlcmd and bcp for the convenience of devs who want to `docker exec -it bash`
 FROM mcr.microsoft.com/mssql/server:2022-latest
 
 USER root
