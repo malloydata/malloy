@@ -6,22 +6,23 @@ mkdir .tmp
 
 # run docker
 SCRIPTDIR=$(cd $(dirname $0); pwd)
-DATADIR=$(dirname $SCRIPTDIR)/data/mysql
-docker run -p 3306:3306 -d -v $DATADIR:/init_data --name mysql-malloy -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:8.4.2
+DATADIR=$(dirname $SCRIPTDIR)/data/sqlserver
+docker run \
+  -p 1433:1433 -d -v $DATADIR:/init_data --name sqlserver-malloy --hostname sqlserver-malloy -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=saTEST_0pword" -d mcr.microsoft.com/mssql/server:2022-latest
 
 # wait for server to start
 counter=0
 echo -n Starting Docker ...
-while ! docker logs mysql-malloy 2>&1 | grep -q "mysqld: ready for connections"
+while ! docker logs sqlserver-malloy 2>&1 | grep -q "SQLServer: ready for connections"
 do
   sleep 10
   counter=$((counter+1))
   # if doesn't start after 2 minutes, output logs and kill process
   if [ $counter -eq 120 ]
   then
-    docker logs mysql-malloy >& ./.tmp/mysql-malloy.logs
-    docker rm -f mysql-malloy
-    echo "MySQL did not start successfully, check .tmp/mysql-malloy.logs"
+    docker logs sqlserver-malloy >& ./.tmp/sqlserver-malloy.logs
+    docker rm -f sqlserver-malloy
+    echo "SqlServer did not start successfully, check .tmp/sqlserver-malloy.logs"
     exit 1
     break
   fi
@@ -31,8 +32,8 @@ done
 # load the test data.
 echo
 echo Loading Test Data
-docker exec mysql-malloy cp /init_data/malloytest.mysql.gz /tmp
-docker exec mysql-malloy gunzip /tmp/malloytest.mysql.gz
-docker exec mysql-malloy mysql -P3306 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.mysql;'
+docker exec sqlserver-malloy cp /init_data/malloytest.sqlserver.gz /tmp
+docker exec sqlserver-malloy gunzip /tmp/malloytest.sqlserver.gz
+docker exec sqlserver-malloy sqlserver -P1433 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.sqlserver;'
 
-echo "MySQL running on port 3306"
+echo "SqlServer running on port 1433"
