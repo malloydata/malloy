@@ -524,6 +524,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'filter_string': 'FilterStringApplication',
     },
   },
+  'FilterOperation': {
+    'type': 'struct',
+    'name': 'FilterOperation',
+    'fields': {
+      'filter': {
+        'type': 'Filter',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
   'FilterStringApplication': {
     'type': 'struct',
     'name': 'FilterStringApplication',
@@ -1460,8 +1471,9 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'aggregate': 'Aggregate',
       'order_by': 'OrderBy',
       'limit': 'Limit',
-      'where': 'Where',
+      'where': 'FilterOperation',
       'nest': 'Nest',
+      'having': 'FilterOperation',
     },
   },
   'ViewRefinement': {
@@ -1774,6 +1786,10 @@ export type Filter = FilterWithFilterString;
 export type FilterWithFilterString = {
   kind: 'filter_string';
 } & FilterStringApplication;
+
+export type FilterOperation = {
+  filter: Filter;
+};
 
 export type FilterStringApplication = {
   field_reference: Reference;
@@ -2155,7 +2171,8 @@ export type ViewOperationType =
   | 'order_by'
   | 'limit'
   | 'where'
-  | 'nest';
+  | 'nest'
+  | 'having';
 
 export type ViewOperation =
   | ViewOperationWithGroupBy
@@ -2163,7 +2180,8 @@ export type ViewOperation =
   | ViewOperationWithOrderBy
   | ViewOperationWithLimit
   | ViewOperationWithWhere
-  | ViewOperationWithNest;
+  | ViewOperationWithNest
+  | ViewOperationWithHaving;
 
 export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
 
@@ -2173,9 +2191,11 @@ export type ViewOperationWithOrderBy = {kind: 'order_by'} & OrderBy;
 
 export type ViewOperationWithLimit = {kind: 'limit'} & Limit;
 
-export type ViewOperationWithWhere = {kind: 'where'} & Where;
+export type ViewOperationWithWhere = {kind: 'where'} & FilterOperation;
 
 export type ViewOperationWithNest = {kind: 'nest'} & Nest;
+
+export type ViewOperationWithHaving = {kind: 'having'} & FilterOperation;
 
 export type ViewRefinement = {
   base: ViewDefinition;
