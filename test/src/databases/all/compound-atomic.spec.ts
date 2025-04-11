@@ -169,10 +169,10 @@ describe.each(runtimes.runtimeList)(
           """) -> { select: roll is d1.each + d2.each }
           -> {
             group_by: roll
-            aggregate: n is count()
+            agggregate: n is count()
             order_by: roll asc
           }
-          `).matchesResult(
+          `).matchesRows(
           runtime,
           {roll: 2, n: 1},
           {roll: 3, n: 2},
@@ -262,7 +262,7 @@ describe.each(runtimes.runtimeList)(
             group_by: nums
             aggregate: addem is n.sum()
             order_by: addem asc
-          }`).matchesResult(
+          }`).matchesRows(
           runtime,
           {nums: evensObj, addem: 11},
           {nums: oddsObj, addem: 1100}
@@ -672,7 +672,7 @@ describe.each(runtimes.runtimeList)(
         test('Basic cross join and group', async () => {
           await expect(
             'run: diffs -> { group_by: f is file_names.file_name_final; aggregate: n}'
-          ).matchesResult(
+          ).matchesRows(
             diffs,
             {f: '/f1/f2/f3/f4', n: 3},
             {f: '/f5/f6/f7/f8', n: 2},
@@ -683,7 +683,7 @@ describe.each(runtimes.runtimeList)(
         test('Cross join and group when reference hidden in a dimension', async () => {
           await expect(
             'run: diffs -> { group_by: f is file_name; aggregate: n}'
-          ).matchesResult(
+          ).matchesRows(
             diffs,
             {f: '/f1/f2/f3/f4', n: 3},
             {f: '/f5/f6/f7/f8', n: 2},
@@ -696,7 +696,7 @@ describe.each(runtimes.runtimeList)(
           run: diffs -> {
             group_by: f is array_join(split(file_name, ${slash}),${slash});
             aggregate: n
-          }`).matchesResult(
+          }`).matchesRows(
             diffs,
             {f: '/f1/f2/f3/f4', n: 3},
             {f: '/f5/f6/f7/f8', n: 2},
@@ -709,7 +709,7 @@ describe.each(runtimes.runtimeList)(
           run: diffs -> {
             group_by: f is element_at(file_path, 2)
             aggregate: n
-          }`).matchesResult(diffs, {n: 3}, {n: 2}, {n: 1});
+          }`).matchesRows(diffs, {n: 3}, {n: 2}, {n: 1});
         });
 
         // this gets the cross join, just be referencing the path
@@ -718,7 +718,7 @@ describe.each(runtimes.runtimeList)(
           run: diffs -> {
             select: first is element_at(file_path, 2)
             limit: 1
-          }`).matchesResult(diffs, {first: 'f1'});
+          }`).matchesRows(diffs, {first: 'f1'});
         });
 
         describe('the failing cases', () => {
@@ -729,20 +729,20 @@ describe.each(runtimes.runtimeList)(
             run: diffs -> {
               where: file_name = '/fa/fb/fc/fd'
               select: file_path
-            }`).matchesResult(diffs, {file_path: ['', 'fa', 'fb', 'fc', 'fd']});
+            }`).matchesRows(diffs, {file_path: ['', 'fa', 'fb', 'fc', 'fd']});
           });
 
           // THESE DO NOT GET THE CROSS JOIn
           test('can select the path array by itself', async () => {
             await expect(`
             run: diffs -> { select: file_path; limit: 1 }
-            `).matchesResult(diffs, {file_path: ['', 'f1', 'f2', 'f3', 'f4']});
+            `).matchesRows(diffs, {file_path: ['', 'f1', 'f2', 'f3', 'f4']});
           });
 
           test('cross join file_names when group on bare path', async () => {
             await expect(`
             run: diffs -> { group_by: f is file_path; aggregate: n }
-            `).matchesResult(diffs, {n: 3}, {n: 2}, {n: 1});
+            `).matchesRows(diffs, {n: 3}, {n: 2}, {n: 1});
           });
         });
       });
