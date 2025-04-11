@@ -10,12 +10,23 @@
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 import '../../util/db-jest-matchers';
+import type {
+  StringLiteralNode,
+  RecordLiteralNode,
+  ArrayTypeDef,
+  FieldDef,
+  Expr,
+} from '@malloydata/malloy';
 
 const [describe, databases] = describeIfDatabaseAvailable(['presto', 'trino']);
 const runtimes = new RuntimeList(databases);
+function literalNum(num: Number): Expr {
+  const literal = num.toString();
+  return {node: 'numberLiteral', literal, sql: literal};
+}
 
 describe.each(runtimes.runtimeList)(
-  'Presto/Trino dialect functions - %s',
+  'Presto/Trino dialect - %s',
 
   (databaseName, runtime) => {
     if (runtime === undefined) {
@@ -42,6 +53,181 @@ describe.each(runtimes.runtimeList)(
       `).malloyResultMatches(runtime, {});
       }
     );
+
+    // working on
+    // fbcode/malloy_models/infrastructure/phabricator/diffs.malloy
+    // dimension:
+    // file_name is file_names.file_names_final
+    // file_path is split(file_name, '/')
+
+    // view: no_cross_join is { select: file_path; limit: 2 }
+    // view: yes_cross_join is {select: file_name; limit: 2 }
+    // view: yes_grouping is { group_by: file_name; aggregate: diff_count }
+    // I CANNOT DUPLICATE THIS ONE IN TEST YET
+    // view: no_grouping is { group_by: file_path; aggregate: diff_count }
+    describe('problem revealed in diff model', () => {
+      function recordLiteral(
+        fromObj: Record<string, string | number>
+      ): RecordLiteralNode {
+        const kids: Record<string, Expr> = {};
+        const fields: FieldDef[] = Object.keys(fromObj).map(name => {
+          const literalVal = fromObj[name];
+          let valType: 'string' | 'number';
+          if (typeof literalVal === 'number') {
+            kids[name] = literalNum(literalVal);
+            valType = 'number';
+          } else {
+            valType = 'string';
+            const str: StringLiteralNode = {
+              node: 'stringLiteral',
+              literal: literalVal,
+            };
+            kids[name] = {
+              ...str,
+              sql: runtime.dialect.sqlLiteralString(literalVal),
+            };
+          }
+          return {type: valType, name};
+        });
+        const literal: RecordLiteralNode = {
+          node: 'recordLiteral',
+          typeDef: {
+            type: 'record',
+            fields,
+          },
+          kids,
+        };
+        literal.sql = runtime.dialect.sqlLiteralRecord(literal);
+        return literal;
+      }
+      const diffsType: ArrayTypeDef = {
+        type: 'array',
+        elementTypeDef: {type: 'record_element'},
+        fields: [{name: 'file_name_final', type: 'string'}],
+      };
+
+      const row1 = runtime.dialect.sqlLiteralArray({
+        node: 'arrayLiteral',
+        typeDef: diffsType,
+        kids: {
+          values: [
+            recordLiteral({file_name_final: '/f1/f2/f3/f4'}),
+            recordLiteral({file_name_final: '/f5/f6/f7/f8'}),
+          ],
+        },
+      });
+
+      const row2 = runtime.dialect.sqlLiteralArray({
+        node: 'arrayLiteral',
+        typeDef: diffsType,
+        kids: {
+          values: [
+            recordLiteral({file_name_final: '/f1/f2/f3/f4'}),
+            recordLiteral({file_name_final: '/f5/f6/f7/f8'}),
+          ],
+        },
+      });
+
+      const row3 = runtime.dialect.sqlLiteralArray({
+        node: 'arrayLiteral',
+        typeDef: diffsType,
+        kids: {
+          values: [
+            recordLiteral({file_name_final: '/f1/f2/f3/f4'}),
+            recordLiteral({file_name_final: '/fa/fb/fc/fd'}),
+          ],
+        },
+      });
+
+      const slash = runtime.dialect.sqlLiteralString('/');
+      const diffs = runtime.loadModel(`source: diffs is ${databaseName}.sql("""
+        SELECT ${row1} as file_names
+        UNION ALL SELECT ${row2}
+        UNION ALL SELECT ${row3}
+      """) extend {
+        dimension: file_name is file_names.file_name_final
+        dimension: file_path is split(file_name, ${slash})
+        measure: n is count()
+      }
+      `);
+
+      test('Basic cross join and group', async () => {
+        await expect(
+          'run: diffs -> { group_by: f is file_names.file_name_final; aggregate: n}'
+        ).matchesRows(
+          diffs,
+          {f: '/f1/f2/f3/f4', n: 3},
+          {f: '/f5/f6/f7/f8', n: 2},
+          {f: '/fa/fb/fc/fd', n: 1}
+        );
+      });
+
+      test('Cross join and group when reference hidden in a dimension', async () => {
+        await expect(
+          'run: diffs -> { group_by: f is file_name; aggregate: n}'
+        ).matchesRows(
+          diffs,
+          {f: '/f1/f2/f3/f4', n: 3},
+          {f: '/f5/f6/f7/f8', n: 2},
+          {f: '/fa/fb/fc/fd', n: 1}
+        );
+      });
+
+      test('CROSS JOIN and group when passed to a dialect function', async () => {
+        await expect(`
+        run: diffs -> {
+          group_by: f is array_join(split(file_name, ${slash}),${slash});
+          aggregate: n
+        }`).matchesRows(
+          diffs,
+          {f: '/f1/f2/f3/f4', n: 3},
+          {f: '/f5/f6/f7/f8', n: 2},
+          {f: '/fa/fb/fc/fd', n: 1}
+        );
+      });
+
+      test('cross join file_names to access path', async () => {
+        await expect(`
+        run: diffs -> {
+          group_by: f is element_at(file_path, 2)
+          aggregate: n
+        }`).matchesRows(diffs, {n: 3}, {n: 2}, {n: 1});
+      });
+
+      // this gets the cross join, just be referencing the path
+      test('can select the path array passed to a function', async () => {
+        await expect(`
+        run: diffs -> {
+          select: first is element_at(file_path, 2)
+          limit: 1
+        }`).matchesRows(diffs, {first: 'f1'});
+      });
+
+      describe('the failing cases', () => {
+        // this gets the cross join, somehow from the filter
+        test('can select the path array when filter has a reference', async () => {
+          await expect(`
+          # test.debug
+          run: diffs -> {
+            where: file_name = '/fa/fb/fc/fd'
+            select: file_path
+          }`).matchesRows(diffs, {file_path: ['', 'fa', 'fb', 'fc', 'fd']});
+        });
+
+        // THESE DO NOT GET THE CROSS JOIn
+        test('can select the path array by itself', async () => {
+          await expect(`
+          run: diffs -> { select: file_path; limit: 1 }
+          `).matchesRows(diffs, {file_path: ['', 'f1', 'f2', 'f3', 'f4']});
+        });
+
+        test('cross join file_names when group on bare path', async () => {
+          await expect(`
+          run: diffs -> { group_by: f is file_path; aggregate: n }
+          `).matchesRows(diffs, {n: 3}, {n: 2}, {n: 1});
+        });
+      });
+    });
 
     it(`runs the to_unixtime function - ${databaseName}`, async () => {
       await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
