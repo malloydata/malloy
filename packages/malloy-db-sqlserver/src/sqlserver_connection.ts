@@ -78,11 +78,10 @@ export class SqlServerExecutor {
       const password = process.env['SQLSERVER_PASSWORD'];
       const database = process.env['SQLSERVER_DATABASE'];
       const encrypt =
-        process.env['SQLSERVER_OPTIONS__ENCRYPT']?.toLowerCase() === 'true';
+        process.env['SQLSERVER_ENCRYPT']?.toLowerCase() === 'true';
       const trustServerCertificate =
-        process.env[
-          'SQLSERVER_OPTIONS__TRUST_SERVER_CERTIFICATE'
-        ]?.toLowerCase() === 'true';
+        process.env['SQLSERVER_TRUST_SERVER_CERTIFICATE']?.toLowerCase() ===
+        'true';
 
       return {
         host,
