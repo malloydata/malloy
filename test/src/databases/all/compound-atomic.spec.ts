@@ -668,7 +668,8 @@ describe.each(runtimes.runtimeList)(
       }
       `);
 
-      test('Basic cross join and group', async () => {
+      const hasSplit = conName === 'presto';
+      test.when(hasSplit)('Basic cross join and group', async () => {
         await expect(
           'run: diffs -> { group_by: f is file_names.file_name_final; aggregate: n}'
         ).matchesRows(
@@ -679,31 +680,37 @@ describe.each(runtimes.runtimeList)(
         );
       });
 
-      test('Cross join and group when reference hidden in a dimension', async () => {
-        await expect(
-          'run: diffs -> { group_by: f is file_name; aggregate: n}'
-        ).matchesRows(
-          diffs,
-          {f: '/f1/f2/f3/f4', n: 3},
-          {f: '/f5/f6/f7/f8', n: 2},
-          {f: '/fa/fb/fc/fd', n: 1}
-        );
-      });
+      test.when(hasSplit)(
+        'Cross join and group when reference hidden in a dimension',
+        async () => {
+          await expect(
+            'run: diffs -> { group_by: f is file_name; aggregate: n}'
+          ).matchesRows(
+            diffs,
+            {f: '/f1/f2/f3/f4', n: 3},
+            {f: '/f5/f6/f7/f8', n: 2},
+            {f: '/fa/fb/fc/fd', n: 1}
+          );
+        }
+      );
 
-      test('CROSS JOIN and group when passed to a dialect function', async () => {
-        await expect(`
+      test.when(hasSplit)(
+        'CROSS JOIN and group when passed to a dialect function',
+        async () => {
+          await expect(`
         run: diffs -> {
           group_by: f is array_join(split(file_name, ${slash}),${slash});
           aggregate: n
         }`).matchesRows(
-          diffs,
-          {f: '/f1/f2/f3/f4', n: 3},
-          {f: '/f5/f6/f7/f8', n: 2},
-          {f: '/fa/fb/fc/fd', n: 1}
-        );
-      });
+            diffs,
+            {f: '/f1/f2/f3/f4', n: 3},
+            {f: '/f5/f6/f7/f8', n: 2},
+            {f: '/fa/fb/fc/fd', n: 1}
+          );
+        }
+      );
 
-      test('cross join file_names to access path', async () => {
+      test.when(hasSplit)('cross join file_names to access path', async () => {
         await expect(`
         run: diffs -> {
           group_by: f is element_at(file_path, 2)
@@ -712,18 +719,20 @@ describe.each(runtimes.runtimeList)(
       });
 
       // this gets the cross join, just be referencing the path
-      test('can select the path array passed to a function', async () => {
-        await expect(`
+      test.when(hasSplit)(
+        'can select the path array passed to a function',
+        async () => {
+          await expect(`
         run: diffs -> {
           select: first is element_at(file_path, 2)
           limit: 1
         }`).matchesRows(diffs, {first: 'f1'});
-      });
+        }
+      );
 
-      const doFails = conName !== 'zzzzz';
       describe('the failing cases', () => {
         // this gets the cross join, somehow from the filter
-        test.when(doFails)(
+        test.when(hasSplit)(
           'can select the path array when filter has a reference',
           async () => {
             await expect(`
@@ -736,13 +745,13 @@ describe.each(runtimes.runtimeList)(
         );
 
         // THESE DO NOT GET THE CROSS JOIn
-        test.when(doFails)('can select the path array by itself', async () => {
+        test.when(hasSplit)('can select the path array by itself', async () => {
           await expect(`
           run: diffs -> { select: file_path; limit: 1 }
           `).matchesRows(diffs, {file_path: ['', 'f1', 'f2', 'f3', 'f4']});
         });
 
-        test.when(doFails)(
+        test.when(hasSplit)(
           'cross join file_names when group on bare path',
           async () => {
             await expect(`
