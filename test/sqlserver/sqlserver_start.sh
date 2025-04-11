@@ -22,7 +22,7 @@ do
   then
     docker logs sqlserver-malloy >& ./.tmp/sqlserver-malloy.logs
     docker rm -f sqlserver-malloy
-    echo "SqlServer did not start successfully, check .tmp/sqlserver-malloy.logs"
+    echo "SQLServer did not start successfully, check .tmp/sqlserver-malloy.logs"
     exit 1
     break
   fi
@@ -36,4 +36,4 @@ docker exec sqlserver-malloy cp /init_data/malloytest.sqlserver.gz /tmp
 docker exec sqlserver-malloy gunzip /tmp/malloytest.sqlserver.gz
 docker exec sqlserver-malloy sqlserver -P1433 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.sqlserver;'
 
-echo "SqlServer running on port 1433"
+echo "SQLServer running on port 1433"

@@ -44,8 +44,8 @@ import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
 import {
-  PooledSqlServerConnection,
-  SqlServerExecutor,
+  PooledSQLServerConnection,
+  SQLServerExecutor,
 } from '@malloydata/db-sqlserver/src/sqlserver_connection';
 
 import {
@@ -154,7 +154,7 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
-export class SqlServerTestConnection extends PooledSqlServerConnection {
+export class SQLServerTestConnection extends PooledSQLServerConnection {
   // we probably need a better way to do this.
 
   public async runSQL(
@@ -258,10 +258,10 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         );
         break;
       case 'sqlserver':
-        connection = new SqlServerTestConnection(
+        connection = new SQLServerTestConnection(
           dbName,
           {},
-          SqlServerExecutor.getConnectionOptionsFromEnv()
+          SQLServerExecutor.getConnectionOptionsFromEnv()
         );
         break;
       default:

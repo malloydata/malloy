@@ -1,4 +1,4 @@
-import {SqlServerConnection, SqlServerExecutor} from './sqlserver_connection';
+import {SQLServerConnection, SQLServerExecutor} from './sqlserver_connection';
 import sql from 'mssql';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -27,10 +27,10 @@ async function testOwnConnection() {
 }
 
 async function testMalloyConnection() {
-  const conn = new SqlServerConnection(
+  const conn = new SQLServerConnection(
     'sqlserver',
     {},
-    SqlServerExecutor.getConnectionOptionsFromEnv()
+    SQLServerExecutor.getConnectionOptionsFromEnv()
   );
 
   const resGen = conn.runSQLStream('SELECT 1');
@@ -45,6 +45,6 @@ async function testMalloyConnection() {
   await testOwnConnection();
   console.log('ok');
   console.log( process.env);
-  console.log( SqlServerExecutor.getConnectionOptionsFromEnv());
+  console.log( SQLServerExecutor.getConnectionOptionsFromEnv());
   await testMalloyConnection();
 })();

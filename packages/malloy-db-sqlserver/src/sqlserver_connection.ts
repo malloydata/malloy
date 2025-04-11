@@ -22,7 +22,7 @@
  */
 
 // LTNOTE: we need this extension to be installed to correctly index
-//  SqlServer data...  We should probably do this on connection creation...
+//  SQLServer data...  We should probably do this on connection creation...
 //
 //     create extension if not exists tsm_system_rows
 //
@@ -54,7 +54,7 @@ import {randomUUID} from 'crypto';
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
-interface SqlServerConnectionConfiguration {
+interface SQLServerConnectionConfiguration {
   host?: string;
   port?: number;
   username?: string;
@@ -65,12 +65,12 @@ interface SqlServerConnectionConfiguration {
   trustServerCertificate?: boolean;
 }
 
-type SqlServerConnectionConfigurationReader =
-  | SqlServerConnectionConfiguration
-  | (() => Promise<SqlServerConnectionConfiguration>);
+type SQLServerConnectionConfigurationReader =
+  | SQLServerConnectionConfiguration
+  | (() => Promise<SQLServerConnectionConfiguration>);
 
-export class SqlServerExecutor {
-  public static getConnectionOptionsFromEnv(): SqlServerConnectionConfiguration {
+export class SQLServerExecutor {
+  public static getConnectionOptionsFromEnv(): SQLServerConnectionConfiguration {
     const user = process.env['SQLSERVER_USER'];
     if (user) {
       const host = process.env['SQLSERVER_HOST'];
@@ -97,33 +97,33 @@ export class SqlServerExecutor {
   }
 }
 
-export interface SqlServerConnectionOptions
+export interface SQLServerConnectionOptions
   extends ConnectionConfig,
-    SqlServerConnectionConfiguration {}
+    SQLServerConnectionConfiguration {}
 
-export class SqlServerConnection
+export class SQLServerConnection
   extends BaseConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
   public readonly name: string;
   private queryOptionsReader: QueryOptionsReader = {};
-  private configReader: SqlServerConnectionConfigurationReader = {};
+  private configReader: SQLServerConnectionConfigurationReader = {};
 
   private readonly dialect = new TSQLDialect();
 
   constructor(
-    options: SqlServerConnectionOptions,
+    options: SQLServerConnectionOptions,
     queryOptionsReader?: QueryOptionsReader
   );
   constructor(
     name: string,
     queryOptionsReader?: QueryOptionsReader,
-    configReader?: SqlServerConnectionConfigurationReader
+    configReader?: SQLServerConnectionConfigurationReader
   );
   constructor(
-    arg: string | SqlServerConnectionOptions,
+    arg: string | SQLServerConnectionOptions,
     queryOptionsReader?: QueryOptionsReader,
-    configReader?: SqlServerConnectionConfigurationReader
+    configReader?: SQLServerConnectionConfigurationReader
   ) {
     super();
     if (typeof arg === 'string') {
@@ -149,7 +149,7 @@ export class SqlServerConnection
     }
   }
 
-  protected async readConfig(): Promise<SqlServerConnectionConfiguration> {
+  protected async readConfig(): Promise<SQLServerConnectionConfiguration> {
     if (this.configReader instanceof Function) {
       return this.configReader();
     } else {
@@ -203,7 +203,7 @@ export class SqlServerConnection
     );
   }
 
-  protected async runSqlServerQuery(
+  protected async runSQLServerQuery(
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
@@ -218,7 +218,7 @@ export class SqlServerConnection
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
     } else {
-      throw new Error('SqlServer non-array output is not supported');
+      throw new Error('SQLServer non-array output is not supported');
     }
 
     await client.close();
@@ -262,7 +262,7 @@ export class SqlServerConnection
     infoQuery: string,
     structDef: StructDef
   ): Promise<void> {
-    const {rows, totalRows} = await this.runSqlServerQuery(
+    const {rows, totalRows} = await this.runSQLServerQuery(
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
@@ -272,15 +272,15 @@ export class SqlServerConnection
       throw new Error('Unable to read schema.');
     }
     for (const row of rows) {
-      const SqlServerDataType = row['data_type'] as string;
+      const SQLServerDataType = row['data_type'] as string;
       const name = row['column_name'] as string;
-      if (SqlServerDataType === 'ARRAY') {
+      if (SQLServerDataType === 'ARRAY') {
         const elementType = this.dialect.sqlTypeToMalloyType(
           row['element_type'] as string
         );
         structDef.fields.push(mkArrayDef(elementType, name));
       } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(SqlServerDataType);
+        const malloyType = this.dialect.sqlTypeToMalloyType(SQLServerDataType);
         structDef.fields.push({...malloyType, name});
       }
     }
@@ -300,7 +300,7 @@ export class SqlServerConnection
     };
     const [schema, table] = tablePath.split('.');
     if (table === undefined) {
-      return 'Default schema not yet supported in SqlServer';
+      return 'Default schema not yet supported in SQLServer';
     }
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
@@ -324,7 +324,7 @@ export class SqlServerConnection
   }
 
   public async connectionSetup(_client: ConnectionPool): Promise<void> {
-    // TODO (Vitor): Discuss session timezone in SqlServer, this feature ins't straight forward
+    // TODO (Vitor): Discuss session timezone in SQLServer, this feature ins't straight forward
     // await client.query("SET TIME ZONE 'UTC'");
   }
 
@@ -335,7 +335,7 @@ export class SqlServerConnection
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
-    return this.runSqlServerQuery(
+    return this.runSQLServerQuery(
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
@@ -378,7 +378,7 @@ export class SqlServerConnection
 
     const cmd = `CREATE TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
     // console.log(cmd);
-    await this.runSqlServerQuery(cmd, 1000, 0, false);
+    await this.runSQLServerQuery(cmd, 1000, 0, false);
     return tableName;
   }
 
@@ -387,25 +387,25 @@ export class SqlServerConnection
   }
 }
 
-export class PooledSqlServerConnection
-  extends SqlServerConnection
+export class PooledSQLServerConnection
+  extends SQLServerConnection
   implements PooledConnection
 {
   private _pool: ConnectionPool | undefined;
 
   constructor(
-    options: SqlServerConnectionOptions,
+    options: SQLServerConnectionOptions,
     queryOptionsReader?: QueryOptionsReader
   );
   constructor(
     name: string,
     queryOptionsReader?: QueryOptionsReader,
-    configReader?: SqlServerConnectionConfigurationReader
+    configReader?: SQLServerConnectionConfigurationReader
   );
   constructor(
-    arg: string | SqlServerConnectionOptions,
+    arg: string | SQLServerConnectionOptions,
     queryOptionsReader?: QueryOptionsReader,
-    configReader?: SqlServerConnectionConfigurationReader
+    configReader?: SQLServerConnectionConfigurationReader
   ) {
     if (typeof arg === 'string') {
       super(arg, queryOptionsReader, configReader);
@@ -454,7 +454,7 @@ export class PooledSqlServerConnection
     return this._pool;
   }
 
-  protected async runSqlServerQuery(
+  protected async runSQLServerQuery(
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
@@ -468,7 +468,7 @@ export class PooledSqlServerConnection
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
     } else {
-      throw new Error('SqlServer non-array output is not supported');
+      throw new Error('SQLServer non-array output is not supported');
     }
 
     await client.close();

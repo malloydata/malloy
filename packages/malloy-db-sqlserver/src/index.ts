@@ -22,6 +22,6 @@
  */
 
 export {
-  SqlServerConnection,
-  PooledSqlServerConnection,
+  SQLServerConnection,
+  PooledSQLServerConnection,
 } from './sqlserver_connection';

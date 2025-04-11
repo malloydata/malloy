@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SqlServerConnection} from './sqlserver_connection';
+import {SQLServerConnection} from './sqlserver_connection';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
@@ -34,13 +34,13 @@ const [describe] = describeIfDatabaseAvailable(['sqlserver']);
  * and keys uniquely for each test you will see cross test interactions.
  */
 
-describe('SqlServerConnection', () => {
-  let connection: SqlServerConnection;
+describe('SQLServerConnection', () => {
+  let connection: SQLServerConnection;
   let getTableSchema: jest.SpyInstance;
   let getSQLBlockSchema: jest.SpyInstance;
 
   beforeAll(async () => {
-    connection = new SqlServerConnection('test-sqlserver');
+    connection = new SQLServerConnection('test-sqlserver');
     await connection.runSQL('SELECT 1');
   });
 
@@ -51,7 +51,7 @@ describe('SqlServerConnection', () => {
   beforeEach(async () => {
     getTableSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(SqlServerConnection.prototype as any, 'fetchTableSchema')
+      .spyOn(SQLServerConnection.prototype as any, 'fetchTableSchema')
       .mockResolvedValue({
         type: 'table',
         dialect: 'sqlserver',
@@ -62,7 +62,7 @@ describe('SqlServerConnection', () => {
 
     getSQLBlockSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(SqlServerConnection.prototype as any, 'fetchSelectSchema')
+      .spyOn(SQLServerConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
         type: 'sql select',
         dialect: 'sqlserver',

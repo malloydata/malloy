@@ -28,9 +28,9 @@ Setting up DuckDB:
 1. At top-level, run `npx ts-node scripts/build_duckdb_test_database.ts`
 2. A file called `duckdb_test.db` should be created in the test/data/duckdb folder - tests will automatically look there.
 
-Setting up SqlServer:
+Setting up SQLServer:
 
-# Setup for SqlServer Test Data
+# Setup for SQLServer Test Data
 
 1. run `npx dotenv -- npm run test-sqlserver`
 
