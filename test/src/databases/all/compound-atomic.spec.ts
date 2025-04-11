@@ -26,15 +26,17 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * so fix that one first if the tests are failing.
  */
 
+function literalNum(num: Number): Expr {
+  const literal = num.toString();
+  return {node: 'numberLiteral', literal, sql: literal};
+}
+
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
   (conName, runtime) => {
     const supportsNestedArrays = runtime.dialect.nestedArrays;
     const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
-    function literalNum(num: Number): Expr {
-      const literal = num.toString();
-      return {node: 'numberLiteral', literal, sql: literal};
-    }
+
     const empty = `${conName}.sql("SELECT 0 as z")`;
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
@@ -67,7 +69,6 @@ describe.each(runtimes.runtimeList)(
       literal.sql = runtime.dialect.sqlLiteralRecord(literal);
       return literal;
     }
-
     function recordSelectVal(fromObj: Record<string, number>): string {
       return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
@@ -89,6 +90,8 @@ describe.each(runtimes.runtimeList)(
     const evens = `${conName}.sql("""
       SELECT ${evensSQL} AS ${quote('evens')}
     """)`;
+    const d4 = [1, 2, 3, 4];
+    const d4SQL = arraySelectVal(...d4);
 
     describe('simple arrays', () => {
       test('array literal dialect function', async () => {
@@ -158,24 +161,26 @@ describe.each(runtimes.runtimeList)(
           {die_roll: 4},
         ]);
       });
-      test.skip('cross join arrays', async () => {
+      test.when(canReadCompoundSchema)('cross join two arrays', async () => {
         await expect(`
-          run: ${empty} extend {
-            dimension: d1 is [1,2,3,4]
-            join_cross: d2 is [1,2,3,4]
-          } -> {
-            group_by: roll is d1.each + d2.each
-            aggregate: rolls is count()
+          run: ${conName}.sql("""
+            SELECT ${d4SQL} as ${quote('d1')}, ${d4SQL} as ${quote('d2')}
+          """) -> { select: roll is d1.each + d2.each }
+          -> {
+            group_by: roll
+            aggregate: n is count()
+            order_by: roll asc
           }
-        `).malloyResultMatches(runtime, [
-          {roll: 2, rolls: 1},
-          {roll: 3, rolls: 2},
-          {roll: 4, rolls: 3},
-          {roll: 5, rolls: 4},
-          {roll: 6, rolls: 3},
-          {roll: 7, rolls: 2},
-          {roll: 8, rolls: 1},
-        ]);
+          `).matchesRows(
+          runtime,
+          {roll: 2, n: 1},
+          {roll: 3, n: 2},
+          {roll: 4, n: 3},
+          {roll: 5, n: 4},
+          {roll: 6, n: 3},
+          {roll: 7, n: 2},
+          {roll: 8, n: 1}
+        );
       });
       // can't use special chars in column names in bq
       test.when(conName !== 'bigquery')(
@@ -242,6 +247,25 @@ describe.each(runtimes.runtimeList)(
         await expect(`
           run: ${empty} extend { dimension: aoa is [[1,2]] } -> { select: aoa.each.each }
         `).malloyResultMatches(runtime, [{each: 1}, {each: 2}]);
+      });
+      test('group by array', async () => {
+        const oddsObj = [1, 3, 5, 7];
+        const oddsSql = arraySelectVal(...oddsObj);
+        await expect(`
+          run: ${conName}.sql("""
+            SELECT ${evensSQL} as ${quote('nums')}, 1 as ${quote('n')}
+            UNION ALL SELECT ${evensSQL}, 10
+            UNION ALL SELECT ${oddsSql}, 100
+            UNION ALL SELECT ${oddsSql}, 1000
+          """) -> {
+            group_by: nums
+            aggregate: addem is n.sum()
+            order_by: addem asc
+          }`).matchesRows(
+          runtime,
+          {nums: evensObj, addem: 11},
+          {nums: oddsObj, addem: 1100}
+        );
       });
     });
     describe('record', () => {
@@ -433,10 +457,10 @@ describe.each(runtimes.runtimeList)(
         {a: 10, b: 11},
         {a: 20, b: 21},
       ];
-      const abMalloy = '[{a is 10, b is 11}, {a is 20, b is 21}]';
       function selectAB(n: string) {
         return `SELECT ${ab} AS ${quote(n)}`;
       }
+      const abMalloy = '[{a is 10, b is 11}, {a is 20, b is 21}]';
 
       test('repeated record from nest', async () => {
         await expect(`
