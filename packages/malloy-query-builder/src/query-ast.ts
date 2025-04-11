@@ -86,13 +86,13 @@ abstract class ASTNode<T> {
         if (node instanceof ASTParameterValueList) return node;
         throw new Error('Not an ASTParameterValueList');
       },
-      Where(): ASTWhere {
-        if (node instanceof ASTWhere) return node;
-        throw new Error('Not an ASTWhere');
+      Where(): ASTFilterOperation {
+        if (node instanceof ASTFilterOperation) return node;
+        throw new Error('Not an ASTFilterOperation');
       },
-      WhereList(): ASTWhereList {
-        if (node instanceof ASTWhereList) return node;
-        throw new Error('Not an ASTWhereList');
+      WhereList(): ASTFilterOperationList {
+        if (node instanceof ASTFilterOperationList) return node;
+        throw new Error('Not an ASTFilterOperationList');
       },
       ParameterValue(): ASTParameterValue {
         if (node instanceof ASTParameterValue) return node;
@@ -197,10 +197,10 @@ abstract class ASTNode<T> {
       ParameterValueList(path: Path): ASTParameterValueList {
         return node.findAny(path).as.ParameterValueList();
       },
-      Where(path: Path): ASTWhere {
+      Where(path: Path): ASTFilterOperation {
         return node.findAny(path).as.Where();
       },
-      WhereList(path: Path): ASTWhereList {
+      WhereList(path: Path): ASTFilterOperationList {
         return node.findAny(path).as.WhereList();
       },
       ParameterValue(path: Path): ASTParameterValue {
@@ -1057,8 +1057,8 @@ export class ASTFieldReference extends ASTReference {
     ) {
       return parent.field.segment;
     } else if (parent instanceof ASTFilterWithFilterString) {
-      const grand = parent.parent as ASTWhere | ASTWhereViewOperation;
-      if (grand instanceof ASTWhere) {
+      const grand = parent.parent as ASTFilterOperation | ASTWhereViewOperation;
+      if (grand instanceof ASTFilterOperation) {
         return grand.list.expression.field.segment;
       } else {
         return grand.list.segment;
@@ -3514,7 +3514,7 @@ export class ASTAggregateViewOperation
       },
     };
     if (this.field.expression instanceof ASTFilteredFieldExpression) {
-      this.field.expression.where.add(new ASTWhere(where));
+      this.field.expression.where.add(new ASTFilterOperation(where));
       return this.field.expression;
     } else if (this.field.expression instanceof ASTReferenceExpression) {
       const existing = this.field.expression.build();
@@ -3819,7 +3819,7 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
   }
 }
 
-export class ASTWhere extends ASTObjectNode<
+export class ASTFilterOperation extends ASTObjectNode<
   Malloy.FilterOperation,
   {filter: ASTFilter}
 > {
@@ -3842,14 +3842,14 @@ export class ASTWhere extends ASTObjectNode<
   }
 }
 
-export class ASTWhereList extends ASTListNode<
+export class ASTFilterOperationList extends ASTListNode<
   Malloy.FilterOperation,
-  ASTWhere
+  ASTFilterOperation
 > {
   constructor(wheres: Malloy.FilterOperation[]) {
     super(
       wheres,
-      wheres.map(p => new ASTWhere(p))
+      wheres.map(p => new ASTFilterOperation(p))
     );
   }
 
@@ -3863,7 +3863,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
   {
     kind: 'filtered_field';
     field_reference: ASTFieldReference;
-    where: ASTWhereList;
+    where: ASTFilterOperationList;
   }
 > {
   readonly kind: Malloy.ExpressionType = 'filtered_field';
@@ -3872,7 +3872,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
     super(node, {
       kind: node.kind,
       field_reference: new ASTFieldReference(node.field_reference),
-      where: new ASTWhereList(node.where),
+      where: new ASTFilterOperationList(node.where),
     });
   }
 
