@@ -86,11 +86,11 @@ abstract class ASTNode<T> {
         if (node instanceof ASTParameterValueList) return node;
         throw new Error('Not an ASTParameterValueList');
       },
-      Where(): ASTFilterOperation {
+      FilterOperation(): ASTFilterOperation {
         if (node instanceof ASTFilterOperation) return node;
         throw new Error('Not an ASTFilterOperation');
       },
-      WhereList(): ASTFilterOperationList {
+      FilterOperationList(): ASTFilterOperationList {
         if (node instanceof ASTFilterOperationList) return node;
         throw new Error('Not an ASTFilterOperationList');
       },
@@ -197,11 +197,11 @@ abstract class ASTNode<T> {
       ParameterValueList(path: Path): ASTParameterValueList {
         return node.findAny(path).as.ParameterValueList();
       },
-      Where(path: Path): ASTFilterOperation {
-        return node.findAny(path).as.Where();
+      FilterOperation(path: Path): ASTFilterOperation {
+        return node.findAny(path).as.FilterOperation();
       },
-      WhereList(path: Path): ASTFilterOperationList {
-        return node.findAny(path).as.WhereList();
+      FilterOperationList(path: Path): ASTFilterOperationList {
+        return node.findAny(path).as.FilterOperationList();
       },
       ParameterValue(path: Path): ASTParameterValue {
         return node.findAny(path).as.ParameterValue();
@@ -1057,7 +1057,10 @@ export class ASTFieldReference extends ASTReference {
     ) {
       return parent.field.segment;
     } else if (parent instanceof ASTFilterWithFilterString) {
-      const grand = parent.parent as ASTFilterOperation | ASTWhereViewOperation;
+      const grand = parent.parent as
+        | ASTFilterOperation
+        | ASTWhereViewOperation
+        | ASTHavingViewOperation;
       if (grand instanceof ASTFilterOperation) {
         return grand.list.expression.field.segment;
       } else {
@@ -3834,7 +3837,7 @@ export class ASTFilterOperation extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as.WhereList();
+    return this.parent.as.FilterOperationList();
   }
 
   delete() {
