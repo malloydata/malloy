@@ -26,7 +26,11 @@ import type {Result, Runtime} from '@malloydata/malloy';
 import {SingleConnectionRuntime} from '@malloydata/malloy';
 import EventEmitter from 'events';
 import {inspect} from 'util';
-import type {ExpectedResult, TestRunner} from './db-matcher-support';
+import type {
+  ExpectedResult,
+  ExpectedResultRow,
+  TestRunner,
+} from './db-matcher-support';
 import {runQuery} from './db-matcher-support';
 
 interface ExpectedEvent {
@@ -76,11 +80,11 @@ declare global {
        * To see if the first row of a query contains a field called num with a value of 7
        * ( a "runtime"  can be a Runtime, or a Model from load/extend of a Model)
        *
-       *     await expect('run: ...').matchesResult(runtime, {num: 7});
+       *     await expect('run: ...').matchesRows(runtime, {num: 7});
        *
        * To see if the first two rows of a query contains a field called num with a values 7 and 8
        *
-       *     await expect('run: ...').matchesResult(runtime {num: 7}, {num:8});
+       *     await expect('run: ...').matchesRows(runtime {num: 7}, {num:8});
        *
        * Every symbol in the expect match must be in the row, however there can be columns in the row
        * which are not in the match.
@@ -92,7 +96,18 @@ declare global {
        *
        * @param matchVals ... list of row objects containing key-value pairs
        */
-      matchesResult(runtime: TestRunner, ...matchVals: unknown[]): Promise<R>;
+      matchesRows(
+        runtime: TestRunner,
+        ...matchVals: ExpectedResultRow[]
+      ): Promise<R>;
+      /**
+       * Similar to matchesRows, argument is an array of rows, not a list of rows
+       * Output on a mismatch is a jest-diff
+       */
+      matchesResult(
+        runtime: TestRunner,
+        matchVals: ExpectedResultRow[]
+      ): Promise<R>;
       toEmitDuringCompile(
         runtime: Runtime,
         ...events: ExpectedEvent[]
@@ -228,11 +243,12 @@ expect.extend({
     };
   },
 
-  async matchesResult(
+  async matchesRows(
     querySrc: string,
     runtime: TestRunner,
-    ...expected: unknown[]
+    ...expected: ExpectedResultRow[]
   ) {
+    querySrc = querySrc.trimEnd().replace(/^\n*/, '');
     const {fail, result, queryTestTag, query} = await runQuery({
       runner: runtime,
       src: querySrc,
@@ -260,24 +276,69 @@ expect.extend({
       const diffs: string[] = [];
       let unMatched = false;
       for (let expectNum = 0; expectNum < expected.length; expectNum += 1) {
-        const eStr = this.utils.EXPECTED_COLOR(
-          humanReadable(expected[expectNum])
-        );
+        const eStr = humanReadable(expected[expectNum]);
         if (objectsMatch(got[expectNum], expected[expectNum])) {
-          diffs.push(`     Matched: ${eStr}`);
+          diffs.push(`              ${eStr}`);
         } else {
-          diffs.push(`<<< Expected: ${eStr}`);
+          diffs.push(this.utils.EXPECTED_COLOR(`<<< Expected: ${eStr}`));
           diffs.push(
-            `>>> Received: ${this.utils.RECEIVED_COLOR(
-              humanReadable(got[expectNum])
-            )}`
+            this.utils.RECEIVED_COLOR(
+              `>>> Received: ${humanReadable(got[expectNum])}`
+            )
           );
           unMatched = true;
         }
       }
       if (unMatched) {
-        fails.push(...diffs);
+        fails.push('ROWS:', ...diffs);
       }
+    }
+
+    if (queryTestTag?.has('debug') && fails.length === 0) {
+      fails.push(
+        `\n${this.utils.RECEIVED_COLOR('Test forced failure (# test.debug)')}`
+      );
+      fails.push(`Received: ${this.utils.EXPECTED_COLOR(humanReadable(got))}`);
+    }
+
+    if (fails.length > 0) {
+      const fromSQL = query
+        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
+        : 'SQL Missing';
+      const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n${fails.join('\n')}`;
+      return {pass: false, message: () => failMsg};
+    }
+
+    return {pass: true, message: () => `Matched: ${expectStr}`};
+  },
+
+  async matchesResult(
+    querySrc: string,
+    runtime: TestRunner,
+    expected: ExpectedResultRow[]
+  ) {
+    querySrc = querySrc.trimEnd();
+    const {fail, result, queryTestTag, query} = await runQuery({
+      runner: runtime,
+      src: querySrc,
+    });
+    if (fail) return fail;
+    if (!result) {
+      return {
+        pass: false,
+        message: () => 'runQuery returned no results and no errors',
+      };
+    }
+
+    const fails: string[] = [];
+    const got = result.data.toObject();
+    const expectStr = humanReadable(expected);
+
+    if (!objectsMatch(got, expected)) {
+      fails.push(
+        'RESULT:',
+        this.utils.diff(expectStr, humanReadable(got)) || ''
+      );
     }
 
     if (queryTestTag?.has('debug') && fails.length === 0) {
@@ -295,7 +356,10 @@ expect.extend({
       return {pass: false, message: () => failMsg};
     }
 
-    return {pass: true, message: () => `Matched: ${expectStr}`};
+    return {
+      pass: true,
+      message: () => `Matched: ${this.utils.EXPECTED_COLOR(expectStr)}`,
+    };
   },
 
   async toEmitDuringCompile(

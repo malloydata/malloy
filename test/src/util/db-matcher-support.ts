@@ -51,11 +51,16 @@ export async function runQuery(
     const queryTags = (await query.getPreparedQuery()).tagParse().tag;
     queryTestTag = queryTags.tag('test');
   } catch (e) {
+    // Add line numbers, helpful if failure is a compiler error
+    const queryText = tq.src
+      .split('\n')
+      .map((line, index) => `${(index + 1).toString().padStart(4)}: ${line}`)
+      .join('\n');
     return {
       fail: {
         pass: false,
         message: () =>
-          `Could not prepare query to run: ${e.message}\nQuery:\n${tq.src}`,
+          `Could not prepare query to run: ${e.message}\n\nQUERY:\n${queryText}`,
       },
     };
   }

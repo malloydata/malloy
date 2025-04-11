@@ -48,7 +48,7 @@ export class HTMLView {
   ): Promise<HTMLElement> {
     let malloyResult: Malloy.Result;
     // TODO this check is bad, but I can't get VSCode to work linked without it...
-    if (result instanceof Result || 'modelDef' in result) {
+    if (result && (result instanceof Result || 'modelDef' in result)) {
       malloyResult = API.util.wrapResult(result as Result);
     } else {
       malloyResult = result;

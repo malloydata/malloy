@@ -2393,4 +2393,188 @@ describe('query builder', () => {
       `,
     });
   });
+
+  describe('isRunnable', () => {
+    test('empty arrow segment is not runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'nest',
+                name: 'Nest',
+                view: {
+                  definition: {
+                    kind: 'segment',
+                    operations: [],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(false);
+    });
+    test('view with refinement with no fields is runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'view_reference',
+              name: 'top_carriers',
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'order_by',
+                  field_reference: {
+                    name: 'carrier',
+                  },
+                },
+              ],
+            },
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(true);
+    });
+    test('view with base as partial view and refinement with fields is runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'limit',
+                  limit: 10,
+                },
+              ],
+            },
+            refinement: {
+              kind: 'view_reference',
+              name: 'top_carriers',
+            },
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(true);
+    });
+    test('view refinement with no fields anywhere is not runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'limit',
+                  limit: 10,
+                },
+              ],
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'limit',
+                  limit: 2,
+                },
+              ],
+            },
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        source: flights_model.entries.at(-1) as Malloy.SourceInfo,
+      });
+      expect(query.isRunnable()).toBe(false);
+    });
+    test('query with empty refinement is runnable', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'refinement',
+          base: {
+            kind: 'query_reference',
+            name: 'flights_by_carrier',
+          },
+          refinement: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'limit',
+                limit: 10,
+              },
+            ],
+          },
+        },
+      };
+      const query = new ASTQuery({
+        query: from,
+        model: {
+          entries: [
+            {
+              kind: 'query',
+              name: 'flights_by_carrier',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'flight_count',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      });
+      expect(query.isRunnable()).toBe(true);
+    });
+  });
 });
