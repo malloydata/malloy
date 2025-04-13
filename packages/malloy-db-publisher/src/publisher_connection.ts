@@ -1,7 +1,5 @@
-
 import type {
   Connection,
-  ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
@@ -12,112 +10,86 @@ import type {
   SQLSourceRequest,
   TableSourceDef,
   RunSQLOptions,
+  TestableConnection,
 } from '@malloydata/malloy';
 import { BaseConnection } from '@malloydata/malloy/connection';
+import { Configuration, ConnectionAttributes, ConnectionsApi } from './client';
 
-interface PublisherConnectionConfiguration {
-  connectionUri?: string;
+interface PublisherConnectionOptions {
+  connectionUri: string;
   accessToken?: string;
-}
-
-type PublisherConnectionConfigurationReader =
-  | PublisherConnectionConfiguration
-  | (() => Promise<PublisherConnectionConfiguration>);
-
-export interface PublisherConnectionOptions
-  extends ConnectionConfig,
-  PublisherConnectionConfiguration { }
-
-interface ConnectionAttributes {
-  dialectName: string;
-  isPool: false;
-  canPersist: false;
-  canStream: true;
-  supportsNesting: false;
 }
 
 export class PublisherConnection
   extends BaseConnection
-  implements Connection, StreamingConnection, PersistSQLResults {
+  implements Connection, StreamingConnection, TestableConnection, PersistSQLResults {
   public readonly name: string;
-  private configReader: PublisherConnectionConfigurationReader = {};
+  public readonly projectName: string;
+  private connectionsApi: ConnectionsApi;
+  private connectionAttributes: ConnectionAttributes;
 
-  // TODO: Replace with connection type from publisher.
-  private attributes: ConnectionAttributes;
-
-  constructor(
-    options: PublisherConnectionOptions,
-  );
-  constructor(
+  static async create(
     name: string,
-    configReader?: PublisherConnectionConfigurationReader
-  );
-  constructor(
-    arg: string | PublisherConnectionOptions,
-    configReader?: PublisherConnectionConfigurationReader
+    options: PublisherConnectionOptions
+  ) {
+    const url = new URL(options.connectionUri);
+    const projectName = url.pathname.split('/')[1];
+    const configuration = new Configuration({
+      basePath: url.origin,
+      accessToken: options.accessToken,
+    });
+    const connectionsApi = new ConnectionsApi(configuration);
+    const response = await connectionsApi.getConnection(projectName, name);
+    const connectionAttributes = response.data.attributes as ConnectionAttributes;
+    const connection = new PublisherConnection(name, projectName, connectionsApi, connectionAttributes);
+    await connection.test();
+    return connection;
+  }
+
+  private constructor(
+    name: string,
+    projectName: string,
+    connectionsApi: ConnectionsApi,
+    connectionAttributes: ConnectionAttributes
   ) {
     super();
-    if (typeof arg === 'string') {
-      this.name = arg;
-      if (configReader) {
-        this.configReader = configReader;
-      }
-    } else {
-      const { name, ...configReader } = arg;
-      this.name = name;
-      this.configReader = configReader;
-    }
-
-    // TODO: Implement -- fetch this info from the publisher
-    this.attributes = {
-      dialectName: 'publisher',
-      isPool: false,
-      canPersist: false,
-      canStream: true,
-      supportsNesting: false,
-    };
+    this.name = name;
+    this.projectName = projectName;
+    this.connectionsApi = connectionsApi;
+    this.connectionAttributes = connectionAttributes;
   }
 
   public get dialectName(): string {
-    return this.attributes.dialectName;
+    return this.connectionAttributes.dialectName as string;
   }
 
   public isPool(): this is PooledConnection {
-    return this.attributes.isPool;
+    return this.connectionAttributes.isPool as boolean;
   }
 
   public canPersist(): this is PersistSQLResults {
-    return this.attributes.canPersist;
+    return this.connectionAttributes.canPersist as boolean;
   }
 
   public canStream(): this is StreamingConnection {
-    return this.attributes.canStream;
-  }
-
-  public get supportsNesting(): boolean {
-    return this.attributes.supportsNesting;
-  }
-
-  private async readConfig(): Promise<PublisherConnectionConfiguration> {
-    if (this.configReader instanceof Function) {
-      return this.configReader();
-    } else {
-      return this.configReader;
-    }
+    return this.connectionAttributes.canStream as boolean;
   }
 
   public async fetchTableSchema(
     tableKey: string,
     tablePath: string
-  ): Promise<TableSourceDef | string> {
-    return "TODO";
+  ): Promise<TableSourceDef> {
+    const response = await this.connectionsApi.getTablesource(this.projectName, this.name, tableKey, tablePath);
+    return JSON.parse(response.data) as TableSourceDef;
   }
 
-  public async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef | string> {
-    return "TODO";
+  public async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const response = await this.connectionsApi.getSqlsource(this.projectName, this.name, sqlRef.selectStr);
+    return JSON.parse(response.data) as SQLSourceDef;
   }
 
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
+    // Most connection types don't support cost estimation.
     return {};
   }
 
@@ -125,29 +97,33 @@ export class PublisherConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    /// TODO: Implement me
-    return {
-      rows: [],
-      totalRows: 0,
-    };
-  }
+    const response = await this.connectionsApi.getQuerydata(this.projectName, this.name, sql, JSON.stringify(options));
+    return JSON.parse(response.data) as MalloyQueryData;
+  };
 
   public async * runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
-    // TODO: Implement
+    // TODO: Add real streaming support to publisher API.
+    const response = await this.connectionsApi.getQuerydata(this.projectName, this.name, sqlCommand, JSON.stringify(options));
+    const queryData = JSON.parse(response.data) as MalloyQueryData;
+    for (const row of queryData.rows) {
+      yield row;
+    }
   }
 
   public async test(): Promise<void> {
-    // TODO: Implement
+    await this.connectionsApi.getTest(this.projectName, this.name);
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    return "TODO";
+    const response = await this.connectionsApi.getTemporarytable(this.projectName, this.name, sqlCommand);
+    return response.data;
   }
 
   public async close(): Promise<void> {
+    // Can't close remote connection.
     return;
   }
 }

@@ -1,0 +1,993 @@
+openapi: 3.1.0
+info:
+  title: Malloy Publisher - Semantic Model Serving API
+  description:
+    The Malloy Publisher - Semantic Model Serving API serves Malloy packages.  A Malloy package is a directory of Malloy models (.malloy files),
+    Malloy notebooks (.malloynb files), and embedded datbases (.parque files) with a malloy-publisher.json manifest at the package's root directory.
+    For example, see the Malloy samples packages (https://github.com/malloydata/malloy-samples) repo.
+  version: v0
+servers:
+  - url: /api/v0/
+
+paths:
+  /projects:
+    get:
+      tags:
+      - projects
+      operationId: list-projects
+      summary:
+        Returns a list of the Projects hosted on this server.
+      responses:
+        200:
+          description:
+            A list of the Projects names.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/about:
+    get:
+      tags:
+      - about:
+      operationId: about
+      summary:
+        Returns metadata about the publisher service.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            Metadata about the publisher service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/About"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections:
+    get:
+      tags:
+      - connections
+      operationId: list-connections
+      summary:
+        Returns a list of the connections in the project.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A list of the connections in the project.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Connection"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections/{connectionName}:
+    get:
+      tags:
+      - connections
+      operationId: get-connection
+      summary:
+        Returns a connection.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: connectionName
+          in: path
+          description: Name of connection
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A connection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections/{connectionName}/test:
+    get:
+      tags:
+      - connections
+      operationId: get-test
+      summary:
+        Returns a test.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: connectionName
+          in: path
+          description: Name of connection
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            Test passed.
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections/{connectionName}/sqlSource:
+    get:
+      tags:
+      - connections
+      operationId: get-sqlsource
+      summary:
+        Returns a SQL source.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: connectionName
+          in: path
+          description: Name of connection
+          required: true
+          schema:
+            type: string
+        - name: sqlStatement
+          in: query
+          description: SQL statement
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A SQL source.
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections/{connectionName}/tableSource:
+    get:
+      tags:
+      - connections
+      operationId: get-tablesource
+      summary:
+        Returns a table source.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: connectionName
+          in: path
+          description: Name of connection
+          required: true
+          schema:
+            type: string
+        - name: tableKey
+          in: query
+          description: Table key
+          required: false
+          schema:
+            type: string
+        - name: tablePath
+          in: query
+          description: Table path
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A table source.
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections/{connectionName}/queryData:
+    get:
+      tags:
+      - connections
+      operationId: get-querydata
+      summary:
+        Returns a query and its results.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: connectionName
+          in: path
+          description: Name of connection
+          required: true
+          schema:
+            type: string
+        - name: sqlStatement
+          in: query
+          description: SQL statement
+          required: false
+          schema:
+            type: string
+        - name: options
+          in: query
+          description: Options
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A query and its results.
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+  /projects/{projectName}/connections/{connectionName}/temporaryTable:
+    get:
+      tags:
+      - connections
+      operationId: get-temporarytable
+      summary:
+        Returns a temporary table.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: connectionName
+          in: path
+          description: Name of connection
+          required: true
+          schema:
+            type: string
+        - name: sqlStatement
+          in: query
+          description: SQL statement
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A temporary table.
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
+
+  /projects/{projectName}/packages:
+    get:
+      tags:
+      - packages
+      operationId: list-packages
+      summary:
+        Returns a list of the Packages hosted on this server.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A list of the Packages names.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+  /projects/{projectName}/packages/{packageName}:
+    get:
+      tags:
+      - packages
+      operationId: get-package
+      summary:
+        Returns the package metadata.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: packageName
+          in: path
+          description: Package name
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: query
+          description: Version ID
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            Package metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+  /projects/{projectName}/packages/{packageName}/models:
+    get:
+      tags:
+      - models
+      operationId: list-models
+      summary:
+        Returns a list of relative paths to the models in the package.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: packageName
+          in: path
+          description: Name of package
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: query
+          description: Version ID
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A list of relative paths to the models in the package.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Model"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+  /projects/{projectName}/packages/{packageName}/models/{path}:
+    get:
+      tags:
+      - models
+      operationId: get-model
+      summary:
+        Returns a Malloy model.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: packageName
+          in: path
+          description: Name of package.
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: path
+          description: Path to model wihin the package.
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: query
+          description: Version ID
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A Malloy model.
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/CompiledModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+  /projects/{projectName}/packages/{packageName}/queryResults/{path}:
+    get:
+      tags:
+      - queryresults
+      operationId: execute-query
+      summary:
+        Returns a query and its results.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: packageName
+          in: path
+          description: Name of package
+          required: true
+          schema:
+            type: string
+        - name: path
+          in: path
+          description: Path to model within the package.
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: query
+          description:
+            Query string to execute on the model.  If the query is paramter is set, the queryName parameter must be empty.
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: sourceName
+          description: Name of the source in the model to use for queryName, search, and topValue requests.
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: queryName
+          description: Name of a query to execute on a source in the model.  Requires the sourceName parameter is set.  If the queryName is paramter is set, the query parameter must be empty.
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: versionId
+          description: Version ID
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A query and its results.
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/QueryResult"
+        400:
+          $ref: "#/components/responses/BadRequestError"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+  /projects/{projectName}/packages/{packageName}/databases:
+    get:
+      tags:
+      - databases
+      operationId: list-databases
+      summary:
+        Returns a list of relative paths to the databases embedded in the package.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: packageName
+          in: path
+          description: Name of package
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: query
+          description: Version ID
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A list of relative paths to the databases embedded in the package.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Database"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+  /projects/{projectName}/packages/{packageName}/schedules:
+    get:
+      tags:
+      - schedules
+      operationId: list-schedules
+      summary:
+        Returns a list of running schedules.
+      parameters:
+        - name: projectName
+          in: path
+          description: Name of project
+          required: true
+          schema:
+            type: string
+        - name: packageName
+          in: path
+          description: Name of package
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: query
+          description: Version ID
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description:
+            A list of running schedules.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFoundError"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+        501:
+          $ref: "#/components/responses/NotImplementedError"
+
+components:
+  responses:
+    InternalServerError:
+      description: The server encountered an internal error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFoundError:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotImplementedError:
+      description:  Not implemented
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    About:
+      type: object
+      properties:
+        readme:
+          type: string
+          description: Readme markdown.
+
+    Project:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Project name.
+
+    Package:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Package name.
+        description:
+          type: string
+          description: Package description.
+
+    Model:
+      type: object
+      description: Malloy model def and result data.  Malloy model def and result data is Malloy version depdendent.
+      properties:
+        packageName:
+          type: string
+          description: Model's package Name
+        path:
+          type: string
+          description: Model's relative path in its package directory.
+        type:
+          type: string
+          enum: ["source", "notebook"]
+          description: Type of malloy model file -- source file or notebook file.
+
+    CompiledModel:
+      type: object
+      description: Malloy model def and result data.  Malloy model def and result data is Malloy version depdendent.
+      properties:
+        packageName:
+          type: string
+          description: Model's package Name
+        path:
+          type: string
+          description: Model's relative path in its package directory.
+        type:
+          type: string
+          enum: ["source", "notebook"]
+          description: Type of malloy model file -- source file or notebook file.
+        malloyVersion:
+          type: string
+          description: Version of the Malloy compiler that generated the model def and results fields.
+        # Pass data styles as an opaque JSON string that is malloyVersion depdendent.
+        dataStyles:
+          type: string
+          description: Data style for rendering query results.
+        # Pass model def as an opaque JSON string that is malloyVersion depdendent.
+        modelDef:
+          type: string
+          description: Malloy model def.
+        sources:
+          type: array
+          description: Array of model sources.
+          items:
+            $ref: "#/components/schemas/Source"
+        queries:
+          type: array
+          descript: Array of named queries.
+          items:
+            $ref: "#/components/schemas/Query"
+        notebookCells:
+          type: array
+          description: Array of notebook cells.
+          items:
+            $ref: "#/components/schemas/NotebookCell"
+
+    Source:
+      type: object
+      description: Model source.
+      properties:
+        name:
+          type: string
+          description: Source's name.
+        annotations:
+          type: array
+          description: Annotations attached to source.
+          items:
+            type: string
+        views:
+          type: array
+          description: List of views in the source.\
+          items:
+            $ref: "#/components/schemas/View"
+
+    View:
+      type: object
+      description: Named model view.
+      properties:
+        name:
+          type: string
+          description: View's name.
+        annotations:
+          type: array
+          description: Annotations attached to view.
+          items:
+            type: string
+
+    Query:
+      type: object
+      description: Named model query.
+      properties:
+        name:
+          type: string
+          description: Query's name.
+        annotations:
+          type: array
+          description: Annotations attached to query.
+          items:
+            type: string
+
+    NotebookCell:
+      type: object
+      description: Notebook cell.
+      properties:
+        type:
+          type: string
+          enum: ["markdown", "code"]
+          description: Type of notebook cell.
+        text:
+          type: string
+          description: Text contents of the notebook cell.
+        queryName:
+          type: string
+          description: Name of query, if this is a named query.  Otherwise, empty.
+        # Pass data styles as an opaque JSON string that is malloyVersion depdendent.
+        queryResult:
+          type: string
+          description: Malloy query results. Populated only if a code cell.
+
+    QueryResult:
+      type: object
+      description: A Malloy query's results, its model def, and its data styles.
+      properties:
+        # Pass data styles as an opaque JSON string that is malloyVersion depdendent.
+        dataStyles:
+          type: string
+          description: Data style for rendering query results.
+        # Pass model def as an opaque JSON string that is malloyVersion depdendent.
+        modelDef:
+          type: string
+          description: Malloy model def.
+        # Pass data styles as an opaque JSON string that is malloyVersion depdendent.
+        queryResult:
+          type: string
+          description: Malloy query results. Populated only if a code cell.
+
+    Database:
+      type: object
+      description: An in-memory DuckDB database embedded in the package.
+      properties:
+        path:
+          type: string
+          description: Database's relative path in its package directory.
+        size:
+          type: integer
+          description: Size of the embedded database in bytes.
+
+    Schedule:
+      type: object
+      description: A scheduled task.
+      properties:
+        resource:
+          type: string
+          description: Resource in the package that the schedule is attached to.
+        schedule:
+          type: string
+          description: Schedule (cron format) for executing task.
+        action:
+          type: string
+          description: Action to execute.
+        connection:
+          type: string
+          description: Connection to perform action on.
+        lastRunTime:
+          type: number
+          description: Timestamp in milliseconds of the last run.
+        lastRunStatus:
+          type: string
+          description: Status of the last run.
+
+    Connection:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [postgres, bigquery, snowflake, trino]
+        attributes:
+          $ref: "#/components/schemas/ConnectionAttributes"
+        postgresConnection:
+          $ref: "#/components/schemas/PostgresConnection"
+        bigqueryConnection:
+          $ref: "#/components/schemas/BigqueryConnection"
+        snowflakeConnection:
+          $ref: "#/components/schemas/SnowflakeConnection"
+        trinoConnection:
+          $ref: "#/components/schemas/TrinoConnection"
+
+    ConnectionAttributes:
+      type: object
+      properties:
+        dialectName:
+          type: string
+        isPool:
+          type: boolean
+        canPersist:
+          type: boolean
+        canStream:
+          type: boolean
+
+    PostgresConnection:
+      type: object
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+        databaseName:
+          type: string
+        userName:
+          type: string
+        password:
+          type: string
+        connectionString:
+          type: string
+
+    BigqueryConnection:
+      type: object
+      properties:
+        defaultProjectId:
+          type: string
+        billingProjectId:
+          type: string
+        location:
+          type: string
+        serviceAccountKeyJson:
+          type: string
+        maximumBytesBilled:
+          type: string
+        queryTimeoutMilliseconds:
+          type: string
+
+    SnowflakeConnection:
+      type: object
+      properties:
+        account:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        warehouse:
+          type: string
+        database:
+          type: string
+        schema:
+          type: string
+        responseTimeoutMilliseconds:
+          type: integer
+
+    TrinoConnection:
+      type: object
+      properties:
+        server:
+          type: string
+        port:
+          type: number
+        catalog:
+          type: string
+        schema:
+          type: string
+        user:
+          type: string
+        password:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
