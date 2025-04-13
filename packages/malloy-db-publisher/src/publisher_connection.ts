@@ -12,8 +12,8 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
-import { BaseConnection } from '@malloydata/malloy/connection';
-import { Configuration, ConnectionAttributes, ConnectionsApi } from './client';
+import {BaseConnection} from '@malloydata/malloy/connection';
+import {Configuration, ConnectionAttributes, ConnectionsApi} from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -22,26 +22,44 @@ interface PublisherConnectionOptions {
 
 export class PublisherConnection
   extends BaseConnection
-  implements Connection, StreamingConnection, TestableConnection, PersistSQLResults {
+  implements
+    Connection,
+    StreamingConnection,
+    TestableConnection,
+    PersistSQLResults
+{
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
   private connectionAttributes: ConnectionAttributes;
 
-  static async create(
-    name: string,
-    options: PublisherConnectionOptions
-  ) {
+  static async create(name: string, options: PublisherConnectionOptions) {
     const url = new URL(options.connectionUri);
-    const projectName = url.pathname.split('/')[1];
+    const urlParts = url.pathname.split('/');
+    if (urlParts.length !== 7) {
+      const fmt = '/api/v0/projects/{projectName}/connections/{connectionName}';
+      throw new Error(
+        `Invalid connection URI: ${options.connectionUri}. Expected format: ${fmt}`
+      );
+    }
+    const apiTag = urlParts[1];
+    const versionTag = urlParts[2];
+    const projectName = urlParts[4];
+    const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
-      basePath: url.origin,
+      basePath: apiUrl,
       accessToken: options.accessToken,
     });
     const connectionsApi = new ConnectionsApi(configuration);
     const response = await connectionsApi.getConnection(projectName, name);
-    const connectionAttributes = response.data.attributes as ConnectionAttributes;
-    const connection = new PublisherConnection(name, projectName, connectionsApi, connectionAttributes);
+    const connectionAttributes = response.data
+      .attributes as ConnectionAttributes;
+    const connection = new PublisherConnection(
+      name,
+      projectName,
+      connectionsApi,
+      connectionAttributes
+    );
     await connection.test();
     return connection;
   }
@@ -79,12 +97,23 @@ export class PublisherConnection
     tableKey: string,
     tablePath: string
   ): Promise<TableSourceDef> {
-    const response = await this.connectionsApi.getTablesource(this.projectName, this.name, tableKey, tablePath);
+    const response = await this.connectionsApi.getTablesource(
+      this.projectName,
+      this.name,
+      tableKey,
+      tablePath
+    );
     return JSON.parse(response.data) as TableSourceDef;
   }
 
-  public async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
-    const response = await this.connectionsApi.getSqlsource(this.projectName, this.name, sqlRef.selectStr);
+  public async fetchSelectSchema(
+    sqlRef: SQLSourceRequest
+  ): Promise<SQLSourceDef> {
+    const response = await this.connectionsApi.getSqlsource(
+      this.projectName,
+      this.name,
+      sqlRef.selectStr
+    );
     return JSON.parse(response.data) as SQLSourceDef;
   }
 
@@ -97,16 +126,26 @@ export class PublisherConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const response = await this.connectionsApi.getQuerydata(this.projectName, this.name, sql, JSON.stringify(options));
+    const response = await this.connectionsApi.getQuerydata(
+      this.projectName,
+      this.name,
+      sql,
+      JSON.stringify(options)
+    );
     return JSON.parse(response.data) as MalloyQueryData;
-  };
+  }
 
-  public async * runSQLStream(
+  public async *runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     // TODO: Add real streaming support to publisher API.
-    const response = await this.connectionsApi.getQuerydata(this.projectName, this.name, sqlCommand, JSON.stringify(options));
+    const response = await this.connectionsApi.getQuerydata(
+      this.projectName,
+      this.name,
+      sqlCommand,
+      JSON.stringify(options)
+    );
     const queryData = JSON.parse(response.data) as MalloyQueryData;
     for (const row of queryData.rows) {
       yield row;
@@ -118,7 +157,11 @@ export class PublisherConnection
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const response = await this.connectionsApi.getTemporarytable(this.projectName, this.name, sqlCommand);
+    const response = await this.connectionsApi.getTemporarytable(
+      this.projectName,
+      this.name,
+      sqlCommand
+    );
     return response.data;
   }
 
