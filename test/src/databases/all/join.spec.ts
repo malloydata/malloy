@@ -303,8 +303,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(joinModel, {c: 0});
   });
 
-  it('finds join dependency in non basic atomic fields', async () => {
-    await expect(`
+  it.when(runtime.dialect.nestedArrays)(
+    'finds join dependency in non basic atomic fields',
+    async () => {
+      await expect(`
       run: ${databaseName}.sql("SELECT 1")
         extend { dimension: a1 is [[1]], a2 is [[2]] }
         -> { select: pick_a1 is pick a1.each when true else a2.each }
