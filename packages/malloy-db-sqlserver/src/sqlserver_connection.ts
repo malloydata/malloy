@@ -247,7 +247,8 @@ export class SQLServerConnection
       FROM (${sqlRef.selectStr}) AS t;
       SELECT
           c.name AS column_name,
-          typ.name AS data_type
+          typ.name AS data_type,
+          NULL as element_type
       FROM tempdb.sys.tables AS t
       JOIN tempdb.sys.columns AS c
           ON t.object_id = c.object_id
@@ -301,12 +302,13 @@ export class SQLServerConnection
       return 'Default schema not yet supported in SQLServer';
     }
     const infoQuery = `
-      SELECT column_name, c.data_type, e.data_type as element_type
-      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
-        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
-          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-        WHERE table_name = '${table}'
-          AND table_schema = '${schema}'
+      SELECT
+        column_name,
+        c.data_type,
+        NULL as element_type
+      FROM information_schema.columns c
+      WHERE table_name = '${table}'
+        AND table_schema = '${schema}';
     `;
 
     try {
