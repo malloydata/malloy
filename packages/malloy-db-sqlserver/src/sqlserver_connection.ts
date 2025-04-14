@@ -21,12 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// LTNOTE: we need this extension to be installed to correctly index
-//  SQLServer data...  We should probably do this on connection creation...
-//
-//     create extension if not exists tsm_system_rows
-//
-
 import * as crypto from 'crypto';
 import type {
   Connection,
