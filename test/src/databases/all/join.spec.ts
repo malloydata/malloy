@@ -307,7 +307,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     'finds join dependency in non basic atomic fields',
     async () => {
       await expect(`
-      run: ${databaseName}.sql("SELECT 1")
+      run: ${databaseName}.sql("SELECT 1 as n")
         extend { dimension: a1 is [[1]], a2 is [[2]] }
         -> { select: pick_a1 is pick a1.each when true else a2.each }
       `).matchesRows(runtime, {pick_a1: [1]});
