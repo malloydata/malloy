@@ -39,22 +39,42 @@ describe('SQL Server tests', () => {
   }
 
   // Idempotently create schema and tables with capital letters ans spaces.
-  // TODO (vitor): (malloy): Discuss collation and spaces allowed in objects
+  // TODO (vitor): (malloy): Discuss collation and spaces allowed in schema/tables/columns
   beforeAll(async () => {
     await runtime.connection.runSQL(
       `
-      IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Funky Schema')
+      IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Upper Spaced Schema')
       BEGIN
-        EXEC('CREATE SCHEMA [Funky Schema]')
+        EXEC('CREATE SCHEMA [Upper Spaced Schema]')
       END;
       `
     );
     await Promise.all([
       runtime.connection.runSQL(
-        'CREATE TABLE IF NOT EXISTS [Funky Schema].[FunkySchema FunkyTable] as select 1 as one;'
+        `
+        IF NOT EXISTS (
+          SELECT * FROM sys.tables
+          WHERE name = 'Upper Spaced Schema Upper Spaced Table'
+            AND schema_id = SCHEMA_ID('Upper Spaced Schema')
+        )
+        BEGIN
+          SELECT 1 AS one
+          INTO [Upper Spaced Schema].[Upper Spaced Schema Upper Spaced Table];
+        END;
+        `
       ),
       runtime.connection.runSQL(
-        'CREATE TABLE IF NOT EXISTS [Dbo FunkyTable] as select 1 as one;'
+        `
+        IF NOT EXISTS (
+          SELECT * FROM sys.tables
+          WHERE name = 'Dbo Upper Spaced Table'
+            AND schema_id = SCHEMA_ID('dbo')
+        )
+        BEGIN
+          SELECT 1 AS one
+          INTO [Dbo Upper Spaced Table];
+        END;
+        `
       ),
     ]);
   });
@@ -107,20 +127,25 @@ describe('SQL Server tests', () => {
   }
 
   it('will quote to properly access mixed case table name', async () => {
-    if (await oneExists(runtime, 'dbo.[UpperTablePublic]')) {
+    if (await oneExists(runtime, 'dbo.[Dbo Upper Spaced Table]')) {
       await expect(`
         ##! experimental.dialect.tsql
         run:
-        sqlserver.table('dbo.[UpperTablePublic]') -> { select: one }
+        sqlserver.table('dbo.[Dbo Upper Spaced Table]') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });
 
   it('quote to properly access mixes case schema name', async () => {
-    if (await oneExists(runtime, '"UpperSchema"."UpperSchemaUpperTable"')) {
+    if (
+      await oneExists(
+        runtime,
+        '"Upper Spaced Schema"."Upper Spaced Schema Upper Spaced Table"'
+      )
+    ) {
       await expect(`
         ##! experimental.dialect.tsql
-        run: sqlserver.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
+        run: sqlserver.table('[Upper Spaced Schema].[Upper Spaced Schema Upper Spaced Table]') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });

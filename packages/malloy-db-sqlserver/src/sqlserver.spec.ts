@@ -41,7 +41,7 @@ describe('SQLServerConnection', () => {
 
   beforeAll(async () => {
     connection = new SQLServerConnection(
-      'test-sqlserver',
+      'sqlserver-test',
       {},
       SQLServerExecutor.getConnectionOptionsFromEnv()
     );
