@@ -115,6 +115,7 @@ export type {
   RepeatedRecordDef,
   // Used in array/record tests
   RecordLiteralNode,
+  StringLiteralNode,
   ArrayLiteralNode,
 } from './model';
 export {
