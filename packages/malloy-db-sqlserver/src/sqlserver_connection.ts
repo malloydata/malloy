@@ -239,16 +239,21 @@ export class SQLServerConnection
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
     const tempTableName = `#tmp${randomUUID()}`.replace(/-/g, '');
+
     const infoQuery = `
-      drop table if exists ${tempTableName};
-      create table ${tempTableName} as SELECT * FROM (
-        ${sqlRef.selectStr}
-      ) as x where false;
-      SELECT column_name, c.data_type, e.data_type as element_type
-      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
-        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
-          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-      where table_name='${tempTableName}';
+      DROP TABLE IF EXISTS ${tempTableName};
+      SELECT TOP(0) *
+      INTO ${tempTableName}
+      FROM (${sqlRef.selectStr}) AS t;
+      SELECT
+          c.name AS column_name,
+          typ.name AS data_type
+      FROM tempdb.sys.tables AS t
+      JOIN tempdb.sys.columns AS c
+          ON t.object_id = c.object_id
+      JOIN tempdb.sys.types AS typ
+          ON c.user_type_id = typ.user_type_id
+      WHERE t.name LIKE '${tempTableName}%';
     `;
     try {
       await this.schemaFromQuery(infoQuery, structDef);
@@ -274,15 +279,8 @@ export class SQLServerConnection
     for (const row of rows) {
       const SQLServerDataType = row['data_type'] as string;
       const name = row['column_name'] as string;
-      if (SQLServerDataType === 'ARRAY') {
-        const elementType = this.dialect.sqlTypeToMalloyType(
-          row['element_type'] as string
-        );
-        structDef.fields.push(mkArrayDef(elementType, name));
-      } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(SQLServerDataType);
-        structDef.fields.push({...malloyType, name});
-      }
+      const malloyType = this.dialect.sqlTypeToMalloyType(SQLServerDataType);
+      structDef.fields.push({...malloyType, name});
     }
   }
 
