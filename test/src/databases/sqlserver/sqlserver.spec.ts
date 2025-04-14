@@ -29,26 +29,32 @@ import {describeIfDatabaseAvailable} from '../../util';
 import '../../util/db-jest-matchers';
 import {DateTime} from 'luxon';
 
-const [describe] = describeIfDatabaseAvailable(['postgres']);
+const [describe] = describeIfDatabaseAvailable(['sqlserver']);
 
-describe('Postgres tests', () => {
-  const runtimeList = new RuntimeList(['postgres']);
-  const runtime = runtimeList.runtimeMap.get('postgres');
+describe('SQL Server tests', () => {
+  const runtimeList = new RuntimeList(['sqlserver']);
+  const runtime = runtimeList.runtimeMap.get('sqlserver');
   if (runtime === undefined) {
     throw new Error("Couldn't build runtime");
   }
 
-  // Idempotently create schema and tables with capital letters to use in tests.
+  // Idempotently create schema and tables with capital letters ans spaces.
+  // TODO (vitor): (malloy): Discuss collation and spaces allowed in objects
   beforeAll(async () => {
     await runtime.connection.runSQL(
-      'create schema if not exists "UpperSchema";'
+      `
+      IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Funky Schema')
+      BEGIN
+        EXEC('CREATE SCHEMA [Funky Schema]')
+      END;
+      `
     );
     await Promise.all([
       runtime.connection.runSQL(
-        'create table if not exists "UpperSchema"."UpperSchemaUpperTable" as select 1 as one;'
+        'CREATE TABLE IF NOT EXISTS [Funky Schema].[FunkySchema FunkyTable] as select 1 as one;'
       ),
       runtime.connection.runSQL(
-        'create table if not exists "UpperTablePublic" as select 1 as one;'
+        'CREATE TABLE IF NOT EXISTS [Dbo FunkyTable] as select 1 as one;'
       ),
     ]);
   });
@@ -59,19 +65,22 @@ describe('Postgres tests', () => {
 
   it('run an sql query', async () => {
     await expect(
-      'run: postgres.sql("SELECT 1 as n") -> { select: n }'
+      `##! experimental.dialect.tsql
+      run: sqlserver.sql("SELECT 1 as n") -> { select: n }`
     ).malloyResultMatches(runtime, {n: 1});
   });
 
   it('mixed case col names are properly quoted so they retain case in results', async () => {
     await expect(`
-      run: postgres.sql('SELECT 1 as "upperLower"') -> { select: upperLower }
+      ##! experimental.dialect.tsql
+      run: sqlserver.sql('SELECT 1 as "upperLower"') -> { select: upperLower }
     `).malloyResultMatches(runtime, {upperLower: 1});
   });
 
   it('fields which are sql keywords are quoted', async () => {
     await expect(`
-    run: postgres.sql('SELECT 1 as "select"') -> {
+    ##! experimental.dialect.tsql
+    run: sqlserver.sql('SELECT 1 as "select"') -> {
       select:
         select
         create is select + 1
@@ -82,7 +91,13 @@ describe('Postgres tests', () => {
   async function oneExists(rt: Runtime, tn: string): Promise<boolean> {
     try {
       const lookForOne = await rt
-        .loadQuery(`run: postgres.sql('SELECT one FROM ${tn}')`)
+        .loadQuery(
+          `
+          ##! experimental.dialect.tsql
+          run:
+          sqlserver.sql('SELECT one FROM ${tn}')
+        `
+        )
         .run();
       const one = lookForOne.data.path(0, 'one').value;
       return one === 1;
@@ -92,9 +107,11 @@ describe('Postgres tests', () => {
   }
 
   it('will quote to properly access mixed case table name', async () => {
-    if (await oneExists(runtime, 'public."UpperTablePublic"')) {
+    if (await oneExists(runtime, 'dbo.[UpperTablePublic]')) {
       await expect(`
-        run: postgres.table('public.UpperTablePublic') -> { select: one }
+        ##! experimental.dialect.tsql
+        run:
+        sqlserver.table('dbo.[UpperTablePublic]') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });
@@ -102,21 +119,30 @@ describe('Postgres tests', () => {
   it('quote to properly access mixes case schema name', async () => {
     if (await oneExists(runtime, '"UpperSchema"."UpperSchemaUpperTable"')) {
       await expect(`
-        run: postgres.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
+        ##! experimental.dialect.tsql
+        run: sqlserver.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });
 
   it('passes unsupported data', async () => {
     const result = await runtime
-      .loadQuery('run: postgres.sql("SELECT int4range(10, 20) as ranger")')
+      .loadQuery(
+        `
+        ##! experimental.dialect.tsql
+        run: sqlserver.sql("SELECT int4range(10, 20) as ranger")
+        `
+      )
       .run();
     expect(result.data.value[0]['ranger']).toBeDefined();
   });
 
   it('supports varchars with parameters', async () => {
     await expect(
-      "run: postgres.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")"
+      `
+      ##! experimental.dialect.tsql
+      run: sqlserver.sql("SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3")
+      `
     ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
 
@@ -137,7 +163,9 @@ describe('Postgres tests', () => {
     );
     test('can cast TIMESTAMPTZ to timestamp', async () => {
       await expect(
-        `run: postgres.sql("""
+        `
+        ##! experimental.dialect.tsql
+        run: sqlserver.sql("""
               SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
           """) -> {
             select: mex_220 is t_tstz::timestamp
@@ -157,7 +185,12 @@ describe('Postgres tests', () => {
       'DOUBLE PRECISION',
     ])('supports %s', async sqlType => {
       const result = await runtime
-        .loadQuery(`run: postgres.sql("SELECT 10::${sqlType} as d")`)
+        .loadQuery(
+          `
+          ##! experimental.dialect.tsql
+          run: sqlserver.sql("SELECT 10::${sqlType} as d")
+          `
+        )
         .run();
       const field = result.data.field.allFields[0];
       expect(field.isAtomicField()).toBe(true);
