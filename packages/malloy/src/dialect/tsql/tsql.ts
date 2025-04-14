@@ -115,7 +115,7 @@ export class TSQLDialect extends PostgresBase {
   quoteTablePath(tablePath: string): string {
     return tablePath
       .split('.')
-      .map(part => `"${part}"`)
+      .map(part => `[${part}]`)
       .join('.');
   }
 
