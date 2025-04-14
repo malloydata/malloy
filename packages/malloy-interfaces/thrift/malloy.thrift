@@ -276,10 +276,6 @@ struct Limit {
 // allow me to have a union whose property is also a union, since I'm compressing them
 // into an intersection type of `{__type: } & Where`. If Where is also a union, then
 // there would be two `__type` fields...
-struct Where {
-  1: required Filter filter,
-}
-
 struct FilterOperation {
   1: required Filter filter,
 }
