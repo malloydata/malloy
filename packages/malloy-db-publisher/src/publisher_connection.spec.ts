@@ -84,7 +84,6 @@ describe('db:Publisher', () => {
       .loadQuery('run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 10 }')
       .getSQL();
     const res = await conn.runSQL(sql);
-    console.log(res);
     expect(res.totalRows).toBe(10);
     let total = 0;
     for (const row of res.rows) {
