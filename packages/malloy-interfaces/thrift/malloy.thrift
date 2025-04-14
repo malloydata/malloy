@@ -417,7 +417,7 @@ struct TimeTruncationFieldReference {
 
 struct FilteredField {
   1: required Reference field_reference,
-  2: required list<Where> where,
+  2: required list<FilterOperation> where,
 }
 
 struct StringCell {
