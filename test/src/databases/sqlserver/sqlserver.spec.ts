@@ -43,9 +43,9 @@ describe('SQL Server tests', () => {
   beforeAll(async () => {
     await runtime.connection.runSQL(
       `
-      IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Upper Spaced Schema')
+      IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Spaced Schema')
       BEGIN
-        EXEC('CREATE SCHEMA [Upper Spaced Schema]')
+        EXEC('CREATE SCHEMA [Spaced Schema]')
       END;
       `
     );
@@ -54,12 +54,12 @@ describe('SQL Server tests', () => {
         `
         IF NOT EXISTS (
           SELECT * FROM sys.tables
-          WHERE name = 'Upper Spaced Schema Upper Spaced Table'
-            AND schema_id = SCHEMA_ID('Upper Spaced Schema')
+          WHERE name = 'Spaced Schema Spaced Table'
+            AND schema_id = SCHEMA_ID('Spaced Schema')
         )
         BEGIN
           SELECT 1 AS one
-          INTO [Upper Spaced Schema].[Upper Spaced Schema Upper Spaced Table];
+          INTO [Spaced Schema].[Spaced Schema Spaced Table];
         END;
         `
       ),
@@ -67,12 +67,12 @@ describe('SQL Server tests', () => {
         `
         IF NOT EXISTS (
           SELECT * FROM sys.tables
-          WHERE name = 'Dbo Upper Spaced Table'
+          WHERE name = 'Dbo Spaced Table'
             AND schema_id = SCHEMA_ID('dbo')
         )
         BEGIN
           SELECT 1 AS one
-          INTO [Dbo Upper Spaced Table];
+          INTO [Dbo Spaced Table];
         END;
         `
       ),
@@ -83,24 +83,24 @@ describe('SQL Server tests', () => {
     await runtimeList.closeAll();
   });
 
-  it('run an sql query', async () => {
+  it('runs an sql query', async () => {
     await expect(
       `##! experimental.dialect.tsql
       run: sqlserver.sql("SELECT 1 as n") -> { select: n }`
     ).malloyResultMatches(runtime, {n: 1});
   });
 
-  it('mixed case col names are properly quoted so they retain case in results', async () => {
+  it('retains spaces in result', async () => {
     await expect(`
       ##! experimental.dialect.tsql
       run: sqlserver.sql('SELECT 1 as "upperLower"') -> { select: upperLower }
     `).malloyResultMatches(runtime, {upperLower: 1});
   });
 
-  it('fields which are sql keywords are quoted', async () => {
+  it('fields which are sql keywords are bracketed', async () => {
     await expect(`
     ##! experimental.dialect.tsql
-    run: sqlserver.sql('SELECT 1 as "select"') -> {
+    run: sqlserver.sql('SELECT 1 as [select]') -> {
       select:
         select
         create is select + 1
@@ -126,26 +126,23 @@ describe('SQL Server tests', () => {
     }
   }
 
-  it('will quote to properly access mixed case table name', async () => {
-    if (await oneExists(runtime, 'dbo.[Dbo Upper Spaced Table]')) {
+  it('will bracket to properly access mixed case table name', async () => {
+    if (await oneExists(runtime, 'dbo.[Dbo Spaced Table]')) {
       await expect(`
         ##! experimental.dialect.tsql
         run:
-        sqlserver.table('dbo.[Dbo Upper Spaced Table]') -> { select: one }
+        sqlserver.table('dbo.[Dbo Spaced Table]') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });
 
   it('quote to properly access mixes case schema name', async () => {
     if (
-      await oneExists(
-        runtime,
-        '"Upper Spaced Schema"."Upper Spaced Schema Upper Spaced Table"'
-      )
+      await oneExists(runtime, '[Spaced Schema].[Spaced Schema Spaced Table]')
     ) {
       await expect(`
         ##! experimental.dialect.tsql
-        run: sqlserver.table('[Upper Spaced Schema].[Upper Spaced Schema Upper Spaced Table]') -> { select: one }
+        run: sqlserver.table('[Spaced Schema].[Spaced Schema Spaced Table]') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });
