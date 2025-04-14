@@ -45,7 +45,7 @@ import type {
   StructDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {TSQLDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
+import {TSQLDialect, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {connect, ConnectionPool} from 'mssql';
