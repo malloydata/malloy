@@ -2670,6 +2670,9 @@ class QueryQuery extends QueryField {
           }
         }
       } else if (field instanceof QueryFieldStruct) {
+        if (field.isAtomic()) {
+          this.addDependancies(resultStruct, field);
+        }
         resultStruct.addField(as, field, {
           resultIndex,
           type: 'result',
