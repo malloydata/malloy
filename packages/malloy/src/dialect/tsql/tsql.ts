@@ -93,19 +93,19 @@ export class TSQLDialect extends PostgresBase {
   name = 'tsql';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
-  udfPrefix = 'pg_temp.__udf';
+  udfPrefix = 'tsql_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
-  supportUnnestArrayAgg = true;
+  supportUnnestArrayAgg = false;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  supportsNesting = true;
+  supportsNesting = false;
   experimental = true;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
@@ -267,9 +267,6 @@ export class TSQLDialect extends PostgresBase {
     return `ROW(${alias})`;
   }
 
-  // The simple way to do this is to add a comment on the table
-  //  with the expiration time. https://www.tsqlql.org/docs/current/sql-comment.html
-  //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error('Not implemented Yet');
   }
