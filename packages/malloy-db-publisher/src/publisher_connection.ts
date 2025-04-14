@@ -12,8 +12,8 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
-import {BaseConnection} from '@malloydata/malloy/connection';
-import {Configuration, ConnectionAttributes, ConnectionsApi} from './client';
+import { BaseConnection } from '@malloydata/malloy/connection';
+import { Configuration, ConnectionAttributes, ConnectionsApi } from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -23,11 +23,10 @@ interface PublisherConnectionOptions {
 export class PublisherConnection
   extends BaseConnection
   implements
-    Connection,
-    StreamingConnection,
-    TestableConnection,
-    PersistSQLResults
-{
+  Connection,
+  StreamingConnection,
+  TestableConnection,
+  PersistSQLResults {
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
@@ -126,6 +125,8 @@ export class PublisherConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
+    // TODO: Add support for abortSignal.
+    options.abortSignal = undefined;
     const response = await this.connectionsApi.getQuerydata(
       this.projectName,
       this.name,
@@ -139,6 +140,8 @@ export class PublisherConnection
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
+    // TODO: Add support for abortSignal.
+    options.abortSignal = undefined;
     // TODO: Add real streaming support to publisher API.
     const response = await this.connectionsApi.getQuerydata(
       this.projectName,
