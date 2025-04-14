@@ -44,6 +44,14 @@ export class PublisherConnection
     const apiTag = urlParts[1];
     const versionTag = urlParts[2];
     const projectName = urlParts[4];
+    const connectionName = urlParts[6];
+
+    if (name !== connectionName) {
+      throw new Error(
+        `Connection name mismatch: ${name} !== ${connectionName}. Connection name must match the URI path.`
+      );
+    }
+
     const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
       basePath: apiUrl,
