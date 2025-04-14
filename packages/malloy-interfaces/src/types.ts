@@ -224,6 +224,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'default_row_limit': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -237,6 +242,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'fields': {
       'result': {
         'type': 'Result',
+        'optional': true,
+        'array': false,
+      },
+      'default_row_limit_added': {
+        'type': 'number',
         'optional': true,
         'array': false,
       },
@@ -1188,6 +1198,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'default_row_limit': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -1201,6 +1216,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'fields': {
       'result': {
         'type': 'Result',
+        'optional': true,
+        'array': false,
+      },
+      'default_row_limit_added': {
+        'type': 'number',
         'optional': true,
         'array': false,
       },
@@ -1677,11 +1697,13 @@ export type CompileModelResponse = {
 export type CompileQueryRequest = {
   model_url: string;
   query: Query;
+  default_row_limit?: number;
   compiler_needs?: CompilerNeeds;
 };
 
 export type CompileQueryResponse = {
   result?: Result;
+  default_row_limit_added?: number;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
   translations?: Array<Translation>;
@@ -2125,11 +2147,13 @@ export type RunIndexQueryResponse = {
 export type RunQueryRequest = {
   model_url: string;
   query: Query;
+  default_row_limit?: number;
   compiler_needs?: CompilerNeeds;
 };
 
 export type RunQueryResponse = {
   result?: Result;
+  default_row_limit_added?: number;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };

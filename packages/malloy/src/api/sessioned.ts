@@ -59,7 +59,7 @@ interface SessionStateForCompileSource extends SessionStateBase {
 interface SessionStateForCompileQuery extends SessionStateBase {
   type: 'compile_query';
   sessionInfo: SessionInfoForCompileQuery;
-  state: Core.CompileModelState;
+  state: Core.CompileQueryState;
 }
 
 function sessionInfosMatch(a: SessionInfo, b: SessionInfo) {
