@@ -5190,20 +5190,27 @@ export class QueryModel {
     };
   }
 
-  addDefaultRowLimit(query: Query, defaultRowLimit?: number): Query {
-    if (defaultRowLimit === undefined) return query;
+  addDefaultRowLimit(
+    query: Query,
+    defaultRowLimit?: number
+  ): {query: Query; addedDefaultRowLimit?: number} {
+    const nope = {query, addedDefaultRowLimit: undefined};
+    if (defaultRowLimit === undefined) return nope;
     const lastSegment = query.pipeline[query.pipeline.length - 1];
-    if (lastSegment.type === 'raw') return query;
-    if (lastSegment.limit !== undefined) return query;
+    if (lastSegment.type === 'raw') return nope;
+    if (lastSegment.limit !== undefined) return nope;
     return {
-      ...query,
-      pipeline: [
-        ...query.pipeline.slice(0, -1),
-        {
-          ...lastSegment,
-          limit: defaultRowLimit,
-        },
-      ],
+      query: {
+        ...query,
+        pipeline: [
+          ...query.pipeline.slice(0, -1),
+          {
+            ...lastSegment,
+            limit: defaultRowLimit,
+          },
+        ],
+      },
+      addedDefaultRowLimit: defaultRowLimit,
     };
   }
 
@@ -5213,10 +5220,12 @@ export class QueryModel {
     finalize = true
   ): CompiledQuery {
     let newModel: QueryModel | undefined;
-    query = this.addDefaultRowLimit(
+    const addDefaultRowLimit = this.addDefaultRowLimit(
       query,
       prepareResultOptions?.defaultRowLimit
     );
+    query = addDefaultRowLimit.query;
+    const addedDefaultRowLimit = addDefaultRowLimit.addedDefaultRowLimit;
     const m = newModel || this;
     const ret = m.loadQuery(
       query,
@@ -5256,6 +5265,7 @@ export class QueryModel {
       connectionName: ret.connectionName,
       annotation: query.annotation,
       queryTimezone: ret.structs[0].queryTimezone,
+      defaultRowLimitAdded: addedDefaultRowLimit,
     };
   }
 
