@@ -66,6 +66,8 @@ function escapeString(str: string): {contents: string; quoteCharacter: string} {
 
 function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
   switch (literal.kind) {
+    case 'filter_expression_literal':
+      return [quoteFilter(literal.filter_expression_value)];
     case 'boolean_literal':
       return [literal.boolean_value.toString()];
     case 'string_literal': {
