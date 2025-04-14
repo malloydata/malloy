@@ -91,7 +91,7 @@ const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 
 export class TSQLDialect extends PostgresBase {
   name = 'tsql';
-  defaultNumberType = 'DOUBLE PRECISION';
+  defaultNumberType = 'FLOAT(53)';
   defaultDecimalType = 'NUMERIC';
   udfPrefix = 'tsql_temp.__udf';
   hasFinalStage = true;
@@ -100,8 +100,8 @@ export class TSQLDialect extends PostgresBase {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = false;
-  supportsAggDistinct = true;
-  supportsCTEinCoorelatedSubQueries = true;
+  supportsAggDistinct = false;
+  supportsCTEinCoorelatedSubQueries = false;
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
