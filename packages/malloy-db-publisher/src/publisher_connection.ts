@@ -12,8 +12,8 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
-import {BaseConnection} from '@malloydata/malloy/connection';
-import {Configuration, ConnectionAttributes, ConnectionsApi} from './client';
+import { BaseConnection } from '@malloydata/malloy/connection';
+import { Configuration, ConnectionAttributes, ConnectionsApi } from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -23,11 +23,10 @@ interface PublisherConnectionOptions {
 export class PublisherConnection
   extends BaseConnection
   implements
-    Connection,
-    StreamingConnection,
-    TestableConnection,
-    PersistSQLResults
-{
+  Connection,
+  StreamingConnection,
+  TestableConnection,
+  PersistSQLResults {
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
@@ -45,6 +44,14 @@ export class PublisherConnection
     const apiTag = urlParts[1];
     const versionTag = urlParts[2];
     const projectName = urlParts[4];
+    const connectionName = urlParts[6];
+
+    if (name !== connectionName) {
+      throw new Error(
+        `Connection name mismatch: ${name} !== ${connectionName}. Connection name must match the URI path.`
+      );
+    }
+
     const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
       basePath: apiUrl,
@@ -126,6 +133,8 @@ export class PublisherConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
+    // TODO: Add support for abortSignal.
+    options.abortSignal = undefined;
     const response = await this.connectionsApi.getQuerydata(
       this.projectName,
       this.name,
@@ -139,6 +148,8 @@ export class PublisherConnection
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
+    // TODO: Add support for abortSignal.
+    options.abortSignal = undefined;
     // TODO: Add real streaming support to publisher API.
     const response = await this.connectionsApi.getQuerydata(
       this.projectName,
