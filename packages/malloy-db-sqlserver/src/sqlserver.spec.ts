@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLServerConnection} from './sqlserver_connection';
+import {SQLServerConnection, SQLServerExecutor} from './sqlserver_connection';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
@@ -40,7 +40,11 @@ describe('SQLServerConnection', () => {
   let getSQLBlockSchema: jest.SpyInstance;
 
   beforeAll(async () => {
-    connection = new SQLServerConnection('test-sqlserver');
+    connection = new SQLServerConnection(
+      'test-sqlserver',
+      {},
+      SQLServerExecutor.getConnectionOptionsFromEnv()
+    );
     await connection.runSQL('SELECT 1');
   });
 

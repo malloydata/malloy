@@ -374,10 +374,10 @@ export class SQLServerConnection
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
-    const tableName = `#tt${hash}`;
+    const tableName = `#${hash}`;
 
     const cmd = `CREATE TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
-    // console.log(cmd);
+
     await this.runSQLServerQuery(cmd, 1000, 0, false);
     return tableName;
   }
