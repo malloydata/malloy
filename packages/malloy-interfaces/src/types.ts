@@ -540,6 +540,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'name': 'FilterExpressionType',
     'fields': {},
   },
+  'FilterOperation': {
+    'type': 'struct',
+    'name': 'FilterOperation',
+    'fields': {
+      'filter': {
+        'type': 'Filter',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
   'FilterStringApplication': {
     'type': 'struct',
     'name': 'FilterStringApplication',
@@ -566,7 +577,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'where': {
-        'type': 'Where',
+        'type': 'FilterOperation',
         'array': true,
         'optional': false,
       },
@@ -1493,8 +1504,9 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'aggregate': 'Aggregate',
       'order_by': 'OrderBy',
       'limit': 'Limit',
-      'where': 'Where',
+      'where': 'FilterOperation',
       'nest': 'Nest',
+      'having': 'FilterOperation',
     },
   },
   'ViewRefinement': {
@@ -1521,17 +1533,6 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'ViewOperation',
         'array': true,
         'optional': false,
-      },
-    },
-  },
-  'Where': {
-    'type': 'struct',
-    'name': 'Where',
-    'fields': {
-      'filter': {
-        'type': 'Filter',
-        'optional': false,
-        'array': false,
       },
     },
   },
@@ -1814,6 +1815,10 @@ export type FilterExpressionLiteral = {
 
 export type FilterExpressionType = {};
 
+export type FilterOperation = {
+  filter: Filter;
+};
+
 export type FilterStringApplication = {
   field_reference: Reference;
   filter: string;
@@ -1821,7 +1826,7 @@ export type FilterStringApplication = {
 
 export type FilteredField = {
   field_reference: Reference;
-  where: Array<Where>;
+  where: Array<FilterOperation>;
 };
 
 export type GroupBy = {
@@ -2250,7 +2255,8 @@ export type ViewOperationType =
   | 'order_by'
   | 'limit'
   | 'where'
-  | 'nest';
+  | 'nest'
+  | 'having';
 
 export type ViewOperation =
   | ViewOperationWithGroupBy
@@ -2258,7 +2264,8 @@ export type ViewOperation =
   | ViewOperationWithOrderBy
   | ViewOperationWithLimit
   | ViewOperationWithWhere
-  | ViewOperationWithNest;
+  | ViewOperationWithNest
+  | ViewOperationWithHaving;
 
 export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
 
@@ -2268,9 +2275,11 @@ export type ViewOperationWithOrderBy = {kind: 'order_by'} & OrderBy;
 
 export type ViewOperationWithLimit = {kind: 'limit'} & Limit;
 
-export type ViewOperationWithWhere = {kind: 'where'} & Where;
+export type ViewOperationWithWhere = {kind: 'where'} & FilterOperation;
 
 export type ViewOperationWithNest = {kind: 'nest'} & Nest;
+
+export type ViewOperationWithHaving = {kind: 'having'} & FilterOperation;
 
 export type ViewRefinement = {
   base: ViewDefinition;
@@ -2279,8 +2288,4 @@ export type ViewRefinement = {
 
 export type ViewSegment = {
   operations: Array<ViewOperation>;
-};
-
-export type Where = {
-  filter: Filter;
 };

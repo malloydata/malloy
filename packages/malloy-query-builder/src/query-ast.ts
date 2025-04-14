@@ -86,13 +86,13 @@ abstract class ASTNode<T> {
         if (node instanceof ASTParameterValueList) return node;
         throw new Error('Not an ASTParameterValueList');
       },
-      Where(): ASTWhere {
-        if (node instanceof ASTWhere) return node;
-        throw new Error('Not an ASTWhere');
+      FilterOperation(): ASTFilterOperation {
+        if (node instanceof ASTFilterOperation) return node;
+        throw new Error('Not an ASTFilterOperation');
       },
-      WhereList(): ASTWhereList {
-        if (node instanceof ASTWhereList) return node;
-        throw new Error('Not an ASTWhereList');
+      FilterOperationList(): ASTFilterOperationList {
+        if (node instanceof ASTFilterOperationList) return node;
+        throw new Error('Not an ASTFilterOperationList');
       },
       ParameterValue(): ASTParameterValue {
         if (node instanceof ASTParameterValue) return node;
@@ -197,11 +197,11 @@ abstract class ASTNode<T> {
       ParameterValueList(path: Path): ASTParameterValueList {
         return node.findAny(path).as.ParameterValueList();
       },
-      Where(path: Path): ASTWhere {
-        return node.findAny(path).as.Where();
+      FilterOperation(path: Path): ASTFilterOperation {
+        return node.findAny(path).as.FilterOperation();
       },
-      WhereList(path: Path): ASTWhereList {
-        return node.findAny(path).as.WhereList();
+      FilterOperationList(path: Path): ASTFilterOperationList {
+        return node.findAny(path).as.FilterOperationList();
       },
       ParameterValue(path: Path): ASTParameterValue {
         return node.findAny(path).as.ParameterValue();
@@ -1026,7 +1026,7 @@ export class ASTReference
     }
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -1057,8 +1057,11 @@ export class ASTFieldReference extends ASTReference {
     ) {
       return parent.field.segment;
     } else if (parent instanceof ASTFilterWithFilterString) {
-      const grand = parent.parent as ASTWhere | ASTWhereViewOperation;
-      if (grand instanceof ASTWhere) {
+      const grand = parent.parent as
+        | ASTFilterOperation
+        | ASTWhereViewOperation
+        | ASTHavingViewOperation;
+      if (grand instanceof ASTFilterOperation) {
         return grand.list.expression.field.segment;
       } else {
         return grand.list.segment;
@@ -1068,7 +1071,7 @@ export class ASTFieldReference extends ASTReference {
     }
   }
 
-  private getReferenceSchema() {
+  private getReferenceSchema(): Malloy.Schema {
     if (this.parent instanceof ASTOrderByViewOperation) {
       return this.segment.getOutputSchema();
     }
@@ -1434,11 +1437,11 @@ export class ASTArrowQueryDefinition
     return this.view.getOrAddDefaultSegment();
   }
 
-  getSourceInfo() {
+  getSourceInfo(): Malloy.SourceInfo {
     return this.source.getSourceInfo();
   }
 
-  getOutputSchema() {
+  getOutputSchema(): Malloy.Schema {
     return this.view.getRefinementSchema();
   }
 
@@ -1511,7 +1514,7 @@ export class ASTRefinementQueryDefinition
   }
 
   isRunnable(): boolean {
-    return this.refinement.isRunnable();
+    return true;
   }
 
   /**
@@ -1525,7 +1528,7 @@ export class ASTRefinementQueryDefinition
     return this.refinement.getOrAddDefaultSegment();
   }
 
-  getOutputSchema() {
+  getOutputSchema(): Malloy.Schema {
     const base = this.base.getOutputSchema();
     const refinement = this.refinement.getRefinementSchema();
     return ASTQuery.schemaMerge(base, refinement);
@@ -1550,7 +1553,7 @@ export class ASTRefinementQueryDefinition
     this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
   }
 
-  getSourceInfo() {
+  getSourceInfo(): Malloy.SourceInfo {
     return this.base.getSourceInfo();
   }
 }
@@ -1632,7 +1635,7 @@ export class ASTReferenceQueryDefinition
     this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -1644,11 +1647,11 @@ export class ASTReferenceQueryDefinition
     return ASTReference.tryGetParameter(this, name);
   }
 
-  public getOutputSchema() {
+  public getOutputSchema(): Malloy.Schema {
     return this.getSourceInfo().schema;
   }
 
-  getSourceInfo() {
+  getSourceInfo(): Malloy.SourceInfo {
     const model = this.query.model;
     const query = model.entries.find(e => e.name === this.name);
     if (query === undefined) {
@@ -1748,7 +1751,7 @@ export class ASTReferenceQueryArrowSource
     return;
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -2007,7 +2010,7 @@ export class ASTReferenceViewDefinition
     return view.annotations ?? [];
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -2147,7 +2150,8 @@ export class ASTRefinementViewDefinition
   }
 
   isRunnable(): boolean {
-    return this.base.isRunnable() && this.refinement.isRunnable();
+    const schema = this.getOutputSchema();
+    return schema.fields.length > 0;
   }
 
   get refinement() {
@@ -2287,10 +2291,13 @@ export class ASTSegmentViewDefinition
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTAggregateViewOperation ||
-        operation instanceof ASTGroupByViewOperation ||
-        operation instanceof ASTNestViewOperation
+        operation instanceof ASTGroupByViewOperation
       ) {
         return true;
+      } else if (operation instanceof ASTNestViewOperation) {
+        if (!operation.view.definition.isRunnable()) {
+          return false;
+        }
       }
     }
     return false;
@@ -2729,6 +2736,44 @@ export class ASTSegmentViewDefinition
     return item;
   }
 
+  public addHaving(name: string, filter: ParsedFilter): ASTHavingViewOperation;
+  public addHaving(name: string, filterString: string): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    path: string[],
+    filter: ParsedFilter
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    path: string[],
+    filterString: string
+  ): ASTHavingViewOperation;
+  public addHaving(
+    name: string,
+    arg2: string[] | string | ParsedFilter,
+    arg3?: string | ParsedFilter
+  ): ASTHavingViewOperation {
+    const path = Array.isArray(arg2) ? arg2 : [];
+    const filter = arg3 === undefined ? (arg2 as string | ParsedFilter) : arg3;
+    const filterString =
+      typeof filter === 'string' ? filter : serializeFilter(filter);
+    const schema = this.getInputSchema();
+    // Validate name
+    const field = ASTQuery.schemaGet(schema, name, path);
+    // Validate filter
+    validateFilter(field, filter);
+    const item = new ASTHavingViewOperation({
+      kind: 'having',
+      filter: {
+        kind: 'filter_string',
+        field_reference: {name, path},
+        filter: filterString,
+      },
+    });
+    this.addOperation(item);
+    return item;
+  }
+
   private addTimeGroupBy(
     name: string,
     path: string[],
@@ -2905,6 +2950,7 @@ export class ASTSegmentViewDefinition
       | ASTAggregateViewOperation
       | ASTNestViewOperation
       | ASTWhereViewOperation
+      | ASTHavingViewOperation
       | ASTOrderByViewOperation
   ) {
     if (
@@ -3063,7 +3109,8 @@ export type ASTViewOperation =
   | ASTOrderByViewOperation
   | ASTNestViewOperation
   | ASTLimitViewOperation
-  | ASTWhereViewOperation;
+  | ASTWhereViewOperation
+  | ASTHavingViewOperation;
 export const ASTViewOperation = {
   from(value: Malloy.ViewOperation): ASTViewOperation {
     switch (value.kind) {
@@ -3079,6 +3126,8 @@ export const ASTViewOperation = {
         return new ASTLimitViewOperation(value);
       case 'where':
         return new ASTWhereViewOperation(value);
+      case 'having':
+        return new ASTHavingViewOperation(value);
     }
   },
   isLimit(x: ASTViewOperation): x is ASTLimitViewOperation {
@@ -3480,7 +3529,7 @@ export class ASTAggregateViewOperation
     const field = ASTQuery.schemaGet(schema, name, path);
     // Validate filter
     validateFilter(field, filter);
-    const where: Malloy.Where = {
+    const where: Malloy.FilterOperation = {
       filter: {
         kind: 'filter_string',
         field_reference: {name, path},
@@ -3488,7 +3537,7 @@ export class ASTAggregateViewOperation
       },
     };
     if (this.field.expression instanceof ASTFilteredFieldExpression) {
-      this.field.expression.where.add(new ASTWhere(where));
+      this.field.expression.where.add(new ASTFilterOperation(where));
       return this.field.expression;
     } else if (this.field.expression instanceof ASTReferenceExpression) {
       const existing = this.field.expression.build();
@@ -3711,7 +3760,7 @@ export class ASTReferenceExpression
     return field.annotations ?? [];
   }
 
-  public getOrAddParameters() {
+  public getOrAddParameters(): ASTParameterValueList {
     return ASTReference.getOrAddParameters(this);
   }
 
@@ -3793,8 +3842,11 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
   }
 }
 
-export class ASTWhere extends ASTObjectNode<Malloy.Where, {filter: ASTFilter}> {
-  constructor(node: Malloy.Where) {
+export class ASTFilterOperation extends ASTObjectNode<
+  Malloy.FilterOperation,
+  {filter: ASTFilter}
+> {
+  constructor(node: Malloy.FilterOperation) {
     super(node, {
       filter: ASTFilter.from(node.filter),
     });
@@ -3805,7 +3857,7 @@ export class ASTWhere extends ASTObjectNode<Malloy.Where, {filter: ASTFilter}> {
   }
 
   get list() {
-    return this.parent.as.WhereList();
+    return this.parent.as.FilterOperationList();
   }
 
   delete() {
@@ -3813,11 +3865,14 @@ export class ASTWhere extends ASTObjectNode<Malloy.Where, {filter: ASTFilter}> {
   }
 }
 
-export class ASTWhereList extends ASTListNode<Malloy.Where, ASTWhere> {
-  constructor(wheres: Malloy.Where[]) {
+export class ASTFilterOperationList extends ASTListNode<
+  Malloy.FilterOperation,
+  ASTFilterOperation
+> {
+  constructor(wheres: Malloy.FilterOperation[]) {
     super(
       wheres,
-      wheres.map(p => new ASTWhere(p))
+      wheres.map(p => new ASTFilterOperation(p))
     );
   }
 
@@ -3831,7 +3886,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
   {
     kind: 'filtered_field';
     field_reference: ASTFieldReference;
-    where: ASTWhereList;
+    where: ASTFilterOperationList;
   }
 > {
   readonly kind: Malloy.ExpressionType = 'filtered_field';
@@ -3840,7 +3895,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
     super(node, {
       kind: node.kind,
       field_reference: new ASTFieldReference(node.field_reference),
-      where: new ASTWhereList(node.where),
+      where: new ASTFilterOperationList(node.where),
     });
   }
 
@@ -4093,6 +4148,37 @@ export class ASTWhereViewOperation extends ASTObjectNode<
   }
 }
 
+export class ASTHavingViewOperation extends ASTObjectNode<
+  Malloy.ViewOperationWithHaving,
+  {
+    kind: 'having';
+    filter: ASTFilter;
+  }
+> {
+  readonly kind: Malloy.ViewOperationType = 'nest';
+  constructor(public node: Malloy.ViewOperationWithHaving) {
+    super(node, {
+      kind: 'having',
+      filter: ASTFilter.from(node.filter),
+    });
+  }
+
+  get filter() {
+    return this.children.filter;
+  }
+
+  /**
+   * @internal
+   */
+  get list() {
+    return this.parent.as.ViewOperationList();
+  }
+
+  delete() {
+    this.list.remove(this);
+  }
+}
+
 export type ASTFilter = ASTFilterWithFilterString;
 export const ASTFilter = {
   from(filter: Malloy.Filter) {
@@ -4207,11 +4293,11 @@ export class ASTView
     return this.parent.as.NestViewOperation();
   }
 
-  getInputSchema() {
+  getInputSchema(): Malloy.Schema {
     return this.nest.list.segment.getInputSchema();
   }
 
-  getOutputSchema() {
+  getOutputSchema(): Malloy.Schema {
     return this.definition.getRefinementSchema();
   }
 

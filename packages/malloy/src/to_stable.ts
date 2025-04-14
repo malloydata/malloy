@@ -63,6 +63,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
               };
             })
           : undefined;
+
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
         kind: 'source',
         name,
@@ -70,6 +71,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
           fields: convertFieldInfos(entry, entry.fields),
         },
         parameters,
+        annotations: getAnnotationsFromField(entry),
       };
       modelInfo.entries.push(sourceInfo);
     } else if (entry.type === 'query') {
@@ -151,7 +153,9 @@ function convertParameterDefaultValue(
   }
 }
 
-function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
+function getAnnotationsFromField(
+  field: FieldDef | Query | SourceDef
+): Malloy.Annotation[] {
   const taglines = annotationToTaglines(field.annotation);
   return taglines.map(tagline => ({
     value: tagline,
@@ -161,6 +165,8 @@ function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
 export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
   const result: Malloy.FieldInfo[] = [];
   for (const field of fields) {
+    const isPublic = field.accessModifier === undefined;
+    if (!isPublic) continue;
     const taglines = annotationToTaglines(field.annotation);
     const rawAnnotations: Malloy.Annotation[] = taglines.map(tagline => ({
       value: tagline,

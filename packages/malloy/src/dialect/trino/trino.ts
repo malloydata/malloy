@@ -532,7 +532,11 @@ ${indent(sql)}
         const typeSpec: string[] = [];
         for (const f of malloyType.fields) {
           if (isAtomic(f)) {
-            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+            typeSpec.push(
+              `${this.sqlMaybeQuoteIdentifier(
+                f.name
+              )} ${this.malloyTypeToSQLType(f)}`
+            );
           }
         }
         return `ROW(${typeSpec.join(',')})`;
@@ -544,7 +548,11 @@ ${indent(sql)}
           const typeSpec: string[] = [];
           for (const f of malloyType.fields) {
             if (isAtomic(f)) {
-              typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+              typeSpec.push(
+                `${this.sqlMaybeQuoteIdentifier(
+                  f.name
+                )} ${this.malloyTypeToSQLType(f)}`
+              );
             }
           }
           return `ARRAY<ROW(${typeSpec.join(',')})>`;

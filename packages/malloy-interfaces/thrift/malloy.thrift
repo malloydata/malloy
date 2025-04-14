@@ -253,8 +253,9 @@ union ViewOperation {
   2: required Aggregate aggregate,
   3: OrderBy order_by,
   4: required Limit limit,
-  5: required Where where,
+  5: required FilterOperation where,
   6: required Nest nest,
+  7: required FilterOperation having,
 }
 
 struct GroupBy {
@@ -292,7 +293,7 @@ struct Limit {
 // allow me to have a union whose property is also a union, since I'm compressing them
 // into an intersection type of `{__type: } & Where`. If Where is also a union, then
 // there would be two `__type` fields...
-struct Where {
+struct FilterOperation {
   1: required Filter filter,
 }
 
@@ -434,7 +435,7 @@ struct TimeTruncationFieldReference {
 
 struct FilteredField {
   1: required Reference field_reference,
-  2: required list<Where> where,
+  2: required list<FilterOperation> where,
 }
 
 struct StringCell {
