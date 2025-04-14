@@ -561,7 +561,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'where': {
-        'type': 'Where',
+        'type': 'FilterOperation',
         'array': true,
         'optional': false,
       },
@@ -1503,17 +1503,6 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
     },
   },
-  'Where': {
-    'type': 'struct',
-    'name': 'Where',
-    'fields': {
-      'filter': {
-        'type': 'Filter',
-        'optional': false,
-        'array': false,
-      },
-    },
-  },
 };
 
 export type Aggregate = {
@@ -1798,7 +1787,7 @@ export type FilterStringApplication = {
 
 export type FilteredField = {
   field_reference: Reference;
-  where: Array<Where>;
+  where: Array<FilterOperation>;
 };
 
 export type GroupBy = {
@@ -2204,8 +2193,4 @@ export type ViewRefinement = {
 
 export type ViewSegment = {
   operations: Array<ViewOperation>;
-};
-
-export type Where = {
-  filter: Filter;
 };
