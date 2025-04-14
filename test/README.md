@@ -33,6 +33,16 @@ Setting up SQLServer:
 # Setup for SQLServer Test Data
 
 1. run `npx dotenv -- npm run test-sqlserver`
+.env
+```
+SQLSERVER_USER=SA
+SQLSERVER_HOST=localhost
+SQLSERVER_PORT=1433
+SQLSERVER_PASSWORD=saTEST_0pword
+SQLSERVER_DATABASE=malloytestdb
+SQLSERVER_ENCRYPT=true
+SQLSERVER_TRUST_SERVER_CERTIFICATE=true
+```
 
 # Using the custom matcher for running queries
 
