@@ -253,7 +253,7 @@ export type CompileResponse =
 
 export function compileQuery(
   request: Malloy.CompileQueryRequest,
-  state?: CompileModelState
+  state?: CompileQueryState
 ): Malloy.CompileQueryResponse {
   state ??= newCompileQueryState(request);
   return statedCompileQuery(state);
@@ -496,9 +496,13 @@ export function hasErrors(log: Malloy.LogMessage[] | undefined) {
 
 // Given a URL to a model and the name of a source, run the indexing query
 
+export interface CompileQueryState extends CompileModelState {
+  defaultRowLimit?: number;
+}
+
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
-): CompileModelState {
+): CompileQueryState {
   const queryMalloy = Malloy.queryToMalloy(request.query);
   const needs = {
     ...(request.compiler_needs ?? {}),
@@ -511,11 +515,14 @@ export function newCompileQueryState(
     },
     ...(needs.files ?? []),
   ];
-  return _newCompileModelState(queryURL, needs, request.model_url);
+  return {
+    ..._newCompileModelState(queryURL, needs, request.model_url),
+    defaultRowLimit: request.default_row_limit,
+  };
 }
 
 export function statedCompileQuery(
-  state: CompileModelState
+  state: CompileQueryState
 ): Malloy.CompileQueryResponse {
   const result = _statedCompileModel(state);
   // TODO this can expose the internal URL... is there a better way to handle URL-less errors from the compiler?
@@ -542,7 +549,9 @@ export function statedCompileQuery(
     const annotations = result.model.anonymous_queries[index].annotations ?? [];
     try {
       const queryModel = new QueryModel(result.modelDef);
-      const translatedQuery = queryModel.compileQuery(query);
+      const translatedQuery = queryModel.compileQuery(query, {
+        defaultRowLimit: state.defaultRowLimit,
+      });
       const modelAnnotations = annotationToTaglines(
         result.modelDef.annotation
       ).map(l => ({
@@ -570,6 +579,7 @@ export function statedCompileQuery(
             modelAnnotations.length > 0 ? modelAnnotations : undefined,
           query_timezone: translatedQuery.queryTimezone,
         },
+        default_row_limit_added: translatedQuery.defaultRowLimitAdded,
       };
     } catch (error) {
       return {

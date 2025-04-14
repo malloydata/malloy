@@ -1570,6 +1570,7 @@ export interface CompiledQuery extends DrillSource {
   // Map of query unique id to the SQL.
   dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
   materialization?: QueryToMaterialize;
+  defaultRowLimitAdded?: number;
 }
 
 /** Result type for running a Malloy query. */

@@ -648,6 +648,7 @@ struct CompileSourceResponse {
 struct RunQueryRequest {
   1: required string model_url,
   2: required Query query,
+  3: optional i32 default_row_limit,
 
   9: optional CompilerNeeds compiler_needs,
 }
@@ -655,6 +656,7 @@ struct RunQueryRequest {
 struct RunQueryResponse {
   1: optional Result result,
 
+  7: optional i32 default_row_limit_added,
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
 }
@@ -664,6 +666,7 @@ struct RunQueryResponse {
 struct CompileQueryRequest {
   1: required string model_url,
   2: required Query query,
+  3: optional i32 default_row_limit,
 
   9: optional CompilerNeeds compiler_needs,
 }
@@ -671,6 +674,7 @@ struct CompileQueryRequest {
 struct CompileQueryResponse {
   1: optional Result result,
 
+  7: optional i32 default_row_limit_added,
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
   10: optional list<Translation> translations;
