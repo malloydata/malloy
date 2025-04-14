@@ -1435,11 +1435,6 @@ class QueryField extends QueryNode {
         fParse = NumberFilterExpression.parse(filterSrc);
         break;
       case 'boolean':
-        if (context.dialect.booleanAsNumbers) {
-          throw new Error(
-            'Boolean filter expression not supported on this connection type'
-          );
-        }
         fParse = BooleanFilterExpression.parse(filterSrc);
         break;
       case 'date':

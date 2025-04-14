@@ -202,8 +202,7 @@ export class NamedSource extends Source {
           parameter.type === 'filter expression' &&
           parameter.filterType
         ) {
-          // mtoy todo ask chris how to get a better error reporting object
-          checkFilterExpression(this, parameter.filterType, value);
+          checkFilterExpression(argument.value, parameter.filterType, value);
         }
         if (pVal.type !== parameter.type && isCastType(parameter.type)) {
           value = castTo(parameter.type, pVal.value, pVal.type, true);
