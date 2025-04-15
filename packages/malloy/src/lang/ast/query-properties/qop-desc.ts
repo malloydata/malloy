@@ -108,10 +108,10 @@ export class QOpDesc extends ListOf<QueryProperty> {
       build.execute(qp);
     }
     const segment = build.finalize(this.refineThis);
-    const requiredGroupBys = unsatisfiedRequiredGroupBys(
-      segment,
-      build.resultFS.requiredGroupBys
-    );
+    const requiredGroupBys =
+      segment.type === 'index' || segment.type === 'raw'
+        ? []
+        : unsatisfiedRequiredGroupBys(segment, build.resultFS.requiredGroupBys);
     return {
       segment,
       outputSpace: () =>
