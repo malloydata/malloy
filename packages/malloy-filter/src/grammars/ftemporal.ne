@@ -12,6 +12,7 @@ import {temporalNot, joinTemporal, timeLiteral, mkUnits} from '../clause_utils';
 
 const kwList = moo.keywords(
   {
+      'AND': 'and',
       'OR': 'or',
       'NOT': 'not',
       'NULL_KW': 'null',
