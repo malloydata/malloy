@@ -203,6 +203,8 @@ export class SQLServerConnection
     _rowIndex: number,
     _deJSON: boolean
   ): Promise<MalloyQueryData> {
+    console.info('runSQLServerQuery', sqlCommand)
+    console.info('_deJSON', _deJSON)
     const client = await this.getClient();
     await client.connect();
     await this.connectionSetup(client);
@@ -211,6 +213,18 @@ export class SQLServerConnection
     let rows: QueryData;
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
+      const deJsonedRows: QueryData = [];
+      if (_deJSON) {
+        for (const row of rows){
+          // TODO (vitor): Remove this @ts-ignore and fix this junk
+          // @ts-ignore
+          const finalValueJSON = row[this.dialect.finalStageName!];
+          if (typeof finalValueJSON === 'string') {
+            deJsonedRows.push(JSON.parse(finalValueJSON));
+          }
+          rows = deJsonedRows;
+        }
+      }
     } else {
       throw new Error('SQLServer non-array output is not supported');
     }
@@ -477,10 +491,7 @@ export class PooledSQLServerConnection
     {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     let index = 0;
-    // This is a strange hack... `this.pool.query(query)` seems to return the wrong
-    // type. Because `query` is a `QueryStream`, the result is supposed to be a
-    // `QueryStream` as well, but it's not. So instead, we get a client and call
-    // `client.query(query)`, which does what it's supposed to.
+
     const pool = await this.getPool();
     const client = await pool.connect();
 
