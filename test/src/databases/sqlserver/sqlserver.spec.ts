@@ -93,7 +93,7 @@ describe('SQL Server tests', () => {
   it('retains spaces in result', async () => {
     await expect(`
       ##! experimental.dialect.tsql
-      run: sqlserver.sql('SELECT 1 as "upperLower"') -> { select: upperLower }
+      run: sqlserver.sql('SELECT 1 as [upperLower]') -> { select: upperLower }
     `).malloyResultMatches(runtime, {upperLower: 1});
   });
 
@@ -152,7 +152,7 @@ describe('SQL Server tests', () => {
       .loadQuery(
         `
         ##! experimental.dialect.tsql
-        run: sqlserver.sql("SELECT int4range(10, 20) as ranger")
+        run: sqlserver.sql("SELECT CAST('10,20' AS VARCHAR) as ranger")
         `
       )
       .run();
@@ -163,7 +163,7 @@ describe('SQL Server tests', () => {
     await expect(
       `
       ##! experimental.dialect.tsql
-      run: sqlserver.sql("SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3")
+      run: sqlserver.sql("SELECT CAST('a' AS VARCHAR) as abc, CAST('a3' AS VARCHAR(3)) as abc3")
       `
     ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
@@ -183,14 +183,14 @@ describe('SQL Server tests', () => {
         zone,
       }
     );
-    test('can cast TIMESTAMPTZ to timestamp', async () => {
+    test('can cast DATETIMEOFFSET to timestamp', async () => {
       await expect(
         `
         ##! experimental.dialect.tsql
         run: sqlserver.sql("""
-              SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+              SELECT CAST('2020-02-20 00:00:00 ${zone}' AS DATETIMEOFFSET) as t_tstz
           """) -> {
-            select: mex_220 is t_tstz::timestamp
+            select: mex_220 is CAST(t_tstz AS DATETIME2)
           }`
       ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
     });
@@ -199,18 +199,18 @@ describe('SQL Server tests', () => {
   describe('numbers', () => {
     it.each([
       'SMALLINT',
-      'INTEGER',
+      'INT',
       'BIGINT',
       'DECIMAL',
       'NUMERIC',
       'REAL',
-      'DOUBLE PRECISION',
+      'FLOAT',
     ])('supports %s', async sqlType => {
       const result = await runtime
         .loadQuery(
           `
           ##! experimental.dialect.tsql
-          run: sqlserver.sql("SELECT 10::${sqlType} as d")
+          run: sqlserver.sql("SELECT CAST(10 AS ${sqlType}) as d")
           `
         )
         .run();
