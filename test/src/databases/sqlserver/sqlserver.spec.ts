@@ -169,7 +169,11 @@ describe('SQL Server tests', () => {
   });
 
   describe('time', () => {
-    const zone = 'America/Mexico_City'; // -06:00 no DST
+    // https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-configure-time-zone?view=sql-server-ver16
+    const [zone, msZone] = [
+      'America/Mexico_City',
+      'Central Standard Time (Mexico)',
+    ]; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(
       {
         year: 2020,
@@ -183,14 +187,16 @@ describe('SQL Server tests', () => {
         zone,
       }
     );
+
+    // TODO (vitor): Remove this comment. Remember not to add ; to the end of queries
     test('can cast DATETIMEOFFSET to timestamp', async () => {
       await expect(
         `
         ##! experimental.dialect.tsql
         run: sqlserver.sql("""
-              SELECT CAST('2020-02-20 00:00:00 ${zone}' AS DATETIMEOFFSET) as t_tstz
+              SELECT CAST('2020-02-20 00:00:00' AS DATETIME2) AT TIME ZONE '${msZone}' AS t_tstz
           """) -> {
-            select: mex_220 is CAST(t_tstz AS DATETIME2)
+            select: mex_220 is t_tstz::timestamp
           }`
       ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
     });
