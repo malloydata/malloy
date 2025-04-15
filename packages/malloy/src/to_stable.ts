@@ -48,11 +48,20 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
     if (isSourceDef(entry)) {
       const parameters: Malloy.ParameterInfo[] | undefined =
         entry.parameters && Object.entries(entry.parameters).length > 0
-          ? Object.entries(entry.parameters).map(([name, parameter]) => ({
-              name,
-              type: typeDefToType(parameter),
-              default_value: convertParameterDefaultValue(parameter.value),
-            }))
+          ? Object.entries(entry.parameters).map(([name, parameter]) => {
+              if (isAtomic(parameter)) {
+                return {
+                  name,
+                  type: typeDefToType(parameter),
+                  default_value: convertParameterDefaultValue(parameter.value),
+                };
+              }
+              return {
+                name,
+                type: {kind: 'filter_expression_type'},
+                default_value: convertParameterDefaultValue(parameter.value),
+              };
+            })
           : undefined;
 
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
@@ -123,6 +132,11 @@ function convertParameterDefaultValue(
       return {kind: 'number_literal', number_value: parseFloat(value.literal)};
     case 'stringLiteral':
       return {kind: 'string_literal', string_value: value.literal};
+    case 'filterLiteral':
+      return {
+        kind: 'filter_expression_literal',
+        filter_expression_value: value.filterSrc,
+      };
     case 'timeLiteral':
       return {
         kind: 'timestamp_literal',

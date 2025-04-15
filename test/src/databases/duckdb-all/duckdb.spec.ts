@@ -131,6 +131,34 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
 
+  it('raw query as head works', async () => {
+    await expect(
+      `
+        query: q is duckdb.sql("SELECT 1 as one")
+        run: q -> { group_by: one }
+      `
+    ).malloyResultMatches(runtime, {one: 1});
+    await expect(
+      `
+        query: q is duckdb.sql("SELECT 1 as one")
+        query: q2 is q -> { group_by: one }
+        run: q2 -> { select: one }
+      `
+    ).malloyResultMatches(runtime, {one: 1});
+    await expect(
+      `
+        query: q is duckdb.sql("SELECT 1 as one") -> { group_by: two is one + 1 }
+        run: q -> { group_by: two }
+      `
+    ).malloyResultMatches(runtime, {two: 2});
+    await expect(
+      `
+        query: q is duckdb.sql("SELECT 1 as one") -> { group_by: two is one + 1 }
+        run: q
+      `
+    ).malloyResultMatches(runtime, {two: 2});
+  });
+
   describe('time oddities', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(

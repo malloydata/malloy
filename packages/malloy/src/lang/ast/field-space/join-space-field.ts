@@ -31,6 +31,6 @@ export class JoinSpaceField extends StructSpaceField {
     readonly join: Join,
     forDialect: string
   ) {
-    super(join.structDef(parameterSpace), forDialect);
+    super(join.getStructDef(parameterSpace), forDialect);
   }
 }

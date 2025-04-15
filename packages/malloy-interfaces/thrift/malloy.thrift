@@ -25,7 +25,7 @@ struct SourceInfo {
 
 struct ParameterInfo {
   1: required string name,
-  2: required AtomicType type,
+  2: required ParameterType type,
   3: optional LiteralValue default_value,
 }
 
@@ -176,6 +176,10 @@ struct RecordType {
   1: required list<DimensionInfo> fields
 }
 
+struct FilterExpressionType {
+}
+
+
 union AtomicType {
   1: required StringType string_type,
   2: required BooleanType boolean_type,
@@ -186,6 +190,19 @@ union AtomicType {
   7: required TimestampType timestamp_type,
   9: required ArrayType array_type,
   10: required RecordType record_type,
+}
+
+union ParameterType {
+  1: required StringType string_type,
+  2: required BooleanType boolean_type,
+  3: required NumberType number_type,
+  4: required JSONType json_type,
+  5: required SQLNativeType sql_native_type,
+  6: required DateType date_type,
+  7: required TimestampType timestamp_type,
+  9: required ArrayType array_type,
+  10: required RecordType record_type,
+  11: required FilterExpressionType filter_expression_type,
 }
 
 struct SQLNativeType {
@@ -236,8 +253,9 @@ union ViewOperation {
   2: required Aggregate aggregate,
   3: OrderBy order_by,
   4: required Limit limit,
-  5: required Where where,
+  5: required FilterOperation where,
   6: required Nest nest,
+  7: required FilterOperation having,
 }
 
 struct GroupBy {
@@ -275,7 +293,7 @@ struct Limit {
 // allow me to have a union whose property is also a union, since I'm compressing them
 // into an intersection type of `{__type: } & Where`. If Where is also a union, then
 // there would be two `__type` fields...
-struct Where {
+struct FilterOperation {
   1: required Filter filter,
 }
 
@@ -372,6 +390,7 @@ union LiteralValue {
   4: required TimestampLiteral timestamp_literal,
   5: required BooleanLiteral boolean_literal,
   6: required NullLiteral null_literal,
+  7: required FilterExpressionLiteral filter_expression_literal,
 }
 
 struct StringLiteral {
@@ -399,6 +418,10 @@ struct TimestampLiteral {
 struct NullLiteral {
 }
 
+struct FilterExpressionLiteral {
+  1: required string filter_expression_value,
+}
+
 union Expression {
   1: required Reference field_reference,
   2: required TimeTruncationFieldReference time_truncation,
@@ -412,7 +435,7 @@ struct TimeTruncationFieldReference {
 
 struct FilteredField {
   1: required Reference field_reference,
-  2: required list<Where> where,
+  2: required list<FilterOperation> where,
 }
 
 struct StringCell {
@@ -625,6 +648,7 @@ struct CompileSourceResponse {
 struct RunQueryRequest {
   1: required string model_url,
   2: required Query query,
+  3: optional i32 default_row_limit,
 
   9: optional CompilerNeeds compiler_needs,
 }
@@ -632,6 +656,7 @@ struct RunQueryRequest {
 struct RunQueryResponse {
   1: optional Result result,
 
+  7: optional i32 default_row_limit_added,
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
 }
@@ -641,6 +666,7 @@ struct RunQueryResponse {
 struct CompileQueryRequest {
   1: required string model_url,
   2: required Query query,
+  3: optional i32 default_row_limit,
 
   9: optional CompilerNeeds compiler_needs,
 }
@@ -648,6 +674,7 @@ struct CompileQueryRequest {
 struct CompileQueryResponse {
   1: optional Result result,
 
+  7: optional i32 default_row_limit_added,
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
   10: optional list<Translation> translations;

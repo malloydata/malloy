@@ -8,19 +8,6 @@
 import type {Expr} from '../../model/malloy_types';
 import {exprHasE, exprHasKids, exprIsLeaf} from '../../model/malloy_types';
 
-import type {
-  BooleanFilter,
-  NumberFilter,
-  StringFilter,
-  TemporalFilter,
-} from '@malloydata/malloy-filter';
-import {
-  BooleanFilterExpression,
-  NumberFilterExpression,
-  StringFilterExpression,
-  TemporalFilterExpression,
-} from '@malloydata/malloy-filter';
-
 /**
  * Returns a readable shorthand for the an Expr for use in debugging.
  * If not passed any symbols, the first field reference will be A,
@@ -110,31 +97,13 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
       return sql;
     }
     case 'filterMatch': {
-      let filterText = '';
-      switch (e.dataType) {
-        case 'string':
-          filterText = StringFilterExpression.unparse(e.filter as StringFilter);
-          break;
-        case 'number':
-          filterText = NumberFilterExpression.unparse(e.filter as NumberFilter);
-          break;
-        case 'date':
-        case 'timestamp':
-          filterText = TemporalFilterExpression.unparse(
-            e.filter as TemporalFilter
-          );
-          break;
-        case 'boolean':
-          filterText = BooleanFilterExpression.unparse(
-            e.filter as BooleanFilter
-          );
-          break;
-        default:
-          filterText = 'UNKOWN-FILTER';
-      }
       const fType = `${e.dataType[0].toUpperCase()}${e.dataType.slice(1)}`;
-      return `{filter${fType} ${subExpr(e.e)} | ${filterText}}`;
+      return `{filter${fType} ${subExpr(e.kids.expr)} | ${subExpr(
+        e.kids.filterExpr
+      )}}`;
     }
+    case 'filterLiteral':
+      return `${e.filterSrc}`;
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
     return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;

@@ -581,6 +581,158 @@ ORDER BY 1 asc NULLS LAST
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile query with default row limit added', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        default_row_limit: 100,
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {kind: 'source_reference', name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {kind: 'field_reference', name: 'carrier'},
+                  },
+                },
+              ],
+            },
+          },
+        },
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileQueryResponse = {
+        default_row_limit_added: 100,
+        result: {
+          connection_name: 'connection',
+          annotations: [
+            {value: '#(malloy) ordered_by = [{ carrier = asc }]\n'},
+            {value: '#(malloy) source_name = flights\n'},
+          ],
+          sql: `SELECT \n\
+   base."carrier" as "carrier"
+FROM flights as base
+GROUP BY 1
+ORDER BY 1 asc NULLS LAST
+LIMIT 100
+`,
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test('compile query with default row limit not added', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        default_row_limit: 100,
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {kind: 'source_reference', name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {kind: 'field_reference', name: 'carrier'},
+                  },
+                },
+                {
+                  kind: 'limit',
+                  limit: 101,
+                },
+              ],
+            },
+          },
+        },
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileQueryResponse = {
+        default_row_limit_added: undefined,
+        result: {
+          connection_name: 'connection',
+          annotations: [
+            {value: '#(malloy) limit = 101 ordered_by = [{ carrier = asc }]\n'},
+            {value: '#(malloy) source_name = flights\n'},
+          ],
+          sql: `SELECT \n\
+   base."carrier" as "carrier"
+FROM flights as base
+GROUP BY 1
+ORDER BY 1 asc NULLS LAST
+LIMIT 101
+`,
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
   });
   describe('compiler errors', () => {
     test('parse error should come back as a log', () => {
