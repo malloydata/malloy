@@ -203,8 +203,8 @@ export class SQLServerConnection
     _rowIndex: number,
     _deJSON: boolean
   ): Promise<MalloyQueryData> {
-    console.info('runSQLServerQuery', sqlCommand)
-    console.info('_deJSON', _deJSON)
+    console.info('runSQLServerQuery', sqlCommand);
+    console.info('_deJSON', _deJSON);
     const client = await this.getClient();
     await client.connect();
     await this.connectionSetup(client);
@@ -215,7 +215,7 @@ export class SQLServerConnection
       rows = result.recordsets.flat();
       const deJsonedRows: QueryData = [];
       if (_deJSON) {
-        for (const row of rows){
+        for (const row of rows) {
           // TODO (vitor): Remove this @ts-ignore and fix this junk
           // @ts-ignore
           const finalValueJSON = row[this.dialect.finalStageName!];

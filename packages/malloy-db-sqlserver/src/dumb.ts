@@ -44,7 +44,7 @@ async function testMalloyConnection() {
 (async () => {
   await testOwnConnection();
   console.log('ok');
-  console.log( process.env);
-  console.log( SQLServerExecutor.getConnectionOptionsFromEnv());
+  console.log(process.env);
+  console.log(SQLServerExecutor.getConnectionOptionsFromEnv());
   await testMalloyConnection();
 })();
