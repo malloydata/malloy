@@ -203,8 +203,8 @@ export class SQLServerConnection
     _rowIndex: number,
     _deJSON: boolean
   ): Promise<MalloyQueryData> {
-    console.info('runSQLServerQuery', sqlCommand);
-    console.info('_deJSON', _deJSON);
+    // TODO (vitor): This doesn't seem to get called by malloy queries, idk why it's important or why I would want to deJSON
+
     const client = await this.getClient();
     await client.connect();
     await this.connectionSetup(client);
@@ -213,18 +213,6 @@ export class SQLServerConnection
     let rows: QueryData;
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
-      const deJsonedRows: QueryData = [];
-      if (_deJSON) {
-        for (const row of rows) {
-          // TODO (vitor): Remove this @ts-ignore and fix this junk
-          // @ts-ignore
-          const finalValueJSON = row[this.dialect.finalStageName!];
-          if (typeof finalValueJSON === 'string') {
-            deJsonedRows.push(JSON.parse(finalValueJSON));
-          }
-          rows = deJsonedRows;
-        }
-      }
     } else {
       throw new Error('SQLServer non-array output is not supported');
     }
@@ -246,7 +234,7 @@ export class SQLServerConnection
       fields: [],
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
-    const tempTableName = `#tmp${randomUUID()}`.replace(/-/g, '');
+    const tempTableName = `#${randomUUID()}`.replace(/-/g, '');
 
     const infoQuery = `
       DROP TABLE IF EXISTS ${tempTableName};
