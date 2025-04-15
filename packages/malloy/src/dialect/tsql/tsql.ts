@@ -40,18 +40,18 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {PostgresBase} from '../pg_impl';
+import {Dialect} from '../dialect';
 import {TSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
-const pgMakeIntervalMap: Record<string, string> = {
-  'year': 'years',
-  'month': 'months',
-  'week': 'weeks',
-  'day': 'days',
-  'hour': 'hours',
-  'minute': 'mins',
-  'second': 'secs',
+const tsqlDatePartMap: Record<string, string> = {
+  'year': 'year',
+  'month': 'month',
+  'week': 'week',
+  'day': 'day',
+  'hour': 'hour',
+  'minute': 'minute',
+  'second': 'second',
 };
 
 const inSeconds: Record<string, number> = {
@@ -63,33 +63,32 @@ const inSeconds: Record<string, number> = {
 };
 
 const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
-  'character varying': {type: 'string'},
-  'name': {type: 'string'},
-  'text': {type: 'string'},
-  'date': {type: 'date'},
-  'integer': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
-  'double precision': {type: 'number', numberType: 'float'},
-  'timestamp without time zone': {type: 'timestamp'}, // maybe not
-  'oid': {type: 'string'},
-  'boolean': {type: 'boolean'},
-  // ARRAY: "string",
-  'timestamp': {type: 'timestamp'},
-  '"char"': {type: 'string'},
-  'character': {type: 'string'},
-  'smallint': {type: 'number', numberType: 'integer'},
-  'xid': {type: 'string'},
-  'real': {type: 'number', numberType: 'float'},
-  'interval': {type: 'string'},
-  'inet': {type: 'string'},
-  'regtype': {type: 'string'},
-  'numeric': {type: 'number', numberType: 'float'},
-  'bytea': {type: 'string'},
-  'pg_ndistinct': {type: 'number', numberType: 'integer'},
   'varchar': {type: 'string'},
+  'nvarchar': {type: 'string'},
+  'text': {type: 'string'},
+  'char': {type: 'string'},
+  'nchar': {type: 'string'},
+  'date': {type: 'date'},
+  'int': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'integer'},
+  'smallint': {type: 'number', numberType: 'integer'},
+  'tinyint': {type: 'number', numberType: 'integer'},
+  'float': {type: 'number', numberType: 'float'},
+  'real': {type: 'number', numberType: 'float'},
+  'datetime': {type: 'timestamp'},
+  'datetime2': {type: 'timestamp'},
+  'datetimeoffset': {type: 'timestamp'},
+  'bit': {type: 'boolean'},
+  'numeric': {type: 'number', numberType: 'float'},
+  'decimal': {type: 'number', numberType: 'float'},
+  'money': {type: 'number', numberType: 'float'},
+  'smallmoney': {type: 'number', numberType: 'float'},
+  'binary': {type: 'string'},
+  'varbinary': {type: 'string'},
+  'uniqueidentifier': {type: 'string'},
 };
 
-export class TSQLDialect extends PostgresBase {
+export class TSQLDialect extends Dialect {
   name = 'tsql';
   defaultNumberType = 'FLOAT(53)';
   defaultDecimalType = 'NUMERIC';
@@ -120,7 +119,16 @@ export class TSQLDialect extends PostgresBase {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;
+    // SQL Server doesn't have GENERATE_SERIES, use a common table expression
+    // to generate numbers from 0 to groupSetCount
+    return `CROSS JOIN (
+      WITH numbers AS (
+        SELECT 0 AS n
+        UNION ALL
+        SELECT n + 1 FROM numbers WHERE n < ${groupSetCount}
+      )
+      SELECT n FROM numbers
+    ) AS group_set(group_set)`;
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
@@ -144,19 +152,29 @@ export class TSQLDialect extends PostgresBase {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
-    const fields = this.mapFields(fieldList);
-    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
+    // SQL Server doesn't have JSONB functions like PostgreSQL
+    // Use FOR JSON PATH to create JSON array
+    const sql = `COALESCE((
+      SELECT ${this.mapFields(fieldList)}
+      FROM (SELECT 1) AS __dummy
+      WHERE group_set=${groupSet}
+      ${orderBy || ''}
+      ${
+        limit !== undefined ? `OFFSET 0 ROWS FETCH NEXT ${limit} ROWS ONLY` : ''
+      }
+      FOR JSON PATH
+    ), '[]')`;
+    return sql;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
       .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
+    // SQL Server doesn't have ANY_VALUE or STRUCT
+    return `MAX(CASE WHEN group_set=${groupSet} THEN (
+      SELECT ${fields} FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    ) END)`;
   }
 
   sqlAnyValueLastTurtle(
@@ -164,15 +182,24 @@ export class TSQLDialect extends PostgresBase {
     groupSet: number,
     sqlName: string
   ): string {
-    return `(ARRAY_AGG(${name}) FILTER (WHERE group_set=${groupSet} AND ${name} IS NOT NULL))[1] as ${sqlName}`;
+    // Using TOP 1 with aggregation to get the last non-null value
+    return `(SELECT TOP 1 ${name} FROM (
+      SELECT ${name}
+      WHERE group_set=${groupSet} AND ${name} IS NOT NULL
+      ORDER BY (SELECT NULL)
+    ) t) as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
     groupSet: number,
     fieldList: DialectFieldList
   ): string {
-    const fields = this.mapFields(fieldList);
-    return `TO_JSONB((ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x)) FILTER (WHERE group_set=${groupSet}))[1])`;
+    // Using FOR JSON PATH to create JSON object
+    return `(
+      SELECT TOP 1 ${this.mapFields(fieldList)}
+      WHERE group_set=${groupSet}
+      FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    )`;
   }
 
   sqlUnnestAlias(
@@ -183,27 +210,49 @@ export class TSQLDialect extends PostgresBase {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
+    // SQL Server doesn't have UNNEST or JSONB_ARRAY_ELEMENTS
+    // Use OPENJSON to parse JSON arrays
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
+        return `LEFT JOIN (
+          SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS __row_id,
+                 JSON_VALUE([value], '$.value') AS value
+          FROM OPENJSON((SELECT ${source} FOR JSON PATH))
+        ) AS ${alias} ON 1=1`;
       } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
+        return `LEFT JOIN (
+          SELECT JSON_VALUE([value], '$.value') AS value
+          FROM OPENJSON((SELECT ${source} FOR JSON PATH))
+        ) AS ${alias} ON 1=1`;
       }
     } else if (needDistinctKey) {
-      // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
-      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_number', row_number() over())|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
+      return `LEFT JOIN (
+        SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS __row_number,
+               *
+        FROM OPENJSON(${source})
+        WITH (
+          ${fieldList
+            .map(
+              f =>
+                `${f.sqlOutputName} ${this.malloyTypeToSQLType(f.typeDef)} '$.${
+                  f.rawName
+                }'`
+            )
+            .join(',\n  ')}
+        )
+      ) AS ${alias} ON 1=1`;
     } else {
-      // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
-      return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
+      return `LEFT JOIN OPENJSON(${source}) AS ${alias} ON 1=1`;
     }
   }
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    return `('x' || MD5(${sqlDistinctKey}::varchar))::bit(64)::bigint::DECIMAL(65,0)  *18446744073709551616 + ('x' || SUBSTR(MD5(${sqlDistinctKey}::varchar),17))::bit(64)::bigint::DECIMAL(65,0)`;
+    // SQL Server doesn't have MD5, use HASHBYTES instead
+    return `CAST(HASHBYTES('SHA2_256', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS BIGINT)`;
   }
 
   sqlGenerateUUID(): string {
-    return 'GEN_RANDOM_UUID()';
+    return 'NEWID()';
   }
 
   sqlFieldReference(
@@ -213,22 +262,23 @@ export class TSQLDialect extends PostgresBase {
     childType: string
   ): string {
     if (childName === '__row_id') {
-      return `(${parentAlias}->>'__row_id')`;
+      return `${parentAlias}.__row_id`;
     }
     if (parentType !== 'table') {
-      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
+      // Using SQL Server JSON functions
+      let ret = `JSON_VALUE(${parentAlias}, '$.${childName}')`;
       switch (childType) {
         case 'string':
           break;
         case 'number':
-          ret = `${ret}::double precision`;
+          ret = `CAST(${ret} AS FLOAT)`;
           break;
         case 'struct':
         case 'array':
         case 'record':
         case 'array[record]':
         case 'sql native':
-          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
+          ret = `JSON_QUERY(${parentAlias}, '$.${childName}')`;
           break;
       }
       return ret;
@@ -242,29 +292,37 @@ export class TSQLDialect extends PostgresBase {
     isSingleton: boolean,
     sourceSQLExpression: string
   ): string {
+    // SQL Server equivalent for unnesting JSON arrays
     if (isSingleton) {
-      return `UNNEST(ARRAY((SELECT ${sourceSQLExpression})))`;
+      return `(SELECT ${sourceSQLExpression})`;
     } else {
-      return `JSONB_ARRAY_ELEMENTS(${sourceSQLExpression})`;
+      return `OPENJSON(${sourceSQLExpression})`;
     }
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
-    return `CREATE FUNCTION ${id}(JSONB) RETURNS JSONB AS $$\n${indent(
-      funcText
-    )}\n$$ LANGUAGE SQL;\n`;
+    // SQL Server function creation syntax
+    return `CREATE FUNCTION ${id}(@json NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+${indent(funcText)}
+END;
+`;
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+    // Using FOR JSON PATH to create a JSON array
+    return `SELECT (SELECT * FROM ${lastStageName} FOR JSON PATH) AS result`;
   }
 
   sqlFinalStage(lastStageName: string, _fields: string[]): string {
-    return `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
+    return `SELECT * FROM ${lastStageName} FOR JSON PATH`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
-    return `ROW(${alias})`;
+    // SQL Server doesn't have ROW constructor, use JSON
+    return `(SELECT ${alias}.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)`;
   }
 
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
@@ -281,58 +339,70 @@ export class TSQLDialect extends PostgresBase {
       timeframe = 'day';
       n = `${n}*7`;
     }
-    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>(${n})::integer)`;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
+
+    // Using DATEADD instead of PostgreSQL's make_interval
+    return `DATEADD(${tsqlDatePartMap[timeframe]}, ${
+      df.op === '+' ? '' : '-'
+    }${n}, ${df.kids.base.sql})`;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     if (cast.safe) {
       throw new Error("TSQL dialect doesn't support Safe Cast");
     }
-    return super.sqlCast(qi, cast);
+    const expr = cast.e.sql || '';
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+
+    if (!srcTypeDef || !dstTypeDef || srcTypeDef.type !== dstTypeDef.type) {
+      return `CAST(${expr} AS ${dstSQLType})`;
+    }
+    return expr;
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
     const from = df.kids.left;
     const to = df.kids.right;
-    let lVal = from.sql;
-    let rVal = to.sql;
+    const lVal = from.sql;
+    const rVal = to.sql;
+
     if (inSeconds[df.units]) {
-      lVal = `EXTRACT(EPOCH FROM ${lVal})`;
-      rVal = `EXTRACT(EPOCH FROM ${rVal})`;
-      const duration = `${rVal}-${lVal}`;
-      return df.units === 'second'
-        ? `FLOOR(${duration})`
-        : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
+      // DATEDIFF returns integer in the specified unit
+      if (df.units === 'second') {
+        return `DATEDIFF(SECOND, ${lVal}, ${rVal})`;
+      } else {
+        return `DATEDIFF(SECOND, ${lVal}, ${rVal}) / ${inSeconds[
+          df.units
+        ].toString()}`;
+      }
     }
     throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+    // SQL Server version using DISTINCT with GROUP BY
     return `(
-      SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
+      SELECT ${funcName}(t.value)
       FROM (
-        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
-      ) a
+        SELECT DISTINCT ${key} AS key, ${value} AS value
+        FROM __temp_table
+      ) t
     )`;
   }
 
-  // TODO this does not preserve the types of the arguments, meaning we have to hack
-  // around this in the definitions of functions that use this to cast back to the correct
-  // type (from text). See the tsql implementation of stddev.
   sqlAggDistinct(
     key: string,
     values: string[],
     func: (valNames: string[]) => string
   ): string {
+    // SQL Server version
     return `(
-      SELECT ${func(values.map((v, i) => `(a::json->>'f${i + 2}')`))} as value
+      SELECT ${func(values.map((_, i) => `t.val${i + 1}`))}
       FROM (
-        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${values.join(
-          ','
-        )}))::text)) a
-      ) a
+        SELECT DISTINCT ${key} AS key, ${values
+          .map((v, i) => `${v} AS val${i + 1}`)
+          .join(', ')}
+        FROM __temp_table
+      ) t
     )`;
   }
 
@@ -342,24 +412,34 @@ export class TSQLDialect extends PostgresBase {
         sample = this.defaultSampling;
       }
       if (isSamplingRows(sample)) {
-        return `(SELECT * FROM ${tableSQL} TABLESAMPLE SYSTEM_ROWS(${sample.rows}))`;
+        // SQL Server TABLESAMPLE uses percent not rows, approximate with TOP
+        return `(SELECT TOP ${sample.rows} * FROM ${tableSQL})`;
       } else if (isSamplingPercent(sample)) {
-        return `(SELECT * FROM ${tableSQL} TABLESAMPLE SYSTEM (${sample.percent}))`;
+        return `(SELECT * FROM ${tableSQL} TABLESAMPLE (${sample.percent} PERCENT))`;
       }
     }
     return tableSQL;
   }
 
   sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
+    // SQL Server doesn't support NULLS LAST syntax directly
+    // Use CASE expression to push NULLs to the end
+    return `ORDER BY ${orderTerms
+      .map(t => {
+        const parts = t.split(' ');
+        const field = parts[0];
+        const dir = parts.length > 1 ? parts[1] : '';
+        return `CASE WHEN ${field} IS NULL THEN 1 ELSE 0 END, ${field} ${dir}`;
+      })
+      .join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+    return "N'" + literal.replace(/'/g, "''") + "'";
   }
 
   sqlLiteralRegexp(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+    return "N'" + literal.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {
@@ -375,12 +455,18 @@ export class TSQLDialect extends PostgresBase {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
-        return 'integer';
+        return 'INT';
       } else {
-        return 'double precision';
+        return 'FLOAT';
       }
     } else if (malloyType.type === 'string') {
-      return 'varchar';
+      return 'NVARCHAR(MAX)';
+    } else if (malloyType.type === 'date') {
+      return 'DATE';
+    } else if (malloyType.type === 'timestamp') {
+      return 'DATETIME2';
+    } else if (malloyType.type === 'boolean') {
+      return 'BIT';
     }
     return malloyType.type;
   }
@@ -397,11 +483,12 @@ export class TSQLDialect extends PostgresBase {
   }
 
   castToString(expression: string): string {
-    return `CAST(${expression} as VARCHAR)`;
+    return `CAST(${expression} as NVARCHAR(MAX))`;
   }
 
   concat(...values: string[]): string {
-    return values.join(' || ');
+    // SQL Server uses + for string concatenation
+    return values.join(' + ');
   }
 
   validateTypeName(sqlType: string): boolean {
@@ -414,15 +501,123 @@ export class TSQLDialect extends PostgresBase {
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
+    // Using JSON_OBJECT to create a JSON object in SQL Server
     const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
-      props.push(`'${kName}',${kVal.sql}`);
+      props.push(`'${kName}', ${kVal.sql}`);
     }
-    return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
+    return `(
+      SELECT ${props
+        .map((p, i) => (i % 2 === 0 ? p : `JSON_QUERY(${p})`))
+        .join(', ')}
+      FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    )`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
+    // Using FOR JSON PATH to create a JSON array
     const array = lit.kids.values.map(val => val.sql);
-    return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
+    return `(
+      SELECT ${array.map((a, i) => `${a} AS col${i}`).join(', ')}
+      FOR JSON PATH
+    )`;
+  }
+
+  sqlMaybeQuoteIdentifier(identifier: string): string {
+    return `[${identifier.replace(/\[/g, '[[').replace(/\]/g, ']]')}]`;
+  }
+
+  sqlNowExpr(): string {
+    return 'GETDATE()';
+  }
+
+  sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
+    // SQL Server equivalent for DATE_TRUNC
+    const datePartMap: Record<string, string> = {
+      'microsecond': 'MICROSECOND',
+      'millisecond': 'MILLISECOND',
+      'second': 'SECOND',
+      'minute': 'MINUTE',
+      'hour': 'HOUR',
+      'day': 'DAY',
+      'week': 'WEEK',
+      'month': 'MONTH',
+      'quarter': 'QUARTER',
+      'year': 'YEAR',
+    };
+
+    const datePart = datePartMap[df.units];
+
+    if (df.units === 'week') {
+      // Adjust for week start (Monday)
+      return `DATEADD(DAY,
+               -DATEPART(WEEKDAY, ${df.e.sql}) + 1,
+               DATEADD(DAY, DATEDIFF(DAY, 0, ${df.e.sql}), 0))`;
+    } else if (df.units === 'quarter') {
+      return `DATEADD(QUARTER, DATEDIFF(QUARTER, 0, ${df.e.sql}), 0)`;
+    } else if (df.units === 'month') {
+      return `DATEADD(MONTH, DATEDIFF(MONTH, 0, ${df.e.sql}), 0)`;
+    } else if (df.units === 'year') {
+      return `DATEADD(YEAR, DATEDIFF(YEAR, 0, ${df.e.sql}), 0)`;
+    } else if (df.units === 'day') {
+      return `CAST(CAST(${df.e.sql} AS DATE) AS DATETIME2)`;
+    } else if (df.units === 'hour') {
+      return `DATEADD(HOUR, DATEDIFF(HOUR, 0, ${df.e.sql}), 0)`;
+    } else if (df.units === 'minute') {
+      return `DATEADD(MINUTE, DATEDIFF(MINUTE, 0, ${df.e.sql}), 0)`;
+    } else if (df.units === 'second') {
+      return `DATEADD(SECOND, DATEDIFF(SECOND, 0, ${df.e.sql}), 0)`;
+    } else {
+      throw new Error(`Unsupported date truncation unit: ${df.units}`);
+    }
+  }
+
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    // SQL Server uses DATEPART
+    const datePartMap: Record<string, string> = {
+      'microsecond': 'MICROSECOND',
+      'millisecond': 'MILLISECOND',
+      'second': 'SECOND',
+      'minute': 'MINUTE',
+      'hour': 'HOUR',
+      'day': 'DAY',
+      'month': 'MONTH',
+      'quarter': 'QUARTER',
+      'year': 'YEAR',
+      'day_of_week': 'WEEKDAY',
+      'day_of_year': 'DAYOFYEAR',
+    };
+
+    const datePart = datePartMap[from.units];
+    if (!datePart) {
+      throw new Error(`Unsupported date extraction unit: ${from.units}`);
+    }
+
+    if (from.units === 'day_of_week') {
+      // SQL Server WEEKDAY returns 1 for Sunday, add 1 to get Monday=1 format
+      return `((DATEPART(WEEKDAY, ${from.e.sql}) + 5) % 7 + 1)`;
+    }
+
+    return `DATEPART(${datePart}, ${from.e.sql})`;
+  }
+
+  sqlRegexpMatch(df: {
+    kids: {expr: {sql: string}; regex: {sql: string}};
+  }): string {
+    // SQL Server doesn't have native regex, use LIKE with wildcards or fallback to PATINDEX
+    return `PATINDEX('%' + ${df.kids.regex.sql} + '%', ${df.kids.expr.sql}) > 0`;
+  }
+
+  sqlLiteralTime(
+    qi: QueryInfo,
+    lt: {typeDef: {type: string}; literal: string; timezone?: string}
+  ): string {
+    if (lt.typeDef.type === 'date') {
+      return `CAST('${lt.literal}' AS DATE)`;
+    }
+
+    // SQL Server doesn't handle timezones directly
+    // All timestamps are assumed local time
+    return `CAST('${lt.literal}' AS DATETIME2)`;
   }
 }
