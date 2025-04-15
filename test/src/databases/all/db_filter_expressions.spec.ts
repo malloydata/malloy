@@ -194,6 +194,18 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
+    test('numeric filters are case insensitive', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'([1 tO 3] aNd [1 To 4]) oR NuLl'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [
+        {t: '1'},
+        {t: '2'},
+        {t: '3'},
+        {t: 'null'},
+      ]);
+    });
     test('empty numeric filter', async () => {
       await expect(`
         run: nums -> {
@@ -459,7 +471,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('date after quarter', async () => {
       const range = mkDateRange('2001-01-01', '2001-04-01');
       await expect(`
-        run: range + { where: t ~ f'after 2001-Q1' }
+        run: range + { where: t ~ f'AFTER 2001-Q1' }
       `).malloyResultMatches(range, {n: 'post-range'});
     });
     test('date before month', async () => {
@@ -798,8 +810,20 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       nowIs('2023-01-03 00:00:00');
       const range = mkRange('2023-01-07 00:00:00', '2023-01-08 00:00:00');
       await expect(`
-        run: range + { where: t ~ f'next saturday' }
+        run: range + { where: t ~ f'next Saturday' }
       `).malloyResultMatches(range, inRange);
+    });
+    test('temporal filters are case insensitive', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-04 00:00:00', '2023-01-05 00:00:00');
+      await expect(`
+        run: range + {where: t ~ f'Null Or noT aFter TomoRRow'}`).matchesRows(
+        range,
+        {n: 'before'},
+        {n: 'first'},
+        {n: 'last'},
+        {n: 'z-null'}
+      );
     });
   });
 });

@@ -10,12 +10,8 @@
 import moo from 'moo';
 import {temporalNot, joinTemporal, timeLiteral, mkUnits} from '../clause_utils';
 
-const temporal_lexer = moo.compile({
-  WS: /[ \t]+/,
-  id: {
-    match: /[a-zA-Z]+/,
-    type: moo.keywords({
-      'AND': 'and',
+const kwList = moo.keywords(
+  {
       'OR': 'or',
       'NOT': 'not',
       'NULL_KW': 'null',
@@ -55,7 +51,14 @@ const temporal_lexer = moo.compile({
       'FRIDAY': 'friday',
       'SATURDAY': 'saturday',
       'SUNDAY': 'sunday',
-    }),
+    }
+);
+
+const temporal_lexer = moo.compile({
+  WS: /[ \t]+/,
+  id: {
+    match: /[a-zA-Z]+/,
+    type: kw => kwList(kw.toLowerCase()),
   },
   oparen: '(',
   cparen: ')',
