@@ -1502,7 +1502,5 @@ describe('query:', () => {
         errorMessage('Group by of `abool` is required but not present')
       );
     });
-    test.todo('what happens if you declare required group by to be yourself?');
-    test.todo('require_group_by only dimensions');
   });
 });
