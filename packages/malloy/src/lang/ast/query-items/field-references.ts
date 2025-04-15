@@ -163,6 +163,13 @@ export class PartitionByFieldReference extends FieldReference {
   }
 }
 
+export class RequireGroupByReference extends FieldReference {
+  elementType = 'requireGroupByReference';
+  typecheck() {
+    return;
+  }
+}
+
 export class ParameterFieldReference extends FieldReference {
   elementType = 'parameterFieldReference';
   // The invocation of the argument will typecheck this

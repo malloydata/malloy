@@ -614,6 +614,35 @@ describe('expressions', () => {
         }
       `).toTranslate();
     });
+
+    describe('require_group_by:', () => {
+      test('require_group_by of dimension', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by }
+          source: aext is a extend {
+            measure: x1 is ai.sum() { require_group_by: astr }
+          }
+        `).toTranslate();
+      });
+      test('require_group_by of measure', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by }
+          source: aext is a extend {
+            measure: c is count()
+            measure: x1 is ai.sum() { require_group_by: ${'c'} }
+          }
+        `).toLog(errorMessage('`require_group_by:` field must be a dimension'));
+      });
+      test('require_group_by of self', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by }
+          source: aext is a extend {
+            measure: c is count()
+            measure: x1 is ai.sum() { require_group_by: ${'x1'} }
+          }
+        `).toLog(errorMessage('x1 is not defined'));
+      });
+    });
   });
 
   describe('aggregate forms', () => {

@@ -28,4 +28,5 @@ import type {SourceFieldSpace} from './field-space';
 export interface OpDesc {
   segment: PipeSegment;
   outputSpace: () => SourceFieldSpace;
+  requiredGroupBys: string[];
 }

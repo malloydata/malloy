@@ -54,6 +54,7 @@ export class IndexBuilder implements QueryBuilder {
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
   alwaysJoins: string[] = [];
+  requiredGroupBys: string[] = [];
   readonly type = 'index';
 
   constructor(

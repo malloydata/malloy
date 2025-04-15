@@ -69,6 +69,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Ordering;
   limit?: number;
   alwaysJoins: string[] = [];
+  requiredGroupBys: string[] = [];
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';

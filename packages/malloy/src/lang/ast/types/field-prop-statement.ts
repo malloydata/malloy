@@ -24,6 +24,7 @@
 import {FunctionOrdering} from '../expressions/function-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
+import {RequireGroupBy} from '../expressions/require_group_by';
 import {PartitionBy} from '../expressions/partition_by';
 import type {MalloyElement} from './malloy-element';
 
@@ -31,7 +32,8 @@ export type FieldPropStatement =
   | Filter
   | Limit
   | PartitionBy
-  | FunctionOrdering;
+  | FunctionOrdering
+  | RequireGroupBy;
 
 export function isFieldPropStatement(
   el: MalloyElement
@@ -40,6 +42,7 @@ export function isFieldPropStatement(
     el instanceof Filter ||
     el instanceof Limit ||
     el instanceof PartitionBy ||
-    el instanceof FunctionOrdering
+    el instanceof FunctionOrdering ||
+    el instanceof RequireGroupBy
   );
 }

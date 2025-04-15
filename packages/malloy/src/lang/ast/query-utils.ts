@@ -46,3 +46,42 @@ export function detectAndRemovePartialStages(
   }
   return cleaned;
 }
+
+export function unsatisfiedRequiredGroupBys(
+  segment: PipeSegment,
+  requiredGroupBys: string[]
+): string[] {
+  if (segment.type === 'raw' || segment.type === 'index') return [];
+  const result: string[] = [];
+  for (const requiredGroupBy of requiredGroupBys) {
+    let found = false;
+    for (const field of segment.queryFields) {
+      if (
+        field.type === 'fieldref' &&
+        field.path.length === 1 &&
+        field.path[0] === requiredGroupBy
+      ) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      result.push(requiredGroupBy);
+    }
+  }
+  return result;
+}
+
+export function validateRequiredGroupBys(
+  segment: PipeSegment,
+  logTo: MalloyElement,
+  requiredGroupBys: string[]
+) {
+  const missing = unsatisfiedRequiredGroupBys(segment, requiredGroupBys);
+  for (const requiredGroupBy of missing) {
+    logTo.logError(
+      'missing-required-group-by',
+      `Group by of \`${requiredGroupBy}\` is required but not present`
+    );
+  }
+}

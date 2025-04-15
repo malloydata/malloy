@@ -22,7 +22,11 @@
  */
 
 import type {FilterCondition} from '../../../model/malloy_types';
-import {expressionIsCalculation} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {FunctionOrdering} from './function-ordering';
@@ -35,6 +39,7 @@ import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
 import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {RequireGroupBy} from './require_group_by';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
@@ -100,6 +105,7 @@ export class ExprProps extends ExpressionDef {
     let limit: Limit | undefined;
     const orderBys: FunctionOrdering[] = [];
     const wheres: Filter[] = [];
+    const requireGroupBys: RequireGroupBy[] = [];
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (!this.expr.canSupportPartitionBy()) {
@@ -133,6 +139,8 @@ export class ExprProps extends ExpressionDef {
         } else {
           orderBys.push(statement);
         }
+      } else if (statement instanceof RequireGroupBy) {
+        requireGroupBys.push(statement);
       } else {
         wheres.push(statement);
       }
@@ -145,6 +153,44 @@ export class ExprProps extends ExpressionDef {
             orderBys,
           })
         : this.expr.getExpression(fs);
-    return this.getFilteredExpression(fs, resultExpr, wheres);
+    const filteredExpr = this.getFilteredExpression(fs, resultExpr, wheres);
+    return this.getRequireGroupByExpression(fs, filteredExpr, requireGroupBys);
+  }
+
+  getRequireGroupByExpression(
+    fs: FieldSpace,
+    expr: ExprValue,
+    requireGroupBys: RequireGroupBy[]
+  ) {
+    const requiredGroupByFields: string[] = [];
+    for (const requiredGroupBy of requireGroupBys) {
+      for (const field of requiredGroupBy.requireGroupByFields) {
+        const e = field.getField(fs);
+        if (e.found === undefined) {
+          field.logError(
+            'require-group-by-not-found',
+            `${field.refString} is not defined`
+          );
+        } else if (
+          expressionIsAnalytic(e.found.typeDesc().expressionType) ||
+          expressionIsAggregate(e.found.typeDesc().expressionType)
+        ) {
+          field.logError(
+            'non-scalar-require-group-by',
+            '`require_group_by:` field must be a dimension'
+          );
+        } else {
+          requiredGroupByFields.push(field.nameString);
+        }
+      }
+    }
+    const allRequiredGroupBys = Array.from(
+      new Set([...requiredGroupByFields, ...(expr.requiredGroupBys ?? [])])
+    );
+
+    return {
+      ...expr,
+      requiredGroupBys: allRequiredGroupBys,
+    };
   }
 }

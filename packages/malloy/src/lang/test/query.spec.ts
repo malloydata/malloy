@@ -1406,4 +1406,103 @@ describe('query:', () => {
       ).toTranslate();
     });
   });
+  describe('require_group_by', () => {
+    test('require_group_by basic success', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: aisum }
+        `
+      ).toTranslate();
+    });
+    test('require_group_by basic failure', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+          }
+          run: aext -> { aggregate: aisum }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('view with inherited require_group_by failure', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+
+            view: requires_astr is {
+              aggregate: aisum
+            }
+          }
+          run: aext -> { nest: requires_astr }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('view with inherited require_group_by success', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+
+            view: requires_astr is {
+              aggregate: aisum
+            }
+          }
+          run: aext -> { group_by: astr; nest: requires_astr }
+        `
+      ).toTranslate();
+    });
+    test('nest satisfies required group by', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+          }
+          run: aext -> {
+            group_by: ai
+            nest: no_require is {
+              group_by: astr
+              aggregate: aisum
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('composed source picked correctly', () => {
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a,
+            a extend { dimension: x is 1 }
+          ) extend {
+            measure: aisum is ai.sum() { require_group_by: x }
+          }
+          run: aext -> {
+            group_by: x
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('require_group_by expression additive', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum1 is ai.sum() { require_group_by: astr }
+            measure: aisum2 is ai.sum() { require_group_by: abool }
+          }
+          run: aext -> { aggregate: aisum is aisum1 + aisum2 }
+        `
+      ).toLog(
+        errorMessage('Group by of `astr` is required but not present'),
+        errorMessage('Group by of `abool` is required but not present')
+      );
+    });
+    test.todo('what happens if you declare required group by to be yourself?');
+    test.todo('require_group_by only dimensions');
+  });
 });

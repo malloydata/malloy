@@ -48,7 +48,7 @@ export class NestFieldDeclaration
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     if (this.turtleDef) return this.turtleDef;
     if (fs.isQueryFieldSpace()) {
-      const {pipeline, annotation} = this.view.pipelineComp(
+      const {pipeline, annotation, requiredGroupBys} = this.view.pipelineComp(
         fs,
         fs.outputSpace()
       );
@@ -64,6 +64,7 @@ export class NestFieldDeclaration
         annotation: {...this.note, inherits: annotation},
         location: this.location,
         compositeFieldUsage,
+        requiredGroupBys,
       };
       return this.turtleDef;
     }

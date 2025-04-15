@@ -54,6 +54,9 @@ export function computedExprValue({
     compositeFieldUsage: mergeCompositeFieldUsage(
       ...from.map(e => e.compositeFieldUsage)
     ),
+    requiredGroupBys: mergeRequiredGroupBys(
+      ...from.map(e => e.requiredGroupBys)
+    ),
   };
 }
 
@@ -76,6 +79,9 @@ export function computedTimeResult({
     value: xv.value,
     compositeFieldUsage: mergeCompositeFieldUsage(
       ...from.map(e => e.compositeFieldUsage)
+    ),
+    requiredGroupBys: mergeRequiredGroupBys(
+      ...from.map(e => e.requiredGroupBys)
     ),
   };
   if (timeframe) {
@@ -129,4 +135,16 @@ export function literalTimeResult({
     y.timeframe = timeframe;
   }
   return y;
+}
+
+export function mergeRequiredGroupBys(
+  ...groupBys: (string[] | undefined)[]
+): string[] | undefined {
+  const requiredGroupBys = Array.from([
+    ...new Set(groupBys.map(x => x ?? []).flat()),
+  ]);
+  if (requiredGroupBys.length === 0) {
+    return undefined;
+  }
+  return requiredGroupBys;
 }

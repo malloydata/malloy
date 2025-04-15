@@ -27,6 +27,7 @@ import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
 import {getFinalStruct} from '../struct-utils';
+import {mergeRequiredGroupBys} from '../types/expr-value';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
@@ -51,6 +52,7 @@ export class QOpDescView extends View {
     return {
       pipeline: [newOperation.segment],
       outputStruct: newOperation.outputSpace().structDef(),
+      requiredGroupBys: newOperation.requiredGroupBys,
     };
   }
 
@@ -59,27 +61,42 @@ export class QOpDescView extends View {
     isNestIn: QueryOperationSpace | undefined,
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
-  ): PipeSegment {
+  ): {segment: PipeSegment; requiredGroupBys: string[]} {
     if (isRawSegment(refineThis)) {
       this.logError('refinement-of-raw-query', 'A raw query cannot be refined');
-      return refineThis;
+      return {segment: refineThis, requiredGroupBys: []};
     }
     qOpDesc.refineFrom(refineThis);
-    return qOpDesc.getOp(inputFS, isNestIn).segment;
+    const opDesc = qOpDesc.getOp(inputFS, isNestIn);
+    return {
+      segment: opDesc.segment,
+      requiredGroupBys: opDesc.requiredGroupBys,
+    };
   }
 
   refine(
     inputFS: SourceFieldSpace,
+    requiredGroupBys: string[],
     _pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
-  ): PipeSegment[] {
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]} {
     const pipeline = [..._pipeline];
     if (pipeline.length === 0) {
-      return pipeline;
+      return {pipeline, requiredGroupBys};
     }
     if (pipeline.length === 1) {
       this.operation.refineFrom(pipeline[0]);
-      return [this.getOp(inputFS, isNestIn, this.operation, pipeline[0])];
+      const {segment, requiredGroupBys: opRequiredGroupBys} = this.getOp(
+        inputFS,
+        isNestIn,
+        this.operation,
+        pipeline[0]
+      );
+      return {
+        pipeline: [segment],
+        requiredGroupBys:
+          mergeRequiredGroupBys(requiredGroupBys, opRequiredGroupBys) ?? [],
+      };
     }
     const headRefinements = new QOpDesc([]);
     const tailRefinements = new QOpDesc([]);
@@ -111,7 +128,7 @@ export class QOpDescView extends View {
         undefined,
         headRefinements,
         pipeline[0]
-      );
+      ).segment;
     }
     if (tailRefinements.notEmpty()) {
       const last = pipeline.length - 1;
@@ -126,9 +143,10 @@ export class QOpDescView extends View {
         undefined,
         tailRefinements,
         pipeline[last]
-      );
+      ).segment;
     }
-    return pipeline;
+    // Since a multi-stage refinement can't add fields, we simply inherit the old required group bys
+    return {pipeline, requiredGroupBys};
   }
 
   getImplicitName(): string | undefined {

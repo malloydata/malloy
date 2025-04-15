@@ -30,6 +30,7 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
+import {validateRequiredGroupBys} from '../query-utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -73,8 +74,10 @@ export class QueryArrow extends QueryBase implements QueryElement {
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct);
     }
-    const {pipeline, annotation, outputStruct, name} =
+    const {pipeline, annotation, outputStruct, name, requiredGroupBys} =
       this.view.pipelineComp(fieldSpace);
+
+    validateRequiredGroupBys(pipeline[0], this, requiredGroupBys);
 
     const query = {
       ...queryBase,

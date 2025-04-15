@@ -24,8 +24,10 @@
 import type {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {unsatisfiedRequiredGroupBys} from '../query-utils';
 import {getFinalStruct} from '../struct-utils';
-import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
+import {mergeRequiredGroupBys} from '../types/expr-value';
+import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {refine} from './refine-utils';
 import {View} from './view';
@@ -51,7 +53,16 @@ export class ViewRefine extends View {
     isNestIn?: QueryOperationSpace
   ): PipelineComp {
     const query = this.base.pipelineComp(fs);
-    const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
+    const {pipeline: resultPipe, requiredGroupBys} = this.refinement.refine(
+      fs,
+      query.requiredGroupBys,
+      query.pipeline,
+      isNestIn
+    );
+    const nextRequiredGroupBys = unsatisfiedRequiredGroupBys(
+      resultPipe[0],
+      requiredGroupBys
+    );
     return {
       pipeline: resultPipe,
       annotation: query.annotation,
@@ -59,24 +70,34 @@ export class ViewRefine extends View {
         resultPipe.length > 0
           ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
           : ErrorFactory.structDef,
+      requiredGroupBys: nextRequiredGroupBys,
     };
   }
 
   refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
+    requiredGroupBys: string[],
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
-  ): PipeSegment[] {
-    const refineFrom = this.pipeline(inputFS, isNestIn);
-    if (refineFrom.length !== 1) {
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]} {
+    const refineFrom = this.pipelineComp(inputFS, isNestIn);
+    if (refineFrom.pipeline.length !== 1) {
       this.refinement.logError(
         'refinement-with-multistage-view',
         'refinement must have exactly one stage'
       );
       // TODO better error pipeline?
-      return pipeline;
+      return {pipeline, requiredGroupBys: []};
     }
-    return refine(this, pipeline, refineFrom[0]);
+    const refinedPipeline = refine(this, pipeline, refineFrom.pipeline[0]);
+    const nextRequiredGroupBys = unsatisfiedRequiredGroupBys(
+      refinedPipeline[0],
+      mergeRequiredGroupBys(requiredGroupBys, refineFrom.requiredGroupBys) ?? []
+    );
+    return {
+      pipeline: refinedPipeline,
+      requiredGroupBys: nextRequiredGroupBys,
+    };
   }
 
   getImplicitName(): string | undefined {

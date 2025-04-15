@@ -42,6 +42,7 @@ export abstract class ViewField extends SpaceField {
       ...TDU.viewT,
       compositeFieldUsage:
         fieldDef.compositeFieldUsage ?? emptyCompositeFieldUsage(),
+      requiredGroupBys: fieldDef.requiredGroupBys,
     };
   }
 }
