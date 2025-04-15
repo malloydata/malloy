@@ -131,7 +131,7 @@ describe('SQL Server tests', () => {
       await expect(`
         ##! experimental.dialect.tsql
         run:
-        sqlserver.table('dbo.[Dbo Spaced Table]') -> { select: one }
+        sqlserver.table('dbo.\`Dbo Spaced Table\`') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });
@@ -142,7 +142,7 @@ describe('SQL Server tests', () => {
     ) {
       await expect(`
         ##! experimental.dialect.tsql
-        run: sqlserver.table('[Spaced Schema].[Spaced Schema Spaced Table]') -> { select: one }
+        run: sqlserver.table('\`Spaced Schema\`.\`Spaced Schema Spaced Table\`') -> { select: one }
       `).malloyResultMatches(runtime, {one: 1});
     }
   });

@@ -255,6 +255,7 @@ export class SQLServerConnection
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
+      console.warn(infoQuery);
       return `Error fetching schema for ${structDef.name}: ${error}`;
     }
     return structDef;
@@ -297,19 +298,21 @@ export class SQLServerConnection
     if (table === undefined) {
       return 'Default schema not yet supported in SQLServer';
     }
+    // TODO (vitor): Not sure if we want to support spaces in table definitions
     const infoQuery = `
       SELECT
         column_name,
         c.data_type,
         NULL as element_type
       FROM information_schema.columns c
-      WHERE table_name = '${table}'
-        AND table_schema = '${schema}';
+      WHERE table_name = '${table.replace(/`/g, '')}'
+        AND table_schema = '${schema.replace(/`/g, '')}';
     `;
 
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
+      console.warn(infoQuery);
       return `Error fetching schema for ${tablePath}: ${error.message}`;
     }
     return structDef;
@@ -372,7 +375,10 @@ export class SQLServerConnection
     const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
     const tableName = `#${hash}`;
 
-    const cmd = `CREATE TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    const cmd = `CREATE TABLE IF NOT EXISTS [${tableName.replace(
+      /`/g,
+      ''
+    )}] AS (${sqlCommand});`;
 
     await this.runSQLServerQuery(cmd, 1000, 0, false);
     return tableName;
