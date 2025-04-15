@@ -76,10 +76,10 @@ export class ViewRefine extends View {
 
   refine(
     inputFS: SourceFieldSpace,
-    requiredGroupBys: string[],
+    requiredGroupBys: string[][],
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]} {
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]} {
     const refineFrom = this.pipelineComp(inputFS, isNestIn);
     if (refineFrom.pipeline.length !== 1) {
       this.refinement.logError(

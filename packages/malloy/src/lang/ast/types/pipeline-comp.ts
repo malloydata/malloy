@@ -32,5 +32,5 @@ export interface PipelineComp {
   pipeline: PipeSegment[];
   annotation?: Annotation;
   name?: string;
-  requiredGroupBys: string[];
+  requiredGroupBys: string[][];
 }

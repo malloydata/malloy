@@ -49,18 +49,18 @@ export function detectAndRemovePartialStages(
 
 export function unsatisfiedRequiredGroupBys(
   segment: PipeSegment | undefined,
-  requiredGroupBys: string[]
-): string[] {
+  requiredGroupBys: string[][]
+): string[][] {
   if (segment === undefined) return [];
   if (segment.type === 'raw' || segment.type === 'index') return [];
-  const result: string[] = [];
+  const result: string[][] = [];
   for (const requiredGroupBy of requiredGroupBys) {
     let found = false;
     for (const field of segment.queryFields) {
       if (
         field.type === 'fieldref' &&
-        field.path.length === 1 &&
-        field.path[0] === requiredGroupBy
+        field.path.length === requiredGroupBy.length &&
+        field.path.every((p, i) => p === requiredGroupBy[i])
       ) {
         found = true;
         break;
@@ -76,13 +76,13 @@ export function unsatisfiedRequiredGroupBys(
 export function validateRequiredGroupBys(
   segment: PipeSegment,
   logTo: MalloyElement,
-  requiredGroupBys: string[]
+  requiredGroupBys: string[][]
 ) {
   const missing = unsatisfiedRequiredGroupBys(segment, requiredGroupBys);
   for (const requiredGroupBy of missing) {
     logTo.logError(
       'missing-required-group-by',
-      `Group by of \`${requiredGroupBy}\` is required but not present`
+      `Group by of \`${requiredGroupBy.join('.')}\` is required but not present`
     );
   }
 }

@@ -1488,6 +1488,47 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
+    test.skip('composed source input skipped when invalid require group by usage', () => {
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { require_group_by: x }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test.skip('joined composed source input skipped when invalid require group by usage', () => {
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { require_group_by: x }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> {
+            aggregate: aext.aisum
+          }
+        `
+      ).toTranslate();
+    });
     test('require_group_by expression additive', () => {
       expect(
         markSource`
@@ -1500,6 +1541,34 @@ describe('query:', () => {
       ).toLog(
         errorMessage('Group by of `astr` is required but not present'),
         errorMessage('Group by of `abool` is required but not present')
+      );
+    });
+    test('require_group_by basic joined success', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: aext.aisum }
+        `
+      ).toTranslate();
+    });
+    test('require_group_by basic joined failure', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { require_group_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: astr; aggregate: aext.aisum }
+        `
+      ).toLog(
+        errorMessage('Group by of `aext.astr` is required but not present')
       );
     });
   });

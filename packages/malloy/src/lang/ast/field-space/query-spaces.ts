@@ -92,8 +92,8 @@ export abstract class QueryOperationSpace
     return this._compositeFieldUsage;
   }
 
-  _requiredGroupBys: string[] | undefined = undefined;
-  get requiredGroupBys(): string[] {
+  _requiredGroupBys: string[][] | undefined = undefined;
+  get requiredGroupBys(): string[][] {
     if (this._requiredGroupBys === undefined) {
       throw new Error('Required group bys accessed before computed');
     }
@@ -359,7 +359,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     let compositeFieldUsage = emptyCompositeFieldUsage();
-    const eachRequiredGroupBys: string[][] = [];
+    const eachRequiredGroupBys: string[][][] = [];
     let narrowedCompositeFieldResolution =
       emptyNarrowedCompositeFieldResolution();
     const source = this.inputSpace().structDef();

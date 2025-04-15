@@ -33,7 +33,7 @@ import {FunctionOrdering} from './function-ordering';
 import type {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
-import type {ExprValue} from '../types/expr-value';
+import {mergeRequiredGroupBys, type ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
@@ -184,8 +184,9 @@ export class ExprProps extends ExpressionDef {
         }
       }
     }
-    const allRequiredGroupBys = Array.from(
-      new Set([...requiredGroupByFields, ...(expr.requiredGroupBys ?? [])])
+    const allRequiredGroupBys = mergeRequiredGroupBys(
+      expr.requiredGroupBys,
+      requiredGroupByFields.map(name => [name])
     );
 
     return {

@@ -61,7 +61,7 @@ export class QOpDescView extends View {
     isNestIn: QueryOperationSpace | undefined,
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
-  ): {segment: PipeSegment; requiredGroupBys: string[]} {
+  ): {segment: PipeSegment; requiredGroupBys: string[][]} {
     if (isRawSegment(refineThis)) {
       this.logError('refinement-of-raw-query', 'A raw query cannot be refined');
       return {segment: refineThis, requiredGroupBys: []};
@@ -76,10 +76,10 @@ export class QOpDescView extends View {
 
   refine(
     inputFS: SourceFieldSpace,
-    requiredGroupBys: string[],
+    requiredGroupBys: string[][],
     _pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]} {
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]} {
     const pipeline = [..._pipeline];
     if (pipeline.length === 0) {
       return {pipeline, requiredGroupBys};

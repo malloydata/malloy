@@ -138,13 +138,20 @@ export function literalTimeResult({
 }
 
 export function mergeRequiredGroupBys(
-  ...groupBys: (string[] | undefined)[]
-): string[] | undefined {
-  const requiredGroupBys = Array.from([
-    ...new Set(groupBys.map(x => x ?? []).flat()),
-  ]);
-  if (requiredGroupBys.length === 0) {
-    return undefined;
+  ...groupBys: (string[][] | undefined)[]
+): string[][] | undefined {
+  const requiredGroupBys: string[][] = [];
+  for (const groupBy of groupBys) {
+    if (groupBy === undefined) continue;
+    for (const path of groupBy) {
+      if (
+        !requiredGroupBys.some(
+          g => g.length === path.length && g.every((p, i) => p === path[i])
+        )
+      ) {
+        requiredGroupBys.push(path);
+      }
+    }
   }
   return requiredGroupBys;
 }

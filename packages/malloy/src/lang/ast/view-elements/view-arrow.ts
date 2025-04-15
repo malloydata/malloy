@@ -63,10 +63,10 @@ export class ViewArrow extends View {
 
   refine(
     _inputFS: SourceFieldSpace,
-    requiredGroupBys: string[],
+    requiredGroupBys: string[][],
     _pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]} {
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]} {
     this.logError(
       'refinement-with-multistage-view',
       'A multi-segment view cannot be used as a refinement'

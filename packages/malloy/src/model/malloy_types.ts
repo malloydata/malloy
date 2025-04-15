@@ -694,7 +694,7 @@ export function isCastType(s: string): s is CastType {
 export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
-  requiredGroupBys?: string[];
+  requiredGroupBys?: string[][];
 }
 
 // this field definition represents something in the database.
@@ -1126,7 +1126,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   compositeFieldUsage?: CompositeFieldUsage;
-  requiredGroupBys?: string[];
+  requiredGroupBys?: string[][];
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1263,7 +1263,7 @@ export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
   compositeFieldUsage: CompositeFieldUsage;
-  requiredGroupBys?: string[];
+  requiredGroupBys?: string[][];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;

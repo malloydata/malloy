@@ -54,10 +54,10 @@ export abstract class View extends MalloyElement {
 
   abstract refine(
     inputFS: SourceFieldSpace,
-    requiredGroupBys: string[],
+    requiredGroupBys: string[][],
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]};
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]};
 
   abstract getImplicitName(): string | undefined;
 }

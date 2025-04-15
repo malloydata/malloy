@@ -143,7 +143,7 @@ export class ReferenceView extends View {
 
   private getRefinement(inputFS: SourceFieldSpace): {
     segment: PipeSegment | undefined;
-    requiredGroupBys: string[];
+    requiredGroupBys: string[][];
   } {
     const {pipeline, error, requiredGroupBys} = this._pipelineComp(inputFS, {
       forRefinement: true,
@@ -164,10 +164,10 @@ export class ReferenceView extends View {
   // used for checking `exclude` references.
   refine(
     inputFS: SourceFieldSpace,
-    requiredGroupBys: string[],
+    requiredGroupBys: string[][],
     pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[]} {
+  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]} {
     const {segment: refineFrom, requiredGroupBys: refinementRequiredGroupBys} =
       this.getRefinement(inputFS);
     const allRequiredGroupBys =
