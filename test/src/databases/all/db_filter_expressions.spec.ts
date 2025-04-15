@@ -332,42 +332,35 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test.when(testBoolean)('true', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'true'
-          select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'true'}]);
-    });
-    test.when(testBoolean)('true', async () => {
-      await expect(`
-        run: facts -> {
-          where: b ~ f'true'
+          where: b ~ f'tRuE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('false', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'false'
+          where: b ~ f'FalSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('=false', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'=false'
+          where: b ~ f'=FALSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
     test.when(testBoolean)('null', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'null'
+          where: b ~ f'Null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'null'}]);
     });
     test.when(testBoolean)('not null', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'not null'
+          where: b ~ f'nOt NuLL'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
