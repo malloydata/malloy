@@ -48,9 +48,10 @@ export function detectAndRemovePartialStages(
 }
 
 export function unsatisfiedRequiredGroupBys(
-  segment: PipeSegment,
+  segment: PipeSegment | undefined,
   requiredGroupBys: string[]
 ): string[] {
+  if (segment === undefined) return [];
   if (segment.type === 'raw' || segment.type === 'index') return [];
   const result: string[] = [];
   for (const requiredGroupBy of requiredGroupBys) {
