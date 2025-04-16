@@ -7,13 +7,22 @@
 
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
+// TODO (vitor): I don't know why NULLs are greatest and least but I've seen this in postgres and duckdb. Gotta figure it out.
+function greatestOrLeastSQL(name: string) {
+  return (
+    'CASE WHEN (SELECT COUNT(*) FROM ( VALUES ${[...values].map((v) => "(" + v + ")" ).join(", ")} ) AS t(v) WHERE v IS NULL) > 0 THEN NULL ELSE ' +
+    name +
+    '(${...values}) END'
+  );
+}
+
 export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   byte_length: {function: 'DATALENGTH'},
   ends_with: {
     sql: 'COALESCE(RIGHT(${value}, LEN(${suffix})) = ${suffix}, CAST(0 AS BIT))',
   },
-  greatest: {function: 'GREATEST'},
-  least: {function: 'LEAST'},
+  greatest: {sql: greatestOrLeastSQL('GREATEST')},
+  least: {sql: greatestOrLeastSQL('LEAST')},
   ifnull: {sql: 'ISNULL(${value}, ${default})'},
   is_inf: {
     sql: "COALESCE(${value} = CAST('Infinity' AS FLOAT) OR ${value} = CAST('-Infinity' AS FLOAT), CAST(0 AS BIT))",
