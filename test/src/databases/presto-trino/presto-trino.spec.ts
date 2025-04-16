@@ -100,6 +100,26 @@ describe.each(runtimes.runtimeList)(
       });
     });
 
+    it(`runs the regexp_extract function - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
+      select:
+        extract is regexp_extract('1a 2b 14m', r'\\d+')
+        group is regexp_extract('1a 2b 14m', r'(\\d+)([a-z]+)', 2)
+      }`).malloyResultMatches(runtime, {
+        extract: '1',
+        group: 'a',
+      });
+    });
+
+    it(`runs the split_part function - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
+      select:
+        part is split_part('one/two/three', '/', 2)
+      }`).malloyResultMatches(runtime, {
+        part: 'two',
+      });
+    });
+
     it(`runs the approx_percentile function - ${databaseName}`, async () => {
       await expect(`run: ${databaseName}.sql("""
       SELECT 1 as n
