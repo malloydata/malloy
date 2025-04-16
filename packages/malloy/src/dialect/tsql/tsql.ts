@@ -47,8 +47,7 @@ import {Dialect} from '../dialect';
 import {TSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
-// SQL Server funky default for json key
-//'JSON_F52E2B61-18A1-11d1-B105-00805F49916B'
+// SQL Server funky default for json key 'JSON_F52E2B61-18A1-11d1-B105-00805F49916B'
 
 const tsqlDatePartMap: Record<string, string> = {
   'year': 'year',
@@ -146,7 +145,6 @@ export class TSQLDialect extends Dialect {
   }
 
   mapFields(fieldList: DialectFieldList): string {
-    console.info('mapFields', fieldList);
     return fieldList
       .map(
         f =>
@@ -180,7 +178,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
-    console.info('sqlAnyValueTurtle', groupSet, fieldList);
     const fields = fieldList
       .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
@@ -225,7 +222,6 @@ export class TSQLDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    console.info('sqlUnnestAlias')
     // SQL Server doesn't have UNNEST or JSONB_ARRAY_ELEMENTS
     // Use OPENJSON to parse JSON arrays
     if (isArray) {
@@ -308,7 +304,6 @@ export class TSQLDialect extends Dialect {
     isSingleton: boolean,
     sourceSQLExpression: string
   ): string {
-    console.info('sqlUnnestPipelineHead');
     // SQL Server equivalent for unnesting JSON arrays
     if (isSingleton) {
       return `(SELECT ${sourceSQLExpression})`;
@@ -318,7 +313,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
-    console.info('sqlCreateFunction');
     // SQL Server function creation syntax
     return `
       CREATE FUNCTION ${id}(@json NVARCHAR(MAX))
@@ -331,7 +325,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    console.info('sqlCreateFunctionCombineLastStage');
     // Using FOR JSON PATH to create a JSON array
     return `SELECT (SELECT * FROM ${lastStageName} FOR JSON PATH) AS result`;
   }
@@ -343,23 +336,19 @@ export class TSQLDialect extends Dialect {
       FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS finalStage
     FROM ${lastStageName};
     `;
-    console.info('sqlFinalStage', res)
     return res;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
-    console.info('sqlSelectAliasAsStruct');
     // SQL Server doesn't have ROW constructor, use JSON
     return `(SELECT ${alias}.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)`;
   }
 
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
-    console.info('sqlCreateTableAsSelect');
     throw new Error('Not implemented Yet');
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    console.info('sqlAlterTimeExpr');
     let timeframe = df.units;
     let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {
@@ -377,7 +366,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    console.info('sqlCast', qi, cast);
     if (cast.safe) {
       throw new Error("TSQL dialect doesn't support Safe Cast");
     }
@@ -396,7 +384,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
-    console.info('sqlMeasureTimeExpr')
     const from = df.kids.left;
     const to = df.kids.right;
     const lVal = from.sql;
@@ -416,7 +403,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    console.info('sqlSumDistinct');
     // SQL Server version using DISTINCT with GROUP BY
     return `(
       SELECT ${funcName}(t.value)
@@ -432,7 +418,6 @@ export class TSQLDialect extends Dialect {
     values: string[],
     func: (valNames: string[]) => string
   ): string {
-    console.info('sqlAggDistinct');
     // SQL Server version
     return `(
       SELECT ${func(values.map((_, i) => `t.val${i + 1}`))}
@@ -446,7 +431,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
-    console.info('sqlSampleTable');
     if (sample !== undefined) {
       if (isSamplingEnable(sample) && sample.enable) {
         sample = this.defaultSampling;
@@ -464,7 +448,6 @@ export class TSQLDialect extends Dialect {
   sqlOrderBy(orderTerms: string[]): string {
     // SQL Server doesn't support NULLS LAST syntax directly
     // Use CASE expression to push NULLs to the end
-    console.info('sqlOrderBy');
     return `ORDER BY ${orderTerms
       .map(t => {
         const parts = t.split(' ');
@@ -476,24 +459,20 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlLiteralString(literal: string): string {
-    console.info('sqlLiteralString');
     return "N'" + literal.replace(/'/g, "''") + "'";
   }
 
   sqlLiteralRegexp(literal: string): string {
-    console.info('sqlLiteralRegexp');
     return "N'" + literal.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
-    console.info('getDialectFunctionOverrides');
     return expandOverrideMap(TSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    console.info('getDialectFunctions');
     return expandBlueprintMap(TSQL_DIALECT_FUNCTIONS);
   }
 
@@ -528,18 +507,15 @@ export class TSQLDialect extends Dialect {
   }
 
   castToString(expression: string): string {
-    console.info('castToString', expression);
     return `CAST(${expression} as NVARCHAR(MAX))`;
   }
 
   concat(...values: string[]): string {
-    console.info('concat');
     // SQL Server uses + for string concatenation
     return values.join(' + ');
   }
 
   validateTypeName(sqlType: string): boolean {
-    console.info('validateTypeName');
     // Letters:              BIGINT
     // Numbers:              INT8
     // Spaces:               TIMESTAMP WITH TIME ZONE
@@ -549,7 +525,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
-    console.info('sqlLiteralRecord');
     // Using JSON_OBJECT to create a JSON object in SQL Server
     const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
@@ -564,7 +539,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
-    console.info('sqlLiteralArray');
     // Using FOR JSON PATH to create a JSON array
     const array = lit.kids.values.map(val => val.sql);
     return `(
@@ -574,17 +548,14 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    console.info('sqlMaybeQuoteIdentifier', identifier);
     return '[' + identifier.replace(/"/g, '') + ']';
   }
 
   sqlNowExpr(): string {
-    console.info('sqlNowExpr');
     return 'GETDATE()';
   }
 
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
-    console.info('sqlTruncExpr');
     // SQL Server equivalent for DATE_TRUNC
     // const datePartMap: Record<string, string> = {
     //   'microsecond': 'MICROSECOND',
@@ -626,7 +597,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    console.info('sqlTimeExtractExpr');
     // SQL Server uses DATEPART
     const datePartMap: Record<string, string> = {
       'microsecond': 'MICROSECOND',
@@ -656,7 +626,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
-    console.info('sqlRegexpMatch', sqlRegexpMatch)
     // SQL Server doesn't have native regex, use LIKE with wildcards or fallback to PATINDEX
     return `PATINDEX('%' + ${df.kids.regex.sql} + '%', ${df.kids.expr.sql}) > 0`;
   }
@@ -665,7 +634,6 @@ export class TSQLDialect extends Dialect {
     qi: QueryInfo,
     lt: {typeDef: {type: string}; literal: string; timezone?: string}
   ): string {
-    console.info('sqlLiteralTime');
     if (lt.typeDef.type === 'date') {
       return `CAST('${lt.literal}' AS DATE)`;
     }

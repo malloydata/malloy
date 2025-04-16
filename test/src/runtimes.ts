@@ -299,6 +299,8 @@ export const allDatabases = [
   'snowflake',
   'trino',
   'mysql',
+  // TODO (vitor): Remove sqlserver from this list. This is here so vitor can use the whole test suite.
+  'sqlserver',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];

@@ -5281,7 +5281,6 @@ export class QueryModel {
     limit = 1000,
     searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
-    console.info('searchIndex')
     if (!connection.canPersist()) {
       return undefined;
     }

@@ -203,40 +203,22 @@ export class SQLServerConnection
     _rowIndex: number,
     _deJSON: boolean
   ): Promise<MalloyQueryData> {
-    try {
-      // TODO (vitor): This doesn't seem to get called by malloy queries, idk why it's important or why I would want to deJSON
-      console.info('runSQLServerQuery START');
-      console.info('SQL Command:', sqlCommand);
-
-      const client = await this.getClient();
-      console.info('Got client');
-      await client.connect();
-      console.info('Connected to client');
-      await this.connectionSetup(client);
-      console.info('Setup connection');
-
-      console.info('About to execute query');
-      const result = await client.query(sqlCommand);
-      console.info('sql-server-result', result);
-      let rows: QueryData;
-      if (Array.isArray(result.recordsets)) {
-        rows = result.recordsets.flat();
-        console.info('Got recordsets, flattened rows:', rows.length);
-      } else {
-        console.error('SQLServer result not in expected format:', result);
-        throw new Error('SQLServer non-array output is not supported');
-      }
-
-      await client.close();
-      console.info('runSQLServerQuery END');
-      return {
-        rows,
-        totalRows: result.rowsAffected.reduce((acc, val) => acc + val, 0),
-      };
-    } catch (error) {
-      console.error('Error in runSQLServerQuery:', error);
-      throw error;
+    const client = await this.getClient();
+    await client.connect();
+    await this.connectionSetup(client);
+    const result = await client.query(sqlCommand);
+    let rows: QueryData;
+    if (Array.isArray(result.recordsets)) {
+      rows = result.recordsets.flat();
+    } else {
+      throw new Error('SQLServer non-array output is not supported');
     }
+
+    await client.close();
+    return {
+      rows,
+      totalRows: result.rowsAffected.reduce((acc, val) => acc + val, 0),
+    };
   }
 
   async fetchSelectSchema(
@@ -270,7 +252,6 @@ export class SQLServerConnection
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
-      console.warn(infoQuery);
       return `Error fetching schema for ${structDef.name}: ${error}`;
     }
     return structDef;
@@ -327,7 +308,6 @@ export class SQLServerConnection
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
-      console.warn(infoQuery);
       return `Error fetching schema for ${tablePath}: ${error.message}`;
     }
     return structDef;
@@ -347,25 +327,14 @@ export class SQLServerConnection
     {rowLimit}: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
-    console.info('mmmmmmmmmmmmmmmmmmmmm')
-    try {
-      const config = await this.readQueryConfig();
-      console.info('banana', sql)
-      console.info('runSQL', sql)
-      console.info('About to call runSQLServerQuery with this:', this.constructor.name)
-      const result = await this.runSQLServerQuery(
-        sql,
-        rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
-        rowIndex,
-        true
-      );
-      console.info('runSQL-result', result)
-      console.info('runSQL completed successfully')
-      return result;
-    } catch (error) {
-      console.error('Error in runSQL:', error);
-      throw error;
-    }
+    const config = await this.readQueryConfig();
+    const result = await this.runSQLServerQuery(
+      sql,
+      rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
+      rowIndex,
+      true
+    );
+    return result;
   }
 
   public async *runSQLStream(
@@ -377,7 +346,6 @@ export class SQLServerConnection
     const readableStream = request.toReadableStream();
     request.query(sqlCommand);
     let index = 0;
-    console.info('runSQLStream', sqlCommand);
     for await (const row of readableStream) {
       yield row as QueryDataRow;
       index += 1;
@@ -405,7 +373,6 @@ export class SQLServerConnection
       /`/g,
       ''
     )}] AS (${sqlCommand});`;
-    console.info('manifestTemporaryTable', sqlCommand)
     await this.runSQLServerQuery(cmd, 1000, 0, false);
     return tableName;
   }
@@ -488,13 +455,9 @@ export class PooledSQLServerConnection
     _rowIndex: number,
     _deJSON: boolean
   ): Promise<MalloyQueryData> {
-    console.info('baaaaaaaaaaaaaaaaaanana');
     const pool = await this.getPool();
     const client = await pool.connect();
-    console.info('sqlllcommandddd', sqlCommand);
     const result = await client.query(sqlCommand);
-    console.info('resultpooled', result);
-    console.info('waka waka');
     let rows: QueryData;
     if (Array.isArray(result.recordsets)) {
       rows = result.recordsets.flat();
@@ -521,7 +484,6 @@ export class PooledSQLServerConnection
     const request = client.request();
     const readableStream = request.toReadableStream();
     request.query(sqlCommand);
-    console.info('runSQLStream', sqlCommand);
 
     for await (const row of readableStream) {
       yield row as QueryDataRow;
