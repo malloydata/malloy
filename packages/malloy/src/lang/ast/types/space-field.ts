@@ -29,7 +29,6 @@ import type {
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import type {FieldSpace} from './field-space';
-import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
@@ -44,10 +43,11 @@ export abstract class SpaceField extends SpaceEntry {
         // Use the composite field usage in the def if it exists, otherwise, if the
         // field has an e whic is a composite field, then the composite field usage
         // should be just the name of the field.
-        def.compositeFieldUsage ??
-        (def.e?.node === 'compositeField'
-          ? {fields: [def.as ?? def.name], joinedUsage: {}}
-          : emptyCompositeFieldUsage()),
+        // TODO update comment
+        def.compositeFieldUsage ?? {
+          fields: [def.as ?? def.name],
+          joinedUsage: {},
+        },
     };
     return ref;
   }

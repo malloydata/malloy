@@ -60,6 +60,7 @@ import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
+import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -155,7 +156,10 @@ export abstract class AtomicFieldDeclaration
       }
       ret.location = this.location;
       ret.e = exprValue.value;
-      ret.compositeFieldUsage = exprValue.compositeFieldUsage;
+      ret.compositeFieldUsage = mergeCompositeFieldUsage(
+        exprValue.compositeFieldUsage,
+        {fields: [ret.name], joinedUsage: {}}
+      );
       ret.requiredGroupBys = exprValue.requiredGroupBys;
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;

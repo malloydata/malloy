@@ -146,7 +146,14 @@ export class SQLSource extends Source {
       const location = this.select.location;
       const locStruct: StructDef = {
         ...lookup.value,
-        fields: lookup.value.fields.map(f => ({...f, location})),
+        fields: lookup.value.fields.map(f => ({
+          ...f,
+          location,
+          compositeFieldUsage: {
+            fields: [f.as ?? f.name],
+            joinedUsage: {},
+          },
+        })),
         location: this.location,
       };
       const fromDoc = this.document();
