@@ -1488,6 +1488,24 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
+    test.skip('composed source input skipped when invalid require group by usage but field is present in source', () => {
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a extend {
+              measure: aisum is ai.sum() { require_group_by: astr }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
     test.skip('composed source input skipped when invalid require group by usage', () => {
       expect(
         markSource`

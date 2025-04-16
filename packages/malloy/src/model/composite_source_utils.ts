@@ -7,7 +7,7 @@
 
 import {isNotUndefined} from '../lang/utils';
 import type {CompositeFieldUsage, FieldDef, SourceDef} from './malloy_types';
-import {isJoinable, isJoined, isSourceDef} from './malloy_types';
+import {isAtomic, isJoinable, isJoined, isSourceDef} from './malloy_types';
 
 type CompositeError =
   | {code: 'not_a_composite_source'; data: {path: string[]}}
@@ -38,6 +38,20 @@ function _resolveCompositeSources(
   const nonCompositeFields = getNonCompositeFields(source);
   if (compositeFieldUsage.fields.length > 0 || source.type === 'composite') {
     if (source.type === 'composite') {
+      // This is a test for now; want to ensure that if I made `compositeFieldUsage` just `fieldUsage`, I could then
+      // pick only the composite field usage out of it here. If this works, I'll likely keep this code, but change
+      // all the names...
+      const testCompositeFieldsThatAreDefinitelyComposite =
+        compositeFieldUsage.fields.filter(fieldName => {
+          const defInComposedSource = source.fields.find(
+            field => field.name === fieldName
+          );
+          return (
+            defInComposedSource &&
+            isAtomic(defInComposedSource) &&
+            defInComposedSource.e?.node === 'compositeField'
+          );
+        });
       let found = false;
       // The narrowed source list is either the one given when this function was called,
       // or we construct a new one from the given composite source's input sources.
@@ -59,7 +73,7 @@ function _resolveCompositeSources(
             fieldNames.add(field.as ?? field.name);
           }
         }
-        for (const usage of compositeFieldUsage.fields) {
+        for (const usage of testCompositeFieldsThatAreDefinitelyComposite) {
           if (!fieldNames.has(usage)) {
             newNarrowedSources.shift();
             continue overSources;
