@@ -7,14 +7,6 @@
 
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
-function greatestOrLeastSQL(name: string) {
-  return (
-    'CASE WHEN (SELECT COUNT(*) FROM (VALUES(${...values})) AS t(v) WHERE v IS NULL) > 0 THEN NULL ELSE ' +
-    name +
-    '(${...values}) END'
-  );
-}
-
 export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   byte_length: {function: 'DATALENGTH'},
   ends_with: {
