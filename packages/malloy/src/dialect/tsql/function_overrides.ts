@@ -9,69 +9,54 @@ import type {MalloyStandardFunctionImplementations as OverrideMap} from '../func
 
 function greatestOrLeastSQL(name: string) {
   return (
-    'CASE WHEN NUM_NULLS(${...values}) > 0 THEN NULL ELSE ' +
+    'CASE WHEN (SELECT COUNT(*) FROM (VALUES(${...values})) AS t(v) WHERE v IS NULL) > 0 THEN NULL ELSE ' +
     name +
     '(${...values}) END'
   );
 }
 
 export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
-  // TODO (vitor): Done-ish. remove this comment after tests
   byte_length: {function: 'DATALENGTH'},
-  // TODO (vitor): Done-ish. remove this comment after tests
-  // There's no ENDS_WITH function in TSQL, so we do a hacky check that the last
-  // N characters, where N is the length of the suffix, are equal to the suffix.
   ends_with: {
-    sql: 'COALESCE(RIGHT(${value}, LENGTH(${suffix})) = ${suffix}, CAST(0 AS BIT))',
+    sql: 'COALESCE(RIGHT(${value}, LEN(${suffix})) = ${suffix}, CAST(0 AS BIT))',
   },
-  greatest: {sql: greatestOrLeastSQL('GREATEST')},
-  least: {sql: greatestOrLeastSQL('LEAST')},
-  // Postgres doesn't have an IFNULL function, so we use COALESCE, which is equivalent.
-  ifnull: {sql: 'COALESCE(${value}, ${default})'},
+  greatest: {function: 'GREATEST'},
+  least: {function: 'LEAST'},
+  ifnull: {sql: 'ISNULL(${value}, ${default})'},
   is_inf: {
-    sql: "COALESCE(${value} = DOUBLE PRECISION 'Infinity' OR ${value} = DOUBLE PRECISION '-Infinity', false)",
+    sql: "COALESCE(${value} = CAST('Infinity' AS FLOAT) OR ${value} = CAST('-Infinity' AS FLOAT), CAST(0 AS BIT))",
   },
-  is_nan: {sql: "COALESCE(${value} = NUMERIC 'NaN', false)"},
-  // Parameter order is backwards in Postgres.
-  log: {sql: 'LOG(${base}, ${value})'},
-  rand: {function: 'RANDOM'},
-  regexp_extract: {function: 'SUBSTRING'},
+  is_nan: {
+    sql: "COALESCE(CAST(${value} AS FLOAT) = CAST('NaN' AS FLOAT), CAST(0 AS BIT))",
+  },
+  log: {sql: 'LOG(${value}, ${base})'},
+  rand: {function: 'RAND'},
+  regexp_extract: {sql: 'STRING_SPLIT(${value}, ${pattern})'},
   replace: {
-    // In Postgres we specifically need to say that the replacement should be global.
     regular_expression: {
-      sql: "REGEXP_REPLACE(${value}, ${pattern}, ${replacement}, 'g')",
+      sql: 'REPLACE(${value}, ${pattern}, ${replacement})',
     },
   },
-  // Postgres doesn't let you ROUND a FLOAT to a particular number of decimal places,
-  // so we cast to NUMERIC first...
-  // TODO it would be nice not to have to do this cast if it was already NUMERIC type...
   round: {
-    to_integer: {sql: 'ROUND((${value})::NUMERIC)'},
-    to_precision: {sql: 'ROUND((${value})::NUMERIC, ${precision})'},
+    to_integer: {sql: 'ROUND(${value}, 0)'},
+    to_precision: {sql: 'ROUND(${value}, ${precision})'},
   },
-  // TODO this is a bit of a hack in order to make the arrayAggUnnest work for Postgres,
-  // as we don't currently have a good way of doing this while preserving types
-  stddev: {sql: 'STDDEV(${value}::DOUBLE PRECISION)'},
+  stddev: {function: 'STDEV'},
   substr: {
     position_only: {
-      sql: 'SUBSTR(${value}, CASE WHEN ${position} < 0 THEN LENGTH(${value}) + ${position} + 1 ELSE ${position} END)',
+      sql: 'SUBSTRING(${value}, CASE WHEN ${position} < 0 THEN LEN(${value}) + ${position} + 1 ELSE ${position} END, LEN(${value}))',
     },
     with_length: {
-      sql: 'SUBSTR(${value}, CASE WHEN ${position} < 0 THEN LENGTH(${value}) + ${position} + 1 ELSE ${position} END, ${length})',
+      sql: 'SUBSTRING(${value}, CASE WHEN ${position} < 0 THEN LEN(${value}) + ${position} + 1 ELSE ${position} END, ${length})',
     },
   },
-  // Postgres doesn't let you TRUNC a FLOAT with a precision, so we cast to NUMERIC first
-  // Also, TRUNC(NULL) doesn't compile because PG doesn't know the type of NULL, so we cast to
-  // NUMERIC there too...
-  // TODO Maybe there's a way we don't have to cast to NUMERIC.
   trunc: {
     to_integer: {
-      sql: 'TRUNC(${value}::NUMERIC)',
+      sql: 'FLOOR(${value})',
     },
     to_precision: {
-      sql: 'TRUNC((${value}::NUMERIC), ${precision})',
+      sql: 'ROUND(${value} - 0.5 * SIGN(${value} - FLOOR(${value})), ${precision})',
     },
   },
-  // Aparently the ASCII function also works for unicode code points...
   unicode: {function: 'ASCII'},
 };
