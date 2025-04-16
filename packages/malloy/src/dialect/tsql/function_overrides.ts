@@ -8,6 +8,7 @@
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
 function greatestOrLeastSQL(name: string) {
+  console.info('greatestOrLeastSQL', name)
   return (
     'CASE WHEN NUM_NULLS(${...values}) > 0 THEN NULL ELSE ' +
     name +

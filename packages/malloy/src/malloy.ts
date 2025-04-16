@@ -594,6 +594,7 @@ export class Malloy {
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
+    console.info('malloy-run');
     if (!connection) {
       if (!connections) {
         throw new Error(
@@ -606,6 +607,7 @@ export class Malloy {
     }
     if (sqlStruct) {
       const data = await connection.runSQL(sqlStruct.selectStr);
+      console.info('malloy-data', data);
       return new Result(
         {
           structs: [sqlStruct],
@@ -631,7 +633,10 @@ export class Malloy {
         }
       );
     } else if (preparedResult) {
+      console.info('malloy-preparedResult.sql', preparedResult.sql);
+      console.info('malloy-options', options?.modelAnnotation?.notes);
       const result = await connection.runSQL(preparedResult.sql, options);
+      console.info('malloy-result', result);
       return new Result(
         {
           ...preparedResult._rawQuery,

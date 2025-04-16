@@ -76,7 +76,6 @@ const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'nchar': {type: 'string'},
   'date': {type: 'date'},
   'int': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
   'smallint': {type: 'number', numberType: 'integer'},
   'tinyint': {type: 'number', numberType: 'integer'},
   'float': {type: 'number', numberType: 'float'},
@@ -96,14 +95,11 @@ const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 
 export class TSQLDialect extends Dialect {
   name = 'tsql';
-  defaultNumberType = 'FLOAT(53)';
-  defaultDecimalType = 'NUMERIC';
+  defaultNumberType = 'float(53)';
+  defaultDecimalType = 'numeric';
   udfPrefix = 'tsql_temp.__udf';
   // TODO (vitor): this is set to false for now because I don't know why its needed.
   hasFinalStage = false;
-  // TODO (vitor): This is a hack and I don't think it will work for streaming as it is.
-  finalStageName = 'finalStage';
-
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
@@ -150,7 +146,7 @@ export class TSQLDialect extends Dialect {
   }
 
   mapFields(fieldList: DialectFieldList): string {
-    // console.info('mapFields');
+    console.info('mapFields', fieldList);
     return fieldList
       .map(
         f =>
@@ -184,7 +180,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
-    // console.info('sqlAnyValueTurtle');
+    console.info('sqlAnyValueTurtle', groupSet, fieldList);
     const fields = fieldList
       .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
@@ -229,6 +225,7 @@ export class TSQLDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
+    console.info('sqlUnnestAlias')
     // SQL Server doesn't have UNNEST or JSONB_ARRAY_ELEMENTS
     // Use OPENJSON to parse JSON arrays
     if (isArray) {
@@ -290,7 +287,7 @@ export class TSQLDialect extends Dialect {
         case 'string':
           break;
         case 'number':
-          ret = `CAST(${ret} AS FLOAT)`;
+          ret = `CAST(${ret} AS ${this.defaultNumberType})`;
           break;
         case 'struct':
         case 'array':
@@ -311,7 +308,7 @@ export class TSQLDialect extends Dialect {
     isSingleton: boolean,
     sourceSQLExpression: string
   ): string {
-    // console.info('sqlUnnestPipelineHead');
+    console.info('sqlUnnestPipelineHead');
     // SQL Server equivalent for unnesting JSON arrays
     if (isSingleton) {
       return `(SELECT ${sourceSQLExpression})`;
@@ -321,7 +318,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
-    // console.info('sqlCreateFunction');
+    console.info('sqlCreateFunction');
     // SQL Server function creation syntax
     return `
       CREATE FUNCTION ${id}(@json NVARCHAR(MAX))
@@ -334,7 +331,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    // console.info('sqlCreateFunctionCombineLastStage');
+    console.info('sqlCreateFunctionCombineLastStage');
     // Using FOR JSON PATH to create a JSON array
     return `SELECT (SELECT * FROM ${lastStageName} FOR JSON PATH) AS result`;
   }
@@ -346,22 +343,23 @@ export class TSQLDialect extends Dialect {
       FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS finalStage
     FROM ${lastStageName};
     `;
+    console.info('sqlFinalStage', res)
     return res;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
-    // console.info('sqlSelectAliasAsStruct');
+    console.info('sqlSelectAliasAsStruct');
     // SQL Server doesn't have ROW constructor, use JSON
     return `(SELECT ${alias}.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)`;
   }
 
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
-    // console.info('sqlCreateTableAsSelect');
+    console.info('sqlCreateTableAsSelect');
     throw new Error('Not implemented Yet');
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    // console.info('sqlAlterTimeExpr');
+    console.info('sqlAlterTimeExpr');
     let timeframe = df.units;
     let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {
@@ -379,7 +377,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    // console.info('sqlCast');
+    console.info('sqlCast', qi, cast);
     if (cast.safe) {
       throw new Error("TSQL dialect doesn't support Safe Cast");
     }
@@ -398,6 +396,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    console.info('sqlMeasureTimeExpr')
     const from = df.kids.left;
     const to = df.kids.right;
     const lVal = from.sql;
@@ -417,7 +416,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // console.info('sqlSumDistinct');
+    console.info('sqlSumDistinct');
     // SQL Server version using DISTINCT with GROUP BY
     return `(
       SELECT ${funcName}(t.value)
@@ -433,7 +432,7 @@ export class TSQLDialect extends Dialect {
     values: string[],
     func: (valNames: string[]) => string
   ): string {
-    // console.info('sqlAggDistinct');
+    console.info('sqlAggDistinct');
     // SQL Server version
     return `(
       SELECT ${func(values.map((_, i) => `t.val${i + 1}`))}
@@ -447,7 +446,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
-    // console.info('sqlSampleTable');
+    console.info('sqlSampleTable');
     if (sample !== undefined) {
       if (isSamplingEnable(sample) && sample.enable) {
         sample = this.defaultSampling;
@@ -465,7 +464,7 @@ export class TSQLDialect extends Dialect {
   sqlOrderBy(orderTerms: string[]): string {
     // SQL Server doesn't support NULLS LAST syntax directly
     // Use CASE expression to push NULLs to the end
-    // console.info('sqlOrderBy');
+    console.info('sqlOrderBy');
     return `ORDER BY ${orderTerms
       .map(t => {
         const parts = t.split(' ');
@@ -477,34 +476,33 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlLiteralString(literal: string): string {
-    // console.info('sqlLiteralString');
+    console.info('sqlLiteralString');
     return "N'" + literal.replace(/'/g, "''") + "'";
   }
 
   sqlLiteralRegexp(literal: string): string {
-    // console.info('sqlLiteralRegexp');
+    console.info('sqlLiteralRegexp');
     return "N'" + literal.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
-    // console.info('getDialectFunctionOverrides');
+    console.info('getDialectFunctionOverrides');
     return expandOverrideMap(TSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    // console.info('getDialectFunctions');
+    console.info('getDialectFunctions');
     return expandBlueprintMap(TSQL_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    // console.info('malloyTypeToSQLType');
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'INT';
       } else {
-        return 'FLOAT';
+        return this.defaultNumberType;
       }
     } else if (malloyType.type === 'string') {
       return 'NVARCHAR(MAX)';
@@ -519,7 +517,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
-    // console.info('sqlTypeToMalloyType');
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (
@@ -531,18 +528,18 @@ export class TSQLDialect extends Dialect {
   }
 
   castToString(expression: string): string {
-    // console.info('castToString');
+    console.info('castToString', expression);
     return `CAST(${expression} as NVARCHAR(MAX))`;
   }
 
   concat(...values: string[]): string {
-    // console.info('concat');
+    console.info('concat');
     // SQL Server uses + for string concatenation
     return values.join(' + ');
   }
 
   validateTypeName(sqlType: string): boolean {
-    // console.info('validateTypeName');
+    console.info('validateTypeName');
     // Letters:              BIGINT
     // Numbers:              INT8
     // Spaces:               TIMESTAMP WITH TIME ZONE
@@ -552,7 +549,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
-    // console.info('sqlLiteralRecord');
+    console.info('sqlLiteralRecord');
     // Using JSON_OBJECT to create a JSON object in SQL Server
     const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
@@ -567,7 +564,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
-    // console.info('sqlLiteralArray');
+    console.info('sqlLiteralArray');
     // Using FOR JSON PATH to create a JSON array
     const array = lit.kids.values.map(val => val.sql);
     return `(
@@ -582,12 +579,12 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlNowExpr(): string {
-    // console.info('sqlNowExpr');
+    console.info('sqlNowExpr');
     return 'GETDATE()';
   }
 
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
-    // console.info('sqlTruncExpr');
+    console.info('sqlTruncExpr');
     // SQL Server equivalent for DATE_TRUNC
     // const datePartMap: Record<string, string> = {
     //   'microsecond': 'MICROSECOND',
@@ -629,7 +626,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    // console.info('sqlTimeExtractExpr');
+    console.info('sqlTimeExtractExpr');
     // SQL Server uses DATEPART
     const datePartMap: Record<string, string> = {
       'microsecond': 'MICROSECOND',
@@ -659,6 +656,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
+    console.info('sqlRegexpMatch', sqlRegexpMatch)
     // SQL Server doesn't have native regex, use LIKE with wildcards or fallback to PATINDEX
     return `PATINDEX('%' + ${df.kids.regex.sql} + '%', ${df.kids.expr.sql}) > 0`;
   }
@@ -667,7 +665,7 @@ export class TSQLDialect extends Dialect {
     qi: QueryInfo,
     lt: {typeDef: {type: string}; literal: string; timezone?: string}
   ): string {
-    // console.info('sqlLiteralTime');
+    console.info('sqlLiteralTime');
     if (lt.typeDef.type === 'date') {
       return `CAST('${lt.literal}' AS DATE)`;
     }

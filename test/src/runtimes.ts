@@ -162,7 +162,10 @@ export class SQLServerTestConnection extends PooledSQLServerConnection {
     options?: RunSQLOptions
   ): Promise<MalloyQueryData> {
     try {
-      return await super.runSQL(sqlCommand, options);
+      console.info('bananasuper');
+      const res = await super.runSQL(sqlCommand, options);
+      console.info('ressss', res);
+      return res;
     } catch (e) {
       // eslint-disable-next-line no-console
       console.log(`Error in SQL:\n ${sqlCommand}`);

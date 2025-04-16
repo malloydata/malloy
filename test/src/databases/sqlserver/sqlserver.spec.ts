@@ -202,28 +202,24 @@ describe('SQL Server tests', () => {
     });
   });
 
+  // TODO (vitor): Support BIGINT. For this reason there is no support to BIGINT for now: https://github.com/tediousjs/node-mssql/issues/187
   describe('numbers', () => {
-    it.each([
-      'SMALLINT',
-      'INT',
-      'BIGINT',
-      'DECIMAL',
-      'NUMERIC',
-      'REAL',
-      'FLOAT',
-    ])('supports %s', async sqlType => {
-      const result = await runtime
-        .loadQuery(
-          `
+    it.each(['SMALLINT', 'INT', 'DECIMAL', 'NUMERIC', 'REAL', 'FLOAT'])(
+      'supports %s',
+      async sqlType => {
+        const result = await runtime
+          .loadQuery(
+            `
           ##! experimental.dialect.tsql
           run: sqlserver.sql("SELECT CAST(10 AS ${sqlType}) as d")
           `
-        )
-        .run();
-      const field = result.data.field.allFields[0];
-      expect(field.isAtomicField()).toBe(true);
-      expect((field as AtomicField).isNumber()).toBe(true);
-      expect(result.data.value[0]['d']).toEqual(10);
-    });
+          )
+          .run();
+        const field = result.data.field.allFields[0];
+        expect(field.isAtomicField()).toBe(true);
+        expect((field as AtomicField).isNumber()).toBe(true);
+        expect(result.data.value[0]['d']).toEqual(10);
+      }
+    );
   });
 });
