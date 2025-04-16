@@ -36,22 +36,25 @@ function _resolveCompositeSources(
   let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
     undefined;
   const nonCompositeFields = getNonCompositeFields(source);
-  if (compositeFieldUsage.fields.length > 0 || source.type === 'composite') {
+  // This is a test for now; want to ensure that if I made `compositeFieldUsage` just `fieldUsage`, I could then
+  // pick only the composite field usage out of it here. If this works, I'll likely keep this code, but change
+  // all the names...
+  const testCompositeFieldsThatAreDefinitelyComposite =
+    compositeFieldUsage.fields.filter(fieldName => {
+      const defInComposedSource = source.fields.find(
+        field => field.name === fieldName
+      );
+      return (
+        defInComposedSource &&
+        isAtomic(defInComposedSource) &&
+        defInComposedSource.e?.node === 'compositeField'
+      );
+    });
+  if (
+    testCompositeFieldsThatAreDefinitelyComposite.length > 0 ||
+    source.type === 'composite'
+  ) {
     if (source.type === 'composite') {
-      // This is a test for now; want to ensure that if I made `compositeFieldUsage` just `fieldUsage`, I could then
-      // pick only the composite field usage out of it here. If this works, I'll likely keep this code, but change
-      // all the names...
-      const testCompositeFieldsThatAreDefinitelyComposite =
-        compositeFieldUsage.fields.filter(fieldName => {
-          const defInComposedSource = source.fields.find(
-            field => field.name === fieldName
-          );
-          return (
-            defInComposedSource &&
-            isAtomic(defInComposedSource) &&
-            defInComposedSource.e?.node === 'compositeField'
-          );
-        });
       let found = false;
       // The narrowed source list is either the one given when this function was called,
       // or we construct a new one from the given composite source's input sources.
