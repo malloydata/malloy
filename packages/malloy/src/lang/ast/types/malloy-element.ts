@@ -635,6 +635,7 @@ export class Document extends MalloyElement implements NameSpace {
    */
   checkExperimentalDialect(me: MalloyElement, dialect: string): void {
     const t = this.translator();
+
     if (
       t &&
       t.firstReferenceToDialect(dialect) &&
