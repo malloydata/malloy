@@ -453,7 +453,7 @@ export class TSQLDialect extends Dialect {
         const parts = t.split(' ');
         const field = parts[0];
         const dir = parts.length > 1 ? parts[1] : '';
-        return `CASE WHEN ${field} IS NULL THEN 1 ELSE 0 END, ${field} ${dir}`;
+        return `(SELECT CASE WHEN ${field} IS NULL THEN 1 ELSE 0 END), ${field} ${dir}`;
       })
       .join(',')}`;
   }
