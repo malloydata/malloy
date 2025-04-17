@@ -369,9 +369,13 @@ export class TSQLDialect extends Dialect {
     }
 
     // TODO (vitor): check why this is needed and if it should be the opposite
-    return `DATEADD(${tsqlDatePartMap[timeframe]}, ${
+    return `
+    -- operatorthing start
+    DATEADD(${tsqlDatePartMap[timeframe]}, ${
       df.op === '-' ? '-' : '+'
-    }${n}, ${df.kids.base.sql})`;
+    }(${n}), ${df.kids.base.sql})
+    -- operatorthing end
+    `;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
