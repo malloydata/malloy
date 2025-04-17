@@ -48,6 +48,8 @@ import {TSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // SQL Server funky default for json key 'JSON_F52E2B61-18A1-11d1-B105-00805F49916B'
+// Weeks appear to start on sunday according to time-lietral.ts and snowflake_executor.ts . This is also the sqlserver convention
+// However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART which uses @@DATEFIRST
 
 const tsqlDatePartMap: Record<string, string> = {
   'year': 'year',
@@ -97,7 +99,7 @@ export class TSQLDialect extends Dialect {
   defaultNumberType = 'float(53)';
   defaultDecimalType = 'numeric';
   udfPrefix = 'tsql_temp.__udf';
-  // TODO (vitor): this is set to false for now because I don't know why its needed.
+  // TODO (vitor): hasFinalStage is set to false for now because I don't know why it would be needed.
   hasFinalStage = false;
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
@@ -574,9 +576,7 @@ export class TSQLDialect extends Dialect {
 
     if (df.units === 'week') {
       // Adjust for week start (Monday)
-      return `DATEADD(DAY,
-               -DATEPART(WEEKDAY, ${df.e.sql}) + 1,
-               DATEADD(DAY, DATEDIFF(DAY, 0, ${df.e.sql}), 0))`;
+      return `DATEADD(DAY, -((DATEDIFF(DAY, 0, ${df.e.sql}) + 1) % 7), ${df.e.sql})`;
     } else if (df.units === 'quarter') {
       return `DATEADD(QUARTER, DATEDIFF(QUARTER, 0, ${df.e.sql}), 0)`;
     } else if (df.units === 'month') {
