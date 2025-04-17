@@ -2268,6 +2268,7 @@ export class ASTSegmentViewDefinition
   }
 
   isRunnable(): boolean {
+    let hasValidNest = false;
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTAggregateViewOperation ||
@@ -2278,9 +2279,10 @@ export class ASTSegmentViewDefinition
         if (!operation.view.definition.isRunnable()) {
           return false;
         }
+        hasValidNest = true;
       }
     }
-    return false;
+    return hasValidNest;
   }
 
   get operations() {
