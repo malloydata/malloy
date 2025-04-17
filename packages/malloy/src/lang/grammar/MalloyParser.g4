@@ -400,6 +400,14 @@ exploreQueryDef
   : ANNOTATION* exploreQueryNameDef isDefine vExpr
   ;
 
+drillStatement
+  : DRILL drillClauseList
+  ;
+
+drillClauseList
+  : fieldExpr (COMMA fieldExpr)* COMMA?
+  ;
+
 queryStatement
   : groupByStatement
   | declareStatement
@@ -417,6 +425,7 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  | drillStatement
   | queryAnnotation
   | ignoredModelAnnotations
   ;

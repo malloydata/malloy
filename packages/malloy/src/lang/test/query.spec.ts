@@ -1406,4 +1406,123 @@ describe('query:', () => {
       ).toTranslate();
     });
   });
+  describe('drill:', () => {
+    test('basic drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('drill view is not defined', () => {
+      expect(
+        markSource`
+          run: a -> {
+            drill: ${'by_ai'}.ai = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such view `by_ai`'));
+    });
+    test('drill field is not defined', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.${'ai'} = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such field `ai` found in `by_ai`'));
+    });
+    test('drill nest found', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+    test('drill nest not found', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.nested.astr = 'foo'
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('No such nest `nested` found in `by_ai`'));
+    });
+    test.skip('drill wrong type', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: ai
+            }
+          }
+          run: aext -> {
+            drill: by_ai.ai = 'foo'
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('Mismathcing type??'));
+    });
+    test('drill picks up wheres', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: ai = 2
+            nest: nested is {
+              where: abool = true
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(3);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+      expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
+      expect(f[2]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+  });
 });

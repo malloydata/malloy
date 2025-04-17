@@ -27,6 +27,7 @@ import type {
   CompositeFieldUsage,
   DocumentLocation,
   DocumentRange,
+  Expr,
 } from '../../model';
 import {exprToStr} from './expr-to-str';
 import type {MarkedSource} from './test-translator';
@@ -78,6 +79,7 @@ declare global {
        * Warnings are ignored, so need to be checked seperately
        */
       compilesTo(exprString: string): R;
+      toBeExpr(exprString: string): R;
       hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
     }
   }
@@ -274,6 +276,14 @@ expect.extend({
     const rcvExpr = exprToStr(toExpr, undefined);
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
+    return {pass, message: () => `${msg}`};
+  },
+  toBeExpr: function (expr: Expr, exprString: string) {
+    const rcvExpr = exprToStr(expr, undefined);
+    const pass = this.equals(rcvExpr, exprString);
+    const msg = pass
+      ? `Matched: ${rcvExpr}`
+      : this.utils.diff(exprString, rcvExpr);
     return {pass, message: () => `${msg}`};
   },
   hasCompositeUsage: function (

@@ -407,6 +407,19 @@ type MessageParameterTypes = {
   'filter-expression-type': string;
   'filter-expression-error': string;
   'invalid-malloy-query-document': string;
+  'analytic-in-drill': string;
+  'aggregate-in-drill': string;
+  'drill-not-equality': string;
+  'drill-lhs-not-id': string;
+  'drill-rhs-not-literal': string;
+  'invalid-drill-reference': string;
+  'drill-view-reference-not-found': string;
+  'drill-view-reference-not-field': string;
+  'drill-view-reference-not-view': string;
+  'drill-incompatible-segment': string;
+  'drill-nest-not-found': string;
+  'drill-field-not-found': string;
+  'drill-field-reference-not-field': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
