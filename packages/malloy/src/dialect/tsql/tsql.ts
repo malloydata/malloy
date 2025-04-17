@@ -368,8 +368,9 @@ export class TSQLDialect extends Dialect {
       n = `${n}*7`;
     }
 
+    // TODO (vitor): check why this is needed and if it should be the opposite
     return `DATEADD(${tsqlDatePartMap[timeframe]}, ${
-      df.op === '+' ? '' : '-'
+      df.op === '-' ? '-' : '+'
     }${n}, ${df.kids.base.sql})`;
   }
 
@@ -570,10 +571,23 @@ export class TSQLDialect extends Dialect {
       throw new Error('Invalid date part');
     }
     const d = df.e.sql;
+
+    const id = Math.floor(Math.random() * 1000);
     if (datePart === 'week') {
-      return `DATEADD(DAY, -((DATEDIFF(DAY, 0, ${d}) + 1) % 7), ${d})`;
+      return `
+      -- trunc ${datePart} start ${id}
+      DATEADD(
+        DAY,
+        -((DATEDIFF(DAY, 0, ${d}) + 1) % 7), ${d}
+      )
+      -- trunc ${datePart} end ${id}
+      `;
     } else {
-      return `DATETRUNC(${df.units}, ${d})`;
+      return `
+      -- trunc ${datePart} start ${id}
+      DATETRUNC(${datePart}, ${d})
+      -- trunc ${datePart} end ${id}
+      `;
     }
     // switch (datePart) {
     //   case 'WEEK':
@@ -616,6 +630,7 @@ export class TSQLDialect extends Dialect {
     const datePart = tsqlDatePartMap[from.units];
     const d = from.e.sql;
 
+    const id = Math.floor(Math.random() * 1000);
     switch (datePart) {
       case 'year':
         return `YEAR(${d})`;
@@ -626,7 +641,11 @@ export class TSQLDialect extends Dialect {
       case 'day':
         return `DAY(${d})`;
       case 'weekday':
-        return `(SELECT DATEDIFF(day, '17530107', ${d}) % 7 + 1)`;
+        return `
+        -- weekday start ${id}
+        (SELECT DATEDIFF(day, '17530107', ${d}) % 7 + 1)
+        -- weekday end ${id}
+        `;
       case 'hour':
         return `(DATEDIFF(hour, CONVERT(date, ${d}), ${d}))`;
       case 'minute':
