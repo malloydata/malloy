@@ -134,10 +134,10 @@ export function matchOp(matchSrc: string): StringFilter {
     }
     return {operator: '~', escaped_values: [matchTxt]};
   }
-  if (matchTxt.toLowerCase() === 'null' || matchTxt === 'NULL') {
+  if (matchTxt.toLowerCase() === 'null') {
     return {operator: 'null'};
   }
-  if (matchTxt === 'empty' || matchTxt === 'EMPTY') {
+  if (matchTxt.toLowerCase() === 'empty') {
     return {operator: 'empty'};
   }
   return {operator: '=', values: [unescape(matchTxt)]};

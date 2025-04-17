@@ -42,13 +42,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
     test('empty string filter expression', async () => {
-      /*
-        since the sql generated works when pasted into mysql
-        my next suggestion is that there is some funky re-ordering
-        happening in the result processing which will test tomorrow
-      */
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'';
           select: *; order_by: nm asc
@@ -111,11 +105,15 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('empty', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
         }`).malloyResultMatches(abc, got('z-empty,z-null'));
+      await expect(`
+          run: abc -> {
+            where: s ~ f'EmpTy'
+            select: nm; order_by: nm asc
+          }`).malloyResultMatches(abc, got('z-empty,z-null'));
     });
     test('-empty', async () => {
       await expect(`
@@ -127,9 +125,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('null', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'null'
+          select: nm
+        }`).malloyResultMatches(abc, got('z-null'));
+      await expect(`
+        run: abc -> {
+          where: s ~ f'nULl'
           select: nm
         }`).malloyResultMatches(abc, got('z-null'));
     });
