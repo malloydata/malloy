@@ -50,8 +50,9 @@ import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // SQL Server funky default for json key 'JSON_F52E2B61-18A1-11d1-B105-00805F49916B'
 // Weeks appear to start on sunday according to time-lietral.ts and snowflake_executor.ts . This is also the sqlserver convention
 // However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART which uses @@DATEFIRST
+// DATEADD's first parameter is a datepart value so we will be referencing those dateparts, just not the function.
 
-const tsqlDateAddMap: Record<string, string> = {
+const tsqlDatePartMap: Record<string, string> = {
   'microsecond': 'MICROSECOND',
   'millisecond': 'MILLISECOND',
   'second': 'SECOND',
@@ -366,7 +367,7 @@ export class TSQLDialect extends Dialect {
       n = `${n}*7`;
     }
 
-    return `DATEADD(${tsqlDateAddMap[timeframe]}, ${
+    return `DATEADD(${tsqlDatePartMap[timeframe]}, ${
       df.op === '+' ? '' : '-'
     }${n}, ${df.kids.base.sql})`;
   }
@@ -584,18 +585,31 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const datePart = tsqlDatePartMap[from.units];
+    const d = from.e.sql;
 
-    const datePart = tsqlDateAddMap[from.units];
-    if (!datePart) {
-      throw new Error(`Unsupported date extraction unit: ${from.units}`);
+    switch (datePart) {
+      case 'YEAR':
+        return `YEAR(${d})`;
+      case 'QUARTER':
+        return `((MONTH(${d}) - 1) / 3 + 1)`;
+      case 'MONTH':
+        return `MONTH(${d})`;
+      case 'DAY':
+        return `DAY(${d})`;
+      case 'WEEKDAY':
+        return `((DATEDIFF(day, '19000101', ${d}) % 7) + 1)`;
+      case 'HOUR':
+        return `(DATEDIFF(hour, CONVERT(date, ${d}), ${d}))`;
+      case 'MINUTE':
+        return `(DATEDIFF(minute, DATEADD(hour, DATEDIFF(hour, 0, ${d}), 0), ${d}))`;
+      case 'SECOND':
+        return `(DATEDIFF(second, DATEADD(minute, DATEDIFF(minute, 0, ${d}), 0), ${d}))`;
+      case 'MILLISECOND':
+        return `(DATEDIFF(millisecond, DATEADD(second, DATEDIFF(second, 0, ${d}), 0), ${d}))`;
+      default:
+        throw new Error(`Unsupported date extraction unit: ${from.units}`);
     }
-
-    if (from.units === 'day_of_week') {
-      // SQL Server WEEKDAY returns 1 for Sunday, add 1 to get Monday=1 format
-      return `((DATEPART(WEEKDAY, ${from.e.sql}) + 5) % 7 + 1)`;
-    }
-
-    return `DATEPART(${datePart}, ${from.e.sql})`;
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
