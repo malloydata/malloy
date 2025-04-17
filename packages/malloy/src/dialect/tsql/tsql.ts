@@ -598,7 +598,7 @@ export class TSQLDialect extends Dialect {
       case 'DAY':
         return `DAY(${d})`;
       case 'WEEKDAY':
-        return `((DATEDIFF(day, '19000101', ${d}) % 7) + 1)`;
+        return `SELECT DATEDIFF(day, '17530107', ${d}) % 7 + 1`;
       case 'HOUR':
         return `(DATEDIFF(hour, CONVERT(date, ${d}), ${d}))`;
       case 'MINUTE':
