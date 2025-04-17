@@ -281,6 +281,20 @@ export class Drill
   }
 
   getFilterList(fs: FieldSpace): FilterCondition[] {
+    // TODO ensure that the rules for drilling are followed:
+    // - can have any number of top level views
+    // - but can only go deeper than depth 0 in ONE of them
+    // - for each nest deep in that one view; cannot go into any other nests at that level
+    // e.g.
+    // a = 1
+    // b = 1
+    // c.d.e = 1
+    // but not
+    // a.b = 1
+    // c.d = 2
+    // or
+    // a.b.c = 1
+    // a.d.e = 1
     return this.list
       .map(filter => this.checkedFilterCondition(fs, filter))
       .filter(isNotUndefined)
