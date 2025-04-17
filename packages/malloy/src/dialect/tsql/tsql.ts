@@ -124,6 +124,7 @@ export class TSQLDialect extends Dialect {
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
   likeEscape = false;
+  booleanAsNumbers = true;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
