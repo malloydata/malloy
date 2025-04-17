@@ -88,14 +88,14 @@ export class Drill
     const viewLookup = fs.lookup([viewName]);
     // TODO register reference to view
     if (viewLookup.found === undefined) {
-      drill.logError(
+      viewName.logError(
         'drill-view-reference-not-found',
         `No such view \`${viewName.refString}\``
       );
       return;
     }
     if (viewLookup.found.refType !== 'field') {
-      drill.logError(
+      viewName.logError(
         'drill-view-reference-not-field',
         `Head of drill reference must be a view, not a ${viewLookup.found.refType}`
       );
