@@ -52,13 +52,18 @@ import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART which uses @@DATEFIRST
 
 const tsqlDateAddMap: Record<string, string> = {
-  'year': 'year',
-  'month': 'month',
-  'week': 'week',
-  'day': 'day',
-  'hour': 'hour',
-  'minute': 'minute',
-  'second': 'second',
+  'microsecond': 'MICROSECOND',
+  'millisecond': 'MILLISECOND',
+  'second': 'SECOND',
+  'minute': 'MINUTE',
+  'hour': 'HOUR',
+  'day': 'DAY',
+  'week': 'WEEK',
+  'month': 'MONTH',
+  'quarter': 'QUARTER',
+  'year': 'YEAR',
+  'day_of_week': 'WEEKDAY',
+  'day_of_year': 'DAYOFYEAR',
 };
 
 const inSeconds: Record<string, number> = {
@@ -579,21 +584,8 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    const datePartMap: Record<string, string> = {
-      'microsecond': 'MICROSECOND',
-      'millisecond': 'MILLISECOND',
-      'second': 'SECOND',
-      'minute': 'MINUTE',
-      'hour': 'HOUR',
-      'day': 'DAY',
-      'month': 'MONTH',
-      'quarter': 'QUARTER',
-      'year': 'YEAR',
-      'day_of_week': 'WEEKDAY',
-      'day_of_year': 'DAYOFYEAR',
-    };
 
-    const datePart = datePartMap[from.units];
+    const datePart = tsqlDateAddMap[from.units];
     if (!datePart) {
       throw new Error(`Unsupported date extraction unit: ${from.units}`);
     }
