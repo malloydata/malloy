@@ -14,6 +14,7 @@ import type {
 } from '@malloydata/malloy';
 import { BaseConnection } from '@malloydata/malloy/connection';
 import { Configuration, ConnectionAttributes, ConnectionsApi } from './client';
+import { AxiosRequestConfig } from 'axios';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -31,6 +32,7 @@ export class PublisherConnection
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
   private connectionAttributes: ConnectionAttributes;
+  private accessToken: string | undefined;
 
   static async create(name: string, options: PublisherConnectionOptions) {
     const url = new URL(options.connectionUri);
@@ -51,37 +53,50 @@ export class PublisherConnection
         `Connection name mismatch: ${name} !== ${connectionName}. Connection name must match the URI path.`
       );
     }
-
     const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
       basePath: apiUrl,
-      accessToken: options.accessToken,
     });
     const connectionsApi = new ConnectionsApi(configuration);
-    const response = await connectionsApi.getConnection(projectName, name);
+    const response = await connectionsApi.getConnection(
+      projectName, name,
+      {
+        headers: PublisherConnection.getAuthHeaders(options.accessToken),
+      });
     const connectionAttributes = response.data
       .attributes as ConnectionAttributes;
     const connection = new PublisherConnection(
       name,
       projectName,
       connectionsApi,
-      connectionAttributes
+      connectionAttributes,
+      options.accessToken
     );
     await connection.test();
     return connection;
+  }
+
+  private static getAuthHeaders(
+    accessToken: string | undefined,
+  ): AxiosRequestConfig["headers"] {
+    return {
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+    };
   }
 
   private constructor(
     name: string,
     projectName: string,
     connectionsApi: ConnectionsApi,
-    connectionAttributes: ConnectionAttributes
+    connectionAttributes: ConnectionAttributes,
+    accessToken: string | undefined
   ) {
     super();
     this.name = name;
     this.projectName = projectName;
     this.connectionsApi = connectionsApi;
     this.connectionAttributes = connectionAttributes;
+    this.accessToken = accessToken;
   }
 
   public get dialectName(): string {
@@ -108,7 +123,10 @@ export class PublisherConnection
       this.projectName,
       this.name,
       tableKey,
-      tablePath
+      tablePath,
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
     );
     return JSON.parse(response.data) as TableSourceDef;
   }
@@ -119,7 +137,10 @@ export class PublisherConnection
     const response = await this.connectionsApi.getSqlsource(
       this.projectName,
       this.name,
-      sqlRef.selectStr
+      sqlRef.selectStr,
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
     );
     return JSON.parse(response.data) as SQLSourceDef;
   }
@@ -139,12 +160,15 @@ export class PublisherConnection
       this.projectName,
       this.name,
       sql,
-      JSON.stringify(options)
+      JSON.stringify(options),
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
     );
     return JSON.parse(response.data) as MalloyQueryData;
   }
 
-  public async *runSQLStream(
+  public async * runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
@@ -155,7 +179,10 @@ export class PublisherConnection
       this.projectName,
       this.name,
       sqlCommand,
-      JSON.stringify(options)
+      JSON.stringify(options),
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
     );
     const queryData = JSON.parse(response.data) as MalloyQueryData;
     for (const row of queryData.rows) {
@@ -171,7 +198,10 @@ export class PublisherConnection
     const response = await this.connectionsApi.getTemporarytable(
       this.projectName,
       this.name,
-      sqlCommand
+      sqlCommand,
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
     );
     return response.data;
   }
