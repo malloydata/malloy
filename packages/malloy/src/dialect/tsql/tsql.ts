@@ -51,7 +51,7 @@ import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // Weeks appear to start on sunday according to time-lietral.ts and snowflake_executor.ts . This is also the sqlserver convention
 // However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART which uses @@DATEFIRST
 
-const tsqlDatePartMap: Record<string, string> = {
+const tsqlDateAddMap: Record<string, string> = {
   'year': 'year',
   'month': 'month',
   'week': 'week',
@@ -361,8 +361,7 @@ export class TSQLDialect extends Dialect {
       n = `${n}*7`;
     }
 
-    // Using DATEADD instead of PostgreSQL's make_interval
-    return `DATEADD(${tsqlDatePartMap[timeframe]}, ${
+    return `DATEADD(${tsqlDateAddMap[timeframe]}, ${
       df.op === '+' ? '' : '-'
     }${n}, ${df.kids.base.sql})`;
   }
@@ -558,24 +557,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
-    // SQL Server equivalent for DATE_TRUNC
-    // const datePartMap: Record<string, string> = {
-    //   'microsecond': 'MICROSECOND',
-    //   'millisecond': 'MILLISECOND',
-    //   'second': 'SECOND',
-    //   'minute': 'MINUTE',
-    //   'hour': 'HOUR',
-    //   'day': 'DAY',
-    //   'week': 'WEEK',
-    //   'month': 'MONTH',
-    //   'quarter': 'QUARTER',
-    //   'year': 'YEAR',
-    // };
-
-    // const datePart = datePartMap[df.units];
-
     if (df.units === 'week') {
-      // Adjust for week start (Monday)
       return `DATEADD(DAY, -((DATEDIFF(DAY, 0, ${df.e.sql}) + 1) % 7), ${df.e.sql})`;
     } else if (df.units === 'quarter') {
       return `DATEADD(QUARTER, DATEDIFF(QUARTER, 0, ${df.e.sql}), 0)`;
@@ -597,7 +579,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
-    // SQL Server uses DATEPART
     const datePartMap: Record<string, string> = {
       'microsecond': 'MICROSECOND',
       'millisecond': 'MILLISECOND',
