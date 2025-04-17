@@ -13,7 +13,7 @@ describe('db:Publisher', () => {
 
   beforeEach(async () => {
     conn = await PublisherConnection.create('bigquery', {
-      connectionUri: 'http://localhost:4000/api/v0/projects/home/connections/bigquery',
+      connectionUri: 'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
     });
     const files = {
       readURL: async (url: URL) => {
