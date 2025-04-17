@@ -1524,5 +1524,65 @@ describe('query:', () => {
       expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
       expect(f[2]).toBeExpr('{filterCondition {astr = {"foo"}}}');
     });
+    test.skip('can filter on private field with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          private dimension: private_ai is ai
+          view: by_private_ai is {
+            group_by: private_ai
+          }
+        }
+        run: aext -> {
+          drill: by_private_ai.private_ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {private_ai = 2}}');
+    });
+    test('can filter on param with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.parameters
+        source: aext(param is 1) is a extend {
+          view: by_param is {
+            group_by: param
+          }
+        }
+        run: aext -> {
+          drill: by_param.param = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{parameter param} = 2}}');
+    });
+    test('can filter on expression with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.parameters
+        source: aext(param is 1) is a extend {
+          dimension: private_field is 1
+          view: by_param is {
+            group_by: x is param + private_field
+          }
+        }
+        run: aext -> {
+          drill: by_param.x = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{parameter param} + private_field} = 2}}'
+      );
+    });
   });
 });
