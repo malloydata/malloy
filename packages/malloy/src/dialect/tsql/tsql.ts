@@ -373,7 +373,7 @@ export class TSQLDialect extends Dialect {
     -- operatorthing start
     DATEADD(${tsqlDatePartMap[timeframe]}, ${
       df.op === '-' ? '-' : '+'
-    }(${n}), ${df.kids.base.sql})
+    }(${n}), (${df.kids.base.sql}))
     -- operatorthing end
     `;
   }
