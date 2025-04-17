@@ -49,22 +49,23 @@ import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // SQL Server funky default for json key 'JSON_F52E2B61-18A1-11d1-B105-00805F49916B'
 // Weeks appear to start on sunday according to time-lietral.ts and snowflake_executor.ts . This is also the sqlserver convention
-// However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART which uses @@DATEFIRST
+// However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART for weeks which uses @@DATEFIRST
 // DATEADD's first parameter is a datepart value so we will be referencing those dateparts, just not the function.
+// DATETRUNC is also based on @@DATEFIRST so we will avoid that for weeks too.
 
 const tsqlDatePartMap: Record<string, string> = {
-  'microsecond': 'MICROSECOND',
-  'millisecond': 'MILLISECOND',
-  'second': 'SECOND',
-  'minute': 'MINUTE',
-  'hour': 'HOUR',
-  'day': 'DAY',
-  'week': 'WEEK',
-  'month': 'MONTH',
-  'quarter': 'QUARTER',
-  'year': 'YEAR',
-  'day_of_week': 'WEEKDAY',
-  'day_of_year': 'DAYOFYEAR',
+  'microsecond': 'microsecond',
+  'millisecond': 'millisecond',
+  'second': 'second',
+  'minute': 'minute',
+  'hour': 'hour',
+  'day': 'day',
+  'week': 'week',
+  'month': 'month',
+  'quarter': 'quarter',
+  'year': 'year',
+  'day_of_week': 'weekday',
+  'day_of_year': 'dayofyear',
 };
 
 const inSeconds: Record<string, number> = {
@@ -563,49 +564,76 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
-    if (df.units === 'week') {
-      return `DATEADD(DAY, -((DATEDIFF(DAY, 0, ${df.e.sql}) + 1) % 7), ${df.e.sql})`;
-    } else if (df.units === 'quarter') {
-      return `DATEADD(QUARTER, DATEDIFF(QUARTER, 0, ${df.e.sql}), 0)`;
-    } else if (df.units === 'month') {
-      return `DATEADD(MONTH, DATEDIFF(MONTH, 0, ${df.e.sql}), 0)`;
-    } else if (df.units === 'year') {
-      return `DATEADD(YEAR, DATEDIFF(YEAR, 0, ${df.e.sql}), 0)`;
-    } else if (df.units === 'day') {
-      return `CAST(CAST(${df.e.sql} AS DATE) AS DATETIME2)`;
-    } else if (df.units === 'hour') {
-      return `DATEADD(HOUR, DATEDIFF(HOUR, 0, ${df.e.sql}), 0)`;
-    } else if (df.units === 'minute') {
-      return `DATEADD(MINUTE, DATEDIFF(MINUTE, 0, ${df.e.sql}), 0)`;
-    } else if (df.units === 'second') {
-      return `DATEADD(SECOND, DATEDIFF(SECOND, 0, ${df.e.sql}), 0)`;
-    } else {
-      throw new Error(`Unsupported date truncation unit: ${df.units}`);
+    const datePart = tsqlDatePartMap[df.units];
+    if (!datePart) {
+      // TODO (vitor): Check throwing conventions
+      throw new Error('Invalid date part');
     }
+    const d = df.e.sql;
+    if (datePart === 'week') {
+      return `DATEADD(DAY, -((DATEDIFF(DAY, 0, ${d}) + 1) % 7), ${d})`;
+    } else {
+      return `DATETRUNC(${df.units}, ${d})`;
+    }
+    // switch (datePart) {
+    //   case 'WEEK':
+    //   case 'QUARTER':
+    //     return `DATETRUNC()`
+    // }
+    // if (df.units === 'week') {
+    //   return '';
+    // } else if (df.units === 'quarter') {
+    //   return `DATEADD(QUARTER, DATEDIFF(QUARTER, 0, ${df.e.sql}), 0)`;
+    // } else if (df.units === 'month') {
+    //   return `DATEADD(MONTH, DATEDIFF(MONTH, 0, ${df.e.sql}), 0)`;
+    // } else if (df.units === 'year') {
+    //   return `DATEADD(YEAR, DATEDIFF(YEAR, 0, ${df.e.sql}), 0)`;
+    // } else if (df.units === 'day') {
+    //   return `CAST(CAST(${df.e.sql} AS DATE) AS DATETIME2)`;
+    // } else if (df.units === 'hour') {
+    //   return `DATEADD(HOUR, DATEDIFF(HOUR, 0, ${df.e.sql}), 0)`;
+    // } else if (df.units === 'minute') {
+    //   return `DATEADD(MINUTE, DATEDIFF(MINUTE, 0, ${df.e.sql}), 0)`;
+    // } else if (df.units === 'second') {
+    //   return `DATEADD(SECOND, DATEDIFF(SECOND, 0, ${df.e.sql}), 0)`;
+    // } else {
+    //   throw new Error(`Unsupported date truncation unit: ${df.units}`);
+    // }
   }
+
+  // const units = timeExtractMap[from.units] || from.units;
+  // let extractFrom = from.e.sql;
+  // if (TD.isTimestamp(from.e.typeDef)) {
+  //   const tz = qtz(qi);
+  //   if (tz) {
+  //     extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+  //   }
+  // }
+  // const extracted = `EXTRACT(${units} FROM ${extractFrom})`;
+  // return from.units === 'day_of_week' ? `(${extracted}+1)` : extracted;
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const datePart = tsqlDatePartMap[from.units];
     const d = from.e.sql;
 
     switch (datePart) {
-      case 'YEAR':
+      case 'year':
         return `YEAR(${d})`;
-      case 'QUARTER':
+      case 'quarter':
         return `((MONTH(${d}) - 1) / 3 + 1)`;
-      case 'MONTH':
+      case 'month':
         return `MONTH(${d})`;
-      case 'DAY':
+      case 'day':
         return `DAY(${d})`;
-      case 'WEEKDAY':
+      case 'weekday':
         return `(SELECT DATEDIFF(day, '17530107', ${d}) % 7 + 1)`;
-      case 'HOUR':
+      case 'hour':
         return `(DATEDIFF(hour, CONVERT(date, ${d}), ${d}))`;
-      case 'MINUTE':
+      case 'minute':
         return `(DATEDIFF(minute, DATEADD(hour, DATEDIFF(hour, 0, ${d}), 0), ${d}))`;
-      case 'SECOND':
+      case 'second':
         return `(DATEDIFF(second, DATEADD(minute, DATEDIFF(minute, 0, ${d}), 0), ${d}))`;
-      case 'MILLISECOND':
+      case 'millisecond':
         return `(DATEDIFF(millisecond, DATEADD(second, DATEDIFF(second, 0, ${d}), 0), ${d}))`;
       default:
         throw new Error(`Unsupported date extraction unit: ${from.units}`);
