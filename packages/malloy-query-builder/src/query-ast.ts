@@ -1800,7 +1800,7 @@ export interface IASTViewDefinition extends IASTQueryOrViewDefinition {
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition;
-  convertToNest();
+  convertToNest(name: string);
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -1955,12 +1955,13 @@ export class ASTReferenceViewDefinition
     return newView.refinement.as.ReferenceViewDefinition();
   }
 
-  convertToNest() {
+  convertToNest(name: string) {
     const nestedView = ASTViewDefinition.from({
       kind: 'segment',
       operations: [
         {
           kind: 'nest',
+          name,
           view: {
             definition: this.build(),
           },
@@ -2093,12 +2094,13 @@ export class ASTArrowViewDefinition
     return this.view.addViewRefinement(name, path);
   }
 
-  convertToNest() {
+  convertToNest(name: string) {
     const nestedView = ASTViewDefinition.from({
       kind: 'segment',
       operations: [
         {
           kind: 'nest',
+          name,
           view: {
             definition: this.build(),
           },
@@ -2204,12 +2206,13 @@ export class ASTRefinementViewDefinition
     this.children.base = base;
   }
 
-  convertToNest() {
+  convertToNest(name: string) {
     const nestedView = ASTViewDefinition.from({
       kind: 'segment',
       operations: [
         {
           kind: 'nest',
+          name,
           view: {
             definition: this.build(),
           },
@@ -2355,12 +2358,13 @@ export class ASTSegmentViewDefinition
     return this.children.operations;
   }
 
-  convertToNest() {
+  convertToNest(name: string) {
     const nestedView = ASTViewDefinition.from({
       kind: 'segment',
       operations: [
         {
           kind: 'nest',
+          name,
           view: {
             definition: this.build(),
           },
