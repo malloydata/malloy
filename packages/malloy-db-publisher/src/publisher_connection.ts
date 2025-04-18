@@ -128,7 +128,7 @@ export class PublisherConnection
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    return JSON.parse(response.data) as TableSourceDef;
+    return JSON.parse(response.data.source as string) as TableSourceDef;
   }
 
   public async fetchSelectSchema(
@@ -142,7 +142,7 @@ export class PublisherConnection
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    return JSON.parse(response.data) as SQLSourceDef;
+    return JSON.parse(response.data.source as string) as SQLSourceDef;
   }
 
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
@@ -165,7 +165,7 @@ export class PublisherConnection
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    return JSON.parse(response.data) as MalloyQueryData;
+    return JSON.parse(response.data.data as string) as MalloyQueryData;
   }
 
   public async * runSQLStream(
@@ -184,14 +184,18 @@ export class PublisherConnection
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    const queryData = JSON.parse(response.data) as MalloyQueryData;
+    const queryData = JSON.parse(response.data.data as string) as MalloyQueryData;
     for (const row of queryData.rows) {
       yield row;
     }
   }
 
   public async test(): Promise<void> {
-    await this.connectionsApi.getTest(this.projectName, this.name);
+    await this.connectionsApi.getTest(this.projectName, this.name,
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
+    );
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
@@ -203,7 +207,7 @@ export class PublisherConnection
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    return response.data;
+    return response.data.table as string;
   }
 
   public async close(): Promise<void> {
