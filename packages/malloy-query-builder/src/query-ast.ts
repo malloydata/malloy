@@ -1800,6 +1800,7 @@ export interface IASTViewDefinition extends IASTQueryOrViewDefinition {
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition;
+  convertToNest();
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -1954,6 +1955,21 @@ export class ASTReferenceViewDefinition
     return newView.refinement.as.ReferenceViewDefinition();
   }
 
+  convertToNest() {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
+  }
+
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -2077,6 +2093,21 @@ export class ASTArrowViewDefinition
     return this.view.addViewRefinement(name, path);
   }
 
+  convertToNest() {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
+  }
+
   getInputSchema(): Malloy.Schema {
     return this.source.getOutputSchema();
   }
@@ -2171,6 +2202,21 @@ export class ASTRefinementViewDefinition
   set base(base: ASTViewDefinition) {
     this.edit();
     this.children.base = base;
+  }
+
+  convertToNest() {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -2307,6 +2353,21 @@ export class ASTSegmentViewDefinition
 
   get operations() {
     return this.children.operations;
+  }
+
+  convertToNest() {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   /**
