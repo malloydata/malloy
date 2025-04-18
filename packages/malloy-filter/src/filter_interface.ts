@@ -9,11 +9,11 @@ interface FilterOperator<T extends string> {
   operator: T;
 }
 
-interface Negateable {
+interface Negatable {
   not?: boolean;
 }
 
-export interface Null extends FilterOperator<'null'>, Negateable {}
+export interface Null extends FilterOperator<'null'>, Negatable {}
 
 export type ChainOp = 'and' | 'or' | ',';
 export function isChainOp(s: string): s is ChainOp {
@@ -29,7 +29,7 @@ export interface BooleanChain<T> extends FilterOperator<BooleanChainOp> {
   members: T[];
 }
 
-interface ClauseGroup<T> extends FilterOperator<'()'>, Negateable {
+interface ClauseGroup<T> extends FilterOperator<'()'>, Negatable {
   expr: T;
 }
 
@@ -40,15 +40,15 @@ export function isStringCondition(sc: StringFilter): sc is StringCondition {
 
 export interface StringCondition
   extends FilterOperator<StringConditionOperator>,
-    Negateable {
+    Negatable {
   values: string[];
 }
 
-export interface StringMatch extends FilterOperator<'~'>, Negateable {
+export interface StringMatch extends FilterOperator<'~'>, Negatable {
   escaped_values: string[];
 }
 
-export interface StringEmpty extends FilterOperator<'empty'>, Negateable {}
+export interface StringEmpty extends FilterOperator<'empty'>, Negatable {}
 
 export type StringFilter =
   | StringCondition
@@ -80,7 +80,7 @@ export function isStringFilter(sc: Object): sc is StringFilter {
 
 export type BooleanOperator = 'true' | 'false' | 'false_or_null';
 
-export interface BooleanCondition extends Negateable {
+export interface BooleanCondition extends Negatable {
   operator: BooleanOperator;
 }
 
@@ -98,13 +98,13 @@ export type NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<';
 
 export interface NumberCondition
   extends FilterOperator<NumberOperator>,
-    Negateable {
+    Negatable {
   values: string[];
 }
 
 export type NumberRangeOperator = '<=' | '>=' | '>' | '<';
 
-export interface NumberRange extends FilterOperator<'range'>, Negateable {
+export interface NumberRange extends FilterOperator<'range'>, Negatable {
   startOperator: NumberRangeOperator;
   startValue: string;
   endOperator: NumberRangeOperator;
@@ -201,36 +201,36 @@ export type Moment =
   | WhichdayMoment
   | WeekdayMoment;
 
-export interface Before extends FilterOperator<'before'>, Negateable {
+export interface Before extends FilterOperator<'before'>, Negatable {
   before: Moment;
 }
 
-export interface After extends FilterOperator<'after'>, Negateable {
+export interface After extends FilterOperator<'after'>, Negatable {
   after: Moment;
 }
 
-export interface To extends FilterOperator<'to'>, Negateable {
+export interface To extends FilterOperator<'to'>, Negatable {
   fromMoment: Moment;
   toMoment: Moment;
 }
 
-export interface For extends FilterOperator<'for'>, Negateable, Duration {
+export interface For extends FilterOperator<'for'>, Negatable, Duration {
   begin: Moment;
 }
 
 // N units starting in the past, including this one
 export interface in_last
   extends FilterOperator<'in_last'>,
-    Negateable,
+    Negatable,
     Duration {}
 
 // Nunits starting in the past, not including this one
 export interface JustUnits
   extends FilterOperator<'last' | 'next'>,
-    Negateable,
+    Negatable,
     Duration {}
 
-export interface InMoment extends FilterOperator<'in'>, Negateable {
+export interface InMoment extends FilterOperator<'in'>, Negatable {
   in: Moment;
 }
 
