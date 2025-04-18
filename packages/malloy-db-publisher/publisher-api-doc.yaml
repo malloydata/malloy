@@ -87,7 +87,7 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         500:
           $ref: "#/components/responses/InternalServerError"
-
+  
   /projects/{projectName}/connections/{connectionName}:
     get:
       tags:
@@ -187,14 +187,14 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/SqlSource"
         401:
           $ref: "#/components/responses/UnauthorizedError"
         404:
           $ref: "#/components/responses/NotFoundError"
         500:
           $ref: "#/components/responses/InternalServerError"
-
+  
   /projects/{projectName}/connections/{connectionName}/tableSource:
     get:
       tags:
@@ -234,7 +234,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/TableSource"
         401:
           $ref: "#/components/responses/UnauthorizedError"
         404:
@@ -281,7 +281,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/QueryData"
         401:
           $ref: "#/components/responses/UnauthorizedError"
         404:
@@ -322,14 +322,14 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/TemporaryTable"
         401:
           $ref: "#/components/responses/UnauthorizedError"
         404:
           $ref: "#/components/responses/NotFoundError"
         500:
           $ref: "#/components/responses/InternalServerError"
-
+          
 
   /projects/{projectName}/packages:
     get:
@@ -410,7 +410,7 @@ paths:
       tags:
       - models
       operationId: list-models
-      summary:
+      summary: 
         Returns a list of relative paths to the models in the package.
       parameters:
         - name: projectName
@@ -439,7 +439,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
+                items: 
                   $ref: "#/components/schemas/Model"
         401:
           $ref: "#/components/responses/UnauthorizedError"
@@ -455,7 +455,7 @@ paths:
       tags:
       - models
       operationId: get-model
-      summary:
+      summary: 
         Returns a Malloy model.
       parameters:
         - name: projectName
@@ -504,7 +504,7 @@ paths:
       tags:
       - queryresults
       operationId: execute-query
-      summary:
+      summary: 
         Returns a query and its results.
       parameters:
         - name: projectName
@@ -574,7 +574,7 @@ paths:
       tags:
       - databases
       operationId: list-databases
-      summary:
+      summary: 
         Returns a list of relative paths to the databases embedded in the package.
       parameters:
         - name: projectName
@@ -603,7 +603,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
+                items: 
                   $ref: "#/components/schemas/Database"
         401:
           $ref: "#/components/responses/UnauthorizedError"
@@ -613,13 +613,13 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         501:
           $ref: "#/components/responses/NotImplementedError"
-
+  
   /projects/{projectName}/packages/{packageName}/schedules:
     get:
       tags:
       - schedules
       operationId: list-schedules
-      summary:
+      summary: 
         Returns a list of running schedules.
       parameters:
         - name: projectName
@@ -648,7 +648,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
+                items: 
                   $ref: "#/components/schemas/Schedule"
         401:
           $ref: "#/components/responses/UnauthorizedError"
@@ -699,14 +699,14 @@ components:
         readme:
           type: string
           description: Readme markdown.
-
+  
     Project:
       type: object
       properties:
         name:
           type: string
           description: Project name.
-
+    
     Package:
       type: object
       properties:
@@ -731,7 +731,7 @@ components:
           type: string
           enum: ["source", "notebook"]
           description: Type of malloy model file -- source file or notebook file.
-
+  
     CompiledModel:
       type: object
       description: Malloy model def and result data.  Malloy model def and result data is Malloy version depdendent.
@@ -772,7 +772,7 @@ components:
           description: Array of notebook cells.
           items:
             $ref: "#/components/schemas/NotebookCell"
-
+  
     Source:
       type: object
       description: Model source.
@@ -835,7 +835,7 @@ components:
         queryResult:
           type: string
           description: Malloy query results. Populated only if a code cell.
-
+  
     QueryResult:
       type: object
       description: A Malloy query's results, its model def, and its data styles.
@@ -863,6 +863,10 @@ components:
         size:
           type: integer
           description: Size of the embedded database in bytes.
+        type:
+          type: string
+          enum: ["embedded", "materialized"]
+          description: Type of database.
 
     Schedule:
       type: object
@@ -916,7 +920,7 @@ components:
         canPersist:
           type: boolean
         canStream:
-          type: boolean
+          type: boolean   
 
     PostgresConnection:
       type: object
@@ -949,7 +953,7 @@ components:
           type: string
         queryTimeoutMilliseconds:
           type: string
-
+      
     SnowflakeConnection:
       type: object
       properties:
@@ -984,6 +988,34 @@ components:
         password:
           type: string
 
+    SqlSource:
+      type: object
+      properties:
+        # Pass source as an opaque JSON string that is malloyVersion depdendent.
+        source:
+          type: string
+    
+    TableSource:
+      type: object
+      properties:
+        # Pass source as an opaque JSON string that is malloyVersion depdendent.
+        source:
+          type: string
+
+    TemporaryTable:
+      type: object
+      properties:
+        # Pass table as an opaque JSON string that is malloyVersion depdendent.
+        table:
+          type: string
+
+    QueryData:
+      type: object
+      properties:
+        # Pass result as an opaque JSON string that is malloyVersion depdendent.
+        data:
+          type: string
+
     Error:
       type: object
       properties:
@@ -991,3 +1023,4 @@ components:
           type: string
         message:
           type: string
+      

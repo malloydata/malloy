@@ -256,7 +256,21 @@ export interface Database {
      * @memberof Database
      */
     'size'?: number;
+    /**
+     * Type of database.
+     * @type {string}
+     * @memberof Database
+     */
+    'type'?: DatabaseTypeEnum;
 }
+
+export const DatabaseTypeEnum = {
+    Embedded: 'embedded',
+    Materialized: 'materialized'
+} as const;
+
+export type DatabaseTypeEnum = typeof DatabaseTypeEnum[keyof typeof DatabaseTypeEnum];
+
 /**
  * Malloy model def and result data.  Malloy model def and result data is Malloy version depdendent.
  * @export
@@ -443,6 +457,19 @@ export interface Query {
     'annotations'?: Array<string>;
 }
 /**
+ * 
+ * @export
+ * @interface QueryData
+ */
+export interface QueryData {
+    /**
+     * 
+     * @type {string}
+     * @memberof QueryData
+     */
+    'data'?: string;
+}
+/**
  * A Malloy query\'s results, its model def, and its data styles.
  * @export
  * @interface QueryResult
@@ -583,6 +610,45 @@ export interface Source {
      * @memberof Source
      */
     'views'?: Array<View>;
+}
+/**
+ * 
+ * @export
+ * @interface SqlSource
+ */
+export interface SqlSource {
+    /**
+     * 
+     * @type {string}
+     * @memberof SqlSource
+     */
+    'source'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface TableSource
+ */
+export interface TableSource {
+    /**
+     * 
+     * @type {string}
+     * @memberof TableSource
+     */
+    'source'?: string;
+}
+/**
+ * 
+ * @export
+ * @interface TemporaryTable
+ */
+export interface TemporaryTable {
+    /**
+     * 
+     * @type {string}
+     * @memberof TemporaryTable
+     */
+    'table'?: string;
 }
 /**
  * 
@@ -979,7 +1045,7 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
+        async getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryData>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getQuerydata(projectName, connectionName, sqlStatement, _options, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getQuerydata']?.[localVarOperationServerIndex]?.url;
@@ -994,7 +1060,7 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
+        async getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SqlSource>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getSqlsource(projectName, connectionName, sqlStatement, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getSqlsource']?.[localVarOperationServerIndex]?.url;
@@ -1010,7 +1076,7 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
+        async getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TableSource>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getTablesource(projectName, connectionName, tableKey, tablePath, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getTablesource']?.[localVarOperationServerIndex]?.url;
@@ -1025,7 +1091,7 @@ export const ConnectionsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>> {
+        async getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TemporaryTable>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.getTemporarytable(projectName, connectionName, sqlStatement, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConnectionsApi.getTemporarytable']?.[localVarOperationServerIndex]?.url;
@@ -1089,7 +1155,7 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): AxiosPromise<string> {
+        getQuerydata(projectName: string, connectionName: string, sqlStatement?: string, _options?: string, options?: RawAxiosRequestConfig): AxiosPromise<QueryData> {
             return localVarFp.getQuerydata(projectName, connectionName, sqlStatement, _options, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1101,7 +1167,7 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<string> {
+        getSqlsource(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<SqlSource> {
             return localVarFp.getSqlsource(projectName, connectionName, sqlStatement, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1114,7 +1180,7 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig): AxiosPromise<string> {
+        getTablesource(projectName: string, connectionName: string, tableKey?: string, tablePath?: string, options?: RawAxiosRequestConfig): AxiosPromise<TableSource> {
             return localVarFp.getTablesource(projectName, connectionName, tableKey, tablePath, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1126,7 +1192,7 @@ export const ConnectionsApiFactory = function (configuration?: Configuration, ba
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<string> {
+        getTemporarytable(projectName: string, connectionName: string, sqlStatement?: string, options?: RawAxiosRequestConfig): AxiosPromise<TemporaryTable> {
             return localVarFp.getTemporarytable(projectName, connectionName, sqlStatement, options).then((request) => request(axios, basePath));
         },
         /**

@@ -12,9 +12,15 @@ describe('db:Publisher', () => {
   let runtime: malloy.Runtime;
 
   beforeEach(async () => {
-    conn = await PublisherConnection.create('bigquery', {
-      connectionUri: 'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
-    });
+    conn = await PublisherConnection.create('bigquery',
+      //{
+      //connectionUri: 'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
+      //}
+      {
+        connectionUri: 'http://demo.data.pathways.localhost:8000/api/v0/projects/malloy-samples/connections/bigquery',
+        accessToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjNDdUMxcFl0OUZSREh1RE9sajBYQyJ9.eyJnaXZlbl9uYW1lIjoiS3lsZSIsImZhbWlseV9uYW1lIjoiTmVzYml0Iiwibmlja25hbWUiOiJram5lc2JpdCIsIm5hbWUiOiJLeWxlIE5lc2JpdCIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NJZTgxd2xmc01rMUVFRHJNdXkzRHVZNWFfSVROaWVKWDQ0em5YdTZpUFN6Mi1jTFlVPXM5Ni1jIiwidXBkYXRlZF9hdCI6IjIwMjUtMDQtMTdUMjE6NTE6NTEuOTgzWiIsImVtYWlsIjoia2puZXNiaXRAbXMyLmNvIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImlzcyI6Imh0dHBzOi8vZGV2LW9oYWFmb2d3NXA4dXl4MW0udXMuYXV0aDAuY29tLyIsImF1ZCI6InJyNm16Sk5qOWIxMDRNakNjOXhXS1BQZWhxMU1KeDBMIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTgwNzczNjkyNTA5MDcwOTc1NDYiLCJpYXQiOjE3NDQ5NDA1MDcsImV4cCI6MTc0NDk3NjUwN30.St0XSYEXCVvNc8Hj4_ZeEfx9ln3h19GVq3TXQWCEU6oXxI-ZswmxMaXtiPPr37tt9vQLbcb6e6GZCHkefRtCS4EX0Rdb5BpR7VqYRcm3xzmvNVNuQRzd0dI1ZPYfoSiHAIgk-u8WAvOAZJkIyy6Qoe3IgzMOsxMlPUY2AFgwLXkkqHQh1S5DzzASF3fDZPIHRjhABEf8xTB3JLSwYOScbrcyzLsRNYZYVIefbL1Hq5FlXKKBvunaN5OhXFif7IV-0lxR55xVCeJo5n84Q_a3mycjWctDswFxur6EAs9BoCWVkFsJx7tusT3dmffHuf4ONQHL6_lvw1IIi8MNNHdajw",
+      }
+    );
     const files = {
       readURL: async (url: URL) => {
         const filePath = fileURLToPath(url);
