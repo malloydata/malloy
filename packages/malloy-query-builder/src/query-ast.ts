@@ -2574,11 +2574,13 @@ export class ASTSegmentViewDefinition
   }
 
   private DEFAULT_INSERTION_ORDER: Malloy.ViewOperationType[] = [
-    'where',
     'group_by',
     'aggregate',
+    'where',
+    'having',
     'nest',
     'order_by',
+    'limit',
   ];
 
   private findInsertionPoint(kind: Malloy.ViewOperationType): number {
@@ -2600,7 +2602,7 @@ export class ASTSegmentViewDefinition
     );
     for (const laterType of laterOperations) {
       const firstOfType = this.firstIndexOfOperationType(laterType);
-      return firstOfType;
+      if (firstOfType > -1) return firstOfType;
     }
     return this.operations.length;
   }
@@ -4191,7 +4193,7 @@ export class ASTWhereViewOperation extends ASTObjectNode<
     filter: ASTFilter;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'nest';
+  readonly kind: Malloy.ViewOperationType = 'where';
   constructor(public node: Malloy.ViewOperationWithWhere) {
     super(node, {
       kind: 'where',
@@ -4222,7 +4224,7 @@ export class ASTHavingViewOperation extends ASTObjectNode<
     filter: ASTFilter;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'nest';
+  readonly kind: Malloy.ViewOperationType = 'having';
   constructor(public node: Malloy.ViewOperationWithHaving) {
     super(node, {
       kind: 'having',
@@ -4580,8 +4582,6 @@ export class ASTAnnotation extends ASTObjectNode<
     value: string;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'limit';
-
   get value() {
     return this.children.value;
   }
