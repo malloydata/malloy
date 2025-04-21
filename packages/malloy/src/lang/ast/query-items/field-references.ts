@@ -163,8 +163,8 @@ export class PartitionByFieldReference extends FieldReference {
   }
 }
 
-export class RequireGroupByReference extends FieldReference {
-  elementType = 'requireGroupByReference';
+export class GroupedByReference extends FieldReference {
+  elementType = 'groupedByReference';
   typecheck() {
     return;
   }

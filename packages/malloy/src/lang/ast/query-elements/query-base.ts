@@ -50,6 +50,7 @@ export abstract class QueryBase extends MalloyElement {
       ) {
         const resolved = resolveCompositeSources(
           inputSource,
+          stage1,
           compositeFieldUsage
         );
         return resolved.sourceDef;

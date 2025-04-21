@@ -407,8 +407,8 @@ type MessageParameterTypes = {
   'filter-expression-type': string;
   'filter-expression-error': string;
   'invalid-malloy-query-document': string;
-  'require-group-by-not-found': string;
-  'non-scalar-require-group-by': string;
+  'grouped-by-not-found': string;
+  'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
 };
 

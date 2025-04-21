@@ -36,7 +36,6 @@ import {StaticSourceSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
-import {unsatisfiedRequiredGroupBys} from '../query-utils';
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -108,10 +107,6 @@ export class QOpDesc extends ListOf<QueryProperty> {
       build.execute(qp);
     }
     const segment = build.finalize(this.refineThis);
-    const requiredGroupBys =
-      segment.type === 'index' || segment.type === 'raw'
-        ? []
-        : unsatisfiedRequiredGroupBys(segment, build.resultFS.requiredGroupBys);
     return {
       segment,
       outputSpace: () =>
@@ -121,7 +116,6 @@ export class QOpDesc extends ListOf<QueryProperty> {
         new StaticSourceSpace(
           opOutputStruct(this, inputFS.structDef(), segment)
         ),
-      requiredGroupBys,
     };
   }
 }

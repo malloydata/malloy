@@ -27,7 +27,6 @@ import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
-import {mergeRequiredGroupBys} from '../types/expr-value';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
@@ -100,7 +99,6 @@ export class ReferenceView extends View {
         pipeline: [newSegment],
         name,
         outputStruct,
-        requiredGroupBys: fieldDef.requiredGroupBys ?? [],
       };
     } else if (isTurtle(fieldDef)) {
       if (this.reference.list.length > 1) {
@@ -123,7 +121,6 @@ export class ReferenceView extends View {
           fs.structDef(),
           fieldDef.pipeline
         ),
-        requiredGroupBys: fieldDef.requiredGroupBys ?? [],
       };
     } else {
       if (forRefinement) {
@@ -141,22 +138,19 @@ export class ReferenceView extends View {
     }
   }
 
-  private getRefinement(inputFS: SourceFieldSpace): {
-    segment: PipeSegment | undefined;
-    requiredGroupBys: string[][];
-  } {
-    const {pipeline, error, requiredGroupBys} = this._pipelineComp(inputFS, {
+  private getRefinement(inputFS: SourceFieldSpace): PipeSegment | undefined {
+    const {pipeline, error} = this._pipelineComp(inputFS, {
       forRefinement: true,
     });
-    if (error) return {segment: undefined, requiredGroupBys: []};
+    if (error) return undefined;
     if (pipeline.length !== 1) {
       this.reference.logError(
         'refinement-with-multistage-view',
         `named refinement \`${this.reference.refString}\` must have exactly one stage`
       );
-      return {segment: undefined, requiredGroupBys: []};
+      return undefined;
     }
-    return {segment: pipeline[0], requiredGroupBys};
+    return pipeline[0];
   }
 
   // `isNestIn` is not needed because `ReferenceView`s never create a field space
@@ -164,25 +158,15 @@ export class ReferenceView extends View {
   // used for checking `exclude` references.
   refine(
     inputFS: SourceFieldSpace,
-    requiredGroupBys: string[][],
     pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]} {
-    const {segment: refineFrom, requiredGroupBys: refinementRequiredGroupBys} =
-      this.getRefinement(inputFS);
-    const allRequiredGroupBys =
-      mergeRequiredGroupBys(requiredGroupBys, refinementRequiredGroupBys) ?? [];
+  ): PipeSegment[] {
+    const refineFrom = this.getRefinement(inputFS);
     if (refineFrom) {
-      return {
-        pipeline: refine(this, pipeline, refineFrom),
-        requiredGroupBys: allRequiredGroupBys,
-      };
+      return refine(this, pipeline, refineFrom);
     }
     // TODO better error pipeline
-    return {
-      pipeline,
-      requiredGroupBys: allRequiredGroupBys,
-    };
+    return pipeline;
   }
 
   getImplicitName(): string | undefined {

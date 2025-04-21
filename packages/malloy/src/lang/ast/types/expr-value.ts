@@ -22,6 +22,7 @@
  */
 
 import type {
+  AggregateFieldUsage,
   Expr,
   ExpressionValueTypeDef,
   TemporalTypeDef,
@@ -54,9 +55,10 @@ export function computedExprValue({
     compositeFieldUsage: mergeCompositeFieldUsage(
       ...from.map(e => e.compositeFieldUsage)
     ),
-    requiredGroupBys: mergeRequiredGroupBys(
-      ...from.map(e => e.requiredGroupBys)
+    aggregateFieldUsage: mergeAggregateFieldUsage(
+      ...from.map(e => e.aggregateFieldUsage)
     ),
+    groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
   };
 }
 
@@ -80,9 +82,10 @@ export function computedTimeResult({
     compositeFieldUsage: mergeCompositeFieldUsage(
       ...from.map(e => e.compositeFieldUsage)
     ),
-    requiredGroupBys: mergeRequiredGroupBys(
-      ...from.map(e => e.requiredGroupBys)
+    aggregateFieldUsage: mergeAggregateFieldUsage(
+      ...from.map(e => e.aggregateFieldUsage)
     ),
+    groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -137,7 +140,12 @@ export function literalTimeResult({
   return y;
 }
 
-export function mergeRequiredGroupBys(
+// TODO does it even make sense to operate on grouped_by fields directly?
+// does the set of grouped by have to be the same?
+// total_users { grouped_by: country }
+// x_total_users { grouped_by: state }
+// x_total_users + total_users
+export function mergeGroupedBys(
   ...groupBys: (string[][] | undefined)[]
 ): string[][] | undefined {
   const requiredGroupBys: string[][] = [];
@@ -153,5 +161,19 @@ export function mergeRequiredGroupBys(
       }
     }
   }
+  if (requiredGroupBys.length === 0) return undefined;
   return requiredGroupBys;
+}
+
+export function mergeAggregateFieldUsage(
+  ...usages: (AggregateFieldUsage[] | undefined)[]
+): AggregateFieldUsage[] | undefined {
+  const result: AggregateFieldUsage[] = [];
+  for (const usage of usages) {
+    if (usage !== undefined) {
+      result.push(...usage);
+    }
+  }
+  if (result.length === 0) return undefined;
+  return result;
 }

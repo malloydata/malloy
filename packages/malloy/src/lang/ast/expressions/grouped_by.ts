@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RequireGroupByReference} from '../query-items/field-references';
+import type {GroupedByReference} from '../query-items/field-references';
 import {ListOf} from '../types/malloy-element';
 
-export class RequireGroupBy extends ListOf<RequireGroupByReference> {
+export class GroupedBy extends ListOf<GroupedByReference> {
   elementType = 'require_group_by';
 
-  constructor(readonly requireGroupByFields: RequireGroupByReference[]) {
-    super(requireGroupByFields);
+  constructor(readonly groupedByFields: GroupedByReference[]) {
+    super(groupedByFields);
   }
 }

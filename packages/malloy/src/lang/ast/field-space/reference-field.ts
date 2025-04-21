@@ -109,10 +109,7 @@ export class ReferenceField extends SpaceField {
           joinPath,
           typeDesc.compositeFieldUsage
         ),
-        requiredGroupBys: typeDesc.requiredGroupBys?.map(path => [
-          ...joinPath,
-          ...path,
-        ]),
+        groupedBy: typeDesc.groupedBy?.map(path => [...joinPath, ...path]),
       };
       return this.memoTypeDesc;
     }

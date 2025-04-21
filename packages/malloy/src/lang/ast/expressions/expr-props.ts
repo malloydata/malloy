@@ -33,13 +33,13 @@ import {FunctionOrdering} from './function-ordering';
 import type {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
-import {mergeRequiredGroupBys, type ExprValue} from '../types/expr-value';
+import {mergeGroupedBys, type ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
 import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {RequireGroupBy} from './require_group_by';
+import {GroupedBy} from './grouped_by';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
@@ -105,7 +105,7 @@ export class ExprProps extends ExpressionDef {
     let limit: Limit | undefined;
     const orderBys: FunctionOrdering[] = [];
     const wheres: Filter[] = [];
-    const requireGroupBys: RequireGroupBy[] = [];
+    const groupedBys: GroupedBy[] = [];
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (!this.expr.canSupportPartitionBy()) {
@@ -139,8 +139,8 @@ export class ExprProps extends ExpressionDef {
         } else {
           orderBys.push(statement);
         }
-      } else if (statement instanceof RequireGroupBy) {
-        requireGroupBys.push(statement);
+      } else if (statement instanceof GroupedBy) {
+        groupedBys.push(statement);
       } else {
         wheres.push(statement);
       }
@@ -154,21 +154,17 @@ export class ExprProps extends ExpressionDef {
           })
         : this.expr.getExpression(fs);
     const filteredExpr = this.getFilteredExpression(fs, resultExpr, wheres);
-    return this.getRequireGroupByExpression(fs, filteredExpr, requireGroupBys);
+    return this.getGroupedBys(fs, filteredExpr, groupedBys);
   }
 
-  getRequireGroupByExpression(
-    fs: FieldSpace,
-    expr: ExprValue,
-    requireGroupBys: RequireGroupBy[]
-  ) {
-    const requiredGroupByFields: string[] = [];
-    for (const requiredGroupBy of requireGroupBys) {
-      for (const field of requiredGroupBy.requireGroupByFields) {
+  getGroupedBys(fs: FieldSpace, expr: ExprValue, groupedBys: GroupedBy[]) {
+    const groupedByFields: string[] = [];
+    for (const requiredGroupBy of groupedBys) {
+      for (const field of requiredGroupBy.groupedByFields) {
         const e = field.getField(fs);
         if (e.found === undefined) {
           field.logError(
-            'require-group-by-not-found',
+            'grouped-by-not-found',
             `${field.refString} is not defined`
           );
         } else if (
@@ -176,22 +172,22 @@ export class ExprProps extends ExpressionDef {
           expressionIsAggregate(e.found.typeDesc().expressionType)
         ) {
           field.logError(
-            'non-scalar-require-group-by',
-            '`require_group_by:` field must be a dimension'
+            'non-scalar-grouped-by',
+            '`grouped_by:` field must be a dimension'
           );
         } else {
-          requiredGroupByFields.push(field.nameString);
+          groupedByFields.push(field.nameString);
         }
       }
     }
-    const allRequiredGroupBys = mergeRequiredGroupBys(
-      expr.requiredGroupBys,
-      requiredGroupByFields.map(name => [name])
+    const allRequiredGroupBys = mergeGroupedBys(
+      expr.groupedBy,
+      groupedByFields.map(name => [name])
     );
 
     return {
       ...expr,
-      requiredGroupBys: allRequiredGroupBys,
+      groupedBy: allRequiredGroupBys,
     };
   }
 }

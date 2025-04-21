@@ -694,7 +694,8 @@ export function isCastType(s: string): s is CastType {
 export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
-  requiredGroupBys?: string[][];
+  groupedBy?: string[][];
+  aggregateFieldUsage?: AggregateFieldUsage[];
 }
 
 // this field definition represents something in the database.
@@ -1259,11 +1260,17 @@ export type BasicExpressionType = Exclude<
   JoinElementType | 'turtle'
 >;
 
+export interface AggregateFieldUsage {
+  fields: string[][];
+  location: DocumentLocation;
+}
+
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
   compositeFieldUsage: CompositeFieldUsage;
-  requiredGroupBys?: string[][];
+  groupedBy?: string[][];
+  aggregateFieldUsage?: AggregateFieldUsage[];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;

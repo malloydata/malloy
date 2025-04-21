@@ -22,7 +22,6 @@
  */
 
 import {StaticSourceSpace} from '../field-space/static-space';
-import {validateRequiredGroupBys} from '../query-utils';
 import {getFinalStruct} from '../struct-utils';
 import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
@@ -47,9 +46,8 @@ export class QueryRefine extends QueryBase implements QueryElement {
   queryComp(isRefOk: boolean): QueryComp {
     const q = this.base.queryComp(isRefOk);
     const inputFS = new StaticSourceSpace(q.inputStruct);
-    const {pipeline: resultPipe, requiredGroupBys} = this.refinement.refine(
+    const resultPipe = this.refinement.refine(
       inputFS,
-      [],
       q.query.pipeline,
       undefined
     );
@@ -57,8 +55,6 @@ export class QueryRefine extends QueryBase implements QueryElement {
       ...q.query,
       pipeline: resultPipe,
     };
-
-    validateRequiredGroupBys(resultPipe[0], this, requiredGroupBys);
 
     const compositeResolvedSourceDef = this.resolveCompositeSource(
       q.inputStruct,

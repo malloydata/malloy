@@ -47,6 +47,7 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
+import {compositeFieldUsagePaths} from '../../../model/composite_source_utils';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -94,7 +95,17 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                   ? {node: 'outputField', name: this.source.refString}
                   : {node: 'field', path: this.source.path},
               evalSpace: footType.evalSpace,
+              // TODO ensure that when there's an `expr` but no `source`, that `compositeFieldUsage`
+              // and `aggregateFieldUsage` still come along correctly
               compositeFieldUsage: footType.compositeFieldUsage,
+              aggregateFieldUsage: [
+                {
+                  fields: compositeFieldUsagePaths(
+                    footType.compositeFieldUsage
+                  ),
+                  location: this.location,
+                },
+              ],
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a

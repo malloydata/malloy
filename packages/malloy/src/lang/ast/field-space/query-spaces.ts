@@ -56,7 +56,6 @@ import {
   narrowCompositeFieldResolution,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
-import {mergeRequiredGroupBys} from '../types/expr-value';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -90,14 +89,6 @@ export abstract class QueryOperationSpace
       throw new Error('Composite field usage accessed before computed');
     }
     return this._compositeFieldUsage;
-  }
-
-  _requiredGroupBys: string[][] | undefined = undefined;
-  get requiredGroupBys(): string[][] {
-    if (this._requiredGroupBys === undefined) {
-      throw new Error('Required group bys accessed before computed');
-    }
-    return this._requiredGroupBys;
   }
 
   constructor(
@@ -359,7 +350,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     let compositeFieldUsage = emptyCompositeFieldUsage();
-    const eachRequiredGroupBys: string[][][] = [];
     let narrowedCompositeFieldResolution =
       emptyNarrowedCompositeFieldResolution();
     const source = this.inputSpace().structDef();
@@ -393,7 +383,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
               !isEmptyNest(fieldQueryDef)
             ) {
               fields.push(fieldQueryDef);
-              eachRequiredGroupBys.push(typeDesc.requiredGroupBys ?? []);
             }
           }
           // TODO I removed the error here because during calculation of the refinement space,
@@ -416,8 +405,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
       narrowedCompositeFieldResolution = next.narrowedCompositeFieldResolution;
     }
     this._compositeFieldUsage = compositeFieldUsage;
-    this._requiredGroupBys =
-      mergeRequiredGroupBys(...eachRequiredGroupBys) ?? [];
     return fields;
   }
 

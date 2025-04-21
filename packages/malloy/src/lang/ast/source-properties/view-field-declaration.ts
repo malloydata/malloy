@@ -58,7 +58,7 @@ export class ViewFieldDeclaration
   }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
-    const {pipeline, annotation, requiredGroupBys} = this.view.pipelineComp(fs);
+    const {pipeline, annotation} = this.view.pipelineComp(fs);
     const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
     const def: model.TurtleDef = {
       type: 'turtle',
@@ -66,7 +66,6 @@ export class ViewFieldDeclaration
       pipeline: checkedPipeline,
       annotation: {...this.note, inherits: annotation},
       location: this.location,
-      requiredGroupBys,
     };
     return def;
   }

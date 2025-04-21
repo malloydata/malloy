@@ -376,7 +376,7 @@ fieldPropertyStatement
   | partitionByStatement
   | aggregateOrderByStatement
   | fieldPropertyLimitStatement
-  | requireGroupByStatement
+  | groupedByStatement
   ;
 
 filterClauseList
@@ -468,8 +468,8 @@ partitionByStatement
   : PARTITION_BY id (COMMA id)* COMMA?
   ;
 
-requireGroupByStatement
-  : REQUIRE_GROUP_BY id (COMMA id)* COMMA?
+groupedByStatement
+  : GROUPED_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement

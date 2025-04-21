@@ -24,7 +24,6 @@
 import type {PipeSegment} from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
-import {validateRequiredGroupBys} from '../query-utils';
 import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
@@ -49,29 +48,22 @@ export class ViewArrow extends View {
     const baseComp = this.base.pipelineComp(fs);
     const nextFS = new StaticSourceSpace(baseComp.outputStruct);
     const finalComp = this.operation.pipelineComp(nextFS);
-    validateRequiredGroupBys(
-      finalComp.pipeline[0],
-      this,
-      finalComp.requiredGroupBys
-    );
     return {
       pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
       outputStruct: finalComp.outputStruct,
-      requiredGroupBys: baseComp.requiredGroupBys,
     };
   }
 
   refine(
     _inputFS: SourceFieldSpace,
-    requiredGroupBys: string[][],
     _pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
-  ): {pipeline: PipeSegment[]; requiredGroupBys: string[][]} {
+  ): PipeSegment[] {
     this.logError(
       'refinement-with-multistage-view',
       'A multi-segment view cannot be used as a refinement'
     );
-    return {pipeline: [], requiredGroupBys};
+    return [];
   }
 
   getImplicitName(): string | undefined {

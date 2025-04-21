@@ -1707,14 +1707,14 @@ export class MalloyToAST
     );
   }
 
-  visitRequireGroupByStatement(pcx: parse.RequireGroupByStatementContext) {
+  visitGroupedByStatement(pcx: parse.GroupedByStatementContext) {
     return this.astAt(
-      new ast.RequireGroupBy(
+      new ast.GroupedBy(
         pcx
           .id()
           .map(idCx =>
             this.astAt(
-              new ast.RequireGroupByReference([
+              new ast.GroupedByReference([
                 this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
               ]),
               idCx

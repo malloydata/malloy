@@ -1406,12 +1406,13 @@ describe('query:', () => {
       ).toTranslate();
     });
   });
-  describe('require_group_by', () => {
-    test('require_group_by basic success', () => {
+  describe('grouped_by', () => {
+    test('grouped_by basic success', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
           }
           run: aext -> { group_by: astr; aggregate: aisum }
         `
@@ -1506,14 +1507,16 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test.skip('composed source input skipped when invalid require group by usage', () => {
+    // TODO test that this actually uses first source
+    test('composed source input skipped when invalid require group by usage', () => {
       expect(
         markSource`
           ##! experimental.composite_sources
           source: aext is compose(
             a extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { require_group_by: x }
+              dimension: ai_grouped_by_x is ai { grouped_by: x }
+              measure: aisum is ai_grouped_by_x.sum()
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1525,14 +1528,37 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test.skip('joined composed source input skipped when invalid require group by usage', () => {
+    test('required group by causes composed source to fall off end', () => {
       expect(
         markSource`
           ##! experimental.composite_sources
           source: aext is compose(
             a extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { require_group_by: x }
+              dimension: ai_grouped_by_x is ai { grouped_by: x }
+              measure: aisum is ai_grouped_by_x.sum()
+            },
+            a extend {
+              dimension: y is 1
+              dimension: ai_grouped_by_y is ai { grouped_by: y }
+              measure: aisum is ai_grouped_by_y.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+          }
+        `
+      ).toLog(errorMessage('Group by of `x` is required but not present'));
+    });
+    test('joined composed source input skipped when invalid require group by usage', () => {
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              dimension: ai_grouped_by_x is ai { grouped_by: x }
+              measure: aisum is ai_grouped_by_x.sum()
             },
             a extend {
               measure: aisum is ai.sum()
