@@ -95,6 +95,10 @@ describe('db:Publisher', () => {
         expect(connection).toBeInstanceOf(PublisherConnection);
         expect(connection.name).toBe('test-connection');
         expect(connection.projectName).toBe('test-project');
+        expect(connection.dialectName).toBe('bigquery');
+        expect(connection.isPool()).toBe(false);
+        expect(connection.canPersist()).toBe(true);
+        expect(connection.canStream()).toBe(true);
         expect(mockConnectionsApi.getConnection).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
