@@ -1589,6 +1589,33 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
+    test('evil case where cannot resolve join composite because of field in root', () => {
+      // Here, `aext_aisum` is defined in `bext`, which means that when we are looking up the
+      // aggregate usage of `aext_aisum` (when deciding whether the first slice of the joined
+      // composite is valid), we need to know `bext`'s fields.
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              dimension: ai_grouped_by_x is ai { grouped_by: x }
+              measure: aisum is ai_grouped_by_x.sum()
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          source: bext is b extend {
+            join_one: aext on true
+            measure: aext_aisum is aext.aisum
+          }
+          run: bext -> {
+            aggregate: aext_aisum
+          }
+        `
+      ).toTranslate();
+    });
     test('require_group_by expression additive', () => {
       expect(
         markSource`

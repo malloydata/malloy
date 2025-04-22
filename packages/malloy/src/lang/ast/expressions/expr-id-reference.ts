@@ -26,7 +26,7 @@ import type {ExprValue} from '../types/expr-value';
 import type {FieldReference} from '../query-items/field-references';
 import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {compositeFieldUsageFromPath} from '../../../model/composite_source_utils';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
@@ -44,15 +44,18 @@ export class ExprIdReference extends ExpressionDef {
     // TODO Currently the join usage is always equivalent to the reference path here;
     // if/when we add namespaces, this will not be the case, and we will need to get the
     // join path from `getField` / `lookup`
-    const compositeJoinUsage = this.fieldReference.list
-      .map(n => n.name)
-      .slice(0, -1);
+    // const compositeJoinUsage = this.fieldReference.list
+    //   .map(n => n.name)
+    //   .slice(0, -1);
+    const compositeFieldUsage = compositeFieldUsageFromPath(
+      this.fieldReference.list.map(n => n.name)
+    );
     if (def.found) {
       const td = def.found.typeDesc();
-      const compositeFieldUsage = joinedCompositeFieldUsage(
-        compositeJoinUsage,
-        td.compositeFieldUsage
-      );
+      // const compositeFieldUsage = joinedCompositeFieldUsage(
+      //   compositeJoinUsage,
+      //   td.compositeFieldUsage
+      // );
       if (def.isOutputField) {
         return {
           ...td,
@@ -60,6 +63,7 @@ export class ExprIdReference extends ExpressionDef {
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
           compositeFieldUsage,
+          aggregateFieldUsage: undefined,
         };
       }
       const value = {node: def.found.refType, path: this.fieldReference.path};
@@ -67,7 +71,13 @@ export class ExprIdReference extends ExpressionDef {
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'
         : td.evalSpace;
-      return {...td, value, evalSpace, compositeFieldUsage};
+      return {
+        ...td,
+        value,
+        evalSpace,
+        compositeFieldUsage,
+        aggregateFieldUsage: undefined,
+      };
     }
     return this.loggedErrorExpr(def.error.code, def.error.message);
   }
