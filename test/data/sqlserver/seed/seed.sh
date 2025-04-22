@@ -18,7 +18,7 @@ for file in "$(dirname "$0")/"*.tsv; do
         -S "$SERVER_NAME" \
         -U "$USERNAME" \
         -P "$PASSWORD" \
-        -r '0x0A' \
+        -r '\r\n' \
         -c -t "\t"
 
     sqlcmd -S "$SERVER_NAME" -d "$DATABASE_NAME" -U "$USERNAME" -P "$PASSWORD" -Q "SET IDENTITY_INSERT [${DATABASE_NAME}].[${schema}].[${table}] ON;" || true && echo "This is not an issue"
