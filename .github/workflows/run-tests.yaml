@@ -55,6 +55,8 @@ jobs:
     uses: './.github/workflows/db-mysql.yaml'
   db-duckdb-wasm:
     uses: './.github/workflows/db-duckdb-wasm.yaml'
+  db-publisher:
+    uses: './.github/workflows/db-publisher.yaml'
 
   # I think I have the sorted roughly longest to shortest
   # so the longer running jobs get workers sooner, not sure
