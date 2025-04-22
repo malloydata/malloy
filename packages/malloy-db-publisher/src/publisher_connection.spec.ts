@@ -7,8 +7,12 @@ import * as fs from 'fs';
 import {Configuration, ConnectionAttributes, ConnectionsApi} from './client';
 import {jest} from '@jest/globals';
 import {AxiosResponse} from 'axios';
-import {TableSourceDef, SQLSourceDef} from '@malloydata/malloy';
-import {MalloyQueryData} from '@malloydata/malloy';
+import {
+  TableSourceDef,
+  SQLSourceDef,
+  MalloyQueryData,
+  QueryDataRow,
+} from '@malloydata/malloy';
 
 // Mock the client module
 jest.mock('./client', () => {
@@ -724,6 +728,255 @@ describe('db:Publisher', () => {
         await expect(
           connection.runSQL('SELECT * FROM test_table')
         ).rejects.toThrow();
+      });
+    });
+
+    describe('runSQLStream', () => {
+      let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let mockConfiguration: jest.Mocked<Configuration>;
+
+      beforeEach(() => {
+        // Get fresh instances of the mocks
+        mockConnectionsApi = new ConnectionsApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsApi>;
+        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+      });
+
+      afterEach(() => {
+        jest.clearAllMocks();
+      });
+
+      it('should stream SQL query results successfully', async () => {
+        const mockQueryData: MalloyQueryData = {
+          rows: [
+            {id: 1, name: 'test1'},
+            {id: 2, name: 'test2'},
+          ],
+          totalRows: 2,
+        };
+
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        const mockQueryResponse: AxiosResponse = {
+          data: {
+            data: JSON.stringify(mockQueryData),
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+          mockQueryResponse
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        const stream = connection.runSQLStream('SELECT * FROM test_table');
+        const results: QueryDataRow[] = [];
+
+        for await (const row of stream) {
+          results.push(row);
+        }
+
+        expect(results).toEqual(mockQueryData.rows);
+        expect(mockConnectionsApi.getQuerydata).toHaveBeenCalledWith(
+          'test-project',
+          'test-connection',
+          'SELECT * FROM test_table',
+          '{}',
+          {
+            headers: {
+              Authorization: 'Bearer test-token',
+            },
+          }
+        );
+      });
+
+      it('should stream SQL query results with options', async () => {
+        const mockQueryData: MalloyQueryData = {
+          rows: [
+            {id: 1, name: 'test1'},
+            {id: 2, name: 'test2'},
+          ],
+          totalRows: 2,
+        };
+
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        const mockQueryResponse: AxiosResponse = {
+          data: {
+            data: JSON.stringify(mockQueryData),
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+          mockQueryResponse
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        const options = {
+          rowLimit: 100,
+          timeoutMs: 5000,
+        };
+
+        const stream = connection.runSQLStream(
+          'SELECT * FROM test_table',
+          options
+        );
+        const results: QueryDataRow[] = [];
+
+        for await (const row of stream) {
+          results.push(row);
+        }
+
+        expect(results).toEqual(mockQueryData.rows);
+        expect(mockConnectionsApi.getQuerydata).toHaveBeenCalledWith(
+          'test-project',
+          'test-connection',
+          'SELECT * FROM test_table',
+          JSON.stringify(options),
+          {
+            headers: {
+              Authorization: 'Bearer test-token',
+            },
+          }
+        );
+      });
+
+      it('should handle API errors', async () => {
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getQuerydata.mockRejectedValueOnce(
+          new Error('API Error')
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        const stream = connection.runSQLStream('SELECT * FROM test_table');
+        const results: QueryDataRow[] = [];
+
+        await expect(async () => {
+          for await (const row of stream) {
+            results.push(row);
+          }
+        }).rejects.toThrow('API Error');
+      });
+
+      it('should handle invalid JSON response', async () => {
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        const mockQueryResponse: AxiosResponse = {
+          data: {
+            data: 'invalid json',
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+          mockQueryResponse
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        const stream = connection.runSQLStream('SELECT * FROM test_table');
+        const results: QueryDataRow[] = [];
+
+        await expect(async () => {
+          for await (const row of stream) {
+            results.push(row);
+          }
+        }).rejects.toThrow();
       });
     });
   });
