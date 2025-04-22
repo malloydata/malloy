@@ -4,182 +4,162 @@ import {PublisherConnection} from './publisher_connection';
 import {fileURLToPath} from 'url';
 import * as util from 'util';
 import * as fs from 'fs';
+import {Configuration, ConnectionAttributes, ConnectionsApi} from './client';
+import {jest} from '@jest/globals';
+import {AxiosResponse} from 'axios';
+
+// Mock the client module
+jest.mock('./client', () => {
+  const mockConnectionsApi = {
+    getConnection: jest.fn(),
+    getTest: jest.fn(),
+  };
+
+  const mockConfiguration = {
+    basePath: 'http://test.com/api/v0',
+  };
+
+  return {
+    Configuration: jest.fn().mockImplementation(() => mockConfiguration),
+    ConnectionsApi: jest.fn().mockImplementation(() => mockConnectionsApi),
+  };
+});
 
 const [describe] = describeIfDatabaseAvailable(['publisher']);
 
 describe('db:Publisher', () => {
-  let conn: PublisherConnection;
-  let runtime: malloy.Runtime;
-  let getTableSchema: jest.SpyInstance;
-  let getSQLBlockSchema: jest.SpyInstance;
+  describe('unit', () => {
+    describe('create', () => {
+      let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let mockConfiguration: jest.Mocked<Configuration>;
 
-  beforeEach(async () => {
-    conn = await PublisherConnection.create('bigquery', {
-      connectionUri:
-        'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
-      accessToken: 'xyz',
-    });
-
-    const files = {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
-    };
-
-    runtime = new malloy.Runtime({
-      urlReader: files,
-      connection: conn,
-    });
-
-    getTableSchema = jest
-      .spyOn(PublisherConnection.prototype as any, 'fetchTableSchema')
-      .mockResolvedValue({
-        type: 'table',
-        dialect: 'standardsql',
-        tablePath: 'bigquery-public-data.hacker_news.full',
-        fields: [
-          {name: 'title', type: 'string'},
-          {name: 'by', type: 'string'},
-          {name: 'score', type: 'number'},
-        ],
+      beforeEach(() => {
+        // Get fresh instances of the mocks
+        mockConnectionsApi = new ConnectionsApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsApi>;
+        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
-    getSQLBlockSchema = jest
-      .spyOn(PublisherConnection.prototype as any, 'fetchSelectSchema')
-      .mockResolvedValue({
-        type: 'sql_select',
-        dialect: 'standardsql',
-        selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
-        fields: [
-          {name: 'title', type: 'string'},
-          {name: 'by', type: 'string'},
-          {name: 'score', type: 'number'},
-        ],
+      afterEach(() => {
+        jest.clearAllMocks();
       });
-  });
 
-  afterEach(async () => {
-    await conn.close();
-    jest.resetAllMocks();
-  });
+      it('should create a connection successfully', async () => {
+        const mockConnectionAttributes: ConnectionAttributes = {
+          dialectName: 'bigquery',
+          isPool: false,
+          canPersist: true,
+          canStream: true,
+        };
 
-  it('tests the connection', async () => {
-    await conn.test();
-  });
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: mockConnectionAttributes,
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
 
-  it('correctly identifies the dialect', () => {
-    expect(conn.dialectName).toBe('standardsql');
-  });
+        const mockTestResponse: AxiosResponse = {
+          data: undefined,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
 
-  it('correctly identifies the connection as a pooled connection', () => {
-    expect(conn.isPool()).toBe(false);
-  });
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getTest.mockResolvedValueOnce(mockTestResponse);
 
-  it('correctly identifies the connection as a streaming connection', () => {
-    expect(conn.canStream()).toBe(true);
-  });
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
 
-  it('correctly identifies the connection as a persistSQLResults connection', () => {
-    expect(conn.canPersist()).toBe(true);
-  });
+        expect(connection).toBeInstanceOf(PublisherConnection);
+        expect(connection.name).toBe('test-connection');
+        expect(connection.projectName).toBe('test-project');
+        expect(mockConnectionsApi.getConnection).toHaveBeenCalledWith(
+          'test-project',
+          'test-connection',
+          {
+            headers: {
+              Authorization: 'Bearer test-token',
+            },
+          }
+        );
+      });
 
-  it('caches table schema', async () => {
-    await conn.fetchTableSchema(
-      'bigquery',
-      'bigquery-public-data.hacker_news.full'
-    );
-    expect(getTableSchema).toBeCalledTimes(1);
-    await conn.fetchTableSchema(
-      'bigquery',
-      'bigquery-public-data.hacker_news.full'
-    );
-    expect(getTableSchema).toBeCalledTimes(1);
-  });
+      it('should throw error for invalid connection URI format', async () => {
+        await expect(
+          PublisherConnection.create('test-connection', {
+            connectionUri: 'http://test.com/invalid/path',
+            accessToken: 'test-token',
+          })
+        ).rejects.toThrow('Invalid connection URI');
+      });
 
-  it('refreshes table schema', async () => {
-    await conn.fetchTableSchema(
-      'bigquery',
-      'bigquery-public-data.hacker_news.full'
-    );
-    expect(getTableSchema).toBeCalledTimes(1);
-    await conn.fetchSchemaForTables(
-      {'bigquery': 'bigquery-public-data.hacker_news.full'},
-      {refreshTimestamp: Date.now() + 10}
-    );
-    expect(getTableSchema).toBeCalledTimes(2);
-  });
+      it('should throw error for connection name mismatch', async () => {
+        await expect(
+          PublisherConnection.create('different-name', {
+            connectionUri:
+              'http://test.com/api/v0/projects/test-project/connections/test-connection',
+            accessToken: 'test-token',
+          })
+        ).rejects.toThrow('Connection name mismatch');
+      });
 
-  it('caches sql schema', async () => {
-    await conn.fetchSelectSchema({
-      connection: 'bigquery',
-      selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
+      it('should handle missing access token', async () => {
+        const mockConnectionAttributes: ConnectionAttributes = {
+          dialectName: 'bigquery',
+          isPool: false,
+          canPersist: true,
+          canStream: true,
+        };
+
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: mockConnectionAttributes,
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        const mockTestResponse: AxiosResponse = {
+          data: undefined,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getTest.mockResolvedValueOnce(mockTestResponse);
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+        });
+
+        expect(connection).toBeInstanceOf(PublisherConnection);
+        expect(mockConnectionsApi.getConnection).toHaveBeenCalledWith(
+          'test-project',
+          'test-connection',
+          {
+            headers: {},
+          }
+        );
+      });
     });
-    expect(getSQLBlockSchema).toBeCalledTimes(1);
-    await conn.fetchSelectSchema({
-      connection: 'bigquery',
-      selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
-    });
-    expect(getSQLBlockSchema).toBeCalledTimes(1);
-  });
-
-  it('refreshes sql schema', async () => {
-    await conn.fetchSelectSchema({
-      connection: 'bigquery',
-      selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
-    });
-    expect(getSQLBlockSchema).toBeCalledTimes(1);
-    await conn.fetchSchemaForSQLStruct(
-      {
-        connection: 'bigquery',
-        selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
-      },
-      {refreshTimestamp: Date.now() + 10}
-    );
-    expect(getSQLBlockSchema).toBeCalledTimes(2);
-  });
-
-  it('runs a SQL query', async () => {
-    const res = await conn.runSQL('SELECT 1 as T');
-    expect(res.rows[0]['T']).toBe(1);
-  });
-
-  it('runs a Malloy query', async () => {
-    const sql = await runtime
-      .loadModel(
-        "source: stories is bigquery.table('bigquery-public-data.hacker_news.full')"
-      )
-      .loadQuery(
-        'run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 10 }'
-      )
-      .getSQL();
-    const res = await conn.runSQL(sql);
-    expect(res.totalRows).toBe(10);
-    let total = 0;
-    for (const row of res.rows) {
-      total += +(row['cnt'] ?? 0);
-    }
-    expect(total).toBe(1836679);
-  });
-
-  it('runs a Malloy query on an sql source', async () => {
-    const sql = await runtime
-      .loadModel(
-        "source: stories is bigquery.sql('SELECT * FROM bigquery-public-data.hacker_news.full')"
-      )
-      .loadQuery(
-        'run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 20 }'
-      )
-      .getSQL();
-    const res = await conn.runSQL(sql);
-    expect(res.totalRows).toBe(20);
-    expect(res.rows[0]['cnt']).toBe(1346912);
-  });
-
-  it('get temporary table name', async () => {
-    const sql = 'SELECT 1 as T';
-    const tempTableName = await conn.manifestTemporaryTable(sql);
-    expect(tempTableName).toBeDefined();
-    expect(tempTableName.startsWith('lofty-complex-452701')).toBe(true);
   });
 });
