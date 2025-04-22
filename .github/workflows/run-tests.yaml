@@ -47,6 +47,7 @@ jobs:
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-publisher:
+    needs: check-permission
     uses: './.github/workflows/db-publisher.yaml'
   db-snowflake:
     needs: check-permission
