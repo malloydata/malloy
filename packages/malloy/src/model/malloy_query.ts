@@ -4166,6 +4166,7 @@ class QueryQueryIndexStage extends QueryQuery {
     this.expandFilters(resultStruct);
   }
 
+  // TODO (vitor): check limit and groupt by 1
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = 'COUNT(*)';
     const dialect = this.parent.dialect;
@@ -4262,11 +4263,24 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    s += 'GROUP BY 1,2,3,4,5\n';
+    // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
+    if (dialect.name === 'tsql') {
+      s += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
+    } else {
+      s += 'GROUP BY 1,2,3,4,5\n';
+    }
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
+      // TODO (vitor): This is ANSI SQL so maybe it's not terrible?
+      if (dialect.name === 'tsql') {
+        s += `
+        ORDER BY 1
+        OFFSET 0 ROWS
+        FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+      } else {
+        s += `LIMIT ${this.firstSegment.limit}\n`;
+      }
     }
     // console.log(s);
     const resultStage = stageWriter.addStage(s);

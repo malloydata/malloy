@@ -355,7 +355,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
-    throw new Error('Not implemented Yet');
+    throw new Error('Not implemented');
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
