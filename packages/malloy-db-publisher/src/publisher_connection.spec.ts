@@ -125,7 +125,7 @@ describe('db:Publisher', () => {
         ).rejects.toThrow('Connection name mismatch');
       });
 
-      it('should handle missing access token', async () => {
+      it('should handle no access token', async () => {
         const mockConnectionAttributes: ConnectionAttributes = {
           dialectName: 'bigquery',
           isPool: false,
