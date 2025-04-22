@@ -472,12 +472,20 @@ export class TSQLDialect extends Dialect {
       .join(',')}`;
   }
 
+  // TODO (vitor): I think the point in other dialects is to allow escaping
+  // but since \\ is \, then you need to make \\ into \\\\ if its going
+  // to be escaped twice.
+  // I expect this to be the final step but I'm not totally sure. Should be fine
+  // if we use tsql literal strings but idk if this is a good idea yet.
   sqlLiteralString(literal: string): string {
-    return "N'" + literal.replace(/'/g, "''") + "'";
+    const noEscape = literal.replace(/\\\\/g, '\\');
+    return "N'" + noEscape.replace(/'/g, "''") + "'";
   }
 
+  // TODO (vitor): Same as sqlLiteralString
   sqlLiteralRegexp(literal: string): string {
-    return "N'" + literal.replace(/'/g, "''") + "'";
+    const noEscape = literal.replace(/\\\\/g, '\\');
+    return "N'" + noEscape.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {
