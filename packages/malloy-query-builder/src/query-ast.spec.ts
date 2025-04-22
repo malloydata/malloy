@@ -2287,6 +2287,10 @@ describe('query builder', () => {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'month',
         });
+        source.setParameter('short_date_param', {
+          date: new Date('0123-01-01 10:00:00+00:00'),
+          granularity: 'day',
+        });
         source.setParameter('timestamp_param', {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'minute',
@@ -2311,6 +2315,10 @@ describe('query builder', () => {
             },
             {
               name: 'date_param',
+              type: {kind: 'date_type'},
+            },
+            {
+              name: 'short_date_param',
               type: {kind: 'date_type'},
             },
             {
@@ -2352,6 +2360,14 @@ describe('query builder', () => {
                   },
                 },
                 {
+                  name: 'short_date_param',
+                  value: {
+                    kind: 'date_literal',
+                    date_value: '0123-01-01 10:00:00',
+                    granularity: 'day',
+                  },
+                },
+                {
                   name: 'timestamp_param',
                   value: {
                     kind: 'timestamp_literal',
@@ -2377,6 +2393,7 @@ describe('query builder', () => {
             number_param is 7,
             boolean_param is true,
             date_param is @2020-01,
+            short_date_param is @0123-01-01,
             timestamp_param is @2020-01-01 18:00,
             null_param is null
           ) -> { }
