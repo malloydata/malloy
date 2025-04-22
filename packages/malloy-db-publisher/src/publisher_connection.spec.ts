@@ -267,47 +267,11 @@ describe('db:Publisher', () => {
       });
 
       it('should handle invalid JSON response', async () => {
-        const mockConnectionResponse: AxiosResponse = {
-          data: {
-            attributes: {
-              dialectName: 'bigquery',
-              isPool: false,
-              canPersist: true,
-              canStream: true,
-            },
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        const mockTableResponse: AxiosResponse = {
-          data: {
-            source: 'invalid json',
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        mockConnectionsApi.getConnection.mockResolvedValueOnce(
-          mockConnectionResponse
+        await setupAndTestInvalidJsonResponse(
+          mockConnectionsApi,
+          'getTablesource',
+          connection => connection.fetchTableSchema('test_key', 'test_path')
         );
-        mockConnectionsApi.getTablesource.mockResolvedValueOnce(
-          mockTableResponse
-        );
-
-        const connection = await PublisherConnection.create('test-connection', {
-          connectionUri:
-            'http://test.com/api/v0/projects/test-project/connections/test-connection',
-          accessToken: 'test-token',
-        });
-
-        await expect(
-          connection.fetchTableSchema('test_key', 'test_path')
-        ).rejects.toThrow();
       });
     });
 
@@ -407,48 +371,15 @@ describe('db:Publisher', () => {
       });
 
       it('should handle invalid JSON response', async () => {
-        const mockConnectionResponse: AxiosResponse = {
-          data: {
-            attributes: {
-              dialectName: 'bigquery',
-              isPool: false,
-              canPersist: true,
-              canStream: true,
-            },
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        const mockSqlResponse: AxiosResponse = {
-          data: {
-            source: 'invalid json',
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        mockConnectionsApi.getConnection.mockResolvedValueOnce(
-          mockConnectionResponse
+        await setupAndTestInvalidJsonResponse(
+          mockConnectionsApi,
+          'getSqlsource',
+          connection =>
+            connection.fetchSelectSchema({
+              selectStr: 'SELECT * FROM test_table',
+              connection: 'test-connection',
+            })
         );
-        mockConnectionsApi.getSqlsource.mockResolvedValueOnce(mockSqlResponse);
-
-        const connection = await PublisherConnection.create('test-connection', {
-          connectionUri:
-            'http://test.com/api/v0/projects/test-project/connections/test-connection',
-          accessToken: 'test-token',
-        });
-
-        await expect(
-          connection.fetchSelectSchema({
-            selectStr: 'SELECT * FROM test_table',
-            connection: 'test-connection',
-          })
-        ).rejects.toThrow();
       });
     });
 
@@ -611,47 +542,12 @@ describe('db:Publisher', () => {
       });
 
       it('should handle invalid JSON response', async () => {
-        const mockConnectionResponse: AxiosResponse = {
-          data: {
-            attributes: {
-              dialectName: 'bigquery',
-              isPool: false,
-              canPersist: true,
-              canStream: true,
-            },
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        const mockQueryResponse: AxiosResponse = {
-          data: {
-            data: 'invalid json',
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        mockConnectionsApi.getConnection.mockResolvedValueOnce(
-          mockConnectionResponse
+        await setupAndTestInvalidJsonResponse(
+          mockConnectionsApi,
+          'getQuerydata',
+          connection => connection.runSQL('SELECT * FROM test_table'),
+          {data: 'invalid json'}
         );
-        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
-          mockQueryResponse
-        );
-
-        const connection = await PublisherConnection.create('test-connection', {
-          connectionUri:
-            'http://test.com/api/v0/projects/test-project/connections/test-connection',
-          accessToken: 'test-token',
-        });
-
-        await expect(
-          connection.runSQL('SELECT * FROM test_table')
-        ).rejects.toThrow();
       });
     });
 
@@ -830,52 +726,18 @@ describe('db:Publisher', () => {
       });
 
       it('should handle invalid JSON response', async () => {
-        const mockConnectionResponse: AxiosResponse = {
-          data: {
-            attributes: {
-              dialectName: 'bigquery',
-              isPool: false,
-              canPersist: true,
-              canStream: true,
-            },
+        await setupAndTestInvalidJsonResponse(
+          mockConnectionsApi,
+          'getQuerydata',
+          async connection => {
+            const stream = connection.runSQLStream('SELECT * FROM test_table');
+            const results: QueryDataRow[] = [];
+            for await (const row of stream) {
+              results.push(row);
+            }
           },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        const mockQueryResponse: AxiosResponse = {
-          data: {
-            data: 'invalid json',
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        };
-
-        mockConnectionsApi.getConnection.mockResolvedValueOnce(
-          mockConnectionResponse
+          {data: 'invalid json'}
         );
-        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
-          mockQueryResponse
-        );
-
-        const connection = await PublisherConnection.create('test-connection', {
-          connectionUri:
-            'http://test.com/api/v0/projects/test-project/connections/test-connection',
-          accessToken: 'test-token',
-        });
-
-        const stream = connection.runSQLStream('SELECT * FROM test_table');
-        const results: QueryDataRow[] = [];
-
-        await expect(async () => {
-          for await (const row of stream) {
-            results.push(row);
-          }
-        }).rejects.toThrow();
       });
     });
 
@@ -1149,13 +1011,17 @@ describe('db:Publisher', () => {
   });
 });
 
-// helper function for handling API errors
-async function testApiErrorHandling(
+// helper function for handling API errors test cases
+async function testErrorHandling(
   connection: PublisherConnection,
   operation: () => Promise<any>,
-  errorMessage: string = 'API Error'
+  errorMessage?: string
 ) {
-  await expect(operation()).rejects.toThrow(errorMessage);
+  if (errorMessage) {
+    await expect(operation()).rejects.toThrow(errorMessage);
+  } else {
+    await expect(operation()).rejects.toThrow();
+  }
 }
 
 // handles API errors test cases
@@ -1191,9 +1057,53 @@ async function setupAndTestApiError(
     accessToken: 'test-token',
   });
 
-  await testApiErrorHandling(
+  await testErrorHandling(
     connection,
     () => operation(connection),
     errorMessage
   );
+}
+
+// handles invalid JSON response test cases
+async function setupAndTestInvalidJsonResponse(
+  mockConnectionsApi: jest.Mocked<ConnectionsApi>,
+  apiMethod: keyof jest.Mocked<ConnectionsApi>,
+  operation: (connection: PublisherConnection) => Promise<any>,
+  responseData: any = {source: 'invalid json'}
+) {
+  const mockConnectionResponse: AxiosResponse = {
+    data: {
+      attributes: {
+        dialectName: 'bigquery',
+        isPool: false,
+        canPersist: true,
+        canStream: true,
+      },
+    },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {} as any,
+  };
+
+  const mockInvalidResponse: AxiosResponse = {
+    data: responseData,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {} as any,
+  };
+
+  mockConnectionsApi.getConnection.mockResolvedValueOnce(
+    mockConnectionResponse
+  );
+  mockConnectionsApi[apiMethod].mockResolvedValueOnce(mockInvalidResponse);
+
+  const connection = await PublisherConnection.create('test-connection', {
+    connectionUri:
+      'http://test.com/api/v0/projects/test-project/connections/test-connection',
+    accessToken: 'test-token',
+  });
+
+  await testErrorHandling(connection, () => operation(connection));
 }
