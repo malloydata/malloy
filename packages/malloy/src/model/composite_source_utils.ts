@@ -72,7 +72,6 @@ function _resolveCompositeSources(
           fieldNames.add(field.as ?? field.name);
         }
       }
-      const allCompositeFieldsReferenced: string[][] = [];
       const allFieldPathsReferenced = compositeFieldUsage.fields.map(f => [f]);
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
       for (let i = 0; i < allFieldPathsReferenced.length; i++) {
@@ -81,11 +80,15 @@ function _resolveCompositeSources(
         // Look up this referenced field; if it is a composite field, then add it to the list
         // of composite fields found;
         // if it has composite usage, add those usages to the list of fields to look up next
-        const def = lookup(reference, fieldsForLookup);
+        // if it doesn't exist, then this source won't work.
+        let def: FieldDef;
+        try {
+          def = lookup(reference, fieldsForLookup);
+        } catch {
+          newNarrowedSources.shift();
+          continue overSources;
+        }
         if (isAtomic(def)) {
-          if (def.e?.node === 'compositeField') {
-            allCompositeFieldsReferenced.push(reference);
-          }
           if (def.compositeFieldUsage) {
             allFieldPathsReferenced.push(
               ...compositeFieldUsagePaths(def.compositeFieldUsage)
@@ -95,10 +98,16 @@ function _resolveCompositeSources(
           }
         }
       }
-      const compositeFieldsReferencedInThisSource = allCompositeFieldsReferenced
+      const namesReferencedInThisSource = allFieldPathsReferenced
         .filter(p => p.length === 1)
         .map(p => p[0]);
-      for (const usage of compositeFieldsReferencedInThisSource) {
+      const compositeFieldsReferenced = namesReferencedInThisSource.filter(
+        f => {
+          const def = lookup([f], source.fields);
+          return isAtomic(def) && def.e?.node === 'compositeField';
+        }
+      );
+      for (const usage of compositeFieldsReferenced) {
         if (!fieldNames.has(usage)) {
           newNarrowedSources.shift();
           continue overSources;
@@ -147,7 +156,7 @@ function _resolveCompositeSources(
       };
 
       const newCompositesThatJoinsNeedToHandle = compositeFieldUsageFromPaths(
-        allCompositeFieldsReferenced
+        allFieldPathsReferenced
       );
 
       const joinError = processJoins(
@@ -190,7 +199,6 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const allCompositeFieldsReferenced: string[][] = [];
     const allFieldPathsReferenced = compositeFieldUsage.fields.map(f => [f]);
     const fieldsForLookup = source.fields;
     // TODO abstract this code; it is duplicated above...
@@ -202,9 +210,6 @@ function _resolveCompositeSources(
       // if it has composite usage, add those usages to the list of fields to look up next
       const def = lookup(reference, fieldsForLookup);
       if (isAtomic(def)) {
-        if (def.e?.node === 'compositeField') {
-          allCompositeFieldsReferenced.push(reference);
-        }
         if (def.compositeFieldUsage) {
           allFieldPathsReferenced.push(
             ...compositeFieldUsagePaths(def.compositeFieldUsage)
@@ -221,7 +226,7 @@ function _resolveCompositeSources(
       nests,
       mergeCompositeFieldUsage(
         compositeFieldUsage,
-        compositeFieldUsageFromPaths(allCompositeFieldsReferenced)
+        compositeFieldUsageFromPaths(allFieldPathsReferenced)
       ),
       narrowedJoinedSources
     );
