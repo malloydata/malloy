@@ -760,6 +760,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
 
   // Memoize tooltip data
   const tooltipEntryMemo = new Map<Item, ChartTooltipEntry | null>();
+  const tooltipItemCountLimit = 10;
 
   return {
     spec,
@@ -802,9 +803,14 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
+        let sortedRecords = [...records].sort((a, b) => b.y - a.y);
+        if (sortedRecords.length > tooltipItemCountLimit) {
+          sortedRecords = sortedRecords.slice(0, tooltipItemCountLimit);
+        }
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => ({
+          entries: sortedRecords.map(rec => ({
             label: rec.series,
             value: formatY(rec),
             highlight: false,
@@ -834,9 +840,20 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
             )
           : itemData.x;
 
+        // If the highlighted item is not included in the first ~20,
+        // then it will probably be cut off.
+
+        let sortedRecords = [...records].sort((a, b) => b.y - a.y);
+        if (sortedRecords.length > tooltipItemCountLimit) {
+          sortedRecords = sortedRecords.filter(
+            (item, index) =>
+              index <= tooltipItemCountLimit ||
+              item.series === highlightedSeries
+          );
+        }
         tooltipData = {
           title: [title],
-          entries: records.map(rec => {
+          entries: sortedRecords.map(rec => {
             return {
               label: rec.series,
               value: formatY(rec),
@@ -866,6 +883,14 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         records.length === 1
       ) {
         customTooltipRecords = records;
+      }
+
+      customTooltipRecords.sort((a, b) => {
+        return a.y - b.y;
+      });
+
+      if (customTooltipRecords.length > 20) {
+        customTooltipRecords = customTooltipRecords.slice(0, 20);
       }
 
       if (tooltipData) {
