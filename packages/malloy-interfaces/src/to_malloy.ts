@@ -119,31 +119,31 @@ function serializeDateAsLiteral(
       return `@${year}-Q${quarter}`;
     }
     case 'month': {
-      const year = digits(date.getUTCFullYear(), 2);
+      const year = digits(date.getUTCFullYear(), 4);
       const month = digits(date.getUTCMonth() + 1, 2);
       return `@${year}-${month}`;
     }
     case 'week': {
-      const year = digits(date.getUTCFullYear(), 2);
+      const year = digits(date.getUTCFullYear(), 4);
       const month = digits(date.getUTCMonth() + 1, 2);
       const day = digits(date.getUTCDate(), 2);
       return `@WK${year}-${month}-${day}`;
     }
     case 'day': {
-      const year = digits(date.getUTCFullYear(), 2);
+      const year = digits(date.getUTCFullYear(), 4);
       const month = digits(date.getUTCMonth() + 1, 2);
       const day = digits(date.getUTCDate(), 2);
       return `@${year}-${month}-${day}`;
     }
     case 'hour': {
-      const year = digits(date.getUTCFullYear(), 2);
+      const year = digits(date.getUTCFullYear(), 4);
       const month = digits(date.getUTCMonth() + 1, 2);
       const day = digits(date.getUTCDate(), 2);
       const hour = digits(date.getUTCHours(), 2);
       return `@${year}-${month}-${day} ${hour}`;
     }
     case 'minute': {
-      const year = digits(date.getUTCFullYear(), 2);
+      const year = digits(date.getUTCFullYear(), 4);
       const month = digits(date.getUTCMonth() + 1, 2);
       const day = digits(date.getUTCDate(), 2);
       const hour = digits(date.getUTCHours(), 2);
@@ -151,7 +151,7 @@ function serializeDateAsLiteral(
       return `@${year}-${month}-${day} ${hour}:${minute}`;
     }
     case 'second': {
-      const year = digits(date.getUTCFullYear(), 2);
+      const year = digits(date.getUTCFullYear(), 4);
       const month = digits(date.getUTCMonth() + 1, 2);
       const day = digits(date.getUTCDate(), 2);
       const hour = digits(date.getUTCHours(), 2);

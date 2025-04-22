@@ -4741,7 +4741,7 @@ function digits(value: number, digits: number) {
 }
 
 function serializeDateAsLiteral(date: Date): string {
-  const year = digits(date.getUTCFullYear(), 2);
+  const year = digits(date.getUTCFullYear(), 4);
   const month = digits(date.getUTCMonth() + 1, 2);
   const day = digits(date.getUTCDate(), 2);
   const hour = digits(date.getUTCHours(), 2);
