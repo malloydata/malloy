@@ -1087,5 +1087,69 @@ describe('db:Publisher', () => {
         ).rejects.toThrow('API Error');
       });
     });
+
+    describe('test', () => {
+      let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let mockConfiguration: jest.Mocked<Configuration>;
+
+      beforeEach(() => {
+        // Get fresh instances of the mocks
+        mockConnectionsApi = new ConnectionsApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsApi>;
+        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+      });
+
+      afterEach(() => {
+        jest.clearAllMocks();
+      });
+
+      it('should test connection successfully', async () => {
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        const mockTestResponse: AxiosResponse = {
+          data: undefined,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getTest.mockResolvedValueOnce(mockTestResponse);
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        await expect(connection.test()).resolves.not.toThrow();
+        expect(mockConnectionsApi.getTest).toHaveBeenCalledWith(
+          'test-project',
+          'test-connection',
+          {
+            headers: {
+              Authorization: 'Bearer test-token',
+            },
+          }
+        );
+      });
+    });
   });
 });
