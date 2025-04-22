@@ -22,6 +22,7 @@ jest.mock('./client', () => {
     getTablesource: jest.fn(),
     getSqlsource: jest.fn(),
     getQuerydata: jest.fn(),
+    getTemporarytable: jest.fn(),
   };
 
   const mockConfiguration = {
@@ -977,6 +978,113 @@ describe('db:Publisher', () => {
             results.push(row);
           }
         }).rejects.toThrow();
+      });
+    });
+
+    describe('manifestTemporaryTable', () => {
+      let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let mockConfiguration: jest.Mocked<Configuration>;
+
+      beforeEach(() => {
+        // Get fresh instances of the mocks
+        mockConnectionsApi = new ConnectionsApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsApi>;
+        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+      });
+
+      afterEach(() => {
+        jest.clearAllMocks();
+      });
+
+      it('should create temporary table successfully', async () => {
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        const mockTableResponse: AxiosResponse = {
+          data: {
+            table: 'temp_table_123',
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getTemporarytable.mockResolvedValueOnce(
+          mockTableResponse
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        const tableName = await connection.manifestTemporaryTable(
+          'SELECT * FROM test_table'
+        );
+
+        expect(tableName).toBe('temp_table_123');
+        expect(mockConnectionsApi.getTemporarytable).toHaveBeenCalledWith(
+          'test-project',
+          'test-connection',
+          'SELECT * FROM test_table',
+          {
+            headers: {
+              Authorization: 'Bearer test-token',
+            },
+          }
+        );
+      });
+
+      it('should handle API errors', async () => {
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsApi.getTemporarytable.mockRejectedValueOnce(
+          new Error('API Error')
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        await expect(
+          connection.manifestTemporaryTable('SELECT * FROM test_table')
+        ).rejects.toThrow('API Error');
       });
     });
   });
