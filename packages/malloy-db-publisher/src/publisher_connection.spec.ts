@@ -1,7 +1,7 @@
 import * as malloy from '@malloydata/malloy';
-import { describeIfDatabaseAvailable } from '@malloydata/malloy/test';
-import { PublisherConnection } from './publisher_connection';
-import { fileURLToPath } from 'url';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import {PublisherConnection} from './publisher_connection';
+import {fileURLToPath} from 'url';
 import * as util from 'util';
 import * as fs from 'fs';
 
@@ -10,31 +10,58 @@ const [describe] = describeIfDatabaseAvailable(['publisher']);
 describe('db:Publisher', () => {
   let conn: PublisherConnection;
   let runtime: malloy.Runtime;
+  let getTableSchema: jest.SpyInstance;
+  let getSQLBlockSchema: jest.SpyInstance;
 
   beforeEach(async () => {
-    conn = await PublisherConnection.create('bigquery',
-      //{
-      //connectionUri: 'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
-      //}
-      {
-        connectionUri: 'http://demo.data.pathways.localhost:8000/api/v0/projects/malloy-samples/connections/bigquery',
-        accessToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjNDdUMxcFl0OUZSREh1RE9sajBYQyJ9.eyJnaXZlbl9uYW1lIjoiS3lsZSIsImZhbWlseV9uYW1lIjoiTmVzYml0Iiwibmlja25hbWUiOiJram5lc2JpdCIsIm5hbWUiOiJLeWxlIE5lc2JpdCIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NJZTgxd2xmc01rMUVFRHJNdXkzRHVZNWFfSVROaWVKWDQ0em5YdTZpUFN6Mi1jTFlVPXM5Ni1jIiwidXBkYXRlZF9hdCI6IjIwMjUtMDQtMTdUMjE6NTE6NTEuOTgzWiIsImVtYWlsIjoia2puZXNiaXRAbXMyLmNvIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImlzcyI6Imh0dHBzOi8vZGV2LW9oYWFmb2d3NXA4dXl4MW0udXMuYXV0aDAuY29tLyIsImF1ZCI6InJyNm16Sk5qOWIxMDRNakNjOXhXS1BQZWhxMU1KeDBMIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTgwNzczNjkyNTA5MDcwOTc1NDYiLCJpYXQiOjE3NDQ5NDA1MDcsImV4cCI6MTc0NDk3NjUwN30.St0XSYEXCVvNc8Hj4_ZeEfx9ln3h19GVq3TXQWCEU6oXxI-ZswmxMaXtiPPr37tt9vQLbcb6e6GZCHkefRtCS4EX0Rdb5BpR7VqYRcm3xzmvNVNuQRzd0dI1ZPYfoSiHAIgk-u8WAvOAZJkIyy6Qoe3IgzMOsxMlPUY2AFgwLXkkqHQh1S5DzzASF3fDZPIHRjhABEf8xTB3JLSwYOScbrcyzLsRNYZYVIefbL1Hq5FlXKKBvunaN5OhXFif7IV-0lxR55xVCeJo5n84Q_a3mycjWctDswFxur6EAs9BoCWVkFsJx7tusT3dmffHuf4ONQHL6_lvw1IIi8MNNHdajw",
-      }
-    );
+    conn = await PublisherConnection.create('bigquery', {
+      connectionUri:
+        'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
+      accessToken: 'xyz',
+    });
+
     const files = {
       readURL: async (url: URL) => {
         const filePath = fileURLToPath(url);
         return await util.promisify(fs.readFile)(filePath, 'utf8');
       },
     };
+
     runtime = new malloy.Runtime({
       urlReader: files,
       connection: conn,
     });
+
+    getTableSchema = jest
+      .spyOn(PublisherConnection.prototype as any, 'fetchTableSchema')
+      .mockResolvedValue({
+        type: 'table',
+        dialect: 'standardsql',
+        tablePath: 'bigquery-public-data.hacker_news.full',
+        fields: [
+          {name: 'title', type: 'string'},
+          {name: 'by', type: 'string'},
+          {name: 'score', type: 'number'},
+        ],
+      });
+
+    getSQLBlockSchema = jest
+      .spyOn(PublisherConnection.prototype as any, 'fetchSelectSchema')
+      .mockResolvedValue({
+        type: 'sql_select',
+        dialect: 'standardsql',
+        selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
+        fields: [
+          {name: 'title', type: 'string'},
+          {name: 'by', type: 'string'},
+          {name: 'score', type: 'number'},
+        ],
+      });
   });
 
   afterEach(async () => {
     await conn.close();
+    jest.resetAllMocks();
   });
 
   it('tests the connection', async () => {
@@ -57,26 +84,59 @@ describe('db:Publisher', () => {
     expect(conn.canPersist()).toBe(true);
   });
 
-  it('fetches the table schema', async () => {
-    const schema = await conn.fetchTableSchema('bigquery', 'bigquery-public-data.hacker_news.full');
-    expect(schema.type).toBe('table');
-    expect(schema.dialect).toBe('standardsql');
-    expect(schema.tablePath).toBe('bigquery-public-data.hacker_news.full');
-    expect(schema.fields.length).toBe(14);
-    expect(schema.fields[0].name).toBe('title');
-    expect(schema.fields[0].type).toBe('string');
+  it('caches table schema', async () => {
+    await conn.fetchTableSchema(
+      'bigquery',
+      'bigquery-public-data.hacker_news.full'
+    );
+    expect(getTableSchema).toBeCalledTimes(1);
+    await conn.fetchTableSchema(
+      'bigquery',
+      'bigquery-public-data.hacker_news.full'
+    );
+    expect(getTableSchema).toBeCalledTimes(1);
   });
 
-  it('fetches the sql source schema', async () => {
-    const schema = await conn.fetchSelectSchema({
+  it('refreshes table schema', async () => {
+    await conn.fetchTableSchema(
+      'bigquery',
+      'bigquery-public-data.hacker_news.full'
+    );
+    expect(getTableSchema).toBeCalledTimes(1);
+    await conn.fetchSchemaForTables(
+      {'bigquery': 'bigquery-public-data.hacker_news.full'},
+      {refreshTimestamp: Date.now() + 10}
+    );
+    expect(getTableSchema).toBeCalledTimes(2);
+  });
+
+  it('caches sql schema', async () => {
+    await conn.fetchSelectSchema({
       connection: 'bigquery',
       selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
     });
-    expect(schema.type).toBe('sql_select');
-    expect(schema.dialect).toBe('standardsql');
-    expect(schema.fields.length).toBe(14);
-    expect(schema.fields[0].name).toBe('title');
-    expect(schema.fields[0].type).toBe('string');
+    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    await conn.fetchSelectSchema({
+      connection: 'bigquery',
+      selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
+    });
+    expect(getSQLBlockSchema).toBeCalledTimes(1);
+  });
+
+  it('refreshes sql schema', async () => {
+    await conn.fetchSelectSchema({
+      connection: 'bigquery',
+      selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
+    });
+    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    await conn.fetchSchemaForSQLStruct(
+      {
+        connection: 'bigquery',
+        selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
+      },
+      {refreshTimestamp: Date.now() + 10}
+    );
+    expect(getSQLBlockSchema).toBeCalledTimes(2);
   });
 
   it('runs a SQL query', async () => {
@@ -86,8 +146,12 @@ describe('db:Publisher', () => {
 
   it('runs a Malloy query', async () => {
     const sql = await runtime
-      .loadModel("source: stories is bigquery.table('bigquery-public-data.hacker_news.full')")
-      .loadQuery('run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 10 }')
+      .loadModel(
+        "source: stories is bigquery.table('bigquery-public-data.hacker_news.full')"
+      )
+      .loadQuery(
+        'run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 10 }'
+      )
       .getSQL();
     const res = await conn.runSQL(sql);
     expect(res.totalRows).toBe(10);
@@ -103,7 +167,9 @@ describe('db:Publisher', () => {
       .loadModel(
         "source: stories is bigquery.sql('SELECT * FROM bigquery-public-data.hacker_news.full')"
       )
-      .loadQuery('run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 20 }')
+      .loadQuery(
+        'run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 20 }'
+      )
       .getSQL();
     const res = await conn.runSQL(sql);
     expect(res.totalRows).toBe(20);
