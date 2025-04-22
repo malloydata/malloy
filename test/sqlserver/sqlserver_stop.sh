@@ -4,4 +4,4 @@
 rm -rf .tmp
 
 # stop container
-docker rm -f sqlserver-malloy
+docker rm -f malloysqlserver
