@@ -339,6 +339,10 @@ export abstract class TrinoPrestoConnection
     tableKey: string,
     tablePath: string
   ): Promise<TableSourceDef> {
+    if (tablePath in this.schemaCache) {
+      return this.schemaCache[tablePath].schema as TableSourceDef;
+    }
+
     const structDef: TableSourceDef = {
       type: 'table',
       name: tableKey,
@@ -354,6 +358,9 @@ export abstract class TrinoPrestoConnection
       `table ${tablePath}`
     );
     structDef.fields = schemaDesc.fields;
+
+    this.schemaCache[tablePath] = {schema: structDef, timestamp: Date.now()};
+
     return structDef;
   }
 
