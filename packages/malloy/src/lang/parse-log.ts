@@ -205,6 +205,7 @@ type MessageParameterTypes = {
     newUsage: CompositeFieldUsage;
     allUsage: CompositeFieldUsage;
   };
+  'could-not-resolve-composite-source': string;
   'empty-composite-source': string;
   'unnecessary-composite-source': string;
   'composite-source-atomic-fields-only': string;

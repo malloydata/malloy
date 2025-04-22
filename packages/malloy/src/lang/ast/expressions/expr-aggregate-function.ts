@@ -47,7 +47,10 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
-import {compositeFieldUsagePaths} from '../../../model/composite_source_utils';
+import {
+  compositeFieldUsageFromPath,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -86,6 +89,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (!(sourceFoot instanceof StructSpaceField)) {
           if (isAtomicFieldType(footType.type)) {
+            const footPath = this.source.list.map(x => x.refString);
             expr = this.source;
             exprVal = {
               ...TDU.atomicDef(footType),
@@ -97,12 +101,13 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               evalSpace: footType.evalSpace,
               // TODO ensure that when there's an `expr` but no `source`, that `compositeFieldUsage`
               // and `aggregateFieldUsage` still come along correctly
-              compositeFieldUsage: footType.compositeFieldUsage,
+              compositeFieldUsage: mergeCompositeFieldUsage(
+                footType.compositeFieldUsage,
+                compositeFieldUsageFromPath(footPath)
+              ),
               aggregateFieldUsage: [
                 {
-                  fields: compositeFieldUsagePaths(
-                    footType.compositeFieldUsage
-                  ),
+                  fields: [footPath],
                   location: this.location,
                 },
               ],

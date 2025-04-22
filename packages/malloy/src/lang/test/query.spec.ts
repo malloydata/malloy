@@ -1418,21 +1418,33 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test('require_group_by basic failure', () => {
+    test('grouped_by basic failure', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
           }
-          run: aext -> { aggregate: aisum }
+          run: aext -> { aggregate: ${'aisum'} }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('view with inherited require_group_by failure', () => {
+    test('grouped_by failure direct in query', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+          }
+          run: aext -> { aggregate: aisum is ${'ai_grouped_by_astr.sum()'} }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('view with inherited grouped_by failure', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
 
             view: requires_astr is {
               aggregate: aisum
@@ -1442,11 +1454,12 @@ describe('query:', () => {
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('view with inherited require_group_by success', () => {
+    test('view with inherited grouped_by success', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
 
             view: requires_astr is {
               aggregate: aisum
@@ -1460,7 +1473,8 @@ describe('query:', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
           }
           run: aext -> {
             group_by: ai
@@ -1480,7 +1494,8 @@ describe('query:', () => {
             a,
             a extend { dimension: x is 1 }
           ) extend {
-            measure: aisum is ai.sum() { require_group_by: x }
+            dimension: ai_grouped_by_x is ai { grouped_by: x }
+            measure: aisum is ai_grouped_by_x.sum()
           }
           run: aext -> {
             group_by: x
@@ -1489,13 +1504,14 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test.skip('composed source input skipped when invalid require group by usage but field is present in source', () => {
+    test('composed source input skipped when invalid require group by usage but field is present in source', () => {
       expect(
         markSource`
           ##! experimental.composite_sources
           source: aext is compose(
             a extend {
-              measure: aisum is ai.sum() { require_group_by: astr }
+              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+              measure: aisum is ai_grouped_by_astr.sum()
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1506,8 +1522,8 @@ describe('query:', () => {
           }
         `
       ).toTranslate();
+      // TODO test that this actually uses first source
     });
-    // TODO test that this actually uses first source
     test('composed source input skipped when invalid require group by usage', () => {
       expect(
         markSource`
@@ -1545,7 +1561,7 @@ describe('query:', () => {
             }
           )
           run: aext -> {
-            aggregate: aisum
+            aggregate: ${'aisum'}
           }
         `
       ).toLog(errorMessage('Group by of `x` is required but not present'));
@@ -1577,8 +1593,10 @@ describe('query:', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum1 is ai.sum() { require_group_by: astr }
-            measure: aisum2 is ai.sum() { require_group_by: abool }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            dimension: ai_grouped_by_abool is ai { grouped_by: abool }
+            measure: aisum1 is ai_grouped_by_astr.sum()
+            measure: aisum2 is ai_grouped_by_abool.sum()
           }
           run: aext -> { aggregate: aisum is aisum1 + aisum2 }
         `
@@ -1587,11 +1605,12 @@ describe('query:', () => {
         errorMessage('Group by of `abool` is required but not present')
       );
     });
-    test('require_group_by basic joined success', () => {
+    test('grouped_by basic joined success', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1600,15 +1619,17 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test('require_group_by basic joined failure', () => {
+    test('grouped_by basic joined failure', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
           }
           source: bext is b extend {
             join_one: aext on true
           }
+          // Note that the 'group_by: astr' does not fool the checker!
           run: bext -> { group_by: astr; aggregate: aext.aisum }
         `
       ).toLog(

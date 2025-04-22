@@ -156,10 +156,7 @@ export abstract class AtomicFieldDeclaration
       }
       ret.location = this.location;
       ret.e = exprValue.value;
-      ret.compositeFieldUsage = mergeCompositeFieldUsage(
-        exprValue.compositeFieldUsage,
-        {fields: [ret.name], joinedUsage: {}}
-      );
+      ret.compositeFieldUsage = exprValue.compositeFieldUsage;
       ret.aggregateFieldUsage = exprValue.aggregateFieldUsage;
       ret.groupedBy = exprValue.groupedBy;
       if (exprValue.expressionType) {
