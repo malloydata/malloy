@@ -463,7 +463,7 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     const formattedNewCompositeUsage = formatFieldUsages(e.newUsage);
     const formattedAllCompositeUsage = formatFieldUsages(e.allUsage);
     const pluralUse = fieldUsageIsPlural(e.newUsage) ? 's' : '';
-    return `This operation uses composite field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedAllCompositeUsage}`;
+    return `This operation uses field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedAllCompositeUsage}`;
   },
 };
 

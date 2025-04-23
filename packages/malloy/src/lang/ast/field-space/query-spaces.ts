@@ -53,6 +53,7 @@ import {
   joinedFieldUsage,
   mergeFieldUsage,
   narrowCompositeFieldResolution,
+  fieldUsageDifference,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 
@@ -269,6 +270,7 @@ export abstract class QueryOperationSpace
   ) {
     if (nextFieldUsage) {
       const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
+      const onlyNewFieldUsage = fieldUsageDifference(newFieldUsage, fieldUsage);
       fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage);
       if (!isEmptyFieldUsage(newFieldUsage)) {
         const result = narrowCompositeFieldResolution(
@@ -278,7 +280,7 @@ export abstract class QueryOperationSpace
         );
         if (result.error) {
           (logTo ?? this).logError('invalid-composite-field-usage', {
-            newUsage: newFieldUsage,
+            newUsage: onlyNewFieldUsage,
             allUsage: fieldUsage,
           });
         } else {

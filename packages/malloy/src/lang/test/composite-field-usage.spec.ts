@@ -80,7 +80,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, and `two`'
         )
       );
     });
@@ -97,7 +97,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, and `two`'
         )
       );
     });
@@ -113,7 +113,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two`'
         )
       );
     });
@@ -186,7 +186,7 @@ describe('composite sources', () => {
         run: foo -> { group_by: x, y }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x`, `y`'
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y`'
         )
       );
     });

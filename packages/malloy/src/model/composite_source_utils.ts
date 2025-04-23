@@ -455,9 +455,26 @@ export function fieldUsagePaths(fieldUsage: FieldUsage[]): string[][] {
 }
 
 export function formatFieldUsages(fieldUsage: FieldUsage[]) {
-  return fieldUsagePaths(fieldUsage)
-    .map(fieldUsage => formatFieldUsage(fieldUsage))
-    .join(', ');
+  const deduped: string[][] = [];
+  for (const usage of fieldUsage) {
+    if (!deduped.some(p => pathEq(p, usage.path))) {
+      deduped.push(usage.path);
+    }
+  }
+  const formattedUsages = deduped.map(fieldUsage =>
+    formatFieldUsage(fieldUsage)
+  );
+  if (formattedUsages.length === 0) {
+    return '';
+  } else if (formattedUsages.length === 1) {
+    return formattedUsages[0];
+  } else if (formattedUsages.length === 2) {
+    return `${formattedUsages[0]} and ${formattedUsages[1]}`;
+  } else {
+    return `${formattedUsages.slice(0, -1).join(', ')}, and ${
+      formattedUsages[formattedUsages.length - 1]
+    }`;
+  }
 }
 
 function countFieldUsage(fieldUsage: FieldUsage[]): number {
@@ -500,6 +517,10 @@ export function mergeFieldUsage(
   }
   if (usage.length === 0) return undefined;
   return usage;
+}
+
+export function fieldUsageDifference(a: FieldUsage[], b: FieldUsage[]) {
+  return a.filter(u1 => !b.some(u2 => pathEq(u1.path, u2.path)));
 }
 
 export function emptyFieldUsage(): FieldUsage[] {
