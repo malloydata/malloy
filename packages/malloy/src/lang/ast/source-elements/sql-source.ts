@@ -149,10 +149,7 @@ export class SQLSource extends Source {
         fields: lookup.value.fields.map(f => ({
           ...f,
           location,
-          compositeFieldUsage: {
-            fields: [f.as ?? f.name],
-            joinedUsage: {},
-          },
+          fieldUsage: [{path: [f.as ?? f.name], at: location}],
         })),
         location: this.location,
       };

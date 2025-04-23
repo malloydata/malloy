@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {FieldUsage} from '../../../model/malloy_types';
 import {expressionIsAggregate} from '../../../model/malloy_types';
 import type {ExprValue} from '../types/expr-value';
 import type {FieldReference} from '../query-items/field-references';
 import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import {compositeFieldUsageFromPath} from '../../../model/composite_source_utils';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
@@ -47,22 +47,21 @@ export class ExprIdReference extends ExpressionDef {
     // const compositeJoinUsage = this.fieldReference.list
     //   .map(n => n.name)
     //   .slice(0, -1);
-    const compositeFieldUsage = compositeFieldUsageFromPath(
-      this.fieldReference.list.map(n => n.name)
-    );
+    const fieldUsage: FieldUsage[] = [
+      {
+        path: this.fieldReference.list.map(n => n.name),
+        at: this.fieldReference.location,
+      },
+    ];
     if (def.found) {
       const td = def.found.typeDesc();
-      // const compositeFieldUsage = joinedCompositeFieldUsage(
-      //   compositeJoinUsage,
-      //   td.compositeFieldUsage
-      // );
       if (def.isOutputField) {
         return {
           ...td,
           // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
-          compositeFieldUsage,
+          fieldUsage,
           aggregateFieldUsage: undefined,
         };
       }
@@ -75,7 +74,7 @@ export class ExprIdReference extends ExpressionDef {
         ...td,
         value,
         evalSpace,
-        compositeFieldUsage,
+        fieldUsage,
         aggregateFieldUsage: undefined,
       };
     }

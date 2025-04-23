@@ -5,10 +5,9 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {isNotUndefined} from '../lang/utils';
 import type {
   AggregateFieldUsage,
-  CompositeFieldUsage,
+  FieldUsage,
   DocumentLocation,
   FieldDef,
   PipeSegment,
@@ -37,7 +36,7 @@ function _resolveCompositeSources(
   source: SourceDef,
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
-  compositeFieldUsage: CompositeFieldUsage,
+  fieldUsage: FieldUsage[],
   narrowedCompositeFieldResolution:
     | NarrowedCompositeFieldResolution
     | undefined = undefined
@@ -53,6 +52,7 @@ function _resolveCompositeSources(
     undefined;
   const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
   const nonCompositeFields = getNonCompositeFields(source);
+  const categorizedFieldUsage = categorizeFieldUsage(fieldUsage);
   if (source.type === 'composite') {
     let found = false;
     // The narrowed source list is either the one given when this function was called,
@@ -72,43 +72,23 @@ function _resolveCompositeSources(
           fieldNames.add(field.as ?? field.name);
         }
       }
-      const allFieldPathsReferenced = compositeFieldUsage.fields.map(f => [f]);
+
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      for (let i = 0; i < allFieldPathsReferenced.length; i++) {
-        const reference = allFieldPathsReferenced[i];
-        const referenceJoinPath = reference.slice(0, -1);
-        // Look up this referenced field; if it is a composite field, then add it to the list
-        // of composite fields found;
-        // if it has composite usage, add those usages to the list of fields to look up next
-        // if it doesn't exist, then this source won't work.
-        let def: FieldDef;
-        try {
-          def = lookup(reference, fieldsForLookup);
-        } catch {
-          newNarrowedSources.shift();
-          continue overSources;
-        }
-        if (isAtomic(def)) {
-          if (def.compositeFieldUsage) {
-            allFieldPathsReferenced.push(
-              ...compositeFieldUsagePaths(def.compositeFieldUsage)
-                .map(p => [...referenceJoinPath, ...p])
-                .filter(p => !allFieldPathsReferenced.some(p2 => pathEq(p, p2)))
-            );
-          }
-        }
-      }
-      const namesReferencedInThisSource = allFieldPathsReferenced
-        .filter(p => p.length === 1)
-        .map(p => p[0]);
-      const compositeFieldsReferenced = namesReferencedInThisSource.filter(
-        f => {
-          const def = lookup([f], source.fields);
-          return isAtomic(def) && def.e?.node === 'compositeField';
-        }
+      const expandedCategorized = expandFieldUsage(
+        categorizedFieldUsage.sourceUsage,
+        fieldsForLookup
       );
-      for (const usage of compositeFieldsReferenced) {
-        if (!fieldNames.has(usage)) {
+      if (expandedCategorized === undefined) {
+        // A lookup failed while expanding, which means this source certainly won't work
+        newNarrowedSources.shift();
+        continue overSources;
+      }
+
+      const compositeUsageInThisSource = expandedCategorized.sourceUsage.filter(
+        f => isCompositeField(lookup(f.path, source.fields))
+      );
+      for (const usage of compositeUsageInThisSource) {
+        if (!fieldNames.has(usage.path[0])) {
           newNarrowedSources.shift();
           continue overSources;
         }
@@ -120,10 +100,7 @@ function _resolveCompositeSources(
           [], // TODO ???
           nests,
           // TODO
-          compositeFieldUsageWithoutNonCompositeFields(
-            compositeFieldUsage,
-            inputSource
-          ),
+          onlyCompositeFieldUsage(fieldUsage, inputSource),
           // This looks wonky, but what we're doing is taking the nested sources
           // and "promoting" them to look like they're top level sources; we will
           // then reverse this when we update the real narrowed resolution.
@@ -155,19 +132,12 @@ function _resolveCompositeSources(
         filterList: [...(source.filterList ?? []), ...(base.filterList ?? [])],
       };
 
-      const newCompositesThatJoinsNeedToHandle = compositeFieldUsageFromPaths(
-        allFieldPathsReferenced
-      );
-
       const joinError = processJoins(
         path,
         base,
         rootFields,
         nests,
-        mergeCompositeFieldUsage(
-          compositeFieldUsage,
-          newCompositesThatJoinsNeedToHandle
-        ),
+        expandedCategorized,
         narrowedJoinedSources
       );
       if (joinError !== undefined) {
@@ -191,7 +161,7 @@ function _resolveCompositeSources(
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {fields: compositeFieldUsage.fields, path},
+          data: {fields: [], path}, // TODO need to determine how to report this error, given the indirect nature.
         },
       };
     }
@@ -199,35 +169,24 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const allFieldPathsReferenced = compositeFieldUsage.fields.map(f => [f]);
-    const fieldsForLookup = source.fields;
-    // TODO abstract this code; it is duplicated above...
-    for (let i = 0; i < allFieldPathsReferenced.length; i++) {
-      const reference = allFieldPathsReferenced[i];
-      const referenceJoinPath = reference.slice(0, -1);
-      // Look up this referenced field; if it is a composite field, then add it to the list
-      // of composite fields found;
-      // if it has composite usage, add those usages to the list of fields to look up next
-      const def = lookup(reference, fieldsForLookup);
-      if (isAtomic(def)) {
-        if (def.compositeFieldUsage) {
-          allFieldPathsReferenced.push(
-            ...compositeFieldUsagePaths(def.compositeFieldUsage)
-              .map(p => [...referenceJoinPath, ...p])
-              .filter(p => !allFieldPathsReferenced.some(p2 => pathEq(p, p2)))
-          );
-        }
-      }
+    const expanded = expandFieldUsage(
+      categorizedFieldUsage.sourceUsage,
+      source.fields
+    );
+    if (expanded === undefined) {
+      return {
+        error: {
+          code: 'no_suitable_composite_source_input',
+          data: {fields: [], path}, // TODO need to determine how to report this error, given the indirect nature.
+        },
+      };
     }
     const joinError = processJoins(
       path,
       base,
       rootFields,
       nests,
-      mergeCompositeFieldUsage(
-        compositeFieldUsage,
-        compositeFieldUsageFromPaths(allFieldPathsReferenced)
-      ),
+      expanded,
       narrowedJoinedSources
     );
     if (joinError !== undefined) {
@@ -242,6 +201,69 @@ function _resolveCompositeSources(
       joined: narrowedJoinedSources,
     },
   };
+}
+
+function expandFieldUsage(
+  fieldUsage: FieldUsage[],
+  fields: FieldDef[]
+): CategorizedFieldUsage | undefined {
+  const allFieldPathsReferenced = [...fieldUsage];
+  for (let i = 0; i < allFieldPathsReferenced.length; i++) {
+    const reference = allFieldPathsReferenced[i];
+    const referenceJoinPath = reference.path.slice(0, -1);
+    // Look up this referenced field; if it is a composite field, then add it to the list
+    // of composite fields found;
+    // if it has composite usage, add those usages to the list of fields to look up next
+    // if it doesn't exist, then this source won't work.
+    let def: FieldDef;
+    try {
+      def = lookup(reference.path, fields);
+    } catch {
+      return undefined; // TODO maybe return some error info?
+    }
+    if (isAtomic(def)) {
+      if (def.fieldUsage) {
+        allFieldPathsReferenced.push(
+          ...def.fieldUsage
+            .map(u => ({
+              path: [...referenceJoinPath, ...u.path],
+              at: reference.at,
+            }))
+            .filter(
+              u1 =>
+                !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
+            )
+        );
+      }
+    }
+  }
+  return categorizeFieldUsage(allFieldPathsReferenced);
+}
+
+interface CategorizedFieldUsage {
+  sourceUsage: FieldUsage[];
+  joinUsage: {[joinName: string]: FieldUsage[]};
+}
+
+function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
+  const categorized: CategorizedFieldUsage = {
+    sourceUsage: [],
+    joinUsage: {},
+  };
+  for (const usage of fieldUsage) {
+    if (usage.path.length === 1) {
+      categorized.sourceUsage.push(usage);
+    } else {
+      const joinName = usage.path[0];
+      const pathInJoin = usage.path.slice(1);
+      categorized.joinUsage[joinName] ??= [];
+      categorized.joinUsage[joinName].push({
+        path: pathInJoin,
+        at: usage.at,
+      });
+    }
+  }
+  return categorized;
 }
 
 function genRootFields(
@@ -279,7 +301,7 @@ function processJoins(
   base: SourceDef,
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
-  compositeFieldUsage: CompositeFieldUsage,
+  categorizedFieldUsage: CategorizedFieldUsage,
   narrowedJoinedSources: NarrowedCompositeFieldResolutionByJoinName
 ): {error: CompositeError} | undefined {
   const fieldsByName: {[name: string]: FieldDef} = {};
@@ -287,7 +309,7 @@ function processJoins(
     fieldsByName[field.as ?? field.name] = field;
   }
   for (const [joinName, joinedUsage] of Object.entries(
-    compositeFieldUsage.joinedUsage
+    categorizedFieldUsage.joinUsage
   )) {
     const join = fieldsByName[joinName];
     const newPath = [...path, joinName];
@@ -357,12 +379,13 @@ export interface NarrowedCompositeFieldResolution {
 export function emptyNarrowedCompositeFieldResolution(): NarrowedCompositeFieldResolution {
   return {source: undefined, joined: {}};
 }
-// Should always give the _full_ `compositeFieldUsage`, because we only
+
+// Should always give the _full_ `fieldUsage`, because we only
 // cross off sources until we find one that works, but that does not
 // guarantee that all the remaining sources will work.
 export function narrowCompositeFieldResolution(
   source: SourceDef,
-  compositeFieldUsage: CompositeFieldUsage,
+  fieldUsage: FieldUsage[],
   narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution
 ):
   | {
@@ -375,7 +398,7 @@ export function narrowCompositeFieldResolution(
     source,
     [],
     undefined,
-    compositeFieldUsage,
+    fieldUsage,
     narrowedCompositeFieldResolution
   );
   if ('success' in result) {
@@ -390,7 +413,7 @@ export function narrowCompositeFieldResolution(
 export function resolveCompositeSources(
   source: SourceDef,
   segment: PipeSegment,
-  compositeFieldUsage: CompositeFieldUsage
+  fieldUsage: FieldUsage[]
 ):
   | {sourceDef: SourceDef; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
@@ -399,7 +422,7 @@ export function resolveCompositeSources(
     source,
     [],
     extractNestLevels(segment),
-    compositeFieldUsage
+    fieldUsage
   );
   if ('success' in result) {
     return {sourceDef: result.success, error: undefined};
@@ -407,148 +430,67 @@ export function resolveCompositeSources(
   return {sourceDef: undefined, error: result.error};
 }
 
-export function compositeFieldUsageFromPath(
-  path: string[]
-): CompositeFieldUsage {
-  if (path.length === 0) {
-    throw new Error('Invalid path');
-  }
-  if (path.length === 1) {
-    return {fields: path, joinedUsage: {}};
-  }
-  return joinedCompositeFieldUsage(path.slice(0, -1), {
-    fields: [path[path.length - 1]],
-    joinedUsage: {},
-  });
+export function fieldUsagePaths(fieldUsage: FieldUsage[]): string[][] {
+  return fieldUsage.map(u => u.path);
 }
 
-export function compositeFieldUsageFromPaths(
-  paths: string[][]
-): CompositeFieldUsage {
-  return mergeCompositeFieldUsage(...paths.map(compositeFieldUsageFromPath));
-}
-
-export function compositeFieldUsagePaths(
-  compositeFieldUsage: CompositeFieldUsage
-): string[][] {
-  return [
-    ...compositeFieldUsage.fields.map(f => [f]),
-    ...Object.entries(compositeFieldUsage.joinedUsage)
-      .map(([joinName, joinedUsage]) =>
-        compositeFieldUsagePaths(joinedUsage).map(path => [joinName, ...path])
-      )
-      .flat(),
-  ];
-}
-
-export function formatCompositeFieldUsages(
-  compositeFieldUsage: CompositeFieldUsage
-) {
-  return compositeFieldUsagePaths(compositeFieldUsage)
-    .map(compositeFieldUsage => formatCompositeFieldUsage(compositeFieldUsage))
+export function formatFieldUsages(fieldUsage: FieldUsage[]) {
+  return fieldUsagePaths(fieldUsage)
+    .map(fieldUsage => formatFieldUsage(fieldUsage))
     .join(', ');
 }
 
-function countCompositeFieldUsage(
-  compositeFieldUsage: CompositeFieldUsage
-): number {
-  return Object.values(compositeFieldUsage.joinedUsage).reduce(
-    (a, b) => a + countCompositeFieldUsage(b),
-    compositeFieldUsage.fields.length
-  );
+function countFieldUsage(fieldUsage: FieldUsage[]): number {
+  const paths: string[][] = [];
+  for (const usage of fieldUsage) {
+    if (!paths.some(p => pathEq(p, usage.path))) {
+      paths.push(usage.path);
+    }
+  }
+  return paths.length;
 }
 
-export function isEmptyCompositeFieldUsage(
-  compositeFieldUsage: CompositeFieldUsage
-): boolean {
-  return countCompositeFieldUsage(compositeFieldUsage) === 0;
+export function isEmptyFieldUsage(fieldUsage: FieldUsage[]): boolean {
+  return countFieldUsage(fieldUsage) === 0;
 }
 
-export function compositeFieldUsageIsPlural(
-  compositeFieldUsage: CompositeFieldUsage
-): boolean {
-  return countCompositeFieldUsage(compositeFieldUsage) > 1;
+export function fieldUsageIsPlural(fieldUsage: FieldUsage[]): boolean {
+  return countFieldUsage(fieldUsage) > 1;
 }
 
-export function formatCompositeFieldUsage(compositeFieldUsage: string[]) {
-  return `\`${compositeFieldUsage.join('.')}\``;
+export function formatFieldUsage(fieldUsage: string[]) {
+  return `\`${fieldUsage.join('.')}\``;
 }
 
 export function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
-export function mergeCompositeFieldUsage(
-  ...usages: (CompositeFieldUsage | undefined)[]
-): CompositeFieldUsage {
-  const nonEmptyUsages = usages.filter(isNotUndefined);
-  const joinNames = new Set(
-    nonEmptyUsages.map(u => Object.keys(u.joinedUsage)).flat()
-  );
-  const joinedUsage = {};
-  for (const joinName of joinNames) {
-    joinedUsage[joinName] = mergeCompositeFieldUsage(
-      ...nonEmptyUsages
-        .map(u => u?.joinedUsage[joinName])
-        .filter(isNotUndefined)
-    );
+export function mergeFieldUsage(...usages: FieldUsage[][]): FieldUsage[];
+export function mergeFieldUsage(
+  ...usages: (FieldUsage[] | undefined)[]
+): FieldUsage[] | undefined;
+export function mergeFieldUsage(
+  ...usages: (FieldUsage[] | undefined)[]
+): FieldUsage[] | undefined {
+  const usage: FieldUsage[] = [];
+  for (const oneUsage of usages) {
+    if (oneUsage === undefined) continue;
+    usage.push(...oneUsage);
   }
-  return {
-    fields: unique(nonEmptyUsages.map(u => u.fields).flat()),
-    joinedUsage,
-  };
+  if (usage.length === 0) return undefined;
+  return usage;
 }
 
-export function emptyCompositeFieldUsage(): CompositeFieldUsage {
-  return {fields: [], joinedUsage: {}};
+export function emptyFieldUsage(): FieldUsage[] {
+  return [];
 }
 
-function arrayDifference<T extends string | number | symbol>(
-  a: T[],
-  b: T[]
-): T[] {
-  const bSet = new Set(b);
-  const ret: T[] = [];
-  for (const value of a) {
-    if (bSet.has(value)) continue;
-    ret.push(value);
-  }
-  return ret;
-}
-
-// Return all of `a`'s usage without any of `b`'s usage
-export function compositeFieldUsageDifference(
-  a: CompositeFieldUsage,
-  b: CompositeFieldUsage
-): CompositeFieldUsage {
-  return {
-    fields: arrayDifference(a.fields, b.fields),
-    joinedUsage: Object.fromEntries(
-      Object.entries(a.joinedUsage).map(
-        ([joinName, joinedUsage]) =>
-          [
-            joinName,
-            joinName in b.joinedUsage
-              ? compositeFieldUsageDifference(
-                  joinedUsage,
-                  b.joinedUsage[joinName]
-                )
-              : joinedUsage,
-          ] as [string, CompositeFieldUsage]
-      )
-    ),
-  };
-}
-
-export function joinedCompositeFieldUsage(
+export function joinedFieldUsage(
   joinPath: string[],
-  compositeFieldUsage: CompositeFieldUsage
-): CompositeFieldUsage {
-  if (joinPath.length === 0) return compositeFieldUsage;
-  return joinedCompositeFieldUsage(joinPath.slice(0, -1), {
-    fields: [],
-    joinedUsage: {[joinPath[joinPath.length - 1]]: compositeFieldUsage},
-  });
+  fieldUsage: FieldUsage[]
+): FieldUsage[] {
+  return fieldUsage.map(u => ({...u, path: [...joinPath, ...u.path]}));
 }
 
 export function joinedAggregateFieldUsage(
@@ -562,20 +504,16 @@ export function joinedAggregateFieldUsage(
   }));
 }
 
-export function compositeFieldUsageJoinPaths(
-  compositeFieldUsage: CompositeFieldUsage
-): string[][] {
-  const joinsUsed = Object.keys(compositeFieldUsage.joinedUsage);
-  return [
-    ...joinsUsed.map(joinName => [joinName]),
-    ...joinsUsed
-      .map(joinName =>
-        compositeFieldUsageJoinPaths(
-          compositeFieldUsage.joinedUsage[joinName]
-        ).map(path => [joinName, ...path])
-      )
-      .flat(),
-  ];
+export function fieldUsageJoinPaths(fieldUsage: FieldUsage[]): string[][] {
+  const joinPaths: string[][] = [];
+  for (const usage of fieldUsage) {
+    const joinPath = usage.path.slice(0, -1);
+    if (joinPath.length === 0) continue;
+    if (!joinPaths.some(j => pathEq(j, joinPath))) {
+      joinPaths.push(joinPath);
+    }
+  }
+  return joinPaths;
 }
 
 function isCompositeField(fieldDef: FieldDef): boolean {
@@ -589,24 +527,17 @@ function getNonCompositeFields(source: SourceDef): FieldDef[] {
 // This is specifically for the case where the source `source` is a composite and the chosen input
 // source is also a composite; if the `source` defines some fields outright, when resolving the inner
 // composite, we don't want to include those fields.
-function compositeFieldUsageWithoutNonCompositeFields(
-  compositeFieldUsage: CompositeFieldUsage,
+function onlyCompositeFieldUsage(
+  fieldUsage: FieldUsage[],
   source: SourceDef
-): CompositeFieldUsage {
+): FieldUsage[] {
   const sourceFieldsByName = {};
   for (const field of source.fields) {
     sourceFieldsByName[field.as ?? field.name] = field;
   }
-  return {
-    fields: compositeFieldUsage.fields.filter(f =>
-      isCompositeField(sourceFieldsByName[f])
-    ),
-    // Today it is not possible for a join to be composite, so we can safely throw
-    // away all join usage here...; if we ever allow joins in composite source
-    // inputs, then this will need to be updated to be the joinUsage with joins
-    // that are not composite filtered out...
-    joinedUsage: {},
-  };
+  return fieldUsage.filter(
+    u => u.path.length === 1 && isCompositeField(sourceFieldsByName[u.path[0]])
+  );
 }
 
 interface NestLevels {
@@ -635,10 +566,8 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         const head = field.pipeline[0];
         nested.push(extractNestLevels(head));
       } else {
-        if (field.compositeFieldUsage !== undefined) {
-          fieldsReferenced.push(
-            ...compositeFieldUsagePaths(field.compositeFieldUsage)
-          );
+        if (field.fieldUsage !== undefined) {
+          fieldsReferenced.push(...fieldUsagePaths(field.fieldUsage));
         }
         if (field.aggregateFieldUsage !== undefined) {
           aggregateFieldUsage.push(...field.aggregateFieldUsage);
@@ -686,8 +615,8 @@ function expandRefs(nests: NestLevels, fields: FieldDef[]): ExpandedNestLevels {
           ...joinedAggregateFieldUsage(joinPath, def.aggregateFieldUsage)!
         );
       }
-      if (def.compositeFieldUsage) {
-        const moreReferences = compositeFieldUsagePaths(def.compositeFieldUsage)
+      if (def.fieldUsage) {
+        const moreReferences = fieldUsagePaths(def.fieldUsage)
           .map(p => [...joinPath, ...p])
           .filter(r => !references.some(r2 => pathEq(r, r2)));
         references.push(...moreReferences);

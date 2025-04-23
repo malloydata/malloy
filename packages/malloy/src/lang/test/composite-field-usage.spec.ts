@@ -7,40 +7,6 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
-import type {CompositeFieldUsage} from '../../model';
-import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
-
-function addPathToCompositeUsage(
-  path: string[],
-  compositeUsage: CompositeFieldUsage
-): CompositeFieldUsage {
-  if (path.length === 0) throw new Error('empty path');
-  if (path.length === 1) {
-    return {
-      fields: [...compositeUsage.fields, path[0]],
-      joinedUsage: compositeUsage.joinedUsage,
-    };
-  } else {
-    return {
-      fields: compositeUsage.fields,
-      joinedUsage: {
-        ...compositeUsage.joinedUsage,
-        [path[0]]: addPathToCompositeUsage(
-          path.slice(1),
-          compositeUsage.joinedUsage[path[0]] ?? emptyCompositeFieldUsage()
-        ),
-      },
-    };
-  }
-}
-
-function paths(paths: string[][]): CompositeFieldUsage {
-  let cu = emptyCompositeFieldUsage();
-  for (const path of paths) {
-    cu = addPathToCompositeUsage(path, cu);
-  }
-  return cu;
-}
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -63,42 +29,40 @@ describe('composite sources', () => {
 
     test('looked up value', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai`).hasCompositeUsage(paths([['ai']]));
+      expect(mexpr`ai`).hasFieldUsage([['ai']]);
     });
 
     test('multiple values', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + af`).hasCompositeUsage(paths([['ai'], ['af']]));
+      expect(mexpr`ai + af`).hasFieldUsage([['ai'], ['af']]);
     });
 
     test('value plus constant', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + 1`).hasCompositeUsage(paths([['ai']]));
+      expect(mexpr`ai + 1`).hasFieldUsage([['ai']]);
     });
 
     test('join usage', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.ai + 1`).hasCompositeUsage(paths([['x', 'ai']]));
+      expect(mexpr`x.ai + 1`).hasFieldUsage([['x', 'ai']]);
     });
 
     test('join usage complex', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.aif`).hasCompositeUsage(
-        paths([
-          ['x', 'ai'],
-          ['x', 'af'],
-        ])
-      );
+      expect(mexpr`x.aif`).hasFieldUsage([
+        ['x', 'ai'],
+        ['x', 'af'],
+      ]);
     });
 
     test('measure defined in composite source', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'x');
-      expect(mexpr`ss`).hasCompositeUsage(paths([['ai']]));
+      expect(mexpr`ss`).hasFieldUsage([['ai']]);
     });
 
     test('measure with filter defined in composite source', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'x');
-      expect(mexpr`saiaf`).hasCompositeUsage(paths([['ai'], ['af']]));
+      expect(mexpr`saiaf`).hasFieldUsage([['ai'], ['af']]);
     });
   });
 

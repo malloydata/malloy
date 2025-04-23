@@ -135,7 +135,7 @@ export class KeyJoin extends Join {
               right: exprX.value,
             },
           };
-          inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
+          inStruct.onFieldUsage = exprX.fieldUsage;
           return;
         } else {
           this.logError(
@@ -192,7 +192,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
+    inStruct.onFieldUsage = exprX.fieldUsage;
   }
 
   getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {

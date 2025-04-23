@@ -22,11 +22,11 @@
  */
 
 import {
-  compositeFieldUsageIsPlural,
-  formatCompositeFieldUsages,
+  fieldUsageIsPlural,
+  formatFieldUsages,
 } from '../model/composite_source_utils';
 import type {
-  CompositeFieldUsage,
+  FieldUsage,
   DocumentLocation,
   ExpressionValueType,
 } from '../model/malloy_types';
@@ -202,8 +202,8 @@ type MessageParameterTypes = {
   'field-not-found': string;
   'invalid-composite-source-input': string;
   'invalid-composite-field-usage': {
-    newUsage: CompositeFieldUsage;
-    allUsage: CompositeFieldUsage;
+    newUsage: FieldUsage[];
+    allUsage: FieldUsage[];
   };
   'could-not-resolve-composite-source': string;
   'empty-composite-source': string;
@@ -460,9 +460,9 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'case-when-type-does-not-match': e =>
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
   'invalid-composite-field-usage': e => {
-    const formattedNewCompositeUsage = formatCompositeFieldUsages(e.newUsage);
-    const formattedAllCompositeUsage = formatCompositeFieldUsages(e.allUsage);
-    const pluralUse = compositeFieldUsageIsPlural(e.newUsage) ? 's' : '';
+    const formattedNewCompositeUsage = formatFieldUsages(e.newUsage);
+    const formattedAllCompositeUsage = formatFieldUsages(e.allUsage);
+    const pluralUse = fieldUsageIsPlural(e.newUsage) ? 's' : '';
     return `This operation uses composite field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedAllCompositeUsage}`;
   },
 };

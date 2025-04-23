@@ -46,13 +46,12 @@ import type {
 } from '../../parse-log';
 import type {NarrowedCompositeFieldResolution} from '../../../model/composite_source_utils';
 import {
-  compositeFieldUsageDifference,
-  compositeFieldUsageJoinPaths,
-  emptyCompositeFieldUsage,
+  fieldUsageJoinPaths,
+  emptyFieldUsage,
   emptyNarrowedCompositeFieldResolution,
-  isEmptyCompositeFieldUsage,
-  joinedCompositeFieldUsage,
-  mergeCompositeFieldUsage,
+  isEmptyFieldUsage,
+  joinedFieldUsage,
+  mergeFieldUsage,
   narrowCompositeFieldResolution,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
@@ -86,12 +85,12 @@ export abstract class QueryOperationSpace
   // Composite field usage is not computed until `queryFieldDefs` is called
   // (or `getPipeSegment` for index segments); if anyone
   // tries to access it before that, they'll get an error
-  _compositeFieldUsage: model.CompositeFieldUsage | undefined = undefined;
-  get compositeFieldUsage(): model.CompositeFieldUsage {
-    if (this._compositeFieldUsage === undefined) {
-      throw new Error('Composite field usage accessed before computed');
+  _fieldUsage: model.FieldUsage[] | undefined = undefined;
+  get fieldUsage(): model.FieldUsage[] {
+    if (this._fieldUsage === undefined) {
+      throw new Error('Field usage accessed before computed');
     }
-    return this._compositeFieldUsage;
+    return this._fieldUsage;
   }
 
   constructor(
@@ -217,42 +216,39 @@ export abstract class QueryOperationSpace
     }
   }
 
-  private getJoinOnCompositeFieldUsage(
-    joinPath: string[]
-  ): model.CompositeFieldUsage {
+  private getJoinOnFieldUsage(joinPath: string[]): model.FieldUsage[] {
     const reference = joinPath.map(n => new FieldName(n));
     this.astEl.has({reference});
     const lookup = this.exprSpace.lookup(reference);
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return joinedCompositeFieldUsage(
+      return joinedFieldUsage(
         joinPath.slice(0, -1),
-        lookup.found.fieldDef().onCompositeFieldUsage ??
-          emptyCompositeFieldUsage()
+        lookup.found.fieldDef().onFieldUsage ?? emptyFieldUsage()
       );
     }
     throw new Error('Unexpected join lookup was not found or not a struct');
   }
 
-  protected getCompositeFieldUsageIncludingJoinOns(
-    compositeFieldUsage: model.CompositeFieldUsage
-  ): model.CompositeFieldUsage {
-    let compositeFieldUsageIncludingJoinOns = compositeFieldUsage;
-    const joinPaths = compositeFieldUsageJoinPaths(compositeFieldUsage);
+  protected getFieldUsageIncludingJoinOns(
+    fieldUsage: model.FieldUsage[]
+  ): model.FieldUsage[] {
+    let fieldUsageIncludingJoinOns = fieldUsage;
+    const joinPaths = fieldUsageJoinPaths(fieldUsage);
     for (const joinPath of joinPaths) {
-      compositeFieldUsageIncludingJoinOns = mergeCompositeFieldUsage(
-        this.getJoinOnCompositeFieldUsage(joinPath),
-        compositeFieldUsageIncludingJoinOns
+      fieldUsageIncludingJoinOns = mergeFieldUsage(
+        this.getJoinOnFieldUsage(joinPath),
+        fieldUsageIncludingJoinOns
       );
     }
-    return compositeFieldUsageIncludingJoinOns;
+    return fieldUsageIncludingJoinOns;
   }
 
-  public addCompositeFieldUserFromFilter(
+  public addFieldUserFromFilter(
     filter: model.FilterCondition,
     logTo: MalloyElement
   ) {
-    if (filter.compositeFieldUsage !== undefined) {
+    if (filter.fieldUsage !== undefined) {
       this.compositeFieldUsers.push({type: 'filter', filter, logTo});
     }
   }
@@ -264,35 +260,26 @@ export abstract class QueryOperationSpace
     super.newEntry(name, logTo, entry);
   }
 
-  protected applyNextCompositeFieldUsage(
+  protected applyNextFieldUsage(
     source: model.SourceDef,
-    compositeFieldUsage: model.CompositeFieldUsage,
+    fieldUsage: model.FieldUsage[],
     narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution,
-    nextCompositeFieldUsage: model.CompositeFieldUsage | undefined,
+    nextFieldUsage: model.FieldUsage[] | undefined,
     logTo: MalloyElement | undefined
   ) {
-    if (nextCompositeFieldUsage) {
-      const newCompositeFieldUsage =
-        this.getCompositeFieldUsageIncludingJoinOns(
-          compositeFieldUsageDifference(
-            nextCompositeFieldUsage,
-            compositeFieldUsage
-          )
-        );
-      compositeFieldUsage = mergeCompositeFieldUsage(
-        compositeFieldUsage,
-        newCompositeFieldUsage
-      );
-      if (!isEmptyCompositeFieldUsage(newCompositeFieldUsage)) {
+    if (nextFieldUsage) {
+      const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
+      fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage);
+      if (!isEmptyFieldUsage(newFieldUsage)) {
         const result = narrowCompositeFieldResolution(
           source,
-          compositeFieldUsage,
+          fieldUsage,
           narrowedCompositeFieldResolution
         );
         if (result.error) {
           (logTo ?? this).logError('invalid-composite-field-usage', {
-            newUsage: newCompositeFieldUsage,
-            allUsage: compositeFieldUsage,
+            newUsage: newFieldUsage,
+            allUsage: fieldUsage,
           });
         } else {
           narrowedCompositeFieldResolution =
@@ -300,7 +287,7 @@ export abstract class QueryOperationSpace
         }
       }
     }
-    return {compositeFieldUsage, narrowedCompositeFieldResolution};
+    return {fieldUsage, narrowedCompositeFieldResolution};
   }
 }
 
@@ -353,29 +340,27 @@ export abstract class QuerySpace extends QueryOperationSpace {
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    let compositeFieldUsage = emptyCompositeFieldUsage();
+    let fieldUsage = emptyFieldUsage();
     let narrowedCompositeFieldResolution =
       emptyNarrowedCompositeFieldResolution();
     const source = this.inputSpace().structDef();
     for (const user of this.compositeFieldUsers) {
-      let nextCompositeFieldUsage: model.CompositeFieldUsage | undefined =
-        undefined;
+      let nextFieldUsage: model.FieldUsage[] | undefined = undefined;
       if (user.type === 'filter') {
-        if (user.filter.compositeFieldUsage) {
-          nextCompositeFieldUsage = user.filter.compositeFieldUsage;
+        if (user.filter.fieldUsage) {
+          nextFieldUsage = user.filter.fieldUsage;
         }
       } else {
         const {name, field} = user;
         const wildPath = this.expandedWild[name];
         if (wildPath) {
           fields.push({type: 'fieldref', path: wildPath.path, at: wildPath.at});
-          nextCompositeFieldUsage =
-            wildPath.entry.typeDesc().compositeFieldUsage;
+          nextFieldUsage = wildPath.entry.typeDesc().fieldUsage;
         } else {
           const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
           if (fieldQueryDef) {
             const typeDesc = field.typeDesc();
-            nextCompositeFieldUsage = typeDesc.compositeFieldUsage;
+            nextFieldUsage = typeDesc.fieldUsage;
             // Filter out fields whose type is 'error', which means that a totally bad field
             // isn't sent to the compiler, where it will wig out.
             // TODO Figure out how to make errors generated by `canContain` go in the right place,
@@ -398,17 +383,17 @@ export abstract class QuerySpace extends QueryOperationSpace {
           // fields, but the individual fields didn't have field defs.
         }
       }
-      const next = this.applyNextCompositeFieldUsage(
+      const next = this.applyNextFieldUsage(
         source,
-        compositeFieldUsage,
+        fieldUsage,
         narrowedCompositeFieldResolution,
-        nextCompositeFieldUsage,
+        nextFieldUsage,
         user.logTo
       );
-      compositeFieldUsage = next.compositeFieldUsage;
+      fieldUsage = next.fieldUsage;
       narrowedCompositeFieldResolution = next.narrowedCompositeFieldResolution;
     }
-    this._compositeFieldUsage = compositeFieldUsage;
+    this._fieldUsage = fieldUsage;
     return fields;
   }
 

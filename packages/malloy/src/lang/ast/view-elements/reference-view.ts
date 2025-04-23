@@ -86,7 +86,7 @@ export class ReferenceView extends View {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
-        compositeFieldUsage: fieldDef.compositeFieldUsage,
+        fieldUsage: fieldDef.fieldUsage,
       };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {

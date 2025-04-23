@@ -22,14 +22,14 @@
  */
 
 import {
-  emptyCompositeFieldUsage,
+  emptyFieldUsage,
   emptyNarrowedCompositeFieldResolution,
 } from '../../../model/composite_source_utils';
 import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  CompositeFieldUsage,
+  FieldUsage,
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {
@@ -71,20 +71,19 @@ export class IndexFieldSpace extends QueryOperationSpace {
       );
       return {type: 'index', indexFields: []};
     }
-    let compositeFieldUsage = emptyCompositeFieldUsage();
+    let fieldUsage = emptyFieldUsage();
     let narrowedCompositeFieldResolution =
       emptyNarrowedCompositeFieldResolution();
     const indexFields: IndexFieldDef[] = [];
     const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        let nextCompositeFieldUsage: CompositeFieldUsage | undefined =
-          undefined;
+        let nextFieldUsage: FieldUsage[] | undefined = undefined;
         let logTo: MalloyElement | undefined = undefined;
         const wild = this.expandedWild[name];
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
-          nextCompositeFieldUsage = wild.entry.typeDesc().compositeFieldUsage;
+          nextFieldUsage = wild.entry.typeDesc().fieldUsage;
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
           const fieldRef = field.fieldRef;
@@ -93,24 +92,23 @@ export class IndexFieldSpace extends QueryOperationSpace {
             fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
-            nextCompositeFieldUsage =
-              check.found.typeDesc().compositeFieldUsage;
+            nextFieldUsage = check.found.typeDesc().fieldUsage;
             logTo = fieldRef;
           }
         }
-        const next = this.applyNextCompositeFieldUsage(
+        const next = this.applyNextFieldUsage(
           source,
-          compositeFieldUsage,
+          fieldUsage,
           narrowedCompositeFieldResolution,
-          nextCompositeFieldUsage,
+          nextFieldUsage,
           logTo
         );
-        compositeFieldUsage = next.compositeFieldUsage;
+        fieldUsage = next.fieldUsage;
         narrowedCompositeFieldResolution =
           next.narrowedCompositeFieldResolution;
       }
     }
-    this._compositeFieldUsage = compositeFieldUsage;
+    this._fieldUsage = fieldUsage;
     return {type: 'index', indexFields};
   }
 

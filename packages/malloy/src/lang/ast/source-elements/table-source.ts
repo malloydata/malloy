@@ -58,10 +58,7 @@ export abstract class TableSource extends Source {
           fields: tableDefEntry.value.fields.map(field => ({
             ...field,
             location: this.location,
-            compositeFieldUsage: {
-              fields: [field.as ?? field.name],
-              joinedUsage: {},
-            },
+            fieldUsage: [{path: [field.as ?? field.name], at: this.location}],
           })),
           location: this.location,
         };

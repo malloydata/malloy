@@ -22,7 +22,7 @@
  */
 
 import type {
-  CompositeFieldUsage,
+  FieldUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
@@ -54,8 +54,8 @@ import {DefinitionList} from '../types/definition-list';
 import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {
-  emptyCompositeFieldUsage,
-  mergeCompositeFieldUsage,
+  emptyFieldUsage,
+  mergeFieldUsage,
 } from '../../../model/composite_source_utils';
 
 function queryFieldName(qf: QueryFieldDef): string {
@@ -105,8 +105,8 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
-  get compositeFieldUsage(): CompositeFieldUsage {
-    return this.resultFS.compositeFieldUsage;
+  get fieldUsage(): FieldUsage[] {
+    return this.resultFS.fieldUsage;
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
@@ -139,14 +139,11 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       to.alwaysJoins = [...this.alwaysJoins];
     }
 
-    const fromCompositeFieldUsage =
+    const fromFieldUsage =
       from && isQuerySegment(from)
-        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
-        : emptyCompositeFieldUsage();
-    to.compositeFieldUsage = mergeCompositeFieldUsage(
-      fromCompositeFieldUsage,
-      this.compositeFieldUsage
-    );
+        ? from.fieldUsage ?? emptyFieldUsage()
+        : emptyFieldUsage();
+    to.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
   }
 }
 
