@@ -146,6 +146,26 @@ const regexp_replace: OverloadedDefinitionBlueprint = {
   },
 };
 
+const regexp_extract: OverloadedDefinitionBlueprint = {
+  extract: {
+    takes: {
+      input_val: 'string',
+      pattern: ['string', 'regular expression'],
+    },
+    returns: 'string',
+    impl: {function: 'regexp_extract'},
+  },
+  extract_group: {
+    takes: {
+      input_val: 'string',
+      pattern: ['string', 'regular expression'],
+      group: 'number',
+    },
+    returns: 'string',
+    impl: {function: 'regexp_extract'},
+  },
+};
+
 const percent_rank: DefinitionBlueprint = {
   takes: {},
   returns: {calculation: 'number'},
@@ -318,8 +338,12 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_parse,
   ...def('from_unixtime', {'unixtime': 'number'}, 'timestamp'),
   json_extract_scalar,
+
+  // regex fnctions
   regexp_like,
   regexp_replace,
+  regexp_extract,
+
   ...def('to_unixtime', {'ts_val': 'timestamp'}, 'number'),
   ...def('url_extract_fragment', {'url': 'string'}, 'string'),
   ...def('url_extract_host', {'url': 'string'}, 'string'),
@@ -363,6 +387,11 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     {array: T}
   ),
   ...def('split', {to_split: 'string', seperator: 'string'}, {array: 'string'}),
+  ...def(
+    'split_part',
+    {to_split: 'string', seperator: 'string', idx: 'number'},
+    'string'
+  ),
   ...def('trim_array', {'x': {array: T}, 'n': 'number'}, {array: T}),
   ...def(
     'array_split_into_chunks',

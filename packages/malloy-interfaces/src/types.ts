@@ -224,6 +224,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'default_row_limit': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -237,6 +242,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'fields': {
       'result': {
         'type': 'Result',
+        'optional': true,
+        'array': false,
+      },
+      'default_row_limit_added': {
+        'type': 'number',
         'optional': true,
         'array': false,
       },
@@ -524,6 +534,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'filter_string': 'FilterStringApplication',
     },
   },
+  'FilterExpressionLiteral': {
+    'type': 'struct',
+    'name': 'FilterExpressionLiteral',
+    'fields': {
+      'filter_expression_value': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
+  'FilterExpressionType': {
+    'type': 'struct',
+    'name': 'FilterExpressionType',
+    'fields': {},
+  },
   'FilterOperation': {
     'type': 'struct',
     'name': 'FilterOperation',
@@ -561,7 +587,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'where': {
-        'type': 'Where',
+        'type': 'FilterOperation',
         'array': true,
         'optional': false,
       },
@@ -646,6 +672,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'timestamp_literal': 'TimestampLiteral',
       'boolean_literal': 'BooleanLiteral',
       'null_literal': 'NullLiteral',
+      'filter_expression_literal': 'FilterExpressionLiteral',
     },
   },
   'Location': {
@@ -851,7 +878,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'type': {
-        'type': 'AtomicType',
+        'type': 'ParameterType',
         'optional': false,
         'array': false,
       },
@@ -860,6 +887,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+    },
+  },
+  'ParameterType': {
+    'type': 'union',
+    'name': 'ParameterType',
+    'options': {
+      'string_type': 'StringType',
+      'boolean_type': 'BooleanType',
+      'number_type': 'NumberType',
+      'json_type': 'JSONType',
+      'sql_native_type': 'SQLNativeType',
+      'date_type': 'DateType',
+      'timestamp_type': 'TimestampType',
+      'array_type': 'ArrayType',
+      'record_type': 'RecordType',
+      'filter_expression_type': 'FilterExpressionType',
     },
   },
   'ParameterValue': {
@@ -1155,6 +1198,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'default_row_limit': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -1168,6 +1216,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'fields': {
       'result': {
         'type': 'Result',
+        'optional': true,
+        'array': false,
+      },
+      'default_row_limit_added': {
+        'type': 'number',
         'optional': true,
         'array': false,
       },
@@ -1503,17 +1556,6 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
     },
   },
-  'Where': {
-    'type': 'struct',
-    'name': 'Where',
-    'fields': {
-      'filter': {
-        'type': 'Filter',
-        'optional': false,
-        'array': false,
-      },
-    },
-  },
 };
 
 export type Aggregate = {
@@ -1655,11 +1697,13 @@ export type CompileModelResponse = {
 export type CompileQueryRequest = {
   model_url: string;
   query: Query;
+  default_row_limit?: number;
   compiler_needs?: CompilerNeeds;
 };
 
 export type CompileQueryResponse = {
   result?: Result;
+  default_row_limit_added?: number;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
   translations?: Array<Translation>;
@@ -1787,6 +1831,12 @@ export type FilterWithFilterString = {
   kind: 'filter_string';
 } & FilterStringApplication;
 
+export type FilterExpressionLiteral = {
+  filter_expression_value: string;
+};
+
+export type FilterExpressionType = {};
+
 export type FilterOperation = {
   filter: Filter;
 };
@@ -1798,7 +1848,7 @@ export type FilterStringApplication = {
 
 export type FilteredField = {
   field_reference: Reference;
-  where: Array<Where>;
+  where: Array<FilterOperation>;
 };
 
 export type GroupBy = {
@@ -1829,7 +1879,8 @@ export type LiteralValueType =
   | 'date_literal'
   | 'timestamp_literal'
   | 'boolean_literal'
-  | 'null_literal';
+  | 'null_literal'
+  | 'filter_expression_literal';
 
 export type LiteralValue =
   | LiteralValueWithStringLiteral
@@ -1837,7 +1888,8 @@ export type LiteralValue =
   | LiteralValueWithDateLiteral
   | LiteralValueWithTimestampLiteral
   | LiteralValueWithBooleanLiteral
-  | LiteralValueWithNullLiteral;
+  | LiteralValueWithNullLiteral
+  | LiteralValueWithFilterExpressionLiteral;
 
 export type LiteralValueWithStringLiteral = {
   kind: 'string_literal';
@@ -1858,6 +1910,10 @@ export type LiteralValueWithBooleanLiteral = {
 } & BooleanLiteral;
 
 export type LiteralValueWithNullLiteral = {kind: 'null_literal'} & NullLiteral;
+
+export type LiteralValueWithFilterExpressionLiteral = {
+  kind: 'filter_expression_literal';
+} & FilterExpressionLiteral;
 
 export type Location = {
   url: string;
@@ -1927,9 +1983,59 @@ export type OrderByDirection = 'asc' | 'desc';
 
 export type ParameterInfo = {
   name: string;
-  type: AtomicType;
+  type: ParameterType;
   default_value?: LiteralValue;
 };
+
+export type ParameterTypeType =
+  | 'string_type'
+  | 'boolean_type'
+  | 'number_type'
+  | 'json_type'
+  | 'sql_native_type'
+  | 'date_type'
+  | 'timestamp_type'
+  | 'array_type'
+  | 'record_type'
+  | 'filter_expression_type';
+
+export type ParameterType =
+  | ParameterTypeWithStringType
+  | ParameterTypeWithBooleanType
+  | ParameterTypeWithNumberType
+  | ParameterTypeWithJSONType
+  | ParameterTypeWithSQLNativeType
+  | ParameterTypeWithDateType
+  | ParameterTypeWithTimestampType
+  | ParameterTypeWithArrayType
+  | ParameterTypeWithRecordType
+  | ParameterTypeWithFilterExpressionType;
+
+export type ParameterTypeWithStringType = {kind: 'string_type'} & StringType;
+
+export type ParameterTypeWithBooleanType = {kind: 'boolean_type'} & BooleanType;
+
+export type ParameterTypeWithNumberType = {kind: 'number_type'} & NumberType;
+
+export type ParameterTypeWithJSONType = {kind: 'json_type'} & JSONType;
+
+export type ParameterTypeWithSQLNativeType = {
+  kind: 'sql_native_type';
+} & SQLNativeType;
+
+export type ParameterTypeWithDateType = {kind: 'date_type'} & DateType;
+
+export type ParameterTypeWithTimestampType = {
+  kind: 'timestamp_type';
+} & TimestampType;
+
+export type ParameterTypeWithArrayType = {kind: 'array_type'} & ArrayType;
+
+export type ParameterTypeWithRecordType = {kind: 'record_type'} & RecordType;
+
+export type ParameterTypeWithFilterExpressionType = {
+  kind: 'filter_expression_type';
+} & FilterExpressionType;
 
 export type ParameterValue = {
   name: string;
@@ -2041,11 +2147,13 @@ export type RunIndexQueryResponse = {
 export type RunQueryRequest = {
   model_url: string;
   query: Query;
+  default_row_limit?: number;
   compiler_needs?: CompilerNeeds;
 };
 
 export type RunQueryResponse = {
   result?: Result;
+  default_row_limit_added?: number;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
@@ -2204,8 +2312,4 @@ export type ViewRefinement = {
 
 export type ViewSegment = {
   operations: Array<ViewOperation>;
-};
-
-export type Where = {
-  filter: Filter;
 };

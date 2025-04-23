@@ -2287,6 +2287,10 @@ describe('query builder', () => {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'month',
         });
+        source.setParameter('short_date_param', {
+          date: new Date('0123-01-01 10:00:00+00:00'),
+          granularity: 'day',
+        });
         source.setParameter('timestamp_param', {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'minute',
@@ -2311,6 +2315,10 @@ describe('query builder', () => {
             },
             {
               name: 'date_param',
+              type: {kind: 'date_type'},
+            },
+            {
+              name: 'short_date_param',
               type: {kind: 'date_type'},
             },
             {
@@ -2352,6 +2360,14 @@ describe('query builder', () => {
                   },
                 },
                 {
+                  name: 'short_date_param',
+                  value: {
+                    kind: 'date_literal',
+                    date_value: '0123-01-01 10:00:00',
+                    granularity: 'day',
+                  },
+                },
+                {
                   name: 'timestamp_param',
                   value: {
                     kind: 'timestamp_literal',
@@ -2377,6 +2393,7 @@ describe('query builder', () => {
             number_param is 7,
             boolean_param is true,
             date_param is @2020-01,
+            short_date_param is @0123-01-01,
             timestamp_param is @2020-01-01 18:00,
             null_param is null
           ) -> { }
@@ -2619,6 +2636,310 @@ describe('query builder', () => {
         },
       });
       expect(query.isRunnable()).toBe(true);
+    });
+  });
+  describe('insertion order', () => {
+    const model: Malloy.ModelInfo = {
+      entries: [
+        {
+          kind: 'source',
+          name: 's',
+          schema: {
+            fields: [
+              {kind: 'dimension', name: 'd1', type: {kind: 'number_type'}},
+              {kind: 'dimension', name: 'd2', type: {kind: 'number_type'}},
+              {kind: 'dimension', name: 'd3', type: {kind: 'number_type'}},
+              {kind: 'measure', name: 'm1', type: {kind: 'number_type'}},
+              {kind: 'measure', name: 'm2', type: {kind: 'number_type'}},
+              {kind: 'measure', name: 'm3', type: {kind: 'number_type'}},
+              {kind: 'view', name: 'v1', schema: {fields: []}},
+              {kind: 'view', name: 'v2', schema: {fields: []}},
+              {kind: 'view', name: 'v3', schema: {fields: []}},
+            ],
+          },
+        },
+      ],
+      anonymous_queries: [],
+    };
+    function group_by(name: string): Malloy.ViewOperationWithGroupBy {
+      return {
+        kind: 'group_by',
+        field: {
+          expression: {
+            kind: 'field_reference',
+            name,
+          },
+        },
+      };
+    }
+    function aggregate(name: string): Malloy.ViewOperationWithAggregate {
+      return {
+        kind: 'aggregate',
+        field: {
+          expression: {
+            kind: 'field_reference',
+            name,
+          },
+        },
+      };
+    }
+    function nest(name: string): Malloy.ViewOperationWithNest {
+      return {
+        kind: 'nest',
+        view: {
+          definition: {
+            kind: 'view_reference',
+            name,
+          },
+        },
+      };
+    }
+    test('add an aggregate after adding some group bys', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addGroupBy('d1');
+        segment.addGroupBy('d2');
+        segment.addAggregate('m1');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [group_by('d1'), group_by('d2'), aggregate('m1')],
+            },
+          },
+        },
+        malloy: dedent`
+          run: s -> {
+            group_by:
+              d1
+              d2
+            aggregate: m1
+          }
+        `,
+      });
+    });
+    test('add GB, AGG, GB', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addGroupBy('d1');
+        segment.addAggregate('m1');
+        segment.addGroupBy('d2');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [group_by('d1'), group_by('d2'), aggregate('m1')],
+            },
+          },
+        },
+        malloy: dedent`
+          run: s -> {
+            group_by:
+              d1
+              d2
+            aggregate: m1
+          }
+        `,
+      });
+    });
+    test('add GB, NEST, AGG', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addGroupBy('d1');
+        segment.addNest('v1');
+        segment.addAggregate('m1');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [group_by('d1'), aggregate('m1'), nest('v1')],
+            },
+          },
+        },
+        malloy: dedent`
+          run: s -> {
+            group_by: d1
+            aggregate: m1
+            nest: v1
+          }
+        `,
+      });
+    });
+    test('add GB, LIMIT, AGG', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addGroupBy('d1');
+        segment.setLimit(10);
+        segment.addAggregate('m1');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                group_by('d1'),
+                aggregate('m1'),
+                {kind: 'limit', limit: 10},
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: s -> {
+            group_by: d1
+            aggregate: m1
+            limit: 10
+          }
+        `,
+      });
+    });
+    test('add HAVING, WHERE, GROUP BY, LIMIT', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addHaving('m1', '> 10');
+        segment.addWhere('d1', '> 10');
+        segment.addGroupBy('d2');
+        segment.setLimit(10);
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                group_by('d2'),
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    filter: '> 10',
+                    field_reference: {name: 'd1'},
+                  },
+                },
+                {
+                  kind: 'having',
+                  filter: {
+                    kind: 'filter_string',
+                    filter: '> 10',
+                    field_reference: {name: 'm1'},
+                  },
+                },
+                {kind: 'limit', limit: 10},
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: s -> {
+            group_by: d2
+            where: d1 ~ f\`> 10\`
+            having: m1 ~ f\`> 10\`
+            limit: 10
+          }
+        `,
+      });
     });
   });
 });

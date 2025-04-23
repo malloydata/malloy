@@ -115,6 +115,12 @@ export class Pick extends ExpressionDef {
         });
       }
     }
+    if (definedReturnType.type === 'filter expression') {
+      return this.loggedErrorExpr(
+        'filter-expression-error',
+        'Pick statments cannot have filter expression values'
+      );
+    }
     caseValue.kids.caseElse = defaultVal.value;
     return computedExprValue({
       dataType: definedReturnType,
@@ -184,6 +190,12 @@ export class Pick extends ExpressionDef {
         elseType: defVal.type,
         returnType: definedReturnType.type,
       });
+    }
+    if (definedReturnType.type === 'filter expression') {
+      return this.loggedErrorExpr(
+        'filter-expression-error',
+        'Pick statments cannot have filter expression values'
+      );
     }
     pick.kids.caseElse = defVal.value;
     return computedExprValue({

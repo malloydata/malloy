@@ -1144,6 +1144,7 @@ export type ASTLiteralValue =
   | ASTBooleanLiteralValue
   | ASTDateLiteralValue
   | ASTTimestampLiteralValue
+  | ASTFilterExpressionLiteralValue
   | ASTNullLiteralValue;
 export const ASTLiteralValue = {
   from(value: Malloy.LiteralValue) {
@@ -1160,6 +1161,8 @@ export const ASTLiteralValue = {
         return new ASTTimestampLiteralValue(value);
       case 'null_literal':
         return new ASTNullLiteralValue(value);
+      case 'filter_expression_literal':
+        return new ASTFilterExpressionLiteralValue(value);
     }
   },
   makeLiteral(value: RawLiteralValue): Malloy.LiteralValue {
@@ -1302,6 +1305,23 @@ export class ASTTimestampLiteralValue extends ASTObjectNode<
       kind: node.kind,
       timestamp_value: node.timestamp_value,
       granularity: node.granularity,
+    });
+  }
+}
+
+export class ASTFilterExpressionLiteralValue extends ASTObjectNode<
+  Malloy.LiteralValueWithFilterExpressionLiteral,
+  {
+    kind: 'filter_expression_literal';
+    filter_expression_value: string;
+  }
+> {
+  readonly kind: Malloy.LiteralValueType = 'filter_expression_literal';
+
+  constructor(public node: Malloy.LiteralValueWithFilterExpressionLiteral) {
+    super(node, {
+      kind: node.kind,
+      filter_expression_value: node.filter_expression_value,
     });
   }
 }
@@ -1780,6 +1800,7 @@ export interface IASTViewDefinition extends IASTQueryOrViewDefinition {
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition;
+  convertToNest(name: string);
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -1934,6 +1955,22 @@ export class ASTReferenceViewDefinition
     return newView.refinement.as.ReferenceViewDefinition();
   }
 
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
+  }
+
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -2057,6 +2094,22 @@ export class ASTArrowViewDefinition
     return this.view.addViewRefinement(name, path);
   }
 
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
+  }
+
   getInputSchema(): Malloy.Schema {
     return this.source.getOutputSchema();
   }
@@ -2151,6 +2204,22 @@ export class ASTRefinementViewDefinition
   set base(base: ASTViewDefinition) {
     this.edit();
     this.children.base = base;
+  }
+
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -2268,6 +2337,7 @@ export class ASTSegmentViewDefinition
   }
 
   isRunnable(): boolean {
+    let hasValidNest = false;
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTAggregateViewOperation ||
@@ -2278,13 +2348,30 @@ export class ASTSegmentViewDefinition
         if (!operation.view.definition.isRunnable()) {
           return false;
         }
+        hasValidNest = true;
       }
     }
-    return false;
+    return hasValidNest;
   }
 
   get operations() {
     return this.children.operations;
+  }
+
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   /**
@@ -2487,11 +2574,13 @@ export class ASTSegmentViewDefinition
   }
 
   private DEFAULT_INSERTION_ORDER: Malloy.ViewOperationType[] = [
-    'where',
     'group_by',
     'aggregate',
+    'where',
+    'having',
     'nest',
     'order_by',
+    'limit',
   ];
 
   private findInsertionPoint(kind: Malloy.ViewOperationType): number {
@@ -2513,7 +2602,7 @@ export class ASTSegmentViewDefinition
     );
     for (const laterType of laterOperations) {
       const firstOfType = this.firstIndexOfOperationType(laterType);
-      return firstOfType;
+      if (firstOfType > -1) return firstOfType;
     }
     return this.operations.length;
   }
@@ -4104,7 +4193,7 @@ export class ASTWhereViewOperation extends ASTObjectNode<
     filter: ASTFilter;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'nest';
+  readonly kind: Malloy.ViewOperationType = 'where';
   constructor(public node: Malloy.ViewOperationWithWhere) {
     super(node, {
       kind: 'where',
@@ -4135,7 +4224,7 @@ export class ASTHavingViewOperation extends ASTObjectNode<
     filter: ASTFilter;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'nest';
+  readonly kind: Malloy.ViewOperationType = 'having';
   constructor(public node: Malloy.ViewOperationWithHaving) {
     super(node, {
       kind: 'having',
@@ -4493,8 +4582,6 @@ export class ASTAnnotation extends ASTObjectNode<
     value: string;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'limit';
-
   get value() {
     return this.children.value;
   }
@@ -4654,7 +4741,7 @@ function digits(value: number, digits: number) {
 }
 
 function serializeDateAsLiteral(date: Date): string {
-  const year = digits(date.getUTCFullYear(), 2);
+  const year = digits(date.getUTCFullYear(), 4);
   const month = digits(date.getUTCMonth() + 1, 2);
   const day = digits(date.getUTCDate(), 2);
   const hour = digits(date.getUTCHours(), 2);

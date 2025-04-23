@@ -237,6 +237,7 @@ export function wrapResult(result: Result): Malloy.Result {
     connection_name: result.connectionName,
     annotations: annotations.length > 0 ? annotations : undefined,
     query_timezone: result.data.field.queryTimezone,
+    sql: result.sql,
   };
 }
 
