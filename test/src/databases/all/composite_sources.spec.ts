@@ -10,8 +10,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -449,6 +448,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x(param is 2) -> { group_by: b }
     `).malloyResultMatches(wrappedRuntime, {b: 3});
   });
+  // TODO still need to fix this
   it.skip('nested composite where field usage depends on which composite selected', async () => {
     await expect(`
       ##! experimental.composite_sources

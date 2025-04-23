@@ -97,7 +97,7 @@ function _resolveCompositeSources(
         const resolveInner = _resolveCompositeSources(
           path,
           inputSource,
-          [], // TODO ???
+          genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
           // TODO
           onlyCompositeFieldUsage(fieldUsage, inputSource),
@@ -146,7 +146,7 @@ function _resolveCompositeSources(
       joinsProcessed = true;
 
       if (nests !== undefined) {
-        const rf = genRootFields(rootFields, path, base.fields);
+        const rf = genRootFields(rootFields, path, base.fields, false);
         // now finally we can check the required group bys...
         const checkedRequiredGroupBys = _checkRequiredGroupBys(path, nests, rf);
         if (checkedRequiredGroupBys.length > 0) {
@@ -286,12 +286,26 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
   return categorized;
 }
 
+function mergeFields(...fields: FieldDef[][]): FieldDef[] {
+  const fieldsByName: {[name: string]: FieldDef} = {};
+  for (const list of fields) {
+    for (const field of list) {
+      fieldsByName[field.as ?? field.name] = field;
+    }
+  }
+  return Object.values(fieldsByName);
+}
+
 function genRootFields(
   rootFields: FieldDef[],
   joinPath: string[],
-  fields: FieldDef[]
+  fields: FieldDef[],
+  replace = true
 ): FieldDef[] {
-  if (joinPath.length === 0) return [...fields];
+  if (joinPath.length === 0) {
+    if (replace) return [...fields];
+    return mergeFields(rootFields, fields);
+  }
   const headJoinName = joinPath[0];
   const fieldsByName: {[name: string]: FieldDef} = {};
   for (const field of rootFields) {
@@ -308,7 +322,7 @@ function genRootFields(
   }
   fieldsByName[headJoinName] = {
     ...join,
-    fields: genRootFields(join.fields, joinPath.slice(1), fields),
+    fields: genRootFields(join.fields, joinPath.slice(1), fields, replace),
   };
   return Object.values(fieldsByName);
 }
@@ -416,7 +430,7 @@ export function narrowCompositeFieldResolution(
   const result = _resolveCompositeSources(
     [],
     source,
-    [],
+    [...source.fields],
     undefined,
     fieldUsage,
     narrowedCompositeFieldResolution
@@ -440,7 +454,7 @@ export function resolveCompositeSources(
   const result = _resolveCompositeSources(
     [],
     source,
-    [],
+    [...source.fields],
     extractNestLevels(segment),
     fieldUsage
   );
@@ -576,9 +590,11 @@ function onlyCompositeFieldUsage(
   for (const field of source.fields) {
     sourceFieldsByName[field.as ?? field.name] = field;
   }
-  return fieldUsage.filter(
-    u => u.path.length === 1 && isCompositeField(sourceFieldsByName[u.path[0]])
-  );
+  return fieldUsage.filter(u => {
+    if (u.path.length !== 1) return false;
+    const field = sourceFieldsByName[u.path[0]];
+    return field !== undefined && isCompositeField(field);
+  });
 }
 
 interface NestLevels {
