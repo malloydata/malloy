@@ -461,18 +461,19 @@ export class TSQLDialect extends Dialect {
     return tableSQL;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
-    // SQL Server doesn't support NULLS LAST syntax directly
-    // Use CASE expression to push NULLs to the end
-    return `ORDER BY ${orderTerms
-      .map(t => {
-        const parts = t.split(' ');
-        const field = parts[0];
-        const dir = parts.length > 1 ? parts[1] : '';
-        return `(SELECT CASE WHEN ${field} IS NULL THEN 1 ELSE 0 END), ${field} ${dir}`;
-      })
-      .join(',')}`;
-  }
+  // TODO (vitor): Revisit this function
+  // sqlOrderBy(orderTerms: string[]): string {
+  //   // SQL Server doesn't support NULLS LAST syntax directly
+  //   // Use CASE expression to push NULLs to the end
+  //   return `ORDER BY ${orderTerms
+  //     .map(t => {
+  //       const parts = t.split(' ');
+  //       const field = parts[0];
+  //       const dir = parts.length > 1 ? parts[1] : '';
+  //       return `(SELECT CASE WHEN ${field} IS NULL THEN 1 ELSE 0 END), ${field} ${dir}`;
+  //     })
+  //     .join(',')}`;
+  // }
 
   // TODO (vitor): I think the point in other dialects is to allow escaping
   // but since \\ is \, then you need to make \\ into \\\\ if its going
@@ -573,6 +574,10 @@ export class TSQLDialect extends Dialect {
 
   sqlNowExpr(): string {
     return 'GETDATE()';
+  }
+
+  sqlDateToString(sqlDateExp: string) {
+    return `CONVERT(varchar(10), ${sqlDateExp}, 23)`;
   }
 
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
