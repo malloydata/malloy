@@ -100,6 +100,8 @@ import {
   annotationToTaglines,
 } from './annotation';
 import {sqlKey} from './model/sql_block';
+import {locationContainsPosition} from './lang/utils';
+import {ReferenceList} from './lang/reference-list';
 
 export interface Taggable {
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
@@ -315,11 +317,19 @@ export class Malloy {
         url.toString()
       );
       if (cached) {
+        const referenceList = new ReferenceList(
+          url.toString(),
+          cached.modelDef.references
+        );
         return new Model(
           cached.modelDef,
           [], // TODO when using a model from cache, should we also store the problems??
-          [url.toString(), ...flatDeps(cached.modelDef.dependencies)]
-          // TODO maybe implement referenceAt and importAt by re-translating the model?
+          [url.toString(), ...flatDeps(cached.modelDef.dependencies)],
+          (location: ModelDocumentPosition) => referenceList.find(location),
+          (location: ModelDocumentPosition) =>
+            cached.modelDef.imports.find(i =>
+              locationContainsPosition(i.location, location)
+            )
         );
       }
     }
@@ -354,13 +364,22 @@ export class Malloy {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.modelDef) {
+          const modelDef = {
+            ...result.modelDef,
+            references: translator.references.toArray(),
+            imports: [...translator.imports],
+          };
           await cacheManager?.setCachedModelDef(url.toString(), {
-            modelDef: result.modelDef,
+            modelDef,
             invalidationKeys,
           });
           for (const model of translator.newlyTranslatedDependencies()) {
             await cacheManager?.setCachedModelDef(model.url, {
-              modelDef: model.modelDef,
+              modelDef: {
+                ...model.modelDef,
+                references: translator.references.toArray(),
+                imports: [...translator.imports],
+              },
               invalidationKeys,
             });
           }
@@ -379,6 +398,8 @@ export class Malloy {
             contents: {},
             dependencies: {},
             queryList: [],
+            references: [],
+            imports: [],
           };
           const modelFromCompile = model?._modelDef || emptyModel;
           return new Model(
@@ -628,6 +649,8 @@ export class Malloy {
           contents: {},
           queryList: [],
           dependencies: {},
+          references: [],
+          imports: [],
         }
       );
     } else if (preparedResult) {
@@ -1679,6 +1702,8 @@ export class Explore extends Entity implements Taggable {
       contents: {[this.structDef.name]: this.structDef},
       queryList: [],
       dependencies: {},
+      references: [],
+      imports: [],
     };
   }
 

@@ -36,6 +36,8 @@ describe('pretranslated models', () => {
               'internal://test/langtests/grandgrandchild2': {},
             },
           },
+          references: [],
+          imports: [],
         },
       },
     });

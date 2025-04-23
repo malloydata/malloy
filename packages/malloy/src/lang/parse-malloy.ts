@@ -644,6 +644,8 @@ export abstract class MalloyTranslation {
       contents: {},
       queryList: [],
       dependencies: {},
+      references: [],
+      imports: [],
     };
     /**
      * This is sort of the makefile for the translation, all the steps

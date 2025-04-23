@@ -588,6 +588,8 @@ export class Document extends MalloyElement implements NameSpace {
       contents: {},
       queryList: [],
       dependencies: {},
+      references: [],
+      imports: [],
     };
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
