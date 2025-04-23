@@ -92,6 +92,7 @@ const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'datetime2': {type: 'timestamp'},
   'datetimeoffset': {type: 'timestamp'},
   'bit': {type: 'boolean'},
+  'numeric(38,0)': {type: 'number', numberType: 'integer'},
   'numeric': {type: 'number', numberType: 'float'},
   'decimal': {type: 'number', numberType: 'float'},
   'money': {type: 'number', numberType: 'float'},

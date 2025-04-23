@@ -683,7 +683,12 @@ class QueryField extends QueryNode {
       expressionIsAggregate(overload.returnType.expressionType) &&
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
-    const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
+    // TODO (vitor): Figure out a better way.
+    const aggregateLimit = frag.limit
+      ? this.parent.dialect.name === 'tsql'
+        ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${frag.limit} ROWS ONLY`
+        : `LIMIT ${frag.limit}`
+      : undefined;
     if (
       frag.name === 'string_agg' &&
       distinctKey &&
@@ -3190,8 +3195,13 @@ class QueryQuery extends QueryField {
         this.firstSegment.sample
       );
       if (this.firstSegment.sample) {
+        // TODO (vitor): fix this
         structSQL = stageWriter.addStage(
-          `SELECT * from ${structSQL} as x limit 100000 `
+          `SELECT * from ${structSQL} as x ${
+            this.parent.dialect.name === 'tsql'
+              ? 'ORDER BY 1 OFFSET 0 ROWS FETCH NEXT 100000 ROWS ONLY'
+              : 'limit 100000'
+          }`
         );
       }
     }
@@ -3334,7 +3344,10 @@ class QueryQuery extends QueryField {
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
+      s +=
+        this.parent.dialect.name === 'tsql'
+          ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
+          : `${this.firstSegment.limit}\n`;
     }
     this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
@@ -3814,7 +3827,10 @@ class QueryQuery extends QueryField {
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += `LIMIT ${this.firstSegment.limit}\n`;
+      s +=
+        this.parent.dialect.name === 'tsql'
+          ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
+          : `LIMIT ${this.firstSegment.limit}\n`;
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -4306,10 +4322,7 @@ class QueryQueryIndexStage extends QueryQuery {
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       // TODO (vitor): This is ANSI SQL so maybe it's not terrible?
       if (dialect.orderByClause === 'output_name') {
-        s += `
-        ORDER BY 1
-        OFFSET 0 ROWS
-        FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+        s += `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
       } else {
         s += `LIMIT ${this.firstSegment.limit}\n`;
       }
@@ -5383,7 +5396,11 @@ export class QueryModel {
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
               searchValue + '%'
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
-            LIMIT ${limit}
+          ${
+            this.dialect.name === 'tsql'
+              ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${limit} ROWS ONLY`
+              : `LIMIT ${limit}`
+          }
           `;
     if (struct.dialect.hasFinalStage) {
       query = `WITH __stage0 AS(\n${query}\n)\n${struct.dialect.sqlFinalStage(
