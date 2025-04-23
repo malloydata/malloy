@@ -749,7 +749,7 @@ function lookup(field: string[], fields: FieldDef[]): FieldDef {
   if (rest.length === 0) {
     return def;
   } else {
-    if (isSourceDef(def)) {
+    if (isJoined(def)) {
       return lookup(rest, def.fields);
     }
     throw new Error(

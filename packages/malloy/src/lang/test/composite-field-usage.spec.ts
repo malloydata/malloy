@@ -161,6 +161,16 @@ describe('composite sources', () => {
         run: foo(param is 2) -> { group_by: y }
       `).toTranslate();
     });
+    test('composite source with parameter in expression', () => {
+      expect(`
+        ##! experimental { composite_sources parameters }
+        source: foo(param is 1) is compose(
+          a extend { dimension: x is param },
+          a extend { dimension: y is param + 1 }
+        )
+        run: foo(param is 2) -> { group_by: y2 is y + 1 }
+      `).toTranslate();
+    });
     test('composite source does not include private field', () => {
       expect(`
         ##! experimental { composite_sources access_modifiers }
