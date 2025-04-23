@@ -294,18 +294,37 @@ abstract class ASTNode<T> {
     name: string,
     path: string[] | undefined
   ) {
-    let current = schema;
+    let current = schema.fields;
     for (const part of path ?? []) {
-      const field = current.fields.find(f => f.name === part);
+      const field = current.find(f => f.name === part);
       if (field === undefined) {
         throw new Error(`${part} not found`);
       }
-      if (field.kind !== 'join') {
-        throw new Error(`${part} is not a join`);
+      if (field.kind === 'join') {
+        current = field.schema.fields;
+        continue;
       }
-      current = field.schema;
+      if (field.kind === 'dimension' || field.kind === 'measure') {
+        if (field.type.kind === 'record_type') {
+          current = field.type.fields.map(f => ({
+            kind: field.kind,
+            ...f,
+          }));
+          continue;
+        } else if (
+          field.type.kind === 'array_type' &&
+          field.type.element_type.kind === 'record_type'
+        ) {
+          current = field.type.element_type.fields.map(f => ({
+            kind: field.kind,
+            ...f,
+          }));
+          continue;
+        }
+      }
+      throw new Error(`${part} is not a join, record, or repeated record`);
     }
-    const field = current.fields.find(f => f.name === name);
+    const field = current.find(f => f.name === name);
     return field;
   }
 
