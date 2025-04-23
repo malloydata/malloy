@@ -110,7 +110,7 @@ export class TSQLDialect extends Dialect {
   // TODO (vitor): hasFinalStage is set to false for now because I don't know why it would be needed.
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = false;
@@ -120,11 +120,11 @@ export class TSQLDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = false;
-  experimental = true;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
   likeEscape = false;
+  experimental = true;
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
 
@@ -270,9 +270,8 @@ export class TSQLDialect extends Dialect {
     }
   }
 
-  sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    // SQL Server doesn't have MD5, use HASHBYTES instead
-    return `CAST(HASHBYTES('SHA2_256', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS NUMERIC(38,0))`;
+  sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
+    return 'Do not use me';
   }
 
   sqlGenerateUUID(): string {
@@ -418,15 +417,36 @@ export class TSQLDialect extends Dialect {
     throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
+  // TODO (vitor): Revisit this function... Some parenthesis aren't looking right
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // SQL Server version using DISTINCT with GROUP BY
-    return `(
-      SELECT ${funcName}(t.value)
-      FROM (
-        SELECT DISTINCT ${key} AS key, ${value} AS value
-        FROM __temp_table
-      ) t
-    )`;
+    const sqlDistinctKey = `CONCAT(${key}, '')`;
+    const partA = `
+      (CAST(
+            CASE
+                WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) >= 0
+                THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) AS DECIMAL(20,0))
+                ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
+            END
+        AS DECIMAL(20,0))
+        *
+        CAST(18446744073709551616.0 AS DECIMAL(20,0)))`;
+    const partB = `
+      (CAST(
+          CASE
+              WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) >= 0
+              THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0))
+              ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
+          END
+      AS DECIMAL(20,0))`;
+    const hashKey = `( CAST( (${partA}+${partB}) AS DECIMAL(38,0) ) )`;
+    const v = `COALESCE(${value}, 0)`;
+    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlAggDistinct(
@@ -504,7 +524,7 @@ export class TSQLDialect extends Dialect {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
-        // TODO (vitor): This NUMERIC(38,0) is dicey
+        // TODO (vitor): This NUMERIC(38,0) might be dicey
         return 'NUMERIC(38,0)';
       } else {
         return this.defaultNumberType;
