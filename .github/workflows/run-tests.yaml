@@ -46,6 +46,9 @@ jobs:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
+  db-publisher:
+    needs: check-permission
+    uses: './.github/workflows/db-publisher.yaml'
   db-snowflake:
     needs: check-permission
     uses: './.github/workflows/db-snowflake.yaml'
@@ -69,6 +72,7 @@ jobs:
       - db-duckdb-wasm
       - db-trino
       - db-postgres
+      - db-publisher
       - db-motherduck
       - db-mysql
     runs-on: ubuntu-latest
