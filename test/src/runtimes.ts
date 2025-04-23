@@ -186,6 +186,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           {projectId: 'malloydata-org'}
         );
         break;
+      case 'publisher':
       case 'postgres':
         connection = new PostgresTestConnection(dbName);
         break;
@@ -267,6 +268,7 @@ export const allDatabases = [
   'snowflake',
   'trino',
   'mysql',
+  'publisher',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
