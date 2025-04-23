@@ -83,7 +83,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         let logTo: MalloyElement | undefined = undefined;
         const wild = this.expandedWild[name];
         if (wild) {
-          indexFields.push({type: 'fieldref', path: wild.path});
+          indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
           nextCompositeFieldUsage = wild.entry.typeDesc().compositeFieldUsage;
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
@@ -180,6 +180,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
           this.expandedWild[indexName] = {
             path: joinPath.concat(name),
             entry,
+            at: wild.location,
           };
         }
       }

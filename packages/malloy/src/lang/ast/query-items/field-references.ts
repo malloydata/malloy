@@ -87,6 +87,7 @@ export abstract class FieldReference
     return {
       type: 'fieldref',
       path: this.list.map(n => n.refString),
+      at: this.location,
     };
   }
 

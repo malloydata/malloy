@@ -69,7 +69,10 @@ export abstract class QueryOperationSpace
 {
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
-  expandedWild: Record<string, {path: string[]; entry: SpaceEntry}> = {};
+  expandedWild: Record<
+    string,
+    {path: string[]; entry: SpaceEntry; at: model.DocumentLocation}
+  > = {};
   compositeFieldUsers: (
     | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
     | {
@@ -187,6 +190,7 @@ export abstract class QueryOperationSpace
           this.expandedWild[name] = {
             path: joinPath.concat(name),
             entry,
+            at: wild.location,
           };
         }
       }
@@ -364,7 +368,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         const {name, field} = user;
         const wildPath = this.expandedWild[name];
         if (wildPath) {
-          fields.push({type: 'fieldref', path: wildPath.path});
+          fields.push({type: 'fieldref', path: wildPath.path, at: wildPath.at});
           nextCompositeFieldUsage =
             wildPath.entry.typeDesc().compositeFieldUsage;
         } else {

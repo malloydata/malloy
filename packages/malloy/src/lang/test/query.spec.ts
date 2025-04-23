@@ -1638,7 +1638,7 @@ describe('query:', () => {
             measure: aisum1 is ai_grouped_by_astr.sum()
             measure: aisum2 is ai_grouped_by_abool.sum()
           }
-          run: aext -> { aggregate: aisum is aisum1 + aisum2 }
+          run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
         `
       ).toLog(
         errorMessage('Group by of `astr` is required but not present'),

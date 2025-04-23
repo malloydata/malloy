@@ -77,7 +77,11 @@ export class ReferenceField extends SpaceField {
           throw new Error('impossible turtle/join parameter');
         }
       } else {
-        this.queryFieldDef = {type: 'fieldref', path};
+        this.queryFieldDef = {
+          type: 'fieldref',
+          path,
+          at: this.fieldRef.location,
+        };
       }
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField) {

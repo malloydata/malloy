@@ -1474,6 +1474,7 @@ export interface RefToField {
   type: 'fieldref';
   path: string[];
   annotation?: Annotation;
+  at?: DocumentLocation;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
