@@ -186,7 +186,10 @@ function _resolveCompositeSources(
       base,
       rootFields,
       nests,
-      expanded,
+      mergeCategorizedFieldUsage(expanded, {
+        sourceUsage: [],
+        joinUsage: categorizedFieldUsage.joinUsage,
+      }),
       narrowedJoinedSources
     );
     if (joinError !== undefined) {
@@ -201,6 +204,23 @@ function _resolveCompositeSources(
       joined: narrowedJoinedSources,
     },
   };
+}
+
+function mergeCategorizedFieldUsage(
+  ...usages: CategorizedFieldUsage[]
+): CategorizedFieldUsage {
+  const result: CategorizedFieldUsage = {
+    sourceUsage: [],
+    joinUsage: {},
+  };
+  for (const usage of usages) {
+    result.sourceUsage.push(...usage.sourceUsage);
+    for (const [joinName, joinUsage] of Object.entries(usage.joinUsage)) {
+      result.joinUsage[joinName] ??= [];
+      result.joinUsage[joinName].push(...joinUsage);
+    }
+  }
+  return result;
 }
 
 function expandFieldUsage(
@@ -541,15 +561,15 @@ function onlyCompositeFieldUsage(
 }
 
 interface NestLevels {
-  fieldsReferencedDirectly: string[][];
-  fieldsReferenced: string[][];
+  fieldsReferencedDirectly: FieldUsage[];
+  fieldsReferenced: FieldUsage[];
   aggregateFieldUsage: AggregateFieldUsage[];
   nested: NestLevels[];
 }
 
 function extractNestLevels(segment: PipeSegment): NestLevels {
-  const fieldsReferencedDirectly: string[][] = [];
-  const fieldsReferenced: string[][] = [];
+  const fieldsReferencedDirectly: FieldUsage[] = [];
+  const fieldsReferenced: FieldUsage[] = [];
   const nested: NestLevels[] = [];
   const aggregateFieldUsage: AggregateFieldUsage[] = [];
 
@@ -560,14 +580,19 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
   ) {
     for (const field of segment.queryFields) {
       if (field.type === 'fieldref') {
-        fieldsReferencedDirectly.push(field.path);
-        fieldsReferenced.push(field.path);
+        const usage = {
+          path: field.path,
+          // TODO handle case where `at` is undefined
+          at: field.at!,
+        };
+        fieldsReferencedDirectly.push(usage);
+        fieldsReferenced.push(usage);
       } else if (field.type === 'turtle') {
         const head = field.pipeline[0];
         nested.push(extractNestLevels(head));
       } else {
         if (field.fieldUsage !== undefined) {
-          fieldsReferenced.push(...fieldUsagePaths(field.fieldUsage));
+          fieldsReferenced.push(...field.fieldUsage);
         }
         if (field.aggregateFieldUsage !== undefined) {
           aggregateFieldUsage.push(...field.aggregateFieldUsage);
@@ -590,7 +615,7 @@ interface RequiredGroupBy {
 }
 
 interface ExpandedNestLevels {
-  fieldsReferencedDirectly: string[][];
+  fieldsReferencedDirectly: FieldUsage[];
   requiredGroupBys: RequiredGroupBy[];
   nested: ExpandedNestLevels[];
 }
@@ -604,21 +629,26 @@ function expandRefs(nests: NestLevels, fields: FieldDef[]): ExpandedNestLevels {
   const references = [...nests.fieldsReferenced];
   for (let i = 0; i < references.length; i++) {
     const field = references[i];
-    const def = lookup(field, fields);
+    const def = lookup(field.path, fields);
     if (isTurtle(def)) {
       const head = def.pipeline[0];
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
-      const joinPath = field.slice(0, -1);
+      const joinPath = field.path.slice(0, -1);
       if (def.aggregateFieldUsage) {
         allAggregateFieldUsage.push(
-          ...joinedAggregateFieldUsage(joinPath, def.aggregateFieldUsage)!
+          ...joinedAggregateFieldUsage(joinPath, def.aggregateFieldUsage)!.map(
+            u => ({
+              ...u,
+              location: field.at,
+            })
+          )
         );
       }
       if (def.fieldUsage) {
-        const moreReferences = fieldUsagePaths(def.fieldUsage)
-          .map(p => [...joinPath, ...p])
-          .filter(r => !references.some(r2 => pathEq(r, r2)));
+        const moreReferences = def.fieldUsage
+          .map(u => ({path: [...joinPath, ...u.path], at: field.at}))
+          .filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)));
         references.push(...moreReferences);
       }
     }
@@ -678,7 +708,9 @@ function getUnsatisfiedRequiredGroupBys(
     requiredGroupBys.push(...getUnsatisfiedRequiredGroupBys(nested));
   }
 
-  return requiredGroupBys.filter(rgb => !fields.some(f => pathEq(f, rgb.path)));
+  return requiredGroupBys.filter(
+    rgb => !fields.some(f => pathEq(f.path, rgb.path))
+  );
 }
 
 function pathEq(a: string[], b: string[]) {
