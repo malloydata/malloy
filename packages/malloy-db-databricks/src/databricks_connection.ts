@@ -263,7 +263,8 @@ export class DatabricksConnection
 
         const finalResult = {rows: actualResult, totalRows: result.length};
         await session.close();
-        await client.close();
+        // Do not close client here.
+        // Closing the client will close all sessions.
         return finalResult;
       })
       .catch(error => {
