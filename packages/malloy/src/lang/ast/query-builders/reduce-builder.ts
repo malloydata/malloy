@@ -53,10 +53,7 @@ import {ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
 import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {MalloyElement} from '../types/malloy-element';
-import {
-  emptyFieldUsage,
-  mergeFieldUsage,
-} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 
 function queryFieldName(qf: QueryFieldDef): string {
   if (qf.type === 'fieldref') {
@@ -140,9 +137,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
 
     const fromFieldUsage =
-      from && isQuerySegment(from)
-        ? from.fieldUsage ?? emptyFieldUsage()
-        : emptyFieldUsage();
+      from && isQuerySegment(from) ? from.fieldUsage ?? [] : [];
     to.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
   }
 }

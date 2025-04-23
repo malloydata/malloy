@@ -271,7 +271,7 @@ export abstract class QueryOperationSpace
     if (nextFieldUsage) {
       const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
       const onlyNewFieldUsage = fieldUsageDifference(newFieldUsage, fieldUsage);
-      fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage);
+      fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage) ?? [];
       if (!isEmptyFieldUsage(newFieldUsage)) {
         const result = narrowCompositeFieldResolution(
           source,

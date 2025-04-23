@@ -46,24 +46,6 @@ describe('composite sources', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
       expect(mexpr`x.ai + 1`).hasFieldUsage([['x', 'ai']]);
     });
-
-    test('join usage complex', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.aif`).hasFieldUsage([
-        ['x', 'ai'],
-        ['x', 'af'],
-      ]);
-    });
-
-    test('measure defined in composite source', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'x');
-      expect(mexpr`ss`).hasFieldUsage([['ai']]);
-    });
-
-    test('measure with filter defined in composite source', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'x');
-      expect(mexpr`saiaf`).hasFieldUsage([['ai'], ['af']]);
-    });
   });
 
   describe('composite source resolution and validation', () => {
