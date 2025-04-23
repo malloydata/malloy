@@ -271,7 +271,7 @@ export class TSQLDialect extends Dialect {
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     // SQL Server doesn't have MD5, use HASHBYTES instead
-    return `CAST(HASHBYTES('SHA2_256', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS NUMERIC)`;
+    return `CAST(HASHBYTES('SHA2_256', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS NUMERIC(38,0))`;
   }
 
   sqlGenerateUUID(): string {
@@ -502,7 +502,8 @@ export class TSQLDialect extends Dialect {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
-        return 'INT';
+        // TODO (vitor): This NUMERIC(38,0) is dicey
+        return 'NUMERIC(38,0)';
       } else {
         return this.defaultNumberType;
       }
@@ -539,11 +540,6 @@ export class TSQLDialect extends Dialect {
   }
 
   validateTypeName(sqlType: string): boolean {
-    // Letters:              BIGINT
-    // Numbers:              INT8
-    // Spaces:               TIMESTAMP WITH TIME ZONE
-    // Parentheses, Commas:  NUMERIC(5, 2)
-    // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 
