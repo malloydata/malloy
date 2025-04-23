@@ -271,7 +271,7 @@ export class TSQLDialect extends Dialect {
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     // SQL Server doesn't have MD5, use HASHBYTES instead
-    return `CAST(HASHBYTES('SHA2_256', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS BIGINT)`;
+    return `CAST(HASHBYTES('SHA2_256', CAST(${sqlDistinctKey} AS NVARCHAR(MAX))) AS NUMERIC)`;
   }
 
   sqlGenerateUUID(): string {
