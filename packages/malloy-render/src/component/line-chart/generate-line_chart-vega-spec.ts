@@ -803,10 +803,9 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
-        let sortedRecords = [...records].sort((a, b) => b.y - a.y);
-        if (sortedRecords.length > tooltipItemCountLimit) {
-          sortedRecords = sortedRecords.slice(0, tooltipItemCountLimit);
-        }
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .slice(0, tooltipItemCountLimit);
 
         tooltipData = {
           title: [title],
@@ -843,14 +842,14 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         // If the highlighted item is not included in the first ~20,
         // then it will probably be cut off.
 
-        let sortedRecords = [...records].sort((a, b) => b.y - a.y);
-        if (sortedRecords.length > tooltipItemCountLimit) {
-          sortedRecords = sortedRecords.filter(
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .filter(
             (item, index) =>
               index <= tooltipItemCountLimit ||
               item.series === highlightedSeries
           );
-        }
+
         tooltipData = {
           title: [title],
           entries: sortedRecords.map(rec => {
