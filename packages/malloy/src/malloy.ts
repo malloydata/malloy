@@ -317,19 +317,25 @@ export class Malloy {
         url.toString()
       );
       if (cached) {
-        const referenceList = new ReferenceList(
-          url.toString(),
-          cached.modelDef.references
-        );
+        const {modelDef} = cached;
+        const {references, imports} = modelDef;
+        let referenceAt: ReferenceAtCallback = () => undefined;
+        if (references) {
+          const referenceList = new ReferenceList(url.toString(), references);
+          referenceAt = (location: ModelDocumentPosition) =>
+            referenceList.find(location);
+        }
+        let importAt: ImportAtCallback = () => undefined;
+        if (imports) {
+          importAt = (location: ModelDocumentPosition) =>
+            imports.find(i => locationContainsPosition(i.location, location));
+        }
         return new Model(
-          cached.modelDef,
+          modelDef,
           [], // TODO when using a model from cache, should we also store the problems??
           [url.toString(), ...flatDeps(cached.modelDef.dependencies)],
-          (location: ModelDocumentPosition) => referenceList.find(location),
-          (location: ModelDocumentPosition) =>
-            cached.modelDef.imports.find(i =>
-              locationContainsPosition(i.location, location)
-            )
+          referenceAt,
+          importAt
         );
       }
     }
@@ -375,11 +381,7 @@ export class Malloy {
           });
           for (const model of translator.newlyTranslatedDependencies()) {
             await cacheManager?.setCachedModelDef(model.url, {
-              modelDef: {
-                ...model.modelDef,
-                references: translator.references.toArray(),
-                imports: [...translator.imports],
-              },
+              modelDef: model.modelDef,
               invalidationKeys,
             });
           }
@@ -398,8 +400,6 @@ export class Malloy {
             contents: {},
             dependencies: {},
             queryList: [],
-            references: [],
-            imports: [],
           };
           const modelFromCompile = model?._modelDef || emptyModel;
           return new Model(
@@ -649,8 +649,6 @@ export class Malloy {
           contents: {},
           queryList: [],
           dependencies: {},
-          references: [],
-          imports: [],
         }
       );
     } else if (preparedResult) {
@@ -798,29 +796,25 @@ export class MalloyError extends Error {
   }
 }
 
+type ReferenceAtCallback = (
+  location: ModelDocumentPosition
+) => DocumentReference | undefined;
+
+type ImportAtCallback = (
+  location: ModelDocumentPosition
+) => ImportLocation | undefined;
+
 /**
  * A compiled Malloy document.
  */
 export class Model implements Taggable {
-  _referenceAt: (
-    location: ModelDocumentPosition
-  ) => DocumentReference | undefined;
-  _importAt: (location: ModelDocumentPosition) => ImportLocation | undefined;
-
   constructor(
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
     readonly fromSources: string[],
-    referenceAt: (
-      location: ModelDocumentPosition
-    ) => DocumentReference | undefined = () => undefined,
-    importAt: (
-      location: ModelDocumentPosition
-    ) => ImportLocation | undefined = () => undefined
-  ) {
-    this._referenceAt = referenceAt;
-    this._importAt = importAt;
-  }
+    private readonly referenceAt: ReferenceAtCallback = () => undefined,
+    private readonly importAt: ImportAtCallback = () => undefined
+  ) {}
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this.modelDef.annotation, spec);
@@ -840,7 +834,7 @@ export class Model implements Taggable {
   public getReference(
     position: ModelDocumentPosition
   ): DocumentReference | undefined {
-    return this._referenceAt(position);
+    return this.referenceAt(position);
   }
 
   /**
@@ -853,7 +847,7 @@ export class Model implements Taggable {
   public getImport(
     position: ModelDocumentPosition
   ): ImportLocation | undefined {
-    return this._importAt(position);
+    return this.importAt(position);
   }
 
   /**
@@ -1702,8 +1696,6 @@ export class Explore extends Entity implements Taggable {
       contents: {[this.structDef.name]: this.structDef},
       queryList: [],
       dependencies: {},
-      references: [],
-      imports: [],
     };
   }
 

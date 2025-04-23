@@ -318,8 +318,6 @@ export class TestTranslator extends MalloyTranslator {
         ],
       },
     },
-    references: [],
-    imports: [],
   };
 
   constructor(

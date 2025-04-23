@@ -644,8 +644,6 @@ export abstract class MalloyTranslation {
       contents: {},
       queryList: [],
       dependencies: {},
-      references: [],
-      imports: [],
     };
     /**
      * This is sort of the makefile for the translation, all the steps
@@ -720,7 +718,12 @@ export abstract class MalloyTranslation {
       }
       const result = child.translate();
       if (result.modelDef) {
-        newModels.push({url, modelDef: result.modelDef});
+        const modelDef = {
+          ...result.modelDef,
+          references: child.references.toArray(),
+          imports: [...child.imports],
+        };
+        newModels.push({url, modelDef});
         newModels.push(...child.newlyTranslatedDependencies());
       }
     }

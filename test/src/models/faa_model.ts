@@ -902,8 +902,6 @@ export const testModel: ModelDef = {
     medicare_state_facts: medicareStateFacts,
     // aircraft: aircraftHandStructDef,
   },
-  references: [],
-  imports: [],
 };
 
 // // clang-format on

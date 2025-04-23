@@ -268,8 +268,6 @@ describe('BigQuery hand-built expression test', () => {
     },
     queryList: [],
     dependencies: {},
-    references: [],
-    imports: [],
   };
 
   // BigQuery tests only on the Hand Coded models.
@@ -725,8 +723,6 @@ describe('BigQuery hand-built expression test', () => {
     },
     queryList: [],
     dependencies: {},
-    references: [],
-    imports: [],
   };
 
   const handJoinModel = bqRuntime._loadModelFromModelDef(joinModel);
