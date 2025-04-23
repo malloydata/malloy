@@ -125,6 +125,7 @@ export class TSQLDialect extends Dialect {
   compoundObjectInSchema = false;
   likeEscape = false;
   booleanAsNumbers = true;
+  orderByClause = 'output_name' as const;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');

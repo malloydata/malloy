@@ -2401,6 +2401,8 @@ type StageOutputContext = {
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
   outputPipelinedSQL: OutputPipelinedSQL[]; // secondary stages for turtles.
+  // TODO (vitor): not sure about this
+  dimensionNames?: string[];
 };
 
 /** Query builder object. */
@@ -3309,7 +3311,12 @@ class QueryQuery extends QueryField {
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          n.push(fi.fieldUsage.resultIndex.toString());
+          // TODO (vitor): Idk if this is needed or wanted. It does reduce the number of test failures tho
+          if (this.parent.dialect.orderByClause === 'output_name') {
+            n.push(fi.f.getFullOutputName());
+          } else {
+            n.push(fi.fieldUsage.resultIndex.toString());
+          }
         }
       }
       if (n.length > 0) {
@@ -3372,6 +3379,8 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
+    // TODO (vitor): Not sure about this
+    output.dimensionNames = [];
     const scalarFields: [string, FieldInstanceField][] = [];
     const otherFields: [string, FieldInstance][] = [];
     for (const [name, fi] of resultSet.allFields) {
@@ -3410,6 +3419,7 @@ class QueryQuery extends QueryField {
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
+                output.dimensionNames.push(outputFieldNameString);
                 output.lateralJoinSQLExpressions.push(
                   `CAST(${exp} as STRING) as ${outputNameString}`
                 );
@@ -3420,6 +3430,7 @@ class QueryQuery extends QueryField {
               output.sql.push(`${exp} as ${outputName}`);
             }
             output.dimensionIndexes.push(output.fieldIndex++);
+            output.dimensionNames.push(outputName);
           } else if (isBasicCalculation(fi.f)) {
             output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
@@ -3579,7 +3590,15 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
+    f.outputPipelinedSQL[0].sqlFieldName;
+
+    // TODO (vitor): Code smell ahead, figure out with the malloy team
+    const groupBy =
+      'GROUP BY ' +
+      (this.parent.dialect.orderByClause === 'output_name'
+        ? f.dimensionNames!.join(',')
+        : f.dimensionIndexes.join(',')) +
+      '\n';
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
@@ -3691,7 +3710,12 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
     if (f.dimensionIndexes.length > 0) {
-      s += `GROUP BY ${f.dimensionIndexes.join(',')}\n`;
+      // TODO (vitor): Code smell ahead
+      s += `GROUP BY ${
+        this.parent.dialect.orderByClause === 'output_name'
+          ? f.dimensionNames!.join(',')
+          : f.dimensionIndexes.join(',')
+      }\n`;
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -3714,6 +3738,8 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
+    // TODO (vitor): Not sure about dimensionNames
+    const dimensionNames: string[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -3725,6 +3751,7 @@ class QueryQuery extends QueryField {
               ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex++);
+            dimensionNames.push(sqlName);
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
@@ -3771,7 +3798,12 @@ class QueryQuery extends QueryField {
     }
 
     if (dimensionIndexes.length > 0) {
-      s += `GROUP BY ${dimensionIndexes.join(',')}\n`;
+      // TODO (vitor): Not sure about dimensionNames here
+      s += `GROUP BY ${
+        this.parent.dialect.orderByClause === 'output_name'
+          ? dimensionNames.join(',')
+          : dimensionIndexes.join(',')
+      }\n`;
     }
 
     // order by
@@ -4264,7 +4296,7 @@ class QueryQueryIndexStage extends QueryQuery {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
-    if (dialect.name === 'tsql') {
+    if (dialect.orderByClause === 'output_name') {
       s += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
     } else {
       s += 'GROUP BY 1,2,3,4,5\n';
@@ -4273,7 +4305,7 @@ class QueryQueryIndexStage extends QueryQuery {
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       // TODO (vitor): This is ANSI SQL so maybe it's not terrible?
-      if (dialect.name === 'tsql') {
+      if (dialect.orderByClause === 'output_name') {
         s += `
         ORDER BY 1
         OFFSET 0 ROWS
