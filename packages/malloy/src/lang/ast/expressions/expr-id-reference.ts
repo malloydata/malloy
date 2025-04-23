@@ -41,19 +41,19 @@ export class ExprIdReference extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
-    // TODO Currently the join usage is always equivalent to the reference path here;
-    // if/when we add namespaces, this will not be the case, and we will need to get the
-    // join path from `getField` / `lookup`
-    // const compositeJoinUsage = this.fieldReference.list
-    //   .map(n => n.name)
-    //   .slice(0, -1);
-    const fieldUsage: FieldUsage[] = [
-      {
-        path: this.fieldReference.list.map(n => n.name),
-        at: this.fieldReference.location,
-      },
-    ];
     if (def.found) {
+      // TODO Currently the join usage is always equivalent to the reference path here;
+      // if/when we add namespaces, this will not be the case, and we will need to get the
+      // join path from `getField` / `lookup`
+      const fieldUsage: FieldUsage[] =
+        def.found.refType === 'field'
+          ? [
+              {
+                path: this.fieldReference.list.map(n => n.name),
+                at: this.fieldReference.location,
+              },
+            ]
+          : [];
       const td = def.found.typeDesc();
       if (def.isOutputField) {
         return {
