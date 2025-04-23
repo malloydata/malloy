@@ -2942,4 +2942,224 @@ describe('query builder', () => {
       });
     });
   });
+  describe('record support', () => {
+    const model: Malloy.ModelInfo = {
+      entries: [
+        {
+          kind: 'source',
+          name: 's',
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'r1',
+                type: {
+                  kind: 'record_type',
+                  fields: [
+                    {name: 'd1', type: {kind: 'string_type'}},
+                    {name: 'd2', type: {kind: 'string_type'}},
+                  ],
+                },
+              },
+              {
+                kind: 'dimension',
+                name: 'rr1',
+                type: {
+                  kind: 'array_type',
+                  element_type: {
+                    kind: 'record_type',
+                    fields: [
+                      {name: 'd1', type: {kind: 'string_type'}},
+                      {name: 'd2', type: {kind: 'string_type'}},
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      anonymous_queries: [],
+    };
+    test('add a group by of a field in a record field', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment().addGroupBy('d1', ['r1']);
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                      path: ['r1'],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: 'run: s -> { group_by: r1.d1 }',
+      });
+    });
+    test('add a group by of a field in a repeated record field', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment().addGroupBy('d1', ['rr1']);
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                      path: ['rr1'],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: 'run: s -> { group_by: rr1.d1 }',
+      });
+    });
+    test('add a where to a field in a record field', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment().addWhere('d1', ['r1'], 'WN, AA');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    field_reference: {name: 'd1', path: ['r1']},
+                    filter: 'WN, AA',
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: 'run: s -> { where: r1.d1 ~ f`WN, AA` }',
+      });
+    });
+    test('add a where to a field in a repeated record field', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 's',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment().addWhere('d1', ['rr1'], 'WN, AA');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 's',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    field_reference: {name: 'd1', path: ['rr1']},
+                    filter: 'WN, AA',
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: 'run: s -> { where: rr1.d1 ~ f`WN, AA` }',
+      });
+    });
+  });
 });
