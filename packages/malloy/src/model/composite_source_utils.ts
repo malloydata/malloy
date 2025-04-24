@@ -55,6 +55,7 @@ function _resolveCompositeSources(
       narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution;
     }
   | {error: CompositeError} {
+  // TODO skip all this if the tree doesn't have any composite sources
   let base = {...source};
   let joinsProcessed = false;
   let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
@@ -184,7 +185,7 @@ function _resolveCompositeSources(
   if (!joinsProcessed) {
     const expanded = expandFieldUsage(
       categorizedFieldUsage.sourceUsage,
-      source.fields
+      getJoinFields(rootFields, path)
     );
     if (expanded.error) {
       return {
@@ -364,6 +365,15 @@ function genRootFields(
     fields: genRootFields(join.fields, joinPath.slice(1), fields, replace),
   };
   return Object.values(fieldsByName);
+}
+
+function getJoinFields(rootFields: FieldDef[], joinPath: string[]): FieldDef[] {
+  if (joinPath.length === 0) return rootFields;
+  const join = lookup(joinPath, rootFields);
+  if (!isJoined(join)) {
+    throw new Error('Not a join!');
+  }
+  return join.fields;
 }
 
 // Resolves composite sources for the joins of a given `base` source (a resolved source)
