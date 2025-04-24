@@ -13,9 +13,11 @@ import type {
   PipeSegment,
   SourceDef,
   Expr,
+  FilterCondition,
 } from './malloy_types';
 import {
   isAtomic,
+  isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
@@ -62,7 +64,6 @@ function _resolveCompositeSources(
     undefined;
   const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
   const nonCompositeFields = getNonCompositeFields(source);
-  const categorizedFieldUsage = categorizeFieldUsage(fieldUsage);
   if (source.type === 'composite') {
     let found = false;
     const firstFaileds: FieldUsage[] = [];
@@ -85,10 +86,7 @@ function _resolveCompositeSources(
       }
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expandedCategorized = expandFieldUsage(
-        categorizedFieldUsage.sourceUsage,
-        fieldsForLookup
-      );
+      const expandedCategorized = expandFieldUsage(fieldUsage, fieldsForLookup);
       if (expandedCategorized.error) {
         // A lookup failed while expanding, which means this source certainly won't work
         newNarrowedSources.shift();
@@ -113,8 +111,7 @@ function _resolveCompositeSources(
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
-          // TODO
-          onlyCompositeFieldUsage(fieldUsage, inputSource),
+          compositeUsageInThisSource,
           // This looks wonky, but what we're doing is taking the nested sources
           // and "promoting" them to look like they're top level sources; we will
           // then reverse this when we update the real narrowed resolution.
@@ -184,7 +181,7 @@ function _resolveCompositeSources(
 
   if (!joinsProcessed) {
     const expanded = expandFieldUsage(
-      categorizedFieldUsage.sourceUsage,
+      fieldUsage,
       getJoinFields(rootFields, path)
     );
     if (expanded.error) {
@@ -200,10 +197,7 @@ function _resolveCompositeSources(
       base,
       rootFields,
       nests,
-      mergeCategorizedFieldUsage(expanded.result, {
-        sourceUsage: [],
-        joinUsage: categorizedFieldUsage.joinUsage,
-      }),
+      expanded.result,
       narrowedJoinedSources
     );
     if (joinError !== undefined) {
@@ -218,23 +212,6 @@ function _resolveCompositeSources(
       joined: narrowedJoinedSources,
     },
   };
-}
-
-function mergeCategorizedFieldUsage(
-  ...usages: CategorizedFieldUsage[]
-): CategorizedFieldUsage {
-  const result: CategorizedFieldUsage = {
-    sourceUsage: [],
-    joinUsage: {},
-  };
-  for (const usage of usages) {
-    result.sourceUsage.push(...usage.sourceUsage);
-    for (const [joinName, joinUsage] of Object.entries(usage.joinUsage)) {
-      result.joinUsage[joinName] ??= [];
-      result.joinUsage[joinName].push(...joinUsage);
-    }
-  }
-  return result;
 }
 
 function expandFieldUsage(
@@ -264,7 +241,7 @@ function expandFieldUsage(
       };
     }
     if (isAtomic(def)) {
-      const fieldUsage = getFieldUsage(def);
+      const fieldUsage = getFieldUsageForField(def);
       allFieldPathsReferenced.push(
         ...fieldUsage
           .map(u => ({
@@ -282,7 +259,7 @@ function expandFieldUsage(
         const join = lookup(referenceJoinPath, fields);
         // Don't want to actually include the name of the join; just the path to the join
         const joinJoinPath = referenceJoinPath.slice(0, -1);
-        const fieldUsage = getFieldUsage(join);
+        const fieldUsage = getFieldUsageForField(join);
         allFieldPathsReferenced.push(
           ...fieldUsage
             .map(u => ({
@@ -496,18 +473,20 @@ export function narrowCompositeFieldResolution(
 export function resolveCompositeSources(
   source: SourceDef,
   segment: PipeSegment,
-  fieldUsage: FieldUsage[]
+  _fieldUsage: FieldUsage[]
 ):
   | {sourceDef: SourceDef; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
+  const nestLevels = extractNestLevels(segment);
+  const fieldUsage = extractFieldUsage(segment);
   const result = _resolveCompositeSources(
     [],
     source,
     mergeFields(source.fields, sourceExtensions),
-    extractNestLevels(segment),
+    nestLevels,
     fieldUsage
   );
   if ('success' in result) {
@@ -631,24 +610,6 @@ function getNonCompositeFields(source: SourceDef): FieldDef[] {
   return source.fields.filter(f => !isCompositeField(f));
 }
 
-// This is specifically for the case where the source `source` is a composite and the chosen input
-// source is also a composite; if the `source` defines some fields outright, when resolving the inner
-// composite, we don't want to include those fields.
-function onlyCompositeFieldUsage(
-  fieldUsage: FieldUsage[],
-  source: SourceDef
-): FieldUsage[] {
-  const sourceFieldsByName = {};
-  for (const field of source.fields) {
-    sourceFieldsByName[field.as ?? field.name] = field;
-  }
-  return fieldUsage.filter(u => {
-    if (u.path.length !== 1) return false;
-    const field = sourceFieldsByName[u.path[0]];
-    return field !== undefined && isCompositeField(field);
-  });
-}
-
 interface NestLevels {
   fieldsReferencedDirectly: FieldUsage[];
   fieldsReferenced: FieldUsage[];
@@ -656,22 +617,63 @@ interface NestLevels {
   nested: NestLevels[];
 }
 
-function getFieldUsage(field: FieldDef): FieldUsage[] {
+function getFieldUsageForFilter(filter: FilterCondition): FieldUsage[] {
+  return getFieldUsageFromExpr(filter.e);
+}
+
+function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
   const fieldUsage: FieldUsage[] = [];
-  let e: Expr | undefined = undefined;
-  if (isAtomic(field) && field.e) {
-    e = field.e;
-  } else if (isJoined(field) && field.onExpression) {
-    e = field.onExpression;
+  for (const node of exprWalk(expr)) {
+    if (node.node === 'field') {
+      fieldUsage.push({
+        path: node.path,
+        at: node.at!, // TODO
+      });
+    }
   }
-  if (e !== undefined) {
-    for (const node of exprWalk(e)) {
-      if (node.node === 'field') {
-        fieldUsage.push({
-          path: node.path,
-          at: node.at!, // TODO
-        });
+  return fieldUsage;
+}
+
+function getFieldUsageForField(field: FieldDef): FieldUsage[] {
+  if (isAtomic(field) && field.e) {
+    return getFieldUsageFromExpr(field.e);
+  } else if (isJoined(field) && field.onExpression) {
+    return getFieldUsageFromExpr(field.onExpression);
+  }
+  return [];
+}
+
+// TODO this and extractNestLevels can probably be combined...
+function extractFieldUsage(segment: PipeSegment): FieldUsage[] {
+  const fieldUsage: FieldUsage[] = [];
+
+  if (isQuerySegment(segment)) {
+    for (const field of segment.queryFields) {
+      if (field.type === 'fieldref') {
+        const usage = {
+          path: field.path,
+          // TODO handle case where `at` is undefined
+          at: field.at!,
+        };
+        fieldUsage.push(usage);
+      } else if (field.type === 'turtle') {
+        const head = field.pipeline[0];
+        fieldUsage.push(...extractFieldUsage(head));
+      } else {
+        fieldUsage.push(...getFieldUsageForField(field));
       }
+    }
+    for (const filter of segment.filterList ?? []) {
+      fieldUsage.push(...getFieldUsageForFilter(filter));
+    }
+  } else if (isIndexSegment(segment)) {
+    for (const field of segment.indexFields) {
+      const usage = {
+        path: field.path,
+        // TODO handle case where `at` is undefined
+        at: field.at!,
+      };
+      fieldUsage.push(usage);
     }
   }
   return fieldUsage;
@@ -701,7 +703,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         const head = field.pipeline[0];
         nested.push(extractNestLevels(head));
       } else {
-        fieldsReferenced.push(...getFieldUsage(field));
+        fieldsReferenced.push(...getFieldUsageForField(field));
         if (field.aggregateFieldUsage !== undefined) {
           aggregateFieldUsage.push(...field.aggregateFieldUsage);
         }
@@ -728,21 +730,37 @@ interface ExpandedNestLevels {
   nested: ExpandedNestLevels[];
 }
 
-function expandRefs(nests: NestLevels, fields: FieldDef[]): ExpandedNestLevels {
+function expandRefs(
+  nests: NestLevels,
+  fields: FieldDef[]
+):
+  | {result: ExpandedNestLevels; error?: undefined}
+  | {error: CompositeCouldNotFindFieldError; result?: undefined} {
   const newNests: NestLevels[] = [];
   const requiredGroupBys: RequiredGroupBy[] = [];
   const allAggregateFieldUsage: AggregateFieldUsage[] = [
     ...nests.aggregateFieldUsage,
   ];
   const references = [...nests.fieldsReferenced];
+  const joinPathsProcessed: string[][] = [];
   for (let i = 0; i < references.length; i++) {
     const field = references[i];
-    const def = lookup(field.path, fields);
+    let def: FieldDef;
+    try {
+      def = lookup(field.path, fields);
+    } catch {
+      return {
+        error: {
+          code: 'could_not_find_field',
+          data: {field},
+        },
+      };
+    }
+    const joinPath = field.path.slice(0, -1);
     if (isTurtle(def)) {
       const head = def.pipeline[0];
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
-      const joinPath = field.path.slice(0, -1);
       if (def.aggregateFieldUsage) {
         allAggregateFieldUsage.push(
           ...joinedAggregateFieldUsage(joinPath, def.aggregateFieldUsage)!.map(
@@ -753,11 +771,29 @@ function expandRefs(nests: NestLevels, fields: FieldDef[]): ExpandedNestLevels {
           )
         );
       }
-      const fieldUsage = getFieldUsage(def);
+      const fieldUsage = getFieldUsageForField(def);
       const moreReferences = fieldUsage
         .map(u => ({path: [...joinPath, ...u.path], at: field.at}))
         .filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)));
       references.push(...moreReferences);
+    }
+    // TODO this logic is super duplicated in `expandFieldUsage`
+    if (field.path.length > 1) {
+      if (!joinPathsProcessed.some(p => pathEq(p, joinPath))) {
+        joinPathsProcessed.push(joinPath);
+        const join = lookup(joinPath, fields);
+        // Don't want to actually include the name of the join; just the path to the join
+        const joinJoinPath = joinPath.slice(0, -1);
+        const fieldUsage = getFieldUsageForField(join);
+        references.push(
+          ...fieldUsage
+            .map(u => ({
+              path: [...joinJoinPath, ...u.path],
+              at: field.at,
+            }))
+            .filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)))
+        );
+      }
     }
   }
   for (const usage of allAggregateFieldUsage) {
@@ -775,11 +811,22 @@ function expandRefs(nests: NestLevels, fields: FieldDef[]): ExpandedNestLevels {
       }
     }
   }
-  const nested = [...nests.nested, ...newNests].map(n => expandRefs(n, fields));
+  const nested: ExpandedNestLevels[] = [];
+  for (const level of [...nests.nested, ...newNests]) {
+    const expanded = expandRefs(level, fields);
+    if (expanded.error) {
+      return {
+        error: expanded.error,
+      };
+    }
+    nested.push(expanded.result);
+  }
   return {
-    fieldsReferencedDirectly: nests.fieldsReferencedDirectly,
-    requiredGroupBys,
-    nested,
+    result: {
+      fieldsReferencedDirectly: nests.fieldsReferencedDirectly,
+      requiredGroupBys,
+      nested,
+    },
   };
 }
 
@@ -789,7 +836,10 @@ function _checkRequiredGroupBys(
   fields: FieldDef[]
 ): RequiredGroupBy[] {
   const expanded = expandRefs(nests, fields);
-  const unsatisfied = getUnsatisfiedRequiredGroupBys(expanded);
+  if (expanded.error) {
+    return [];
+  }
+  const unsatisfied = getUnsatisfiedRequiredGroupBys(expanded.result);
   return unsatisfied;
 }
 
