@@ -419,8 +419,13 @@ export class TSQLDialect extends Dialect {
 
   // TODO (vitor): Revisit this function... Some parenthesis aren't looking right
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const sqlDistinctKey = `CONCAT(${key}, '')`;
+    const sqlDistinctKey = `
+    -- concat
+    CONCAT(${key}, '')
+    -- concat
+    `;
     const partA = `
+    -- part a
       (CAST(
             CASE
                 WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) >= 0
@@ -429,18 +434,36 @@ export class TSQLDialect extends Dialect {
             END
         AS DECIMAL(20,0))
         *
-        CAST(18446744073709551616.0 AS DECIMAL(20,0)))`;
+        CAST(18446744073709551616.0 AS DECIMAL(20,0)))
+    -- part a
+    `;
     const partB = `
+    -- part b
       (CAST(
           CASE
               WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) >= 0
               THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0))
               ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
           END
-      AS DECIMAL(20,0))`;
-    const hashKey = `( CAST( (${partA}+${partB}) AS DECIMAL(38,0) ) )`;
-    const v = `COALESCE(${value}, 0)`;
-    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))`;
+      AS DECIMAL(20,0))
+    -- part b
+      `;
+    const hashKey = `
+    -- hashkey
+    ( CAST( (${partA}+${partB})) AS DECIMAL(38,0) ) )
+    -- hashkey
+     `;
+    const v = `
+    -- coalesce
+    COALESCE(${value}, 0)
+    -- coalesce
+    `;
+    const sqlSum = `(
+    -- sqlsum
+    SUM(DISTINCT (${hashKey} + ${v})) - SUM(DISTINCT ${hashKey})
+    -- sqlsum
+    )
+    `;
     if (funcName === 'SUM') {
       return sqlSum;
     } else if (funcName === 'AVG') {
