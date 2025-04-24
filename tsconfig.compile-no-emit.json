@@ -11,6 +11,7 @@
     {"path": "packages/malloy-db-snowflake"},
     {"path": "packages/malloy-db-trino"},
     {"path": "packages/malloy-db-mysql"},
+    {"path": "packages/malloy-db-publisher"},
     {"path": "packages/malloy-malloy-sql"},
     {"path": "test"},
     {"path": "packages/malloy-filter"},
