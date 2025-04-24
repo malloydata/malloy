@@ -1429,6 +1429,19 @@ describe('query:', () => {
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
+    // TODO how do we check this??
+    test.skip('failure in multi-stage view in source', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai_grouped_by_astr.sum()
+
+            view: x is { aggregate: ${'aisum'} } -> { select: * }
+          }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
     test('grouped_by failure direct in query', () => {
       expect(
         markSource`

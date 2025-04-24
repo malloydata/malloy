@@ -182,7 +182,11 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             ...TDU.atomicDef(footType),
             expressionType: footType.expressionType,
-            value: {node: 'field', path: this.source.path},
+            value: {
+              node: 'field',
+              path: this.source.path,
+              at: this.source.location,
+            },
             evalSpace: footType.evalSpace,
             fieldUsage: footType.fieldUsage,
           };
@@ -437,7 +441,11 @@ export class ExprFunc extends ExpressionDef {
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: [part.name]});
             } else {
-              expr.push({node: 'field', path: [part.name]});
+              expr.push({
+                node: 'field',
+                path: [part.name],
+                at: this.args[0].location,
+              });
             }
           }
         }

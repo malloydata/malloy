@@ -94,7 +94,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               value:
                 footType.evalSpace === 'output'
                   ? {node: 'outputField', name: this.source.refString}
-                  : {node: 'field', path: this.source.path},
+                  : {
+                      node: 'field',
+                      path: this.source.path,
+                      at: this.source.location,
+                    },
               evalSpace: footType.evalSpace,
               // TODO ensure that when there's an `expr` but no `source`, that `fieldUsage`
               // and `aggregateFieldUsage` still come along correctly
@@ -212,7 +216,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        const sfd: Expr = {node: 'field', path: this.source.path};
+        const sfd: Expr = {
+          node: 'field',
+          path: this.source.path,
+          at: this.source.location,
+        };
         result.push(...getJoinUsage(fs, sfd));
       }
     }

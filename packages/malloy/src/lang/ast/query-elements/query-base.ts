@@ -50,27 +50,24 @@ export abstract class QueryBase extends MalloyElement {
           stage1,
           fieldUsage
         );
-        if (resolved.error) {
-          if (resolved.error.code === 'no_suitable_composite_source_input') {
-            const conflict = resolved.error.data.fields;
-            const sorted = sortFieldUsageByReferenceLocation(conflict);
-            const lastUsage = sorted[sorted.length - 1];
-            this.logError(
-              'invalid-composite-field-usage',
-              {
-                newUsage: [lastUsage],
-                allUsage: sorted,
-              },
-              {
-                at: lastUsage.at,
-              }
-            );
-          } else {
-            this.logError(
-              'could-not-resolve-composite-source',
-              'Could not resolve composite source'
-            );
-          }
+        if (
+          resolved.error &&
+          resolved.error.code === 'no_suitable_composite_source_input' &&
+          resolved.error.data.fields.length > 0
+        ) {
+          const conflict = resolved.error.data.fields;
+          const sorted = sortFieldUsageByReferenceLocation(conflict);
+          const lastUsage = sorted[sorted.length - 1];
+          this.logError(
+            'invalid-composite-field-usage',
+            {
+              newUsage: [lastUsage],
+              allUsage: sorted,
+            },
+            {
+              at: lastUsage.at,
+            }
+          );
         }
         return resolved.sourceDef;
       }

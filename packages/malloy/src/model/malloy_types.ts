@@ -209,6 +209,7 @@ export interface SpreadExpr extends ExprE {
 export interface FieldnameNode extends ExprLeaf {
   node: 'field';
   path: string[];
+  at?: DocumentLocation;
 }
 
 export interface SourceReferenceNode extends ExprLeaf {

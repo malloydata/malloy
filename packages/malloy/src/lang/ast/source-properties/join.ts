@@ -131,6 +131,7 @@ export class KeyJoin extends Join {
               left: {
                 node: 'field',
                 path: [this.name.refString, inStruct.primaryKey],
+                at: this.keyExpr.location,
               },
               right: exprX.value,
             },
