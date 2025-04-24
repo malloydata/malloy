@@ -132,10 +132,10 @@ export function getChartLayoutSettings(
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formattedMin = yField.isAtomic()
+    const formattedMin = yField.isBasic()
       ? renderNumericField(yField, minAxisVal)
       : l.format(',')(minAxisVal);
-    const formattedMax = yField.isAtomic()
+    const formattedMax = yField.isBasic()
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
     // const formattedMin = l.format(',')(minAxisVal);

@@ -17,6 +17,8 @@ jobs:
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+  db-publisher:
+    uses: './.github/workflows/db-publisher.yaml'
   main:
     uses: './.github/workflows/main.yaml'
     secrets:
@@ -26,6 +28,7 @@ jobs:
     needs:
       - db-bigquery
       - db-motherduck
+      - db-publisher
       - db-postgres
       - db-snowflake
       - main

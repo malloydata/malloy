@@ -153,6 +153,39 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     ],
     ruleContextOptions: ['queryStatement'],
   },
+  {
+    errorMessage:
+      "Expected a query statement, '${offendingSymbol}:' is not a keyword.",
+    ruleContextOptions: ['queryStatement'],
+    offendingSymbol: MalloyParser.IDENTIFIER,
+    lookAheadOptions: [[MalloyParser.COLON, MalloyParser.IDENTIFIER]],
+    alternatives: {
+      replace: '${offendingSymbol}:',
+      with: ['group_by:', 'select:', 'aggregate:', 'calculate:', 'nest:'],
+    },
+  },
+  {
+    errorMessage:
+      "Expected a source statement, '${offendingSymbol}:' is not a keyword.",
+    ruleContextOptions: ['exploreStatement'],
+    offendingSymbol: MalloyParser.IDENTIFIER,
+    lookAheadOptions: [[MalloyParser.COLON, MalloyParser.IDENTIFIER]],
+    alternatives: {
+      replace: '${offendingSymbol}:',
+      with: ['dimension:', 'measure:', 'primary_key:', 'view:', 'join:'],
+    },
+  },
+  {
+    errorMessage:
+      "Expected a statement, '${offendingSymbol}:' is not a keyword.",
+    ruleContextOptions: ['malloyDocument'],
+    offendingSymbol: MalloyParser.IDENTIFIER,
+    lookAheadOptions: [[MalloyParser.COLON, MalloyParser.IDENTIFIER]],
+    alternatives: {
+      replace: '${offendingSymbol}:',
+      with: ['run:', 'query:', 'source:'],
+    },
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {

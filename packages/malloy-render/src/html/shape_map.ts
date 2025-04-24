@@ -66,7 +66,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   getDataType(
     field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomic()) {
+    if (field.isBasic()) {
       if (field.isTime()) {
         return 'nominal';
       } else if (field.isString()) {

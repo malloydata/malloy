@@ -1,0 +1,31 @@
+{
+  "name": "@malloydata/db-publisher",
+  "version": "0.0.261",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../../jest.config.js",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run build",
+    "generate-api-types": "openapi-generator-cli generate -i publisher-api-doc.yaml -g typescript-axios -o src/client/"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "^0.0.261",
+    "axios": "^1.6.7"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.13.5"
+  }
+}

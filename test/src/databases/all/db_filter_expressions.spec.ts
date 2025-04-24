@@ -42,13 +42,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(abc, [{s: 'abc'}]);
     });
     test('empty string filter expression', async () => {
-      /*
-        since the sql generated works when pasted into mysql
-        my next suggestion is that there is some funky re-ordering
-        happening in the result processing which will test tomorrow
-      */
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'';
           select: *; order_by: nm asc
@@ -111,11 +105,15 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('empty', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
         }`).malloyResultMatches(abc, got('z-empty,z-null'));
+      await expect(`
+          run: abc -> {
+            where: s ~ f'EmpTy'
+            select: nm; order_by: nm asc
+          }`).malloyResultMatches(abc, got('z-empty,z-null'));
     });
     test('-empty', async () => {
       await expect(`
@@ -127,9 +125,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('null', async () => {
       await expect(`
-        # test.verbose
         run: abc -> {
           where: s ~ f'null'
+          select: nm
+        }`).malloyResultMatches(abc, got('z-null'));
+      await expect(`
+        run: abc -> {
+          where: s ~ f'nULl'
           select: nm
         }`).malloyResultMatches(abc, got('z-null'));
     });
@@ -194,6 +196,18 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
+    test('numeric filters are case insensitive', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'([1 tO 3] aNd [1 To 4]) oR NuLl'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [
+        {t: '1'},
+        {t: '2'},
+        {t: '3'},
+        {t: 'null'},
+      ]);
+    });
     test('empty numeric filter', async () => {
       await expect(`
         run: nums -> {
@@ -320,42 +334,35 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test.when(testBoolean)('true', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'true'
-          select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'true'}]);
-    });
-    test.when(testBoolean)('true', async () => {
-      await expect(`
-        run: facts -> {
-          where: b ~ f'true'
+          where: b ~ f'tRuE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('false', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'false'
+          where: b ~ f'FalSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('=false', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'=false'
+          where: b ~ f'=FALSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
     test.when(testBoolean)('null', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'null'
+          where: b ~ f'Null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'null'}]);
     });
     test.when(testBoolean)('not null', async () => {
       await expect(`
         run: facts -> {
-          where: b ~ f'not null'
+          where: b ~ f'nOt NuLL'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
@@ -439,6 +446,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         -> {select: t,n; order_by: n}`;
       return db.loadModel(rangeModel);
     }
+    function mkEqTime(exact: string) {
+      return db.loadModel(
+        `query: eqtime is ${dbName}.sql("""
+          SELECT ${lit(exact, 'timestamp')} AS ${q`t`}, 'exact' as ${q`n`}
+        """) -> {select: t, n}`
+      );
+    }
 
     /**
      * All the relative time tests need a way to set what time it is now
@@ -452,7 +466,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     test('date after quarter', async () => {
       const range = mkDateRange('2001-01-01', '2001-04-01');
       await expect(`
-        run: range + { where: t ~ f'after 2001-Q1' }
+        run: range + { where: t ~ f'AFTER 2001-Q1' }
       `).malloyResultMatches(range, {n: 'post-range'});
     });
     test('date before month', async () => {
@@ -634,6 +648,18 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: range + { where: t ~ f'2023-01-01-WK' }
       `).malloyResultMatches(range, inRange);
     });
+    test('full second literal', async () => {
+      const eqtime = mkEqTime('2023-01-01 01:02:03');
+      await expect(`
+        run: eqtime + { where: t ~ f'2023-01-01 01:02:03' }
+      `).malloyResultMatches(eqtime, [{n: 'exact'}]);
+    });
+    test('subsecond literal', async () => {
+      const eqtime = mkEqTime('2023-01-01 01:02:03.04');
+      await expect(`
+        run: eqtime + { where: t ~ f'2023-01-01 01:02:03.04' }
+      `).malloyResultMatches(eqtime, [{n: 'exact'}]);
+    });
     test('today', async () => {
       nowIs('2001-02-03 12:00:00');
       const range = mkRange('2001-02-03 00:00:00', '2001-02-04 00:00:00');
@@ -779,8 +805,20 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       nowIs('2023-01-03 00:00:00');
       const range = mkRange('2023-01-07 00:00:00', '2023-01-08 00:00:00');
       await expect(`
-        run: range + { where: t ~ f'next saturday' }
+        run: range + { where: t ~ f'next Saturday' }
       `).malloyResultMatches(range, inRange);
+    });
+    test('temporal filters are case insensitive', async () => {
+      nowIs('2023-01-03 00:00:00');
+      const range = mkRange('2023-01-04 00:00:00', '2023-01-05 00:00:00');
+      await expect(`
+        run: range + {where: t ~ f'Null Or noT aFter TomoRRow'}`).matchesRows(
+        range,
+        {n: 'before'},
+        {n: 'first'},
+        {n: 'last'},
+        {n: 'z-null'}
+      );
     });
   });
 });

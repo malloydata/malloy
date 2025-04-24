@@ -28,7 +28,7 @@ import type {
   TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
 } from '../../model/malloy_types';
@@ -62,7 +62,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
@@ -132,9 +132,8 @@ export class PostgresDialect extends PostgresBase {
       .map(
         f =>
           `\n  ${f.sqlExpression}${
-            f.type === 'number' ? `::${this.defaultNumberType}` : ''
+            f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
           } as ${f.sqlOutputName}`
-        //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
       )
       .join(', ');
   }
@@ -150,7 +149,6 @@ export class PostgresDialect extends PostgresBase {
       tail += `[1:${limit}]`;
     }
     const fields = this.mapFields(fieldList);
-    // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
     return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
   }
 
@@ -176,41 +174,6 @@ export class PostgresDialect extends PostgresBase {
     const fields = this.mapFields(fieldList);
     return `TO_JSONB((ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x)) FILTER (WHERE group_set=${groupSet}))[1])`;
   }
-
-  // UNNEST((select ARRAY((SELECT ROW(gen_random_uuid()::text, state, airport_count) FROM UNNEST(base.by_state) as by_state(state text, airport_count numeric, by_fac_type record[]))))) as by_state(__distinct_key text, state text, airport_count numeric)
-
-  // sqlUnnestAlias(
-  //   source: string,
-  //   alias: string,
-  //   fieldList: DialectFieldList,
-  //   needDistinctKey: boolean
-  // ): string {
-  //   const fields = [];
-  //   for (const f of fieldList) {
-  //     let t = undefined;
-  //     switch (f.type) {
-  //       case "string":
-  //         t = "text";
-  //         break;
-  //       case "number":
-  //         t = this.defaultNumberType;
-  //         break;
-  //       case "struct":
-  //         t = "record[]";
-  //         break;
-  //     }
-  //     fields.push(`${f.sqlOutputName} ${t || f.type}`);
-  //   }
-  //   if (needDistinctKey) {
-  //     return `UNNEST((select ARRAY((SELECT ROW(gen_random_uuid()::text, ${fieldList
-  //       .map((f) => f.sqlOutputName)
-  //       .join(", ")}) FROM UNNEST(${source}) as ${alias}(${fields.join(
-  //       ", "
-  //     )}))))) as ${alias}(__distinct_key text, ${fields.join(", ")})`;
-  //   } else {
-  //     return `UNNEST(${source}) as ${alias}(${fields.join(", ")})`;
-  //   }
-  // }
 
   sqlUnnestAlias(
     source: string,
@@ -264,6 +227,7 @@ export class PostgresDialect extends PostgresBase {
         case 'array':
         case 'record':
         case 'array[record]':
+        case 'sql native':
           ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }
@@ -424,7 +388,7 @@ export class PostgresDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

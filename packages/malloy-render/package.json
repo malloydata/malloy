@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.249",
+  "version": "0.0.270",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -13,9 +13,18 @@
     "node": ">=20"
   },
   "exports": {
-    ".": "./dist/module/index.umd.js",
-    "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
-    "./webcomponent/register": "./dist/register/register.umd.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/module/index.umd.js"
+    },
+    "./webcomponent": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/webcomponent/malloy-render.umd.js"
+    },
+    "./webcomponent/register": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/register/register.umd.js"
+    }
   },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",
@@ -32,9 +41,9 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.249",
-    "@malloydata/malloy-interfaces": "^0.0.249",
-    "@malloydata/malloy-tag": "^0.0.249",
+    "@malloydata/malloy": "^0.0.270",
+    "@malloydata/malloy-interfaces": "^0.0.270",
+    "@malloydata/malloy-tag": "^0.0.270",
     "@tanstack/solid-virtual": "^3.10.4",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",
@@ -47,7 +56,7 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@malloydata/db-duckdb": "^0.0.249",
+    "@malloydata/db-duckdb": "^0.0.270",
     "@storybook/addon-essentials": "^8.5.8",
     "@storybook/addon-interactions": "^8.5.8",
     "@storybook/addon-links": "^8.5.8",

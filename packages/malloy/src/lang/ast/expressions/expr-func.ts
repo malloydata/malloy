@@ -49,7 +49,7 @@ import {
   isAtomicFieldType,
   isExpressionTypeLEQ,
   isRepeatedRecordFunctionParam,
-  isScalarArray,
+  isBasicArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
   TD,
@@ -428,6 +428,12 @@ export class ExprFunc extends ExpressionDef {
                 `Invalid interpolation: ${result.error.message}`
               );
             }
+            if (result.found.typeDesc().type === 'filter expression') {
+              return this.loggedErrorExpr(
+                'filter-expression-error',
+                'Filter expressions cannot be used in sql_ functions'
+              );
+            }
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: [part.name]});
             } else {
@@ -660,7 +666,7 @@ function isDataTypeMatch(
     return {dataTypeMatch: true, genericsSet: []};
   }
   if (paramT.type === 'array' && arg.type === 'array') {
-    if (isScalarArray(arg)) {
+    if (isBasicArray(arg)) {
       if (!isRepeatedRecordFunctionParam(paramT)) {
         return isDataTypeMatch(
           genericsAlreadySelected,

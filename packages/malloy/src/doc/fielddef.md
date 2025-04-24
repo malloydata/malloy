@@ -96,6 +96,6 @@ are an array of ...
 * `isTemporalType` -- `date` or `timestamp` type
 * `isAtomicFieldType` -- Does type string match the type of one of the atomiv types
 * `isRepeatedRecord` -- In some databases this is a type, in other this is an array of record
-* `isScalarArray` -- Is a ".each" array
+* `isBasicArray` -- Is a ".each" array
 * `isAtomic` -- Like `isAtomicFieldType` for `FieldDef` instead
-* `isLeafAtomic` -- an Atomic field can be stored in a column, a LeafAtomic is one which isn't a join
+* `isBasicAtomic` -- an Atomic field can be stored in a column, a BasicAtomic is one which isn't a join

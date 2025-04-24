@@ -28,7 +28,7 @@ import type {
   Expr,
   FunctionParamTypeDesc,
   GenericSQLExpr,
-  LeafExpressionType,
+  BasicExpressionType,
   FieldDef,
   FunctionReturnTypeDesc,
   FunctionParameterTypeDef,
@@ -235,7 +235,7 @@ export interface SQLNativeTypeBlueprint {
   sql_native: string;
 }
 
-export type LeafPlusType = LeafExpressionType | 'any';
+export type LeafPlusType = BasicExpressionType | 'any';
 export type TypeDescElementBlueprint =
   | LeafPlusType
   | ArrayBlueprint

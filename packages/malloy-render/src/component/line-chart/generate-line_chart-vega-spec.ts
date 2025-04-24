@@ -760,6 +760,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
 
   // Memoize tooltip data
   const tooltipEntryMemo = new Map<Item, ChartTooltipEntry | null>();
+  const tooltipItemCountLimit = 10;
 
   return {
     spec,
@@ -787,7 +788,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
             );
 
         const value = rec.y;
-        return field.isAtomic()
+        return field.isBasic()
           ? renderNumericField(field, value)
           : String(value);
       };
@@ -802,9 +803,13 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .slice(0, tooltipItemCountLimit);
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => ({
+          entries: sortedRecords.map(rec => ({
             label: rec.series,
             value: formatY(rec),
             highlight: false,
@@ -834,9 +839,20 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
             )
           : itemData.x;
 
+        // If the highlighted item is not included in the first ~20,
+        // then it will probably be cut off.
+
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .filter(
+            (item, index) =>
+              index <= tooltipItemCountLimit ||
+              item.series === highlightedSeries
+          );
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => {
+          entries: sortedRecords.map(rec => {
             return {
               label: rec.series,
               value: formatY(rec),
@@ -866,6 +882,14 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         records.length === 1
       ) {
         customTooltipRecords = records;
+      }
+
+      customTooltipRecords.sort((a, b) => {
+        return a.y - b.y;
+      });
+
+      if (customTooltipRecords.length > 20) {
+        customTooltipRecords = customTooltipRecords.slice(0, 20);
       }
 
       if (tooltipData) {

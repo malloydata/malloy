@@ -664,6 +664,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             aircraft.aircraft.first_three
             aircraft_count
             order_by: 2 desc, 1
+            limit: 3
         }
       `).malloyResultMatches(expressionModel, {first_three: 'SAB'});
     }
