@@ -677,6 +677,12 @@ class TrinoPrestoSchemaParser extends TinyParser {
             fields: elType.fields,
           }
         : {type: 'array', elementTypeDef: elType};
+    } else if (typToken.text === 'map' && this.next('(')) {
+      const _keyType = this.typeDef();
+      this.next(',');
+      const _valType = this.typeDef();
+      this.next(')');
+      return {type: 'sql native'};
     } else if (typToken.type === 'id') {
       const sqlType = typToken.text.toLowerCase();
       if (sqlType === 'varchar') {

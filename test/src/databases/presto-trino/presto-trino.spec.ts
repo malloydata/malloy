@@ -564,6 +564,13 @@ describe.each(runtimes.runtimeList)(
       });
       // mtoy todo document missing lambda sort
     });
+
+    it('can read a map data type from an sql schema', async () => {
+      await expect(`run: ${databaseName}.sql("""
+          SELECT MAP(ARRAY['key1', 'key2', 'key3' ], ARRAY['v1', 'v2', 'v3']) as KEY_TO_V
+        """) -> { aggregate: n is count() }
+      `).matchesRows(runtime, {n: 1});
+    });
   }
 );
 
