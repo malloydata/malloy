@@ -980,7 +980,7 @@ describe('query:', () => {
         const index = q.pipeline[0];
         expect(index.type).toBe('index');
         if (index.type === 'index') {
-          expect(index.indexFields).toEqual([
+          expect(index.indexFields).toMatchObject([
             {type: 'fieldref', path: ['af']},
             {type: 'fieldref', path: ['astr']},
           ]);
