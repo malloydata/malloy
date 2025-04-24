@@ -210,7 +210,7 @@ export class PublisherConnection
   }
 
   public async close(): Promise<void> {
-    // Can't close remote connection.
+    // Can't close the remote connection.
     return;
   }
 }
