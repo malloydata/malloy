@@ -88,20 +88,23 @@ export class QueryArrow extends QueryBase implements QueryElement {
       query.compositeResolvedSourceDef ??
       this.resolveCompositeSource(inputStruct, query);
 
-    const unsatisfiedGroupBys = checkRequiredGroupBys(
-      compositeResolvedSourceDef ?? inputStruct,
-      query.pipeline[0]
-    );
-    for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
-      this.logError(
-        'missing-required-group-by',
-        `Group by of \`${unsatisfiedGroupBy.path.join(
-          '.'
-        )}\` is required but not present`,
-        {
-          at: unsatisfiedGroupBy.location,
-        }
+    const segment = query.pipeline[0];
+    if (segment !== undefined) {
+      const unsatisfiedGroupBys = checkRequiredGroupBys(
+        compositeResolvedSourceDef ?? inputStruct,
+        segment
       );
+      for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
+        this.logError(
+          'missing-required-group-by',
+          `Group by of \`${unsatisfiedGroupBy.path.join(
+            '.'
+          )}\` is required but not present`,
+          {
+            at: unsatisfiedGroupBy.location,
+          }
+        );
+      }
     }
 
     return {
