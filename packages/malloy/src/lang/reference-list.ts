@@ -25,10 +25,11 @@ import type {DocumentPosition, DocumentReference} from '../model';
 import {locationContainsPosition} from './utils';
 
 export class ReferenceList {
-  constructor(private readonly sourceURL: string) {}
-
-  // These should always be sorted by their end positions
-  private readonly references: DocumentReference[] = [];
+  constructor(
+    private readonly sourceURL: string,
+    // These should always be sorted by their end positions
+    private readonly references: DocumentReference[] = []
+  ) {}
 
   private findIndexBefore(position: DocumentPosition): number {
     let low = 0;
@@ -93,5 +94,9 @@ export class ReferenceList {
       return reference;
     }
     return undefined;
+  }
+
+  public toArray() {
+    return [...this.references];
   }
 }
