@@ -736,8 +736,10 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
       series: CellValue;
     }[] = [];
     data.rows.forEach(row => {
-      // Filter out missing date/time values
-      if (xIsDateorTime && getXValue(row) === null) {
+      // Filter out missing date/time/metric values
+      const isMissingX = xIsDateorTime && getXValue(row) === null;
+      const isMissingY = row.column(yField.name).value === null;
+      if (isMissingX || isMissingY) {
         return;
       }
       // Map data fields to chart properties.  Handle undefined values properly.
