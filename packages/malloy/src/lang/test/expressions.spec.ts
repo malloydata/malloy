@@ -615,32 +615,31 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
-    describe('require_group_by:', () => {
-      test('require_group_by of dimension', () => {
+    describe('grouped_by:', () => {
+      test('grouped_by of dimension', () => {
         expect(markSource`
           ##! experimental { aggregate_order_by }
           source: aext is a extend {
-            measure: x1 is ai.sum() { require_group_by: astr }
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
           }
         `).toTranslate();
       });
-      test('require_group_by of measure', () => {
+      test('grouped_by of measure', () => {
         expect(markSource`
           ##! experimental { aggregate_order_by }
           source: aext is a extend {
             measure: c is count()
-            measure: x1 is ai.sum() { require_group_by: ${'c'} }
+            dimension: ai_grouped_by_astr is ai { grouped_by: ${'c'} }
           }
-        `).toLog(errorMessage('`require_group_by:` field must be a dimension'));
+        `).toLog(errorMessage('`grouped_by:` field must be a dimension'));
       });
-      test('require_group_by of self', () => {
+      test('grouped_by of self', () => {
         expect(markSource`
           ##! experimental { aggregate_order_by }
           source: aext is a extend {
-            measure: c is count()
-            measure: x1 is ai.sum() { require_group_by: ${'x1'} }
+            dimension: ai_grouped_by_astr is ai { grouped_by: ai_grouped_by_astr }
           }
-        `).toLog(errorMessage('x1 is not defined'));
+        `).toLog(errorMessage('ai_grouped_by_astr is not defined'));
       });
     });
   });
