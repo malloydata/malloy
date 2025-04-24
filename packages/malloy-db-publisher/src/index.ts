@@ -21,4 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export { PublisherConnection } from './publisher_connection';
+export {PublisherConnection} from './publisher_connection';

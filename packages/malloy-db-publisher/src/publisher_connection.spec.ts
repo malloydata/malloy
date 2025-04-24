@@ -4,10 +4,10 @@ import {PublisherConnection} from './publisher_connection';
 import {fileURLToPath} from 'url';
 import * as util from 'util';
 import * as fs from 'fs';
-import {Configuration, ConnectionAttributes, ConnectionsApi} from './client';
-import {jest} from '@jest/globals';
-import {AxiosResponse} from 'axios';
-import {
+import type {ConnectionAttributes} from './client';
+import {Configuration, ConnectionsApi} from './client';
+import type {AxiosResponse} from 'axios';
+import type {
   TableSourceDef,
   SQLSourceDef,
   MalloyQueryData,
@@ -25,12 +25,10 @@ jest.mock('./client', () => {
     getTemporarytable: jest.fn(),
   };
 
-  const mockConfiguration = {
-    basePath: 'http://test.com/api/v0',
-  };
-
   return {
-    Configuration: jest.fn().mockImplementation(() => mockConfiguration),
+    Configuration: jest.fn().mockImplementation(() => ({
+      basePath: 'http://test.com/api/v0',
+    })),
     ConnectionsApi: jest.fn().mockImplementation(() => mockConnectionsApi),
   };
 });
@@ -41,14 +39,14 @@ describe('db:Publisher', () => {
   describe('unit', () => {
     describe('create', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -70,7 +68,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockTestResponse: AxiosResponse = {
@@ -78,7 +76,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -144,7 +142,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockTestResponse: AxiosResponse = {
@@ -152,7 +150,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -178,14 +176,14 @@ describe('db:Publisher', () => {
 
     describe('fetchTableSchema', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -217,7 +215,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockTableResponse: AxiosResponse = {
@@ -227,7 +225,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -281,14 +279,14 @@ describe('db:Publisher', () => {
 
     describe('fetchSelectSchema', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -320,7 +318,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockSqlResponse: AxiosResponse = {
@@ -330,7 +328,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -389,14 +387,14 @@ describe('db:Publisher', () => {
 
     describe('runSQL', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -424,7 +422,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockQueryResponse: AxiosResponse = {
@@ -434,7 +432,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -487,7 +485,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockQueryResponse: AxiosResponse = {
@@ -497,7 +495,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -557,14 +555,14 @@ describe('db:Publisher', () => {
 
     describe('runSQLStream', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -592,7 +590,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockQueryResponse: AxiosResponse = {
@@ -602,7 +600,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -660,7 +658,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockQueryResponse: AxiosResponse = {
@@ -670,7 +668,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -747,14 +745,14 @@ describe('db:Publisher', () => {
 
     describe('manifestTemporaryTable', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -774,7 +772,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockTableResponse: AxiosResponse = {
@@ -784,7 +782,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -829,14 +827,14 @@ describe('db:Publisher', () => {
 
     describe('test', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
-      let mockConfiguration: jest.Mocked<Configuration>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
         // Get fresh instances of the mocks
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
-        mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
       afterEach(() => {
@@ -856,7 +854,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         const mockTestResponse: AxiosResponse = {
@@ -864,7 +862,7 @@ describe('db:Publisher', () => {
           status: 200,
           statusText: 'OK',
           headers: {},
-          config: {} as any,
+          config: {} as AxiosResponse['config'],
         };
 
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -1018,7 +1016,7 @@ describe('db:Publisher', () => {
 // helper function for handling API errors test cases
 async function testErrorHandling(
   connection: PublisherConnection,
-  operation: () => Promise<any>,
+  operation: () => Promise<unknown>,
   errorMessage?: string
 ) {
   if (errorMessage) {
@@ -1032,8 +1030,8 @@ async function testErrorHandling(
 async function setupAndTestApiError(
   mockConnectionsApi: jest.Mocked<ConnectionsApi>,
   apiMethod: keyof jest.Mocked<ConnectionsApi>,
-  operation: (connection: PublisherConnection) => Promise<any>,
-  errorMessage: string = 'API Error'
+  operation: (connection: PublisherConnection) => Promise<unknown>,
+  errorMessage = 'API Error'
 ) {
   const mockConnectionResponse: AxiosResponse = {
     data: {
@@ -1047,7 +1045,7 @@ async function setupAndTestApiError(
     status: 200,
     statusText: 'OK',
     headers: {},
-    config: {} as any,
+    config: {} as AxiosResponse['config'],
   };
 
   mockConnectionsApi.getConnection.mockResolvedValueOnce(
@@ -1072,8 +1070,8 @@ async function setupAndTestApiError(
 async function setupAndTestInvalidJsonResponse(
   mockConnectionsApi: jest.Mocked<ConnectionsApi>,
   apiMethod: keyof jest.Mocked<ConnectionsApi>,
-  operation: (connection: PublisherConnection) => Promise<any>,
-  responseData: any = {source: 'invalid json'}
+  operation: (connection: PublisherConnection) => Promise<unknown>,
+  responseData: Record<string, unknown> = {source: 'invalid json'}
 ) {
   const mockConnectionResponse: AxiosResponse = {
     data: {
@@ -1087,7 +1085,7 @@ async function setupAndTestInvalidJsonResponse(
     status: 200,
     statusText: 'OK',
     headers: {},
-    config: {} as any,
+    config: {} as AxiosResponse['config'],
   };
 
   const mockInvalidResponse: AxiosResponse = {
@@ -1095,7 +1093,7 @@ async function setupAndTestInvalidJsonResponse(
     status: 200,
     statusText: 'OK',
     headers: {},
-    config: {} as any,
+    config: {} as AxiosResponse['config'],
   };
 
   mockConnectionsApi.getConnection.mockResolvedValueOnce(

@@ -12,9 +12,9 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
-import { BaseConnection } from '@malloydata/malloy/connection';
-import { Configuration, ConnectionAttributes, ConnectionsApi } from './client';
-import { AxiosRequestConfig } from 'axios';
+import {BaseConnection} from '@malloydata/malloy/connection';
+import type {ConnectionAttributes, RawAxiosRequestConfig} from './client';
+import {Configuration, ConnectionsApi} from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -24,10 +24,11 @@ interface PublisherConnectionOptions {
 export class PublisherConnection
   extends BaseConnection
   implements
-  Connection,
-  StreamingConnection,
-  TestableConnection,
-  PersistSQLResults {
+    Connection,
+    StreamingConnection,
+    TestableConnection,
+    PersistSQLResults
+{
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
@@ -58,11 +59,9 @@ export class PublisherConnection
       basePath: apiUrl,
     });
     const connectionsApi = new ConnectionsApi(configuration);
-    const response = await connectionsApi.getConnection(
-      projectName, name,
-      {
-        headers: PublisherConnection.getAuthHeaders(options.accessToken),
-      });
+    const response = await connectionsApi.getConnection(projectName, name, {
+      headers: PublisherConnection.getAuthHeaders(options.accessToken),
+    });
     const connectionAttributes = response.data
       .attributes as ConnectionAttributes;
     const connection = new PublisherConnection(
@@ -77,10 +76,10 @@ export class PublisherConnection
   }
 
   private static getAuthHeaders(
-    accessToken: string | undefined,
-  ): AxiosRequestConfig["headers"] {
+    accessToken: string | undefined
+  ): RawAxiosRequestConfig['headers'] {
     return {
-      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+      ...(accessToken && {Authorization: `Bearer ${accessToken}`}),
     };
   }
 
@@ -168,7 +167,7 @@ export class PublisherConnection
     return JSON.parse(response.data.data as string) as MalloyQueryData;
   }
 
-  public async * runSQLStream(
+  public async *runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
@@ -184,18 +183,18 @@ export class PublisherConnection
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    const queryData = JSON.parse(response.data.data as string) as MalloyQueryData;
+    const queryData = JSON.parse(
+      response.data.data as string
+    ) as MalloyQueryData;
     for (const row of queryData.rows) {
       yield row;
     }
   }
 
   public async test(): Promise<void> {
-    await this.connectionsApi.getTest(this.projectName, this.name,
-      {
-        headers: PublisherConnection.getAuthHeaders(this.accessToken),
-      }
-    );
+    await this.connectionsApi.getTest(this.projectName, this.name, {
+      headers: PublisherConnection.getAuthHeaders(this.accessToken),
+    });
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
