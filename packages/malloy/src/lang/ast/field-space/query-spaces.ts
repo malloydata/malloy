@@ -49,11 +49,8 @@ import {
   fieldUsageJoinPaths,
   emptyFieldUsage,
   emptyNarrowedCompositeFieldResolution,
-  isEmptyFieldUsage,
   joinedFieldUsage,
   mergeFieldUsage,
-  narrowCompositeFieldResolution,
-  fieldUsageDifference,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 
@@ -266,28 +263,28 @@ export abstract class QueryOperationSpace
     fieldUsage: model.FieldUsage[],
     narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution,
     nextFieldUsage: model.FieldUsage[] | undefined,
-    logTo: MalloyElement | undefined
+    _logTo: MalloyElement | undefined
   ) {
     if (nextFieldUsage) {
       const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
-      const onlyNewFieldUsage = fieldUsageDifference(newFieldUsage, fieldUsage);
+      // const onlyNewFieldUsage = fieldUsageDifference(newFieldUsage, fieldUsage);
       fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage) ?? [];
-      if (!isEmptyFieldUsage(newFieldUsage)) {
-        const result = narrowCompositeFieldResolution(
-          source,
-          fieldUsage,
-          narrowedCompositeFieldResolution
-        );
-        if (result.error) {
-          (logTo ?? this).logError('invalid-composite-field-usage', {
-            newUsage: onlyNewFieldUsage,
-            allUsage: fieldUsage,
-          });
-        } else {
-          narrowedCompositeFieldResolution =
-            result.narrowedCompositeFieldResolution;
-        }
-      }
+      // if (!isEmptyFieldUsage(newFieldUsage)) {
+      //   const result = narrowCompositeFieldResolution(
+      //     source,
+      //     fieldUsage,
+      //     narrowedCompositeFieldResolution
+      //   );
+      //   if (result.error) {
+      //     (logTo ?? this).logError('invalid-composite-field-usage', {
+      //       newUsage: onlyNewFieldUsage,
+      //       allUsage: fieldUsage,
+      //     });
+      //   } else {
+      //     narrowedCompositeFieldResolution =
+      //       result.narrowedCompositeFieldResolution;
+      //   }
+      // }
     }
     return {fieldUsage, narrowedCompositeFieldResolution};
   }

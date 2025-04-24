@@ -62,7 +62,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
         )
       );
     });
@@ -79,7 +79,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
         )
       );
     });

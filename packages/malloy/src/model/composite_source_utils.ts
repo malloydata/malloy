@@ -17,18 +17,25 @@ import {
   isAtomic,
   isJoinable,
   isJoined,
+  isQuerySegment,
   isSourceDef,
   isTurtle,
 } from './malloy_types';
 
+type CompositeCouldNotFindFieldError = {
+  code: 'could_not_find_field';
+  data: {field: FieldUsage};
+};
+
 type CompositeError =
   | {code: 'not_a_composite_source'; data: {path: string[]}}
+  | CompositeCouldNotFindFieldError
   | {code: 'composite_source_not_defined'; data: {path: string[]}}
   | {code: 'composite_source_not_a_join'; data: {path: string[]}}
   | {code: 'composite_source_is_not_joinable'; data: {path: string[]}}
   | {
       code: 'no_suitable_composite_source_input';
-      data: {path: string[]; fields: string[]};
+      data: {path: string[]; fields: FieldUsage[]};
     };
 
 function _resolveCompositeSources(
@@ -55,6 +62,7 @@ function _resolveCompositeSources(
   const categorizedFieldUsage = categorizeFieldUsage(fieldUsage);
   if (source.type === 'composite') {
     let found = false;
+    const firstFaileds: FieldUsage[] = [];
     // The narrowed source list is either the one given when this function was called,
     // or we construct a new one from the given composite source's input sources.
     narrowedSources =
@@ -78,18 +86,21 @@ function _resolveCompositeSources(
         categorizedFieldUsage.sourceUsage,
         fieldsForLookup
       );
-      if (expandedCategorized === undefined) {
+      if (expandedCategorized.error) {
         // A lookup failed while expanding, which means this source certainly won't work
         newNarrowedSources.shift();
+        firstFaileds.push(expandedCategorized.error.data.field);
         continue overSources;
       }
 
-      const compositeUsageInThisSource = expandedCategorized.sourceUsage.filter(
-        f => isCompositeField(lookup(f.path, source.fields))
-      );
+      const compositeUsageInThisSource =
+        expandedCategorized.result.sourceUsage.filter(f =>
+          isCompositeField(lookup(f.path, source.fields))
+        );
       for (const usage of compositeUsageInThisSource) {
         if (!fieldNames.has(usage.path[0])) {
           newNarrowedSources.shift();
+          firstFaileds.push(usage);
           continue overSources;
         }
       }
@@ -137,7 +148,7 @@ function _resolveCompositeSources(
         base,
         rootFields,
         nests,
-        expandedCategorized,
+        expandedCategorized.result,
         narrowedJoinedSources
       );
       if (joinError !== undefined) {
@@ -161,7 +172,7 @@ function _resolveCompositeSources(
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {fields: [], path}, // TODO need to determine how to report this error, given the indirect nature.
+          data: {fields: firstFaileds, path}, // TODO need to determine how to report this error, given the indirect nature.
         },
       };
     }
@@ -173,11 +184,11 @@ function _resolveCompositeSources(
       categorizedFieldUsage.sourceUsage,
       source.fields
     );
-    if (expanded === undefined) {
+    if (expanded.error) {
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {fields: [], path}, // TODO need to determine how to report this error, given the indirect nature.
+          data: {fields: [expanded.error.data.field], path}, // TODO need to determine how to report this error, given the indirect nature.
         },
       };
     }
@@ -186,7 +197,7 @@ function _resolveCompositeSources(
       base,
       rootFields,
       nests,
-      mergeCategorizedFieldUsage(expanded, {
+      mergeCategorizedFieldUsage(expanded.result, {
         sourceUsage: [],
         joinUsage: categorizedFieldUsage.joinUsage,
       }),
@@ -226,7 +237,9 @@ function mergeCategorizedFieldUsage(
 function expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
-): CategorizedFieldUsage | undefined {
+):
+  | {result: CategorizedFieldUsage; error?: undefined}
+  | {error: CompositeCouldNotFindFieldError; result?: undefined} {
   const allFieldPathsReferenced = [...fieldUsage];
   for (let i = 0; i < allFieldPathsReferenced.length; i++) {
     const reference = allFieldPathsReferenced[i];
@@ -239,7 +252,12 @@ function expandFieldUsage(
     try {
       def = lookup(reference.path, fields);
     } catch {
-      return undefined; // TODO maybe return some error info?
+      return {
+        error: {
+          code: 'could_not_find_field',
+          data: {field: reference},
+        },
+      };
     }
     if (isAtomic(def)) {
       if (def.fieldUsage) {
@@ -257,7 +275,7 @@ function expandFieldUsage(
       }
     }
   }
-  return categorizeFieldUsage(allFieldPathsReferenced);
+  return {result: categorizeFieldUsage(allFieldPathsReferenced)};
 }
 
 interface CategorizedFieldUsage {
@@ -451,10 +469,13 @@ export function resolveCompositeSources(
 ):
   | {sourceDef: SourceDef; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
+  const sourceExtensions = isQuerySegment(segment)
+    ? segment.extendSource ?? []
+    : [];
   const result = _resolveCompositeSources(
     [],
     source,
-    [...source.fields],
+    mergeFields(source.fields, sourceExtensions),
     extractNestLevels(segment),
     fieldUsage
   );
@@ -728,10 +749,13 @@ export function checkRequiredGroupBys(
   segment: PipeSegment
 ): RequiredGroupBy[] {
   const nests = extractNestLevels(segment);
+  const sourceExtensions = isQuerySegment(segment)
+    ? segment.extendSource ?? []
+    : [];
   const unsatisfied = _checkRequiredGroupBys(
     [],
     nests,
-    compositeResolvedSourceDef.fields
+    mergeFields(compositeResolvedSourceDef.fields, sourceExtensions)
   );
   return unsatisfied;
 }
@@ -756,7 +780,7 @@ function pathEq(a: string[], b: string[]) {
 
 function lookup(field: string[], fields: FieldDef[]): FieldDef {
   const [head, ...rest] = field;
-  const def = fields.find(f => f.as ?? f.name === head);
+  const def = fields.find(f => (f.as ?? f.name) === head);
   if (def === undefined) {
     throw new Error(
       `No definition for ${head} when resolving composite source`
@@ -772,4 +796,14 @@ function lookup(field: string[], fields: FieldDef[]): FieldDef {
       `${head} cannot contian ${rest.join('.')} when resolving composite source`
     );
   }
+}
+
+export function sortFieldUsageByReferenceLocation(usage: FieldUsage[]) {
+  return usage.sort((a, b) => {
+    if (a.at.range.start.line < b.at.range.start.line) return -1;
+    if (a.at.range.start.line > b.at.range.start.line) return 1;
+    if (a.at.range.start.character < b.at.range.start.character) return -1;
+    if (a.at.range.start.character > b.at.range.start.character) return 1;
+    return 0;
+  });
 }
