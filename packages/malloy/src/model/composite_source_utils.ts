@@ -279,11 +279,13 @@ function expandFieldUsage(
       if (!joinPathsProcessed.some(p => pathEq(p, referenceJoinPath))) {
         joinPathsProcessed.push(referenceJoinPath);
         const join = lookup(referenceJoinPath, fields);
+        // Don't want to actually include the name of the join; just the path to the join
+        const joinJoinPath = referenceJoinPath.slice(0, -1);
         const fieldUsage = getFieldUsage(join);
         allFieldPathsReferenced.push(
           ...fieldUsage
             .map(u => ({
-              path: [...referenceJoinPath, ...u.path],
+              path: [...joinJoinPath, ...u.path],
               at: reference.at,
             }))
             .filter(
