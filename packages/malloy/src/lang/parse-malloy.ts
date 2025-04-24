@@ -602,6 +602,8 @@ class TranslateStep implements TranslationStep {
         modelDef: {
           ...that.modelDef,
           dependencies: that.getDependencyTree(),
+          references: that.references.toArray(),
+          imports: [...that.imports],
         },
         fromSources: that.getDependencies(),
         ...that.problemResponse(),

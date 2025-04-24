@@ -317,25 +317,10 @@ export class Malloy {
         url.toString()
       );
       if (cached) {
-        const {modelDef} = cached;
-        const {references, imports} = modelDef;
-        let referenceAt: ReferenceAtCallback = () => undefined;
-        if (references) {
-          const referenceList = new ReferenceList(url.toString(), references);
-          referenceAt = (location: ModelDocumentPosition) =>
-            referenceList.find(location);
-        }
-        let importAt: ImportAtCallback = () => undefined;
-        if (imports) {
-          importAt = (location: ModelDocumentPosition) =>
-            imports.find(i => locationContainsPosition(i.location, location));
-        }
         return new Model(
-          modelDef,
+          cached.modelDef,
           [], // TODO when using a model from cache, should we also store the problems??
-          [url.toString(), ...flatDeps(cached.modelDef.dependencies)],
-          referenceAt,
-          importAt
+          [url.toString(), ...flatDeps(cached.modelDef.dependencies)]
         );
       }
     }
@@ -370,13 +355,8 @@ export class Malloy {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.modelDef) {
-          const modelDef = {
-            ...result.modelDef,
-            references: translator.references.toArray(),
-            imports: [...translator.imports],
-          };
           await cacheManager?.setCachedModelDef(url.toString(), {
-            modelDef,
+            modelDef: result.modelDef,
             invalidationKeys,
           });
           for (const model of translator.newlyTranslatedDependencies()) {
@@ -385,14 +365,10 @@ export class Malloy {
               invalidationKeys,
             });
           }
-          return new Model(
-            result.modelDef,
-            result.problems || [],
-            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
-            (position: ModelDocumentPosition) =>
-              translator.referenceAt(position),
-            (position: ModelDocumentPosition) => translator.importAt(position)
-          );
+          return new Model(result.modelDef, result.problems || [], [
+            ...(model?.fromSources ?? []),
+            ...(result.fromSources ?? []),
+          ]);
         } else if (noThrowOnError) {
           const emptyModel = {
             name: 'modelDidNotCompile',
@@ -402,14 +378,10 @@ export class Malloy {
             queryList: [],
           };
           const modelFromCompile = model?._modelDef || emptyModel;
-          return new Model(
-            modelFromCompile,
-            result.problems || [],
-            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
-            (position: ModelDocumentPosition) =>
-              translator.referenceAt(position),
-            (position: ModelDocumentPosition) => translator.importAt(position)
-          );
+          return new Model(modelFromCompile, result.problems || [], [
+            ...(model?.fromSources ?? []),
+            ...(result.fromSources ?? []),
+          ]);
         } else {
           const errors = result.problems || [];
           const errText = translator.prettyErrors();
@@ -796,25 +768,22 @@ export class MalloyError extends Error {
   }
 }
 
-type ReferenceAtCallback = (
-  location: ModelDocumentPosition
-) => DocumentReference | undefined;
-
-type ImportAtCallback = (
-  location: ModelDocumentPosition
-) => ImportLocation | undefined;
-
 /**
  * A compiled Malloy document.
  */
 export class Model implements Taggable {
+  private readonly references: ReferenceList;
+
   constructor(
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
-    readonly fromSources: string[],
-    private readonly referenceAt: ReferenceAtCallback = () => undefined,
-    private readonly importAt: ImportAtCallback = () => undefined
-  ) {}
+    readonly fromSources: string[]
+  ) {
+    this.references = new ReferenceList(
+      fromSources[0] ?? '',
+      modelDef.references ?? []
+    );
+  }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
     return annotationToTag(this.modelDef.annotation, spec);
@@ -834,7 +803,7 @@ export class Model implements Taggable {
   public getReference(
     position: ModelDocumentPosition
   ): DocumentReference | undefined {
-    return this.referenceAt(position);
+    return this.references.find(position);
   }
 
   /**
@@ -847,7 +816,9 @@ export class Model implements Taggable {
   public getImport(
     position: ModelDocumentPosition
   ): ImportLocation | undefined {
-    return this.importAt(position);
+    return this.modelDef.imports?.find(i =>
+      locationContainsPosition(i.location, position)
+    );
   }
 
   /**
