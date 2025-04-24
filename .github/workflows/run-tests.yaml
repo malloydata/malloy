@@ -70,8 +70,8 @@ jobs:
       - db-presto
       - db-duckdb-wasm
       - db-trino
-      - db-postgres
       - db-publisher
+      - db-postgres
       - db-motherduck
       - db-mysql
     runs-on: ubuntu-latest

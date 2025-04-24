@@ -28,6 +28,7 @@ jobs:
     needs:
       - db-bigquery
       - db-motherduck
+      - db-publisher
       - db-postgres
       - db-snowflake
       - main
