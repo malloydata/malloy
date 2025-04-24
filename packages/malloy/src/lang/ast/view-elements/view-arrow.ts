@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {PipeSegment} from '../../../model';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
 import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
