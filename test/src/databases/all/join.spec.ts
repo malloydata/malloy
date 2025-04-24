@@ -27,8 +27,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
 function modelText(connectionName: string) {
   return `
   source: aircraft_models is ${connectionName}.table('malloytest.aircraft_models') extend {
