@@ -37,11 +37,6 @@ import type {ParameterSpace} from '../field-space/parameter-space';
 export abstract class Source extends MalloyElement {
   abstract getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef;
 
-  // TODO pick a better name
-  getNonInvokedSourceDef(): SourceDef {
-    return this.getSourceDef(undefined);
-  }
-
   structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     return {
       structRef: this.getSourceDef(parameterSpace),

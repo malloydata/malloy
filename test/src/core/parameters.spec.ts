@@ -180,42 +180,6 @@ describe('parameters', () => {
       `
     ).malloyResultMatches(runtime, {param_value: 11});
   });
-  // TODO enable this test when real namespaces are implemented
-  it.skip('param in extension can have different value but same name', async () => {
-    await expect(
-      `
-        ##! experimental.parameters
-        source: ab_new(param::number is 10) is duckdb.table('malloytest.state_facts') extend {
-          dimension: param_value is param
-        }
-        source: ab_new_new(param::number is 11) is ab_new(param is param + 1) extend {
-          dimension: param_value_new is param
-        }
-        run: ab_new_new -> {
-          group_by: param_value, param_value_new
-
-        }
-      `
-    ).malloyResultMatches(runtime, {param_value: 12, param_value_new: 11});
-  });
-  // TODO enable this test when real namespaces are implemented
-  it.skip('param in base can depend on param in extending source', async () => {
-    await expect(
-      `
-        ##! experimental.parameters
-        source: thing(param::number is 10) is duckdb.table('malloytest.state_facts') extend {
-          dimension: param_value is param
-        }
-        source: thing_new(param_new::number is 11) is thing(param is param_new + 1) extend {
-          dimension: param_value_new is param_new
-        }
-        run: thing_new -> {
-          group_by: param_value, param_value_new
-
-        }
-      `
-    ).malloyResultMatches(runtime, {param_value: 12, param_value_new: 11});
-  });
   it('default value passed through extension propagates', async () => {
     await expect(
       `
