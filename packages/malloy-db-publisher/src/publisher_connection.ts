@@ -19,9 +19,9 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
-import { BaseConnection } from '@malloydata/malloy/connection';
-import type { ConnectionAttributes, RawAxiosRequestConfig } from './client';
-import { Configuration, ConnectionsApi } from './client';
+import {BaseConnection} from '@malloydata/malloy/connection';
+import type {ConnectionAttributes, RawAxiosRequestConfig} from './client';
+import {Configuration, ConnectionsApi} from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -31,10 +31,11 @@ interface PublisherConnectionOptions {
 export class PublisherConnection
   extends BaseConnection
   implements
-  Connection,
-  StreamingConnection,
-  TestableConnection,
-  PersistSQLResults {
+    Connection,
+    StreamingConnection,
+    TestableConnection,
+    PersistSQLResults
+{
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
@@ -85,7 +86,7 @@ export class PublisherConnection
     accessToken: string | undefined
   ): RawAxiosRequestConfig['headers'] {
     return {
-      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+      ...(accessToken && {Authorization: `Bearer ${accessToken}`}),
     };
   }
 

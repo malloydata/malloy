@@ -5,4 +5,4 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export { PublisherConnection } from './publisher_connection';
+export {PublisherConnection} from './publisher_connection';

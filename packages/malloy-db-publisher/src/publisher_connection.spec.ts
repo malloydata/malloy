@@ -6,14 +6,14 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import { describeIfDatabaseAvailable } from '@malloydata/malloy/test';
-import { PublisherConnection } from './publisher_connection';
-import { fileURLToPath } from 'url';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import {PublisherConnection} from './publisher_connection';
+import {fileURLToPath} from 'url';
 import * as util from 'util';
 import * as fs from 'fs';
-import type { ConnectionAttributes } from './client';
-import { Configuration, ConnectionsApi } from './client';
-import type { AxiosResponse } from 'axios';
+import type {ConnectionAttributes} from './client';
+import {Configuration, ConnectionsApi} from './client';
+import type {AxiosResponse} from 'axios';
 import type {
   TableSourceDef,
   SQLSourceDef,
@@ -205,8 +205,8 @@ describe('db:Publisher', () => {
           connection: 'test-connection',
           dialect: 'bigquery',
           fields: [
-            { name: 'id', type: 'number' },
-            { name: 'name', type: 'string' },
+            {name: 'id', type: 'number'},
+            {name: 'name', type: 'string'},
           ],
         };
 
@@ -308,8 +308,8 @@ describe('db:Publisher', () => {
           connection: 'test-connection',
           dialect: 'bigquery',
           fields: [
-            { name: 'id', type: 'number' },
-            { name: 'name', type: 'string' },
+            {name: 'id', type: 'number'},
+            {name: 'name', type: 'string'},
           ],
         };
 
@@ -411,8 +411,8 @@ describe('db:Publisher', () => {
       it('should run SQL query successfully', async () => {
         const mockQueryData: MalloyQueryData = {
           rows: [
-            { id: 1, name: 'test1' },
-            { id: 2, name: 'test2' },
+            {id: 1, name: 'test1'},
+            {id: 2, name: 'test2'},
           ],
           totalRows: 2,
         };
@@ -474,8 +474,8 @@ describe('db:Publisher', () => {
       it('should run SQL query with options', async () => {
         const mockQueryData: MalloyQueryData = {
           rows: [
-            { id: 1, name: 'test1' },
-            { id: 2, name: 'test2' },
+            {id: 1, name: 'test1'},
+            {id: 2, name: 'test2'},
           ],
           totalRows: 2,
         };
@@ -555,7 +555,7 @@ describe('db:Publisher', () => {
           mockConnectionsApi,
           'getQuerydata',
           connection => connection.runSQL('SELECT * FROM test_table'),
-          { data: 'invalid json' }
+          {data: 'invalid json'}
         );
       });
     });
@@ -579,8 +579,8 @@ describe('db:Publisher', () => {
       it('should stream SQL query results successfully', async () => {
         const mockQueryData: MalloyQueryData = {
           rows: [
-            { id: 1, name: 'test1' },
-            { id: 2, name: 'test2' },
+            {id: 1, name: 'test1'},
+            {id: 2, name: 'test2'},
           ],
           totalRows: 2,
         };
@@ -647,8 +647,8 @@ describe('db:Publisher', () => {
       it('should stream SQL query results with options', async () => {
         const mockQueryData: MalloyQueryData = {
           rows: [
-            { id: 1, name: 'test1' },
-            { id: 2, name: 'test2' },
+            {id: 1, name: 'test1'},
+            {id: 2, name: 'test2'},
           ],
           totalRows: 2,
         };
@@ -745,7 +745,7 @@ describe('db:Publisher', () => {
               results.push(row);
             }
           },
-          { data: 'invalid json' }
+          {data: 'invalid json'}
         );
       });
     });
@@ -1078,7 +1078,7 @@ async function setupAndTestInvalidJsonResponse(
   mockConnectionsApi: jest.Mocked<ConnectionsApi>,
   apiMethod: keyof jest.Mocked<ConnectionsApi>,
   operation: (connection: PublisherConnection) => Promise<unknown>,
-  responseData: Record<string, unknown> = { source: 'invalid json' }
+  responseData: Record<string, unknown> = {source: 'invalid json'}
 ) {
   const mockConnectionResponse: AxiosResponse = {
     data: {
