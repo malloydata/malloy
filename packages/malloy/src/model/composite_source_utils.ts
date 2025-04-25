@@ -14,6 +14,7 @@ import type {
   SourceDef,
   Expr,
   FilterCondition,
+  StructDef,
 } from './malloy_types';
 import {
   isAtomic,
@@ -379,8 +380,8 @@ function processJoins(
   for (const [joinName, joinedUsage] of Object.entries(
     categorizedFieldUsage.joinUsage
   )) {
-    const join = fieldsByName[joinName];
     const newPath = [...path, joinName];
+    const join = fieldsByName[joinName];
     if (join === undefined) {
       return {
         error: {
@@ -447,40 +448,6 @@ type NarrowedCompositeFieldResolutionByJoinName = {
 export interface NarrowedCompositeFieldResolution {
   source: SingleNarrowedCompositeFieldResolution | undefined;
   joined: NarrowedCompositeFieldResolutionByJoinName;
-}
-
-export function emptyNarrowedCompositeFieldResolution(): NarrowedCompositeFieldResolution {
-  return {source: undefined, joined: {}};
-}
-
-// Should always give the _full_ `fieldUsage`, because we only
-// cross off sources until we find one that works, but that does not
-// guarantee that all the remaining sources will work.
-export function narrowCompositeFieldResolution(
-  source: SourceDef,
-  fieldUsage: FieldUsage[],
-  narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution
-):
-  | {
-      narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution;
-      error: undefined;
-    }
-  | {error: CompositeError; narrowedCompositeFieldResolution: undefined} {
-  const result = _resolveCompositeSources(
-    [],
-    source,
-    [...source.fields],
-    undefined,
-    fieldUsage,
-    narrowedCompositeFieldResolution
-  );
-  if ('success' in result) {
-    return {
-      narrowedCompositeFieldResolution: result.narrowedCompositeFieldResolution,
-      error: undefined,
-    };
-  }
-  return {narrowedCompositeFieldResolution: undefined, error: result.error};
 }
 
 export function resolveCompositeSources(
@@ -939,4 +906,14 @@ export function sortFieldUsageByReferenceLocation(usage: FieldUsage[]) {
     if (a.at.range.start.character > b.at.range.start.character) return 1;
     return 0;
   });
+}
+
+export function hasCompositesAnywhere(source: StructDef): boolean {
+  if (source.type === 'composite') return true;
+  for (const field of source.fields) {
+    if (isJoined(field) && hasCompositesAnywhere(field)) {
+      return true;
+    }
+  }
+  return false;
 }

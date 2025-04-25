@@ -22,6 +22,7 @@
  */
 
 import {
+  hasCompositesAnywhere,
   resolveCompositeSources,
   sortFieldUsageByReferenceLocation,
 } from '../../../model/composite_source_utils';
@@ -41,33 +42,38 @@ export abstract class QueryBase extends MalloyElement {
     const stage1 = pipeline[0];
     // TODO add an error if a raw query is done against a composite source
     if (stage1 && (isQuerySegment(stage1) || isIndexSegment(stage1))) {
-      const resolved = resolveCompositeSources(inputSource, stage1);
-      if (resolved.error) {
-        if (
-          resolved.error.code === 'no_suitable_composite_source_input' &&
-          resolved.error.data.fields.length > 0
-        ) {
-          const conflict = resolved.error.data.fields;
-          const sorted = sortFieldUsageByReferenceLocation(conflict);
-          const lastUsage = sorted[sorted.length - 1];
-          this.logError(
-            'invalid-composite-field-usage',
-            {
-              newUsage: [lastUsage],
-              allUsage: sorted,
-            },
-            {
-              at: lastUsage.at,
-            }
-          );
-        } else {
-          this.logError(
-            'could-not-resolve-composite-source',
-            'Could not resolve composite source'
-          );
+      // TODO some features don't work with composite sources; e.g. sources in `extend:` don't
+      // play nicely; here, we skip all the composite checking if there are no composites,
+      // which hides the fact that this code doesn't handle sources in `extend:`.
+      if (hasCompositesAnywhere(inputSource)) {
+        const resolved = resolveCompositeSources(inputSource, stage1);
+        if (resolved.error) {
+          if (
+            resolved.error.code === 'no_suitable_composite_source_input' &&
+            resolved.error.data.fields.length > 0
+          ) {
+            const conflict = resolved.error.data.fields;
+            const sorted = sortFieldUsageByReferenceLocation(conflict);
+            const lastUsage = sorted[sorted.length - 1];
+            this.logError(
+              'invalid-composite-field-usage',
+              {
+                newUsage: [lastUsage],
+                allUsage: sorted,
+              },
+              {
+                at: lastUsage.at,
+              }
+            );
+          } else {
+            this.logError(
+              'could-not-resolve-composite-source',
+              'Could not resolve composite source'
+            );
+          }
         }
+        return resolved.sourceDef;
       }
-      return resolved.sourceDef;
     }
     return undefined;
   }
