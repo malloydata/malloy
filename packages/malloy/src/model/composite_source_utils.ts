@@ -54,11 +54,13 @@ function _resolveCompositeSources(
 ):
   | {
       success: SourceDef;
+      anyComposites: boolean;
       narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution;
     }
   | {error: CompositeError} {
   // TODO skip all this if the tree doesn't have any composite sources
   let base = {...source};
+  let anyComposites = false;
   let joinsProcessed = false;
   let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
     undefined;
@@ -66,6 +68,7 @@ function _resolveCompositeSources(
   const nonCompositeFields = getNonCompositeFields(source);
   if (source.type === 'composite') {
     let found = false;
+    anyComposites = true;
     const firstFaileds: FieldUsage[] = [];
     // The narrowed source list is either the one given when this function was called,
     // or we construct a new one from the given composite source's input sources.
@@ -151,8 +154,8 @@ function _resolveCompositeSources(
         expandedCategorized.result,
         narrowedJoinedSources
       );
-      if (joinError !== undefined) {
-        return joinError;
+      if (joinError.error !== undefined) {
+        return {error: joinError.error};
       }
       joinsProcessed = true;
 
@@ -192,7 +195,7 @@ function _resolveCompositeSources(
         },
       };
     }
-    const joinError = processJoins(
+    const joinResult = processJoins(
       path,
       base,
       rootFields,
@@ -200,9 +203,10 @@ function _resolveCompositeSources(
       expanded.result,
       narrowedJoinedSources
     );
-    if (joinError !== undefined) {
-      return joinError;
+    if (joinResult.error !== undefined) {
+      return {error: joinResult.error};
     }
+    anyComposites ||= joinResult.anyComposites;
   }
 
   return {
@@ -211,6 +215,7 @@ function _resolveCompositeSources(
       source: narrowedSources,
       joined: narrowedJoinedSources,
     },
+    anyComposites,
   };
 }
 
@@ -363,7 +368,10 @@ function processJoins(
   nests: NestLevels | undefined,
   categorizedFieldUsage: CategorizedFieldUsage,
   narrowedJoinedSources: NarrowedCompositeFieldResolutionByJoinName
-): {error: CompositeError} | undefined {
+):
+  | {error: CompositeError; anyComposites?: undefined}
+  | {anyComposites: boolean; error?: undefined} {
+  let anyComposites = false;
   const fieldsByName: {[name: string]: FieldDef} = {};
   for (const field of base.fields) {
     fieldsByName[field.as ?? field.name] = field;
@@ -403,6 +411,10 @@ function processJoins(
     if ('error' in resolved) {
       return resolved;
     }
+    if (!resolved.anyComposites) {
+      continue;
+    }
+    anyComposites = true;
     if (!isJoinable(resolved.success)) {
       return {
         error: {
@@ -420,6 +432,7 @@ function processJoins(
     narrowedJoinedSources[joinName] = resolved.narrowedCompositeFieldResolution;
     base.fields = Object.values(fieldsByName);
   }
+  return {anyComposites};
 }
 
 type SingleNarrowedCompositeFieldResolution = {
@@ -475,7 +488,7 @@ export function resolveCompositeSources(
   segment: PipeSegment,
   _fieldUsage: FieldUsage[]
 ):
-  | {sourceDef: SourceDef; error: undefined}
+  | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
@@ -490,7 +503,10 @@ export function resolveCompositeSources(
     fieldUsage
   );
   if ('success' in result) {
-    return {sourceDef: result.success, error: undefined};
+    if (result.anyComposites) {
+      return {sourceDef: result.success, error: undefined};
+    }
+    return {sourceDef: undefined, error: undefined};
   }
   return {sourceDef: undefined, error: result.error};
 }

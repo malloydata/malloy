@@ -345,4 +345,20 @@ describe('parameters', () => {
       `
     ).malloyResultMatches(runtime, {param_value: 10});
   });
+  // TODO fix this when we redo namespaces
+  it.skip('default value not passed through extension propagates, with composite source', async () => {
+    await expect(
+      `
+        ##! experimental { parameters composite_sources }
+        source: ab_new(param::number is 10) is compose(
+          duckdb.table('malloytest.state_facts'),
+          duckdb.table('malloytest.state_facts') extend { dimension: foo is 1 }
+        ) extend {
+          dimension: param_value is param
+        }
+        source: ab_new_new is ab_new extend {}
+        run: ab_new_new -> { group_by: param_value, foo }
+      `
+    ).malloyResultMatches(runtime, {param_value: 10});
+  });
 });
