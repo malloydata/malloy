@@ -1407,9 +1407,23 @@ describe('query:', () => {
     });
   });
   describe('grouped_by', () => {
+    test('grouped_by requires compiler flag', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Experimental flag `grouped_by` is not set, feature not available'
+        )
+      );
+    });
     test('grouped_by basic success', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1421,6 +1435,7 @@ describe('query:', () => {
     test('grouped_by basic failure', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1433,6 +1448,7 @@ describe('query:', () => {
     test.skip('failure in multi-stage view in source', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1445,6 +1461,7 @@ describe('query:', () => {
     test('grouped_by failure direct in query', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
           }
@@ -1455,6 +1472,7 @@ describe('query:', () => {
     test('view with inherited grouped_by failure', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1470,6 +1488,7 @@ describe('query:', () => {
     test('view with inherited grouped_by success', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1485,6 +1504,7 @@ describe('query:', () => {
     test('nest satisfies required group by', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1502,7 +1522,7 @@ describe('query:', () => {
     test('composed source picked correctly', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a,
             a extend { dimension: x is 1 }
@@ -1521,7 +1541,7 @@ describe('query:', () => {
     test('composite used in join', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: x is compose(a, a extend { dimension: foo is 1 })
           source: y is a extend {
             join_one: x on x.ai = ai
@@ -1533,7 +1553,7 @@ describe('query:', () => {
     test('composed source input skipped when invalid require group by usage but field is present in source', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
               dimension: ai_grouped_by_astr is ai { grouped_by: astr }
@@ -1553,7 +1573,7 @@ describe('query:', () => {
     test('composed source input skipped when invalid require group by usage', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
               dimension: x is 1
@@ -1575,7 +1595,7 @@ describe('query:', () => {
     test('required group by causes composed source to fall off end', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
               dimension: x is 1
@@ -1588,9 +1608,7 @@ describe('query:', () => {
               measure: aisum is ai_grouped_by_y.sum()
             }
           )
-          run: aext -> {
-            aggregate: ${'aisum'}
-          }
+          run: ${'aext -> { aggregate: aisum }'}
         `
       ).toLog(errorMessage('Could not resolve composite source'));
     });
@@ -1598,7 +1616,7 @@ describe('query:', () => {
     test('required group by fails one slice; other slice fails because of field usage', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
               dimension: x is 1
@@ -1611,8 +1629,8 @@ describe('query:', () => {
             }
           )
           run: aext -> {
-            aggregate: ${'aisum'}
-            group_by: foo
+            aggregate: aisum
+            group_by: ${'foo'}
           }
         `
       ).toLog(
@@ -1624,7 +1642,7 @@ describe('query:', () => {
     test('joined composed source input skipped when invalid require group by usage', () => {
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
               dimension: x is 1
@@ -1650,7 +1668,7 @@ describe('query:', () => {
       // composite is valid), we need to know `bext`'s fields.
       expect(
         markSource`
-          ##! experimental.composite_sources
+          ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
               dimension: x is 1
@@ -1674,6 +1692,7 @@ describe('query:', () => {
     test('require_group_by expression additive', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             dimension: ai_grouped_by_abool is ai { grouped_by: abool }
@@ -1690,6 +1709,7 @@ describe('query:', () => {
     test('grouped_by basic joined success', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()
@@ -1704,6 +1724,7 @@ describe('query:', () => {
     test('grouped_by basic joined failure', () => {
       expect(
         markSource`
+          ##! experimental.grouped_by
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
             measure: aisum is ai_grouped_by_astr.sum()

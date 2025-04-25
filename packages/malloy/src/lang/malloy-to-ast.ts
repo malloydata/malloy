@@ -1708,6 +1708,7 @@ export class MalloyToAST
   }
 
   visitGroupedByStatement(pcx: parse.GroupedByStatementContext) {
+    this.inExperiment('grouped_by', pcx);
     return this.astAt(
       new ast.GroupedBy(
         pcx
