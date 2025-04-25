@@ -44,15 +44,6 @@ import type {
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
-import type {NarrowedCompositeFieldResolution} from '../../../model/composite_source_utils';
-import {
-  fieldUsageJoinPaths,
-  emptyFieldUsage,
-  emptyNarrowedCompositeFieldResolution,
-  joinedFieldUsage,
-  mergeFieldUsage,
-} from '../../../model/composite_source_utils';
-import {StructSpaceFieldBase} from './struct-space-field-base';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -79,17 +70,6 @@ export abstract class QueryOperationSpace
         logTo: MalloyElement | undefined;
       }
   )[] = [];
-
-  // Composite field usage is not computed until `queryFieldDefs` is called
-  // (or `getPipeSegment` for index segments); if anyone
-  // tries to access it before that, they'll get an error
-  _fieldUsage: model.FieldUsage[] | undefined = undefined;
-  get fieldUsage(): model.FieldUsage[] {
-    if (this._fieldUsage === undefined) {
-      throw new Error('Field usage accessed before computed');
-    }
-    return this._fieldUsage;
-  }
 
   constructor(
     readonly queryInputSpace: SourceFieldSpace,
@@ -214,79 +194,11 @@ export abstract class QueryOperationSpace
     }
   }
 
-  private getJoinOnFieldUsage(joinPath: string[]): model.FieldUsage[] {
-    const reference = joinPath.map(n => new FieldName(n));
-    this.astEl.has({reference});
-    const lookup = this.exprSpace.lookup(reference);
-    // Should always be found...
-    if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return joinedFieldUsage(
-        joinPath.slice(0, -1),
-        lookup.found.fieldDef().onFieldUsage ?? emptyFieldUsage()
-      );
-    }
-    throw new Error('Unexpected join lookup was not found or not a struct');
-  }
-
-  protected getFieldUsageIncludingJoinOns(
-    fieldUsage: model.FieldUsage[]
-  ): model.FieldUsage[] {
-    let fieldUsageIncludingJoinOns = fieldUsage;
-    const joinPaths = fieldUsageJoinPaths(fieldUsage);
-    for (const joinPath of joinPaths) {
-      fieldUsageIncludingJoinOns = mergeFieldUsage(
-        this.getJoinOnFieldUsage(joinPath),
-        fieldUsageIncludingJoinOns
-      );
-    }
-    return fieldUsageIncludingJoinOns;
-  }
-
-  public addFieldUserFromFilter(
-    filter: model.FilterCondition,
-    logTo: MalloyElement
-  ) {
-    if (filter.fieldUsage !== undefined) {
-      this.compositeFieldUsers.push({type: 'filter', filter, logTo});
-    }
-  }
-
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
     if (entry instanceof SpaceField) {
       this.compositeFieldUsers.push({type: 'field', name, field: entry, logTo});
     }
     super.newEntry(name, logTo, entry);
-  }
-
-  protected applyNextFieldUsage(
-    source: model.SourceDef,
-    fieldUsage: model.FieldUsage[],
-    narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution,
-    nextFieldUsage: model.FieldUsage[] | undefined,
-    _logTo: MalloyElement | undefined
-  ) {
-    if (nextFieldUsage) {
-      const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
-      // const onlyNewFieldUsage = fieldUsageDifference(newFieldUsage, fieldUsage);
-      fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage) ?? [];
-      // if (!isEmptyFieldUsage(newFieldUsage)) {
-      //   const result = narrowCompositeFieldResolution(
-      //     source,
-      //     fieldUsage,
-      //     narrowedCompositeFieldResolution
-      //   );
-      //   if (result.error) {
-      //     (logTo ?? this).logError('invalid-composite-field-usage', {
-      //       newUsage: onlyNewFieldUsage,
-      //       allUsage: fieldUsage,
-      //     });
-      //   } else {
-      //     narrowedCompositeFieldResolution =
-      //       result.narrowedCompositeFieldResolution;
-      //   }
-      // }
-    }
-    return {fieldUsage, narrowedCompositeFieldResolution};
   }
 }
 
@@ -339,27 +251,15 @@ export abstract class QuerySpace extends QueryOperationSpace {
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    let fieldUsage = emptyFieldUsage();
-    let narrowedCompositeFieldResolution =
-      emptyNarrowedCompositeFieldResolution();
-    const source = this.inputSpace().structDef();
-    for (const user of this.compositeFieldUsers) {
-      let nextFieldUsage: model.FieldUsage[] | undefined = undefined;
-      if (user.type === 'filter') {
-        if (user.filter.fieldUsage) {
-          nextFieldUsage = user.filter.fieldUsage;
-        }
-      } else {
-        const {name, field} = user;
+    for (const [name, field] of this.entries()) {
+      if (field instanceof SpaceField) {
         const wildPath = this.expandedWild[name];
         if (wildPath) {
           fields.push({type: 'fieldref', path: wildPath.path, at: wildPath.at});
-          nextFieldUsage = wildPath.entry.typeDesc().fieldUsage;
         } else {
           const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
           if (fieldQueryDef) {
             const typeDesc = field.typeDesc();
-            nextFieldUsage = typeDesc.fieldUsage;
             // Filter out fields whose type is 'error', which means that a totally bad field
             // isn't sent to the compiler, where it will wig out.
             // TODO Figure out how to make errors generated by `canContain` go in the right place,
@@ -382,17 +282,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
           // fields, but the individual fields didn't have field defs.
         }
       }
-      const next = this.applyNextFieldUsage(
-        source,
-        fieldUsage,
-        narrowedCompositeFieldResolution,
-        nextFieldUsage,
-        user.logTo
-      );
-      fieldUsage = next.fieldUsage;
-      narrowedCompositeFieldResolution = next.narrowedCompositeFieldResolution;
     }
-    this._fieldUsage = fieldUsage;
     return fields;
   }
 

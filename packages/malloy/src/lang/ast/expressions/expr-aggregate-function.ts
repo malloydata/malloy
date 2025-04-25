@@ -47,7 +47,6 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -100,11 +99,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                       at: this.source.location,
                     },
               evalSpace: footType.evalSpace,
-              // TODO ensure that when there's an `expr` but no `source`, that `fieldUsage`
-              // and `aggregateFieldUsage` still come along correctly
-              fieldUsage: mergeFieldUsage(footType.fieldUsage, [
-                {path: footPath, at: this.source.location},
-              ]),
+              // TODO ensure that when there's an `expr` but no `source`, that
+              // `aggregateFieldUsage` still comes along correctly
               aggregateFieldUsage: [
                 {
                   fields: [footPath],

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {FieldUsage} from '../../../model/malloy_types';
 import {expressionIsAggregate} from '../../../model/malloy_types';
 import type {ExprValue} from '../types/expr-value';
 import type {FieldReference} from '../query-items/field-references';
@@ -42,18 +41,6 @@ export class ExprIdReference extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
-      // TODO Currently the join usage is always equivalent to the reference path here;
-      // if/when we add namespaces, this will not be the case, and we will need to get the
-      // join path from `getField` / `lookup`
-      const fieldUsage: FieldUsage[] =
-        def.found.refType === 'field'
-          ? [
-              {
-                path: this.fieldReference.list.map(n => n.name),
-                at: this.fieldReference.location,
-              },
-            ]
-          : [];
       const td = def.found.typeDesc();
       if (def.isOutputField) {
         return {
@@ -61,7 +48,6 @@ export class ExprIdReference extends ExpressionDef {
           // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
-          fieldUsage,
           aggregateFieldUsage: undefined,
         };
       }
@@ -78,7 +64,6 @@ export class ExprIdReference extends ExpressionDef {
         ...td,
         value,
         evalSpace,
-        fieldUsage,
         aggregateFieldUsage: undefined,
       };
     }

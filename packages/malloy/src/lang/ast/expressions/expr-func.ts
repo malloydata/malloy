@@ -69,7 +69,6 @@ import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
@@ -188,7 +187,6 @@ export class ExprFunc extends ExpressionDef {
               at: this.source.location,
             },
             evalSpace: footType.evalSpace,
-            fieldUsage: footType.fieldUsage,
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -473,7 +471,6 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage: mergeFieldUsage(...argExprs.map(e => e.fieldUsage)),
     };
   }
 }

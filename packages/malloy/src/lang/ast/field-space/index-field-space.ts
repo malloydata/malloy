@@ -21,15 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  emptyFieldUsage,
-  emptyNarrowedCompositeFieldResolution,
-} from '../../../model/composite_source_utils';
 import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  FieldUsage,
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {
@@ -71,19 +66,12 @@ export class IndexFieldSpace extends QueryOperationSpace {
       );
       return {type: 'index', indexFields: []};
     }
-    let fieldUsage = emptyFieldUsage();
-    let narrowedCompositeFieldResolution =
-      emptyNarrowedCompositeFieldResolution();
     const indexFields: IndexFieldDef[] = [];
-    const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        let nextFieldUsage: FieldUsage[] | undefined = undefined;
-        let logTo: MalloyElement | undefined = undefined;
         const wild = this.expandedWild[name];
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
-          nextFieldUsage = wild.entry.typeDesc().fieldUsage;
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
           const fieldRef = field.fieldRef;
@@ -92,23 +80,10 @@ export class IndexFieldSpace extends QueryOperationSpace {
             fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
-            nextFieldUsage = check.found.typeDesc().fieldUsage;
-            logTo = fieldRef;
           }
         }
-        const next = this.applyNextFieldUsage(
-          source,
-          fieldUsage,
-          narrowedCompositeFieldResolution,
-          nextFieldUsage,
-          logTo
-        );
-        fieldUsage = next.fieldUsage;
-        narrowedCompositeFieldResolution =
-          next.narrowedCompositeFieldResolution;
       }
     }
-    this._fieldUsage = fieldUsage;
     return {type: 'index', indexFields};
   }
 

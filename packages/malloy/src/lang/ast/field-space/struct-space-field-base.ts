@@ -53,14 +53,12 @@ export abstract class StructSpaceFieldBase extends SpaceField {
         type: this.structDef.type,
         evalSpace: 'input',
         expressionType: 'scalar',
-        fieldUsage: this.structDef.onFieldUsage ?? [],
       };
     }
     return {
       ...TDU.atomicDef(this.structDef),
       evalSpace: 'input',
       expressionType: 'scalar',
-      fieldUsage: this.structDef.onFieldUsage ?? [],
     };
   }
 }

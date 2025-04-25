@@ -22,8 +22,6 @@
  */
 
 import {
-  emptyFieldUsage,
-  isEmptyFieldUsage,
   resolveCompositeSources,
   sortFieldUsageByReferenceLocation,
 } from '../../../model/composite_source_utils';
@@ -43,34 +41,27 @@ export abstract class QueryBase extends MalloyElement {
     const stage1 = query.pipeline[0];
     // TODO add an error if a raw query is done against a composite source
     if (stage1 && (isQuerySegment(stage1) || isIndexSegment(stage1))) {
-      const fieldUsage = stage1.fieldUsage ?? emptyFieldUsage();
-      if (!isEmptyFieldUsage(fieldUsage) || inputSource.type === 'composite') {
-        const resolved = resolveCompositeSources(
-          inputSource,
-          stage1,
-          fieldUsage
+      const resolved = resolveCompositeSources(inputSource, stage1);
+      if (
+        resolved.error &&
+        resolved.error.code === 'no_suitable_composite_source_input' &&
+        resolved.error.data.fields.length > 0
+      ) {
+        const conflict = resolved.error.data.fields;
+        const sorted = sortFieldUsageByReferenceLocation(conflict);
+        const lastUsage = sorted[sorted.length - 1];
+        this.logError(
+          'invalid-composite-field-usage',
+          {
+            newUsage: [lastUsage],
+            allUsage: sorted,
+          },
+          {
+            at: lastUsage.at,
+          }
         );
-        if (
-          resolved.error &&
-          resolved.error.code === 'no_suitable_composite_source_input' &&
-          resolved.error.data.fields.length > 0
-        ) {
-          const conflict = resolved.error.data.fields;
-          const sorted = sortFieldUsageByReferenceLocation(conflict);
-          const lastUsage = sorted[sorted.length - 1];
-          this.logError(
-            'invalid-composite-field-usage',
-            {
-              newUsage: [lastUsage],
-              allUsage: sorted,
-            },
-            {
-              at: lastUsage.at,
-            }
-          );
-        }
-        return resolved.sourceDef;
       }
+      return resolved.sourceDef;
     }
     return undefined;
   }

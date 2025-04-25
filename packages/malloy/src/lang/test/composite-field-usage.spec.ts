@@ -5,49 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {errorMessage, makeExprFunc, model} from './test-translator';
+import {errorMessage} from './test-translator';
 import './parse-expects';
 
 describe('composite sources', () => {
-  describe('composite field usage', () => {
-    const m = model`
-      ##! experimental.composite_sources
-      source: x is compose(ab, ab) extend {
-        dimension: aif is ai + af
-        measure: ss is ai.sum()
-        measure: saiaf is ai.sum() { where: af > 1 }
-      }
-
-      source: y is compose(ab, ab) extend {
-        join_one: x on 1 = 1
-      }
-    `;
-
-    beforeAll(() => {
-      m.translator.translate();
-    });
-
-    test('looked up value', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai`).hasFieldUsage([['ai']]);
-    });
-
-    test('multiple values', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + af`).hasFieldUsage([['ai'], ['af']]);
-    });
-
-    test('value plus constant', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + 1`).hasFieldUsage([['ai']]);
-    });
-
-    test('join usage', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.ai + 1`).hasFieldUsage([['x', 'ai']]);
-    });
-  });
-
   describe('composite source resolution and validation', () => {
     test('compose fails on group_by that is relevant', () => {
       expect(`

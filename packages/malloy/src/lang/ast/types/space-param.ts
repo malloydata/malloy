@@ -52,7 +52,6 @@ export class AbstractParameter extends SpaceParam {
       ...theType,
       expressionType: 'scalar',
       evalSpace: 'constant',
-      fieldUsage: [],
     };
   }
 }
@@ -76,7 +75,6 @@ export class DefinedParameter extends SpaceParam {
       // TODO Not sure whether params are considered "input space". It seems like they
       // could be input or constant, depending on usage (same as above).
       evalSpace: 'input',
-      fieldUsage: [],
     };
   }
 }

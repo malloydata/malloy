@@ -20,7 +20,6 @@ export class ExprFilterExpression extends ExpressionDef {
       value: {node: 'filterLiteral', filterSrc: this.filterText},
       expressionType: 'scalar',
       evalSpace: 'constant',
-      fieldUsage: [],
     };
   }
 }

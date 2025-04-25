@@ -42,7 +42,6 @@ function mkTypeDesc(
     type: dataType,
     expressionType,
     evalSpace,
-    fieldUsage: [],
   };
 }
 

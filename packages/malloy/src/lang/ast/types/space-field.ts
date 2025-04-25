@@ -39,15 +39,6 @@ export abstract class SpaceField extends SpaceEntry {
       ...def,
       expressionType,
       evalSpace: 'input',
-      fieldUsage:
-        // Use the composite field usage in the def if it exists, otherwise, if the
-        // field has an e whic is a composite field, then the composite field usage
-        // should be just the name of the field.
-        // TODO handle case when location is undefined
-        def.fieldUsage ??
-        (def.e?.node === 'compositeField'
-          ? [{path: [def.name], at: def.location!}]
-          : []),
     };
     return ref;
   }

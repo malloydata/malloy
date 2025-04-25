@@ -48,7 +48,6 @@ export class ExprCount extends ExprAggregateFunction {
       evalSpace: ev.evalSpace,
       expressionType: 'aggregate',
       value: ev.value,
-      fieldUsage: ev.fieldUsage,
     };
   }
 
@@ -67,7 +66,6 @@ export class ExprCount extends ExprAggregateFunction {
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',
-      fieldUsage: [],
     };
   }
 }

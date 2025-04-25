@@ -485,8 +485,7 @@ export function narrowCompositeFieldResolution(
 
 export function resolveCompositeSources(
   source: SourceDef,
-  segment: PipeSegment,
-  _fieldUsage: FieldUsage[]
+  segment: PipeSegment
 ):
   | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {

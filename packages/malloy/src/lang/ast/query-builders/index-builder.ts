@@ -22,7 +22,6 @@
  */
 
 import type {
-  FieldUsage,
   FilterCondition,
   PipeSegment,
   Sampling,
@@ -41,10 +40,6 @@ import type {QueryBuilder} from '../types/query-builder';
 import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {MalloyElement} from '../types/malloy-element';
-import {
-  emptyFieldUsage,
-  mergeFieldUsage,
-} from '../../../model/composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];
@@ -99,10 +94,6 @@ export class IndexBuilder implements QueryBuilder {
     }
   }
 
-  get fieldUsage(): FieldUsage[] {
-    return this.resultFS.fieldUsage;
-  }
-
   finalize(from: PipeSegment | undefined): PipeSegment {
     if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
       this.resultFS.logError(
@@ -142,12 +133,6 @@ export class IndexBuilder implements QueryBuilder {
     if (this.alwaysJoins.length > 0) {
       indexSegment.alwaysJoins = [...this.alwaysJoins];
     }
-
-    const fromFieldUsage =
-      from && from.type === 'index'
-        ? from.fieldUsage ?? emptyFieldUsage()
-        : emptyFieldUsage();
-    indexSegment.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
 
     return indexSegment;
   }
