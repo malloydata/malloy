@@ -70,6 +70,15 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
+  getNonInvokedSourceDef(): SourceDef {
+    const modelStruct = this.modelStruct();
+    if (modelStruct === undefined) {
+      this.logError('source-not-found', `Undefined source '${this.refName}'`);
+      return ErrorFactory.structDef;
+    }
+    return modelStruct;
+  }
+
   structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     const modelEnt = this.modelEntry(this.ref);
     // If we are not exporting the referenced structdef, don't use the reference
