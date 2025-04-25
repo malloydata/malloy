@@ -48,7 +48,6 @@ export class ExprIdReference extends ExpressionDef {
           // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
-          aggregateFieldUsage: undefined,
         };
       }
       const value = {
@@ -64,7 +63,6 @@ export class ExprIdReference extends ExpressionDef {
         ...td,
         value,
         evalSpace,
-        aggregateFieldUsage: undefined,
       };
     }
     return this.loggedErrorExpr(def.error.code, def.error.message);

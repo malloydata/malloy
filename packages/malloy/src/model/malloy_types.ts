@@ -694,7 +694,6 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   groupedBy?: string[][];
-  aggregateFieldUsage?: AggregateFieldUsage[];
 }
 
 // this field definition represents something in the database.
@@ -1264,7 +1263,6 @@ export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
   groupedBy?: string[][];
-  aggregateFieldUsage?: AggregateFieldUsage[];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
