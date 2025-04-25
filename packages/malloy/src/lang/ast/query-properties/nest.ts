@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from '../../../model/malloy_types';
+import type * as model from '../../../model/malloy_types';
 import type {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
