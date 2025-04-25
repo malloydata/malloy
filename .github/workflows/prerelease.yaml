@@ -1,4 +1,5 @@
 name: npmjs.com Pre-release
+permissions: {}
 
 on:
   workflow_dispatch:
