@@ -1,5 +1,6 @@
 name: 'DB:MySQL'
 permissions: {}
+
 on: workflow_call
 
 jobs:

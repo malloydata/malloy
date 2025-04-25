@@ -1,7 +1,8 @@
 name: 'DB:Publisher'
 permissions: {}
 
-on: workflow_call
+on:
+  workflow_call:
 
 jobs:
   test-publisher:
