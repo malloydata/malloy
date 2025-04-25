@@ -1,4 +1,6 @@
 name: Malloy Tests
+permissions:
+  contents: read
 
 on: [workflow_dispatch, pull_request_target]
 

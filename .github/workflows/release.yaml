@@ -1,4 +1,6 @@
 name: npmjs.com Release
+permissions:
+  contents: read
 
 on: [workflow_dispatch]
 

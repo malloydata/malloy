@@ -3,6 +3,8 @@
 # which touch some combination of duckdb,bigquery,postgres but do
 # not need to be once times for each dialect.
 name: Core
+permissions:
+  contents: read
 
 on:
   workflow_call:
