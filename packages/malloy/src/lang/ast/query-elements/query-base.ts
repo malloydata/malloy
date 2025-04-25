@@ -25,7 +25,7 @@ import {
   resolveCompositeSources,
   sortFieldUsageByReferenceLocation,
 } from '../../../model/composite_source_utils';
-import type {Query, SourceDef} from '../../../model/malloy_types';
+import type {PipeSegment, Query, SourceDef} from '../../../model/malloy_types';
 import {isIndexSegment, isQuerySegment} from '../../../model/malloy_types';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
@@ -36,9 +36,9 @@ export abstract class QueryBase extends MalloyElement {
 
   protected resolveCompositeSource(
     inputSource: SourceDef,
-    query: Query
+    pipeline: PipeSegment[]
   ): SourceDef | undefined {
-    const stage1 = query.pipeline[0];
+    const stage1 = pipeline[0];
     // TODO add an error if a raw query is done against a composite source
     if (stage1 && (isQuerySegment(stage1) || isIndexSegment(stage1))) {
       const resolved = resolveCompositeSources(inputSource, stage1);
