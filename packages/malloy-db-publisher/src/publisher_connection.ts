@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import type {
   Connection,
   MalloyQueryData,
@@ -12,9 +19,9 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
-import {BaseConnection} from '@malloydata/malloy/connection';
-import type {ConnectionAttributes, RawAxiosRequestConfig} from './client';
-import {Configuration, ConnectionsApi} from './client';
+import { BaseConnection } from '@malloydata/malloy/connection';
+import type { ConnectionAttributes, RawAxiosRequestConfig } from './client';
+import { Configuration, ConnectionsApi } from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -24,11 +31,10 @@ interface PublisherConnectionOptions {
 export class PublisherConnection
   extends BaseConnection
   implements
-    Connection,
-    StreamingConnection,
-    TestableConnection,
-    PersistSQLResults
-{
+  Connection,
+  StreamingConnection,
+  TestableConnection,
+  PersistSQLResults {
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
@@ -79,7 +85,7 @@ export class PublisherConnection
     accessToken: string | undefined
   ): RawAxiosRequestConfig['headers'] {
     return {
-      ...(accessToken && {Authorization: `Bearer ${accessToken}`}),
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     };
   }
 
