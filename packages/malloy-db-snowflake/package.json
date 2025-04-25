@@ -11,6 +11,7 @@
   "engines": {
     "node": ">=20"
   },
+  "homepage": "https://github.com/malloydata/malloy#readme",
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
