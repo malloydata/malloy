@@ -180,6 +180,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         node: 'aggregate',
         function: this.func,
         e: exprVal.value,
+        at: this.location,
       };
       if (structPath && structPath.length > 0) {
         f.structPath = structPath;

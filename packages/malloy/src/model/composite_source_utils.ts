@@ -624,8 +624,7 @@ function getAggregateFieldUsageFromExpr(expr: Expr): AggregateFieldUsage[] {
       if (inner.length > 0) {
         fieldUsage.push({
           fields: inner.map(u => u.path),
-          // TODO this should be the location of the aggregate, not the field
-          location: inner[0].at,
+          location: node.at!, // TODO
         });
       }
     }

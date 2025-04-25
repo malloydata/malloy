@@ -167,6 +167,7 @@ export interface AggregateExpr extends ExprE {
   node: 'aggregate';
   function: AggregateFunctionType;
   structPath?: string[];
+  at?: DocumentLocation;
 }
 export function isAsymmetricExpr(f: Expr): f is AggregateExpr {
   return (

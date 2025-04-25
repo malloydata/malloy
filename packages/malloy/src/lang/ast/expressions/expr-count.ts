@@ -56,6 +56,7 @@ export class ExprCount extends ExprAggregateFunction {
       node: 'aggregate',
       function: 'count',
       e: {node: ''},
+      at: this.location,
     };
     if (this.source) {
       ret.structPath = this.source.path;
