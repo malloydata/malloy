@@ -1570,6 +1570,8 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
+    // TODO this could get a better error message:
+    // something like "one source failed because it did not have a required group by"
     test('required group by causes composed source to fall off end', () => {
       expect(
         markSource`
@@ -1590,7 +1592,34 @@ describe('query:', () => {
             aggregate: ${'aisum'}
           }
         `
-      ).toLog(errorMessage('Group by of `x` is required but not present'));
+      ).toLog(errorMessage('Could not resolve composite source'));
+    });
+    // TODO this error message is not helpful
+    test('required group by fails one slice; other slice fails because of field usage', () => {
+      expect(
+        markSource`
+          ##! experimental.composite_sources
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              dimension: ai_grouped_by_x is ai { grouped_by: x }
+              measure: aisum is ai_grouped_by_x.sum()
+              dimension: foo is 1
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: ${'aisum'}
+            group_by: foo
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `foo`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `foo`'
+        )
+      );
     });
     test('joined composed source input skipped when invalid require group by usage', () => {
       expect(

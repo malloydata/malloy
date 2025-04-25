@@ -649,11 +649,35 @@ function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
   return fieldUsage;
 }
 
+function getAggregateFieldUsageFromExpr(expr: Expr): AggregateFieldUsage[] {
+  const fieldUsage: AggregateFieldUsage[] = [];
+  for (const node of exprWalk(expr)) {
+    if (node.node === 'aggregate') {
+      const inner = getFieldUsageFromExpr(node.e);
+      if (inner.length > 0) {
+        fieldUsage.push({
+          fields: inner.map(u => u.path),
+          // TODO this should be the location of the aggregate, not the field
+          location: inner[0].at,
+        });
+      }
+    }
+  }
+  return fieldUsage;
+}
+
 function getFieldUsageForField(field: FieldDef): FieldUsage[] {
   if (isAtomic(field) && field.e) {
     return getFieldUsageFromExpr(field.e);
   } else if (isJoined(field) && field.onExpression) {
     return getFieldUsageFromExpr(field.onExpression);
+  }
+  return [];
+}
+
+function getAggregateFieldUsage(field: FieldDef): AggregateFieldUsage[] {
+  if (isAtomic(field) && field.e) {
+    return getAggregateFieldUsageFromExpr(field.e);
   }
   return [];
 }
@@ -719,9 +743,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         nested.push(extractNestLevels(head));
       } else {
         fieldsReferenced.push(...getFieldUsageForField(field));
-        if (field.aggregateFieldUsage !== undefined) {
-          aggregateFieldUsage.push(...field.aggregateFieldUsage);
-        }
+        aggregateFieldUsage.push(...getAggregateFieldUsage(field));
       }
     }
   }
@@ -776,16 +798,13 @@ function expandRefs(
       const head = def.pipeline[0];
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
-      if (def.aggregateFieldUsage) {
-        allAggregateFieldUsage.push(
-          ...joinedAggregateFieldUsage(joinPath, def.aggregateFieldUsage)!.map(
-            u => ({
-              ...u,
-              location: field.at,
-            })
-          )
-        );
-      }
+      const aggregateFieldUsage = getAggregateFieldUsage(def);
+      allAggregateFieldUsage.push(
+        ...joinedAggregateFieldUsage(joinPath, aggregateFieldUsage)!.map(u => ({
+          ...u,
+          location: field.at,
+        }))
+      );
       const fieldUsage = getFieldUsageForField(def);
       const moreReferences = fieldUsage
         .map(u => ({path: [...joinPath, ...u.path], at: field.at}))
