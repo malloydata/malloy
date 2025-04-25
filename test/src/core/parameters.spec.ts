@@ -198,8 +198,7 @@ describe('parameters', () => {
       `
     ).malloyResultMatches(runtime, {param_value: 12, param_value_new: 11});
   });
-  // TODO enable this test when real namespaces are implemented
-  it.skip('param in base can depend on param in extending source', async () => {
+  it('param in base can depend on param in extending source', async () => {
     await expect(
       `
         ##! experimental.parameters
