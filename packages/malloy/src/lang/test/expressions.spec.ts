@@ -618,7 +618,7 @@ describe('expressions', () => {
     describe('grouped_by:', () => {
       test('grouped_by of dimension', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by }
+          ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: astr }
           }
@@ -626,7 +626,7 @@ describe('expressions', () => {
       });
       test('grouped_by of measure', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by }
+          ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
             measure: c is count()
             dimension: ai_grouped_by_astr is ai { grouped_by: ${'c'} }
@@ -635,7 +635,7 @@ describe('expressions', () => {
       });
       test('grouped_by of self', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by }
+          ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
             dimension: ai_grouped_by_astr is ai { grouped_by: ai_grouped_by_astr }
           }
