@@ -271,7 +271,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return 'Do not use me';
+    return '!DO NOT USE ME (function sqlSumDistinctHashedKey)!';
   }
 
   sqlGenerateUUID(): string {
