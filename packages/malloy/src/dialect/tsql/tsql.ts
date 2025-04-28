@@ -417,57 +417,58 @@ export class TSQLDialect extends Dialect {
     throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
-  // TODO (vitor): Revisit this function... Some parenthesis aren't looking right
+  // TODO (vitor): Revisit this function...
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const sqlDistinctKey = `
-    -- concat
-    CONCAT(${key}, '')
-    -- concat
-    `;
+    // Generate a unique representation for the key using MD5 hash
+    const sqlDistinctKey = `CONCAT(${key}, '')`; // Ensures key is treated as string for HASHBYTES
+
+    // Calculate the first 64 bits of the MD5 hash as an unsigned integer
     const partA = `
-    -- part a
-      (CAST(
+        CAST(
             CASE
+                -- Convert first 8 bytes to BIGINT (signed 64-bit)
                 WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) >= 0
+                -- If positive, it's the correct unsigned value when cast
                 THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) AS DECIMAL(20,0))
+                -- If negative, add 2^64 to get the correct unsigned value
                 ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
             END
         AS DECIMAL(20,0))
-        *
-        CAST(18446744073709551616.0 AS DECIMAL(20,0)))
-    -- part a
     `;
+
+    // Calculate the second 64 bits of the MD5 hash as an unsigned integer
     const partB = `
-    -- part b
-      (CAST(
-          CASE
-              WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) >= 0
-              THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0))
-              ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
-          END
-      AS DECIMAL(20,0))
-    -- part b
-      `;
+        CAST(
+            CASE
+                -- Convert next 8 bytes to BIGINT (signed 64-bit)
+                WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) >= 0
+                -- If positive, it's the correct unsigned value when cast
+                THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0))
+                -- If negative, add 2^64 to get the correct unsigned value
+                ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
+            END
+        AS DECIMAL(20,0))
+    `;
+
+    // Combine the two 64-bit parts into a 128-bit number (represented as DECIMAL(38,0))
+    // Formula: partA * 2^64 + partB
     const hashKey = `
-    -- hashkey
-    ( CAST( (${partA}+${partB})) AS DECIMAL(38,0) ) )
-    -- hashkey
-     `;
-    const v = `
-    -- coalesce
-    COALESCE(${value}, 0)
-    -- coalesce
+        CAST( ((${partA}) * CAST(18446744073709551616.0 AS DECIMAL(20,0))) + (${partB}) AS DECIMAL(38,0) )
     `;
+
+    // Coalesce the value to 0 if it's NULL
+    const v = `COALESCE(${value}, 0)`;
+
+    // The core calculation: SUM(DISTINCT hashKey + value) - SUM(DISTINCT hashKey)
     const sqlSum = `(
-    -- sqlsum
-    SUM(DISTINCT (${hashKey} + ${v})) - SUM(DISTINCT ${hashKey})
-    -- sqlsum
-    )
-    `;
+        SUM(DISTINCT (${hashKey} + ${v})) - SUM(DISTINCT ${hashKey})
+    )`;
+
     if (funcName === 'SUM') {
       return sqlSum;
     } else if (funcName === 'AVG') {
-      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+      // For AVG, divide the distinct sum by the count of distinct keys with non-null values
+      return `(${sqlSum}) / NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
     }
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
