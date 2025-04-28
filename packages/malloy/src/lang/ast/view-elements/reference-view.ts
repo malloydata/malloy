@@ -22,7 +22,12 @@
  */
 
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
-import {isAtomic, isTurtle, sourceBase} from '../../../model/malloy_types';
+import {
+  isAtomic,
+  isRawSegment,
+  isTurtle,
+  sourceBase,
+} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
@@ -86,6 +91,7 @@ export class ReferenceView extends View {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
+        fieldUsage: fieldDef.fieldUsage,
       };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
@@ -149,7 +155,15 @@ export class ReferenceView extends View {
       );
       return undefined;
     }
-    return pipeline[0];
+    const segment = pipeline[0];
+    if (isRawSegment(segment)) return segment;
+    return {
+      ...segment,
+      fieldUsage: segment.fieldUsage?.map(u => ({
+        ...u,
+        at: this.reference.location,
+      })),
+    };
   }
 
   // `isNestIn` is not needed because `ReferenceView`s never create a field space

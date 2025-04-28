@@ -108,6 +108,12 @@ export class ReferenceField extends SpaceField {
       const typeDesc = refTo.typeDesc();
       this.memoTypeDesc = {
         ...typeDesc,
+        fieldUsage: [
+          {
+            path: this.fieldRef.path,
+            at: this.fieldRef.location,
+          },
+        ],
         groupedBy: typeDesc.groupedBy?.map(path => [...joinPath, ...path]),
       };
       return this.memoTypeDesc;

@@ -39,6 +39,7 @@ export abstract class ViewField extends SpaceField {
     const fieldDef = this.fieldDef();
     return {
       ...TDU.viewT,
+      fieldUsage: fieldDef.fieldUsage ?? [],
       requiredGroupBys: fieldDef.requiredGroupBys,
     };
   }

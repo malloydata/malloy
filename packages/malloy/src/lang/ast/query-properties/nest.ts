@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type * as model from '../../../model/malloy_types';
+import * as model from '../../../model/malloy_types';
 import type {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
@@ -52,6 +52,10 @@ export class NestFieldDeclaration
         fs,
         fs.outputSpace()
       );
+      const fieldUsage =
+        pipeline[0] && model.isQuerySegment(pipeline[0])
+          ? pipeline[0].fieldUsage
+          : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
       this.turtleDef = {
         type: 'turtle',
@@ -59,6 +63,7 @@ export class NestFieldDeclaration
         pipeline: checkedPipeline,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
+        fieldUsage,
       };
       return this.turtleDef;
     }

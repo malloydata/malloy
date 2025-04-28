@@ -139,6 +139,7 @@ export abstract class AtomicFieldDeclaration
         value: exprValue.value,
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
+        fieldUsage: exprValue.fieldUsage,
         groupedBy: exprValue.groupedBy,
       };
       exprValue = nullAsNumber;
@@ -154,7 +155,7 @@ export abstract class AtomicFieldDeclaration
       }
       ret.location = this.location;
       ret.e = exprValue.value;
-      // TODO get rid of this and just compute it later like we're doing with fieldUsage now
+      ret.fieldUsage = exprValue.fieldUsage;
       ret.aggregateFieldUsage = exprValue.aggregateFieldUsage;
       ret.groupedBy = exprValue.groupedBy;
       if (exprValue.expressionType) {

@@ -37,5 +37,6 @@ export function errorFor(reason: string): ExprValue {
     expressionType: 'scalar',
     value: {node: 'error', message: reason},
     evalSpace: 'constant',
+    fieldUsage: [],
   };
 }

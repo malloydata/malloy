@@ -13,12 +13,10 @@ import type {
   PipeSegment,
   SourceDef,
   Expr,
-  FilterCondition,
   StructDef,
 } from './malloy_types';
 import {
   isAtomic,
-  isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
@@ -452,7 +450,8 @@ export interface NarrowedCompositeFieldResolution {
 
 export function resolveCompositeSources(
   source: SourceDef,
-  segment: PipeSegment
+  segment: PipeSegment,
+  fieldUsage: FieldUsage[]
 ):
   | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
@@ -460,7 +459,6 @@ export function resolveCompositeSources(
     ? segment.extendSource ?? []
     : [];
   const nestLevels = extractNestLevels(segment);
-  const fieldUsage = extractFieldUsage(segment);
   const result = _resolveCompositeSources(
     [],
     source,
@@ -599,9 +597,9 @@ interface NestLevels {
   nested: NestLevels[];
 }
 
-function getFieldUsageForFilter(filter: FilterCondition): FieldUsage[] {
-  return getFieldUsageFromExpr(filter.e);
-}
+// function getFieldUsageForFilter(filter: FilterCondition): FieldUsage[] {
+//   return getFieldUsageFromExpr(filter.e);
+// }
 
 function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
   const fieldUsage: FieldUsage[] = [];
@@ -649,40 +647,40 @@ function getAggregateFieldUsage(field: FieldDef): AggregateFieldUsage[] {
 }
 
 // TODO this and extractNestLevels can probably be combined...
-function extractFieldUsage(segment: PipeSegment): FieldUsage[] {
-  const fieldUsage: FieldUsage[] = [];
+// function extractFieldUsage(segment: PipeSegment): FieldUsage[] {
+//   const fieldUsage: FieldUsage[] = [];
 
-  if (isQuerySegment(segment)) {
-    for (const field of segment.queryFields) {
-      if (field.type === 'fieldref') {
-        const usage = {
-          path: field.path,
-          // TODO handle case where `at` is undefined
-          at: field.at!,
-        };
-        fieldUsage.push(usage);
-      } else if (field.type === 'turtle') {
-        const head = field.pipeline[0];
-        fieldUsage.push(...extractFieldUsage(head));
-      } else {
-        fieldUsage.push(...getFieldUsageForField(field));
-      }
-    }
-    for (const filter of segment.filterList ?? []) {
-      fieldUsage.push(...getFieldUsageForFilter(filter));
-    }
-  } else if (isIndexSegment(segment)) {
-    for (const field of segment.indexFields) {
-      const usage = {
-        path: field.path,
-        // TODO handle case where `at` is undefined
-        at: field.at!,
-      };
-      fieldUsage.push(usage);
-    }
-  }
-  return fieldUsage;
-}
+//   if (isQuerySegment(segment)) {
+//     for (const field of segment.queryFields) {
+//       if (field.type === 'fieldref') {
+//         const usage = {
+//           path: field.path,
+//           // TODO handle case where `at` is undefined
+//           at: field.at!,
+//         };
+//         fieldUsage.push(usage);
+//       } else if (field.type === 'turtle') {
+//         const head = field.pipeline[0];
+//         fieldUsage.push(...extractFieldUsage(head));
+//       } else {
+//         fieldUsage.push(...getFieldUsageForField(field));
+//       }
+//     }
+//     for (const filter of segment.filterList ?? []) {
+//       fieldUsage.push(...getFieldUsageForFilter(filter));
+//     }
+//   } else if (isIndexSegment(segment)) {
+//     for (const field of segment.indexFields) {
+//       const usage = {
+//         path: field.path,
+//         // TODO handle case where `at` is undefined
+//         at: field.at!,
+//       };
+//       fieldUsage.push(usage);
+//     }
+//   }
+//   return fieldUsage;
+// }
 
 function extractNestLevels(segment: PipeSegment): NestLevels {
   const fieldsReferencedDirectly: FieldUsage[] = [];

@@ -148,6 +148,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
+  fieldUsage?: FieldUsage[];
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -417,6 +418,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
+  fieldUsage?: FieldUsage[]; // TODO maybe make required?
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -881,6 +883,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
+  onFieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1097,6 +1100,7 @@ export interface IndexSegment extends Filtered {
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
+  fieldUsage?: FieldUsage[];
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -1114,6 +1118,7 @@ export interface QuerySegment extends Filtered, Ordered {
   limit?: number;
   queryTimezone?: string;
   alwaysJoins?: string[];
+  fieldUsage?: FieldUsage[];
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
@@ -1123,6 +1128,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
 }
 
@@ -1264,6 +1270,7 @@ export interface AggregateFieldUsage {
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
+  fieldUsage: FieldUsage[];
   groupedBy?: string[][];
   aggregateFieldUsage?: AggregateFieldUsage[];
 };

@@ -38,6 +38,7 @@ import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import {GroupedBy} from './grouped_by';
 
 export class ExprProps extends ExpressionDef {
@@ -80,6 +81,10 @@ export class ExprProps extends ExpressionDef {
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
           ...expr,
+          fieldUsage: mergeFieldUsage(
+            expr.fieldUsage,
+            ...filterList.map(f => f.fieldUsage ?? [])
+          ),
           value: {
             node: 'filteredExpr',
             kids: {e: expr.value, filterList},
