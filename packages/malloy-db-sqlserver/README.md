@@ -9,3 +9,4 @@ This package facilitates using the `malloydata/malloy` library with SQLServer - 
 
 ## Especifics
 There is no support for column type BIGINT
+npx dotenv -- npm run ci-sqlserver

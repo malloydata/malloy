@@ -417,51 +417,29 @@ export class TSQLDialect extends Dialect {
     throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
-  // TODO (vitor): Revisit this function...
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // Generate a unique representation for the key using MD5 hash
     const sqlDistinctKey = `CONCAT(${key}, '')`; // Ensures key is treated as string for HASHBYTES
 
-    // Calculate the first 64 bits of the MD5 hash as an unsigned integer
-    const partA = `
-        CAST(
-            CASE
-                -- Convert first 8 bytes to BIGINT (signed 64-bit)
-                WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) >= 0
-                -- If positive, it's the correct unsigned value when cast
-                THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) AS DECIMAL(20,0))
-                -- If negative, add 2^64 to get the correct unsigned value
-                ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
-            END
-        AS DECIMAL(20,0))
-    `;
-
-    // Calculate the second 64 bits of the MD5 hash as an unsigned integer
-    const partB = `
-        CAST(
-            CASE
-                -- Convert next 8 bytes to BIGINT (signed 64-bit)
-                WHEN CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) >= 0
-                -- If positive, it's the correct unsigned value when cast
-                THEN CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0))
-                -- If negative, add 2^64 to get the correct unsigned value
-                ELSE CAST(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 9, 8)) AS DECIMAL(20,0)) + CAST(18446744073709551616.0 AS DECIMAL(20,0))
-            END
-        AS DECIMAL(20,0))
-    `;
-
-    // Combine the two 64-bit parts into a 128-bit number (represented as DECIMAL(38,0))
-    // Formula: partA * 2^64 + partB
+    // Generate a unique representation for the key using MD5 hash
+    // Use only the first 8 bytes of the hash and scale it down to avoid overflow
+    // This creates a reliable hash value within SQL Server's numeric limits
     const hashKey = `
-        CAST( ((${partA}) * CAST(18446744073709551616.0 AS DECIMAL(20,0))) + (${partB}) AS DECIMAL(38,0) )
+        CAST(
+            ABS(CAST(
+                CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8))
+                AS DECIMAL(19,0)
+            )) * 0.000001
+        AS DECIMAL(28,6))
     `;
 
     // Coalesce the value to 0 if it's NULL
     const v = `COALESCE(${value}, 0)`;
 
     // The core calculation: SUM(DISTINCT hashKey + value) - SUM(DISTINCT hashKey)
+    // This avoids arithmetic overflow by using appropriate decimal precision
     const sqlSum = `(
-        SUM(DISTINCT (${hashKey} + ${v})) - SUM(DISTINCT ${hashKey})
+        SUM(DISTINCT CAST((${hashKey} + CAST(${v} AS DECIMAL(28,6))) AS DECIMAL(28,6)))
+        - SUM(DISTINCT CAST(${hashKey} AS DECIMAL(28,6)))
     )`;
 
     if (funcName === 'SUM') {
