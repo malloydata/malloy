@@ -81,7 +81,7 @@ export function mkSqlEqWith(
             }
             select: calc is
               pick '=' when expect = got
-              else concat('sqlEq failed', concat(CHR(10), concat('    Expected: ${qExpr} == ${result}', concat(CHR(10), '    Received: ', got::string))))
+              else concat('sqlEq failed', concat(CHR(10), concat('    Expected: ${qExpr} == ${result}', concat(CHR(10), concat('    Received: ', got::string)))))
           }`;
     } else if (expr[0] === "'") {
       // quoted strings
@@ -95,9 +95,11 @@ export function mkSqlEqWith(
           } -> {
             select: calc is
               pick '=' when expect = got
-              else concat('sqlEq failed', CHR(10), '    Expected: ${sqlSafe(
+              else concat('sqlEq failed', concat(CHR(10), '    concat(Expected: ${sqlSafe(
                 expr
-              )} == ${sqlSafe(result)}', CHR(10), '    Received: ', got::string)
+              )} == ${sqlSafe(
+                result
+              )}', concat(CHR(10), '    concat(Received: ', got::string)))))
           }`;
     } else {
       const qResult = result.replace(/'/g, '`');

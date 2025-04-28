@@ -73,7 +73,9 @@ export const REDSHIFT_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   abs: {sql: 'ABS(${value}::FLOAT8)'},
   sign: {sql: 'SIGN(${value}::FLOAT8)'},
   div: {sql: '${dividend} / ${divisor}'},
-  starts_with: {sql: 'LEFT(${value}, LENGTH(${prefix})) = ${prefix}'},
+  starts_with: {
+    sql: 'COALESCE(SUBSTR(${value}, 1, LENGTH(${prefix})) = ${prefix}, false)',
+  },
   // Aparently the ASCII function also works for unicode code points...
   unicode: {function: 'ASCII'},
   concat: {

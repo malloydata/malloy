@@ -95,7 +95,8 @@ const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
 export class RedshiftDialect extends PostgresBase {
   name = 'redshift';
   defaultNumberType = 'DOUBLE PRECISION';
-  defaultDecimalType = 'DECIMAL';
+  // Use the max 38 digits of precision and reserve 10 digits for decimals
+  defaultDecimalType = 'DECIMAL(38,10)';
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
@@ -108,7 +109,7 @@ export class RedshiftDialect extends PostgresBase {
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  supportsNesting = true;
+  supportsNesting = false;
   experimental = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
@@ -226,8 +227,9 @@ export class RedshiftDialect extends PostgresBase {
     const md5Hash = `MD5(${stringKey})`;
 
     // Take first 16 chars of hash for upper part and next 8 chars for lower part
-    const upperPart = `STRTOL(SUBSTRING(${md5Hash}, 1, 15), 16)::DECIMAL(38,0) * 4294967296`;
-    const lowerPart = `STRTOL(SUBSTRING(${md5Hash}, 17, 8), 16)::DECIMAL(38,0)`;
+    const upperPart = `STRTOL(SUBSTRING(${md5Hash}, 1, 15), 16)::DECIMAL(38,0)`;
+    // correctly getting the next 8 chars of the hash
+    const lowerPart = `STRTOL(SUBSTRING(${md5Hash}, 16, 8), 16)::DECIMAL(38,0)`;
 
     // Combine parts to create final hash value
     return `(${upperPart} + ${lowerPart})`;
@@ -334,6 +336,12 @@ export class RedshiftDialect extends PostgresBase {
     if (op === 'boolean::string') {
       const expr = cast.e.sql || '';
       return `CASE WHEN ${expr} THEN 'true' ELSE 'false' END`;
+    } else if (dstSQLType === 'timestamp') {
+      // malloy default timezone is UTC
+      const tz = qtz(qi);
+      if (tz) {
+        return `CONVERT_TIMEZONE('${tz}', 'UTC', ${cast.e.sql}::TIMESTAMP) AT TIME ZONE 'UTC'`;
+      }
     }
 
     const result = super.sqlCast(qi, cast);
@@ -401,11 +409,35 @@ export class RedshiftDialect extends PostgresBase {
   }
 
   sqlLiteralString(literal: string): string {
-    return "'" + literal.replace(/'/g, "''") + "'";
+    // escape backslash literals
+    const noVirgule = literal.replace(/\\/g, '\\\\');
+    return "'" + noVirgule.replace(/'/g, "''") + "'";
   }
 
   sqlLiteralRegexp(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
+    // adjusting for monday/sunday weeks
+    const week = df.units === 'week';
+    const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
+    if (TD.isTimestamp(df.e.typeDef)) {
+      const tz = qtz(qi);
+      if (tz) {
+        const civilSource = `(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        let civilTrunc = `DATE_TRUNC('${df.units}', ${civilSource})`;
+        // MTOY todo ... only need to do this if this is a date ...
+        civilTrunc = `${civilTrunc}::TIMESTAMP`;
+        const truncTsTz = `${civilTrunc} AT TIME ZONE '${tz}'`;
+        return `(${truncTsTz})::TIMESTAMP AT TIME ZONE 'UTC'`;
+      }
+    }
+    let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
+    if (week) {
+      result = `(${result} - INTERVAL '1' DAY)`;
+    }
+    return result;
   }
 
   sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {
@@ -413,8 +445,10 @@ export class RedshiftDialect extends PostgresBase {
       return `DATE '${lt.literal}'`;
     }
     const tz = lt.timezone || qtz(qi);
+
+    // malloy default timezone is UTC
     if (tz) {
-      return `CONVERT_TIMEZONE('${tz}', 'UTC', '${lt.literal}')`;
+      return `CONVERT_TIMEZONE('${tz}', 'UTC', '${lt.literal}') AT TIME ZONE 'UTC'`;
     }
     return `'${lt.literal}' AT TIME ZONE 'UTC'`;
   }
