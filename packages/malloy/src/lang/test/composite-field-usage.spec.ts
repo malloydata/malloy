@@ -27,6 +27,61 @@ describe('composite sources', () => {
         )
       );
     });
+    test('compose fails on scalar lens', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) -> {
+          group_by: one
+          group_by: three
+        } + ${'two'}
+      `).toLog(
+        errorMessage(
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+        )
+      );
+    });
+    // TODO I don't really know how to attach the error to the lens itself, since by that point
+    // we've lost the fact that it was a lens and that the `group_by: two` was not just added
+    // directly into the query...
+    test.skip('compose fails on view lens', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          view: v is { group_by: two }
+        } -> {
+          group_by: one
+          group_by: three
+        } + ${'v'}
+      `).toLog(
+        errorMessage(
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+        )
+      );
+    });
+    test('compose fails on scalar lens that is dimension', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          dimension: x is two
+        } -> {
+          group_by: one
+          group_by: three
+        } + ${'x'}
+      `).toLog(
+        errorMessage(
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+        )
+      );
+    });
     test('compose fails on filter that is relevant', () => {
       expect(`
         ##! experimental.composite_sources
