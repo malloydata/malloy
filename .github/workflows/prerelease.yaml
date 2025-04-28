@@ -46,7 +46,8 @@ jobs:
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
           PRERELEASE=$(date +%y%m%d%H%M%S)
-          VERSION=$(jq -r .version ./lerna.json)-$BRANCH_NAME-$PRERELEASE
+          CLEAN_BRANCH_NAME=$(echo $BRANCH_NAME | sed -e 's/\//-/')
+          VERSION=$(jq -r .version ./lerna.json)-$CLEAN_BRANCH_NAME-$PRERELEASE
           jq 'del(.command)' ./lerna.json > ./lerna.json
           npx lerna version $VERSION --yes --no-push --no-git-tag-version
           for package in $PACKAGES; do
