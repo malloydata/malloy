@@ -686,7 +686,7 @@ class QueryField extends QueryNode {
     // TODO (vitor): Figure out a better way.
     const aggregateLimit = frag.limit
       ? this.parent.dialect.name === 'tsql'
-        ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${frag.limit} ROWS ONLY`
+        ? `OFFSET 0 ROWS FETCH NEXT ${frag.limit} ROWS ONLY`
         : `LIMIT ${frag.limit}`
       : undefined;
     if (
@@ -3297,7 +3297,8 @@ class QueryQuery extends QueryField {
   }
 
   generateSimpleSQL(stageWriter: StageWriter): string {
-    let s = '';
+    // TODO (vitor): Idk about this wrapper select...
+    let s = 'SELECT * FROM (';
     s += 'SELECT \n';
     const fields: string[] = [];
 
@@ -3314,6 +3315,7 @@ class QueryQuery extends QueryField {
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+    s += ') as base \n';
 
     // group by
     if (this.firstSegment.type === 'reduce') {
@@ -3337,17 +3339,24 @@ class QueryQuery extends QueryField {
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
     // order by
-    s += this.genereateSQLOrderBy(
+    const orderBy = this.genereateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
+
+    s += orderBy || 'ORDER BY 1 ';
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s +=
         this.parent.dialect.name === 'tsql'
-          ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
+          ? `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
           : `${this.firstSegment.limit}\n`;
+    } else {
+      // TODO (vitor): This is nasty.
+      if (this.parent.dialect.name === 'tsql') {
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647  ROWS ONLY\n';
+      }
     }
     this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
@@ -3746,7 +3755,8 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stage0Name: string
   ): string {
-    let s = 'SELECT\n';
+    let s = 'SELECT * FROM (';
+    s = 'SELECT\n';
     const fieldsSQL: string[] = [];
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
@@ -3810,6 +3820,8 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
+    s += ') as base \n';
+
     if (dimensionIndexes.length > 0) {
       // TODO (vitor): Not sure about dimensionNames here
       s += `GROUP BY ${
@@ -3829,8 +3841,13 @@ class QueryQuery extends QueryField {
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s +=
         this.parent.dialect.name === 'tsql'
-          ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
+          ? `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
           : `LIMIT ${this.firstSegment.limit}\n`;
+    } else {
+      // TODO (vitor): This is nasty.
+      if (this.parent.dialect.name === 'tsql') {
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+      }
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -4246,7 +4263,8 @@ class QueryQueryIndexStage extends QueryQuery {
       }
     }
 
-    let s = 'SELECT\n  group_set,\n';
+    let s = 'SELECT * FROM (';
+    s += 'SELECT\n  group_set,\n';
 
     s += '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
@@ -4311,6 +4329,8 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
+    s += ') as base \n';
+
     // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
     if (dialect.orderByClause === 'output_name') {
       s += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
@@ -4322,11 +4342,17 @@ class QueryQueryIndexStage extends QueryQuery {
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       // TODO (vitor): This is ANSI SQL so maybe it's not terrible?
       if (dialect.orderByClause === 'output_name') {
-        s += `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+        s += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
       } else {
         s += `LIMIT ${this.firstSegment.limit}\n`;
       }
+    } else {
+      // TODO (vitor): This is nasty.
+      if (dialect.name === 'tsql') {
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647  ROWS ONLY\n';
+      }
     }
+
     // console.log(s);
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
