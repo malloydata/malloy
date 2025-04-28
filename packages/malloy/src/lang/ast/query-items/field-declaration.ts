@@ -154,6 +154,8 @@ export abstract class AtomicFieldDeclaration
       }
       ret.location = this.location;
       ret.e = exprValue.value;
+      // TODO get rid of this and just compute it later like we're doing with fieldUsage now
+      ret.aggregateFieldUsage = exprValue.aggregateFieldUsage;
       ret.groupedBy = exprValue.groupedBy;
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;

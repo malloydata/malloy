@@ -22,6 +22,7 @@
  */
 
 import type {
+  AggregateFieldUsage,
   Expr,
   ExpressionValueTypeDef,
   TemporalTypeDef,
@@ -47,6 +48,9 @@ export function computedExprValue({
     value,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
+    aggregateFieldUsage: mergeAggregateFieldUsage(
+      ...from.map(e => e.aggregateFieldUsage)
+    ),
     groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
   };
 }
@@ -68,6 +72,9 @@ export function computedTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
+    aggregateFieldUsage: mergeAggregateFieldUsage(
+      ...from.map(e => e.aggregateFieldUsage)
+    ),
     groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
   };
   if (timeframe) {
@@ -145,4 +152,17 @@ export function mergeGroupedBys(
   }
   if (requiredGroupBys.length === 0) return undefined;
   return requiredGroupBys;
+}
+
+export function mergeAggregateFieldUsage(
+  ...usages: (AggregateFieldUsage[] | undefined)[]
+): AggregateFieldUsage[] | undefined {
+  const result: AggregateFieldUsage[] = [];
+  for (const usage of usages) {
+    if (usage !== undefined) {
+      result.push(...usage);
+    }
+  }
+  if (result.length === 0) return undefined;
+  return result;
 }

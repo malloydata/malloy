@@ -85,6 +85,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (!(sourceFoot instanceof StructSpaceField)) {
           if (isAtomicFieldType(footType.type)) {
+            const footPath = this.source.list.map(x => x.refString);
             expr = this.source;
             exprVal = {
               ...TDU.atomicDef(footType),
@@ -98,6 +99,14 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                       at: this.source.location,
                     },
               evalSpace: footType.evalSpace,
+              // TODO ensure that when there's an `expr` but no `source`, that
+              // `aggregateFieldUsage` still comes along correctly
+              aggregateFieldUsage: [
+                {
+                  fields: [footPath],
+                  location: this.location,
+                },
+              ],
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
