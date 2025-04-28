@@ -14,12 +14,7 @@ import type {
 import type {Annotation} from '../../../model';
 import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
-
-// type RenameSpec = {
-//   as: string;
-//   name: FieldReference;
-//   location: DocumentLocation;
-// };
+import type {GroupedBy} from '../expressions/grouped_by';
 
 export abstract class IncludeItem extends MalloyElement {
   abstract kind: 'private' | 'public' | 'internal' | 'except' | undefined;
@@ -37,17 +32,6 @@ export class IncludeAccessItem extends IncludeItem implements Noteable {
     super();
     this.has({fields});
   }
-
-  // getRenames(): RenameSpec[] {
-  //   const renames: RenameSpec[] = [];
-  //   if (this.fields === '*') return renames;
-  //   for (const item of this.fields) {
-  //     if (item.as) {
-  //       renames.push({as: item.as, name: item.name, location: item.location});
-  //     }
-  //   }
-  //   return renames;
-  // }
 }
 
 export class IncludeExceptItem extends IncludeItem {
@@ -67,8 +51,9 @@ export class IncludeListItem extends MalloyElement implements Noteable {
 
   constructor(
     readonly name: AccessModifierFieldReference | WildcardFieldReference,
-    readonly as: string | undefined
+    readonly as: string | undefined,
+    readonly groupedBys: GroupedBy[]
   ) {
-    super({name});
+    super({name, groupedBys});
   }
 }

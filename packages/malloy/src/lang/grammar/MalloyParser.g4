@@ -293,9 +293,17 @@ includeList
   : includeField (COMMA? includeField)* COMMA?
   ;
 
+includePropertyStatment
+  : groupedByStatement
+  ;
+
+includeProperties
+  : OCURLY (includePropertyStatment | SEMI)* CCURLY
+  ;
+
 includeField
-  : tags (as=fieldName isDefine)? name=fieldName
-  | tags name=fieldName
+  : tags (as=fieldName isDefine)? name=fieldName includeProperties?
+  | tags name=fieldName includeProperties?
   | tags collectionWildCard
   ;
 

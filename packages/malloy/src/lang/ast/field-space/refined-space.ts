@@ -25,6 +25,7 @@ import type {
   AccessModifierLabel,
   Annotation,
   DocumentLocation,
+  FieldDef,
   SourceDef,
 } from '../../../model/malloy_types';
 import type {FieldListEdit} from '../source-properties/field-list-edit';
@@ -53,9 +54,23 @@ export class RefinedSpace extends DynamicSpace {
           location: DocumentLocation;
         }[]
       | undefined,
-    parameters: ParameterSpace | undefined
+    parameters: ParameterSpace | undefined,
+    groupedBys: Map<string, string[]> | undefined
   ): RefinedSpace {
-    const edited = new RefinedSpace(from);
+    // This is somewhat of a hack, but we're about to redo all this namespacing stuff anyway...
+    const fieldsWithGroupedBys: FieldDef[] = from.fields.map(f => {
+      if (groupedBys?.has(f.name)) {
+        return {
+          ...f,
+          groupedBy: groupedBys.get(f.name)?.map(n => [n]) ?? [],
+        };
+      }
+      return f;
+    });
+    const edited = new RefinedSpace({
+      ...from,
+      fields: fieldsWithGroupedBys,
+    });
     const renameMap = new Map<
       string,
       {as: string; location: DocumentLocation; logTo: MalloyElement}

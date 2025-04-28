@@ -1444,6 +1444,34 @@ describe('query:', () => {
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
+    test('grouped_by failure from include block', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by access_modifiers }
+          source: aext is a include {
+            *
+            ai { grouped_by: astr }
+          } extend {
+            measure: aisum is ai.sum()
+          }
+          run: aext -> { aggregate: ${'aisum'} }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('grouped_by failure from include block with rename', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by access_modifiers }
+          source: aext is a include {
+            *
+            ai_grouped_by_astr is ai { grouped_by: astr }
+          } extend {
+            measure: aisum is ai_grouped_by_astr.sum()
+          }
+          run: aext -> { aggregate: ${'aisum'} }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
     // TODO how do we check this??
     test.skip('failure in multi-stage view in source', () => {
       expect(
