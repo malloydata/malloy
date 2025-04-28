@@ -162,6 +162,23 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
 
+  describe('concat with any number of params', () => {
+    it.when(
+      !brokenIn('trino', databaseName) &&
+        !brokenIn('presto', databaseName) /* crswenson */
+    )(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ["concat('one')", 'one'],
+        ["concat('one', ' two')", 'one two'],
+        ["concat('one', ' two', ' three')", 'one two three'],
+        [
+          "concat('one', ' two', ' three', ' four', ' five', ' six')",
+          'one two three four five six',
+        ]
+      );
+    });
+  });
+
   describe('round', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(

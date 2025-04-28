@@ -354,7 +354,8 @@ function expandFunctionCall(
   overload: FunctionOverloadDef,
   args: Expr[],
   orderBy: string | undefined,
-  limit: string | undefined
+  limit: string | undefined,
+  tl_function: string | undefined
 ) {
   function withCommas(es: Expr[]): SQLExprElement[] {
     const ret: SQLExprElement[] = [];
@@ -363,6 +364,17 @@ function expandFunctionCall(
       i += 1;
       if (i < es.length) {
         ret.push(',');
+      }
+    }
+    return ret;
+  }
+  function withConcatOperator(es: Expr[]): SQLExprElement[] {
+    const ret: SQLExprElement[] = [];
+    for (let i = 0; i < es.length; ) {
+      ret.push(es[i]);
+      i += 1;
+      if (i < es.length) {
+        ret.push(' || ');
       }
     }
     return ret;
@@ -384,6 +396,9 @@ function expandFunctionCall(
         return fragment;
       }
       const spread = entry.argIndexes.map(argIndex => args[argIndex]);
+      if (dialect === 'redshift' && tl_function === 'concat') {
+        return composeSQLExpr(withConcatOperator(spread));
+      }
       return composeSQLExpr(withCommas(spread));
     } else if (fragment.node === 'function_parameter') {
       const entry = paramMap.get(fragment.name);
@@ -628,7 +643,8 @@ export function generateFunctionCallExpression(
           overload,
           newArgs,
           orderBySQL,
-          aggregateLimit
+          aggregateLimit,
+          frag.name
         );
         return exprToSQL(resultSet, context, funcCall, state);
       }
@@ -671,7 +687,8 @@ export function generateFunctionCallExpression(
       overload,
       mappedArgs,
       orderBySql,
-      aggregateLimit
+      aggregateLimit,
+      frag.name
     );
 
     if (expressionIsAnalytic(overload.returnType.expressionType)) {

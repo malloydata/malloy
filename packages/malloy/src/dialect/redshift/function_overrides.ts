@@ -76,4 +76,9 @@ export const REDSHIFT_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   starts_with: {sql: 'LEFT(${value}, LENGTH(${prefix})) = ${prefix}'},
   // Aparently the ASCII function also works for unicode code points...
   unicode: {function: 'ASCII'},
+  concat: {
+    // special case added in expandFunctionCall() in malloy_query.ts
+    // to process "...values" scenarios for redshift concat
+    variadic: {sql: '${...values}'},
+  },
 };
