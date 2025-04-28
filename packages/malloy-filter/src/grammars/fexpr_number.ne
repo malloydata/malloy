@@ -10,17 +10,19 @@
 import moo from 'moo';
 import {numNot, mkRange, joinNumbers, mkValues} from '../clause_utils';
 
+const kwList = moo.keywords({
+  'AND': 'and',
+  'OR': 'or',
+  'NOT': 'not',
+  'NULL_KW': 'null',
+  'TO': 'to',
+});
+
 const fnumber_lexer = moo.compile({
   WS: /[ \t]+/,
   id: {
     match: /[a-zA-Z]+/,
-    type: moo.keywords({
-      'AND': 'and',
-      'OR': 'or',
-      'NOT': 'not',
-      'NULL_KW': 'null',
-      'TO': 'to',
-    }),
+    type: kw => kwList(kw.toLowerCase()),
   },
   oparen: '(',
   cparen: ')',

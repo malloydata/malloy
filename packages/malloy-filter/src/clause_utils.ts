@@ -134,10 +134,10 @@ export function matchOp(matchSrc: string): StringFilter {
     }
     return {operator: '~', escaped_values: [matchTxt]};
   }
-  if (matchTxt.toLowerCase() === 'null' || matchTxt === 'NULL') {
+  if (matchTxt.toLowerCase() === 'null') {
     return {operator: 'null'};
   }
-  if (matchTxt === 'empty' || matchTxt === 'EMPTY') {
+  if (matchTxt.toLowerCase() === 'empty') {
     return {operator: 'empty'};
   }
   return {operator: '=', values: [unescape(matchTxt)]};
@@ -154,6 +154,7 @@ export function conjoin(
   op: string,
   right: Object
 ): StringFilter | null {
+  op = op.toLowerCase();
   if (isStringFilter(left) && isStringFilter(right)) {
     if (op === ',') {
       if (left.operator === '~' && sameAs(left, right)) {
@@ -183,6 +184,7 @@ export function joinNumbers(
   op: string,
   right: Object
 ): NumberFilter | null {
+  op = op.toLowerCase();
   if (isNumberFilter(left) && isNumberFilter(right)) {
     if (op === 'or' && left.operator === '=' && sameAs(left, right)) {
       const ret: NumberFilter = {
@@ -244,6 +246,7 @@ export function joinTemporal(
   op: string,
   right: Object
 ): TemporalFilter | null {
+  op = op.toLowerCase();
   if (isTemporalFilter(left) && isTemporalFilter(right)) {
     // if (
     //   (op === ',' || op === 'or') &&

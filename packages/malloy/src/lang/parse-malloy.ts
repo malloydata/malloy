@@ -602,6 +602,8 @@ class TranslateStep implements TranslationStep {
         modelDef: {
           ...that.modelDef,
           dependencies: that.getDependencyTree(),
+          references: that.references.toArray(),
+          imports: [...that.imports],
         },
         fromSources: that.getDependencies(),
         ...that.problemResponse(),
@@ -718,7 +720,12 @@ export abstract class MalloyTranslation {
       }
       const result = child.translate();
       if (result.modelDef) {
-        newModels.push({url, modelDef: result.modelDef});
+        const modelDef = {
+          ...result.modelDef,
+          references: child.references.toArray(),
+          imports: [...child.imports],
+        };
+        newModels.push({url, modelDef});
         newModels.push(...child.newlyTranslatedDependencies());
       }
     }
