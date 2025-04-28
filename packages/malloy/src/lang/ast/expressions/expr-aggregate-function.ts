@@ -354,7 +354,7 @@ function suggestNewVersion(
   // Get longest shared prefix
   let longestOverlap = joinUsage[0];
   for (const usage of joinUsage.slice(1)) {
-    for (let i = 0; i < longestOverlap.length; i++) {
+    for (let i = 0; i < longestOverlap.length && i < usage.length; i++) {
       const a = longestOverlap[i];
       const b = usage[i];
       if (a.name !== b.name) {
