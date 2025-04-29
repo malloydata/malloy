@@ -14,6 +14,7 @@ import type {
   VegaPadding,
   VegaSignalRef,
 } from '../types';
+import type {ChartLayoutSettings} from '../chart-layout-settings';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import type {
   Data,
@@ -53,6 +54,44 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
     }
   }
   return inverted;
+}
+
+function getLimitedData({
+  xField,
+  seriesField,
+  maxSeries = 20,
+  maxSizePerBar,
+  isGrouping,
+  chartSettings,
+}: {
+  xField: Field;
+  seriesField?: Field | null;
+  maxSeries?: number;
+  maxSizePerBar?: number;
+  isGrouping: boolean;
+  chartSettings: ChartLayoutSettings;
+}) {
+  // Limit series values shown
+  const seriesLimit = Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
+  const seriesValuesToPlot = seriesField
+    ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
+    : [];
+
+  const refinedMaxSizePerBar =
+    maxSizePerBar ?? (seriesField && isGrouping) ? 6 : 16;
+
+  // Limit x axis values shown
+  const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
+  const maxSizePerXGroup = Math.floor(refinedMaxSizePerBar * subGroupBars);
+  const barLimit = Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
+  const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit);
+
+  return {
+    seriesValuesToPlot,
+    barValuesToPlot,
+    barLimit,
+    seriesLimit,
+  };
 }
 
 export function generateBarChartVegaSpec(
@@ -140,17 +179,27 @@ export function generateBarChartVegaSpec(
     yField,
     chartType: 'bar_chart',
     getYMinMax: () => [yDomainMin, yDomainMax],
+    independentY: chartTag.has('y', 'independent'),
+  });
+
+  // Data limits
+  const dataLimits = getLimitedData({
+    xField,
+    seriesField,
+    isGrouping,
+    chartSettings,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedX = xField.valueSet.size <= 20;
+  const autoSharedX = dataLimits.barValuesToPlot.length <= 20;
   const forceSharedX = chartTag.text('x', 'independent') === 'false';
   const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
   const shouldShareXDomain =
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedSeries = seriesField && seriesField.valueSet.size <= 20;
+  const autoSharedSeries =
+    seriesField && dataLimits.seriesValuesToPlot.length <= 20;
   const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
   const forceIndependentSeries =
     chartTag.has('series', 'independent') && !forceSharedSeries;
@@ -584,7 +633,7 @@ export function generateBarChartVegaSpec(
         name: 'xscale',
         type: 'band',
         domain: shouldShareXDomain
-          ? [...xField.valueSet]
+          ? [...dataLimits.barValuesToPlot]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
@@ -603,7 +652,7 @@ export function generateBarChartVegaSpec(
         type: 'ordinal',
         range: 'category',
         domain: shouldShareSeriesDomain
-          ? [...seriesField!.valueSet]
+          ? [...dataLimits.seriesValuesToPlot]
           : {
               data: 'values',
               field: 'series',
@@ -766,6 +815,49 @@ export function generateBarChartVegaSpec(
       return cell.isTime() ? cell.value.valueOf() : cell.value;
     };
 
+    const localXSet = new Set();
+    const skipX = xValue => {
+      if (shouldShareXDomain) {
+        const isXOutOfLimit = !dataLimits.barValuesToPlot.includes(xValue);
+        // Filter out missing date/time values
+        // TODO: figure out how we can show null values in continuous axes
+        const isXMissingDateTime = xIsDateorTime && xValue === null;
+        return isXOutOfLimit || isXMissingDateTime;
+      }
+
+      if (localXSet.size >= dataLimits.barLimit && !localXSet.has(xValue)) {
+        return true;
+      }
+      localXSet.add(xValue);
+      return false;
+    };
+    const skipSeries = seriesValue => {
+      if (isMeasureSeries) return false;
+      if (shouldShareSeriesDomain) {
+        return !!(
+          seriesField &&
+          isDimensionalSeries &&
+          !dataLimits.seriesValuesToPlot.includes(seriesValue)
+        );
+      }
+
+      if (
+        localSeriesSet.size >= dataLimits.seriesLimit &&
+        !localSeriesSet.has(seriesValue)
+      ) {
+        return true;
+      }
+      localSeriesSet.add(seriesValue);
+      return false;
+    };
+    const localSeriesSet = new Set();
+    const skipRecord = (row: RecordCell) => {
+      return (
+        skipX(getXValue(row)) ||
+        (seriesField ? skipSeries(row.column(seriesField.name).value) : false)
+      );
+    };
+
     const mappedData: {
       __row: RecordCell;
       __values: {[name: string]: CellValue};
@@ -773,15 +865,17 @@ export function generateBarChartVegaSpec(
       y: CellValue;
       series: CellValue;
     }[] = [];
-    data.rows.forEach(row => {
+
+    for (let i = 0; i < data.rows.length; i++) {
+      const row = data.rows[i];
       const xValue = getXValue(row);
-      // Filter out missing date/time values
-      // TODO: figure out how we can show null values in continuous axes
-      if (xIsDateorTime && xValue === null) return;
-      // Map data fields to chart properties
       const seriesVal = seriesField
         ? row.column(seriesField.name).value
         : yField.name;
+
+      if (skipRecord(row)) continue;
+
+      // Map data fields to chart properties
       mappedData.push({
         __values: row.allCellValues(),
         __row: row,
@@ -789,8 +883,12 @@ export function generateBarChartVegaSpec(
         y: row.column(yField.name).value,
         series: seriesVal,
       });
-    });
-    return mappedData;
+    }
+
+    return {
+      data: mappedData,
+      isDataLimited: data.rows.length > mappedData.length,
+    };
   };
 
   // Memoize tooltip data
