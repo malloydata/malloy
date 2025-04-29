@@ -1,4 +1,5 @@
 name: 'DB:Snowflake'
+permissions: {}
 
 on:
   workflow_call:

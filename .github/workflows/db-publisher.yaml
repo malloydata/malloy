@@ -1,15 +1,18 @@
-name: 'DB:BigQuery'
+name: 'DB:Publisher'
 permissions: {}
 
 on:
   workflow_call:
-    secrets:
-      BIGQUERY_KEY:
-        required: true
 
 jobs:
-  test-bigquery:
+  test-publisher:
     runs-on: ubuntu-latest
+
+    services:
+      publisher:
+        image: ms2data/publisher
+        ports:
+          - 8000:8000
 
     steps:
       - uses: actions/checkout@v4
@@ -19,15 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-      - name: GCloud auth
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.BIGQUERY_KEY }}'
       - name: npm install, build, and test
         run: |
           npm ci --loglevel error
           npm run build
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.bigquery.config.ts
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.publisher.config.ts
         env:
-          CI: true
-          MALLOY_DATABASES: bigquery
+          MALLOY_DATABASES: publisher

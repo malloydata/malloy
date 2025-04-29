@@ -1,4 +1,5 @@
 name: 'DB:Presto'
+permissions: {}
 
 on:
   workflow_call:
