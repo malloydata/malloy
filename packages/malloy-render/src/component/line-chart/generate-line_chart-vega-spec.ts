@@ -757,7 +757,10 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         series: seriesVal,
       });
     });
-    return mappedData;
+    return {
+      data: mappedData,
+      isDataLimited: data.rows.length > mappedData.length,
+    };
   };
 
   // Memoize tooltip data
