@@ -35,6 +35,7 @@ import {getMarkName} from '../vega/vega-utils';
 import type {CellValue, RecordCell, RepeatedRecordField} from '../../data_tree';
 import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
+import type {Tag} from '@malloydata/malloy-tag';
 
 type BarDataRecord = {
   x: string | number;
@@ -63,6 +64,7 @@ function getLimitedData({
   maxSizePerBar,
   isGrouping,
   chartSettings,
+  chartTag,
 }: {
   xField: Field;
   seriesField?: Field | null;
@@ -70,9 +72,12 @@ function getLimitedData({
   maxSizePerBar?: number;
   isGrouping: boolean;
   chartSettings: ChartLayoutSettings;
+  chartTag: Tag;
 }) {
   // Limit series values shown
-  const seriesLimit = Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
+  const seriesLimit =
+    chartTag.numeric('series', 'limit') ??
+    Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
   const seriesValuesToPlot = seriesField
     ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
     : [];
@@ -83,7 +88,9 @@ function getLimitedData({
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
   const maxSizePerXGroup = Math.floor(refinedMaxSizePerBar * subGroupBars);
-  const barLimit = Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
+  const barLimitTag = chartTag.numeric('x', 'limit');
+  const barLimit =
+    barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
   const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit);
 
   return {
@@ -188,6 +195,7 @@ export function generateBarChartVegaSpec(
     seriesField,
     isGrouping,
     chartSettings,
+    chartTag,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
