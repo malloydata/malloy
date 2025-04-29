@@ -3,9 +3,6 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   db-bigquery:
@@ -48,17 +45,20 @@ jobs:
           node-version: 20.x
       - name: npm install, build, and publish
         run: |
+          echo BRANCH_NAME=$BRANCH_NAME
           npm ci --loglevel error
           npm run build
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
           PRERELEASE=$(date +%y%m%d%H%M%S)
-          VERSION=$(jq -r .version ./lerna.json)-dev$PRERELEASE
-          npx lerna version $VERSION --yes --no-push --no-git-tag-version
+          CLEAN_BRANCH_NAME=$(echo $BRANCH_NAME | sed -e 's/\//-/')
+          VERSION=$(jq -r .version ./lerna.json)-$CLEAN_BRANCH_NAME-$PRERELEASE
+          npx lerna version $VERSION --allow-branch=$BRANCH_NAME --yes --no-push --no-git-tag-version
           for package in $PACKAGES; do
             echo Publishing $package $VERSION
-            npm publish -w $package --access=public --tag next
+            npm publish -w $package --access=public --tag dev
           done
         env:
           CI: true
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          BRANCH_NAME: ${{ github.ref_name || 'dev' }}
