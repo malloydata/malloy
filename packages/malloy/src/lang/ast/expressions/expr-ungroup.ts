@@ -28,6 +28,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from '../field-space/query-spaces';
+import {ReferenceField} from '../field-space/reference-field';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -62,13 +63,14 @@ export class ExprUngroup extends ExpressionDef {
       node: this.control,
       e: exprVal.value,
     };
+    const ungroupFields: string[][] = [];
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
+      const isExclude = this.control === 'exclude';
       // Now every mentioned field must be in the output space of one of the queries
       // of the nest tree leading to this query. If this is a source definition,
       // this is not checked until sql generation time.
       if (fs.isQueryFieldSpace() && this.fields.length > 0) {
         const dstFields: string[] = [];
-        const isExclude = this.control === 'exclude';
         for (const mentionedField of this.fields) {
           let ofs: FieldSpace | undefined = fs.outputSpace();
           let notFound = true;
@@ -76,6 +78,11 @@ export class ExprUngroup extends ExpressionDef {
             const entryInfo = ofs.lookup([mentionedField]);
             if (entryInfo.found && entryInfo.isOutputField) {
               dstFields.push(mentionedField.refString);
+              if (entryInfo.found instanceof ReferenceField) {
+                ungroupFields.push(
+                  entryInfo.found.fieldRef.list.map(n => n.refString)
+                );
+              }
               notFound = false;
             } else if (ofs instanceof QuerySpace) {
               // should always be true, but don't have types right, thus the if
@@ -100,6 +107,13 @@ export class ExprUngroup extends ExpressionDef {
         value: ungroup,
         evalSpace: 'output',
         fieldUsage: exprVal.fieldUsage,
+        ungroupings: [
+          {
+            aggregateFieldUsage: exprVal.aggregateFieldUsage ?? [],
+            fieldUsage: exprVal.fieldUsage ?? [],
+            ungroupedFields: isExclude ? ungroupFields ?? [] : '*',
+          },
+        ],
       };
     }
     return this.loggedErrorExpr(

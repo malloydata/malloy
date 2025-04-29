@@ -23,6 +23,7 @@
 
 import type {
   AggregateFieldUsage,
+  AggregateUngrouping,
   Expr,
   ExpressionValueTypeDef,
   TemporalTypeDef,
@@ -53,6 +54,7 @@ export function computedExprValue({
     aggregateFieldUsage: mergeAggregateFieldUsage(
       ...from.map(e => e.aggregateFieldUsage)
     ),
+    ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
     groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
   };
 }
@@ -78,6 +80,7 @@ export function computedTimeResult({
     aggregateFieldUsage: mergeAggregateFieldUsage(
       ...from.map(e => e.aggregateFieldUsage)
     ),
+    ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
     groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
   };
   if (timeframe) {
@@ -162,6 +165,19 @@ export function mergeAggregateFieldUsage(
   ...usages: (AggregateFieldUsage[] | undefined)[]
 ): AggregateFieldUsage[] | undefined {
   const result: AggregateFieldUsage[] = [];
+  for (const usage of usages) {
+    if (usage !== undefined) {
+      result.push(...usage);
+    }
+  }
+  if (result.length === 0) return undefined;
+  return result;
+}
+
+export function mergeUngroupings(
+  ...usages: (AggregateUngrouping[] | undefined)[]
+): AggregateUngrouping[] | undefined {
+  const result: AggregateUngrouping[] = [];
   for (const usage of usages) {
     if (usage !== undefined) {
       result.push(...usage);

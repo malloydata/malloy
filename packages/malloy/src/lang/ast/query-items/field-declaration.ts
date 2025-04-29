@@ -156,6 +156,7 @@ export abstract class AtomicFieldDeclaration
       ret.location = this.location;
       ret.e = exprValue.value;
       ret.fieldUsage = exprValue.fieldUsage;
+      ret.ungroupings = exprValue.ungroupings;
       ret.aggregateFieldUsage = exprValue.aggregateFieldUsage;
       ret.groupedBy = exprValue.groupedBy;
       if (exprValue.expressionType) {
@@ -167,6 +168,21 @@ export abstract class AtomicFieldDeclaration
       if (this.note) {
         ret.annotation = this.note;
       }
+      // const unsatisfiableGroupBys = checkUnresolvableRequiredGroupBys(
+      //   exprFS.structDef(),
+      //   ret
+      // );
+      // for (const groupBy of unsatisfiableGroupBys) {
+      //   this.logError(
+      //     'missing-required-group-by',
+      //     `Ungrouped aggregate results in unsatisfiable required group by of \`${groupBy.path.join(
+      //       '.'
+      //     )}\``,
+      //     {
+      //       at: groupBy.location,
+      //     }
+      //   );
+      // }
       return ret;
     }
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;

@@ -78,6 +78,10 @@ export class CompositeSource extends Source {
             fieldUsage: [{path: [fieldName], at: this.codeLocation!}],
             code: this.code,
             location: this.codeLocation,
+            // A composite field's grouping may differ from slice to slice
+            groupedBy: undefined,
+            // A composite fields's aggregation may differ from slice to slice
+            aggregateFieldUsage: undefined,
           };
           fieldsByName.set(fieldName, compositeField);
           fields.push(compositeField);

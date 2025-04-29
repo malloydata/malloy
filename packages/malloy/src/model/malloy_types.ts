@@ -698,6 +698,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   groupedBy?: string[][];
   aggregateFieldUsage?: AggregateFieldUsage[];
+  ungroupings?: AggregateUngrouping[];
 }
 
 // this field definition represents something in the database.
@@ -1265,6 +1266,13 @@ export type BasicExpressionType = Exclude<
 export interface AggregateFieldUsage {
   fields: string[][];
   location: DocumentLocation;
+  ungrouped?: string[] | '*';
+}
+
+export interface AggregateUngrouping {
+  ungroupedFields: string[][] | '*';
+  fieldUsage: FieldUsage[];
+  aggregateFieldUsage?: AggregateFieldUsage[];
 }
 
 export type TypeInfo = {
@@ -1273,6 +1281,7 @@ export type TypeInfo = {
   fieldUsage: FieldUsage[];
   groupedBy?: string[][];
   aggregateFieldUsage?: AggregateFieldUsage[];
+  ungroupings?: AggregateUngrouping[];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
