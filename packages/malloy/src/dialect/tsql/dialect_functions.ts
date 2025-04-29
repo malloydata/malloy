@@ -17,7 +17,9 @@ const string_agg: OverloadedDefinitionBlueprint = {
     takes: {'value': {dimension: 'string'}},
     returns: {measure: 'string'},
     supportsOrderBy: true,
-    impl: {sql: "STRING_AGG(${value}, ',') WITHIN GROUP (${order_by:})"},
+    impl: {
+      sql: "STRING_AGG(${value}, ',') WITHIN GROUP (ORDER BY ${order_by})",
+    },
   },
   // TODO (vitor): Done-ish. remove this comment after tests
   with_separator: {
@@ -28,7 +30,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
     returns: {measure: 'string'},
     supportsOrderBy: true,
     impl: {
-      sql: 'STRING_AGG(${value}, ${separator}) WITHIN GROUP (${order_by:})',
+      sql: 'STRING_AGG(${value}, ${separator}) WITHIN GROUP (ORDER BY ${order_by})',
     },
   },
 };

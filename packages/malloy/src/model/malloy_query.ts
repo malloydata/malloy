@@ -3618,8 +3618,6 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    f.outputPipelinedSQL[0].sqlFieldName;
-
     // TODO (vitor): Code smell ahead, figure out with the malloy team
     const groupBy =
       'GROUP BY ' +
