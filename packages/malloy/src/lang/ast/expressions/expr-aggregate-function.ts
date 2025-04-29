@@ -101,16 +101,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                     },
               evalSpace: footType.evalSpace,
               // TODO ensure that when there's an `expr` but no `source`, that `fieldUsage`
-              // and `aggregateFieldUsage` still come along correctly
+              // still comes along correctly
               fieldUsage: mergeFieldUsage(footType.fieldUsage, [
                 {path: footPath, at: this.source.location},
               ]),
-              aggregateFieldUsage: [
-                {
-                  fields: [footPath],
-                  location: this.location,
-                },
-              ],
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a

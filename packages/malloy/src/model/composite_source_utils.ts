@@ -6,15 +6,14 @@
  */
 
 import type {
-  AggregateFieldUsage,
   FieldUsage,
-  DocumentLocation,
   FieldDef,
   PipeSegment,
   SourceDef,
   Expr,
   StructDef,
   AggregateUngrouping,
+  RequiredGroupBy,
 } from './malloy_types';
 import {
   isAtomic,
@@ -560,25 +559,6 @@ export function joinedFieldUsage(
   return fieldUsage.map(u => ({...u, path: [...joinPath, ...u.path]}));
 }
 
-export function joinedAggregateFieldUsage(
-  joinPath: string[],
-  aggregateFieldUsage: AggregateFieldUsage[]
-): AggregateFieldUsage[];
-export function joinedAggregateFieldUsage(
-  joinPath: string[],
-  aggregateFieldUsage: AggregateFieldUsage[] | undefined
-): AggregateFieldUsage[] | undefined;
-export function joinedAggregateFieldUsage(
-  joinPath: string[],
-  aggregateFieldUsage: AggregateFieldUsage[] | undefined
-): AggregateFieldUsage[] | undefined {
-  if (aggregateFieldUsage === undefined) return undefined;
-  return aggregateFieldUsage.map(u => ({
-    ...u,
-    fields: u.fields.map(f => [...joinPath, ...f]),
-  }));
-}
-
 export function fieldUsageJoinPaths(fieldUsage: FieldUsage[]): string[][] {
   const joinPaths: string[][] = [];
   for (const usage of fieldUsage) {
@@ -602,7 +582,7 @@ function getNonCompositeFields(source: SourceDef): FieldDef[] {
 interface NestLevels {
   fieldsReferencedDirectly: FieldUsage[];
   fieldsReferenced: FieldUsage[];
-  aggregateFieldUsage: AggregateFieldUsage[];
+  requiredGroupBys: RequiredGroupBy[];
   nested: NestLevels[];
   ungroupings: AggregateUngrouping[];
 }
@@ -624,22 +604,6 @@ function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
   return fieldUsage;
 }
 
-// function getAggregateFieldUsageFromExpr(expr: Expr): AggregateFieldUsage[] {
-//   const fieldUsage: AggregateFieldUsage[] = [];
-//   for (const node of exprWalk(expr)) {
-//     if (node.node === 'aggregate') {
-//       const inner = getFieldUsageFromExpr(node.e);
-//       if (inner.length > 0) {
-//         fieldUsage.push({
-//           fields: inner.map(u => u.path),
-//           location: node.at!, // TODO
-//         });
-//       }
-//     }
-//   }
-//   return fieldUsage;
-// }
-
 function getFieldUsageForField(field: FieldDef): FieldUsage[] {
   if (isAtomic(field) && field.e) {
     return getFieldUsageFromExpr(field.e);
@@ -649,55 +613,12 @@ function getFieldUsageForField(field: FieldDef): FieldUsage[] {
   return [];
 }
 
-// function getAggregateFieldUsage(field: FieldDef): AggregateFieldUsage[] {
-//   if (isAtomic(field) && field.e) {
-//     return getAggregateFieldUsageFromExpr(field.e);
-//   }
-//   return [];
-// }
-
-// TODO this and extractNestLevels can probably be combined...
-// function extractFieldUsage(segment: PipeSegment): FieldUsage[] {
-//   const fieldUsage: FieldUsage[] = [];
-
-//   if (isQuerySegment(segment)) {
-//     for (const field of segment.queryFields) {
-//       if (field.type === 'fieldref') {
-//         const usage = {
-//           path: field.path,
-//           // TODO handle case where `at` is undefined
-//           at: field.at!,
-//         };
-//         fieldUsage.push(usage);
-//       } else if (field.type === 'turtle') {
-//         const head = field.pipeline[0];
-//         fieldUsage.push(...extractFieldUsage(head));
-//       } else {
-//         fieldUsage.push(...getFieldUsageForField(field));
-//       }
-//     }
-//     for (const filter of segment.filterList ?? []) {
-//       fieldUsage.push(...getFieldUsageForFilter(filter));
-//     }
-//   } else if (isIndexSegment(segment)) {
-//     for (const field of segment.indexFields) {
-//       const usage = {
-//         path: field.path,
-//         // TODO handle case where `at` is undefined
-//         at: field.at!,
-//       };
-//       fieldUsage.push(usage);
-//     }
-//   }
-//   return fieldUsage;
-// }
-
 function extractNestLevels(segment: PipeSegment): NestLevels {
   const fieldsReferencedDirectly: FieldUsage[] = [];
   const fieldsReferenced: FieldUsage[] = [];
   const nested: NestLevels[] = [];
-  const aggregateFieldUsage: AggregateFieldUsage[] = [];
   const ungroupings: AggregateUngrouping[] = [];
+  const requiredGroupBys: RequiredGroupBy[] = [];
 
   if (
     segment.type === 'project' ||
@@ -718,8 +639,8 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         nested.push(extractNestLevels(head));
       } else {
         fieldsReferenced.push(...getFieldUsageForField(field));
-        aggregateFieldUsage.push(...(field.aggregateFieldUsage ?? []));
         ungroupings.push(...(field.ungroupings ?? []));
+        requiredGroupBys.push(...(field.requiresGroupBy ?? []));
       }
     }
   }
@@ -727,15 +648,10 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
   return {
     fieldsReferencedDirectly,
     nested,
-    aggregateFieldUsage,
     fieldsReferenced,
     ungroupings,
+    requiredGroupBys,
   };
-}
-
-interface RequiredGroupBy {
-  location: DocumentLocation;
-  path: string[];
 }
 
 interface ExpandedNestLevels {
@@ -752,10 +668,7 @@ function expandRefs(
   | {result: ExpandedNestLevels; error?: undefined}
   | {error: CompositeCouldNotFindFieldError; result?: undefined} {
   const newNests: NestLevels[] = [];
-  const requiredGroupBys: RequiredGroupBy[] = [];
-  const allAggregateFieldUsage: AggregateFieldUsage[] = [
-    ...nests.aggregateFieldUsage,
-  ];
+  const requiredGroupBys: RequiredGroupBy[] = [...nests.requiredGroupBys];
   const allUngroupings: AggregateUngrouping[] = [...nests.ungroupings];
   const references = [...nests.fieldsReferenced];
   const joinPathsProcessed: string[][] = [];
@@ -777,26 +690,22 @@ function expandRefs(
       const head = def.pipeline[0];
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
-      if (def.aggregateFieldUsage) {
-        allAggregateFieldUsage.push(
-          ...joinedAggregateFieldUsage(joinPath, def.aggregateFieldUsage).map(
-            u => ({
-              ...u,
-              location: field.at,
-            })
-          )
+      if (def.requiresGroupBy) {
+        requiredGroupBys.push(
+          ...def.requiresGroupBy.map(gb => ({
+            path: [...joinPath, ...gb.path],
+            at: field.at,
+          }))
         );
       }
       if (def.ungroupings) {
         allUngroupings.push(
           ...def.ungroupings.map(u => ({
             ...u,
-            aggregateFieldUsage: joinedAggregateFieldUsage(
-              joinPath,
-              u.aggregateFieldUsage
-            )?.map(u2 => ({
-              ...u2,
-              location: field.at,
+            requiresGroupBy: u.requiresGroupBy?.map(gb => ({
+              ...gb,
+              path: [...joinPath, ...gb.path],
+              at: field.at,
             })),
             fieldUsage: joinedFieldUsage(joinPath, u.fieldUsage).map(u2 => ({
               ...u2,
@@ -830,20 +739,15 @@ function expandRefs(
       }
     }
   }
-  requiredGroupBys.push(
-    ...allAggregateFieldUsage.flatMap(u =>
-      getGroupBysFromAggregateUsage(u, fields)
-    )
-  );
   const unsatisfiableGroupBys: RequiredGroupBy[] = [];
   for (const ungrouping of allUngroupings) {
     const expanded = expandRefs(
       {
         fieldsReferenced: ungrouping.fieldUsage,
         fieldsReferencedDirectly: [],
-        aggregateFieldUsage: ungrouping.aggregateFieldUsage ?? [],
         ungroupings: [],
         nested: [],
+        requiredGroupBys: ungrouping.requiresGroupBy ?? [],
       },
       fields
     );
@@ -875,28 +779,6 @@ function expandRefs(
       nested,
     },
   };
-}
-
-function getGroupBysFromAggregateUsage(
-  aggregateUsage: AggregateFieldUsage,
-  fields: FieldDef[]
-) {
-  const requiredGroupBys: RequiredGroupBy[] = [];
-  for (const aggregatedField of aggregateUsage.fields) {
-    const joinPath = aggregatedField.slice(0, -1);
-    const aggregatedFieldDef = lookup(aggregatedField, fields);
-    if (isAtomic(aggregatedFieldDef)) {
-      // TODO ensure that when an aggregated field is defined in a join, that the join path is correctly modified, ugh
-      for (const groupedBy of aggregatedFieldDef.groupedBy ?? []) {
-        const gb: RequiredGroupBy = {
-          path: [...joinPath, ...groupedBy],
-          location: aggregateUsage.location,
-        };
-        requiredGroupBys.push(gb);
-      }
-    }
-  }
-  return requiredGroupBys;
 }
 
 function isUngroupedBy(ungrouping: AggregateUngrouping, groupedBy: string[]) {
@@ -932,27 +814,6 @@ export function checkRequiredGroupBys(
   );
   return unsatisfied;
 }
-
-// export function checkUnresolvableRequiredGroupBys(
-//   unresolvedSourceDef: StructDef,
-//   field: FieldDef
-// ): RequiredGroupBy[] {
-//   if (!isAtomic(field)) return [];
-//   const nests = expandRefs(
-//     {
-//       fieldsReferenced: [],
-//       fieldsReferencedDirectly: [],
-//       ungroupings: field.ungroupings ?? [],
-//       aggregateFieldUsage: [],
-//       nested: [],
-//     },
-//     unresolvedSourceDef.fields
-//   );
-//   if (nests.error) {
-//     return [];
-//   }
-//   return nests.result.unsatisfiableGroupBys;
-// }
 
 function getUnsatisfiedRequiredGroupBys(
   level: ExpandedNestLevels

@@ -1411,7 +1411,7 @@ describe('query:', () => {
       expect(
         markSource`
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
         `
       ).toLog(
@@ -1425,8 +1425,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> { group_by: astr; aggregate: aisum }
         `
@@ -1437,36 +1436,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
-          }
-          run: aext -> { aggregate: ${'aisum'} }
-        `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
-    });
-    test('grouped_by failure from include block', () => {
-      expect(
-        markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            *
-            ai { grouped_by: astr }
-          } extend {
-            measure: aisum is ai.sum()
-          }
-          run: aext -> { aggregate: ${'aisum'} }
-        `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
-    });
-    test('grouped_by failure from include block with rename', () => {
-      expect(
-        markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            *
-            ai_grouped_by_astr is ai { grouped_by: astr }
-          } extend {
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> { aggregate: ${'aisum'} }
         `
@@ -1478,8 +1448,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
 
             view: x is { aggregate: ${'aisum'} } -> { select: * }
           }
@@ -1490,10 +1459,7 @@ describe('query:', () => {
       expect(
         markSource`
           ##! experimental.grouped_by
-          source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-          }
-          run: aext -> { aggregate: aisum is ${'ai_grouped_by_astr.sum()'} }
+          run: a -> { aggregate: aisum is ${'ai.sum() { grouped_by: astr }'} }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
@@ -1502,8 +1468,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
 
             view: requires_astr is {
               aggregate: aisum
@@ -1518,8 +1483,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
 
             view: requires_astr is {
               aggregate: aisum
@@ -1534,8 +1498,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> {
             group_by: ai
@@ -1555,8 +1518,7 @@ describe('query:', () => {
             a,
             a extend { dimension: x is 1 }
           ) extend {
-            dimension: ai_grouped_by_x is ai { grouped_by: x }
-            measure: aisum is ai_grouped_by_x.sum()
+            measure: aisum is ai.sum() { grouped_by: x }
           }
           run: aext -> {
             group_by: x
@@ -1584,8 +1546,7 @@ describe('query:', () => {
           ##! experimental { composite_sources grouped_by }
           source: aext is compose(
             a extend {
-              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-              measure: aisum is ai_grouped_by_astr.sum()
+              measure: aisum is ai.sum() { grouped_by: astr }
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1605,8 +1566,7 @@ describe('query:', () => {
           source: aext is compose(
             a extend {
               dimension: x is 1
-              dimension: ai_grouped_by_x is ai { grouped_by: x }
-              measure: aisum is ai_grouped_by_x.sum()
+              measure: aisum is ai.sum() { grouped_by: x }
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1627,13 +1587,11 @@ describe('query:', () => {
           source: aext is compose(
             a extend {
               dimension: x is 1
-              dimension: ai_grouped_by_x is ai { grouped_by: x }
-              measure: aisum is ai_grouped_by_x.sum()
+              measure: aisum is ai.sum() { grouped_by: x }
             },
             a extend {
               dimension: y is 1
-              dimension: ai_grouped_by_y is ai { grouped_by: y }
-              measure: aisum is ai_grouped_by_y.sum()
+              measure: aisum is ai.sum() { grouped_by: y }
             }
           )
           run: ${'aext -> { aggregate: aisum }'}
@@ -1648,8 +1606,7 @@ describe('query:', () => {
           source: aext is compose(
             a extend {
               dimension: x is 1
-              dimension: ai_grouped_by_x is ai { grouped_by: x }
-              measure: aisum is ai_grouped_by_x.sum()
+              measure: aisum is ai.sum() { grouped_by: x }
               dimension: foo is 1
             },
             a extend {
@@ -1674,8 +1631,7 @@ describe('query:', () => {
           source: aext is compose(
             a extend {
               dimension: x is 1
-              dimension: ai_grouped_by_x is ai { grouped_by: x }
-              measure: aisum is ai_grouped_by_x.sum()
+              measure: aisum is ai.sum() { grouped_by: x }
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1700,8 +1656,7 @@ describe('query:', () => {
           source: aext is compose(
             a extend {
               dimension: x is 1
-              dimension: ai_grouped_by_x is ai { grouped_by: x }
-              measure: aisum is ai_grouped_by_x.sum()
+              measure: aisum is ai.sum() { grouped_by: x }
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1722,10 +1677,8 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            dimension: ai_grouped_by_abool is ai { grouped_by: abool }
-            measure: aisum1 is ai_grouped_by_astr.sum()
-            measure: aisum2 is ai_grouped_by_abool.sum()
+            measure: aisum1 is ai.sum() { grouped_by: astr }
+            measure: aisum2 is ai.sum() { grouped_by: abool }
           }
           run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
         `
@@ -1739,8 +1692,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1754,8 +1706,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1771,10 +1722,7 @@ describe('query:', () => {
       expect(
         markSource`
           ##! experimental.grouped_by
-          source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-          }
-          run: aext -> { group_by: astr; aggregate: x is all(ai_grouped_by_astr.sum()) }
+          run: a -> { group_by: astr; aggregate: x is all(ai.sum() { grouped_by: astr }) }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
@@ -1782,10 +1730,7 @@ describe('query:', () => {
       expect(
         markSource`
           ##! experimental.grouped_by
-          source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-          }
-          run: aext -> { group_by: astr, abool; aggregate: x is exclude(ai_grouped_by_astr.sum(), abool) }
+          run: a -> { group_by: astr, abool; aggregate: x is exclude(ai.sum() { grouped_by: astr }, abool) }
         `
       ).toTranslate();
     });
@@ -1794,8 +1739,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> { group_by: astr; aggregate: x is all(aisum) }
         `
@@ -1806,8 +1750,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
         `
@@ -1818,8 +1761,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, abool) }
         `
@@ -1832,8 +1774,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
             measure: x is all(${'aisum'})
           }
         `
@@ -1848,8 +1789,7 @@ describe('query:', () => {
         markSource`
           ##! experimental.grouped_by
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
             measure: x is all(aisum)
           }
           run: aext -> { group_by: astr; aggregate: ${'x'} }
@@ -1902,8 +1842,7 @@ describe('query:', () => {
         markSource`
           ##! experimental { grouped_by composite_sources }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1919,8 +1858,7 @@ describe('query:', () => {
         markSource`
           ##! experimental { grouped_by composite_sources }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
             measure: x is all(aisum)
           }
           source: bext is b extend {
@@ -1937,8 +1875,7 @@ describe('query:', () => {
         markSource`
           ##! experimental { grouped_by composite_sources }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> {
             group_by: astr;
@@ -1955,8 +1892,7 @@ describe('query:', () => {
         markSource`
           ##! experimental { grouped_by composite_sources }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
             join_one: a on true
           }
           run: aext -> {
@@ -1974,8 +1910,7 @@ describe('query:', () => {
         markSource`
           ##! experimental { grouped_by composite_sources }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-            measure: aisum is ai_grouped_by_astr.sum()
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
           run: aext -> {
             group_by: astr;

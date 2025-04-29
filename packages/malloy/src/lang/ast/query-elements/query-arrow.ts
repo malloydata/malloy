@@ -101,7 +101,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
             '.'
           )}\` is required but not present`,
           {
-            at: unsatisfiedGroupBy.location,
+            at: unsatisfiedGroupBy.at,
           }
         );
       }

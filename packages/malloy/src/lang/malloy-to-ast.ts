@@ -1707,7 +1707,7 @@ export class MalloyToAST
     );
   }
 
-  visitGroupedByStatement(pcx: parse.GroupedByStatementContext): ast.GroupedBy {
+  visitGroupedByStatement(pcx: parse.GroupedByStatementContext) {
     this.inExperiment('grouped_by', pcx);
     return this.astAt(
       new ast.GroupedBy(
@@ -1977,12 +1977,6 @@ export class MalloyToAST
     const wildcard = wildcardCx
       ? this.visitCollectionWildCard(wildcardCx)
       : undefined;
-    const groupedBys =
-      pcx
-        .includeProperties()
-        ?.includePropertyStatment()
-        ?.map(p => p.groupedByStatement())
-        ?.map(g => this.visitGroupedByStatement(g)) ?? [];
     const as = pcx._as ? pcx._as.text : undefined;
     const tags1cx = pcx.tags();
     const tags1 = tags1cx ? this.getNotes(tags1cx) : [];
@@ -2001,10 +1995,7 @@ export class MalloyToAST
     if (reference === undefined) {
       throw this.internalError(pcx, 'Expected a field name or wildcard');
     }
-    const item = this.astAt(
-      new ast.IncludeListItem(reference, as, groupedBys),
-      pcx
-    );
+    const item = this.astAt(new ast.IncludeListItem(reference, as), pcx);
     item.extendNote({notes});
     return item;
   }

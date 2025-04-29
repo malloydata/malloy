@@ -181,13 +181,16 @@ export class ExprProps extends ExpressionDef {
       }
     }
     const allRequiredGroupBys = mergeGroupedBys(
-      expr.groupedBy,
-      groupedByFields.map(name => [name])
+      expr.requiresGroupBy,
+      groupedByFields.map(name => ({
+        path: [name],
+        at: this.location,
+      }))
     );
 
     return {
       ...expr,
-      groupedBy: allRequiredGroupBys,
+      requiresGroupBy: allRequiredGroupBys,
     };
   }
 }

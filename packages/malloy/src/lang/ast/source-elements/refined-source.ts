@@ -51,7 +51,6 @@ import {
 } from '../source-query-elements/include-item';
 import type {FieldReference} from '../query-items/field-references';
 import {WildcardFieldReference} from '../query-items/field-references';
-import type {GroupedBy} from '../expressions/grouped_by';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -136,8 +135,10 @@ export class RefinedSource extends Source {
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
     const from = structuredClone(this.source.getSourceDef(paramSpace));
-    const {fieldsToInclude, modifiers, renames, notes, groupedBys} =
-      processIncludeList(this.includeList, from);
+    const {fieldsToInclude, modifiers, renames, notes} = processIncludeList(
+      this.includeList,
+      from
+    );
     for (const modifier of inlineAccessModifiers) {
       for (const field of modifier.fields) {
         modifiers.set(field, modifier.access);
@@ -154,8 +155,7 @@ export class RefinedSource extends Source {
       fieldListEdit,
       fieldsToInclude,
       renames,
-      paramSpace,
-      groupedBys
+      paramSpace
     );
     if (newTimezone) {
       fs.setTimezone(newTimezone);
@@ -218,7 +218,6 @@ function processIncludeList(
     location: DocumentLocation;
   }[] = [];
   const notes = new Map<string, Annotation>();
-  const groupedBys = new Map<string, GroupedBy[]>();
   if (includeItems === undefined) {
     return {fieldsToInclude: undefined, modifiers, renames, notes};
   }
@@ -292,9 +291,6 @@ function processIncludeList(
             }
           }
         }
-        if (f.groupedBys.length > 0) {
-          groupedBys.set(f.name.refString, f.groupedBys);
-        }
       }
     } else if (item instanceof IncludeExceptItem) {
       for (const f of item.fields) {
@@ -348,50 +344,9 @@ function processIncludeList(
   } else {
     fieldsToInclude = starFields;
   }
-  const outGroupedBys: Map<string, string[]> = new Map();
-  for (const [name, gbs] of groupedBys.entries()) {
-    const outGbs: string[] = [];
-    for (const gb of gbs) {
-      for (const field of gb.groupedByFields) {
-        if (fieldsToInclude.has(field.refString)) {
-          const rename = renames.find(
-            r => r.name.refString === field.refString
-          );
-          if (rename !== undefined) {
-            field.logError(
-              'grouped-by-not-found',
-              `\`${field.refString}\` is renamed to \`${rename.as}\``
-            );
-          }
-          outGbs.push(field.refString);
-        } else if (renames.find(r => r.as === field.refString)) {
-          outGbs.push(field.refString);
-        } else if (allFields.has(field.refString)) {
-          field.logError(
-            'grouped-by-not-found',
-            `\`${field.refString}\` is not included`
-          );
-        } else {
-          field.logError(
-            'grouped-by-not-found',
-            `\`${field.refString}\` is not found`
-          );
-        }
-      }
-    }
-    if (outGbs.length > 0) {
-      outGroupedBys.set(name, outGbs);
-    }
-  }
   // TODO: validate that a field isn't renamed more than once
   // TODO: validate that excluded fields are not referenced by included fields
   // TODO: make renames fields work in existing references
   // TODO: make renames that would replace an excluded field don't do that
-  return {
-    fieldsToInclude,
-    modifiers,
-    renames,
-    notes,
-    groupedBys: outGroupedBys,
-  };
+  return {fieldsToInclude, modifiers, renames, notes};
 }

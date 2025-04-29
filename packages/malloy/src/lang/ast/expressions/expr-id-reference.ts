@@ -62,7 +62,6 @@ export class ExprIdReference extends ExpressionDef {
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
           fieldUsage,
-          aggregateFieldUsage: undefined,
         };
       }
       const value = {
@@ -79,7 +78,7 @@ export class ExprIdReference extends ExpressionDef {
         value,
         evalSpace,
         fieldUsage,
-        aggregateFieldUsage: undefined,
+        requiresGroupBy: undefined,
       };
     }
     return this.loggedErrorExpr(def.error.code, def.error.message);

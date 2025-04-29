@@ -140,7 +140,7 @@ export abstract class AtomicFieldDeclaration
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
         fieldUsage: exprValue.fieldUsage,
-        groupedBy: exprValue.groupedBy,
+        requiresGroupBy: exprValue.requiresGroupBy,
       };
       exprValue = nullAsNumber;
     }
@@ -157,8 +157,7 @@ export abstract class AtomicFieldDeclaration
       ret.e = exprValue.value;
       ret.fieldUsage = exprValue.fieldUsage;
       ret.ungroupings = exprValue.ungroupings;
-      ret.aggregateFieldUsage = exprValue.aggregateFieldUsage;
-      ret.groupedBy = exprValue.groupedBy;
+      ret.requiresGroupBy = exprValue.requiresGroupBy;
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;
       }

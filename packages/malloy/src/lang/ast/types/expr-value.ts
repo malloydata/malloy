@@ -22,10 +22,10 @@
  */
 
 import type {
-  AggregateFieldUsage,
   AggregateUngrouping,
   Expr,
   ExpressionValueTypeDef,
+  RequiredGroupBy,
   TemporalTypeDef,
   TimestampUnit,
 } from '../../../model';
@@ -51,11 +51,8 @@ export function computedExprValue({
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
     fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
-    aggregateFieldUsage: mergeAggregateFieldUsage(
-      ...from.map(e => e.aggregateFieldUsage)
-    ),
     ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
-    groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
+    requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
 }
 
@@ -77,11 +74,8 @@ export function computedTimeResult({
     evalSpace: xv.evalSpace,
     value: xv.value,
     fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
-    aggregateFieldUsage: mergeAggregateFieldUsage(
-      ...from.map(e => e.aggregateFieldUsage)
-    ),
     ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
-    groupedBy: mergeGroupedBys(...from.map(e => e.groupedBy)),
+    requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -142,36 +136,25 @@ export function literalTimeResult({
 // x_total_users { grouped_by: state }
 // x_total_users + total_users
 export function mergeGroupedBys(
-  ...groupBys: (string[][] | undefined)[]
-): string[][] | undefined {
-  const requiredGroupBys: string[][] = [];
+  ...groupBys: (RequiredGroupBy[] | undefined)[]
+): RequiredGroupBy[] | undefined {
+  const requiredGroupBys: RequiredGroupBy[] = [];
   for (const groupBy of groupBys) {
     if (groupBy === undefined) continue;
-    for (const path of groupBy) {
+    for (const gb of groupBy) {
       if (
         !requiredGroupBys.some(
-          g => g.length === path.length && g.every((p, i) => p === path[i])
+          g =>
+            g.path.length === gb.path.length &&
+            g.path.every((p, i) => p === gb.path[i])
         )
       ) {
-        requiredGroupBys.push(path);
+        requiredGroupBys.push(gb);
       }
     }
   }
   if (requiredGroupBys.length === 0) return undefined;
   return requiredGroupBys;
-}
-
-export function mergeAggregateFieldUsage(
-  ...usages: (AggregateFieldUsage[] | undefined)[]
-): AggregateFieldUsage[] | undefined {
-  const result: AggregateFieldUsage[] = [];
-  for (const usage of usages) {
-    if (usage !== undefined) {
-      result.push(...usage);
-    }
-  }
-  if (result.length === 0) return undefined;
-  return result;
 }
 
 export function mergeUngroupings(

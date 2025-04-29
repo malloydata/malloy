@@ -620,7 +620,7 @@ describe('expressions', () => {
         expect(markSource`
           ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
         `).toTranslate();
       });
@@ -629,7 +629,7 @@ describe('expressions', () => {
           ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
             measure: c is count()
-            dimension: ai_grouped_by_astr is ai { grouped_by: ${'c'} }
+            measure: aisum is ai.sum() { grouped_by: ${'c'} }
           }
         `).toLog(errorMessage('`grouped_by:` field must be a dimension'));
       });
@@ -637,83 +637,9 @@ describe('expressions', () => {
         expect(markSource`
           ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
-            dimension: ai_grouped_by_astr is ai { grouped_by: ai_grouped_by_astr }
+            measure: aisum is ai.sum() { grouped_by: aisum }
           }
-        `).toLog(errorMessage('ai_grouped_by_astr is not defined'));
-      });
-      test('grouped_by on star illegal', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            * { grouped_by: astr }
-          }
-        `).not.toTranslate();
-      });
-      test('grouped_by in include valid', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            astr
-            ai { grouped_by: astr }
-          }
-        `).toTranslate();
-      });
-      test('grouped_by in include valid multiple in one statement', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            astr,
-            abool,
-            ai { grouped_by: astr, abool }
-          }
-        `).toTranslate();
-      });
-      test('grouped_by in include valid multiple statements', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            astr,
-            abool,
-            ai {
-              grouped_by: astr
-              grouped_by: abool
-            }
-          }
-        `).toTranslate();
-      });
-      test('grouped_by in include missing name', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            ai { grouped_by: does_not_exist }
-          }
-        `).toLog(errorMessage('`does_not_exist` is not found'));
-      });
-      test('grouped_by in include also renamed good', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            astr_2 is astr,
-            ai { grouped_by: astr_2 }
-          }
-        `).toTranslate();
-      });
-      test('grouped_by in include also renamed bad', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            astr_2 is astr,
-            ai { grouped_by: astr }
-          }
-        `).toLog(errorMessage('`astr` is renamed to `astr_2`'));
-      });
-      test('grouped_by in include also excluded', () => {
-        expect(markSource`
-          ##! experimental { grouped_by access_modifiers }
-          source: aext is a include {
-            ai { grouped_by: abool }
-          }
-        `).toLog(errorMessage('`abool` is not included'));
+        `).toLog(errorMessage('aisum is not defined'));
       });
     });
   });
