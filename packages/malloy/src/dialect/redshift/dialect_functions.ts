@@ -50,9 +50,25 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
-export const POSTGRES_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+export const REDSHIFT_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
   ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
   ...def('reverse', {'str': 'string'}, 'string'),
+
+  btrim: {
+    default: {
+      takes: {'value': {dimension: 'string'}},
+      returns: {dimension: 'string'},
+      impl: {function: 'BTRIM'},
+    },
+    with_trim_chars: {
+      takes: {
+        'value': {dimension: 'string'},
+        'trimChars': {literal: 'string'},
+      },
+      returns: {dimension: 'string'},
+      impl: {function: 'BTRIM'},
+    },
+  },
 };

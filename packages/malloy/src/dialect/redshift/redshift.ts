@@ -45,7 +45,7 @@ import {
 } from '../functions';
 import {DialectFieldList, FieldReferenceType, qtz, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
-import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
+import {REDSHIFT_DIALECT_FUNCTIONS} from './dialect_functions';
 import {REDSHIFT_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const pgMakeIntervalMap: Record<string, string> = {
@@ -460,7 +460,7 @@ export class RedshiftDialect extends PostgresBase {
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
+    return expandBlueprintMap(REDSHIFT_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
