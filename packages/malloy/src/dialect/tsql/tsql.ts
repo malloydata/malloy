@@ -704,7 +704,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
-    // SQL Server doesn't have native regex, use LIKE with wildcards or fallback to PATINDEX
+    // SQL Server doesn't have native regex, fallback to PATINDEX
     return `PATINDEX('%' + ${df.kids.regex.sql} + '%', ${df.kids.expr.sql}) > 0`;
   }
 

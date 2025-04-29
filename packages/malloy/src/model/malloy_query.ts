@@ -1364,7 +1364,8 @@ class QueryField extends QueryNode {
         return `(${expr.e.sql})`;
       case 'not':
         // Malloy not operator always returns a boolean
-        return `COALESCE(NOT ${expr.e.sql},TRUE)`;
+        // TODO (vitor): Sorry! I feel like woody the woodpecker saying i did not not not not not eat all the pizza
+        return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1, 0) = 1`;
       case 'unary-':
         return `-${expr.e.sql}`;
       case 'is-null':
