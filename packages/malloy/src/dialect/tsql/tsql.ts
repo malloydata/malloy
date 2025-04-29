@@ -127,6 +127,7 @@ export class TSQLDialect extends Dialect {
   experimental = true;
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
+  supportsLimit = false;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');

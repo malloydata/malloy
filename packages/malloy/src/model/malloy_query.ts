@@ -685,9 +685,9 @@ class QueryField extends QueryNode {
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
     // TODO (vitor): Figure out a better way.
     const aggregateLimit = frag.limit
-      ? this.parent.dialect.name === 'tsql'
-        ? `OFFSET 0 ROWS FETCH NEXT ${frag.limit} ROWS ONLY`
-        : `LIMIT ${frag.limit}`
+      ? this.parent.dialect.supportsLimit
+        ? `LIMIT ${frag.limit}`
+        : `OFFSET 0 ROWS FETCH NEXT ${frag.limit} ROWS ONLY`
       : undefined;
     if (
       frag.name === 'string_agg' &&
@@ -3204,9 +3204,9 @@ class QueryQuery extends QueryField {
         // TODO (vitor): fix this
         structSQL = stageWriter.addStage(
           `SELECT * from ${structSQL} as x ${
-            this.parent.dialect.name === 'tsql'
-              ? 'ORDER BY 1 OFFSET 0 ROWS FETCH NEXT 100000 ROWS ONLY'
-              : 'limit 100000'
+            this.parent.dialect.supportsLimit
+              ? 'limit 100000\n'
+              : 'ORDER BY 1 OFFSET 0 ROWS FETCH NEXT 100000 ROWS ONLY'
           }`
         );
       }
@@ -3354,14 +3354,13 @@ class QueryQuery extends QueryField {
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s +=
-        this.parent.dialect.name === 'tsql'
-          ? `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
-          : `${this.firstSegment.limit}\n`;
+      s += this.parent.dialect.supportsLimit
+        ? `LIMIT ${this.firstSegment.limit}\n`
+        : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
     } else {
-      // TODO (vitor): This is nasty.
+      // TODO (vitor): This is nasty. Figure out if its sqlserver specific
       if (this.parent.dialect.name === 'tsql') {
-        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647  ROWS ONLY\n';
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
     this.resultStage = stageWriter.addStage(s);
@@ -3843,15 +3842,9 @@ class QueryQuery extends QueryField {
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s +=
-        this.parent.dialect.name === 'tsql'
-          ? `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY`
-          : `LIMIT ${this.firstSegment.limit}\n`;
-    } else {
-      // TODO (vitor): This is nasty.
-      if (this.parent.dialect.name === 'tsql') {
-        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
-      }
+      s += this.parent.dialect.supportsLimit
+        ? `LIMIT ${this.firstSegment.limit}\n`
+        : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -4344,14 +4337,13 @@ class QueryQueryIndexStage extends QueryQuery {
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      // TODO (vitor): This is ANSI SQL so maybe it's not terrible?
-      if (dialect.orderByClause === 'output_name') {
-        s += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
-      } else {
+      if (dialect.supportsLimit) {
         s += `LIMIT ${this.firstSegment.limit}\n`;
+      } else {
+        s += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
       }
     } else {
-      // TODO (vitor): This is nasty.
+      // TODO (vitor): This is nasty. Seems to be sqlserver specific
       if (dialect.name === 'tsql') {
         s += 'OFFSET 0 ROWS FETCH NEXT 2147483647  ROWS ONLY\n';
       }
@@ -5434,9 +5426,9 @@ export class QueryModel {
               searchValue + '%'
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
           ${
-            this.dialect.name === 'tsql'
-              ? `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${limit} ROWS ONLY`
-              : `LIMIT ${limit}`
+            this.dialect.supportsLimit
+              ? `LIMIT ${limit}\n`
+              : `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${limit} ROWS ONLY\n`
           }
           `;
     if (struct.dialect.hasFinalStage) {

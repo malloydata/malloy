@@ -172,6 +172,9 @@ export abstract class Dialect {
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
 
+  // TSQL Doesn't support limit and limit is not part of the SQL Standard
+  supportsLimit = true;
+
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   };
