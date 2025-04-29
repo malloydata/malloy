@@ -1370,7 +1370,7 @@ class QueryField extends QueryNode {
         // There lurk the double negatives,
         // Entwined in tangled predicates.
         // I guess i can override and call super for the other cases? And put this poetic following statement in the tsql dialect...
-        return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1, 0) = 1`;
+        return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1 END, 0) = 1`;
       case 'unary-':
         return `-${expr.e.sql}`;
       case 'is-null':
