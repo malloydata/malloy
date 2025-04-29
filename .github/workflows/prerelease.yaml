@@ -5,35 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  db-bigquery:
-    uses: './.github/workflows/db-bigquery.yaml'
-    secrets:
-      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-motherduck:
-    uses: './.github/workflows/db-motherduck.yaml'
-    secrets:
-      MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
-  db-postgres:
-    uses: './.github/workflows/db-postgres.yaml'
-  db-snowflake:
-    uses: './.github/workflows/db-snowflake.yaml'
-    secrets:
-      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
-  db-publisher:
-    uses: './.github/workflows/db-publisher.yaml'
-  main:
-    uses: './.github/workflows/main.yaml'
-    secrets:
-      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-
   npm-prerelease:
-    needs:
-      - db-bigquery
-      - db-motherduck
-      - db-publisher
-      - db-postgres
-      - db-snowflake
-      - main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
