@@ -735,20 +735,30 @@ export class TSQLDialect extends Dialect {
     }
   }
 
+  // TODO (vitor): This is mostly a hack.
   sqlRegexpMatch(df: RegexMatchExpr): string {
     // SQL Server doesn't have native regex, fallback to PATINDEX
-    let pattern = df.kids.regex.sql;
-    if (pattern?.startsWith('^')) {
-      pattern = pattern.substring(1);
-    } else {
-      pattern = '%' + pattern;
-    }
-    if (pattern?.endsWith('$')) {
-      pattern = pattern.substring(0, -1);
-    } else {
-      pattern = pattern + '%';
-    }
-    return `PATINDEX(${pattern}${df.kids.expr.sql}) > 0`;
+    const rawPatterns = df.kids.regex.sql?.split('|') || [];
+    const patterns = rawPatterns.map(ogPattern => {
+      const groups = /(^N')(.*)(')/.exec(ogPattern) || [];
+      const leading = groups[1] || '';
+      const trailing = groups[3] || '';
+      let pattern = groups[2] || '';
+      if (pattern?.startsWith('^')) {
+        pattern = pattern.substring(1);
+      } else {
+        pattern = '%' + pattern;
+      }
+      if (pattern?.endsWith('$')) {
+        pattern = pattern.substring(0, -1);
+      } else {
+        pattern = pattern + '%';
+      }
+      pattern = pattern.replace('\\d', '[0-9]');
+      pattern = pattern.replace('\\w', '[a-zA-Z]');
+      return `PATINDEX(${leading}${pattern}${trailing}, ${df.kids.expr.sql}) > 0`;
+    });
+    return patterns.join(' OR ');
   }
 
   sqlLiteralTime(
