@@ -3321,7 +3321,7 @@ class QueryQuery extends QueryField {
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-    s += ') as base \n';
+    s += `) as base__${uuidv4()}\n`;
 
     // group by
     if (this.firstSegment.type === 'reduce') {
@@ -3823,7 +3823,7 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    s += ') as base \n';
+    s += `) as base__${uuidv4()}\n`;
 
     if (dimensionIndexes.length > 0) {
       // TODO (vitor): Not sure about dimensionNames here
@@ -4326,7 +4326,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    s += ') as base \n';
+    s += `) as base__${uuidv4()}\n`;
 
     // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
     if (dialect.orderByClause === 'output_name') {
