@@ -46,6 +46,7 @@ export abstract class QueryBase extends MalloyElement {
     pipeline: PipeSegment[]
   ): SourceDef | undefined {
     const stage1 = pipeline[0];
+    if (stage1 === undefined) return undefined;
     // TODO some features don't work with composite sources; e.g. sources in `extend:` don't
     // play nicely; here, we skip all the composite checking if there are no composites,
     // which hides the fact that this code doesn't handle sources in `extend:`.
