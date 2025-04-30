@@ -7,6 +7,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   dimension: product is name
   dimension: dcId is distribution_center_id::number
 
+
   # line_chart
   view: topSellingBrands is {
     group_by: brand
@@ -324,6 +325,40 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     aggregate: total is count()
 
     order_by: sale_year
+  }
+
+    #(story)
+  view: lots_of_lines_nested is {
+    group_by: department
+
+    # line_chart { series.limit=5 }
+    nest: lots_of_lines is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+     # line_chart { y.independent }
+    nest: lots_of_lines_independent_y is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+    # line_chart { series.independent }
+    nest: lots_of_lines_independent_series is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+
   }
 
   #(story)
