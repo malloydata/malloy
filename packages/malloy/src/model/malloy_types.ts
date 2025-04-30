@@ -1520,6 +1520,8 @@ export interface ModelDef {
   annotation?: ModelAnnotation;
   queryList: Query[];
   dependencies: DependencyTree;
+  references?: DocumentReference[];
+  imports?: ImportLocation[];
 }
 
 /** Very common record type */

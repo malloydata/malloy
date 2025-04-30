@@ -736,8 +736,10 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
       series: CellValue;
     }[] = [];
     data.rows.forEach(row => {
-      // Filter out missing date/time values
-      if (xIsDateorTime && getXValue(row) === null) {
+      // Filter out missing date/time/metric values
+      const isMissingX = xIsDateorTime && getXValue(row) === null;
+      const isMissingY = row.column(yField.name).value === null;
+      if (isMissingX || isMissingY) {
         return;
       }
       // Map data fields to chart properties.  Handle undefined values properly.
@@ -760,6 +762,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
 
   // Memoize tooltip data
   const tooltipEntryMemo = new Map<Item, ChartTooltipEntry | null>();
+  const tooltipItemCountLimit = 10;
 
   return {
     spec,
@@ -802,9 +805,13 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .slice(0, tooltipItemCountLimit);
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => ({
+          entries: sortedRecords.map(rec => ({
             label: rec.series,
             value: formatY(rec),
             highlight: false,
@@ -834,9 +841,20 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
             )
           : itemData.x;
 
+        // If the highlighted item is not included in the first ~20,
+        // then it will probably be cut off.
+
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .filter(
+            (item, index) =>
+              index <= tooltipItemCountLimit ||
+              item.series === highlightedSeries
+          );
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => {
+          entries: sortedRecords.map(rec => {
             return {
               label: rec.series,
               value: formatY(rec),
@@ -866,6 +884,14 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         records.length === 1
       ) {
         customTooltipRecords = records;
+      }
+
+      customTooltipRecords.sort((a, b) => {
+        return a.y - b.y;
+      });
+
+      if (customTooltipRecords.length > 20) {
+        customTooltipRecords = customTooltipRecords.slice(0, 20);
       }
 
       if (tooltipData) {

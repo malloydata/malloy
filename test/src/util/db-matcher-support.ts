@@ -69,7 +69,8 @@ export async function runQuery(
   try {
     result = await query.run();
   } catch (e) {
-    let failMsg = `QUERY RUN FAILED: ${tq.src}\nMESSAGE: ${e.message}\n`;
+    const src = tq.src.replace(/^\n+/m, '').trimEnd();
+    let failMsg = `QUERY RUN FAILED:\n${src}`;
     if (e instanceof MalloyError) {
       failMsg = `Error in query compilation\n${errorLogToString(
         tq.src,
@@ -77,11 +78,13 @@ export async function runQuery(
       )}`;
     } else {
       try {
-        failMsg += `SQL: ${await query.getSQL()}\n`;
+        failMsg += `\nMESSAGE: ${e.message}\nSQL: ${await query.getSQL()}\n`;
       } catch (e2) {
-        failMsg += `SQL FOR FAILING QUERY COULD NOT BE COMPUTED: ${e2.message}\n`;
+        failMsg += '\nSQL FOR QUERY COULD NOT BE COMPUTED\n';
       }
-      failMsg += e.stack;
+      if (e.stack) {
+        failMsg += `STACK:\n${e.stack}\n`;
+      }
     }
     return {fail: {pass: false, message: () => failMsg}, query};
   }

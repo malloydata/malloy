@@ -490,7 +490,7 @@ ORDER BY 1 asc NULLS LAST
           {
             url: 'file://test.malloy',
             compiled_model_json:
-              '{"name":"","exports":["flights"],"contents":{"flights":{"type":"table","tablePath":"flights","connection":"connection","dialect":"duckdb","fields":[{"type":"string","name":"carrier","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":19},"end":{"line":0,"character":46}}}}],"name":"connection:flights","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":8},"end":{"line":0,"character":46}}},"parameters":{},"as":"flights"}},"queryList":[],"dependencies":{}}',
+              '{"name":"","exports":["flights"],"contents":{"flights":{"type":"table","tablePath":"flights","connection":"connection","dialect":"duckdb","fields":[{"type":"string","name":"carrier","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":19},"end":{"line":0,"character":46}}}}],"name":"connection:flights","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":8},"end":{"line":0,"character":46}}},"parameters":{},"as":"flights"}},"queryList":[],"dependencies":{},"references":[],"imports":[]}',
           },
         ],
       };
@@ -520,7 +520,7 @@ ORDER BY 1 asc NULLS LAST
             {
               url: 'file://test.malloy',
               compiled_model_json:
-                '{"name":"","exports":["flights"],"contents":{"flights":{"type":"table","tablePath":"flights","connection":"connection","dialect":"duckdb","fields":[{"type":"string","name":"carrier","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":19},"end":{"line":0,"character":46}}}}],"name":"connection:flights","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":8},"end":{"line":0,"character":46}}},"parameters":{},"as":"flights"}},"queryList":[],"dependencies":{}}',
+                '{"name":"","exports":["flights"],"contents":{"flights":{"type":"table","tablePath":"flights","connection":"connection","dialect":"duckdb","fields":[{"type":"string","name":"carrier","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":19},"end":{"line":0,"character":46}}}}],"name":"connection:flights","location":{"url":"file://test.malloy","range":{"start":{"line":0,"character":8},"end":{"line":0,"character":46}}},"parameters":{},"as":"flights"}},"queryList":[],"dependencies":{},"references":[],"imports":[]}',
             },
           ],
         },

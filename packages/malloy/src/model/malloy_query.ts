@@ -4672,7 +4672,14 @@ class QueryStruct {
   ) {
     let parentRef = this.getSQLIdentifier();
     if (expand && isAtomic(this.structDef) && hasExpression(this.structDef)) {
-      parentRef = expand.field.exprToSQL(expand.result, this, this.structDef.e);
+      if (!this.parent) {
+        throw new Error(`Cannot expand reference to ${name} without parent`);
+      }
+      parentRef = expand.field.exprToSQL(
+        expand.result,
+        this.parent,
+        this.structDef.e
+      );
     }
     let refType: FieldReferenceType = 'table';
     if (this.structDef.type === 'record') {
