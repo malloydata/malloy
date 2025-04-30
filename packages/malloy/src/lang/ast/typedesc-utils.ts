@@ -29,7 +29,6 @@ import type {
   TypeDesc,
 } from '../../model';
 import {expressionIsScalar, isRepeatedRecord, TD} from '../../model';
-import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 
 function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
@@ -43,7 +42,7 @@ function mkTypeDesc(
     type: dataType,
     expressionType,
     evalSpace,
-    compositeFieldUsage: emptyCompositeFieldUsage(),
+    fieldUsage: [],
   };
 }
 

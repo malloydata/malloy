@@ -47,6 +47,7 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -85,6 +86,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (!(sourceFoot instanceof StructSpaceField)) {
           if (isAtomicFieldType(footType.type)) {
+            const footPath = this.source.list.map(x => x.refString);
             expr = this.source;
             exprVal = {
               ...TDU.atomicDef(footType),
@@ -92,9 +94,17 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               value:
                 footType.evalSpace === 'output'
                   ? {node: 'outputField', name: this.source.refString}
-                  : {node: 'field', path: this.source.path},
+                  : {
+                      node: 'field',
+                      path: this.source.path,
+                      at: this.source.location,
+                    },
               evalSpace: footType.evalSpace,
-              compositeFieldUsage: footType.compositeFieldUsage,
+              // TODO ensure that when there's an `expr` but no `source`, that `fieldUsage`
+              // still comes along correctly
+              fieldUsage: mergeFieldUsage(footType.fieldUsage, [
+                {path: footPath, at: this.source.location},
+              ]),
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
@@ -177,6 +187,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         node: 'aggregate',
         function: this.func,
         e: exprVal.value,
+        at: this.location,
       };
       if (structPath && structPath.length > 0) {
         f.structPath = structPath;
@@ -200,7 +211,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        const sfd: Expr = {node: 'field', path: this.source.path};
+        const sfd: Expr = {
+          node: 'field',
+          path: this.source.path,
+          at: this.source.location,
+        };
         result.push(...getJoinUsage(fs, sfd));
       }
     }

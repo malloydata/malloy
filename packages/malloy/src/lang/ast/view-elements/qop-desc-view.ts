@@ -65,7 +65,8 @@ export class QOpDescView extends View {
       return refineThis;
     }
     qOpDesc.refineFrom(refineThis);
-    return qOpDesc.getOp(inputFS, isNestIn).segment;
+    const opDesc = qOpDesc.getOp(inputFS, isNestIn);
+    return opDesc.segment;
   }
 
   refine(
@@ -79,7 +80,13 @@ export class QOpDescView extends View {
     }
     if (pipeline.length === 1) {
       this.operation.refineFrom(pipeline[0]);
-      return [this.getOp(inputFS, isNestIn, this.operation, pipeline[0])];
+      const segment = this.getOp(
+        inputFS,
+        isNestIn,
+        this.operation,
+        pipeline[0]
+      );
+      return [segment];
     }
     const headRefinements = new QOpDesc([]);
     const tailRefinements = new QOpDesc([]);

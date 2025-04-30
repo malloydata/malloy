@@ -23,7 +23,7 @@
 
 import type {PipeSegment} from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
-import type {FieldSpace} from '../types/field-space';
+import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import type {PipelineComp} from '../types/pipeline-comp';
 
@@ -53,7 +53,7 @@ export abstract class View extends MalloyElement {
   }
 
   abstract refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[];

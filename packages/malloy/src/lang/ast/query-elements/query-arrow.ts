@@ -30,6 +30,7 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
+import {checkRequiredGroupBys} from '../../../model/composite_source_utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -85,7 +86,26 @@ export class QueryArrow extends QueryBase implements QueryElement {
 
     const compositeResolvedSourceDef =
       query.compositeResolvedSourceDef ??
-      this.resolveCompositeSource(inputStruct, query);
+      this.resolveCompositeSource(inputStruct, pipeline);
+
+    const segment = query.pipeline[0];
+    if (segment !== undefined) {
+      const unsatisfiedGroupBys = checkRequiredGroupBys(
+        compositeResolvedSourceDef ?? inputStruct,
+        segment
+      );
+      for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
+        this.logError(
+          'missing-required-group-by',
+          `Group by of \`${unsatisfiedGroupBy.path.join(
+            '.'
+          )}\` is required but not present`,
+          {
+            at: unsatisfiedGroupBy.at,
+          }
+        );
+      }
+    }
 
     return {
       query: {

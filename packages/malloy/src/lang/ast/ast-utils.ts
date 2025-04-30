@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 import type {ExprValue} from './types/expr-value';
 
 /**
@@ -38,6 +37,6 @@ export function errorFor(reason: string): ExprValue {
     expressionType: 'scalar',
     value: {node: 'error', message: reason},
     evalSpace: 'constant',
-    compositeFieldUsage: emptyCompositeFieldUsage(),
+    fieldUsage: [],
   };
 }

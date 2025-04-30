@@ -22,16 +22,15 @@
  */
 
 import type {
+  AggregateUngrouping,
   Expr,
   ExpressionValueTypeDef,
+  RequiredGroupBy,
   TemporalTypeDef,
   TimestampUnit,
 } from '../../../model';
 import {maxOfExpressionTypes, mergeEvalSpaces} from '../../../model';
-import {
-  emptyCompositeFieldUsage,
-  mergeCompositeFieldUsage,
-} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import type {ExprResult} from './expr-result';
 import type {TimeResult} from './time-result';
 
@@ -51,9 +50,9 @@ export function computedExprValue({
     value,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
-    compositeFieldUsage: mergeCompositeFieldUsage(
-      ...from.map(e => e.compositeFieldUsage)
-    ),
+    fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
+    ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
+    requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
 }
 
@@ -74,9 +73,9 @@ export function computedTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    compositeFieldUsage: mergeCompositeFieldUsage(
-      ...from.map(e => e.compositeFieldUsage)
-    ),
+    fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
+    ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
+    requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -123,10 +122,50 @@ export function literalTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    compositeFieldUsage: emptyCompositeFieldUsage(),
+    fieldUsage: [],
   };
   if (timeframe) {
     y.timeframe = timeframe;
   }
   return y;
+}
+
+// TODO does it even make sense to operate on grouped_by fields directly?
+// does the set of grouped by have to be the same?
+// total_users { grouped_by: country }
+// x_total_users { grouped_by: state }
+// x_total_users + total_users
+export function mergeGroupedBys(
+  ...groupBys: (RequiredGroupBy[] | undefined)[]
+): RequiredGroupBy[] | undefined {
+  const requiredGroupBys: RequiredGroupBy[] = [];
+  for (const groupBy of groupBys) {
+    if (groupBy === undefined) continue;
+    for (const gb of groupBy) {
+      if (
+        !requiredGroupBys.some(
+          g =>
+            g.path.length === gb.path.length &&
+            g.path.every((p, i) => p === gb.path[i])
+        )
+      ) {
+        requiredGroupBys.push(gb);
+      }
+    }
+  }
+  if (requiredGroupBys.length === 0) return undefined;
+  return requiredGroupBys;
+}
+
+export function mergeUngroupings(
+  ...usages: (AggregateUngrouping[] | undefined)[]
+): AggregateUngrouping[] | undefined {
+  const result: AggregateUngrouping[] = [];
+  for (const usage of usages) {
+    if (usage !== undefined) {
+      result.push(...usage);
+    }
+  }
+  if (result.length === 0) return undefined;
+  return result;
 }

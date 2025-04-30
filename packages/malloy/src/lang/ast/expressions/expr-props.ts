@@ -22,19 +22,24 @@
  */
 
 import type {FilterCondition} from '../../../model/malloy_types';
-import {expressionIsCalculation} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {FunctionOrdering} from './function-ordering';
 import type {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
-import type {ExprValue} from '../types/expr-value';
+import {mergeGroupedBys, type ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
-import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import {GroupedBy} from './grouped_by';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
@@ -76,9 +81,9 @@ export class ExprProps extends ExpressionDef {
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
           ...expr,
-          compositeFieldUsage: mergeCompositeFieldUsage(
-            expr.compositeFieldUsage,
-            ...filterList.map(f => f.compositeFieldUsage)
+          fieldUsage: mergeFieldUsage(
+            expr.fieldUsage,
+            ...filterList.map(f => f.fieldUsage ?? [])
           ),
           value: {
             node: 'filteredExpr',
@@ -100,6 +105,7 @@ export class ExprProps extends ExpressionDef {
     let limit: Limit | undefined;
     const orderBys: FunctionOrdering[] = [];
     const wheres: Filter[] = [];
+    const groupedBys: GroupedBy[] = [];
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (!this.expr.canSupportPartitionBy()) {
@@ -133,6 +139,8 @@ export class ExprProps extends ExpressionDef {
         } else {
           orderBys.push(statement);
         }
+      } else if (statement instanceof GroupedBy) {
+        groupedBys.push(statement);
       } else {
         wheres.push(statement);
       }
@@ -145,6 +153,44 @@ export class ExprProps extends ExpressionDef {
             orderBys,
           })
         : this.expr.getExpression(fs);
-    return this.getFilteredExpression(fs, resultExpr, wheres);
+    const filteredExpr = this.getFilteredExpression(fs, resultExpr, wheres);
+    return this.getGroupedBys(fs, filteredExpr, groupedBys);
+  }
+
+  getGroupedBys(fs: FieldSpace, expr: ExprValue, groupedBys: GroupedBy[]) {
+    const groupedByFields: string[] = [];
+    for (const requiredGroupBy of groupedBys) {
+      for (const field of requiredGroupBy.groupedByFields) {
+        const e = field.getField(fs);
+        if (e.found === undefined) {
+          field.logError(
+            'grouped-by-not-found',
+            `${field.refString} is not defined`
+          );
+        } else if (
+          expressionIsAnalytic(e.found.typeDesc().expressionType) ||
+          expressionIsAggregate(e.found.typeDesc().expressionType)
+        ) {
+          field.logError(
+            'non-scalar-grouped-by',
+            '`grouped_by:` field must be a dimension'
+          );
+        } else {
+          groupedByFields.push(field.nameString);
+        }
+      }
+    }
+    const allRequiredGroupBys = mergeGroupedBys(
+      expr.requiresGroupBy,
+      groupedByFields.map(name => ({
+        path: [name],
+        at: this.location,
+      }))
+    );
+
+    return {
+      ...expr,
+      requiresGroupBy: allRequiredGroupBys,
+    };
   }
 }

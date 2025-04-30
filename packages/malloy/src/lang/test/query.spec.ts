@@ -980,7 +980,7 @@ describe('query:', () => {
         const index = q.pipeline[0];
         expect(index.type).toBe('index');
         if (index.type === 'index') {
-          expect(index.indexFields).toEqual([
+          expect(index.indexFields).toMatchObject([
             {type: 'fieldref', path: ['af']},
             {type: 'fieldref', path: ['astr']},
           ]);
@@ -1404,6 +1404,522 @@ describe('query:', () => {
           calculate: l is lag(ai)
         }`
       ).toTranslate();
+    });
+  });
+  describe('grouped_by', () => {
+    test('grouped_by requires compiler flag', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Experimental flag `grouped_by` is not set, feature not available'
+        )
+      );
+    });
+    test('grouped_by basic success', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: aisum }
+        `
+      ).toTranslate();
+    });
+    test('grouped_by basic failure', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { aggregate: ${'aisum'} }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    // TODO how do we check this??
+    test.skip('failure in multi-stage view in source', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: x is { aggregate: ${'aisum'} } -> { select: * }
+          }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('grouped_by failure direct in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          run: a -> { aggregate: aisum is ${'ai.sum() { grouped_by: astr }'} }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('view with inherited grouped_by failure', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: requires_astr is {
+              aggregate: aisum
+            }
+          }
+          run: aext -> { nest: requires_astr }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('view with inherited grouped_by success', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: requires_astr is {
+              aggregate: aisum
+            }
+          }
+          run: aext -> { group_by: astr; nest: requires_astr }
+        `
+      ).toTranslate();
+    });
+    test('nest satisfies required group by', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            group_by: ai
+            nest: no_require is {
+              group_by: astr
+              aggregate: aisum
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('composed source picked correctly', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a,
+            a extend { dimension: x is 1 }
+          ) extend {
+            measure: aisum is ai.sum() { grouped_by: x }
+          }
+          run: aext -> {
+            group_by: x
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    // TODO move this test somewhere else
+    test('composite used in join', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: x is compose(a, a extend { dimension: foo is 1 })
+          source: y is a extend {
+            join_one: x on x.ai = ai
+          }
+          run: y -> { group_by: x.foo }
+        `
+      ).toTranslate();
+    });
+    test('composed source input skipped when invalid require group by usage but field is present in source', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+      // TODO test that this actually uses first source
+    });
+    test('composed source input skipped when invalid require group by usage', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    // TODO this could get a better error message:
+    // something like "one source failed because it did not have a required group by"
+    test('required group by causes composed source to fall off end', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+            },
+            a extend {
+              dimension: y is 1
+              measure: aisum is ai.sum() { grouped_by: y }
+            }
+          )
+          run: ${'aext -> { aggregate: aisum }'}
+        `
+      ).toLog(errorMessage('Could not resolve composite source'));
+    });
+    // TODO this error message is not helpful
+    test('required group by fails one slice; other slice fails because of field usage', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+              dimension: foo is 1
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> {
+            aggregate: aisum
+            group_by: ${'foo'}
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `foo`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `foo`'
+        )
+      );
+    });
+    test('joined composed source input skipped when invalid require group by usage', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> {
+            aggregate: aext.aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('evil case where cannot resolve join composite because of field in root', () => {
+      // Here, `aext_aisum` is defined in `bext`, which means that when we are looking up the
+      // aggregate usage of `aext_aisum` (when deciding whether the first slice of the joined
+      // composite is valid), we need to know `bext`'s fields.
+      expect(
+        markSource`
+          ##! experimental { composite_sources grouped_by }
+          source: aext is compose(
+            a extend {
+              dimension: x is 1
+              measure: aisum is ai.sum() { grouped_by: x }
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          source: bext is b extend {
+            join_one: aext on true
+            measure: aext_aisum is aext.aisum
+          }
+          run: bext -> {
+            aggregate: aext_aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('require_group_by expression additive', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum1 is ai.sum() { grouped_by: astr }
+            measure: aisum2 is ai.sum() { grouped_by: abool }
+          }
+          run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
+        `
+      ).toLog(
+        errorMessage('Group by of `astr` is required but not present'),
+        errorMessage('Group by of `abool` is required but not present')
+      );
+    });
+    test('grouped_by basic joined success', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: aext.aisum }
+        `
+      ).toTranslate();
+    });
+    test('grouped_by basic joined failure', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          // Note that the 'group_by: astr' does not fool the checker!
+          run: bext -> { group_by: astr; aggregate: aext.aisum }
+        `
+      ).toLog(
+        errorMessage('Group by of `aext.astr` is required but not present')
+      );
+    });
+    test('grouped by failure when ungrouped (all, expression)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          run: a -> { group_by: astr; aggregate: x is all(ai.sum() { grouped_by: astr }) }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('grouped by success when ungrouped (exclude okay, expression)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          run: a -> { group_by: astr, abool; aggregate: x is exclude(ai.sum() { grouped_by: astr }, abool) }
+        `
+      ).toTranslate();
+    });
+    test('grouped by failure when ungrouped (all) direct in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: x is all(aisum) }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('grouped by failure when ungrouped (exclude)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('grouped by success when ungrouped (exclude, different name)', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, abool) }
+        `
+      ).toTranslate();
+    });
+    // Ideally, in cases where the aggregate usage is known when the measure is defined,
+    // we should log an error immediately rather than waiting until it is used in a query.
+    test.skip('grouped by failure when ungrouped (all) in measure definition not used in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: x is all(${'aisum'})
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Ungrouped aggregate results in unsatisfiable required group by of `astr`'
+        )
+      );
+    });
+    test('grouped by failure when ungrouped (all) in measure definition then used in query', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: x is all(aisum)
+          }
+          run: aext -> { group_by: astr; aggregate: ${'x'} }
+        `
+      ).toLog(
+        // TODO Might not really need both these errors...
+        // errorMessage(
+        //   'Ungrouped aggregate results in unsatisfiable required group by of `astr`'
+        // ),
+        errorMessage('Group by of `astr` is required but not present')
+      );
+    });
+    test('ungroup fails composite slice', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is compose(
+            a extend {
+              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+              measure: aisum is ai_grouped_by_astr.sum()
+            },
+            a extend {
+              measure: aisum is ai.sum()
+            }
+          )
+          run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
+        `
+      ).toTranslate();
+    });
+    test('ungroup fails composite source', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is compose(
+            a extend {
+              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
+              measure: aisum is ai_grouped_by_astr.sum()
+            },
+            a extend {
+              dimension: ai_grouped_by_abool is ai { grouped_by: abool }
+              measure: aisum is ai_grouped_by_abool.sum()
+            }
+          )
+          run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, astr, abool) }
+        `
+      ).toLog(errorMessage('Could not resolve composite source'));
+    });
+    test('ungroup in join expression', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: x is exclude(${'aext.aisum'}, astr) }
+        `
+      ).toLog(
+        errorMessage('Group by of `aext.astr` is required but not present')
+      );
+    });
+    test('ungroup in join reference', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: x is all(aisum)
+          }
+          source: bext is b extend {
+            join_one: aext on true
+          }
+          run: bext -> { group_by: aext.astr; aggregate: ${'aext.x'} }
+        `
+      ).toLog(
+        errorMessage('Group by of `aext.astr` is required but not present')
+      );
+    });
+    test('ungroup shadowed by definition', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            group_by: astr;
+            nest: foo is {
+              group_by: astr is 'foo'
+              aggregate: x is exclude(${'aisum'}, astr)
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('ungroup shadowed by reference', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            join_one: a on true
+          }
+          run: aext -> {
+            group_by: astr;
+            nest: foo is {
+              group_by: a.astr
+              aggregate: x is exclude(${'aisum'}, astr)
+            }
+          }
+        `
+      ).toTranslate();
+    });
+    test('ungroup nested', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            group_by: astr;
+            nest: foo is {
+              aggregate: x is exclude(${'aisum'}, astr)
+            }
+          }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
   });
 });

@@ -7,40 +7,6 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
-import type {CompositeFieldUsage} from '../../model';
-import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
-
-function addPathToCompositeUsage(
-  path: string[],
-  compositeUsage: CompositeFieldUsage
-): CompositeFieldUsage {
-  if (path.length === 0) throw new Error('empty path');
-  if (path.length === 1) {
-    return {
-      fields: [...compositeUsage.fields, path[0]],
-      joinedUsage: compositeUsage.joinedUsage,
-    };
-  } else {
-    return {
-      fields: compositeUsage.fields,
-      joinedUsage: {
-        ...compositeUsage.joinedUsage,
-        [path[0]]: addPathToCompositeUsage(
-          path.slice(1),
-          compositeUsage.joinedUsage[path[0]] ?? emptyCompositeFieldUsage()
-        ),
-      },
-    };
-  }
-}
-
-function paths(paths: string[][]): CompositeFieldUsage {
-  let cu = emptyCompositeFieldUsage();
-  for (const path of paths) {
-    cu = addPathToCompositeUsage(path, cu);
-  }
-  return cu;
-}
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -63,42 +29,22 @@ describe('composite sources', () => {
 
     test('looked up value', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai`).hasCompositeUsage(paths([['ai']]));
+      expect(mexpr`ai`).hasFieldUsage([['ai']]);
     });
 
     test('multiple values', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + af`).hasCompositeUsage(paths([['ai'], ['af']]));
+      expect(mexpr`ai + af`).hasFieldUsage([['ai'], ['af']]);
     });
 
     test('value plus constant', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + 1`).hasCompositeUsage(paths([['ai']]));
+      expect(mexpr`ai + 1`).hasFieldUsage([['ai']]);
     });
 
     test('join usage', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.ai + 1`).hasCompositeUsage(paths([['x', 'ai']]));
-    });
-
-    test('join usage complex', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.aif`).hasCompositeUsage(
-        paths([
-          ['x', 'ai'],
-          ['x', 'af'],
-        ])
-      );
-    });
-
-    test('measure defined in composite source', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'x');
-      expect(mexpr`ss`).hasCompositeUsage(paths([['ai']]));
-    });
-
-    test('measure with filter defined in composite source', () => {
-      const mexpr = makeExprFunc(m.translator.modelDef, 'x');
-      expect(mexpr`saiaf`).hasCompositeUsage(paths([['ai'], ['af']]));
+      expect(mexpr`x.ai + 1`).hasFieldUsage([['x', 'ai']]);
     });
   });
 
@@ -116,7 +62,62 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+        )
+      );
+    });
+    test('compose fails on scalar lens', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) -> {
+          group_by: one
+          group_by: three
+        } + ${'two'}
+      `).toLog(
+        errorMessage(
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+        )
+      );
+    });
+    // TODO I don't really know how to attach the error to the lens itself, since by that point
+    // we've lost the fact that it was a lens and that the `group_by: two` was not just added
+    // directly into the query...
+    test('compose fails on view lens', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          view: v is { group_by: two }
+        } -> {
+          group_by: one
+          group_by: three
+        } + ${'v'}
+      `).toLog(
+        errorMessage(
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+        )
+      );
+    });
+    test('compose fails on scalar lens that is dimension', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          dimension: x is two
+        } -> {
+          group_by: one
+          group_by: three
+        } + ${'x'}
+      `).toLog(
+        errorMessage(
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
         )
       );
     });
@@ -133,7 +134,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `three`, `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
         )
       );
     });
@@ -149,7 +150,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two`'
         )
       );
     });
@@ -197,6 +198,16 @@ describe('composite sources', () => {
         run: foo(param is 2) -> { group_by: y }
       `).toTranslate();
     });
+    test('composite source with parameter in expression', () => {
+      expect(`
+        ##! experimental { composite_sources parameters }
+        source: foo(param is 1) is compose(
+          a extend { dimension: x is param },
+          a extend { dimension: y is param + 1 }
+        )
+        run: foo(param is 2) -> { group_by: y2 is y + 1 }
+      `).toTranslate();
+    });
     test('composite source does not include private field', () => {
       expect(`
         ##! experimental { composite_sources access_modifiers }
@@ -222,7 +233,7 @@ describe('composite sources', () => {
         run: foo -> { group_by: x, y }
       `).toLog(
         errorMessage(
-          'This operation uses composite field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x`, `y`'
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y`'
         )
       );
     });

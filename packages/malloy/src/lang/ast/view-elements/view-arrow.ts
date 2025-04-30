@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {PipeSegment} from '../../../model/malloy_types';
+import type {PipeSegment} from '../../../model';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
-import type {FieldSpace} from '../types/field-space';
+import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
 
@@ -55,7 +55,7 @@ export class ViewArrow extends View {
   }
 
   refine(
-    _inputFS: FieldSpace,
+    _inputFS: SourceFieldSpace,
     _pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
