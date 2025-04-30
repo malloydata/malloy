@@ -448,6 +448,7 @@ export class TSQLDialect extends Dialect {
     throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
+  // TODO (vitor): Idk, this seems to be coming back wrong but the bug might be somewhere else.
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const sqlDistinctKey = `CONCAT(${key}, '')`; // Ensures key is treated as string for HASHBYTES
 
@@ -482,6 +483,7 @@ export class TSQLDialect extends Dialect {
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
+  // TODO (vitor): Test this properly
   sqlAggDistinct(
     key: string,
     values: string[],
