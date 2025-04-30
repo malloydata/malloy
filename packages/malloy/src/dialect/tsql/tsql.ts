@@ -737,11 +737,18 @@ export class TSQLDialect extends Dialect {
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
     // SQL Server doesn't have native regex, fallback to PATINDEX
-    return `PATINDEX(${df.kids.regex.sql?.startsWith('^') ? '' : '% + '}${
-      df.kids.regex.sql
-    }${df.kids.regex.sql?.endsWith('$') ? '' : '+ %'}, ${
-      df.kids.expr.sql
-    }) > 0`;
+    let pattern = df.kids.regex.sql;
+    if (pattern?.startsWith('^')) {
+      pattern = pattern.substring(1);
+    } else {
+      pattern = '%' + pattern;
+    }
+    if (pattern?.endsWith('$')) {
+      pattern = pattern.substring(0, -1);
+    } else {
+      pattern = pattern + '%';
+    }
+    return `PATINDEX(${pattern}${df.kids.expr.sql}) > 0`;
   }
 
   sqlLiteralTime(
