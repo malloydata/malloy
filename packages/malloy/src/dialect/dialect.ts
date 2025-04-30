@@ -175,6 +175,9 @@ export abstract class Dialect {
   // TSQL Doesn't support limit and limit is not part of the SQL Standard
   supportsLimit = true;
 
+  // TSQL Doesn't support regexp
+  supportsRegexp = true;
+
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   };

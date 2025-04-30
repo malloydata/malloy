@@ -39,6 +39,8 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
+  isBasicAtomic,
+  isRawCast,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
@@ -105,7 +107,7 @@ const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 export class TSQLDialect extends Dialect {
   name = 'tsql';
   defaultNumberType = 'float(53)';
-  defaultDecimalType = 'numeric';
+  defaultDecimalType = 'numeric(38)';
   udfPrefix = 'tsql_temp.__udf';
   // TODO (vitor): hasFinalStage is set to false for now because I don't know why it would be needed.
   hasFinalStage = false;
@@ -128,6 +130,7 @@ export class TSQLDialect extends Dialect {
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
   supportsLimit = false;
+  supportsRegexp = false;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
@@ -207,11 +210,12 @@ export class TSQLDialect extends Dialect {
   ): string {
     // console.info('sqlAnyValueLastTurtle');
     // Using TOP 1 with aggregation to get the last non-null value
-    return `(SELECT TOP 1 ${name} FROM (
+    return `
+    (SELECT TOP 1 ${name} FROM (
       SELECT ${name}
       WHERE group_set=${groupSet} AND ${name} IS NOT NULL
-      ORDER BY (SELECT NULL)
-    ) t) as ${sqlName}`;
+    ) t
+    ORDER BY (SELECT NULL)) as ${sqlName}\n`;
   }
 
   sqlCoaleseMeasuresInline(
@@ -381,6 +385,34 @@ export class TSQLDialect extends Dialect {
     `;
   }
 
+  // TODO (vitor): Not sure about this...
+  sqlCastPrep(cast: TypecastExpr): {
+    op: string;
+    srcTypeDef: BasicAtomicTypeDef | undefined;
+    dstTypeDef: BasicAtomicTypeDef | undefined;
+    dstSQLType: string;
+  } {
+    let srcTypeDef = cast.srcType || cast.e.typeDef;
+    const src = srcTypeDef?.type || 'unknown';
+    if (srcTypeDef && !isBasicAtomic(srcTypeDef)) {
+      srcTypeDef = undefined;
+    }
+    if (isRawCast(cast)) {
+      return {
+        op: `CAST ${src} AS '${cast.dstSQLType}')`,
+        srcTypeDef,
+        dstTypeDef: undefined,
+        dstSQLType: cast.dstSQLType,
+      };
+    }
+    return {
+      op: `CAST(${src} AS ${cast.dstType.type})`,
+      srcTypeDef,
+      dstTypeDef: cast.dstType,
+      dstSQLType: this.malloyTypeToSQLType(cast.dstType),
+    };
+  }
+
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     if (cast.safe) {
       throw new Error("TSQL dialect doesn't support Safe Cast");
@@ -439,8 +471,8 @@ export class TSQLDialect extends Dialect {
     // The core calculation: SUM(DISTINCT hashKey + value) - SUM(DISTINCT hashKey)
     // This avoids arithmetic overflow by using appropriate decimal precision
     const sqlSum = `(
-        SUM(DISTINCT CAST((${hashKey} + CAST(${v} AS DECIMAL(28,6))) AS DECIMAL(28,6)))
-        - SUM(DISTINCT CAST(${hashKey} AS DECIMAL(28,6)))
+        CAST(SUM(DISTINCT CAST((${hashKey} + CAST(${v} AS DECIMAL(28,6))) AS DECIMAL(28,6)))
+        - SUM(DISTINCT CAST(${hashKey} AS DECIMAL(28,6))) AS DECIMAL(28,0))
     )`;
 
     if (funcName === 'SUM') {
@@ -514,10 +546,11 @@ export class TSQLDialect extends Dialect {
     return "N'" + noEscape.replace(/'/g, "''") + "'";
   }
 
-  // TODO (vitor): Same as sqlLiteralString
-  sqlLiteralRegexp(literal: string): string {
-    const noEscape = literal.replace(/\\\\/g, '\\');
-    return "N'" + noEscape.replace(/'/g, "''") + "'";
+  sqlLiteralRegexp(_literal: string): string {
+    // SQL Server doesn't have native regex, It can be done with CLR
+    // Azure SQL does have regexp but Synapse doesn't (unless you use spark or something like that)
+    // Better not to support it for now.
+    throw new Error('Unsupported function');
   }
 
   getDialectFunctionOverrides(): {
@@ -704,9 +737,11 @@ export class TSQLDialect extends Dialect {
     }
   }
 
-  sqlRegexpMatch(df: RegexMatchExpr): string {
-    // SQL Server doesn't have native regex, fallback to PATINDEX
-    return `PATINDEX('%' + ${df.kids.regex.sql} + '%', ${df.kids.expr.sql}) > 0`;
+  sqlRegexpMatch(_df: RegexMatchExpr): string {
+    // SQL Server doesn't have native regex, It can be done with CLR
+    // Azure SQL does have regexp but Synapse doesn't (unless you use spark or something like that)
+    // Better not to support it for now.
+    throw new Error('Unsupported function');
   }
 
   sqlLiteralTime(
