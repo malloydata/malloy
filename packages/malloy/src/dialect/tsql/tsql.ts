@@ -112,6 +112,7 @@ export class TSQLDialect extends Dialect {
   // TODO (vitor): hasFinalStage is set to false for now because I don't know why it would be needed.
   hasFinalStage = false;
   divisionIsInteger = true;
+  // TODO (vitor): Gotta leave supportsSumDistinctFunction as true i guess.
   supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
@@ -130,6 +131,8 @@ export class TSQLDialect extends Dialect {
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
   supportsLimit = false;
+  // TODO (vitor): idk about this cantPartitionWindowFunctionsOnExpressions...
+  cantPartitionWindowFunctionsOnExpressions = false;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
@@ -740,23 +743,24 @@ export class TSQLDialect extends Dialect {
     // SQL Server doesn't have native regex, fallback to PATINDEX
     const rawPatterns = df.kids.regex.sql?.split('|') || [];
     const patterns = rawPatterns.map(ogPattern => {
-      const groups = /(^N')(.*)(')/.exec(ogPattern) || [];
-      const leading = groups[1] || '';
-      const trailing = groups[3] || '';
-      let pattern = groups[2] || '';
+      const groups = /(^N)(')(.*)(')/.exec(ogPattern) || [];
+      const literal = groups[1] || '';
+      const leading = groups[2] || "'";
+      const trailing = groups[4] || "'";
+      let pattern = groups[3] || '';
       if (pattern?.startsWith('^')) {
         pattern = pattern.substring(1);
-      } else {
+      } else if (pattern) {
         pattern = '%' + pattern;
       }
       if (pattern?.endsWith('$')) {
         pattern = pattern.substring(0, -1);
-      } else {
+      } else if (pattern) {
         pattern = pattern + '%';
       }
       pattern = pattern.replace('\\d', '[0-9]');
       pattern = pattern.replace('\\w', '[a-zA-Z]');
-      return `PATINDEX(${leading}${pattern}${trailing}, ${df.kids.expr.sql}) > 0`;
+      return `PATINDEX(${literal}${leading}${pattern}${trailing}, ${df.kids.expr.sql}) > 0`;
     });
     return patterns.join(' OR ');
   }
