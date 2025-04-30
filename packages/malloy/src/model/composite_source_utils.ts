@@ -13,9 +13,11 @@ import type {
   Expr,
   StructDef,
   AggregateUngrouping,
-  RequiredGroupBy,
+  AdditiveFields,
+  DocumentLocation,
 } from './malloy_types';
 import {
+  expressionIsScalar,
   isAtomic,
   isJoinable,
   isJoined,
@@ -582,7 +584,7 @@ function getNonCompositeFields(source: SourceDef): FieldDef[] {
 interface NestLevels {
   fieldsReferencedDirectly: FieldUsage[];
   fieldsReferenced: FieldUsage[];
-  requiredGroupBys: RequiredGroupBy[];
+  additiveFields: AdditiveFields[];
   nested: NestLevels[];
   ungroupings: AggregateUngrouping[];
 }
@@ -613,12 +615,17 @@ function getFieldUsageForField(field: FieldDef): FieldUsage[] {
   return [];
 }
 
+export interface RequiredGroupBy {
+  at: DocumentLocation;
+  path: string[];
+}
+
 function extractNestLevels(segment: PipeSegment): NestLevels {
   const fieldsReferencedDirectly: FieldUsage[] = [];
   const fieldsReferenced: FieldUsage[] = [];
   const nested: NestLevels[] = [];
   const ungroupings: AggregateUngrouping[] = [];
-  const requiredGroupBys: RequiredGroupBy[] = [];
+  const additiveFields: AdditiveFields[] = [];
 
   if (
     segment.type === 'project' ||
@@ -640,7 +647,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
       } else {
         fieldsReferenced.push(...getFieldUsageForField(field));
         ungroupings.push(...(field.ungroupings ?? []));
-        requiredGroupBys.push(...(field.requiresGroupBy ?? []));
+        additiveFields.push(...(field.additiveFields ?? []));
       }
     }
   }
@@ -650,7 +657,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
     nested,
     fieldsReferenced,
     ungroupings,
-    requiredGroupBys,
+    additiveFields,
   };
 }
 
@@ -661,6 +668,27 @@ interface ExpandedNestLevels {
   nested: ExpandedNestLevels[];
 }
 
+function getRequiredGroupBysFromAdditiveFields(
+  additiveFieldses: AdditiveFields[],
+  fields: FieldDef[]
+): RequiredGroupBy[] {
+  const requiredGroupBys: RequiredGroupBy[] = [];
+  for (const additiveFields of additiveFieldses) {
+    const joinFields = getJoinFields(fields, additiveFields.joinPath);
+    for (const field of joinFields) {
+      const name = field.as ?? field.name;
+      if (!isAtomic(field)) continue;
+      if (!expressionIsScalar(field.expressionType)) continue;
+      if (additiveFields.fields.includes(name)) continue;
+      requiredGroupBys.push({
+        path: [...additiveFields.joinPath, name],
+        at: additiveFields.at,
+      });
+    }
+  }
+  return requiredGroupBys;
+}
+
 function expandRefs(
   nests: NestLevels,
   fields: FieldDef[]
@@ -668,7 +696,9 @@ function expandRefs(
   | {result: ExpandedNestLevels; error?: undefined}
   | {error: CompositeCouldNotFindFieldError; result?: undefined} {
   const newNests: NestLevels[] = [];
-  const requiredGroupBys: RequiredGroupBy[] = [...nests.requiredGroupBys];
+  const requiredGroupBys: RequiredGroupBy[] = [
+    ...getRequiredGroupBysFromAdditiveFields(nests.additiveFields, fields),
+  ];
   const allUngroupings: AggregateUngrouping[] = [...nests.ungroupings];
   const references = [...nests.fieldsReferenced];
   const joinPathsProcessed: string[][] = [];
@@ -690,10 +720,16 @@ function expandRefs(
       const head = def.pipeline[0];
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
-      if (def.requiresGroupBy) {
+      if (def.additiveFields) {
         requiredGroupBys.push(
-          ...def.requiresGroupBy.map(gb => ({
-            path: [...joinPath, ...gb.path],
+          ...getRequiredGroupBysFromAdditiveFields(
+            def.additiveFields.map(af => ({
+              ...af,
+              joinPath: [...joinPath, ...af.joinPath],
+            })),
+            fields
+          ).map(gb => ({
+            ...gb,
             at: field.at,
           }))
         );
@@ -702,9 +738,9 @@ function expandRefs(
         allUngroupings.push(
           ...def.ungroupings.map(u => ({
             ...u,
-            requiresGroupBy: u.requiresGroupBy?.map(gb => ({
-              ...gb,
-              path: [...joinPath, ...gb.path],
+            additiveFields: u.additiveFields?.map(af => ({
+              ...af,
+              joinPath: [...joinPath, ...af.joinPath],
               at: field.at,
             })),
             fieldUsage: joinedFieldUsage(joinPath, u.fieldUsage).map(u2 => ({
@@ -747,7 +783,7 @@ function expandRefs(
         fieldsReferencedDirectly: [],
         ungroupings: [],
         nested: [],
-        requiredGroupBys: ungrouping.requiresGroupBy ?? [],
+        additiveFields: ungrouping.additiveFields ?? [],
       },
       fields
     );

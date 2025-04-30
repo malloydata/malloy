@@ -114,9 +114,9 @@ export class ReferenceField extends SpaceField {
             at: this.fieldRef.location,
           },
         ],
-        requiresGroupBy: typeDesc.requiresGroupBy?.map(gb => ({
-          ...gb,
-          path: [...joinPath, ...gb.path],
+        additiveFields: typeDesc.additiveFields?.map(af => ({
+          ...af,
+          joinPath: [...joinPath, ...af.joinPath],
         })),
       };
       return this.memoTypeDesc;

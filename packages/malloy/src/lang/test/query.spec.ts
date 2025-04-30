@@ -1406,37 +1406,37 @@ describe('query:', () => {
       ).toTranslate();
     });
   });
-  describe('grouped_by', () => {
-    test('grouped_by requires compiler flag', () => {
+  describe('additive_for', () => {
+    test('additive_for requires compiler flag', () => {
       expect(
         markSource`
           source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: aisum is ai.sum() { additive_for: astr }
           }
         `
       ).toLog(
         errorMessage(
-          'Experimental flag `grouped_by` is not set, feature not available'
+          'Experimental flag `additivity` is not set, feature not available'
         )
       );
     });
-    test('grouped_by basic success', () => {
+    test('additive_for basic success', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           run: aext -> { group_by: astr; aggregate: aisum }
         `
       ).toTranslate();
     });
-    test('grouped_by basic failure', () => {
+    test('additive_for basic failure', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: abool, ai }
           }
           run: aext -> { aggregate: ${'aisum'} }
         `
@@ -1446,29 +1446,32 @@ describe('query:', () => {
     test.skip('failure in multi-stage view in source', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: abool, ai }
 
             view: x is { aggregate: ${'aisum'} } -> { select: * }
           }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('grouped_by failure direct in query', () => {
+    test('additive_for failure direct in query', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          run: a -> { aggregate: aisum is ${'ai.sum() { grouped_by: astr }'} }
+          ##! experimental { additivity access_modifiers }
+          run: a include { ai, astr, abool } -> {
+            aggregate: aisum is ${'ai.sum() { additive_for: ai, abool }'}
+          }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('view with inherited grouped_by failure', () => {
+    // TODO error location should be on usage, not definition!
+    test('view with inherited additive_for failure', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: abool, ai }
 
             view: requires_astr is {
               aggregate: aisum
@@ -1478,12 +1481,12 @@ describe('query:', () => {
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('view with inherited grouped_by success', () => {
+    test('view with inherited additive_for success', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: abool, ai }
 
             view: requires_astr is {
               aggregate: aisum
@@ -1496,9 +1499,9 @@ describe('query:', () => {
     test('nest satisfies required group by', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: abool, ai }
           }
           run: aext -> {
             group_by: ai
@@ -1513,12 +1516,13 @@ describe('query:', () => {
     test('composed source picked correctly', () => {
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources access_modifiers additivity }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a,
-            a extend { dimension: x is 1 }
+            asmall,
+            asmall extend { dimension: x is 1 }
           ) extend {
-            measure: aisum is ai.sum() { grouped_by: x }
+            measure: aisum is ai.sum() { additive_for: ai, astr, abool }
           }
           run: aext -> {
             group_by: x
@@ -1531,7 +1535,7 @@ describe('query:', () => {
     test('composite used in join', () => {
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources }
           source: x is compose(a, a extend { dimension: foo is 1 })
           source: y is a extend {
             join_one: x on x.ai = ai
@@ -1540,15 +1544,17 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test('composed source input skipped when invalid require group by usage but field is present in source', () => {
+    test('composed source input skipped when invalid additivity usage but field is present in source', () => {
+      // TODO test that this actually uses second source
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources access_modifiers additivity }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
-              measure: aisum is ai.sum() { grouped_by: astr }
+            asmall extend {
+              measure: aisum is ai.sum() { additive_for: ai, abool }
             },
-            a extend {
+            asmall extend {
               measure: aisum is ai.sum()
             }
           )
@@ -1557,22 +1563,42 @@ describe('query:', () => {
           }
         `
       ).toTranslate();
-      // TODO test that this actually uses first source
     });
-    test('composed source input skipped when invalid require group by usage', () => {
+    test('composed source input skipped when invalid additivity usage', () => {
+      // TODO test that this actually uses second source
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources access_modifiers additivity }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
+            asmall extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
+              measure: aisum is ai.sum() { additive_for: ai, astr, abool }
             },
-            a extend {
+            asmall extend {
               measure: aisum is ai.sum()
             }
           )
           run: aext -> {
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('composed source input selected when valid additivity usage', () => {
+      expect(
+        markSource`
+          ##! experimental { composite_sources access_modifiers additivity }
+          source: asmall is a include { ai, astr, abool }
+          source: aext is compose(
+            asmall,
+            asmall extend {
+              dimension: y is 1
+              measure: aisum is ai.sum() { additive_for: ai, astr }
+            }
+          )
+          run: aext -> {
+            group_by: abool, y
             aggregate: aisum
           }
         `
@@ -1583,30 +1609,35 @@ describe('query:', () => {
     test('required group by causes composed source to fall off end', () => {
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources access_modifiers additivity }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
+            asmall extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
             },
-            a extend {
+            asmall extend {
               dimension: y is 1
-              measure: aisum is ai.sum() { grouped_by: y }
             }
-          )
+          ) extend {
+            measure: aisum is ai.sum() { additive_for: ai, astr, abool }
+          }
           run: ${'aext -> { aggregate: aisum }'}
         `
-      ).toLog(errorMessage('Could not resolve composite source'));
+      ).toLog(
+        errorMessage('Could not resolve composite source'),
+        errorMessage('Group by of `x` is required but not present'),
+        errorMessage('Group by of `y` is required but not present')
+      );
     });
     // TODO this error message is not helpful
     test('required group by fails one slice; other slice fails because of field usage', () => {
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources additivity }
           source: aext is compose(
             a extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
+              measure: aisum is ai.sum() { additive_for: ai }
               dimension: foo is 1
             },
             a extend {
@@ -1624,16 +1655,17 @@ describe('query:', () => {
         )
       );
     });
-    test('joined composed source input skipped when invalid require group by usage', () => {
+    test('joined composed source input skipped when invalid additivity usage', () => {
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources additivity access_modifiers }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
+            asmall extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
+              measure: aisum is ai.sum() { additive_for: ai, abool, astr }
             },
-            a extend {
+            asmall extend {
               measure: aisum is ai.sum()
             }
           )
@@ -1644,6 +1676,7 @@ describe('query:', () => {
             aggregate: aext.aisum
           }
         `
+        // TODO test that this actually uses source 2
       ).toTranslate();
     });
     test('evil case where cannot resolve join composite because of field in root', () => {
@@ -1652,13 +1685,14 @@ describe('query:', () => {
       // composite is valid), we need to know `bext`'s fields.
       expect(
         markSource`
-          ##! experimental { composite_sources grouped_by }
+          ##! experimental { composite_sources additivity access_modifiers }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
+            asmall extend {
               dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
+              measure: aisum is ai.sum() { additive_for: ai, astr, abool }
             },
-            a extend {
+            asmall extend {
               measure: aisum is ai.sum()
             }
           )
@@ -1672,13 +1706,13 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test('require_group_by expression additive', () => {
+    test('additive_for expression additive', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum1 is ai.sum() { grouped_by: astr }
-            measure: aisum2 is ai.sum() { grouped_by: abool }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum1 is ai.sum() { additive_for: ai, abool }
+            measure: aisum2 is ai.sum() { additive_for: ai, astr }
           }
           run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
         `
@@ -1687,12 +1721,12 @@ describe('query:', () => {
         errorMessage('Group by of `abool` is required but not present')
       );
     });
-    test('grouped_by basic joined success', () => {
+    test('additive_for basic joined success', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1701,12 +1735,12 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test('grouped_by basic joined failure', () => {
+    test('additive_for basic joined failure', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1718,50 +1752,56 @@ describe('query:', () => {
         errorMessage('Group by of `aext.astr` is required but not present')
       );
     });
-    test('grouped by failure when ungrouped (all, expression)', () => {
+    test('additivity failure when ungrouped (all, expression)', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          run: a -> { group_by: astr; aggregate: x is all(ai.sum() { grouped_by: astr }) }
+          ##! experimental { additivity access_modifiers }
+          run: a include { ai, astr, abool } -> {
+            group_by: astr
+            aggregate: x is all(ai.sum() { additive_for: ai, abool })
+          }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('grouped by success when ungrouped (exclude okay, expression)', () => {
+    test('additivity success when ungrouped (exclude okay, expression)', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          run: a -> { group_by: astr, abool; aggregate: x is exclude(ai.sum() { grouped_by: astr }, abool) }
+          ##! experimental { additivity access_modifiers }
+          run: a include { ai, astr, abool } -> {
+            group_by: astr, abool
+            aggregate: x is exclude(ai.sum() { additive_for: ai, abool }, abool)
+          }
         `
       ).toTranslate();
     });
-    test('grouped by failure when ungrouped (all) direct in query', () => {
+    test('additivity failure when ungrouped (all) direct in query', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           run: aext -> { group_by: astr; aggregate: x is all(aisum) }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('grouped by failure when ungrouped (exclude)', () => {
+    test('additivity failure when ungrouped (exclude)', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
-    test('grouped by success when ungrouped (exclude, different name)', () => {
+    test('additivity success when ungrouped (exclude, different name)', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, abool) }
         `
@@ -1772,9 +1812,9 @@ describe('query:', () => {
     test.skip('grouped by failure when ungrouped (all) in measure definition not used in query', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
             measure: x is all(${'aisum'})
           }
         `
@@ -1784,12 +1824,12 @@ describe('query:', () => {
         )
       );
     });
-    test('grouped by failure when ungrouped (all) in measure definition then used in query', () => {
+    test('additivity failure when ungrouped (all) in measure definition then used in query', () => {
       expect(
         markSource`
-          ##! experimental.grouped_by
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
             measure: x is all(aisum)
           }
           run: aext -> { group_by: astr; aggregate: ${'x'} }
@@ -1803,15 +1843,16 @@ describe('query:', () => {
       );
     });
     test('ungroup fails composite slice', () => {
+      // TODO test that this uses second slice
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
+          ##! experimental { composite_sources access_modifiers additivity }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
-              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-              measure: aisum is ai_grouped_by_astr.sum()
+            asmall extend {
+              measure: aisum is ai.sum() { additive_for: ai, abool }
             },
-            a extend {
+            asmall extend {
               measure: aisum is ai.sum()
             }
           )
@@ -1822,15 +1863,14 @@ describe('query:', () => {
     test('ungroup fails composite source', () => {
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
+          ##! experimental { additivity composite_sources access_modifiers }
+          source: asmall is a include { ai, astr, abool }
           source: aext is compose(
-            a extend {
-              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-              measure: aisum is ai_grouped_by_astr.sum()
+            asmall extend {
+              measure: aisum is ai.sum() { additive_for: ai, abool }
             },
-            a extend {
-              dimension: ai_grouped_by_abool is ai { grouped_by: abool }
-              measure: aisum is ai_grouped_by_abool.sum()
+            asmall extend {
+              measure: aisum is ai.sum() { additive_for: ai, astr }
             }
           )
           run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, astr, abool) }
@@ -1840,9 +1880,9 @@ describe('query:', () => {
     test('ungroup in join expression', () => {
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers composite_sources }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           source: bext is b extend {
             join_one: aext on true
@@ -1856,9 +1896,9 @@ describe('query:', () => {
     test('ungroup in join reference', () => {
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers composite_sources }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
             measure: x is all(aisum)
           }
           source: bext is b extend {
@@ -1870,12 +1910,13 @@ describe('query:', () => {
         errorMessage('Group by of `aext.astr` is required but not present')
       );
     });
+    test.todo('group by should not be required for constants');
     test('ungroup shadowed by definition', () => {
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers composite_sources }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           run: aext -> {
             group_by: astr;
@@ -1890,9 +1931,9 @@ describe('query:', () => {
     test('ungroup shadowed by reference', () => {
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers composite_sources }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
             join_one: a on true
           }
           run: aext -> {
@@ -1908,9 +1949,9 @@ describe('query:', () => {
     test('ungroup nested', () => {
       expect(
         markSource`
-          ##! experimental { grouped_by composite_sources }
-          source: aext is a extend {
-            measure: aisum is ai.sum() { grouped_by: astr }
+          ##! experimental { additivity access_modifiers composite_sources }
+          source: aext is a include { ai, astr, abool } extend {
+            measure: aisum is ai.sum() { additive_for: ai, abool }
           }
           run: aext -> {
             group_by: astr;

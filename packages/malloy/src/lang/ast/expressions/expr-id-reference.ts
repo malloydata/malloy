@@ -78,7 +78,7 @@ export class ExprIdReference extends ExpressionDef {
         value,
         evalSpace,
         fieldUsage,
-        requiresGroupBy: undefined,
+        additiveFields: undefined,
       };
     }
     return this.loggedErrorExpr(def.error.code, def.error.message);

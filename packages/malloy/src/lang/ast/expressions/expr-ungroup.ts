@@ -109,7 +109,7 @@ export class ExprUngroup extends ExpressionDef {
         fieldUsage: exprVal.fieldUsage,
         ungroupings: [
           {
-            requiresGroupBy: exprVal.requiresGroupBy ?? [],
+            additiveFields: exprVal.additiveFields ?? [],
             fieldUsage: exprVal.fieldUsage ?? [],
             ungroupedFields: isExclude ? ungroupFields ?? [] : '*',
           },

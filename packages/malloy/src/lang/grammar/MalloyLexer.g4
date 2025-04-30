@@ -26,6 +26,7 @@ lexer grammar MalloyLexer;
 fragment SPACE_CHAR: [ \u000B\t\r\n\u00A0];
 
 // colon keywords ...
+ADDITIVE_FOR: A D D I T I V E '_' F O R SPACE_CHAR* ':';
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
 CALCULATE: C A L C U L A T E SPACE_CHAR* ':';
@@ -36,7 +37,6 @@ DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
 EXCEPT: E X C E P T SPACE_CHAR* ':';
 EXTENDQ: E X T E N D SPACE_CHAR* ':';
 GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
-GROUPED_BY: G R O U P E D '_' B Y SPACE_CHAR* ':';
 HAVING: H A V I N G SPACE_CHAR* ':';
 INDEX: I N D E X SPACE_CHAR* ':';
 INTERNAL: I N T E R N A L SPACE_CHAR* ':';
