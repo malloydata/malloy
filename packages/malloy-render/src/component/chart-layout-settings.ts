@@ -84,6 +84,7 @@ export function getChartLayoutSettings(
     chartType: string;
     getXMinMax?: () => [number, number];
     getYMinMax?: () => [number, number];
+    independentY?: boolean;
   }
 ): ChartLayoutSettings {
   // TODO: improve logic for field extraction
@@ -243,7 +244,7 @@ export function getChartLayoutSettings(
       yTitleSize,
     },
     yScale: {
-      domain: chartTag.has('y', 'independent') ? null : yDomain,
+      domain: options.independentY ? null : yDomain,
     },
     padding: isSpark
       ? {top: 0, left: 0, bottom: 0, right: 0}

@@ -29,9 +29,11 @@ export type VegaPadding = {
   right?: number;
   bottom?: number;
 };
-export type MalloyDataToChartDataHandler = (
-  data: RepeatedRecordCell
-) => unknown[];
+export type MalloyDataToChartDataHandler = (data: RepeatedRecordCell) => {
+  data: unknown[];
+  isDataLimited: boolean;
+  dataLimitMessage?: string;
+};
 export type VegaChartProps = {
   spec: Spec;
   plotWidth: number;
