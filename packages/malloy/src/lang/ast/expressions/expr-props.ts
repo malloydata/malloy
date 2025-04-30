@@ -33,13 +33,13 @@ import {FunctionOrdering} from './function-ordering';
 import type {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
-import type {ExprValue} from '../types/expr-value';
+import {mergeGroupedBys, type ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
 import {mergeFieldUsage} from '../../../model/composite_source_utils';
-import {AdditiveFor} from './additive_for';
+import {GroupedBy} from './grouped_by';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
@@ -105,7 +105,7 @@ export class ExprProps extends ExpressionDef {
     let limit: Limit | undefined;
     const orderBys: FunctionOrdering[] = [];
     const wheres: Filter[] = [];
-    const groupedBys: AdditiveFor[] = [];
+    const groupedBys: GroupedBy[] = [];
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (!this.expr.canSupportPartitionBy()) {
@@ -139,7 +139,7 @@ export class ExprProps extends ExpressionDef {
         } else {
           orderBys.push(statement);
         }
-      } else if (statement instanceof AdditiveFor) {
+      } else if (statement instanceof GroupedBy) {
         groupedBys.push(statement);
       } else {
         wheres.push(statement);
@@ -154,24 +154,17 @@ export class ExprProps extends ExpressionDef {
           })
         : this.expr.getExpression(fs);
     const filteredExpr = this.getFilteredExpression(fs, resultExpr, wheres);
-    return this.getAdditiveFields(fs, filteredExpr, groupedBys);
+    return this.getGroupedBys(fs, filteredExpr, groupedBys);
   }
 
-  getAdditiveFields(
-    fs: FieldSpace,
-    expr: ExprValue,
-    additiveFors: AdditiveFor[]
-  ) {
-    if (additiveFors.length === 0) {
-      return expr;
-    }
-    const additiveFields: string[] = [];
-    for (const additiveFor of additiveFors) {
-      for (const field of additiveFor.additiveForFields) {
+  getGroupedBys(fs: FieldSpace, expr: ExprValue, groupedBys: GroupedBy[]) {
+    const groupedByFields: string[] = [];
+    for (const requiredGroupBy of groupedBys) {
+      for (const field of requiredGroupBy.groupedByFields) {
         const e = field.getField(fs);
         if (e.found === undefined) {
           field.logError(
-            'additive-for-not-found',
+            'grouped-by-not-found',
             `${field.refString} is not defined`
           );
         } else if (
@@ -179,24 +172,25 @@ export class ExprProps extends ExpressionDef {
           expressionIsAggregate(e.found.typeDesc().expressionType)
         ) {
           field.logError(
-            'non-scalar-additive-for',
-            '`additive_for:` field must be a dimension'
+            'non-scalar-grouped-by',
+            '`grouped_by:` field must be a dimension'
           );
         } else {
-          additiveFields.push(field.nameString);
+          groupedByFields.push(field.nameString);
         }
       }
     }
+    const allRequiredGroupBys = mergeGroupedBys(
+      expr.requiresGroupBy,
+      groupedByFields.map(name => ({
+        path: [name],
+        at: this.location,
+      }))
+    );
 
     return {
       ...expr,
-      additiveFields: [
-        {
-          fields: additiveFields,
-          at: this.location,
-          joinPath: [],
-        },
-      ],
+      requiresGroupBy: allRequiredGroupBys,
     };
   }
 }

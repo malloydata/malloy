@@ -164,8 +164,8 @@ export class PartitionByFieldReference extends FieldReference {
   }
 }
 
-export class AdditiveForReference extends FieldReference {
-  elementType = 'additiveForReference';
+export class GroupedByReference extends FieldReference {
+  elementType = 'groupedByReference';
   typecheck() {
     return;
   }

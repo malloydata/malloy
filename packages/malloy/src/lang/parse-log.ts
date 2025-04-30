@@ -408,8 +408,8 @@ type MessageParameterTypes = {
   'filter-expression-type': string;
   'filter-expression-error': string;
   'invalid-malloy-query-document': string;
-  'additive-for-not-found': string;
-  'non-scalar-additive-for': string;
+  'grouped-by-not-found': string;
+  'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
 };
 

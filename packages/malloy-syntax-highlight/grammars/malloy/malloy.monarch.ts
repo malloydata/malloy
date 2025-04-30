@@ -201,7 +201,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bexcept\b/, 'keyword.control.except'],
       [/\bsource\b/, 'keyword.control.source'],
       [/\bgroup_by\b/, 'keyword.control.group_by'],
-      [/\badditive_for\b/, 'keyword.control.additive_for'],
+      [/\bgrouped_by\b/, 'keyword.control.grouped_by'],
       [/\bhaving\b/, 'keyword.control.having'],
       [/\bindex\b/, 'keyword.control.index'],
       [/\bjoin_one\b/, 'keyword.control.join_one'],

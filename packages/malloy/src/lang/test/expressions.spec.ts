@@ -615,29 +615,29 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
-    describe('additive_for:', () => {
-      test('additive_for of dimension', () => {
+    describe('grouped_by:', () => {
+      test('grouped_by of dimension', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by additive_for }
+          ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
-            measure: aisum is ai.sum() { additive_for: astr }
+            measure: aisum is ai.sum() { grouped_by: astr }
           }
         `).toTranslate();
       });
-      test('additive_for of measure', () => {
+      test('grouped_by of measure', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by additive_for }
+          ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
             measure: c is count()
-            measure: aisum is ai.sum() { additive_for: ${'c'} }
+            measure: aisum is ai.sum() { grouped_by: ${'c'} }
           }
-        `).toLog(errorMessage('`additive_for:` field must be a dimension'));
+        `).toLog(errorMessage('`grouped_by:` field must be a dimension'));
       });
-      test('additive_for of self', () => {
+      test('grouped_by of self', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by additive_for }
+          ##! experimental { aggregate_order_by grouped_by }
           source: aext is a extend {
-            measure: aisum is ai.sum() { additive_for: aisum }
+            measure: aisum is ai.sum() { grouped_by: aisum }
           }
         `).toLog(errorMessage('aisum is not defined'));
       });

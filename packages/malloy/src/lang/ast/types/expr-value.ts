@@ -25,7 +25,7 @@ import type {
   AggregateUngrouping,
   Expr,
   ExpressionValueTypeDef,
-  AdditiveFields,
+  RequiredGroupBy,
   TemporalTypeDef,
   TimestampUnit,
 } from '../../../model';
@@ -52,7 +52,7 @@ export function computedExprValue({
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
     fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
     ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
-    additiveFields: mergeAdditiveFields(...from.map(e => e.additiveFields)),
+    requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
 }
 
@@ -75,7 +75,7 @@ export function computedTimeResult({
     value: xv.value,
     fieldUsage: mergeFieldUsage(...from.map(e => e.fieldUsage)),
     ungroupings: mergeUngroupings(...from.map(e => e.ungroupings)),
-    additiveFields: mergeAdditiveFields(...from.map(e => e.additiveFields)),
+    requiresGroupBy: mergeGroupedBys(...from.map(e => e.requiresGroupBy)),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -130,17 +130,31 @@ export function literalTimeResult({
   return y;
 }
 
-export function mergeAdditiveFields(
-  ...additiveFieldses: (AdditiveFields[] | undefined)[]
-): AdditiveFields[] | undefined {
-  const result: AdditiveFields[] = [];
-  for (const additiveFields of additiveFieldses) {
-    if (additiveFields !== undefined) {
-      result.push(...additiveFields);
+// TODO does it even make sense to operate on grouped_by fields directly?
+// does the set of grouped by have to be the same?
+// total_users { grouped_by: country }
+// x_total_users { grouped_by: state }
+// x_total_users + total_users
+export function mergeGroupedBys(
+  ...groupBys: (RequiredGroupBy[] | undefined)[]
+): RequiredGroupBy[] | undefined {
+  const requiredGroupBys: RequiredGroupBy[] = [];
+  for (const groupBy of groupBys) {
+    if (groupBy === undefined) continue;
+    for (const gb of groupBy) {
+      if (
+        !requiredGroupBys.some(
+          g =>
+            g.path.length === gb.path.length &&
+            g.path.every((p, i) => p === gb.path[i])
+        )
+      ) {
+        requiredGroupBys.push(gb);
+      }
     }
   }
-  if (result.length === 0) return undefined;
-  return result;
+  if (requiredGroupBys.length === 0) return undefined;
+  return requiredGroupBys;
 }
 
 export function mergeUngroupings(

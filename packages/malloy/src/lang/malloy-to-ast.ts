@@ -1707,15 +1707,15 @@ export class MalloyToAST
     );
   }
 
-  visitAdditiveForStatement(pcx: parse.AdditiveForStatementContext) {
-    this.inExperiment('additivity', pcx);
+  visitGroupedByStatement(pcx: parse.GroupedByStatementContext) {
+    this.inExperiment('grouped_by', pcx);
     return this.astAt(
-      new ast.AdditiveFor(
+      new ast.GroupedBy(
         pcx
           .id()
           .map(idCx =>
             this.astAt(
-              new ast.AdditiveForReference([
+              new ast.GroupedByReference([
                 this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
               ]),
               idCx

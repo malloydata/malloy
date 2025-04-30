@@ -79,7 +79,7 @@ export * from './expressions/for-range';
 export * from './expressions/time-literal';
 export * from './expressions/partial-compare';
 export * from './expressions/partition_by';
-export * from './expressions/additive_for';
+export * from './expressions/grouped_by';
 export * from './expressions/pick-when';
 export * from './expressions/case';
 export * from './expressions/expr-array-literal';

@@ -387,8 +387,8 @@
           "name": "keyword.control.group_by"
         },
         {
-          "match": "(?i)\\badditive_for\\b",
-          "name": "keyword.control.additive_for"
+          "match": "(?i)\\bgrouped_by\\b",
+          "name": "keyword.control.grouped_by"
         },
         {
           "match": "(?i)\\bhaving\\b",

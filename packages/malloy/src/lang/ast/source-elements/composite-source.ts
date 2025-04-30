@@ -79,7 +79,7 @@ export class CompositeSource extends Source {
             code: this.code,
             location: this.codeLocation,
             // A composite field's grouping may differ from slice to slice
-            additiveFields: undefined,
+            requiresGroupBy: undefined,
           };
           fieldsByName.set(fieldName, compositeField);
           fields.push(compositeField);
