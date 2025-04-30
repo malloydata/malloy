@@ -618,7 +618,7 @@ describe('expressions', () => {
     describe('additive_for:', () => {
       test('additive_for of dimension', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by additive_for }
+          ##! experimental { aggregate_order_by additivity }
           source: aext is a extend {
             measure: aisum is ai.sum() { additive_for: astr }
           }
@@ -626,7 +626,7 @@ describe('expressions', () => {
       });
       test('additive_for of measure', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by additive_for }
+          ##! experimental { aggregate_order_by additivity }
           source: aext is a extend {
             measure: c is count()
             measure: aisum is ai.sum() { additive_for: ${'c'} }
@@ -635,7 +635,7 @@ describe('expressions', () => {
       });
       test('additive_for of self', () => {
         expect(markSource`
-          ##! experimental { aggregate_order_by additive_for }
+          ##! experimental { aggregate_order_by additivity }
           source: aext is a extend {
             measure: aisum is ai.sum() { additive_for: aisum }
           }
