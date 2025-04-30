@@ -132,7 +132,8 @@ export class TSQLDialect extends Dialect {
   orderByClause = 'output_name' as const;
   supportsLimit = false;
   // TODO (vitor): idk about this cantPartitionWindowFunctionsOnExpressions...
-  cantPartitionWindowFunctionsOnExpressions = false;
+  // There's a problem with non top level CTE's with sqlserver
+  cantPartitionWindowFunctionsOnExpressions = true;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
@@ -157,11 +158,12 @@ export class TSQLDialect extends Dialect {
     ) AS group_set(group_set)`;
   }
 
+  // TODO (vitor): Figure out if i need to use groupSet here.
   sqlAnyValue(groupSet: number, fieldName: string): string {
-    // console.info('sqlAnyValue');
     return `MAX(${fieldName})`;
   }
 
+  // TODO (vitor): Is this :: casting a malloy thing or a dialect thing?
   mapFields(fieldList: DialectFieldList): string {
     return fieldList
       .map(
@@ -278,7 +280,7 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return '!DO NOT USE ME (function sqlSumDistinctHashedKey)!';
+    return '!DO_NOT_USE_ME_sqlSumDistinctHashedKey!';
   }
 
   sqlGenerateUUID(): string {
@@ -331,7 +333,6 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
-    // SQL Server function creation syntax
     return `
       CREATE FUNCTION ${id}(@json NVARCHAR(MAX))
       RETURNS NVARCHAR(MAX)
@@ -347,14 +348,8 @@ export class TSQLDialect extends Dialect {
     return `SELECT (SELECT * FROM ${lastStageName} FOR JSON PATH) AS result`;
   }
 
-  sqlFinalStage(lastStageName: string, _fields: string[]): string {
-    const res = `
-    SELECT
-      (SELECT ${lastStageName}.*
-      FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS finalStage
-    FROM ${lastStageName};
-    `;
-    return res;
+  sqlFinalStage(_lastStageName: string, _fields: string[]): string {
+    return '!DO_NOT_USE_ME_sqlFinalStage!';
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
@@ -415,6 +410,7 @@ export class TSQLDialect extends Dialect {
     };
   }
 
+  // TODO (vitor): This function interacts with sqlCastPrep. Need to check if I'm not double casting I guess...
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     if (cast.safe) {
       throw new Error("TSQL dialect doesn't support Safe Cast");
