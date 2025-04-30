@@ -130,7 +130,6 @@ export class TSQLDialect extends Dialect {
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
   supportsLimit = false;
-  supportsRegexp = false;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
@@ -472,7 +471,7 @@ export class TSQLDialect extends Dialect {
     // This avoids arithmetic overflow by using appropriate decimal precision
     const sqlSum = `(
         CAST(SUM(DISTINCT CAST((${hashKey} + CAST(${v} AS DECIMAL(28,6))) AS DECIMAL(28,6)))
-        - SUM(DISTINCT CAST(${hashKey} AS DECIMAL(28,6))) AS DECIMAL(28,0))
+        - SUM(DISTINCT CAST(${hashKey} AS DECIMAL(28,6))) AS DECIMAL(38,0))
     )`;
 
     if (funcName === 'SUM') {
@@ -546,11 +545,10 @@ export class TSQLDialect extends Dialect {
     return "N'" + noEscape.replace(/'/g, "''") + "'";
   }
 
-  sqlLiteralRegexp(_literal: string): string {
-    // SQL Server doesn't have native regex, It can be done with CLR
-    // Azure SQL does have regexp but Synapse doesn't (unless you use spark or something like that)
-    // Better not to support it for now.
-    throw new Error('Unsupported function');
+  // TODO (vitor): Same as sqlLiteralString
+  sqlLiteralRegexp(literal: string): string {
+    const noEscape = literal.replace(/\\\\/g, '\\');
+    return "N'" + noEscape.replace(/'/g, "''") + "'";
   }
 
   getDialectFunctionOverrides(): {
@@ -737,11 +735,13 @@ export class TSQLDialect extends Dialect {
     }
   }
 
-  sqlRegexpMatch(_df: RegexMatchExpr): string {
-    // SQL Server doesn't have native regex, It can be done with CLR
-    // Azure SQL does have regexp but Synapse doesn't (unless you use spark or something like that)
-    // Better not to support it for now.
-    throw new Error('Unsupported function');
+  sqlRegexpMatch(df: RegexMatchExpr): string {
+    // SQL Server doesn't have native regex, fallback to PATINDEX
+    return `PATINDEX(${df.kids.regex.sql?.startsWith('^') ? '' : '% + '}${
+      df.kids.regex.sql
+    }${df.kids.regex.sql?.endsWith('$') ? '' : '+ %'}, ${
+      df.kids.expr.sql
+    }) > 0`;
   }
 
   sqlLiteralTime(
