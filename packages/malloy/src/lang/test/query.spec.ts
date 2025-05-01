@@ -1808,8 +1808,7 @@ describe('query:', () => {
           ##! experimental { grouped_by composite_sources }
           source: aext is compose(
             a extend {
-              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-              measure: aisum is ai_grouped_by_astr.sum()
+              measure: aisum is ai.sum() { grouped_by: astr }
             },
             a extend {
               measure: aisum is ai.sum()
@@ -1825,17 +1824,58 @@ describe('query:', () => {
           ##! experimental { grouped_by composite_sources }
           source: aext is compose(
             a extend {
-              dimension: ai_grouped_by_astr is ai { grouped_by: astr }
-              measure: aisum is ai_grouped_by_astr.sum()
+              measure: aisum is ai.sum() { grouped_by: astr }
             },
             a extend {
-              dimension: ai_grouped_by_abool is ai { grouped_by: abool }
-              measure: aisum is ai_grouped_by_abool.sum()
+              measure: aisum is ai.sum() { grouped_by: abool }
             }
           )
           run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, astr, abool) }
         `
       ).toLog(errorMessage('Could not resolve composite source'));
+    });
+    test('grouped_by: is ignored if field does not exist in slice', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources access_modifiers }
+          source: abase is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr, abool }
+          }
+          source: aext is compose(
+            abase include { ai, astr, aisum } extend {
+              dimension: x is 1
+            },
+            abase include { ai, abool, aisum } extend {
+              dimension: y is 1
+            }
+          )
+          run: aext -> {
+            group_by: astr, x
+            aggregate: aisum
+          }
+          run: aext -> {
+            group_by: abool, y
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
+    });
+    test('ignore grouped_by which has been removed from source (non-composite)', () => {
+      expect(
+        markSource`
+          ##! experimental { grouped_by composite_sources access_modifiers }
+          source: abase is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr, abool }
+          }
+          source: aext is abase include { ai, astr, aisum } extend {
+            dimension: x is 1
+          }
+          run: aext -> {
+            group_by: astr, x
+            aggregate: aisum
+          }
+        `
+      ).toTranslate();
     });
     test('ungroup in join expression', () => {
       expect(

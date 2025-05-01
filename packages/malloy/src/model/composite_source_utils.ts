@@ -161,7 +161,7 @@ function _resolveCompositeSources(
       if (nests !== undefined) {
         const rf = genRootFields(rootFields, path, base.fields, false);
         // now finally we can check the required group bys...
-        const checkedRequiredGroupBys = _checkRequiredGroupBys(path, nests, rf);
+        const checkedRequiredGroupBys = _checkRequiredGroupBys(nests, rf);
         if (checkedRequiredGroupBys.length > 0) {
           newNarrowedSources.shift();
           continue overSources;
@@ -664,26 +664,21 @@ interface ExpandedNestLevels {
 function expandRefs(
   nests: NestLevels,
   fields: FieldDef[]
-):
-  | {result: ExpandedNestLevels; error?: undefined}
-  | {error: CompositeCouldNotFindFieldError; result?: undefined} {
+): {result: ExpandedNestLevels; missingFields: FieldUsage[] | undefined} {
   const newNests: NestLevels[] = [];
   const requiredGroupBys: RequiredGroupBy[] = [...nests.requiredGroupBys];
   const allUngroupings: AggregateUngrouping[] = [...nests.ungroupings];
   const references = [...nests.fieldsReferenced];
   const joinPathsProcessed: string[][] = [];
+  const missingFields: FieldUsage[] = [];
   for (let i = 0; i < references.length; i++) {
     const field = references[i];
     let def: FieldDef;
     try {
       def = lookup(field.path, fields);
     } catch {
-      return {
-        error: {
-          code: 'could_not_find_field',
-          data: {field},
-        },
-      };
+      missingFields.push(field);
+      continue;
     }
     const joinPath = field.path.slice(0, -1);
     if (isTurtle(def)) {
@@ -691,12 +686,17 @@ function expandRefs(
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
       if (def.requiresGroupBy) {
-        requiredGroupBys.push(
-          ...def.requiresGroupBy.map(gb => ({
-            path: [...joinPath, ...gb.path],
-            at: field.at,
-          }))
-        );
+        for (const requiredGroupBy of def.requiresGroupBy) {
+          const path = [...joinPath, ...requiredGroupBy.path];
+          try {
+            const def = lookup(path, fields);
+            if (isCompositeField(def)) continue;
+          } catch {
+            missingFields.push(field);
+            continue;
+          }
+          requiredGroupBys.push({path, at: field.at});
+        }
       }
       if (def.ungroupings) {
         allUngroupings.push(
@@ -751,9 +751,7 @@ function expandRefs(
       },
       fields
     );
-    if (expanded.error) {
-      return {error: expanded.error};
-    }
+    missingFields.push(...(expanded.missingFields ?? []));
     for (const field of expanded.result.requiredGroupBys) {
       if (isUngroupedBy(ungrouping, field.path)) {
         unsatisfiableGroupBys.push(field);
@@ -763,11 +761,7 @@ function expandRefs(
   const nested: ExpandedNestLevels[] = [];
   for (const level of [...nests.nested, ...newNests]) {
     const expanded = expandRefs(level, fields);
-    if (expanded.error) {
-      return {
-        error: expanded.error,
-      };
-    }
+    missingFields.push(...(expanded.missingFields ?? []));
     nested.push(expanded.result);
     unsatisfiableGroupBys.push(...expanded.result.unsatisfiableGroupBys);
   }
@@ -778,6 +772,7 @@ function expandRefs(
       unsatisfiableGroupBys,
       nested,
     },
+    missingFields: missingFields.length > 0 ? missingFields : undefined,
   };
 }
 
@@ -787,14 +782,10 @@ function isUngroupedBy(ungrouping: AggregateUngrouping, groupedBy: string[]) {
 }
 
 function _checkRequiredGroupBys(
-  joinPath: string[],
   nests: NestLevels,
   fields: FieldDef[]
 ): RequiredGroupBy[] {
   const expanded = expandRefs(nests, fields);
-  if (expanded.error) {
-    return [];
-  }
   const unsatisfied = getUnsatisfiedRequiredGroupBys(expanded.result);
   return unsatisfied;
 }
@@ -808,7 +799,6 @@ export function checkRequiredGroupBys(
     ? segment.extendSource ?? []
     : [];
   const unsatisfied = _checkRequiredGroupBys(
-    [],
     nests,
     mergeFields(compositeResolvedSourceDef.fields, sourceExtensions)
   );
