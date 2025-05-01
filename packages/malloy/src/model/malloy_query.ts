@@ -3303,9 +3303,7 @@ class QueryQuery extends QueryField {
   }
 
   generateSimpleSQL(stageWriter: StageWriter): string {
-    // TODO (vitor): Idk about this wrapper select...
-    let s = 'SELECT * FROM (';
-    s += 'SELECT \n';
+    let s = 'SELECT \n';
     const fields: string[] = [];
 
     for (const [name, field] of this.rootResult.allFields) {
@@ -3321,7 +3319,6 @@ class QueryQuery extends QueryField {
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-    s += `) as base__${uuidv4().replace(/-/g, '')}\n`;
 
     // group by
     if (this.firstSegment.type === 'reduce') {
@@ -3758,8 +3755,7 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stage0Name: string
   ): string {
-    let s = 'SELECT * FROM (';
-    s = 'SELECT\n';
+    let s = 'SELECT\n';
     const fieldsSQL: string[] = [];
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
@@ -3822,8 +3818,6 @@ class QueryQuery extends QueryField {
     if (where.length > 0) {
       s += `WHERE ${where}\n`;
     }
-
-    s += `) as base__${uuidv4().replace(/-/g, '')}\n`;
 
     if (dimensionIndexes.length > 0) {
       // TODO (vitor): Not sure about dimensionNames here
@@ -4260,8 +4254,7 @@ class QueryQueryIndexStage extends QueryQuery {
       }
     }
 
-    let s = 'SELECT * FROM (';
-    s += 'SELECT\n  group_set,\n';
+    let s = 'SELECT\n  group_set,\n';
 
     s += '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
@@ -4325,8 +4318,6 @@ class QueryQueryIndexStage extends QueryQuery {
     s += dialect.sqlGroupSetTable(fields.length) + '\n';
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-
-    s += `) as base__${uuidv4().replace(/-/g, '')}\n`;
 
     // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
     if (dialect.orderByClause === 'output_name') {
