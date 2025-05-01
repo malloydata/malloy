@@ -1578,8 +1578,6 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    // TODO this could get a better error message:
-    // something like "one source failed because it did not have a required group by"
     test('required group by causes composed source to fall off end', () => {
       expect(
         markSource`
@@ -1594,11 +1592,17 @@ describe('query:', () => {
               measure: aisum is ai.sum() { grouped_by: y }
             }
           )
-          run: ${'aext -> { aggregate: aisum }'}
+          run: aext -> { aggregate: ${'aisum'} }
         `
-      ).toLog(errorMessage('Could not resolve composite source'));
+      ).toLog(
+        errorMessage(
+          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)'
+        ),
+        errorMessage(
+          'Could not resolve composite source: missing group by `y` as required in composed source #2 (`a`)'
+        )
+      );
     });
-    // TODO this error message is not helpful
     test('required group by fails one slice; other slice fails because of field usage', () => {
       expect(
         markSource`
@@ -1614,13 +1618,16 @@ describe('query:', () => {
             }
           )
           run: aext -> {
-            aggregate: aisum
+            aggregate: ${'aisum'}
             group_by: ${'foo'}
           }
         `
       ).toLog(
         errorMessage(
-          'This operation uses field `foo`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `foo`'
+          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)'
+        ),
+        errorMessage(
+          'Could not resolve composite source: missing field `foo` in composed source #2 (`a`)'
         )
       );
     });
@@ -1822,17 +1829,25 @@ describe('query:', () => {
       expect(
         markSource`
           ##! experimental { grouped_by composite_sources }
+          source: slice_1 is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
           source: aext is compose(
-            a extend {
-              measure: aisum is ai.sum() { grouped_by: astr }
-            },
+            slice_1,
             a extend {
               measure: aisum is ai.sum() { grouped_by: abool }
             }
           )
           run: aext -> { group_by: astr, abool; aggregate: x is exclude(aisum, astr, abool) }
         `
-      ).toLog(errorMessage('Could not resolve composite source'));
+      ).toLog(
+        errorMessage(
+          'Could not resolve composite source: missing group by `astr` as required in composed source #1 (`slice_1`)'
+        ),
+        errorMessage(
+          'Could not resolve composite source: missing group by `abool` as required in composed source #2 (`a`)'
+        )
+      );
     });
     test('grouped_by: is ignored if field does not exist in slice', () => {
       expect(

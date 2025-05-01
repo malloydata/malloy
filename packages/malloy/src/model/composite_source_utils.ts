@@ -5,6 +5,7 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
+import type {MalloyElement} from '../lang/ast';
 import type {
   FieldUsage,
   FieldDef,
@@ -14,6 +15,7 @@ import type {
   StructDef,
   AggregateUngrouping,
   RequiredGroupBy,
+  DocumentLocation,
 } from './malloy_types';
 import {
   isAtomic,
@@ -38,48 +40,56 @@ type CompositeError =
   | {code: 'composite_source_is_not_joinable'; data: {path: string[]}}
   | {
       code: 'no_suitable_composite_source_input';
-      data: {path: string[]; fields: FieldUsage[]};
+      data: {failures: CompositeFailure[]};
     };
+
+type CompositeIssue =
+  | {type: 'missing-field'; field: FieldUsage}
+  | {
+      type: 'missing-required-group-by';
+      requiredGroupBy: RequiredGroupBy;
+    };
+
+interface CompositeFailure {
+  source: SourceDef;
+  issues: CompositeIssue[];
+}
 
 function _resolveCompositeSources(
   path: string[],
   source: SourceDef,
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
-  fieldUsage: FieldUsage[],
-  narrowedCompositeFieldResolution:
-    | NarrowedCompositeFieldResolution
-    | undefined = undefined
+  fieldUsage: FieldUsage[]
 ):
   | {
       success: SourceDef;
       anyComposites: boolean;
-      narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution;
     }
   | {error: CompositeError} {
   // TODO skip all this if the tree doesn't have any composite sources
   let base = {...source};
   let anyComposites = false;
   let joinsProcessed = false;
-  let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
-    undefined;
-  const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
   const nonCompositeFields = getNonCompositeFields(source);
   if (source.type === 'composite') {
     let found = false;
     anyComposites = true;
-    const firstFaileds: FieldUsage[] = [];
+    const failures: CompositeFailure[] = [];
     // The narrowed source list is either the one given when this function was called,
     // or we construct a new one from the given composite source's input sources.
-    narrowedSources =
-      narrowedCompositeFieldResolution?.source ??
-      source.sources.map(s => ({source: s, nested: undefined}));
-    // Make a copy, which we will mutate: if a source is invalid, we remove it from the list
-    // and move on; if the source is a nested composite source, we narrow the resolution of
-    // the inner sources and update the element in the list
-    const newNarrowedSources = [...narrowedSources];
+    const sources = source.sources;
     // We iterate over the list of narrowed sources;
-    overSources: for (const {source: inputSource, nested} of narrowedSources) {
+    overSources: for (const inputSource of sources) {
+      let failed = false;
+      const issues: CompositeIssue[] = [];
+      const fail = (issue: CompositeIssue) => {
+        issues.push(issue);
+        failed = true;
+      };
+      const abort = () => {
+        failures.push({issues, source: inputSource});
+      };
       const fieldNames = new Set<string>();
       for (const field of inputSource.fields) {
         if (field.accessModifier !== 'private') {
@@ -89,10 +99,18 @@ function _resolveCompositeSources(
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
       const expandedCategorized = expandFieldUsage(fieldUsage, fieldsForLookup);
-      if (expandedCategorized.error) {
+      if (expandedCategorized.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
-        newNarrowedSources.shift();
-        firstFaileds.push(expandedCategorized.error.data.field);
+        for (const missingField of expandedCategorized.missingFields) {
+          fail({
+            type: 'missing-field',
+            field: missingField,
+          });
+        }
+      }
+      // First point where we abort is if we couldn't expand fields
+      if (failed) {
+        abort();
         continue overSources;
       }
 
@@ -102,10 +120,16 @@ function _resolveCompositeSources(
         );
       for (const usage of compositeUsageInThisSource) {
         if (!fieldNames.has(usage.path[0])) {
-          newNarrowedSources.shift();
-          firstFaileds.push(usage);
-          continue overSources;
+          fail({
+            type: 'missing-field',
+            field: usage,
+          });
         }
+      }
+      // Second point where we abort is if the composite simply is missing fields
+      if (failed) {
+        abort();
+        continue overSources;
       }
       if (inputSource.type === 'composite') {
         const resolveInner = _resolveCompositeSources(
@@ -113,27 +137,14 @@ function _resolveCompositeSources(
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
-          compositeUsageInThisSource,
-          // This looks wonky, but what we're doing is taking the nested sources
-          // and "promoting" them to look like they're top level sources; we will
-          // then reverse this when we update the real narrowed resolution.
-          {
-            source:
-              nested ?? inputSource.sources.map(s => ({source: s, nested: []})),
-            // Composite source inputs cannot have joins, so we don't need to
-            // pass in the narrowed resolution
-            joined: {},
-          }
+          compositeUsageInThisSource
         );
         if ('error' in resolveInner) {
-          newNarrowedSources.shift();
+          // Third point where we abort; if a nested composite failed
+          abort();
           continue overSources;
         }
         base = {...resolveInner.success};
-        newNarrowedSources[0] = {
-          source: inputSource,
-          nested: resolveInner.narrowedCompositeFieldResolution.source,
-        };
       } else {
         base = {...inputSource};
       }
@@ -150,9 +161,9 @@ function _resolveCompositeSources(
         base,
         rootFields,
         nests,
-        expandedCategorized.result,
-        narrowedJoinedSources
+        expandedCategorized.result
       );
+      // Fourth point where we abort: if a join failed we just completely give up
       if (joinError.error !== undefined) {
         return {error: joinError.error};
       }
@@ -163,9 +174,18 @@ function _resolveCompositeSources(
         // now finally we can check the required group bys...
         const checkedRequiredGroupBys = _checkRequiredGroupBys(nests, rf);
         if (checkedRequiredGroupBys.length > 0) {
-          newNarrowedSources.shift();
-          continue overSources;
+          for (const requiredGroupBy of checkedRequiredGroupBys) {
+            fail({
+              type: 'missing-required-group-by',
+              requiredGroupBy,
+            });
+          }
         }
+      }
+      // Last point where we abort
+      if (failed) {
+        abort();
+        continue overSources;
       }
       found = true;
       break;
@@ -174,11 +194,10 @@ function _resolveCompositeSources(
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {fields: firstFaileds, path},
+          data: {failures},
         },
       };
     }
-    narrowedSources = newNarrowedSources;
   }
 
   if (!joinsProcessed) {
@@ -186,11 +205,11 @@ function _resolveCompositeSources(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
-    if (expanded.error) {
+    if (expanded.missingFields) {
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {fields: [expanded.error.data.field], path}, // TODO need to determine how to report this error, given the indirect nature.
+          data: {failures: []}, // TODO need to determine how to report this error, given the indirect nature.
         },
       };
     }
@@ -199,8 +218,7 @@ function _resolveCompositeSources(
       base,
       rootFields,
       nests,
-      expanded.result,
-      narrowedJoinedSources
+      expanded.result
     );
     if (joinResult.error !== undefined) {
       return {error: joinResult.error};
@@ -210,10 +228,6 @@ function _resolveCompositeSources(
 
   return {
     success: base,
-    narrowedCompositeFieldResolution: {
-      source: narrowedSources,
-      joined: narrowedJoinedSources,
-    },
     anyComposites,
   };
 }
@@ -221,11 +235,10 @@ function _resolveCompositeSources(
 function expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
-):
-  | {result: CategorizedFieldUsage; error?: undefined}
-  | {error: CompositeCouldNotFindFieldError; result?: undefined} {
+): {result: CategorizedFieldUsage; missingFields: FieldUsage[]} {
   const allFieldPathsReferenced = [...fieldUsage];
   const joinPathsProcessed: string[][] = [];
+  const missingFields: FieldUsage[] = [];
   for (let i = 0; i < allFieldPathsReferenced.length; i++) {
     const reference = allFieldPathsReferenced[i];
     const referenceJoinPath = reference.path.slice(0, -1);
@@ -237,12 +250,8 @@ function expandFieldUsage(
     try {
       def = lookup(reference.path, fields);
     } catch {
-      return {
-        error: {
-          code: 'could_not_find_field',
-          data: {field: reference},
-        },
-      };
+      missingFields.push(reference);
+      continue;
     }
     if (isAtomic(def)) {
       const fieldUsage = getFieldUsageForField(def);
@@ -278,7 +287,7 @@ function expandFieldUsage(
       }
     }
   }
-  return {result: categorizeFieldUsage(allFieldPathsReferenced)};
+  return {result: categorizeFieldUsage(allFieldPathsReferenced), missingFields};
 }
 
 interface CategorizedFieldUsage {
@@ -365,8 +374,7 @@ function processJoins(
   base: SourceDef,
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
-  categorizedFieldUsage: CategorizedFieldUsage,
-  narrowedJoinedSources: NarrowedCompositeFieldResolutionByJoinName
+  categorizedFieldUsage: CategorizedFieldUsage
 ):
   | {error: CompositeError; anyComposites?: undefined}
   | {anyComposites: boolean; error?: undefined} {
@@ -404,8 +412,7 @@ function processJoins(
       join,
       genRootFields(rootFields, path, base.fields),
       nests,
-      joinedUsage,
-      narrowedJoinedSources[joinName]
+      joinedUsage
     );
     if ('error' in resolved) {
       return resolved;
@@ -428,7 +435,6 @@ function processJoins(
       as: join.as ?? join.name,
       onExpression: join.onExpression,
     };
-    narrowedJoinedSources[joinName] = resolved.narrowedCompositeFieldResolution;
     base.fields = Object.values(fieldsByName);
   }
   return {anyComposites};
@@ -846,14 +852,16 @@ function lookup(field: string[], fields: FieldDef[]): FieldDef {
   }
 }
 
+function compareLocations(a: DocumentLocation, b: DocumentLocation) {
+  if (a.range.start.line < b.range.start.line) return -1;
+  if (a.range.start.line > b.range.start.line) return 1;
+  if (a.range.start.character < b.range.start.character) return -1;
+  if (a.range.start.character > b.range.start.character) return 1;
+  return 0;
+}
+
 export function sortFieldUsageByReferenceLocation(usage: FieldUsage[]) {
-  return usage.sort((a, b) => {
-    if (a.at.range.start.line < b.at.range.start.line) return -1;
-    if (a.at.range.start.line > b.at.range.start.line) return 1;
-    if (a.at.range.start.character < b.at.range.start.character) return -1;
-    if (a.at.range.start.character > b.at.range.start.character) return 1;
-    return 0;
-  });
+  return usage.sort((a, b) => compareLocations(a.at, b.at));
 }
 
 export function hasCompositesAnywhere(source: StructDef): boolean {
@@ -864,4 +872,105 @@ export function hasCompositesAnywhere(source: StructDef): boolean {
     }
   }
   return false;
+}
+
+export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
+  if (error.code === 'no_suitable_composite_source_input') {
+    if (
+      error.data.failures.length > 0 &&
+      error.data.failures.every(failure => {
+        return (
+          failure.issues.length > 0 &&
+          failure.issues.every(issue => issue.type === 'missing-field')
+        );
+      })
+    ) {
+      const firstFails = error.data.failures.map(failure => {
+        if (failure.issues[0].type !== 'missing-field')
+          throw new Error('Programmer error');
+        return failure.issues[0].field;
+      });
+      const sorted = sortFieldUsageByReferenceLocation(firstFails);
+      const lastUsage = sorted[sorted.length - 1];
+      logTo.logError(
+        'invalid-composite-field-usage',
+        {
+          newUsage: [lastUsage],
+          allUsage: sorted,
+        },
+        {
+          at: lastUsage.at,
+        }
+      );
+    } else {
+      const trace: string[] = [];
+      const locations: DocumentLocation[] = [];
+      for (let i = 0; i < error.data.failures.length; i++) {
+        const summaryLines: string[] = [];
+        const failure = error.data.failures[i];
+        const sourceName = failure.source.as
+          ? ` (\`${failure.source.as}\`)`
+          : '';
+        const source = `composed source #${i + 1}${sourceName}`;
+        for (const issue of failure.issues) {
+          if (issue.type === 'missing-field') {
+            const fieldRef = `\`${issue.field.path.join('.')}\``;
+            // summaryLines.push(
+            //   `    - Missing field: \`${issue.field.path.join('.')}\``
+            // );
+            // locations.push(issue.field.at);
+            logTo.logError(
+              'could-not-resolve-composite-source',
+              `Could not resolve composite source: missing field ${fieldRef} in ${source}`,
+              {at: issue.field.at}
+            );
+          } else {
+            const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
+            logTo.logError(
+              'could-not-resolve-composite-source',
+              `Could not resolve composite source: missing group by ${fieldRef} as required in ${source}`,
+              {at: issue.requiredGroupBy.at}
+            );
+            // summaryLines.push(
+            //   `    - Missing required group by: \`${issue.requiredGroupBy.path.join(
+            //     '.'
+            //   )}\``
+            // );
+            // locations.push(issue.requiredGroupBy.at);
+          }
+        }
+        trace.push(summaryLines.join('\n'));
+      }
+      locations.sort(compareLocations);
+      // for (const failure of error.data.failures) {
+      //   for (const issue of failure.issues) {
+      //     if (issue.type === 'missing-field') {
+      //       const fieldRef = `\`${issue.field.path.join('.')}\``;
+      //       logTo.logError(
+      //         'could-not-resolve-composite-source',
+      //         `Cannot resolve composite source: missing field ${fieldRef}`,
+      //         {at: issue.field.at}
+      //       );
+      //     } else {
+      //       const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
+      //       logTo.logError(
+      //         'could-not-resolve-composite-source',
+      //         `Cannot resolve composite source: missing required group by ${fieldRef}`,
+      //         {at: issue.requiredGroupBy.at}
+      //       );
+      //     }
+      //   }
+      // }
+      // logTo.logError(
+      //   'could-not-resolve-composite-source',
+      //   `Could not resolve composite source\n${trace.join('\n')}`,
+      //   {at: locations[locations.length - 1]}
+      // );
+    }
+  } else {
+    logTo.logError(
+      'could-not-resolve-composite-source',
+      'Could not resolve composite source'
+    );
+  }
 }

@@ -25,7 +25,7 @@ import {
   hasCompositesAnywhere,
   emptyFieldUsage,
   resolveCompositeSources,
-  sortFieldUsageByReferenceLocation,
+  logCompositeError,
 } from '../../../model/composite_source_utils';
 import {
   isIndexSegment,
@@ -57,29 +57,7 @@ export abstract class QueryBase extends MalloyElement {
       const fieldUsage = stage1.fieldUsage ?? emptyFieldUsage();
       const resolved = resolveCompositeSources(inputSource, stage1, fieldUsage);
       if (resolved.error) {
-        if (
-          resolved.error.code === 'no_suitable_composite_source_input' &&
-          resolved.error.data.fields.length > 0
-        ) {
-          const conflict = resolved.error.data.fields;
-          const sorted = sortFieldUsageByReferenceLocation(conflict);
-          const lastUsage = sorted[sorted.length - 1];
-          this.logError(
-            'invalid-composite-field-usage',
-            {
-              newUsage: [lastUsage],
-              allUsage: sorted,
-            },
-            {
-              at: lastUsage.at,
-            }
-          );
-        } else {
-          this.logError(
-            'could-not-resolve-composite-source',
-            'Could not resolve composite source'
-          );
-        }
+        logCompositeError(resolved.error, this);
       }
       return resolved.sourceDef;
     }
