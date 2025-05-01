@@ -542,6 +542,22 @@ source: random_data is duckdb.sql("""
     nest: nests is {
       group_by: dim_2
       # bar_chart
+      nest: `Limited bars` is {
+        group_by:
+          dim_500
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.limit=100 }
+      nest: `Limited bars override` is {
+        group_by:
+          dim_500
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart
       nest: `Limited with shared axis and legend` is {
         group_by:
           dim_50
