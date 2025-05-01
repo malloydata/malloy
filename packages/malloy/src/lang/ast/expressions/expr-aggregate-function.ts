@@ -47,7 +47,6 @@ import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
 import type {MessageCode} from '../../parse-log';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -86,7 +85,6 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (!(sourceFoot instanceof StructSpaceField)) {
           if (isAtomicFieldType(footType.type)) {
-            const footPath = this.source.list.map(x => x.refString);
             expr = this.source;
             exprVal = {
               ...TDU.atomicDef(footType),
@@ -100,11 +98,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                       at: this.source.location,
                     },
               evalSpace: footType.evalSpace,
-              // TODO ensure that when there's an `expr` but no `source`, that `fieldUsage`
-              // still comes along correctly
-              fieldUsage: mergeFieldUsage(footType.fieldUsage, [
-                {path: footPath, at: this.source.location},
-              ]),
+              fieldUsage: footType.fieldUsage,
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a

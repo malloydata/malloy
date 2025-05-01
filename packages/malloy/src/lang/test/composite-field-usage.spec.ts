@@ -46,6 +46,21 @@ describe('composite sources', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
       expect(mexpr`x.ai + 1`).hasFieldUsage([['x', 'ai']]);
     });
+
+    test('use in function-style aggregate', () => {
+      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
+      expect(mexpr`sum(ai)`).hasFieldUsage([['ai']]);
+    });
+
+    test('use in method-style aggregate', () => {
+      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
+      expect(mexpr`ai.sum()`).hasFieldUsage([['ai']]);
+    });
+
+    test('join use in method-style aggregate', () => {
+      const mexpr = makeExprFunc(m.translator.modelDef, 'y');
+      expect(mexpr`x.ai.sum()`).hasFieldUsage([['ai']]);
+    });
   });
 
   describe('composite source resolution and validation', () => {
