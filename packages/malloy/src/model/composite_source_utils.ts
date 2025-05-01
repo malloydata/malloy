@@ -60,7 +60,9 @@ function _resolveCompositeSources(
   source: SourceDef,
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
-  fieldUsage: FieldUsage[]
+  fieldUsage: FieldUsage[],
+  // for resolving nested composites; the list of sources to try
+  sources?: SourceDef[]
 ):
   | {
       success: SourceDef;
@@ -78,9 +80,9 @@ function _resolveCompositeSources(
     const failures: CompositeFailure[] = [];
     // The narrowed source list is either the one given when this function was called,
     // or we construct a new one from the given composite source's input sources.
-    const sources = source.sources;
+    const sourcesToTry = sources ?? source.sources;
     // We iterate over the list of narrowed sources;
-    overSources: for (const inputSource of sources) {
+    overSources: for (const inputSource of sourcesToTry) {
       let failed = false;
       const issues: CompositeIssue[] = [];
       const fail = (issue: CompositeIssue) => {
@@ -137,7 +139,8 @@ function _resolveCompositeSources(
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
-          compositeUsageInThisSource
+          compositeUsageInThisSource,
+          inputSource.sources
         );
         if ('error' in resolveInner) {
           // Third point where we abort; if a nested composite failed
@@ -205,7 +208,7 @@ function _resolveCompositeSources(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
-    if (expanded.missingFields) {
+    if (expanded.missingFields.length > 0) {
       return {
         error: {
           code: 'no_suitable_composite_source_input',
@@ -903,10 +906,7 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
         }
       );
     } else {
-      const trace: string[] = [];
-      const locations: DocumentLocation[] = [];
       for (let i = 0; i < error.data.failures.length; i++) {
-        const summaryLines: string[] = [];
         const failure = error.data.failures[i];
         const sourceName = failure.source.as
           ? ` (\`${failure.source.as}\`)`
@@ -915,10 +915,6 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
         for (const issue of failure.issues) {
           if (issue.type === 'missing-field') {
             const fieldRef = `\`${issue.field.path.join('.')}\``;
-            // summaryLines.push(
-            //   `    - Missing field: \`${issue.field.path.join('.')}\``
-            // );
-            // locations.push(issue.field.at);
             logTo.logError(
               'could-not-resolve-composite-source',
               `Could not resolve composite source: missing field ${fieldRef} in ${source}`,
@@ -931,41 +927,9 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
               `Could not resolve composite source: missing group by ${fieldRef} as required in ${source}`,
               {at: issue.requiredGroupBy.at}
             );
-            // summaryLines.push(
-            //   `    - Missing required group by: \`${issue.requiredGroupBy.path.join(
-            //     '.'
-            //   )}\``
-            // );
-            // locations.push(issue.requiredGroupBy.at);
           }
         }
-        trace.push(summaryLines.join('\n'));
       }
-      locations.sort(compareLocations);
-      // for (const failure of error.data.failures) {
-      //   for (const issue of failure.issues) {
-      //     if (issue.type === 'missing-field') {
-      //       const fieldRef = `\`${issue.field.path.join('.')}\``;
-      //       logTo.logError(
-      //         'could-not-resolve-composite-source',
-      //         `Cannot resolve composite source: missing field ${fieldRef}`,
-      //         {at: issue.field.at}
-      //       );
-      //     } else {
-      //       const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
-      //       logTo.logError(
-      //         'could-not-resolve-composite-source',
-      //         `Cannot resolve composite source: missing required group by ${fieldRef}`,
-      //         {at: issue.requiredGroupBy.at}
-      //       );
-      //     }
-      //   }
-      // }
-      // logTo.logError(
-      //   'could-not-resolve-composite-source',
-      //   `Could not resolve composite source\n${trace.join('\n')}`,
-      //   {at: locations[locations.length - 1]}
-      // );
     }
   } else {
     logTo.logError(
