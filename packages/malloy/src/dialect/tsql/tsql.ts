@@ -126,14 +126,17 @@ export class TSQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
-  likeEscape = false;
   experimental = true;
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
   supportsLimit = false;
+
+  // SQL Server does have ESCAPE but Synapse doesn't
+  likeEscape = false;
+
   // TODO (vitor): idk about this cantPartitionWindowFunctionsOnExpressions...
   // There's a problem with non top level CTE's with sqlserver
-  cantPartitionWindowFunctionsOnExpressions = true;
+  cantPartitionWindowFunctionsOnExpressions = false;
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
@@ -145,17 +148,18 @@ export class TSQLDialect extends Dialect {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    // console.info('sqlGroupSetTable');
     // SQL Server doesn't have GENERATE_SERIES, use a common table expression
     // to generate numbers from 0 to groupSetCount
-    return `CROSS JOIN (
+    return `
+    CROSS JOIN (
       WITH numbers AS (
-        SELECT 0 AS n
-        UNION ALL
-        SELECT n + 1 FROM numbers WHERE n < ${groupSetCount}
+          SELECT 0 AS group_set
+          UNION ALL
+          SELECT group_set + 1 FROM numbers WHERE group_set < ${groupSetCount}
       )
-      SELECT n FROM numbers
-    ) AS group_set(group_set)`;
+      SELECT group_set FROM numbers
+    ) AS group_set
+    `;
   }
 
   // TODO (vitor): Figure out if i need to use groupSet here.
