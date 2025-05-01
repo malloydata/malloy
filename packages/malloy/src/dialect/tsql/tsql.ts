@@ -152,12 +152,9 @@ export class TSQLDialect extends Dialect {
     // to generate numbers from 0 to groupSetCount
     return `
     CROSS JOIN (
-      WITH numbers AS (
-          SELECT 0 AS group_set
-          UNION ALL
-          SELECT group_set + 1 FROM numbers WHERE group_set < ${groupSetCount}
-      )
-      SELECT group_set FROM numbers
+      SELECT n AS group_set
+      FROM dbo.malloynumbers
+      WHERE n <= ${groupSetCount}
     ) AS group_set
     `;
   }
@@ -239,6 +236,7 @@ export class TSQLDialect extends Dialect {
     )`;
   }
 
+  // TODO (vitor): Need to figure out a way out if that WITH statement there
   sqlUnnestAlias(
     source: string,
     alias: string,
