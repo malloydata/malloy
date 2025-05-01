@@ -5,4 +5,5 @@ module.exports = {
     '<rootDir>/test/src/databases/all/',
     '<rootDir>/test/src/databases/sqlserver/',
   ],
+  testNamePattern: "always inner join has side effects"
 };

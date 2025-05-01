@@ -258,6 +258,7 @@ class StageWriter {
   }
 
   addStage(sql: string): string {
+    console.warn('addStage', sql)
     if (this.useCTE) {
       this.withs.push(sql);
       return this.getName(this.withs.length - 1);
@@ -339,10 +340,14 @@ class StageWriter {
       return {sql: this.withs[0], lastStageName: this.withs[0]};
     }
     let lastStageName = this.getName(0);
+
     let prefix = 'WITH ';
     let w = '';
     for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
+
       const sql = this.withs[i];
+      console.warn('combineStagesi', i, sql)
+
       lastStageName = this.getName(i);
       if (sql === undefined) {
         throw new Error(
@@ -2405,6 +2410,12 @@ export function getResultStructDefForQuery(
 
 type StageGroupMaping = {fromGroup: number; toGroup: number};
 
+type Dimension = {
+  index: number;
+  name: string;
+  expression: string;
+};
+
 type StageOutputContext = {
   sql: string[]; // sql expressions
   lateralJoinSQLExpressions: string[];
@@ -2412,8 +2423,8 @@ type StageOutputContext = {
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
   outputPipelinedSQL: OutputPipelinedSQL[]; // secondary stages for turtles.
-  // TODO (vitor): not sure about this
-  dimensionNames?: string[];
+  // TODO (vitor): not sure about this dimensions here. I'm using it elsewhere too.
+  dimensions?: Dimension[];
 };
 
 /** Query builder object. */
@@ -3200,8 +3211,9 @@ class QueryQuery extends QueryField {
         structSQL,
         this.firstSegment.sample
       );
+      console.warn('sqlSampleTable', structSQL)
       if (this.firstSegment.sample) {
-        // TODO (vitor): fix this
+        // TODO (vitor): double check this
         structSQL = stageWriter.addStage(
           `SELECT * from ${structSQL} as x ${
             this.parent.dialect.supportsLimit
@@ -3326,6 +3338,7 @@ class QueryQuery extends QueryField {
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+          // FOUND YOU SUCKER
           // TODO (vitor): Idk if this is needed or wanted. It does reduce the number of test failures tho
           if (this.parent.dialect.orderByClause === 'output_name') {
             n.push(fi.f.getFullOutputName());
@@ -3395,6 +3408,7 @@ class QueryQuery extends QueryField {
         fields.length > 0 ? fields.join(', ') + ',' : ''
       } ${pipelinesSQL} FROM ${lastStageName}`;
     }
+    console.warn('generatePipelinedStages', retSQL)
     return stageWriter.addStage(retSQL);
   }
 
@@ -3404,7 +3418,7 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter
   ) {
     // TODO (vitor): Not sure about this
-    output.dimensionNames = [];
+    output.dimensions = [];
     const scalarFields: [string, FieldInstanceField][] = [];
     const otherFields: [string, FieldInstance][] = [];
     for (const [name, fi] of resultSet.allFields) {
@@ -3442,8 +3456,13 @@ class QueryQuery extends QueryField {
                   );
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
-                output.dimensionIndexes.push(output.fieldIndex++);
-                output.dimensionNames.push(outputFieldNameString);
+                output.dimensionIndexes.push(output.fieldIndex);
+                output.dimensions.push({
+                  index: output.fieldIndex,
+                  name: outputFieldNameString,
+                  expression: exp,
+                });
+                output.fieldIndex++;
                 output.lateralJoinSQLExpressions.push(
                   `CAST(${exp} as STRING) as ${outputNameString}`
                 );
@@ -3453,10 +3472,21 @@ class QueryQuery extends QueryField {
               // just treat it like a regular field.
               output.sql.push(`${exp} as ${outputName}`);
             }
-            output.dimensionIndexes.push(output.fieldIndex++);
-            output.dimensionNames.push(outputName);
+            output.dimensionIndexes.push(output.fieldIndex);
+            output.dimensions.push({
+              index: output.fieldIndex,
+              name: outputName,
+              expression: exp,
+            });
+            output.fieldIndex++;
           } else if (isBasicCalculation(fi.f)) {
             output.sql.push(`${exp} as ${outputName}`);
+            // TODO (vitor): Does that need to go in here?
+            // output.dimensions.push({
+            //   index: output.fieldIndex,
+            //   name: outputName,
+            //   expression: exp,
+            // });
             output.fieldIndex++;
           }
         }
@@ -3593,6 +3623,7 @@ class QueryQuery extends QueryField {
   }
 
   generateSQLStage0(stageWriter: StageWriter): string {
+    console.warn('generateSQLStage0');
     let s = 'SELECT\n';
     let from = this.generateSQLJoins(stageWriter);
     const wheres = this.generateSQLWhereTurtled();
@@ -3614,14 +3645,26 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    // TODO (vitor): Code smell ahead, figure out with the malloy team
-    const groupBy =
-      'GROUP BY ' +
-      (this.parent.dialect.orderByClause === 'output_name'
-        ? f.dimensionNames!.join(',')
-        : f.dimensionIndexes.join(',')) +
-      '\n';
-
+    // TODO (vitor): Figure out with the malloy team
+    // We are using orderByClause here instead of say, groupByClause which doesn't seem to exist yet.
+    let groupBy = '';
+    if (this.parent.dialect.supportsLateGroupByEval) {
+      if (this.parent.dialect.orderByClause === 'output_name') {
+        groupBy = f.dimensions?.map(v => v.name).join(',') + '\n';
+      } else {
+        groupBy = f.dimensionIndexes.join(',') + '\n';
+      }
+    } else {
+      console.warn('else-generateSQLStage0');
+      groupBy =
+        f.dimensions
+          ?.map(v =>
+            /\d+/.test(v.expression) ? `${v.expression}` : v.expression
+          )!
+          .join(',') + '\n';
+    }
+    groupBy = groupBy ? 'GROUP BY' + groupBy : '';
+    console.warn('groupBy-generateSQLStage0', groupBy);
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
     s += indent(f.sql.join(',\n')) + '\n';
@@ -3731,13 +3774,27 @@ class QueryQuery extends QueryField {
     if (where.length > 0) {
       s += `WHERE ${where}\n`;
     }
+
     if (f.dimensionIndexes.length > 0) {
-      // TODO (vitor): Code smell ahead
-      s += `GROUP BY ${
-        this.parent.dialect.orderByClause === 'output_name'
-          ? f.dimensionNames!.join(',')
-          : f.dimensionIndexes.join(',')
-      }\n`;
+      // TODO (vitor): Figure out with the malloy team
+      // We are using orderByClause here instead of say, groupByClause which doesn't seem to exist yet.
+      let groupBy = '';
+      if (this.parent.dialect.supportsLateGroupByEval) {
+        if (this.parent.dialect.orderByClause === 'output_name') {
+          groupBy = f.dimensions?.map(v => v.name).join(',') + '\n';
+        } else {
+          groupBy = f.dimensionIndexes.join(',') + '\n';
+        }
+      } else {
+        groupBy =
+          f.dimensions
+            ?.map(v =>
+              /\d+/.test(v.expression) ? `${v.expression}` : v.expression
+            )!
+            .join(',') + '\n';
+        console.warn('groupBy-generateSQLDepthN', groupBy);
+      }
+      s += groupBy ? 'GROUP BY ' + groupBy : '';
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -3761,7 +3818,7 @@ class QueryQuery extends QueryField {
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
     // TODO (vitor): Not sure about dimensionNames
-    const dimensionNames: string[] = [];
+    const dimensions: Dimension[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -3772,8 +3829,13 @@ class QueryQuery extends QueryField {
                 `${name}__${this.rootResult.groupSet}`
               ) + ` as ${sqlName}`
             );
-            dimensionIndexes.push(fieldIndex++);
-            dimensionNames.push(sqlName);
+            dimensionIndexes.push(fieldIndex);
+            dimensions.push({
+              name: sqlName,
+              expression: fi.getSQL(),
+              index: fieldIndex,
+            });
+            fieldIndex++;
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
@@ -3820,12 +3882,27 @@ class QueryQuery extends QueryField {
     }
 
     if (dimensionIndexes.length > 0) {
-      // TODO (vitor): Not sure about dimensionNames here
-      s += `GROUP BY ${
-        this.parent.dialect.orderByClause === 'output_name'
-          ? dimensionNames.join(',')
-          : dimensionIndexes.join(',')
-      }\n`;
+      // TODO (vitor): Figure out with the malloy team
+      // We are using orderByClause here instead of say, groupByClause which doesn't seem to exist yet.
+      let groupBy = '';
+      if (this.parent.dialect.supportsLateGroupByEval) {
+        if (this.parent.dialect.orderByClause === 'output_name') {
+          groupBy = dimensions?.map(v => v.name).join(',') + '\n';
+        } else {
+          groupBy = dimensionIndexes.join(',') + '\n';
+        }
+      } else {
+        console.warn('else-genereateSQLCombineTurtles');
+        groupBy =
+          dimensions
+            ?.map(v =>
+              /\d+/.test(v.expression) ? `${v.expression}` : v.expression
+            )!
+            .join(',') + '\n';
+      }
+      groupBy = groupBy ? 'GROUP BY' + groupBy : '';
+      console.warn('groupBy-genereateSQLCombineTurtles', groupBy);
+      s += groupBy;
     }
 
     // order by
@@ -4222,7 +4299,7 @@ class QueryQueryIndexStage extends QueryQuery {
     this.expandFilters(resultStruct);
   }
 
-  // TODO (vitor): check limit and groupt by 1
+  // TODO (vitor): check limit and group by 1
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = 'COUNT(*)';
     const dialect = this.parent.dialect;
@@ -4326,6 +4403,8 @@ class QueryQueryIndexStage extends QueryQuery {
       s += 'GROUP BY 1,2,3,4,5\n';
     }
 
+    console.warn('generateSQL', s);
+
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       if (dialect.supportsLimit) {
@@ -4362,6 +4441,7 @@ class QueryQueryRaw extends QueryQuery {
         'Invalid struct for QueryQueryRaw, currently only supports SQL'
       );
     }
+    console.warn('QueryQueryRaw', this.parent.structDef.selectStr);
     return stageWriter.addStage(this.parent.structDef.selectStr);
   }
 
