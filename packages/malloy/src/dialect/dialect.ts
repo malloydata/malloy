@@ -176,7 +176,11 @@ export abstract class Dialect {
   supportsLimit = true;
 
   // TSQL Doesn't support regexp
+  // TODO (vitor): Idk how to use this with = false yet. Malloy seems to often go for regexp
   supportsRegexp = true;
+
+  // TSQL doesn't let you do complex operations on GROUP BY for aliased columns.
+  supportsLateGroupByEval = true;
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];

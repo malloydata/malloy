@@ -130,6 +130,8 @@ export class TSQLDialect extends Dialect {
   booleanAsNumbers = true;
   orderByClause = 'output_name' as const;
   supportsLimit = false;
+  supportsRegexp = false;
+  supportsLateGroupByEval = false;
 
   // SQL Server does have ESCAPE but Synapse doesn't
   likeEscape = false;
