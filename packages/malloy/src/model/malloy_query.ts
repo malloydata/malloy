@@ -3315,23 +3315,29 @@ class QueryQuery extends QueryField {
     return s;
   }
 
+  // TODO (vitor): Mark CHECK when done
   generateSimpleSQL(stageWriter: StageWriter): string {
-    let s = 'SELECT \n';
-    const fields: string[] = [];
+    let sWrap = 'SELECT \n';
+    let sInner = 'SELECT \n';
+    const sWrapFields: string[] = [];
+    const sInnerFields: string[] = [];
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
+        if (fi.f.)
         fields.push(
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
         );
       }
     }
-    s += indent(fields.join(',\n')) + '\n';
+    sInner += indent(sInnerFields.join(',\n')) + '\n';
 
-    s += this.generateSQLJoins(stageWriter);
-    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+    sInner += this.generateSQLJoins(stageWriter);
+    sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+
+    sWrap += `\nFROM (${sInner}) as ${uuidv4().replace(/-/g, '')}\n`;
 
     // group by
     if (this.firstSegment.type === 'reduce') {
@@ -3349,11 +3355,11 @@ class QueryQuery extends QueryField {
         }
       }
       if (n.length > 0) {
-        s += `GROUP BY ${n.join(',')}\n`;
+        sWrap += `GROUP BY ${n.join(',')}\n`;
       }
     }
 
-    s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
+    sWrap += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
     // order by
     const orderBy = this.genereateSQLOrderBy(
@@ -3361,20 +3367,20 @@ class QueryQuery extends QueryField {
       this.rootResult
     );
 
-    s += orderBy || 'ORDER BY 1 ';
+    sWrap += orderBy || 'ORDER BY 1 ';
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += this.parent.dialect.supportsLimit
+      sWrap += this.parent.dialect.supportsLimit
         ? `LIMIT ${this.firstSegment.limit}\n`
         : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
     } else {
       // TODO (vitor): This is nasty. Figure out if its sqlserver specific
       if (this.parent.dialect.name === 'tsql') {
-        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        sWrap += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
-    this.resultStage = stageWriter.addStage(s);
+    this.resultStage = stageWriter.addStage(sWrap);
     return this.resultStage;
   }
 
