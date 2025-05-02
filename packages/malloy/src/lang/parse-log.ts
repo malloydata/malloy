@@ -204,6 +204,7 @@ type MessageParameterTypes = {
   'invalid-composite-field-usage': {
     newUsage: FieldUsage[];
     allUsage: FieldUsage[];
+    conflictingUsage: FieldUsage[];
   };
   'could-not-resolve-composite-source': string;
   'empty-composite-source': string;
@@ -461,9 +462,12 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
   'invalid-composite-field-usage': e => {
     const formattedNewCompositeUsage = formatFieldUsages(e.newUsage);
+    const formattedConflictingCompositeUsage = formatFieldUsages(
+      e.conflictingUsage
+    );
     const formattedAllCompositeUsage = formatFieldUsages(e.allUsage);
     const pluralUse = fieldUsageIsPlural(e.newUsage) ? 's' : '';
-    return `This operation uses field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedAllCompositeUsage}`;
+    return `This operation uses field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedConflictingCompositeUsage}\nFields required in source: ${formattedAllCompositeUsage}`;
   },
 };
 

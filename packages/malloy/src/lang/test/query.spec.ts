@@ -1641,10 +1641,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)'
+          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing group by `y` as required in composed source #2 (`a`)'
+          'Could not resolve composite source: missing group by `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
         )
       );
     });
@@ -1669,10 +1669,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)'
+          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)\nFields required in source: `aisum` and `foo`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing field `foo` in composed source #2 (`a`)'
+          'Could not resolve composite source: missing field `foo` in composed source #2 (`a`)\nFields required in source: `aisum` and `foo`'
         )
       );
     });
@@ -1908,10 +1908,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `astr` as required in composed source #1 (`slice_1`)'
+          'Could not resolve composite source: missing group by `astr` as required in composed source #1 (`slice_1`)\nFields required in source: `astr`, `abool`, and `aisum`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing group by `abool` as required in composed source #2 (`a`)'
+          'Could not resolve composite source: missing group by `abool` as required in composed source #2 (`a`)\nFields required in source: `astr`, `abool`, and `aisum`'
         )
       );
     });

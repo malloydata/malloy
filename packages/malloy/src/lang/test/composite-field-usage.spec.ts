@@ -77,7 +77,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
         )
       );
     });
@@ -93,7 +93,7 @@ describe('composite sources', () => {
         } + ${'two'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
         )
       );
     });
@@ -111,7 +111,7 @@ describe('composite sources', () => {
         } + ${'v'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
         )
       );
     });
@@ -141,7 +141,7 @@ describe('composite sources', () => {
         } + ${'x'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
         )
       );
     });
@@ -158,7 +158,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
         )
       );
     });
@@ -174,7 +174,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two`\nFields required in source: `one` and `two`'
         )
       );
     });
@@ -257,7 +257,7 @@ describe('composite sources', () => {
         run: foo -> { group_by: x, y }
       `).toLog(
         errorMessage(
-          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y`'
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y`\nFields required in source: `x` and `y`'
         )
       );
     });

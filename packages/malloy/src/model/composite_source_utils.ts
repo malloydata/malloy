@@ -40,7 +40,7 @@ type CompositeError =
   | {code: 'composite_source_is_not_joinable'; data: {path: string[]}}
   | {
       code: 'no_suitable_composite_source_input';
-      data: {failures: CompositeFailure[]};
+      data: {failures: CompositeFailure[]; path: string[]; usage: FieldUsage[]};
     };
 
 type CompositeIssue =
@@ -74,6 +74,10 @@ function _resolveCompositeSources(
   let anyComposites = false;
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
+  const expandedForError = onlyCompositeUsage(
+    expandFieldUsage(fieldUsage, rootFields).result,
+    source.fields
+  );
   if (source.type === 'composite') {
     let found = false;
     anyComposites = true;
@@ -100,10 +104,10 @@ function _resolveCompositeSources(
       }
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expandedCategorized = expandFieldUsage(fieldUsage, fieldsForLookup);
-      if (expandedCategorized.missingFields.length > 0) {
+      const expanded = expandFieldUsage(fieldUsage, fieldsForLookup);
+      if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
-        for (const missingField of expandedCategorized.missingFields) {
+        for (const missingField of expanded.missingFields) {
           fail({
             type: 'missing-field',
             field: missingField,
@@ -116,10 +120,11 @@ function _resolveCompositeSources(
         continue overSources;
       }
 
-      const compositeUsageInThisSource =
-        expandedCategorized.result.sourceUsage.filter(f =>
-          isCompositeField(lookup(f.path, source.fields))
-        );
+      const expandedCategorized = categorizeFieldUsage(expanded.result);
+      const compositeUsageInThisSource = onlyCompositeUsage(
+        expandedCategorized.sourceUsage,
+        source.fields
+      );
       for (const usage of compositeUsageInThisSource) {
         if (!fieldNames.has(usage.path[0])) {
           fail({
@@ -164,7 +169,7 @@ function _resolveCompositeSources(
         base,
         rootFields,
         nests,
-        expandedCategorized.result
+        expandedCategorized
       );
       // Fourth point where we abort: if a join failed we just completely give up
       if (joinError.error !== undefined) {
@@ -197,7 +202,7 @@ function _resolveCompositeSources(
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {failures},
+          data: {failures, usage: expandedForError, path},
         },
       };
     }
@@ -212,7 +217,7 @@ function _resolveCompositeSources(
       return {
         error: {
           code: 'no_suitable_composite_source_input',
-          data: {failures: []}, // TODO need to determine how to report this error, given the indirect nature.
+          data: {failures: [], usage: expandedForError, path}, // TODO need to determine how to report this error, given the indirect nature.
         },
       };
     }
@@ -221,7 +226,7 @@ function _resolveCompositeSources(
       base,
       rootFields,
       nests,
-      expanded.result
+      categorizeFieldUsage(expanded.result)
     );
     if (joinResult.error !== undefined) {
       return {error: joinResult.error};
@@ -235,10 +240,20 @@ function _resolveCompositeSources(
   };
 }
 
+function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
+  return fieldUsage.filter(f => {
+    try {
+      return isCompositeField(lookup(f.path, fields));
+    } catch {
+      return true;
+    }
+  });
+}
+
 function expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
-): {result: CategorizedFieldUsage; missingFields: FieldUsage[]} {
+): {result: FieldUsage[]; missingFields: FieldUsage[]} {
   const allFieldPathsReferenced = [...fieldUsage];
   const joinPathsProcessed: string[][] = [];
   const missingFields: FieldUsage[] = [];
@@ -285,7 +300,7 @@ function expandFieldUsage(
       }
     }
   }
-  return {result: categorizeFieldUsage(allFieldPathsReferenced), missingFields};
+  return {result: allFieldPathsReferenced, missingFields};
 }
 
 interface CategorizedFieldUsage {
@@ -463,10 +478,11 @@ export function resolveCompositeSources(
     ? segment.extendSource ?? []
     : [];
   const nestLevels = extractNestLevels(segment);
+  const fields = mergeFields(source.fields, sourceExtensions);
   const result = _resolveCompositeSources(
     [],
     source,
-    mergeFields(source.fields, sourceExtensions),
+    fields,
     nestLevels,
     fieldUsage
   );
@@ -948,7 +964,8 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
         'invalid-composite-field-usage',
         {
           newUsage: [lastUsage],
-          allUsage: sorted,
+          conflictingUsage: sorted,
+          allUsage: error.data.usage,
         },
         {
           at: lastUsage.at,
@@ -960,20 +977,27 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
         const sourceName = failure.source.as
           ? ` (\`${failure.source.as}\`)`
           : '';
-        const source = `composed source #${i + 1}${sourceName}`;
+        const join =
+          error.data.path.length === 0
+            ? ''
+            : `join ${error.data.path.join('.')} of `;
+        const source = `${join}composed source #${i + 1}${sourceName}`;
+        const requiredFields = `\nFields required in source: ${formatFieldUsages(
+          error.data.usage
+        )}`;
         for (const issue of failure.issues) {
           if (issue.type === 'missing-field') {
             const fieldRef = `\`${issue.field.path.join('.')}\``;
             logTo.logError(
               'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing field ${fieldRef} in ${source}`,
+              `Could not resolve composite source: missing field ${fieldRef} in ${source}${requiredFields}`,
               {at: issue.field.at}
             );
           } else {
             const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
             logTo.logError(
               'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing group by ${fieldRef} as required in ${source}`,
+              `Could not resolve composite source: missing group by ${fieldRef} as required in ${source}${requiredFields}`,
               {at: issue.requiredGroupBy.at}
             );
           }
