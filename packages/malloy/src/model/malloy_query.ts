@@ -3445,7 +3445,7 @@ class QueryQuery extends QueryField {
     // These sections are now handled by the more efficient code above
 
     // Finalize the SQL statements
-    sInner += indent(sInnerFields.join(',\n')) + '\n';
+    sInner += indent(sInnerFields.join(',\n') || '*') + '\n';
     sInner += this.generateSQLJoins(stageWriter);
     sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
@@ -3791,7 +3791,7 @@ class QueryQuery extends QueryField {
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
-    sInner += indent(sInnerFields.join(',\n')) + '\n';
+    sInner += indent(sInnerFields.join(',\n') || '*') + '\n';
 
     // this should only happen on standard SQL, BigQuery can't partition by expressions and aggregates
     if (f.lateralJoinSQLExpressions.length > 0) {
@@ -3955,7 +3955,7 @@ class QueryQuery extends QueryField {
     }
 
     // Build inner query
-    sInner += indent(sInnerFields.join(',\n')) + '\n';
+    sInner += indent(sInnerFields.join(',\n') || '*') + '\n';
     sInner += `FROM ${stageName}\n`;
 
     const where = this.rootResult.eliminateComputeGroupsSQL();
