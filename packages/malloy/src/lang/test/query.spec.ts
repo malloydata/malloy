@@ -1442,6 +1442,23 @@ describe('query:', () => {
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
+    test('grouped_by double failure on same path', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: afsum is af.sum() { grouped_by: astr }
+          }
+          run: aext -> {
+            aggregate: ${'aisum'}, ${'afsum'}
+          }
+        `
+      ).toLog(
+        errorMessage('Group by of `astr` is required but not present'),
+        errorMessage('Group by of `astr` is required but not present')
+      );
+    });
     // TODO how do we check this??
     test.skip('failure in multi-stage view in source', () => {
       expect(

@@ -130,31 +130,17 @@ export function literalTimeResult({
   return y;
 }
 
-// TODO does it even make sense to operate on grouped_by fields directly?
-// does the set of grouped by have to be the same?
-// total_users { grouped_by: country }
-// x_total_users { grouped_by: state }
-// x_total_users + total_users
 export function mergeGroupedBys(
-  ...groupBys: (RequiredGroupBy[] | undefined)[]
+  ...groupByses: (RequiredGroupBy[] | undefined)[]
 ): RequiredGroupBy[] | undefined {
-  const requiredGroupBys: RequiredGroupBy[] = [];
-  for (const groupBy of groupBys) {
-    if (groupBy === undefined) continue;
-    for (const gb of groupBy) {
-      if (
-        !requiredGroupBys.some(
-          g =>
-            g.path.length === gb.path.length &&
-            g.path.every((p, i) => p === gb.path[i])
-        )
-      ) {
-        requiredGroupBys.push(gb);
-      }
+  const result: RequiredGroupBy[] = [];
+  for (const groupBys of groupByses) {
+    if (groupBys !== undefined) {
+      result.push(...groupBys);
     }
   }
-  if (requiredGroupBys.length === 0) return undefined;
-  return requiredGroupBys;
+  if (result.length === 0) return undefined;
+  return result;
 }
 
 export function mergeUngroupings(
