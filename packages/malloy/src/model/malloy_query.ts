@@ -465,194 +465,34 @@ class QueryField extends QueryNode {
       return [this.getIdentifier()];
     }
 
-    // For fields with expressions, collect all field references
+    // For fields with expressions, collect all field references using exprWalk
     const references: string[] = [];
-    this.collectFieldReferences(
-      resultSet,
-      this.parent,
-      this.fieldDef.e,
-      references
-    );
+    
+    // Use the existing exprWalk utility to find all field references
+    for (const subExpr of exprWalk(this.fieldDef.e)) {
+      if (subExpr.node === 'field') {
+        references.push(subExpr.path.join('.'));
+      }
+    }
+    
     return references;
   }
-
+  
+  // Internal helper method - Now uses exprWalk
   private collectFieldReferences(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: Expr,
     references: string[]
   ): void {
-    // Handle based on expression node type
-    switch (expr.node) {
-      case 'field':
-        // Add the field reference (FieldnameNode)
-        references.push(expr.path.join('.'));
-        break;
-      case 'filteredExpr':
-        // Handle filtered expressions
-        if (expr.kids && 'e' in expr.kids && 'filterList' in expr.kids) {
-          this.collectFieldReferences(
-            resultSet,
-            context,
-            expr.kids.e,
-            references
-          );
-          for (const filter of expr.kids.filterList) {
-            this.collectFieldReferences(resultSet, context, filter, references);
-          }
-        }
-        break;
-      case 'function_call':
-        // Handle function calls with arguments
-        if (expr.kids && 'args' in expr.kids) {
-          for (const arg of expr.kids.args) {
-            this.collectFieldReferences(resultSet, context, arg, references);
-          }
-          // Handle order by in function calls if present
-          if ('orderBy' in expr.kids && expr.kids.orderBy) {
-            for (const orderBy of expr.kids.orderBy) {
-              this.collectFieldReferences(
-                resultSet,
-                context,
-                orderBy,
-                references
-              );
-            }
-          }
-        }
-        break;
-      case 'aggregate':
-        // Handle aggregate expressions
-        if ('e' in expr && expr.e) {
-          this.collectFieldReferences(resultSet, context, expr.e, references);
-        }
-        break;
-      case 'case':
-        // Handle case expressions according to the CaseExpr interface
-        if (expr.kids) {
-          // Case with value (switch/case style)
-          if ('caseValue' in expr.kids && expr.kids.caseValue) {
-            this.collectFieldReferences(
-              resultSet,
-              context,
-              expr.kids.caseValue,
-              references
-            );
-          }
-          // Process when/then pairs
-          if ('caseWhen' in expr.kids && 'caseThen' in expr.kids) {
-            const whenExprs = expr.kids.caseWhen;
-            const thenExprs = expr.kids.caseThen;
-            // Process all when conditions
-            for (let i = 0; i < whenExprs.length; i++) {
-              this.collectFieldReferences(
-                resultSet,
-                context,
-                whenExprs[i],
-                references
-              );
-              if (i < thenExprs.length) {
-                this.collectFieldReferences(
-                  resultSet,
-                  context,
-                  thenExprs[i],
-                  references
-                );
-              }
-            }
-          }
-          // Process else clause if present
-          if ('caseElse' in expr.kids && expr.kids.caseElse) {
-            this.collectFieldReferences(
-              resultSet,
-              context,
-              expr.kids.caseElse,
-              references
-            );
-          }
-        }
-        break;
-
-      // Handle unary expressions
-      case '()':
-      case 'not':
-      case 'unary-':
-      case 'is-null':
-      case 'is-not-null':
-        if ('e' in expr && expr.e) {
-          this.collectFieldReferences(resultSet, context, expr.e, references);
-        }
-        break;
-      // Handle binary expressions
-      case '+':
-      case '-':
-      case '*':
-      case '/':
-      case '%':
-      case 'and':
-      case 'or':
-      case '=':
-      case '!=':
-      case '>':
-      case '<':
-      case '>=':
-      case '<=':
-      case 'coalesce':
-      case 'like':
-      case '!like':
-        if (expr.kids && 'left' in expr.kids && 'right' in expr.kids) {
-          this.collectFieldReferences(
-            resultSet,
-            context,
-            expr.kids.left,
-            references
-          );
-          this.collectFieldReferences(
-            resultSet,
-            context,
-            expr.kids.right,
-            references
-          );
-        }
-        break;
-      // Handle 'in' expressions
-      case 'in':
-        if (expr.kids && 'e' in expr.kids && 'oneOf' in expr.kids) {
-          // Process the expression being compared
-          this.collectFieldReferences(
-            resultSet,
-            context,
-            expr.kids.e,
-            references
-          );
-          // Process all values in the 'oneOf' array
-          for (const oneOfExpr of expr.kids.oneOf) {
-            this.collectFieldReferences(
-              resultSet,
-              context,
-              oneOfExpr,
-              references
-            );
-          }
-        }
-        break;
-      // For other types we don't need to process, or unsupported types
-      default:
-        // For GenericSQLExpr, we might want to try to extract from src
-        if (
-          expr.node === 'genericSQLExpr' &&
-          'kids' in expr &&
-          expr.kids &&
-          'args' in expr.kids
-        ) {
-          for (const arg of expr.kids.args) {
-            this.collectFieldReferences(resultSet, context, arg, references);
-          }
-        }
-        break;
+    // Use the existing exprWalk utility to find field references
+    for (const subExpr of exprWalk(expr)) {
+      if (subExpr.node === 'field') {
+        references.push(subExpr.path.join('.'));
+      }
     }
   }
-
+  
   isAtomic() {
     return isAtomic(this.fieldDef);
   }
@@ -3526,107 +3366,81 @@ class QueryQuery extends QueryField {
     const sWrapFields: string[] = [];
     const sInnerFields: string[] = [];
 
-    // Add a property to track referenced columns for each field
+    // Categorize fields as aggregates or dimensions
+    const nonAggregates: string[] = [];
+    const aggregates: string[] = [];
     const fieldDependencies = new Map<string, string[]>();
-    // Track fields that require aggregation
-    const isAggregateField = new Map<string, boolean>();
-    // Track all columns needed for the inner query
-    const requiredInnerColumns = new Set<string>();
 
-    // First pass - identify aggregate fields and collect dependencies
+    // Find all result fields and categorize them
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === 'result') {
-        // Get the referenced columns for this field
-        const referencedColumns = fi.getReferencedColumns();
-        fieldDependencies.set(name, referencedColumns);
-
-        // Determine if this is an aggregate field by checking if it's a QueryBasicField with an aggregate expression
-        const isAggregate =
-          fi.f.isAtomic() &&
-          hasExpression(fi.f.fieldDef) &&
-          expressionIsAggregate(fi.f.fieldDef.expressionType);
-        isAggregateField.set(name, isAggregate);
-
-        // Add all referenced columns to our required columns set
-        referencedColumns.forEach(col => requiredInnerColumns.add(col));
-      }
-    }
-
-    // Second pass - build inner and outer SQL statements
-    for (const [name, field] of this.rootResult.allFields) {
-      const fi = field as FieldInstanceField;
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-
-      if (fi.fieldUsage.type === 'result') {
-        const isAggregate = isAggregateField.get(name) || false;
-
+        // Get dependencies
+        const dependencies = fi.getReferencedColumns();
+        fieldDependencies.set(name, dependencies);
+        
+        // Check if this is an aggregate field
+        const isAggregate = isBasicAggregate(fi.f);
+        
+        // Add to appropriate category
         if (isAggregate) {
-          // For aggregate fields, use the full expression in the outer query
-          sWrapFields.push(
-            ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-          );
+          aggregates.push(name);
         } else {
-          // For non-aggregate fields, just reference the inner column in the outer query
-          sWrapFields.push(` ${sqlName}`);
-
-          // Add to inner query
-          sInnerFields.push(
-            ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-          );
+          nonAggregates.push(name);
         }
       }
     }
 
-    // Build a set of columns already included in the inner query
-    const existingInnerColumns = new Set(
-      Array.from(this.rootResult.allFields.entries())
-        .filter(([name, field]) => {
-          const fi = field as FieldInstanceField;
-          return (
-            fi.fieldUsage.type === 'result' &&
-            !(isAggregateField.get(name) || false)
-          );
-        })
-        .map(([name, _]) => name)
-    );
-
-    // Now make sure any required columns for aggregate expressions are included
-    // First, collect all the columns needed by aggregate fields
-    const columnsNeededForAggregates = new Set<string>();
-
-    for (const [name, field] of this.rootResult.allFields) {
-      const fi = field as FieldInstanceField;
-      if (
-        fi.fieldUsage.type === 'result' &&
-        (isAggregateField.get(name) || false)
-      ) {
-        // Get dependencies for this aggregate field
-        const deps = fieldDependencies.get(name) || [];
-        deps.forEach(dep => columnsNeededForAggregates.add(dep));
-      }
+    // Process non-aggregate fields - add to both inner and outer queries
+    for (const name of nonAggregates) {
+      const fi = this.rootResult.getField(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      
+      // Add to inner query with full expression
+      sInnerFields.push(
+        ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+      );
+      
+      // Add to outer query by name
+      sWrapFields.push(` ${sqlName}`);
+    }
+    
+    // Process aggregate fields - add to outer query only
+    for (const name of aggregates) {
+      const fi = this.rootResult.getField(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      
+      // Add to outer query with full expression
+      sWrapFields.push(
+        ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+      );
     }
 
-    // Add any missing required columns to the inner query
-    for (const requiredCol of columnsNeededForAggregates) {
-      // If this column isn't already in our inner fields but is needed for an aggregate
-      if (!existingInnerColumns.has(requiredCol)) {
-        // Try to find the field in rootResult
-        if (this.rootResult.hasField(requiredCol)) {
-          const field = this.rootResult.getField(requiredCol);
-          const sqlName =
-            this.parent.dialect.sqlMaybeQuoteIdentifier(requiredCol);
-
-          // Add this field to the inner query
+    // Add dependencies for aggregate fields to inner query
+    // Use Set for deduplication
+    const addedFields = new Set(nonAggregates);
+    
+    // For each aggregate field
+    for (const aggrName of aggregates) {
+      // Get its dependencies
+      const deps = fieldDependencies.get(aggrName) || [];
+      
+      // Add each dependency to inner query if not already included
+      for (const dep of deps) {
+        if (!addedFields.has(dep) && this.rootResult.hasField(dep)) {
+          const depField = this.rootResult.getField(dep);
+          const depSqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(dep);
+          
           sInnerFields.push(
-            ` ${field.f.generateExpression(this.rootResult)} as ${sqlName}`
+            ` ${depField.f.generateExpression(this.rootResult)} as ${depSqlName}`
           );
-
-          // Mark it as included
-          existingInnerColumns.add(requiredCol);
+          
+          addedFields.add(dep);
         }
       }
     }
+
+    // These sections are now handled by the more efficient code above
 
     // Finalize the SQL statements
     sInner += indent(sInnerFields.join(',\n')) + '\n';
@@ -3637,23 +3451,14 @@ class QueryQuery extends QueryField {
     sWrap += indent(sWrapFields.join(',\n')) + '\n';
     sWrap += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
-    // group by
+    // group by - use non-aggregate field names from outer query
     if (this.firstSegment.type === 'reduce') {
-      const n: string[] = [];
-      for (const field of this.rootResult.fields()) {
-        const fi = field as FieldInstanceField;
-        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          // FOUND YOU SUCKER
-          // TODO (vitor): Idk if this is needed or wanted. It does reduce the number of test failures tho
-          if (this.parent.dialect.groupByClause === 'expression') {
-            n.push(fi.f.getFullOutputName());
-          } else {
-            n.push(fi.fieldUsage.resultIndex.toString());
-          }
-        }
-      }
-      if (n.length > 0) {
-        sWrap += `GROUP BY ${n.join(',')}\n`;
+      const groupByColumns = nonAggregates.map(name => 
+        this.parent.dialect.sqlMaybeQuoteIdentifier(name)
+      );
+      
+      if (groupByColumns.length > 0) {
+        sWrap += `GROUP BY ${groupByColumns.join(', ')}\n`;
       }
     }
 
@@ -3928,8 +3733,6 @@ class QueryQuery extends QueryField {
   }
 
   generateSQLStage0(stageWriter: StageWriter): string {
-    console.warn('generateSQLStage0');
-
     // Use inner/outer query pattern for SQL Server support
     let sInner = 'SELECT\n';
     let sOuter = 'SELECT\n';
@@ -4806,8 +4609,6 @@ class QueryQueryIndexStage extends QueryQuery {
         outerSQL += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
-
-    console.warn('generateSQL - outer SQL', outerSQL);
 
     // Generate the final SQL stage
     const resultStage = stageWriter.addStage(outerSQL);
