@@ -14,6 +14,7 @@ import type {
   JoinType,
   ModelDef,
   Query,
+  QueryResult,
   RecordTypeDef,
   RepeatedRecordTypeDef,
   ResultMetadataDef,
@@ -37,6 +38,37 @@ import {
 } from './model/malloy_query';
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
+import {util} from './api';
+
+/**
+ * Convert a QueryResult to a Malloy.Result.
+ * @param modelInfo - The model info.
+ * @param queryResult - The query result.
+ * @returns A fully-populated Malloy.Result.
+ */
+export function queryResultToMalloyResult(
+  modelInfo: Malloy.ModelInfo,
+  queryResult: QueryResult
+): Malloy.Result {
+  const structs = queryResult.structs;
+  // TODO(jjs): Copied this from `wrapResult` in `util.ts`, but I've no idea if
+  // this is a reasonable way to pull a particular schema out of the structs.
+  const struct = structs[structs.length - 1];
+  const schema = {fields: convertFieldInfos(struct, struct.fields)};
+  const data = util.mapData(queryResult.result, schema);
+
+  return {
+    data,
+    schema,
+    connection_name: queryResult.connectionName,
+    model_annotations: modelInfo.annotations,
+    annotations: annotationToTaglines(queryResult.annotation).map(a => ({
+      value: a,
+    })),
+    sql: queryResult.sql,
+    query_timezone: queryResult.queryTimezone,
+  };
+}
 
 export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   const modelInfo: Malloy.ModelInfo = {
