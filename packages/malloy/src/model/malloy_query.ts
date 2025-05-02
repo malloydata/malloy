@@ -3363,7 +3363,7 @@ class QueryQuery extends QueryField {
   generateSimpleSQL(stageWriter: StageWriter): string {
     let sOuter = 'SELECT \n';
     let sInner = 'SELECT \n';
-    const sWrapFields: string[] = [];
+    const sOuterFields: string[] = [];
     const sInnerFields: string[] = [];
 
     // Categorize fields as aggregates or dimensions
@@ -3402,7 +3402,7 @@ class QueryQuery extends QueryField {
       );
 
       // Add to outer query by name
-      sWrapFields.push(` ${sqlName}`);
+      sOuterFields.push(` ${sqlName}`);
     }
 
     // Process aggregate fields - add to outer query only
@@ -3411,7 +3411,7 @@ class QueryQuery extends QueryField {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
 
       // Add to outer query with full expression
-      sWrapFields.push(
+      sOuterFields.push(
         ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
       );
     }
@@ -3450,7 +3450,7 @@ class QueryQuery extends QueryField {
     sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
-    sOuter += indent(sWrapFields.join(',\n')) + '\n';
+    sOuter += indent(sOuterFields.join(',\n')) + '\n';
     sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
     // group by - use non-aggregate field names from outer query
