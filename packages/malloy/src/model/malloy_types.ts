@@ -1085,6 +1085,7 @@ export function isSamplingEnable(s: Sampling): s is SamplingEnable {
 export interface RawSegment extends Filtered {
   type: 'raw';
   fields: never[];
+  referencedAt?: DocumentLocation;
 }
 export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
@@ -1101,6 +1102,7 @@ export interface IndexSegment extends Filtered {
   sample?: Sampling;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  referencedAt?: DocumentLocation;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -1119,6 +1121,7 @@ export interface QuerySegment extends Filtered, Ordered {
   queryTimezone?: string;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  referencedAt?: DocumentLocation;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';

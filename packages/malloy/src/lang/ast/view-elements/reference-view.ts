@@ -24,6 +24,7 @@
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
   isAtomic,
+  isQuerySegment,
   isRawSegment,
   isTurtle,
   sourceBase,
@@ -117,8 +118,19 @@ export class ReferenceView extends View {
         }
         return oops();
       }
+      let pipeline = [...fieldDef.pipeline];
+      if (pipeline.length > 0 && isQuerySegment(pipeline[0])) {
+        const head = pipeline[0];
+        pipeline = [
+          {
+            ...head,
+            referencedAt: this.reference.location,
+          },
+          ...pipeline.slice(1),
+        ];
+      }
       return {
-        pipeline: [...fieldDef.pipeline],
+        pipeline,
         name: fieldDef.name,
         annotation: fieldDef.annotation,
         outputStruct: getFinalStruct(

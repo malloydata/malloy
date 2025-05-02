@@ -1459,7 +1459,7 @@ describe('query:', () => {
         errorMessage('Group by of `astr` is required but not present')
       );
     });
-    // TODO how do we check this??
+    // TODO would be nice to have an error here, before you use it
     test.skip('failure in multi-stage view in source', () => {
       expect(
         markSource`
@@ -1468,6 +1468,34 @@ describe('query:', () => {
             measure: aisum is ai.sum() { grouped_by: astr }
 
             view: x is { aggregate: ${'aisum'} } -> { select: * }
+          }
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('failure in multi-stage view used later', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: x is { aggregate: aisum } -> { select: * }
+          }
+          run: aext -> ${'x'}
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+    });
+    test('failure in multi-stage view used in nest', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+
+            view: x is { aggregate: aisum } -> { select: * }
+          }
+          run: aext -> {
+            nest: ${'x'}
           }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
@@ -1491,7 +1519,7 @@ describe('query:', () => {
               aggregate: aisum
             }
           }
-          run: aext -> { nest: requires_astr }
+          run: aext -> { nest: ${'requires_astr'} }
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
@@ -1509,6 +1537,18 @@ describe('query:', () => {
           run: aext -> { group_by: astr; nest: requires_astr }
         `
       ).toTranslate();
+    });
+    test('lens error shows up in the right place', () => {
+      expect(
+        markSource`
+          ##! experimental.grouped_by
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+            measure: aisum_plus_one is aisum + 1
+          }
+          run: aext -> { where: true } + ${'aisum_plus_one'}
+        `
+      ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
     test('nest satisfies required group by', () => {
       expect(
