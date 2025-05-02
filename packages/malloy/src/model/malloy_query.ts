@@ -258,7 +258,7 @@ class StageWriter {
   }
 
   addStage(sql: string): string {
-    console.warn('addStage', sql)
+    console.warn('addStage', sql);
     if (this.useCTE) {
       this.withs.push(sql);
       return this.getName(this.withs.length - 1);
@@ -344,9 +344,8 @@ class StageWriter {
     let prefix = 'WITH ';
     let w = '';
     for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
-
       const sql = this.withs[i];
-      console.warn('combineStagesi', i, sql)
+      console.warn('combineStagesi', i, sql);
 
       lastStageName = this.getName(i);
       if (sql === undefined) {
@@ -458,6 +457,200 @@ class QueryField extends QueryNode {
       return parent.getJoinableParent();
     }
     return parent;
+  }
+
+  getReferencedFields(resultSet: FieldInstanceResult): string[] {
+    // For simple fields with no expression, just return the field itself
+    if (!hasExpression(this.fieldDef)) {
+      return [this.getIdentifier()];
+    }
+
+    // For fields with expressions, collect all field references
+    const references: string[] = [];
+    this.collectFieldReferences(
+      resultSet,
+      this.parent,
+      this.fieldDef.e,
+      references
+    );
+    return references;
+  }
+
+  private collectFieldReferences(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: Expr,
+    references: string[]
+  ): void {
+    // Handle based on expression node type
+    switch (expr.node) {
+      case 'field':
+        // Add the field reference (FieldnameNode)
+        references.push(expr.path.join('.'));
+        break;
+      case 'filteredExpr':
+        // Handle filtered expressions
+        if (expr.kids && 'e' in expr.kids && 'filterList' in expr.kids) {
+          this.collectFieldReferences(
+            resultSet,
+            context,
+            expr.kids.e,
+            references
+          );
+          for (const filter of expr.kids.filterList) {
+            this.collectFieldReferences(resultSet, context, filter, references);
+          }
+        }
+        break;
+      case 'function_call':
+        // Handle function calls with arguments
+        if (expr.kids && 'args' in expr.kids) {
+          for (const arg of expr.kids.args) {
+            this.collectFieldReferences(resultSet, context, arg, references);
+          }
+          // Handle order by in function calls if present
+          if ('orderBy' in expr.kids && expr.kids.orderBy) {
+            for (const orderBy of expr.kids.orderBy) {
+              this.collectFieldReferences(
+                resultSet,
+                context,
+                orderBy,
+                references
+              );
+            }
+          }
+        }
+        break;
+      case 'aggregate':
+        // Handle aggregate expressions
+        if ('e' in expr && expr.e) {
+          this.collectFieldReferences(resultSet, context, expr.e, references);
+        }
+        break;
+      case 'case':
+        // Handle case expressions according to the CaseExpr interface
+        if (expr.kids) {
+          // Case with value (switch/case style)
+          if ('caseValue' in expr.kids && expr.kids.caseValue) {
+            this.collectFieldReferences(
+              resultSet,
+              context,
+              expr.kids.caseValue,
+              references
+            );
+          }
+          // Process when/then pairs
+          if ('caseWhen' in expr.kids && 'caseThen' in expr.kids) {
+            const whenExprs = expr.kids.caseWhen;
+            const thenExprs = expr.kids.caseThen;
+            // Process all when conditions
+            for (let i = 0; i < whenExprs.length; i++) {
+              this.collectFieldReferences(
+                resultSet,
+                context,
+                whenExprs[i],
+                references
+              );
+              if (i < thenExprs.length) {
+                this.collectFieldReferences(
+                  resultSet,
+                  context,
+                  thenExprs[i],
+                  references
+                );
+              }
+            }
+          }
+          // Process else clause if present
+          if ('caseElse' in expr.kids && expr.kids.caseElse) {
+            this.collectFieldReferences(
+              resultSet,
+              context,
+              expr.kids.caseElse,
+              references
+            );
+          }
+        }
+        break;
+
+      // Handle unary expressions
+      case '()':
+      case 'not':
+      case 'unary-':
+      case 'is-null':
+      case 'is-not-null':
+        if ('e' in expr && expr.e) {
+          this.collectFieldReferences(resultSet, context, expr.e, references);
+        }
+        break;
+      // Handle binary expressions
+      case '+':
+      case '-':
+      case '*':
+      case '/':
+      case '%':
+      case 'and':
+      case 'or':
+      case '=':
+      case '!=':
+      case '>':
+      case '<':
+      case '>=':
+      case '<=':
+      case 'coalesce':
+      case 'like':
+      case '!like':
+        if (expr.kids && 'left' in expr.kids && 'right' in expr.kids) {
+          this.collectFieldReferences(
+            resultSet,
+            context,
+            expr.kids.left,
+            references
+          );
+          this.collectFieldReferences(
+            resultSet,
+            context,
+            expr.kids.right,
+            references
+          );
+        }
+        break;
+      // Handle 'in' expressions
+      case 'in':
+        if (expr.kids && 'e' in expr.kids && 'oneOf' in expr.kids) {
+          // Process the expression being compared
+          this.collectFieldReferences(
+            resultSet,
+            context,
+            expr.kids.e,
+            references
+          );
+          // Process all values in the 'oneOf' array
+          for (const oneOfExpr of expr.kids.oneOf) {
+            this.collectFieldReferences(
+              resultSet,
+              context,
+              oneOfExpr,
+              references
+            );
+          }
+        }
+        break;
+      // For other types we don't need to process, or unsupported types
+      default:
+        // For GenericSQLExpr, we might want to try to extract from src
+        if (
+          expr.node === 'genericSQLExpr' &&
+          'kids' in expr &&
+          expr.kids &&
+          'args' in expr.kids
+        ) {
+          for (const arg of expr.kids.args) {
+            this.collectFieldReferences(resultSet, context, arg, references);
+          }
+        }
+        break;
+    }
   }
 
   isAtomic() {
@@ -1770,6 +1963,10 @@ class FieldInstanceField implements FieldInstance {
     } else {
       return this.analyticalSQL;
     }
+  }
+
+  getReferencedColumns(): string[] {
+    return this.f.getReferencedFields(this.parent);
   }
 }
 
@@ -3211,7 +3408,7 @@ class QueryQuery extends QueryField {
         structSQL,
         this.firstSegment.sample
       );
-      console.warn('sqlSampleTable', structSQL)
+      console.warn('sqlSampleTable', structSQL);
       if (this.firstSegment.sample) {
         // TODO (vitor): double check this
         structSQL = stageWriter.addStage(
@@ -3322,16 +3519,30 @@ class QueryQuery extends QueryField {
     const sWrapFields: string[] = [];
     const sInnerFields: string[] = [];
 
+    // Add a property to track referenced columns for each field
+    const fieldDependencies = new Map<string, string[]>();
+
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
-        if (fi.f.)
-        fields.push(
+        // Get the referenced columns for this field
+        const referencedColumns = fi.getReferencedColumns();
+        fieldDependencies.set(name, referencedColumns);
+
+        // Continue with normal SQL generation
+        sInnerFields.push(
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
         );
       }
     }
+
+    // // You can now use fieldDependencies map to access the columns used in each expression
+    // // For debugging purposes (can be removed in production):
+    // console.log(
+    //   'Field dependencies:',
+    //   Object.fromEntries(fieldDependencies.entries())
+
     sInner += indent(sInnerFields.join(',\n')) + '\n';
 
     sInner += this.generateSQLJoins(stageWriter);
@@ -3415,7 +3626,7 @@ class QueryQuery extends QueryField {
         fields.length > 0 ? fields.join(', ') + ',' : ''
       } ${pipelinesSQL} FROM ${lastStageName}`;
     }
-    console.warn('generatePipelinedStages', retSQL)
+    console.warn('generatePipelinedStages', retSQL);
     return stageWriter.addStage(retSQL);
   }
 
