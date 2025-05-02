@@ -1739,7 +1739,12 @@ function isBasicCalculation(f: QueryField): f is QueryBasicField {
 }
 
 function isBasicAggregate(f: QueryField): f is QueryBasicField {
-  return f instanceof QueryAtomicField && isAggregateField(f);
+  return (
+    f instanceof QueryAtomicField &&
+    f.isAtomic() &&
+    hasExpression(f.fieldDef) &&
+    expressionIsAggregate(f.fieldDef.expressionType)
+  );
 }
 
 function isBasicScalar(f: QueryField): f is QueryBasicField {
@@ -1766,7 +1771,9 @@ function isCalculatedField(f: QueryField) {
   return false;
 }
 
-function isAggregateField(f: QueryField) {
+// Inlined into isBasicAggregate for direct access
+// Original function kept for reference
+function _isAggregateField(f: QueryField) {
   if (f.isAtomic() && hasExpression(f.fieldDef)) {
     return expressionIsAggregate(f.fieldDef.expressionType);
   }
@@ -3521,34 +3528,114 @@ class QueryQuery extends QueryField {
 
     // Add a property to track referenced columns for each field
     const fieldDependencies = new Map<string, string[]>();
+    // Track fields that require aggregation
+    const isAggregateField = new Map<string, boolean>();
+    // Track all columns needed for the inner query
+    const requiredInnerColumns = new Set<string>();
 
+    // First pass - identify aggregate fields and collect dependencies
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
         // Get the referenced columns for this field
         const referencedColumns = fi.getReferencedColumns();
         fieldDependencies.set(name, referencedColumns);
 
-        // Continue with normal SQL generation
-        sInnerFields.push(
-          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-        );
+        // Determine if this is an aggregate field by checking if it's a QueryBasicField with an aggregate expression
+        const isAggregate =
+          fi.f.isAtomic() &&
+          hasExpression(fi.f.fieldDef) &&
+          expressionIsAggregate(fi.f.fieldDef.expressionType);
+        isAggregateField.set(name, isAggregate);
+
+        // Add all referenced columns to our required columns set
+        referencedColumns.forEach(col => requiredInnerColumns.add(col));
       }
     }
 
-    // // You can now use fieldDependencies map to access the columns used in each expression
-    // // For debugging purposes (can be removed in production):
-    // console.log(
-    //   'Field dependencies:',
-    //   Object.fromEntries(fieldDependencies.entries())
+    // Second pass - build inner and outer SQL statements
+    for (const [name, field] of this.rootResult.allFields) {
+      const fi = field as FieldInstanceField;
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
 
+      if (fi.fieldUsage.type === 'result') {
+        const isAggregate = isAggregateField.get(name) || false;
+
+        if (isAggregate) {
+          // For aggregate fields, use the full expression in the outer query
+          sWrapFields.push(
+            ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+          );
+        } else {
+          // For non-aggregate fields, just reference the inner column in the outer query
+          sWrapFields.push(` ${sqlName}`);
+
+          // Add to inner query
+          sInnerFields.push(
+            ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+          );
+        }
+      }
+    }
+
+    // Build a set of columns already included in the inner query
+    const existingInnerColumns = new Set(
+      Array.from(this.rootResult.allFields.entries())
+        .filter(([name, field]) => {
+          const fi = field as FieldInstanceField;
+          return (
+            fi.fieldUsage.type === 'result' &&
+            !(isAggregateField.get(name) || false)
+          );
+        })
+        .map(([name, _]) => name)
+    );
+
+    // Now make sure any required columns for aggregate expressions are included
+    // First, collect all the columns needed by aggregate fields
+    const columnsNeededForAggregates = new Set<string>();
+
+    for (const [name, field] of this.rootResult.allFields) {
+      const fi = field as FieldInstanceField;
+      if (
+        fi.fieldUsage.type === 'result' &&
+        (isAggregateField.get(name) || false)
+      ) {
+        // Get dependencies for this aggregate field
+        const deps = fieldDependencies.get(name) || [];
+        deps.forEach(dep => columnsNeededForAggregates.add(dep));
+      }
+    }
+
+    // Add any missing required columns to the inner query
+    for (const requiredCol of columnsNeededForAggregates) {
+      // If this column isn't already in our inner fields but is needed for an aggregate
+      if (!existingInnerColumns.has(requiredCol)) {
+        // Try to find the field in rootResult
+        if (this.rootResult.hasField(requiredCol)) {
+          const field = this.rootResult.getField(requiredCol);
+          const sqlName =
+            this.parent.dialect.sqlMaybeQuoteIdentifier(requiredCol);
+
+          // Add this field to the inner query
+          sInnerFields.push(
+            ` ${field.f.generateExpression(this.rootResult)} as ${sqlName}`
+          );
+
+          // Mark it as included
+          existingInnerColumns.add(requiredCol);
+        }
+      }
+    }
+
+    // Finalize the SQL statements
     sInner += indent(sInnerFields.join(',\n')) + '\n';
-
     sInner += this.generateSQLJoins(stageWriter);
     sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    sWrap += `\nFROM (${sInner}) as ${uuidv4().replace(/-/g, '')}\n`;
+    const innerTableAlias = uuidv4().replace(/-/g, '');
+    sWrap += indent(sWrapFields.join(',\n')) + '\n';
+    sWrap += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
     // group by
     if (this.firstSegment.type === 'reduce') {
@@ -3842,7 +3929,14 @@ class QueryQuery extends QueryField {
 
   generateSQLStage0(stageWriter: StageWriter): string {
     console.warn('generateSQLStage0');
-    let s = 'SELECT\n';
+
+    // Use inner/outer query pattern for SQL Server support
+    let sInner = 'SELECT\n';
+    let sOuter = 'SELECT\n';
+    const sInnerFields: string[] = [];
+    const sOuterFields: string[] = [];
+
+    // Add required fields to inner query
     let from = this.generateSQLJoins(stageWriter);
     const wheres = this.generateSQLWhereTurtled();
 
@@ -3863,40 +3957,73 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    // TODO (vitor): Figure out with the malloy team
-    let groupBy = '';
-    if (this.parent.dialect.supportsLateGroupByEval) {
-      if (this.parent.dialect.groupByClause === 'output_name') {
-        groupBy = f.dimensions?.map(v => v.name).join(',') + '\n';
-      } else {
-        groupBy = f.dimensionIndexes.join(',') + '\n';
-      }
-    } else {
-      console.warn('else-generateSQLStage0');
-      groupBy =
-        f.dimensions
-          ?.map(v =>
-            /\d+/.test(v.expression) ? `${v.expression}` : v.expression
-          )!
-          .join(',') + '\n';
+    // Track which fields are dimensions (non-aggregates) for grouping
+    const dimensionFields: string[] = [];
+    for (const dimension of f.dimensions || []) {
+      dimensionFields.push(dimension.name);
     }
-    groupBy = groupBy ? 'GROUP BY' + groupBy : '';
-    console.warn('groupBy-generateSQLStage0', groupBy);
+
+    // Add group_set to inner query
+    sInnerFields.push('group_set');
+    sOuterFields.push('group_set');
+
+    // Add all fields to the appropriate queries
+    for (const fieldSql of f.sql) {
+      if (fieldSql === 'group_set') continue; // Already added
+
+      // For SQL Server compatibility, we need to use column names in GROUP BY
+      const isAggregate = !dimensionFields.includes(fieldSql.split(' as ')[1]);
+
+      if (isAggregate) {
+        // Add to outer query
+        sOuterFields.push(fieldSql);
+      } else {
+        // Add to both inner and outer query
+        sInnerFields.push(fieldSql);
+        sOuterFields.push(fieldSql.split(' as ')[1]); // Just use the alias name
+      }
+    }
+
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
-    s += indent(f.sql.join(',\n')) + '\n';
+    sInner += indent(sInnerFields.join(',\n')) + '\n';
 
-    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
-    //  aggregates.
+    // this should only happen on standard SQL, BigQuery can't partition by expressions and aggregates
     if (f.lateralJoinSQLExpressions.length > 0) {
       from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
         ',\n'
       )})]) as __lateral_join_bag\n`;
     }
-    s += from + wheres + groupBy + this.rootResult.havings.sql('having');
+
+    // Add FROM clause and WHERE to inner query
+    sInner += from + wheres;
+
+    // Generate inner query
+    const innerTableAlias = uuidv4().replace(/-/g, '');
+    const innerQuery = stageWriter.addStage(sInner);
+
+    // Build outer query with appropriate GROUP BY
+    sOuter += indent(sOuterFields.join(',\n')) + '\n';
+    sOuter += `FROM (${innerQuery}) as ${innerTableAlias}\n`;
+
+    // Add GROUP BY to outer query using dimension field names
+    let groupBy = '';
+    if (dimensionFields.length > 0) {
+      groupBy = 'GROUP BY group_set';
+
+      for (const dimension of f.dimensions || []) {
+        if (dimension.name !== 'group_set') {
+          groupBy += ', ' + dimension.name;
+        }
+      }
+
+      groupBy += '\n';
+    }
+
+    sOuter += groupBy + this.rootResult.havings.sql('having');
 
     // generate the stage
-    const resultStage = stageWriter.addStage(s);
+    const resultStage = stageWriter.addStage(sOuter);
 
     // generate stages for havings and limits
     this.resultStage = this.generateSQLHavingLimit(stageWriter, resultStage);
@@ -3975,7 +4102,12 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stageName: string
   ): string {
-    let s = 'SELECT \n';
+    // Use inner/outer query pattern for SQL Server compatibility
+    let sInner = 'SELECT\n';
+    let sOuter = 'SELECT\n';
+    const sInnerFields: string[] = [];
+    const sOuterFields: string[] = [];
+
     const f: StageOutputContext = {
       dimensionIndexes: [1],
       fieldIndex: 2,
@@ -3984,37 +4116,66 @@ class QueryQuery extends QueryField {
       groupsAggregated: [],
       outputPipelinedSQL: [],
     };
+
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
-    s += indent(f.sql.join(',\n')) + '\n';
-    s += `FROM ${stageName}\n`;
+
+    // Track which fields are dimensions (for GROUP BY)
+    const dimensionFields: string[] = [];
+
+    // Add group_set to both queries
+    sInnerFields.push('group_set');
+    sOuterFields.push('group_set');
+
+    // Separate fields into dimensions and aggregates
+    for (const fieldSql of f.sql) {
+      if (fieldSql === 'group_set') continue; // Already added
+
+      // Extract field name from SQL
+      const parts = fieldSql.split(' as ');
+      const fieldName = parts[parts.length - 1];
+
+      // Check if it's a dimension field
+      const isDimension = f.dimensionIndexes.includes(
+        f.dimensions?.findIndex(dim => dim.name === fieldName) ?? -1
+      );
+
+      if (isDimension) {
+        // Add dimensions to both inner and outer queries
+        sInnerFields.push(fieldSql);
+        sOuterFields.push(fieldName);
+        dimensionFields.push(fieldName);
+      } else {
+        // Add aggregates only to outer query
+        sOuterFields.push(fieldSql);
+      }
+    }
+
+    // Build inner query
+    sInner += indent(sInnerFields.join(',\n')) + '\n';
+    sInner += `FROM ${stageName}\n`;
+
     const where = this.rootResult.eliminateComputeGroupsSQL();
     if (where.length > 0) {
-      s += `WHERE ${where}\n`;
+      sInner += `WHERE ${where}\n`;
     }
 
-    if (f.dimensionIndexes.length > 0) {
-      // TODO (vitor): Figure out with the malloy team
-      let groupBy = '';
-      if (this.parent.dialect.supportsLateGroupByEval) {
-        if (this.parent.dialect.groupByClause === 'expression') {
-          groupBy = f.dimensions?.map(v => v.name).join(',') + '\n';
-        } else {
-          groupBy = f.dimensionIndexes.join(',') + '\n';
-        }
-      } else {
-        groupBy =
-          f.dimensions
-            ?.map(v =>
-              /\d+/.test(v.expression) ? `${v.expression}` : v.expression
-            )!
-            .join(',') + '\n';
-        console.warn('groupBy-generateSQLDepthN', groupBy);
-      }
-      s += groupBy ? 'GROUP BY ' + groupBy : '';
+    // Generate inner query stage
+    const innerTableAlias = uuidv4().replace(/-/g, '');
+    const innerQuery = stageWriter.addStage(sInner);
+
+    // Build outer query with GROUP BY
+    sOuter += indent(sOuterFields.join(',\n')) + '\n';
+    sOuter += `FROM (${innerQuery}) as ${innerTableAlias}\n`;
+
+    // Add GROUP BY to outer query using dimension field names
+    if (dimensionFields.length > 0) {
+      sOuter += `GROUP BY ${dimensionFields.join(', ')}\n`;
     }
 
-    this.resultStage = stageWriter.addStage(s);
+    // Generate the final stage
+    this.resultStage = stageWriter.addStage(sOuter);
 
+    // Apply pipelined stages if needed
     this.resultStage = this.generatePipelinedStages(
       f.outputPipelinedSQL,
       this.resultStage,
@@ -4611,31 +4772,45 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
-    if (dialect.groupByClause === 'expression') {
-      s += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
-    } else {
-      s += 'GROUP BY 1,2,3,4,5\n';
-    }
+    // Use inner/outer query pattern for SQL Server compatibility
+    const innerStage = stageWriter.addStage(s);
 
-    console.warn('generateSQL', s);
+    // Create outer query that uses column names in GROUP BY
+    let outerSQL = 'SELECT\n';
 
-    // limit
+    // Reference all columns from inner query
+    outerSQL += `  ${fieldNameColumn},\n`;
+    outerSQL += `  ${fieldPathColumn},\n`;
+    outerSQL += `  ${fieldTypeColumn},\n`;
+    outerSQL += `  ${fieldValueColumn},\n`;
+    outerSQL += `  ${weightColumn},\n`;
+    outerSQL += `  ${fieldRangeColumn}\n`;
+
+    // Add FROM clause referencing inner query
+    const innerTableAlias = uuidv4().replace(/-/g, '');
+    outerSQL += `FROM (${innerStage}) as ${innerTableAlias}\n`;
+
+    // Add GROUP BY clause using column names instead of positions
+    outerSQL += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
+
+    // Add limit if needed
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       if (dialect.supportsLimit) {
-        s += `LIMIT ${this.firstSegment.limit}\n`;
+        outerSQL += `LIMIT ${this.firstSegment.limit}\n`;
       } else {
-        s += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+        outerSQL += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
       }
     } else {
-      // TODO (vitor): This is nasty. Seems to be sqlserver specific
+      // Add SQL Server specific limit
       if (dialect.name === 'tsql') {
-        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647  ROWS ONLY\n';
+        outerSQL += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
 
-    // console.log(s);
-    const resultStage = stageWriter.addStage(s);
+    console.warn('generateSQL - outer SQL', outerSQL);
+
+    // Generate the final SQL stage
+    const resultStage = stageWriter.addStage(outerSQL);
     this.resultStage = stageWriter.addStage(
       `SELECT
   ${fieldNameColumn},
