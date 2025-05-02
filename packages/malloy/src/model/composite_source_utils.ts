@@ -596,10 +596,6 @@ interface NestLevels {
   ungroupings: AggregateUngrouping[];
 }
 
-// function getFieldUsageForFilter(filter: FilterCondition): FieldUsage[] {
-//   return getFieldUsageFromExpr(filter.e);
-// }
-
 function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
   const fieldUsage: FieldUsage[] = [];
   for (const node of exprWalk(expr)) {
@@ -728,7 +724,6 @@ function expandRefs(
         .filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)));
       references.push(...moreReferences);
     }
-    // TODO this logic is super duplicated in `expandFieldUsage`
     if (field.path.length > 1) {
       if (!joinPathsProcessed.some(p => pathEq(p, joinPath))) {
         joinPathsProcessed.push(joinPath);
