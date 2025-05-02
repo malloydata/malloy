@@ -201,6 +201,7 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
 
 // TODO (vitor): Not sure... This is pretty hidden away and uses dbName instead of dialect
 export function booleanResult(value: boolean, dbName: string) {
+  console.warn('booleanResult', dbName);
   if (dbName === 'mysql' || dbName === 'sqlserver') {
     return value ? 1 : 0;
   } else {
@@ -210,6 +211,7 @@ export function booleanResult(value: boolean, dbName: string) {
 
 // TODO (vitor): Not sure... This is pretty hidden away and uses dbName instead of dialect
 export function booleanCode(value: boolean, dbName: string) {
+  console.warn('booleanCode', dbName);
   if (dbName === 'mysql') {
     return value ? '1' : '0';
   } else if (dbName === 'sqlserver') {
