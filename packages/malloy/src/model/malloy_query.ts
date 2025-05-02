@@ -3361,7 +3361,7 @@ class QueryQuery extends QueryField {
 
   // TODO (vitor): Mark CHECK when done
   generateSimpleSQL(stageWriter: StageWriter): string {
-    let sWrap = 'SELECT \n';
+    let sOuter = 'SELECT \n';
     let sInner = 'SELECT \n';
     const sWrapFields: string[] = [];
     const sInnerFields: string[] = [];
@@ -3450,8 +3450,8 @@ class QueryQuery extends QueryField {
     sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
-    sWrap += indent(sWrapFields.join(',\n')) + '\n';
-    sWrap += `FROM (${sInner}) as ${innerTableAlias}\n`;
+    sOuter += indent(sWrapFields.join(',\n')) + '\n';
+    sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
     // group by - use non-aggregate field names from outer query
     if (this.firstSegment.type === 'reduce') {
@@ -3460,11 +3460,11 @@ class QueryQuery extends QueryField {
       );
 
       if (groupByColumns.length > 0) {
-        sWrap += `GROUP BY ${groupByColumns.join(', ')}\n`;
+        sOuter += `GROUP BY ${groupByColumns.join(', ')}\n`;
       }
     }
 
-    sWrap += this.generateSQLFilters(this.rootResult, 'having').sql('having');
+    sOuter += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
     // order by
     const orderBy = this.genereateSQLOrderBy(
@@ -3472,20 +3472,20 @@ class QueryQuery extends QueryField {
       this.rootResult
     );
 
-    sWrap += orderBy || 'ORDER BY 1 ';
+    sOuter += orderBy || 'ORDER BY 1 ';
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      sWrap += this.parent.dialect.supportsLimit
+      sOuter += this.parent.dialect.supportsLimit
         ? `LIMIT ${this.firstSegment.limit}\n`
         : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
     } else {
       // TODO (vitor): This is nasty. Figure out if its sqlserver specific
       if (this.parent.dialect.name === 'tsql') {
-        sWrap += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        sOuter += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
-    this.resultStage = stageWriter.addStage(sWrap);
+    this.resultStage = stageWriter.addStage(sOuter);
     return this.resultStage;
   }
 
@@ -3805,11 +3805,10 @@ class QueryQuery extends QueryField {
 
     // Generate inner query
     const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
-    const innerQuery = stageWriter.addStage(sInner);
 
     // Build outer query with appropriate GROUP BY
     sOuter += indent(sOuterFields.join(',\n')) + '\n';
-    sOuter += `FROM (${innerQuery}) as ${innerTableAlias}\n`;
+    sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
     // Add GROUP BY to outer query using dimension field names
     let groupBy = '';
@@ -3966,11 +3965,10 @@ class QueryQuery extends QueryField {
 
     // Generate inner query stage
     const innerTableAlias = 'inner+' + uuidv4().replace(/-/g, '');
-    const innerQuery = stageWriter.addStage(sInner);
 
     // Build outer query with GROUP BY
     sOuter += indent(sOuterFields.join(',\n')) + '\n';
-    sOuter += `FROM (${innerQuery}) as ${innerTableAlias}\n`;
+    sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
     // Add GROUP BY to outer query using dimension field names
     if (dimensionFields.length > 0) {
@@ -4577,9 +4575,6 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    // Use inner/outer query pattern for SQL Server compatibility
-    const innerStage = stageWriter.addStage(s);
-
     // Create outer query that uses column names in GROUP BY
     let outerSQL = 'SELECT\n';
 
@@ -4593,7 +4588,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     // Add FROM clause referencing inner query
     const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
-    outerSQL += `FROM (${innerStage}) as ${innerTableAlias}\n`;
+    outerSQL += `FROM (${s}) as ${innerTableAlias}\n`;
 
     // Add GROUP BY clause using column names instead of positions
     outerSQL += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
