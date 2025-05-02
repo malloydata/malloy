@@ -2279,23 +2279,23 @@ describe('query builder', () => {
         const source = q.definition.as
           .ArrowQueryDefinition()
           .source.as.ReferenceQueryArrowSource();
-        source.setParameter('string_param', 'COOL');
-        source.setParameter('number_param', 7);
-        source.setParameter('boolean_param', true);
-        source.setParameter('date_param', {
+        source.setParameter('string_param', 'string_literal', 'COOL');
+        source.setParameter('number_param', 'number_literal', 7);
+        source.setParameter('boolean_param', 'boolean_literal', true);
+        source.setParameter('date_param', 'date_literal', {
           // TODO what am I supposed to do about timezones?
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'month',
         });
-        source.setParameter('short_date_param', {
+        source.setParameter('short_date_param', 'date_literal', {
           date: new Date('0123-01-01 10:00:00+00:00'),
           granularity: 'day',
         });
-        source.setParameter('timestamp_param', {
+        source.setParameter('timestamp_param', 'timestamp_literal', {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'minute',
         });
-        source.setParameter('null_param', null);
+        source.setParameter('null_param', 'null_literal', null);
       }).toModifyQuery({
         source: {
           name: 'foo',
@@ -2400,58 +2400,58 @@ describe('query builder', () => {
         `,
       });
     });
-  });
-  test('add parameter twice overrides', () => {
-    const from: Malloy.Query = {
-      definition: {
-        kind: 'arrow',
-        source: {kind: 'source_reference', name: 'foo'},
-        view: {
-          kind: 'segment',
-          operations: [],
-        },
-      },
-    };
-    expect((q: ASTQuery) => {
-      const source = q.definition.as
-        .ArrowQueryDefinition()
-        .source.as.ReferenceQueryArrowSource();
-      source.setParameter('string_param', 'COOL');
-      source.setParameter('string_param', 'COOLER');
-    }).toModifyQuery({
-      source: {
-        name: 'foo',
-        schema: {fields: []},
-        parameters: [
-          {
-            name: 'string_param',
-            type: {kind: 'string_type'},
-          },
-        ],
-      },
-      from,
-      to: {
+    test('add parameter twice overrides', () => {
+      const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source: {
-            kind: 'source_reference',
-            name: 'foo',
-            parameters: [
-              {
-                name: 'string_param',
-                value: {kind: 'string_literal', string_value: 'COOLER'},
-              },
-            ],
-          },
+          source: {kind: 'source_reference', name: 'foo'},
           view: {
             kind: 'segment',
             operations: [],
           },
         },
-      },
-      malloy: dedent`
+      };
+      expect((q: ASTQuery) => {
+        const source = q.definition.as
+          .ArrowQueryDefinition()
+          .source.as.ReferenceQueryArrowSource();
+        source.setParameter('string_param', 'string_literal', 'COOL');
+        source.setParameter('string_param', 'string_literal', 'COOLER');
+      }).toModifyQuery({
+        source: {
+          name: 'foo',
+          schema: {fields: []},
+          parameters: [
+            {
+              name: 'string_param',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'foo',
+              parameters: [
+                {
+                  name: 'string_param',
+                  value: {kind: 'string_literal', string_value: 'COOLER'},
+                },
+              ],
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: dedent`
         run: foo(string_param is "COOLER") -> { }
       `,
+      });
     });
   });
 
