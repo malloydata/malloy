@@ -1545,42 +1545,43 @@ describe('query:', () => {
       ).toTranslate();
     });
     test('composed source input skipped when invalid require group by usage but field is present in source', () => {
-      expect(
-        markSource`
-          ##! experimental { composite_sources grouped_by }
-          source: aext is compose(
-            a extend {
-              measure: aisum is ai.sum() { grouped_by: astr }
-            },
-            a extend {
-              measure: aisum is ai.sum()
-            }
-          )
-          run: aext -> {
-            aggregate: aisum
-          }
-        `
-      ).toTranslate();
-      // TODO test that this actually uses first source
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        source: s1 is a extend {
+          measure: aisum is ai.sum() { grouped_by: astr }
+        }
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(s1, s2)
+        run: aext -> {
+          aggregate: aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      expect(q.compositeResolvedSourceDef?.as).toBe('s2');
     });
     test('composed source input skipped when invalid require group by usage', () => {
-      expect(
-        markSource`
-          ##! experimental { composite_sources grouped_by }
-          source: aext is compose(
-            a extend {
-              dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
-            },
-            a extend {
-              measure: aisum is ai.sum()
-            }
-          )
-          run: aext -> {
-            aggregate: aisum
-          }
-        `
-      ).toTranslate();
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        source: s1 is a extend {
+          dimension: x is 1
+          measure: aisum is ai.sum() { grouped_by: x }
+        }
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(s1, s2)
+        run: aext -> {
+          aggregate: aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      expect(q.compositeResolvedSourceDef?.as).toBe('s2');
     });
     test('required group by causes composed source to fall off end', () => {
       expect(
@@ -1636,52 +1637,70 @@ describe('query:', () => {
       );
     });
     test('joined composed source input skipped when invalid require group by usage', () => {
-      expect(
-        markSource`
-          ##! experimental { composite_sources grouped_by }
-          source: aext is compose(
-            a extend {
-              dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
-            },
-            a extend {
-              measure: aisum is ai.sum()
-            }
-          )
-          source: bext is b extend {
-            join_one: aext on true
-          }
-          run: bext -> {
-            aggregate: aext.aisum
-          }
-        `
-      ).toTranslate();
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        source: s1 is a extend {
+          dimension: x is 1
+          measure: aisum is ai.sum() { grouped_by: x }
+        }
+        # only_on_s2
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(s1, s2)
+        source: bext is b extend {
+          join_one: aext on true
+        }
+        run: bext -> {
+          aggregate: aext.aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      const aext = q.compositeResolvedSourceDef?.fields.find(
+        f => f.as === 'aext'
+      );
+      expect(aext).toBeDefined();
+      expect(aext?.annotation?.blockNotes).toMatchObject([
+        {text: '# only_on_s2\n'},
+      ]);
     });
     test('evil case where cannot resolve join composite because of field in root', () => {
       // Here, `aext_aisum` is defined in `bext`, which means that when we are looking up the
       // aggregate usage of `aext_aisum` (when deciding whether the first slice of the joined
       // composite is valid), we need to know `bext`'s fields.
-      expect(
-        markSource`
-          ##! experimental { composite_sources grouped_by }
-          source: aext is compose(
-            a extend {
-              dimension: x is 1
-              measure: aisum is ai.sum() { grouped_by: x }
-            },
-            a extend {
-              measure: aisum is ai.sum()
-            }
-          )
-          source: bext is b extend {
-            join_one: aext on true
-            measure: aext_aisum is aext.aisum
-          }
-          run: bext -> {
-            aggregate: aext_aisum
-          }
-        `
-      ).toTranslate();
+      const t = new TestTranslator(`
+        ##! experimental { composite_sources grouped_by }
+        # only_on_s2
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(
+          a extend {
+            dimension: x is 1
+            measure: aisum is ai.sum() { grouped_by: x }
+          },
+          s2
+        )
+        source: bext is b extend {
+          join_one: aext on true
+          measure: aext_aisum is aext.aisum
+        }
+        run: bext -> {
+          aggregate: aext_aisum
+        }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      const aext = q.compositeResolvedSourceDef?.fields.find(
+        f => f.as === 'aext'
+      );
+      expect(aext).toBeDefined();
+      expect(aext?.annotation?.blockNotes).toMatchObject([
+        {text: '# only_on_s2\n'},
+      ]);
     });
     test('require_group_by expression additive', () => {
       expect(
@@ -1814,20 +1833,23 @@ describe('query:', () => {
       );
     });
     test('ungroup fails composite slice', () => {
-      expect(
-        markSource`
-          ##! experimental { grouped_by composite_sources }
-          source: aext is compose(
-            a extend {
-              measure: aisum is ai.sum() { grouped_by: astr }
-            },
-            a extend {
-              measure: aisum is ai.sum()
-            }
-          )
-          run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
-        `
-      ).toTranslate();
+      const t = new TestTranslator(`
+        ##! experimental { grouped_by composite_sources }
+        source: s2 is a extend {
+          measure: aisum is ai.sum()
+        }
+        source: aext is compose(
+          a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          },
+          s2
+        )
+        run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
+      `);
+      expect(t).toTranslate();
+      const q = t.modelDef.queryList[0];
+      expect(q).toBeDefined();
+      expect(q.compositeResolvedSourceDef?.as).toBe('s2');
     });
     test('ungroup fails composite source', () => {
       expect(
