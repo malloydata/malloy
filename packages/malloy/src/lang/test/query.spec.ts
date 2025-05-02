@@ -1544,19 +1544,6 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    // TODO move this test somewhere else
-    test('composite used in join', () => {
-      expect(
-        markSource`
-          ##! experimental { composite_sources grouped_by }
-          source: x is compose(a, a extend { dimension: foo is 1 })
-          source: y is a extend {
-            join_one: x on x.ai = ai
-          }
-          run: y -> { group_by: x.foo }
-        `
-      ).toTranslate();
-    });
     test('composed source input skipped when invalid require group by usage but field is present in source', () => {
       expect(
         markSource`

@@ -115,6 +115,18 @@ describe('composite sources', () => {
         )
       );
     });
+    test('composite used in join', () => {
+      expect(
+        `
+          ##! experimental { composite_sources grouped_by }
+          source: x is compose(a, a extend { dimension: foo is 1 })
+          source: y is a extend {
+            join_one: x on x.ai = ai
+          }
+          run: y -> { group_by: x.foo }
+        `
+      ).toTranslate();
+    });
     test('compose fails on scalar lens that is dimension', () => {
       expect(`
         ##! experimental.composite_sources
