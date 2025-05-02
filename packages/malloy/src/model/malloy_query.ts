@@ -459,7 +459,7 @@ class QueryField extends QueryNode {
     return parent;
   }
 
-  getReferencedFields(resultSet: FieldInstanceResult): string[] {
+  getReferencedFields(_resultSet: FieldInstanceResult): string[] {
     // For simple fields with no expression, just return the field itself
     if (!hasExpression(this.fieldDef)) {
       return [this.getIdentifier()];
@@ -467,17 +467,17 @@ class QueryField extends QueryNode {
 
     // For fields with expressions, collect all field references using exprWalk
     const references: string[] = [];
-    
+
     // Use the existing exprWalk utility to find all field references
     for (const subExpr of exprWalk(this.fieldDef.e)) {
       if (subExpr.node === 'field') {
         references.push(subExpr.path.join('.'));
       }
     }
-    
+
     return references;
   }
-  
+
   // Internal helper method - Now uses exprWalk
   private collectFieldReferences(
     resultSet: FieldInstanceResult,
@@ -492,7 +492,7 @@ class QueryField extends QueryNode {
       }
     }
   }
-  
+
   isAtomic() {
     return isAtomic(this.fieldDef);
   }
@@ -3378,10 +3378,10 @@ class QueryQuery extends QueryField {
         // Get dependencies
         const dependencies = fi.getReferencedColumns();
         fieldDependencies.set(name, dependencies);
-        
+
         // Check if this is an aggregate field
         const isAggregate = isBasicAggregate(fi.f);
-        
+
         // Add to appropriate category
         if (isAggregate) {
           aggregates.push(name);
@@ -3395,21 +3395,21 @@ class QueryQuery extends QueryField {
     for (const name of nonAggregates) {
       const fi = this.rootResult.getField(name);
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-      
+
       // Add to inner query with full expression
       sInnerFields.push(
         ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
       );
-      
+
       // Add to outer query by name
       sWrapFields.push(` ${sqlName}`);
     }
-    
+
     // Process aggregate fields - add to outer query only
     for (const name of aggregates) {
       const fi = this.rootResult.getField(name);
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-      
+
       // Add to outer query with full expression
       sWrapFields.push(
         ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
@@ -3419,22 +3419,24 @@ class QueryQuery extends QueryField {
     // Add dependencies for aggregate fields to inner query
     // Use Set for deduplication
     const addedFields = new Set(nonAggregates);
-    
+
     // For each aggregate field
     for (const aggrName of aggregates) {
       // Get its dependencies
       const deps = fieldDependencies.get(aggrName) || [];
-      
+
       // Add each dependency to inner query if not already included
       for (const dep of deps) {
         if (!addedFields.has(dep) && this.rootResult.hasField(dep)) {
           const depField = this.rootResult.getField(dep);
           const depSqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(dep);
-          
+
           sInnerFields.push(
-            ` ${depField.f.generateExpression(this.rootResult)} as ${depSqlName}`
+            ` ${depField.f.generateExpression(
+              this.rootResult
+            )} as ${depSqlName}`
           );
-          
+
           addedFields.add(dep);
         }
       }
@@ -3453,10 +3455,10 @@ class QueryQuery extends QueryField {
 
     // group by - use non-aggregate field names from outer query
     if (this.firstSegment.type === 'reduce') {
-      const groupByColumns = nonAggregates.map(name => 
+      const groupByColumns = nonAggregates.map(name =>
         this.parent.dialect.sqlMaybeQuoteIdentifier(name)
       );
-      
+
       if (groupByColumns.length > 0) {
         sWrap += `GROUP BY ${groupByColumns.join(', ')}\n`;
       }
