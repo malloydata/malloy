@@ -3223,6 +3223,7 @@ class QueryQuery extends QueryField {
         );
       }
     }
+
     if (isBaseTable(qs.structDef)) {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
@@ -3340,7 +3341,7 @@ class QueryQuery extends QueryField {
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
           // FOUND YOU SUCKER
           // TODO (vitor): Idk if this is needed or wanted. It does reduce the number of test failures tho
-          if (this.parent.dialect.orderByClause === 'output_name') {
+          if (this.parent.dialect.groupByClause === 'expression') {
             n.push(fi.f.getFullOutputName());
           } else {
             n.push(fi.fieldUsage.resultIndex.toString());
@@ -3646,10 +3647,9 @@ class QueryQuery extends QueryField {
     }
 
     // TODO (vitor): Figure out with the malloy team
-    // We are using orderByClause here instead of say, groupByClause which doesn't seem to exist yet.
     let groupBy = '';
     if (this.parent.dialect.supportsLateGroupByEval) {
-      if (this.parent.dialect.orderByClause === 'output_name') {
+      if (this.parent.dialect.groupByClause === 'output_name') {
         groupBy = f.dimensions?.map(v => v.name).join(',') + '\n';
       } else {
         groupBy = f.dimensionIndexes.join(',') + '\n';
@@ -3777,10 +3777,9 @@ class QueryQuery extends QueryField {
 
     if (f.dimensionIndexes.length > 0) {
       // TODO (vitor): Figure out with the malloy team
-      // We are using orderByClause here instead of say, groupByClause which doesn't seem to exist yet.
       let groupBy = '';
       if (this.parent.dialect.supportsLateGroupByEval) {
-        if (this.parent.dialect.orderByClause === 'output_name') {
+        if (this.parent.dialect.groupByClause === 'expression') {
           groupBy = f.dimensions?.map(v => v.name).join(',') + '\n';
         } else {
           groupBy = f.dimensionIndexes.join(',') + '\n';
@@ -3883,10 +3882,9 @@ class QueryQuery extends QueryField {
 
     if (dimensionIndexes.length > 0) {
       // TODO (vitor): Figure out with the malloy team
-      // We are using orderByClause here instead of say, groupByClause which doesn't seem to exist yet.
       let groupBy = '';
       if (this.parent.dialect.supportsLateGroupByEval) {
-        if (this.parent.dialect.orderByClause === 'output_name') {
+        if (this.parent.dialect.groupByClause === 'expression') {
           groupBy = dimensions?.map(v => v.name).join(',') + '\n';
         } else {
           groupBy = dimensionIndexes.join(',') + '\n';
@@ -4397,7 +4395,7 @@ class QueryQueryIndexStage extends QueryQuery {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // TODO (vitor): Sort out this here with the malloy team. Code smell ahead.
-    if (dialect.orderByClause === 'output_name') {
+    if (dialect.groupByClause === 'expression') {
       s += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
     } else {
       s += 'GROUP BY 1,2,3,4,5\n';

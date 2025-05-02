@@ -96,6 +96,7 @@ export function qtz(qi: QueryInfo): string | undefined {
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+export type GroupByClauseType = 'output_name' | 'ordinal' | 'expression';
 
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 
@@ -136,6 +137,8 @@ export abstract class Dialect {
 
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
+
+  groupByClause: GroupByClauseType = 'ordinal';
 
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
