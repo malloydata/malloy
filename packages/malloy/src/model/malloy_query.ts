@@ -3449,7 +3449,7 @@ class QueryQuery extends QueryField {
     sInner += this.generateSQLJoins(stageWriter);
     sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    const innerTableAlias = uuidv4().replace(/-/g, '');
+    const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
     sWrap += indent(sWrapFields.join(',\n')) + '\n';
     sWrap += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
@@ -3804,7 +3804,7 @@ class QueryQuery extends QueryField {
     sInner += from + wheres;
 
     // Generate inner query
-    const innerTableAlias = uuidv4().replace(/-/g, '');
+    const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
     const innerQuery = stageWriter.addStage(sInner);
 
     // Build outer query with appropriate GROUP BY
@@ -3965,7 +3965,7 @@ class QueryQuery extends QueryField {
     }
 
     // Generate inner query stage
-    const innerTableAlias = uuidv4().replace(/-/g, '');
+    const innerTableAlias = 'inner+' + uuidv4().replace(/-/g, '');
     const innerQuery = stageWriter.addStage(sInner);
 
     // Build outer query with GROUP BY
@@ -4592,7 +4592,7 @@ class QueryQueryIndexStage extends QueryQuery {
     outerSQL += `  ${fieldRangeColumn}\n`;
 
     // Add FROM clause referencing inner query
-    const innerTableAlias = uuidv4().replace(/-/g, '');
+    const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
     outerSQL += `FROM (${innerStage}) as ${innerTableAlias}\n`;
 
     // Add GROUP BY clause using column names instead of positions
