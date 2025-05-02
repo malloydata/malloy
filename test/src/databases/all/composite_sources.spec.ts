@@ -448,8 +448,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x(param is 2) -> { group_by: b }
     `).malloyResultMatches(wrappedRuntime, {b: 3});
   });
-  // TODO still need to fix this
-  it.skip('nested composite where field usage depends on which composite selected', async () => {
+  it('nested composite where field usage depends on which composite selected', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
