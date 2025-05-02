@@ -262,7 +262,7 @@ function expandFieldUsage(
         ...fieldUsage
           .map(u => ({
             path: [...referenceJoinPath, ...u.path],
-            at: reference.at,
+            at: reference.at ?? u.at,
           }))
           .filter(
             u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
@@ -280,7 +280,7 @@ function expandFieldUsage(
           ...fieldUsage
             .map(u => ({
               path: [...joinJoinPath, ...u.path],
-              at: reference.at,
+              at: reference.at ?? u.at,
             }))
             .filter(
               u1 =>
@@ -606,7 +606,7 @@ function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
     if (node.node === 'field') {
       fieldUsage.push({
         path: node.path,
-        at: node.at!, // TODO
+        at: node.at,
       });
     }
   }
@@ -638,8 +638,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
       if (field.type === 'fieldref') {
         const usage = {
           path: field.path,
-          // TODO handle case where `at` is undefined
-          at: field.at!,
+          at: field.at,
         };
         fieldsReferencedDirectly.push(usage);
         fieldsReferenced.push(usage);
@@ -714,18 +713,18 @@ function expandRefs(
             requiresGroupBy: u.requiresGroupBy?.map(gb => ({
               ...gb,
               path: [...joinPath, ...gb.path],
-              at: field.at,
+              at: field.at ?? gb.at,
             })),
             fieldUsage: joinedFieldUsage(joinPath, u.fieldUsage).map(u2 => ({
               ...u2,
-              at: field.at,
+              at: field.at ?? u2.at,
             })),
           }))
         );
       }
       const fieldUsage = getFieldUsageForField(def);
       const moreReferences = fieldUsage
-        .map(u => ({path: [...joinPath, ...u.path], at: field.at}))
+        .map(u => ({path: [...joinPath, ...u.path], at: field.at ?? u.at}))
         .filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)));
       references.push(...moreReferences);
     }
@@ -741,7 +740,7 @@ function expandRefs(
           ...fieldUsage
             .map(u => ({
               path: [...joinJoinPath, ...u.path],
-              at: field.at,
+              at: field.at ?? u.at,
             }))
             .filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)))
         );
@@ -855,7 +854,15 @@ function lookup(field: string[], fields: FieldDef[]): FieldDef {
   }
 }
 
-function compareLocations(a: DocumentLocation, b: DocumentLocation) {
+function compareLocations(
+  a: DocumentLocation | undefined,
+  b: DocumentLocation | undefined
+) {
+  if (a === undefined) {
+    if (b === undefined) return 0;
+    return -1;
+  }
+  if (b === undefined) return 1;
   if (a.range.start.line < b.range.start.line) return -1;
   if (a.range.start.line > b.range.start.line) return 1;
   if (a.range.start.character < b.range.start.character) return -1;

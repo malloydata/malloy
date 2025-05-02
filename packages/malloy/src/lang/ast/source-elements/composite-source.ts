@@ -74,8 +74,7 @@ export class CompositeSource extends Source {
             name: fieldName,
             as: undefined,
             e: {node: 'compositeField'},
-            // TODO handle when codeLocation is undefined
-            fieldUsage: [{path: [fieldName], at: this.codeLocation!}],
+            fieldUsage: [{path: [fieldName], at: this.codeLocation}],
             code: this.code,
             location: this.codeLocation,
             // A composite field's grouping may differ from slice to slice

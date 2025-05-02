@@ -97,9 +97,6 @@ describe('composite sources', () => {
         )
       );
     });
-    // TODO I don't really know how to attach the error to the lens itself, since by that point
-    // we've lost the fact that it was a lens and that the `group_by: two` was not just added
-    // directly into the query...
     test('compose fails on view lens', () => {
       expect(`
         ##! experimental.composite_sources

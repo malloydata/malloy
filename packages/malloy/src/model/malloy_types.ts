@@ -418,7 +418,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  fieldUsage?: FieldUsage[]; // TODO maybe make required?
+  fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -1108,7 +1108,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 
 export interface FieldUsage {
   path: string[];
-  at: DocumentLocation;
+  at?: DocumentLocation;
 }
 
 export interface QuerySegment extends Filtered, Ordered {
@@ -1263,7 +1263,7 @@ export type BasicExpressionType = Exclude<
 >;
 
 export interface RequiredGroupBy {
-  at: DocumentLocation;
+  at?: DocumentLocation;
   path: string[];
 }
 
