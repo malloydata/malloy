@@ -1,4 +1,5 @@
 name: 'DB:DuckDB'
+permissions: {}
 
 on: workflow_call
 

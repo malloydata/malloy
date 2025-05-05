@@ -32,7 +32,6 @@ import type {FieldReference} from '../query-items/field-references';
 import type {FieldSpace} from '../types/field-space';
 import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
-import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ReferenceField extends SpaceField {
   private didLookup = false;
@@ -77,7 +76,11 @@ export class ReferenceField extends SpaceField {
           throw new Error('impossible turtle/join parameter');
         }
       } else {
-        this.queryFieldDef = {type: 'fieldref', path};
+        this.queryFieldDef = {
+          type: 'fieldref',
+          path,
+          at: this.fieldRef.location,
+        };
       }
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField) {
@@ -105,10 +108,16 @@ export class ReferenceField extends SpaceField {
       const typeDesc = refTo.typeDesc();
       this.memoTypeDesc = {
         ...typeDesc,
-        compositeFieldUsage: joinedCompositeFieldUsage(
-          joinPath,
-          typeDesc.compositeFieldUsage
-        ),
+        fieldUsage: [
+          {
+            path: this.fieldRef.path,
+            at: this.fieldRef.location,
+          },
+        ],
+        requiresGroupBy: typeDesc.requiresGroupBy?.map(gb => ({
+          ...gb,
+          path: [...joinPath, ...gb.path],
+        })),
       };
       return this.memoTypeDesc;
     }

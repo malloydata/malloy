@@ -148,7 +148,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -168,6 +168,7 @@ export interface AggregateExpr extends ExprE {
   node: 'aggregate';
   function: AggregateFunctionType;
   structPath?: string[];
+  at?: DocumentLocation;
 }
 export function isAsymmetricExpr(f: Expr): f is AggregateExpr {
   return (
@@ -209,6 +210,7 @@ export interface SpreadExpr extends ExprE {
 export interface FieldnameNode extends ExprLeaf {
   node: 'field';
   path: string[];
+  at?: DocumentLocation;
 }
 
 export interface SourceReferenceNode extends ExprLeaf {
@@ -416,7 +418,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  compositeFieldUsage?: CompositeFieldUsage; // TODO maybe make required?
+  fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -694,6 +696,8 @@ export function isCastType(s: string): s is CastType {
 export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  requiresGroupBy?: RequiredGroupBy[];
+  ungroupings?: AggregateUngrouping[];
 }
 
 // this field definition represents something in the database.
@@ -879,7 +883,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onCompositeFieldUsage?: CompositeFieldUsage;
+  onFieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1081,6 +1085,7 @@ export function isSamplingEnable(s: Sampling): s is SamplingEnable {
 export interface RawSegment extends Filtered {
   type: 'raw';
   fields: never[];
+  referencedAt?: DocumentLocation;
 }
 export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
@@ -1096,15 +1101,16 @@ export interface IndexSegment extends Filtered {
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  referencedAt?: DocumentLocation;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export interface CompositeFieldUsage {
-  fields: string[];
-  joinedUsage: Record<string, CompositeFieldUsage>;
+export interface FieldUsage {
+  path: string[];
+  at?: DocumentLocation;
 }
 
 export interface QuerySegment extends Filtered, Ordered {
@@ -1114,7 +1120,8 @@ export interface QuerySegment extends Filtered, Ordered {
   limit?: number;
   queryTimezone?: string;
   alwaysJoins?: string[];
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  referencedAt?: DocumentLocation;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
@@ -1124,7 +1131,8 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  requiredGroupBys?: string[][];
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1257,10 +1265,23 @@ export type BasicExpressionType = Exclude<
   JoinElementType | 'turtle'
 >;
 
+export interface RequiredGroupBy {
+  at?: DocumentLocation;
+  path: string[];
+}
+
+export interface AggregateUngrouping {
+  ungroupedFields: string[][] | '*';
+  fieldUsage: FieldUsage[];
+  requiresGroupBy?: RequiredGroupBy[];
+}
+
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
-  compositeFieldUsage: CompositeFieldUsage;
+  fieldUsage: FieldUsage[];
+  requiresGroupBy?: RequiredGroupBy[];
+  ungroupings?: AggregateUngrouping[];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
@@ -1464,6 +1485,7 @@ export interface RefToField {
   type: 'fieldref';
   path: string[];
   annotation?: Annotation;
+  at?: DocumentLocation;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

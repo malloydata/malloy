@@ -23,7 +23,7 @@
 
 import type {PipeSegment, QueryFieldDef} from '../../../model';
 import {isQuerySegment, isRawSegment} from '../../../model';
-import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import {nameFromDef} from '../../field-utils';
 import type {MalloyElement} from '../types/malloy-element';
 
@@ -113,10 +113,7 @@ export function refine(
           )}`
         );
       }
-      to.compositeFieldUsage = mergeCompositeFieldUsage(
-        to.compositeFieldUsage,
-        from.compositeFieldUsage
-      );
+      to.fieldUsage = mergeFieldUsage(to.fieldUsage, from.fieldUsage);
     } else if (from.type === 'index' && to.type === 'index') {
       to.indexFields = [...from.indexFields, ...to.indexFields];
     }

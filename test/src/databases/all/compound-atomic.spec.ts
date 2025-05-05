@@ -328,8 +328,8 @@ describe.each(runtimes.runtimeList)(
         'can read schema of record object',
         async () => {
           await expect(`run: ${conName}.sql("""
-          SELECT ${sizesSQL} AS ${quote('sizes')}
-        """)`).malloyResultMatches(runtime, rec_eq());
+              SELECT ${sizesSQL} AS ${quote('sizes')}
+          """)`).malloyResultMatches(runtime, rec_eq());
         }
       );
       test('simple record.property access', async () => {
@@ -338,6 +338,14 @@ describe.each(runtimes.runtimeList)(
           runtime,
           {small: 0}
         );
+      });
+      test('property accessed from aliased record dimension', async () => {
+        await expect(`
+          source: sx is ${sizes} extend {
+            dimension: copy_sizes is sizes
+          }
+          run: sx -> {select: xl is copy_sizes.xl}
+        `).matchesRows(runtime, {xl: 3});
       });
       test('nested data looks like a record', async () => {
         await expect(`
@@ -571,13 +579,9 @@ describe.each(runtimes.runtimeList)(
       test('nest a group_by repeated record', async () => {
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """)
-          -> {
-            nest: gab is {group_by: ab }
-          } -> {
-            // mtoy todo fix malloyResultMatches, this un-nest should not be needed
-            select: gab.ab
-          }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+          -> { nest: gab is {group_by: ab } }
+          -> { select: gab.ab }
+        `).matchesRows(runtime, {ab: ab_eq});
       });
     });
   }

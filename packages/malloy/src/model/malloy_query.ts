@@ -1385,6 +1385,8 @@ class QueryField extends QueryNode {
       case 'functionDefaultOrderBy':
       case 'functionOrderBy':
         return '';
+      // TODO: throw an error here; not simple because we call into this
+      // code currently before the composite source is resolved in some cases
       case 'compositeField':
         return '{COMPOSITE_FIELD}';
       case 'filterMatch':
@@ -4670,7 +4672,14 @@ class QueryStruct {
   ) {
     let parentRef = this.getSQLIdentifier();
     if (expand && isAtomic(this.structDef) && hasExpression(this.structDef)) {
-      parentRef = expand.field.exprToSQL(expand.result, this, this.structDef.e);
+      if (!this.parent) {
+        throw new Error(`Cannot expand reference to ${name} without parent`);
+      }
+      parentRef = expand.field.exprToSQL(
+        expand.result,
+        this.parent,
+        this.structDef.e
+      );
     }
     let refType: FieldReferenceType = 'table';
     if (this.structDef.type === 'record') {
@@ -4877,6 +4886,8 @@ class QueryStruct {
       case 'table':
         return this.dialect.quoteTablePath(this.structDef.tablePath);
       case 'composite':
+        // TODO: throw an error here; not simple because we call into this
+        // code currently before the composite source is resolved in some cases
         return '{COMPOSITE SOURCE}';
       case 'finalize':
         return this.structDef.name;

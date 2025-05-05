@@ -1,4 +1,5 @@
 name: 'DB:Postgres'
+permissions: {}
 
 on: workflow_call
 
