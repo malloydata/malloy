@@ -292,7 +292,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
         'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
       },
       isSymmetric: true,
-      impl: {function: 'APPROX_SET'},
+      impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
     },
     with_percent: {
       takes: {'value': {dimension: T}, 'accuracy': 'number'},
@@ -301,7 +301,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
         'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
       },
       isSymmetric: true,
-      impl: {function: 'APPROX_SET'},
+      impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
     },
   },
   hll_combine: {
