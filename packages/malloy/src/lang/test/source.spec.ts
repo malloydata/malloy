@@ -31,6 +31,7 @@ import {
   getFieldDef,
 } from './test-translator';
 import './parse-expects';
+import {isSourceDef} from '../../model';
 
 describe('source:', () => {
   test('table', () => {
@@ -275,6 +276,49 @@ describe('source:', () => {
             }
             run: d -> { group_by: c.ai }
           `).toLog(errorMessage("'ai' is internal"));
+        });
+        test('can add note', () => {
+          const t = new TestTranslator(`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              *
+              # new_note
+              c.ai
+            }
+          `);
+          expect(t).toTranslate();
+          const d = t.modelDef.contents['d'];
+          expect(isSourceDef(d)).toBe(true);
+          if (isSourceDef(d)) {
+            const dC = d.fields.find(f => (f.as ?? f.name) === 'c');
+            expect(dC).toBeDefined();
+            if (dC === undefined) throw new Error('Expected dC to be defined');
+            expect(isSourceDef(dC)).toBe(true);
+            expect(isSourceDef(d)).toBe(true);
+            if (isSourceDef(dC)) {
+              const dCAi = dC.fields.find(f => (f.as ?? f.name) === 'ai');
+              expect(dCAi?.annotation).toMatchObject({
+                notes: [{text: '# new_note\n'}],
+              });
+            }
+          }
+        });
+        test('cannot rename', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              *
+              x is c.ai
+            }
+          `).toLog(
+            errorMessage('Cannot rename a joined field in an `include` block')
+          );
         });
         test('can exclude field in join', () => {
           expect(markSource`

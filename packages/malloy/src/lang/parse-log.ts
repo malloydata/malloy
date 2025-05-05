@@ -371,6 +371,7 @@ type MessageParameterTypes = {
   'illegal-record-property-type': string;
   'record-literal-needs-keys': string;
   'not-yet-implemented': string;
+  'cannot-rename-join-field': string;
   'sql-case': string;
   'case-then-type-does-not-match': {
     thenType: ExpressionValueType;

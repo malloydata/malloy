@@ -203,6 +203,12 @@ export function processIncludeList(
                 'Cannot rename a wildcard field in an `include` block'
               );
             } else {
+              if (joinPath.length > 0) {
+                f.logError(
+                  'cannot-rename-join-field',
+                  'Cannot rename a joined field in an `include` block'
+                );
+              }
               joinState.renames.push({
                 name: f.name,
                 as: f.as,
