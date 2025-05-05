@@ -21,20 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  AccessModifierLabel,
-  Annotation,
-  DocumentLocation,
-  SourceDef,
+import type {FieldDef, StructDef} from '../../../model/malloy_types';
+import {
+  isJoined,
+  type AccessModifierLabel,
+  type Annotation,
+  type DocumentLocation,
+  type SourceDef,
 } from '../../../model/malloy_types';
 import type {FieldListEdit} from '../source-properties/field-list-edit';
 import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';
 import type {MalloyElement} from '../types/malloy-element';
 import type {ParameterSpace} from './parameter-space';
-import type {FieldReference} from '../query-items/field-references';
 import {RenameSpaceField} from './rename-space-field';
 import {SpaceField} from '../types/space-field';
+import {
+  getIncludeStateForJoin,
+  type IncludeProcessingState,
+} from './include-utils';
 
 export class RefinedSpace extends DynamicSpace {
   /**
@@ -45,22 +50,19 @@ export class RefinedSpace extends DynamicSpace {
   static filteredFrom(
     from: SourceDef,
     choose: FieldListEdit | undefined,
-    fieldsToInclude: Set<string> | undefined,
-    renames:
-      | {
-          as: string;
-          name: FieldReference;
-          location: DocumentLocation;
-        }[]
-      | undefined,
+    includeState: IncludeProcessingState,
     parameters: ParameterSpace | undefined
   ): RefinedSpace {
-    const edited = new RefinedSpace(from);
+    const edited = new RefinedSpace({
+      ...from,
+      fields: editJoinsFromIncludeState([], from, includeState),
+    });
     const renameMap = new Map<
       string,
       {as: string; location: DocumentLocation; logTo: MalloyElement}
     >();
-    for (const rename of renames ?? []) {
+    const s = getIncludeStateForJoin([], includeState);
+    for (const rename of s.renames ?? []) {
       if (renameMap.has(rename.name.refString)) {
         rename.name.logError(
           'already-renamed',
@@ -74,11 +76,11 @@ export class RefinedSpace extends DynamicSpace {
         });
       }
     }
-    if (fieldsToInclude !== undefined) {
+    if (s.fieldsToInclude !== undefined) {
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {
-        if (fieldsToInclude.has(symbol)) {
+        if (s.fieldsToInclude.has(symbol)) {
           const renamed = renameMap.get(symbol);
           if (renamed) {
             if (value instanceof SpaceField) {
@@ -166,4 +168,65 @@ export class RefinedSpace extends DynamicSpace {
   accessProtectionLevel(): AccessModifierLabel {
     return 'internal';
   }
+}
+
+function editJoinsFromIncludeState(
+  path: string[],
+  from: StructDef,
+  includeState: IncludeProcessingState
+): FieldDef[] {
+  let fields: FieldDef[];
+  const joinedState = getIncludeStateForJoin(path, includeState);
+  const isJoin = path.length > 0;
+  if (isJoin) {
+    if (joinedState.fieldsToInclude) {
+      fields = from.fields.filter(
+        f => joinedState.fieldsToInclude?.has(f.as ?? f.name)
+      );
+    } else {
+      fields = from.fields;
+    }
+  } else {
+    fields = from.fields;
+  }
+  // const fields = from.fields;
+  const updatedFields: FieldDef[] = [];
+  for (const field of fields) {
+    const name = field.as ?? field.name;
+    // TODO ensure you can't make it more permissive here...
+    const accessModifier =
+      joinedState.modifiers.get(name) ?? field.accessModifier;
+    const notes = joinedState.notes.get(name);
+    const rename = joinedState.renames.find(
+      r => r.name.nameString === (field.as ?? field.name)
+    );
+    const editedField: FieldDef = isJoin
+      ? {
+          ...field,
+          as: rename ? rename.name.nameString : field.as,
+          accessModifier:
+            accessModifier === 'public' ? undefined : accessModifier,
+          annotation: notes
+            ? {
+                inherits: field.annotation,
+                blockNotes: notes.blockNotes,
+                notes: notes.notes,
+              }
+            : field.annotation,
+        }
+      : {...field};
+    if (isJoined(editedField)) {
+      updatedFields.push({
+        ...editedField,
+        fields: editJoinsFromIncludeState(
+          [...path, field.as ?? field.name],
+          editedField,
+          includeState
+        ),
+      });
+    } else {
+      updatedFields.push(editedField);
+    }
+  }
+  return updatedFields;
 }

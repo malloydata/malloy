@@ -249,6 +249,47 @@ describe('source:', () => {
           }
         `).toLog(errorMessage("'ai' is private"));
       });
+      describe('joined paths', () => {
+        test('can use join paths in include block', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              *
+              internal: c.ai
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(errorMessage("'ai' is internal"));
+        });
+        test('can use joined wildcard', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              *
+              internal: c.*
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(errorMessage("'ai' is internal"));
+        });
+        test('can exclude field in join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              *
+              except: c.ai
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(errorMessage("'ai' is not defined"));
+        });
+      });
       test('internal is accessible in joining source on', () => {
         expect(markSource`
           ##! experimental.access_modifiers

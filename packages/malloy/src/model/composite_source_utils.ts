@@ -888,7 +888,7 @@ function getUnsatisfiedRequiredGroupBys(
   ];
 }
 
-function pathEq(a: string[], b: string[]) {
+export function pathEq(a: string[], b: string[]) {
   return a.length === b.length && a.every((s, i) => b[i] === s);
 }
 
