@@ -163,7 +163,7 @@ export class RefinedSpace extends DynamicSpace {
     }
   }
 
-  isProtectedAccessSpace(): boolean {
-    return true;
+  accessProtectionLevel(): AccessModifierLabel {
+    return 'internal';
   }
 }

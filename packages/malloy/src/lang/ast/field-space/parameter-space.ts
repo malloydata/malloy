@@ -6,7 +6,7 @@
  */
 
 import type {Dialect} from '../../../dialect';
-import type {StructDef} from '../../../model';
+import type {AccessModifierLabel, StructDef} from '../../../model';
 import type {HasParameter} from '../parameters/has-parameter';
 import type {
   FieldName,
@@ -95,7 +95,7 @@ export class ParameterSpace implements FieldSpace {
     return false;
   }
 
-  isProtectedAccessSpace(): boolean {
-    return false;
+  accessProtectionLevel(): AccessModifierLabel {
+    return 'private';
   }
 }

@@ -249,7 +249,7 @@ describe('source:', () => {
           }
         `).toLog(errorMessage("'ai' is private"));
       });
-      test('internal is inaccessible in joining source on', () => {
+      test('internal is accessible in joining source on', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a include {
@@ -259,6 +259,48 @@ describe('source:', () => {
           source: d is a extend {
             join_one: c on ai = ${'c.ai'}
           }
+        `).toTranslate();
+      });
+      test('internal is accessible in joining source view', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            internal: ai
+          }
+          source: d is a extend {
+            join_one: c on true
+            view: x is {
+              group_by: c.ai
+            }
+          }
+        `).toTranslate();
+      });
+      test('internal is accessible in joining source dimension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            internal: ai
+          }
+          source: d is a extend {
+            join_one: c on true
+            dimension: cai is c.ai
+          }
+          run: d -> { group_by: c.astr } // TODO just here for debugging
+        `).toTranslate();
+      });
+      test('joined internal is inaccessible in query', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            internal: ai
+          }
+          source: d is a extend {
+            join_one: c on true
+          }
+          run: d -> { group_by: c.ai }
         `).toLog(errorMessage("'ai' is internal"));
       });
       test('internal at definition time', () => {
@@ -269,19 +311,6 @@ describe('source:', () => {
           }
           run: c -> x
         `).toLog(errorMessage("'x' is internal"));
-      });
-      test('internal is inaccessible in joining source field', () => {
-        expect(markSource`
-          ##! experimental.access_modifiers
-          source: c is a include {
-            public: *
-            internal: ai
-          }
-          source: d is a extend {
-            join_one: c on true
-            dimension: cai is ${'c.ai'}
-          }
-        `).toLog(errorMessage("'ai' is internal"));
       });
       test('internal is inaccessible in view reference', () => {
         expect(markSource`
