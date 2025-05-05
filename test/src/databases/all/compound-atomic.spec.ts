@@ -580,8 +580,8 @@ describe.each(runtimes.runtimeList)(
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """)
           -> { nest: gab is {group_by: ab } }
-          -> { select: gab }
-        `).matchesRows(runtime, {gab: {ab: ab_eq}});
+          -> { select: gab.ab }
+        `).matchesRows(runtime, {ab: ab_eq});
       });
     });
   }
