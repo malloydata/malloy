@@ -2295,6 +2295,10 @@ describe('query builder', () => {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'minute',
         });
+        source.setParameter('filter_param', {
+          kind: 'filter_expression_literal',
+          filter_expression_value: '7 days',
+        });
         source.setParameter('null_param', null);
       }).toModifyQuery({
         source: {
@@ -2323,6 +2327,10 @@ describe('query builder', () => {
             },
             {
               name: 'timestamp_param',
+              type: {kind: 'timestamp_type'},
+            },
+            {
+              name: 'filter_param',
               type: {kind: 'timestamp_type'},
             },
             {
@@ -2376,6 +2384,13 @@ describe('query builder', () => {
                   },
                 },
                 {
+                  name: 'filter_param',
+                  value: {
+                    kind: 'filter_expression_literal',
+                    filter_expression_value: '7 days',
+                  },
+                },
+                {
                   name: 'null_param',
                   value: {kind: 'null_literal'},
                 },
@@ -2394,7 +2409,8 @@ describe('query builder', () => {
             boolean_param is true,
             date_param is @2020-01,
             short_date_param is @0123-01-01,
-            timestamp_param is @2020-01-01 18:00,
+            timestamp_param is @2020-01-01 10:00,
+            filter_param is f\`7 days\`,
             null_param is null
           ) -> { }
         `,
