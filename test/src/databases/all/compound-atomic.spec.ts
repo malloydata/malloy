@@ -579,13 +579,9 @@ describe.each(runtimes.runtimeList)(
       test('nest a group_by repeated record', async () => {
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """)
-          -> {
-            nest: gab is {group_by: ab }
-          } -> {
-            // mtoy todo fix malloyResultMatches, this un-nest should not be needed
-            select: gab.ab
-          }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+          -> { nest: gab is {group_by: ab } }
+          -> { select: gab }
+        `).matchesRows(runtime, {gab: {ab: ab_eq}});
       });
     });
   }

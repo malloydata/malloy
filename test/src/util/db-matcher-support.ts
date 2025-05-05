@@ -41,6 +41,18 @@ interface QueryRunResult {
   queryTestTag: Tag;
 }
 
+function errInfo(e: {message?: string; stack?: string}) {
+  let err = '';
+  const trace = e.stack ?? '';
+  if (e.message && !trace.includes(e.message)) {
+    err = `ERROR: ${e.message}\n`;
+  }
+  if (e.stack) {
+    err += `STACK: ${e.stack}\n`;
+  }
+  return err;
+}
+
 export async function runQuery(
   tq: TestQuery
 ): Promise<Partial<QueryRunResult>> {
@@ -60,7 +72,7 @@ export async function runQuery(
       fail: {
         pass: false,
         message: () =>
-          `Could not prepare query to run: ${e.message}\n\nQUERY:\n${queryText}\n\nSTACK:\n${e.stack}`,
+          `Could not prepare query to run:\n${queryText}\n\n${errInfo(e)}`,
       },
     };
   }
@@ -78,13 +90,11 @@ export async function runQuery(
       )}`;
     } else {
       try {
-        failMsg += `\nMESSAGE: ${e.message}\nSQL: ${await query.getSQL()}\n`;
+        failMsg += `\nSQL: ${await query.getSQL()}\n`;
       } catch (e2) {
         failMsg += '\nSQL FOR QUERY COULD NOT BE COMPUTED\n';
       }
-      if (e.stack) {
-        failMsg += `STACK:\n${e.stack}\n`;
-      }
+      failMsg += errInfo(e);
     }
     return {fail: {pass: false, message: () => failMsg}, query};
   }
