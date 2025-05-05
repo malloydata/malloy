@@ -69,7 +69,7 @@ import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
@@ -182,9 +182,13 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             ...TDU.atomicDef(footType),
             expressionType: footType.expressionType,
-            value: {node: 'field', path: this.source.path},
+            value: {
+              node: 'field',
+              path: this.source.path,
+              at: this.source.location,
+            },
             evalSpace: footType.evalSpace,
-            compositeFieldUsage: footType.compositeFieldUsage,
+            fieldUsage: footType.fieldUsage,
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -437,7 +441,11 @@ export class ExprFunc extends ExpressionDef {
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: [part.name]});
             } else {
-              expr.push({node: 'field', path: [part.name]});
+              expr.push({
+                node: 'field',
+                path: [part.name],
+                at: this.args[0].location,
+              });
             }
           }
         }
@@ -465,9 +473,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      compositeFieldUsage: mergeCompositeFieldUsage(
-        ...argExprs.map(e => e.compositeFieldUsage)
-      ),
+      fieldUsage: mergeFieldUsage(...argExprs.map(e => e.fieldUsage)),
     };
   }
 }

@@ -60,7 +60,7 @@ export async function runQuery(
       fail: {
         pass: false,
         message: () =>
-          `Could not prepare query to run: ${e.message}\n\nQUERY:\n${queryText}`,
+          `Could not prepare query to run: ${e.message}\n\nQUERY:\n${queryText}\n\nSTACK:\n${e.stack}`,
       },
     };
   }

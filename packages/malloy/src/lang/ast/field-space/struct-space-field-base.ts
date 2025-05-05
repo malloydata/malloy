@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 import type {JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
 import {isSourceDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
@@ -54,16 +53,14 @@ export abstract class StructSpaceFieldBase extends SpaceField {
         type: this.structDef.type,
         evalSpace: 'input',
         expressionType: 'scalar',
-        compositeFieldUsage:
-          this.structDef.onCompositeFieldUsage ?? emptyCompositeFieldUsage(),
+        fieldUsage: this.structDef.onFieldUsage ?? [],
       };
     }
     return {
       ...TDU.atomicDef(this.structDef),
       evalSpace: 'input',
       expressionType: 'scalar',
-      compositeFieldUsage:
-        this.structDef.onCompositeFieldUsage ?? emptyCompositeFieldUsage(),
+      fieldUsage: this.structDef.onFieldUsage ?? [],
     };
   }
 }

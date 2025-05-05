@@ -448,4 +448,33 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x(param is 2) -> { group_by: b }
     `).malloyResultMatches(wrappedRuntime, {b: 3});
   });
+  it('nested composite where field usage depends on which composite selected', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts extend {
+            dimension: a is 'a1'
+          },
+          state_facts extend {
+            dimension: b is 'b1'
+          }
+        ) extend {
+          dimension: x is b
+        },
+        compose(
+          state_facts extend {
+            dimension: a is 'a2'
+          },
+          state_facts extend {
+            dimension: b is 'b2'
+          }
+        ) extend {
+          dimension: x is b
+        }
+      )
+      run: x -> { group_by: x }
+    `).malloyResultMatches(runtime, {x: 'b1'});
+  });
 });
