@@ -292,7 +292,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
         'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
       },
       isSymmetric: true,
-      impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
+      impl: {function: 'APPROX_SET'},
     },
     with_percent: {
       takes: {'value': {dimension: T}, 'accuracy': 'number'},
@@ -301,7 +301,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
         'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
       },
       isSymmetric: true,
-      impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
+      impl: {function: 'APPROX_SET'},
     },
   },
   hll_combine: {
@@ -443,4 +443,26 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...def('array_sort_desc', {'x': {array: T}}, {array: T}),
   ...def('remove_nulls', {'x': {array: T}}, {array: T}),
   ...def('array_top_n', {'x': {array: T}, 'n': 'number'}, {array: T}),
+
+  // presto with more parameters
+  hll_accumulate: {
+    default: {
+      takes: {'value': {dimension: T}},
+      returns: {measure: {sql_native: 'hyperloglog'}},
+      generic: {
+        'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+      },
+      isSymmetric: true,
+      impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
+    },
+    with_percent: {
+      takes: {'value': {dimension: T}, 'accuracy': 'number'},
+      returns: {measure: {sql_native: 'hyperloglog'}},
+      generic: {
+        'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+      },
+      isSymmetric: true,
+      impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
+    },
+  },
 };
