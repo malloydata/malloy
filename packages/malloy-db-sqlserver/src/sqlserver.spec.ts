@@ -98,6 +98,7 @@ describe('SQLServerConnection', () => {
     expect(getTableSchema).toBeCalledTimes(2);
   });
 
+  // TODO (vitor): Not sure about this test
   it('caches sql schema', async () => {
     await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
@@ -105,6 +106,7 @@ describe('SQLServerConnection', () => {
     expect(getSQLBlockSchema).toBeCalledTimes(1);
   });
 
+  // TODO (vitor): Not sure about this test
   it('refreshes sql schema', async () => {
     await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
