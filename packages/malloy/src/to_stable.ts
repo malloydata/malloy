@@ -39,14 +39,6 @@ import {
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
 
-const FilterTypeMap: Record<FilterExprType, Malloy.FilterableType> = {
-  'string': {kind: 'string_type'},
-  'number': {kind: 'number_type'},
-  'boolean': {kind: 'boolean_type'},
-  'date': {kind: 'date_type'},
-  'timestamp': {kind: 'timestamp_type'},
-};
-
 export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   const modelInfo: Malloy.ModelInfo = {
     entries: [],
@@ -66,7 +58,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
                 };
               }
               const filterType = parameter.filterType
-                ? {filter_type: FilterTypeMap[parameter.filterType]}
+                ? {filter_type: {kind: `${parameter.filterType}_type` as const}}
                 : {};
               return {
                 name,
