@@ -4,7 +4,7 @@
     "noEmit": true,
     "composite": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "solid-js",
+    "jsxImportSource": "solid-js"
   },
   "include": ["src", "bin", "./jest.setup.ts", "./types/jest.d.ts"],
   "references": [
@@ -43,6 +43,9 @@
     },
     {
       "path": "../packages/malloy-tag"
+    },
+    {
+      "path": "../packages/malloy-db-publisher"
     }
   ]
 }

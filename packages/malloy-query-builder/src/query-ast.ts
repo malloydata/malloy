@@ -953,7 +953,10 @@ export interface IASTReference extends ASTAny {
    * @param name The name of the parameter to set
    * @param value The value of the parameter to set
    */
-  setParameter(name: string, value: RawLiteralValue): void;
+  setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ): void;
 
   tryGetParameter(name: string): ASTParameterValue | undefined;
 
@@ -1023,7 +1026,7 @@ export class ASTReference
   static setParameter(
     reference: IASTReference,
     name: string,
-    value: RawLiteralValue
+    value: RawLiteralValue | Malloy.LiteralValue
   ) {
     const existing = ASTReference.tryGetParameter(reference, name);
     if (existing !== undefined) {
@@ -1049,7 +1052,10 @@ export class ASTReference
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -1118,7 +1124,7 @@ export class ASTParameterValueList extends ASTListNode<
     return this.children;
   }
 
-  addParameter(name: string, value: RawLiteralValue) {
+  addParameter(name: string, value: RawLiteralValue | Malloy.LiteralValue) {
     // TODO validate that the parameter is valid (name and type)
     this.add(
       new ASTParameterValue({
@@ -1184,8 +1190,12 @@ export const ASTLiteralValue = {
         return new ASTFilterExpressionLiteralValue(value);
     }
   },
-  makeLiteral(value: RawLiteralValue): Malloy.LiteralValue {
-    if (typeof value === 'string') {
+  makeLiteral(
+    value: RawLiteralValue | Malloy.LiteralValue
+  ): Malloy.LiteralValue {
+    if (value !== null && typeof value === 'object' && 'kind' in value) {
+      return value;
+    } else if (typeof value === 'string') {
       return {
         kind: 'string_literal',
         string_value: value,
@@ -1658,7 +1668,10 @@ export class ASTReferenceQueryDefinition
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -1774,7 +1787,10 @@ export class ASTReferenceQueryArrowSource
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -2050,7 +2066,10 @@ export class ASTReferenceViewDefinition
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -3852,7 +3871,10 @@ export class ASTReferenceExpression
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 

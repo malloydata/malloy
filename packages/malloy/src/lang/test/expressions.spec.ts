@@ -614,6 +614,34 @@ describe('expressions', () => {
         }
       `).toTranslate();
     });
+
+    describe('grouped_by:', () => {
+      test('grouped_by of dimension', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by grouped_by }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+        `).toTranslate();
+      });
+      test('grouped_by of measure', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by grouped_by }
+          source: aext is a extend {
+            measure: c is count()
+            measure: aisum is ai.sum() { grouped_by: ${'c'} }
+          }
+        `).toLog(errorMessage('`grouped_by:` field must be a dimension'));
+      });
+      test('grouped_by of self', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by grouped_by }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: aisum }
+          }
+        `).toLog(errorMessage('aisum is not defined'));
+      });
+    });
   });
 
   describe('aggregate forms', () => {
@@ -798,6 +826,18 @@ describe('expressions', () => {
           aggregate: v is f.sum()
         }
       `).toTranslate();
+    });
+    test('shows the correct error message when the longest overlap between the join usages is length zero', () => {
+      expect(markSource`
+    source: testcase is a extend {
+      join_one: a on true
+
+      measure: value is sum(a.ai * ai)
+    }
+      `).toLog;
+      errorMessage(
+        'Join path is required for this calculation; use `a.sum(a.ai * ai)` or `source.sum(a.ai * ai)` to get a result weighted with respect to `source`'
+      );
     });
     test('sum(inline.column)', () => {
       expect(modelX`sum(inline.column)`).toLog(

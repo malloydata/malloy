@@ -1678,9 +1678,7 @@ export class MalloyToAST
   }
 
   visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
-    const statements = this.only<
-      ast.Filter | ast.FunctionOrdering | ast.PartitionBy | ast.Limit
-    >(
+    const statements = this.only<ast.FieldPropStatement>(
       pcx
         .fieldProperties()
         .fieldPropertyStatement()
@@ -1699,6 +1697,25 @@ export class MalloyToAST
           .map(idCx =>
             this.astAt(
               new ast.PartitionByFieldReference([
+                this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
+              ]),
+              idCx
+            )
+          )
+      ),
+      pcx
+    );
+  }
+
+  visitGroupedByStatement(pcx: parse.GroupedByStatementContext) {
+    this.inExperiment('grouped_by', pcx);
+    return this.astAt(
+      new ast.GroupedBy(
+        pcx
+          .id()
+          .map(idCx =>
+            this.astAt(
+              new ast.GroupedByReference([
                 this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
               ]),
               idCx

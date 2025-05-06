@@ -1,4 +1,5 @@
 name: 'DB:Trino'
+permissions: {}
 
 on:
   workflow_call:
