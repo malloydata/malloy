@@ -16,6 +16,7 @@ import type {
   AggregateUngrouping,
   RequiredGroupBy,
   DocumentLocation,
+  Annotation,
 } from './malloy_types';
 import {
   isAtomic,
@@ -152,9 +153,21 @@ function _resolveCompositeSources(
           abort();
           continue overSources;
         }
-        base = {...resolveInner.success};
+        base = {
+          ...resolveInner.success,
+          annotation: composeAnnotations(
+            base.annotation,
+            resolveInner.success.annotation
+          ),
+        };
       } else {
-        base = {...inputSource};
+        base = {
+          ...inputSource,
+          annotation: composeAnnotations(
+            base.annotation,
+            inputSource.annotation
+          ),
+        };
       }
       const fields = [...nonCompositeFields, ...base.fields];
       base = {
@@ -327,6 +340,21 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
     }
   }
   return categorized;
+}
+
+function composeAnnotations(
+  base: Annotation | undefined,
+  slice: Annotation | undefined
+): Annotation | undefined {
+  if (base === undefined) return slice;
+  if (slice === undefined) return base;
+  const notes = [...(base.notes ?? []), ...(slice.notes ?? [])];
+  const blockNotes = [...(base.blockNotes ?? []), ...(slice.blockNotes ?? [])];
+  return {
+    inherits: composeAnnotations(base.inherits, slice.inherits),
+    notes: notes.length === 0 ? undefined : notes,
+    blockNotes: blockNotes.length === 0 ? undefined : blockNotes,
+  };
 }
 
 function mergeFields(...fields: FieldDef[][]): FieldDef[] {

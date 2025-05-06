@@ -559,25 +559,20 @@ export function statedCompileQuery(
         value: l,
       }));
       let source: StructDef;
-      if (refIsStructDef(query.structRef)) {
-        source = query.structRef;
+      if (query.compositeResolvedSourceDef) {
+        source = query.compositeResolvedSourceDef;
       } else {
-        source = result.modelDef.contents[query.structRef] as StructDef;
+        if (refIsStructDef(query.structRef)) {
+          source = query.structRef;
+        } else {
+          source = result.modelDef.contents[query.structRef] as StructDef;
+        }
       }
       const sourceAnnotations = annotationToTaglines(source.annotation).map(
         l => ({
           value: l,
         })
       );
-      if (query.compositeResolvedSourceDef) {
-        sourceAnnotations.push(
-          ...annotationToTaglines(
-            query.compositeResolvedSourceDef.annotation
-          ).map(l => ({
-            value: l,
-          }))
-        );
-      }
       annotations.push({
         value: Tag.withPrefix('#(malloy) ')
           .set(['source_name'], translatedQuery.sourceExplore)
