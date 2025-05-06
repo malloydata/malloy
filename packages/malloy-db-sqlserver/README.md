@@ -1,12 +1,6 @@
-# Malloy
-
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
-
-## This package
-
-This package facilitates using the `malloydata/malloy` library with SQLServer - see [here](https://github.com/malloydata/malloy/blob/main/packages/malloy/README.md) for additional information.
-
+# EXPERIMENTAL
 
 ## Especifics
-There is no support for column type BIGINT
-npx dotenv -- npm run ci-sqlserver
+There is no support for column type BIGINT (mostly because of the mssql library, it keeps bringing them back as strings (not JS bigint type even))
+There is no real support for regexp
+Yout can test with `npx dotenv -- npm run ci-sqlserver` or `npx dotenv -- npm run test-sqlserver`
