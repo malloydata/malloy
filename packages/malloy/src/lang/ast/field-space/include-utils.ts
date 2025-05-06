@@ -11,7 +11,6 @@ import type {
   DocumentLocation,
   FieldDef,
   SourceDef,
-  StructDef,
 } from '../../../model/malloy_types';
 import {isJoined} from '../../../model/malloy_types';
 import type {IncludeItem} from '../source-query-elements/include-item';
