@@ -27,7 +27,7 @@ import {scale, locale} from 'vega';
 import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
 import type {Field, NestField} from '../data_tree';
-import {RenderMetadata} from './render-result-metadata';
+import type {RenderMetadata} from './render-result-metadata';
 
 export type ChartLayoutSettings = {
   plotWidth: number;

@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {createContext, useContext, Accessor} from 'solid-js';
+import {createContext, useContext} from 'solid-js';
+import type {Accessor} from 'solid-js';
 import type {RenderMetadata} from './render-result-metadata';
 
 export const ResultContext = createContext<Accessor<RenderMetadata>>();

@@ -33,7 +33,7 @@ import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries'
 import type {CellValue, NestField, RecordCell} from '../../data_tree';
 import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
-import {RenderMetadata} from '../render-result-metadata';
+import type {RenderMetadata} from '../render-result-metadata';
 
 type LineDataRecord = {
   x: string | number;

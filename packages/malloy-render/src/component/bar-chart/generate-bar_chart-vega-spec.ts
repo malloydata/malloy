@@ -36,7 +36,7 @@ import type {CellValue, RecordCell, RepeatedRecordField} from '../../data_tree';
 import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {Tag} from '@malloydata/malloy-tag';
-import {RenderMetadata} from '../render-result-metadata';
+import type {RenderMetadata} from '../render-result-metadata';
 
 type BarDataRecord = {
   x: string | number;
