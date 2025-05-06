@@ -258,7 +258,6 @@ class StageWriter {
   }
 
   addStage(sql: string): string {
-    console.warn('addStage', sql);
     if (this.useCTE) {
       this.withs.push(sql);
       return this.getName(this.withs.length - 1);
@@ -345,7 +344,6 @@ class StageWriter {
     let w = '';
     for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
       const sql = this.withs[i];
-      console.warn('combineStagesi', i, sql);
 
       lastStageName = this.getName(i);
       if (sql === undefined) {
@@ -3262,7 +3260,6 @@ class QueryQuery extends QueryField {
         structSQL,
         this.firstSegment.sample
       );
-      console.warn('sqlSampleTable', structSQL);
       if (this.firstSegment.sample) {
         // TODO (vitor): double check this
         structSQL = stageWriter.addStage(
@@ -3527,7 +3524,6 @@ class QueryQuery extends QueryField {
         fields.length > 0 ? fields.join(', ') + ',' : ''
       } ${pipelinesSQL} FROM ${lastStageName}`;
     }
-    console.warn('generatePipelinedStages', retSQL);
     return stageWriter.addStage(retSQL);
   }
 
@@ -4078,7 +4074,6 @@ class QueryQuery extends QueryField {
           groupBy = dimensionIndexes.join(',') + '\n';
         }
       } else {
-        console.warn('else-genereateSQLCombineTurtles');
         groupBy =
           dimensions
             ?.map(v =>
@@ -4087,7 +4082,6 @@ class QueryQuery extends QueryField {
             .join(',') + '\n';
       }
       groupBy = groupBy ? 'GROUP BY' + groupBy : '';
-      console.warn('groupBy-genereateSQLCombineTurtles', groupBy);
       s += groupBy;
     }
 
@@ -4342,7 +4336,6 @@ class QueryQuery extends QueryField {
       );
       pipeOut = q.generateSQLFromPipeline(stageWriter);
       outputRepeatedResultType = q.rootResult.getRepeatedResultType();
-      // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
     structDef.annotation = fi.turtleDef.annotation;
@@ -4636,7 +4629,6 @@ class QueryQueryRaw extends QueryQuery {
         'Invalid struct for QueryQueryRaw, currently only supports SQL'
       );
     }
-    console.warn('QueryQueryRaw', this.parent.structDef.selectStr);
     return stageWriter.addStage(this.parent.structDef.selectStr);
   }
 

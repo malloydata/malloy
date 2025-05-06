@@ -199,9 +199,8 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
   return result;
 }
 
-// TODO (vitor): Not sure... This is pretty hidden away and uses dbName instead of dialect
+// TODO (vitor): Not sure... This is pretty hidden away and uses dbName instead of dialect for param
 export function booleanResult(value: boolean, dbName: string) {
-  console.warn('booleanResult', dbName);
   if (dbName === 'mysql' || dbName === 'sqlserver') {
     return value ? 1 : 0;
   } else {
@@ -209,9 +208,8 @@ export function booleanResult(value: boolean, dbName: string) {
   }
 }
 
-// TODO (vitor): Not sure... This is pretty hidden away and uses dbName instead of dialect
+// TODO (vitor): Not sure... This is pretty hidden away and uses dbName instead of dialect for param
 export function booleanCode(value: boolean, dbName: string) {
-  console.warn('booleanCode', dbName);
   if (dbName === 'mysql') {
     return value ? '1' : '0';
   } else if (dbName === 'sqlserver') {
