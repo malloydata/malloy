@@ -548,7 +548,13 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'FilterExpressionType': {
     'type': 'struct',
     'name': 'FilterExpressionType',
-    'fields': {},
+    'fields': {
+      'filter_type': {
+        'type': 'FilterableType',
+        'optional': true,
+        'array': false,
+      },
+    },
   },
   'FilterOperation': {
     'type': 'struct',
@@ -575,6 +581,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+    },
+  },
+  'FilterableType': {
+    'type': 'union',
+    'name': 'FilterableType',
+    'options': {
+      'string_type': 'StringType',
+      'boolean_type': 'BooleanType',
+      'number_type': 'NumberType',
+      'date_type': 'DateType',
+      'timestamp_type': 'TimestampType',
     },
   },
   'FilteredField': {
@@ -1840,7 +1857,9 @@ export type FilterExpressionLiteral = {
   filter_expression_value: string;
 };
 
-export type FilterExpressionType = {};
+export type FilterExpressionType = {
+  filter_type?: FilterableType;
+};
 
 export type FilterOperation = {
   filter: Filter;
@@ -1850,6 +1869,34 @@ export type FilterStringApplication = {
   field_reference: Reference;
   filter: string;
 };
+
+export type FilterableTypeType =
+  | 'string_type'
+  | 'boolean_type'
+  | 'number_type'
+  | 'date_type'
+  | 'timestamp_type';
+
+export type FilterableType =
+  | FilterableTypeWithStringType
+  | FilterableTypeWithBooleanType
+  | FilterableTypeWithNumberType
+  | FilterableTypeWithDateType
+  | FilterableTypeWithTimestampType;
+
+export type FilterableTypeWithStringType = {kind: 'string_type'} & StringType;
+
+export type FilterableTypeWithBooleanType = {
+  kind: 'boolean_type';
+} & BooleanType;
+
+export type FilterableTypeWithNumberType = {kind: 'number_type'} & NumberType;
+
+export type FilterableTypeWithDateType = {kind: 'date_type'} & DateType;
+
+export type FilterableTypeWithTimestampType = {
+  kind: 'timestamp_type';
+} & TimestampType;
 
 export type FilteredField = {
   field_reference: Reference;
