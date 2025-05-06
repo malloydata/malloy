@@ -11,6 +11,7 @@ import type {
   DateUnit,
   Expr,
   FieldDef,
+  FilterExprType,
   JoinType,
   ModelDef,
   Query,
@@ -38,6 +39,14 @@ import {
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
 
+const FilterTypeMap: Record<FilterExprType, Malloy.FilterableType> = {
+  'string': {kind: 'string_type'},
+  'number': {kind: 'number_type'},
+  'boolean': {kind: 'boolean_type'},
+  'date': {kind: 'date_type'},
+  'timestamp': {kind: 'timestamp_type'},
+};
+
 export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   const modelInfo: Malloy.ModelInfo = {
     entries: [],
@@ -56,9 +65,15 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
                   default_value: convertParameterDefaultValue(parameter.value),
                 };
               }
+              const filterType = parameter.filterType
+                ? {filter_type: FilterTypeMap[parameter.filterType]}
+                : {};
               return {
                 name,
-                type: {kind: 'filter_expression_type'},
+                type: {
+                  kind: 'filter_expression_type',
+                  ...filterType,
+                },
                 default_value: convertParameterDefaultValue(parameter.value),
               };
             })
