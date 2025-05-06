@@ -96,6 +96,8 @@ export function qtz(qi: QueryInfo): string | undefined {
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+
+// TODO (vitor): We might want output_name + expression fallback as a single thing.
 export type GroupByClauseType = 'output_name' | 'ordinal' | 'expression';
 
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
