@@ -33,6 +33,7 @@ import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries'
 import type {CellValue, NestField, RecordCell} from '../../data_tree';
 import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
+import {RenderMetadata} from '../render-result-metadata';
 
 type LineDataRecord = {
   x: string | number;
@@ -56,7 +57,10 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
   return inverted;
 }
 
-export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
+export function generateLineChartVegaSpec(
+  explore: NestField,
+  metadata: RenderMetadata
+): VegaChartProps {
   const tag = explore.tag;
   const chartTag = tag.tag('line_chart');
   if (!chartTag)
@@ -130,6 +134,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
   );
 
   const chartSettings = getChartLayoutSettings(explore, chartTag, {
+    metadata,
     xField,
     yField,
     chartType: 'line_chart',

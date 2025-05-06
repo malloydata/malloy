@@ -121,8 +121,16 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: root_chart is topSellingBrands
 
   #(story)
+  # size=fill
+  view: root_chart_fill is topSellingBrands
+
+  #(story)
   # line_chart
   view: dimension_series is baseLineData + { group_by: department }
+
+  #(story)
+  # line_chart size=fill
+  view: dimension_series_fill is baseLineData + { group_by: department }
 
   #(story)
   view: single_nest is {

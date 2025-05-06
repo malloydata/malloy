@@ -27,6 +27,7 @@ import {scale, locale} from 'vega';
 import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
 import type {Field, NestField} from '../data_tree';
+import {RenderMetadata} from './render-result-metadata';
 
 export type ChartLayoutSettings = {
   plotWidth: number;
@@ -79,6 +80,7 @@ export function getChartLayoutSettings(
   field: NestField,
   chartTag: Tag,
   options: {
+    metadata: RenderMetadata;
     xField?: Field;
     yField?: Field;
     chartType: string;
@@ -94,15 +96,30 @@ export function getChartLayoutSettings(
   const tag = field.tag;
 
   // For now, support legacy API of size being its own tag
-  const customWidth =
+  let customWidth =
     chartTag.numeric('size', 'width') ?? tag.numeric('size', 'width');
-  const customHeight =
+  let customHeight =
     chartTag.numeric('size', 'height') ?? tag.numeric('size', 'height');
-  const presetSize = (chartTag.text('size') ?? tag.text('size')) || 'md';
+  let presetSize = (chartTag.text('size') ?? tag.text('size')) || 'md';
+  if (!field.isRoot() && presetSize === 'fill') {
+    presetSize = 'md';
+  }
+
+  const isFillMode = presetSize === 'fill';
+  const fillModeWidth = options.metadata.parentSize.width;
+  const fillModeHeight = options.metadata.parentSize.height;
+
   let chartWidth = 0,
     chartHeight = 0,
     heightRows = 0;
-  [chartWidth, heightRows] = CHART_SIZES[presetSize];
+
+  if (isFillMode) {
+    customWidth = fillModeWidth;
+    customHeight = fillModeHeight;
+  } else {
+    [chartWidth, heightRows] = CHART_SIZES[presetSize];
+  }
+
   chartHeight = heightRows * ROW_HEIGHT;
   if (customWidth) chartWidth = customWidth;
   if (customHeight) chartHeight = customHeight;
@@ -225,9 +242,34 @@ export function getChartLayoutSettings(
 
   const isSpark = tag.text('size') === 'spark';
 
+  const padding = isSpark
+    ? {top: 0, left: 0, bottom: 0, right: 0}
+    : {
+        top: topPadding + 1,
+        left: yAxisWidth,
+        bottom: xAxisHeight + xTitleSize,
+        right: 8,
+      };
+
+  // TODO: kinda hacky, to account for titles and such. Need to think how to get better chart sizing availability
+  // It might be a thing where at vega chart level, it can decide to shrink chart based on titles? like override that spec value?
+  // Add extra padding for fill mode
+  if (isFillMode) {
+    padding.left += 24;
+    padding.right += 24;
+    padding.top += 24;
+    padding.bottom += 24;
+  }
+  const paddingInline = padding.left + padding.right;
+  const paddingBlock = padding.top + padding.bottom;
+  const plotWidth = isFillMode ? fillModeWidth - paddingInline : chartWidth;
+  const plotHeight = isFillMode ? fillModeHeight - paddingBlock : chartHeight;
+  const totalWidth = isFillMode ? fillModeWidth : chartWidth + paddingInline;
+  const totalHeight = isFillMode ? fillModeHeight : chartHeight + paddingBlock;
+
   return {
-    plotWidth: chartWidth,
-    plotHeight: chartHeight,
+    plotWidth,
+    plotHeight,
     xAxis: {
       labelAngle,
       labelAlign,
@@ -256,11 +298,7 @@ export function getChartLayoutSettings(
         },
     xField,
     yField,
-    get totalWidth() {
-      return this.plotWidth + this.padding.left + this.padding.right;
-    },
-    get totalHeight() {
-      return this.plotHeight + this.padding.top + this.padding.bottom;
-    },
+    totalWidth,
+    totalHeight,
   };
 }
