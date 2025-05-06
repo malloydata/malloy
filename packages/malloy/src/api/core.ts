@@ -15,9 +15,10 @@ import type {
   FieldDef,
   ModelDef,
   SQLSourceDef,
+  StructDef,
   TableSourceDef,
 } from '../model';
-import {mkFieldDef, QueryModel} from '../model';
+import {mkFieldDef, QueryModel, refIsStructDef} from '../model';
 import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
@@ -557,6 +558,21 @@ export function statedCompileQuery(
       ).map(l => ({
         value: l,
       }));
+      let source: StructDef;
+      if (query.compositeResolvedSourceDef) {
+        source = query.compositeResolvedSourceDef;
+      } else {
+        if (refIsStructDef(query.structRef)) {
+          source = query.structRef;
+        } else {
+          source = result.modelDef.contents[query.structRef] as StructDef;
+        }
+      }
+      const sourceAnnotations = annotationToTaglines(source.annotation).map(
+        l => ({
+          value: l,
+        })
+      );
       annotations.push({
         value: Tag.withPrefix('#(malloy) ')
           .set(['source_name'], translatedQuery.sourceExplore)
@@ -574,10 +590,10 @@ export function statedCompileQuery(
           sql: translatedQuery.sql,
           schema,
           connection_name: translatedQuery.connectionName,
-          annotations: annotations.length > 0 ? annotations : undefined,
-          model_annotations:
-            modelAnnotations.length > 0 ? modelAnnotations : undefined,
+          annotations: annotationsOrUndefined(annotations),
+          model_annotations: annotationsOrUndefined(modelAnnotations),
           query_timezone: translatedQuery.queryTimezone,
+          source_annotations: annotationsOrUndefined(sourceAnnotations),
         },
         default_row_limit_added: translatedQuery.defaultRowLimitAdded,
       };
@@ -597,4 +613,10 @@ export function statedCompileQuery(
   } else {
     return {compiler_needs: result.compilerNeeds, logs};
   }
+}
+
+function annotationsOrUndefined(
+  annotations: Malloy.Annotation[]
+): Malloy.Annotation[] | undefined {
+  return annotations.length > 0 ? annotations : undefined;
 }
