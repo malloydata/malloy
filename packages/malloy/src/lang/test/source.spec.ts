@@ -758,6 +758,25 @@ describe('source:', () => {
           run: c -> { group_by: ${'ai'} }
         `).toLog(errorMessage("'ai' is not defined"));
       });
+      test('rename with backticks', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: \`ai2\` is ai
+          }
+          run: c -> { group_by: ai2 }
+          run: c -> { group_by: ${'ai'} }
+        `).toLog(errorMessage("'ai' is not defined"));
+      });
+      test('reference with backticks', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            internal: \`ai\`
+          }
+          run: c -> { group_by: ${'ai'} }
+        `).toLog(errorMessage("'ai' is internal"));
+      });
       test('not-mentioned fields are private', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
