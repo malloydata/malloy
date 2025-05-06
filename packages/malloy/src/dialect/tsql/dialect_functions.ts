@@ -35,7 +35,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
   },
 };
 
-// TODO (vitor): Discuss the possibility of having string_agg_distinct, we can't support that now.
+// TODO (vitor): Discuss the possibility of having string_agg_distinct here.
 
 export const TSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
