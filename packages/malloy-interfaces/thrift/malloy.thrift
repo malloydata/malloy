@@ -504,6 +504,7 @@ struct Result {
   5: optional list<Annotation> annotations,
   6: optional list<Annotation> model_annotations,
   7: optional string query_timezone,
+  8: optional list<Annotation> source_annotations,
 }
 
 /*
