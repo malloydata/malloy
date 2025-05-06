@@ -826,7 +826,6 @@ describe('query operation annotations', () => {
       expect(m).toLog(
         warningMessage('Tags on `except:` are ignored'),
         warningMessage('Tags on `except:` are ignored'),
-        warningMessage('`except: *` is implied, unless another clause uses *')
       );
     });
     test('oprhaned annotation', () => {

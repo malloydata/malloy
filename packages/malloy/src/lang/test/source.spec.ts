@@ -222,6 +222,33 @@ describe('source:', () => {
           run: c -> { select: ${'ai'} }
         `).toLog(errorMessage("'ai' is private"));
       });
+      test('list except, internal, and public: *', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            except: ai
+            internal: af
+            public: *
+          }
+          run: c -> { select: ${'ai'} }
+          run: c -> { select: ${'af'} }
+          run: c -> { select: abool }
+        `).toLog(
+          errorMessage("'ai' is not defined"),
+          errorMessage("'af' is internal")
+        );
+      });
+      test('fernando regression', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            private: ai
+            public: *
+          }
+          run: c -> { select: ${'ai'} }
+          run: c -> { select: abool }
+        `).toLog(errorMessage("'ai' is private"));
+      });
       test('internal not accessible in query', () => {
         expect(markSource`
           ##! experimental.access_modifiers
@@ -276,6 +303,184 @@ describe('source:', () => {
             }
             run: d -> { group_by: c.ai }
           `).toLog(errorMessage("'ai' is internal"));
+        });
+        test('access label on join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              internal: c
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(errorMessage("'c' is internal"));
+        });
+        test('except join and include join fields', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              except: c
+              public: c.*
+            }
+          `).toLog(
+            errorMessage(
+              'Cannot include fields from `c` when `c` is itself excepted'
+            )
+          );
+        });
+        test('except join and except join fields', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              except: c
+              except: c.*
+            }
+          `).toLog(
+            errorMessage(
+              'Cannot exclude fields from `c` when `c` is itself excepted'
+            )
+          );
+        });
+        test('include join fields then except join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              public: c.*
+              except: c
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(
+            errorMessage(
+              'Cannot except `c` when fields from `c` are already included'
+            )
+          );
+        });
+        test('except join fields then except join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              except: c.*
+              except: ${'c'}
+            }
+          `).toLog(
+            errorMessage(
+              'Cannot except `c` when fields from `c` are already excepted'
+            )
+          );
+        });
+        test('join gets most permissive access level of inner fields (public)', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              public: c.*
+            }
+            run: d -> { group_by: c.ai }
+          `).toTranslate();
+        });
+        test('set fields public of previously private join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include { private: * } include {
+              public: ${'c.*'}
+            }
+            run: d -> { group_by: ${'c.ai'} }
+          `).toLog(
+            errorMessage('`c` is private'),
+            errorMessage("'c' is private")
+          );
+        });
+        test('set fields public of newly private join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              private: c
+              public: ${'c.*'}
+            }
+            run: d -> { group_by: ${'c.ai'} }
+          `).toLog(
+            errorMessage('`c` is private'),
+            errorMessage("'c' is private")
+          );
+        });
+        test('set join private of join with set fields public', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              public: c.*
+              private: ${'c'}
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(
+            errorMessage(
+              'Cannot make `c` and also make fields in `c` public or internal'
+            )
+          );
+        });
+        test('set fields public of internal join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include { internal: * } include {
+              public: c.*
+            }
+            run: d -> { group_by: c.ai }
+          `).toTranslate();
+        });
+        test('set fields public of internal join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include { internal: * } include {
+              public: c.*
+              internal: ${'c'}
+            }
+            run: d -> { group_by: c.ai }
+          `).toLog(
+            errorMessage('Field `c` already referenced in include list')
+          );
+        });
+        test('mentioning a join field should count as mentioning the join', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+            } include {
+              internal: *
+              public:
+                c.ai
+            }
+            run: d -> { group_by: c.ai }
+          `).toTranslate();
         });
         test('can add note', () => {
           const t = new TestTranslator(`
@@ -542,6 +747,7 @@ describe('source:', () => {
           }
         `).toLog(errorMessage('Field `ai` already referenced in include list'));
       });
+
       test('rename in include', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
@@ -551,6 +757,13 @@ describe('source:', () => {
           run: c -> { group_by: ai2 }
           run: c -> { group_by: ${'ai'} }
         `).toLog(errorMessage("'ai' is not defined"));
+      });
+      test('not-mentioned fields are private', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include { ai }
+          run: c -> { group_by: ${'astr'} }
+        `).toLog(errorMessage("'astr' is private"));
       });
       test('commas optional in include', () => {
         return expect(markSource`
@@ -592,24 +805,41 @@ describe('source:', () => {
           source: c is a include {
             ai
             except: astr
+          } extend {
+            dimension: astr2 is ${'astr'}
           }
-        `).toLog(
-          errorMessage(
-            'Cannot exclude specific fields if specific fields are already included'
-          )
-        );
+        `).toLog(errorMessage("'astr' is not defined"));
       });
-      test('except and include list', () => {
+      test('access modifier and except list', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
           source: c is a include {
-            except: astr
             public: ai
+            except: astr
+          } extend {
+            dimension: astr2 is ${'astr'}
           }
+          run: c -> { group_by: ai }
+          run: c -> { group_by: ${'abool'} }
         `).toLog(
-          errorMessage(
-            'Cannot include specific fields if specific fields are already excluded'
-          )
+          errorMessage("'astr' is not defined"),
+          errorMessage("'abool' is private")
+        );
+      });
+      test('inherit * and except', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include { *; internal: abool } include {
+            *
+            except: astr
+          } extend {
+            dimension: astr2 is ${'astr'}
+          }
+          run: c -> { group_by: ai }
+          run: c -> { group_by: ${'abool'} }
+        `).toLog(
+          errorMessage("'astr' is not defined"),
+          errorMessage("'abool' is internal")
         );
       });
       // TODO test conflict with `rename:` and `except:` and `accept:`

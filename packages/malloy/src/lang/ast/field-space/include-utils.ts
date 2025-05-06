@@ -11,6 +11,7 @@ import type {
   DocumentLocation,
   FieldDef,
   SourceDef,
+  StructDef,
 } from '../../../model/malloy_types';
 import {isJoined} from '../../../model/malloy_types';
 import type {IncludeItem} from '../source-query-elements/include-item';
@@ -24,10 +25,11 @@ import {pathEq} from '../../../model/composite_source_utils';
 import type {MalloyElement} from '../types/malloy-element';
 
 export interface JoinIncludeProcessingState {
-  star: AccessModifierLabel | 'inherit' | undefined;
+  star: AccessModifierLabel | 'inherit' | 'except' | undefined;
   starNote: Annotation | undefined;
-  mode: 'exclude' | 'include' | undefined;
-  fieldsMentioned: Set<string>;
+  fieldsIncluded: Set<string>;
+  joinNames: Set<string>;
+  fieldsExcepted: Set<string>;
   allFields: Set<string>;
   alreadyPrivateFields: Set<string>;
   modifiers: Map<string, AccessModifierLabel>;
@@ -77,8 +79,9 @@ export function getIncludeStateForJoin(
   return {
     star: undefined,
     starNote: undefined,
-    mode: undefined,
-    fieldsMentioned: new Set(),
+    joinNames: new Set(),
+    fieldsIncluded: new Set(),
+    fieldsExcepted: new Set(),
     allFields: new Set(),
     alreadyPrivateFields: new Set(),
     modifiers: new Map(),
@@ -99,6 +102,9 @@ function getOrCreateIncludeStateForJoin(
   else {
     const fromFields = getJoinFields(from, joinPath, logTo);
     const allFields = new Set(fromFields.map(f => f.as ?? f.name));
+    const joinNames = new Set(
+      fromFields.filter(f => isJoined(f)).map(f => f.as ?? f.name)
+    );
     const alreadyPrivateFields = new Set(
       fromFields
         .filter(f => f.accessModifier === 'private')
@@ -106,9 +112,10 @@ function getOrCreateIncludeStateForJoin(
     );
     const joinState: JoinIncludeProcessingState = {
       star: undefined,
+      joinNames,
       starNote: undefined,
-      mode: undefined,
-      fieldsMentioned: new Set(),
+      fieldsIncluded: new Set(),
+      fieldsExcepted: new Set(),
       allFields,
       alreadyPrivateFields,
       modifiers: new Map(),
@@ -118,6 +125,42 @@ function getOrCreateIncludeStateForJoin(
     };
     state.joins.push({path: [...joinPath], state: joinState});
     return joinState;
+  }
+}
+
+function checkParents(
+  state: IncludeProcessingState,
+  joinPath: string[],
+  from: SourceDef,
+  f: MalloyElement,
+  kind: AccessModifierLabel | 'except' | undefined
+) {
+  for (let prefixLength = 0; prefixLength < joinPath.length; prefixLength++) {
+    const parentPath = joinPath.slice(0, prefixLength);
+    const joinName = joinPath[prefixLength];
+    const parentState = getOrCreateIncludeStateForJoin(
+      parentPath,
+      state,
+      from,
+      f
+    );
+    if (parentState.fieldsExcepted.has(joinName)) {
+      const action = kind === 'except' ? 'exclude' : 'include';
+      f.logError(
+        'include-after-exclude',
+        `Cannot ${action} fields from \`${joinName}\` when \`${joinName}\` is itself excepted`
+      );
+      continue;
+    } else if (
+      parentState.alreadyPrivateFields.has(joinName) ||
+      parentState.modifiers.get(joinName) === 'private'
+    ) {
+      f.logError('field-not-accessible', `\`${joinName}\` is private`);
+      continue;
+    } else if (kind === 'public') {
+      parentState.modifiers.set(joinName, 'public');
+    }
+    parentState.fieldsIncluded.add(joinName);
   }
 }
 
@@ -142,6 +185,7 @@ export function processIncludeList(
           from,
           f
         );
+        checkParents(state, joinPath, from, f, item.kind);
 
         if (f.name instanceof WildcardFieldReference) {
           if (joinState.star !== undefined) {
@@ -164,15 +208,30 @@ export function processIncludeList(
             );
             continue;
           }
-          if (joinState.mode === 'exclude') {
-            item.logError(
-              'include-after-exclude',
-              'Cannot include specific fields if specific fields are already excluded'
-            );
-            continue;
-          }
-          joinState.mode = 'include';
           const name = f.name.nameString;
+          if (joinState.joinNames.has(name)) {
+            const joinJoinState = getIncludeStateForJoin(
+              [...joinPath, name],
+              state
+            );
+            if (item.kind === 'private') {
+              // If we're making a join private, we need to make sure we didn't also make any
+              // of its fields public or internal
+              if (
+                Object.values(joinJoinState.modifiers).some(
+                  m => m === 'public' || m === 'internal'
+                ) ||
+                joinJoinState.star === 'internal' ||
+                joinJoinState.star === 'public'
+              ) {
+                f.logError(
+                  'cannot-expand-access',
+                  `Cannot make \`${name}\` and also make fields in \`${name}\` public or internal`
+                );
+                continue;
+              }
+            }
+          }
           if (joinState.alreadyPrivateFields.has(name)) {
             f.logError(
               'cannot-expand-access',
@@ -186,9 +245,9 @@ export function processIncludeList(
             );
           } else {
             if (item.kind !== undefined) {
-              joinState.modifiers.set(name, item.kind);
+              joinState.modifiers.set(f.as ?? name, item.kind);
             }
-            joinState.fieldsMentioned.add(name);
+            joinState.fieldsIncluded.add(name);
             if (f.note || item.note) {
               joinState.notes.set(name, {
                 notes: f.note?.notes ?? [],
@@ -230,23 +289,59 @@ export function processIncludeList(
           from,
           f
         );
+        checkParents(state, joinPath, from, f, item.kind);
         if (f instanceof WildcardFieldReference) {
-          f.logWarning(
-            'wildcard-except-redundant',
-            '`except: *` is implied, unless another clause uses *'
-          );
-        } else {
-          if (!joinState.allFields.has(f.getName())) {
-            item.logError('field-not-found', `\`${f.refString}\` not found`);
-          } else if (joinState.mode === 'include') {
+          if (joinState.star !== undefined) {
             item.logError(
-              'exclude-after-include',
-              'Cannot exclude specific fields if specific fields are already included'
+              'already-used-star-in-include',
+              'Wildcard already used in this include block'
             );
           } else {
-            joinState.mode = 'exclude';
-            joinState.star = 'inherit';
-            joinState.fieldsMentioned.add(f.nameString);
+            joinState.star = 'except';
+          }
+        } else {
+          const name = f.getName();
+          if (!joinState.allFields.has(name)) {
+            item.logError('field-not-found', `\`${f.refString}\` not found`);
+            continue;
+          }
+          if (joinState.joinNames.has(name)) {
+            const joinJoinState = getIncludeStateForJoin(
+              [...joinPath, name],
+              state
+            );
+            const star = joinJoinState.star;
+            if (
+              joinJoinState.fieldsIncluded.size > 0 ||
+              star === 'inherit' ||
+              star === 'public' ||
+              star === 'private' ||
+              star === 'internal'
+            ) {
+              f.logError(
+                'exclude-after-include',
+                `Cannot except \`${name}\` when fields from \`${name}\` are already included`
+              );
+              continue;
+            } else if (
+              joinJoinState.fieldsExcepted.size > 0 ||
+              star === 'except'
+            ) {
+              f.logError(
+                'exclude-after-exclude',
+                `Cannot except \`${name}\` when fields from \`${name}\` are already excepted`
+              );
+              continue;
+            }
+          }
+
+          if (joinState.star === 'except') {
+            item.logWarning(
+              'except-star-and-list',
+              'Excluding specific fields is unnecessary if also using `except: *`'
+            );
+          } else {
+            joinState.fieldsExcepted.add(f.nameString);
           }
         }
       }
@@ -255,26 +350,24 @@ export function processIncludeList(
   for (const join of state.joins) {
     const joinState = join.state;
     const starFields: Set<string> = new Set(joinState.allFields);
-    joinState.fieldsMentioned.forEach(f => starFields.delete(f));
+    joinState.fieldsIncluded.forEach(f => starFields.delete(f));
+    joinState.fieldsExcepted.forEach(f => starFields.delete(f));
     joinState.alreadyPrivateFields.forEach(f => starFields.delete(f));
-    if (joinState.star !== undefined) {
+    if (joinState.star === 'except') {
+      joinState.fieldsToInclude = joinState.fieldsIncluded;
+    } else {
+      joinState.fieldsToInclude = new Set(joinState.allFields);
+      for (const field of joinState.fieldsExcepted) {
+        joinState.fieldsToInclude.delete(field);
+      }
       for (const field of starFields) {
         if (joinState.star !== 'inherit') {
-          joinState.modifiers.set(field, joinState.star);
+          joinState.modifiers.set(field, joinState.star ?? 'private');
         }
         if (joinState.starNote) {
           joinState.notes.set(field, {...joinState.starNote});
         }
       }
-    }
-    if (joinState.mode !== 'exclude') {
-      if (joinState.star !== undefined) {
-        joinState.fieldsToInclude = joinState.allFields;
-      } else {
-        joinState.fieldsToInclude = joinState.fieldsMentioned;
-      }
-    } else {
-      joinState.fieldsToInclude = starFields;
     }
   }
   // TODO: validate that a field isn't renamed more than once
