@@ -11,7 +11,6 @@ import type {
   DateUnit,
   Expr,
   FieldDef,
-  FilterExprType,
   JoinType,
   ModelDef,
   Query,
