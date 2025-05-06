@@ -8,6 +8,12 @@
 import {compileModel, compileQuery, compileSource} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
+type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>;
+    }
+  : T;
+
 describe('api', () => {
   describe('compile model', () => {
     test('compile model with table dependency', () => {
@@ -733,6 +739,209 @@ LIMIT 101
       };
       expect(result).toMatchObject(expected);
     });
+  });
+  test('compile and get source annotations', () => {
+    const result = compileQuery({
+      model_url: 'file://test.malloy',
+      query: {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {kind: 'field_reference', name: 'carrier'},
+                },
+              },
+            ],
+          },
+        },
+      },
+      compiler_needs: {
+        table_schemas: [
+          {
+            connection_name: 'connection',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        files: [
+          {
+            url: 'file://test.malloy',
+            contents: `
+              # cool_source_annotation
+              source: flights is connection.table('flights')
+            `,
+          },
+        ],
+        connections: [{name: 'connection', dialect: 'duckdb'}],
+      },
+    });
+    const expected: DeepPartial<Malloy.CompileQueryResponse> = {
+      result: {
+        source_annotations: [{value: '# cool_source_annotation\n'}],
+      },
+    };
+    expect(result).toMatchObject(expected);
+  });
+  test('source annotations from composite slice and composite are selected', () => {
+    const result = compileQuery({
+      model_url: 'file://test.malloy',
+      query: {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights_cube'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {kind: 'field_reference', name: 'x'},
+                },
+              },
+            ],
+          },
+        },
+      },
+      compiler_needs: {
+        table_schemas: [
+          {
+            connection_name: 'connection',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        files: [
+          {
+            url: 'file://test.malloy',
+            contents: `
+              ##! experimental.composite_sources
+              source: flights is connection.table('flights')
+
+              # slice_one
+              source: slice_one is flights
+
+              # slice_two
+              source: slice_two is flights extend {
+                dimension: x is 1
+              }
+
+              # composite
+              source: flights_cube is compose(slice_one, slice_two)
+            `,
+          },
+        ],
+        connections: [{name: 'connection', dialect: 'duckdb'}],
+      },
+    });
+    const expected: DeepPartial<Malloy.CompileQueryResponse> = {
+      result: {
+        source_annotations: [
+          {value: '# composite\n'},
+          {value: '# slice_two\n'},
+        ],
+      },
+    };
+    expect(result).toMatchObject(expected);
+  });
+  test('source annotations from nested composite slices and composite are selected', () => {
+    const result = compileQuery({
+      model_url: 'file://test.malloy',
+      query: {
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights_cube'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {kind: 'field_reference', name: 'x'},
+                },
+              },
+            ],
+          },
+        },
+      },
+      compiler_needs: {
+        table_schemas: [
+          {
+            connection_name: 'connection',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        files: [
+          {
+            url: 'file://test.malloy',
+            contents: `
+                ##! experimental.composite_sources
+                source: flights is connection.table('flights')
+
+                # slice_one
+                source: slice_one is flights
+
+                # slice_two
+                source: slice_two is flights
+
+                # slice_three
+                source: slice_three is flights extend {
+                  dimension: x is 1
+                }
+
+                # nested_composite
+                source: slices_two_and_three is compose(slice_two, slice_three)
+
+                # composite
+                source: flights_cube is compose(
+                  slice_one,
+                  slices_two_and_three
+                )
+              `,
+          },
+        ],
+        connections: [{name: 'connection', dialect: 'duckdb'}],
+      },
+    });
+    const expected: DeepPartial<Malloy.CompileQueryResponse> = {
+      result: {
+        source_annotations: [
+          {value: '# composite\n'},
+          {value: '# nested_composite\n'},
+          {value: '# slice_three\n'},
+        ],
+      },
+    };
+    expect(result).toMatchObject(expected);
   });
   describe('compiler errors', () => {
     test('parse error should come back as a log', () => {
