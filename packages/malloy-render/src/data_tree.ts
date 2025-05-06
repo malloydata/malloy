@@ -21,13 +21,30 @@ export type DrillEntry =
     }
   | {where: string};
 
-export function getDataTree(result: Malloy.Result) {
+// Global registry to track field instances across the data tree
+export interface FieldRegistry {
+  // Maps field path to all instances of that field
+  fieldInstances: Map<string, Field[]>;
+  // Store plugin instances by field path
+  plugins: Map<string, RenderPluginInstance[]>;
+}
+
+export function getDataTree(
+  result: Malloy.Result,
+  plugins: RenderPlugin[] = []
+) {
   const fields: Malloy.DimensionInfo[] = [];
   for (const field of result.schema.fields) {
     if (field.kind === 'dimension') {
       fields.push(field);
     }
   }
+
+  // Create registry to track fields and their instances
+  const registry: FieldRegistry = {
+    fieldInstances: new Map(),
+    plugins: new Map(),
+  };
 
   const metadataTag = tagFromAnnotations(result.annotations, '#(malloy) ');
   const rootName = metadataTag.text('query_name') ?? 'root';
@@ -46,14 +63,54 @@ export function getDataTree(result: Malloy.Result) {
     {
       modelTag: tagFromAnnotations(result.model_annotations, '## '),
       queryTimezone: result.query_timezone,
-    }
+    },
+    registry
   );
+
+  // Register plugins for fields based on matching
+  registerPluginsForField(rootFieldMeta, plugins, registry);
+
   const cell: Malloy.DataWithArrayCell =
     result.data!.kind === 'record_cell'
       ? {kind: 'array_cell', array_value: [result.data!]}
       : result.data!;
-  const rootCell = new RootCell(cell, rootFieldMeta);
+
+  const rootCell = new RootCell(cell, rootFieldMeta, plugins, registry);
   return rootCell;
+}
+
+// Helper to register plugins for a field and all its children
+function registerPluginsForField(
+  field: Field,
+  allPlugins: RenderPlugin[],
+  registry: FieldRegistry
+) {
+  // Register this field in the registry
+  const fieldKey = field.key;
+  if (!registry.fieldInstances.has(fieldKey)) {
+    registry.fieldInstances.set(fieldKey, []);
+  }
+  registry.fieldInstances.get(fieldKey)!.push(field);
+
+  // Check which plugins match this field
+  const fieldType = getFieldType(field);
+  const matchingPlugins = allPlugins.filter(plugin =>
+    plugin.matches(field.tag, fieldType)
+  );
+
+  if (matchingPlugins.length > 0) {
+    registry.plugins.set(
+      fieldKey,
+      matchingPlugins.map(plugin => plugin.plugin(field))
+    );
+  }
+
+  // Recurse for nested fields
+  if (field.isNest()) {
+    for (const childField of field.fields) {
+      registerPluginsForField(childField, allPlugins, registry);
+    }
+  }
 }
 
 export type Field =
@@ -182,27 +239,31 @@ function isSQLNativeFieldInfo(
 }
 
 export const Field = {
-  from(field: Malloy.DimensionInfo, parent: NestField | undefined): Field {
+  from(
+    field: Malloy.DimensionInfo,
+    parent: NestField | undefined,
+    registry?: FieldRegistry
+  ): Field {
     if (isRepeatedRecordFieldInfo(field)) {
-      return new RepeatedRecordField(field, parent);
+      return new RepeatedRecordField(field, parent, registry);
     } else if (isArrayFieldInfo(field)) {
-      return new ArrayField(field, parent);
+      return new ArrayField(field, parent, registry);
     } else if (isRecordFieldInfo(field)) {
-      return new RecordField(field, parent);
+      return new RecordField(field, parent, registry);
     } else if (isBooleanFieldInfo(field)) {
-      return new BooleanField(field, parent);
+      return new BooleanField(field, parent, registry);
     } else if (isJSONFieldInfo(field)) {
-      return new JSONField(field, parent);
+      return new JSONField(field, parent, registry);
     } else if (isDateFieldInfo(field)) {
-      return new DateField(field, parent);
+      return new DateField(field, parent, registry);
     } else if (isTimestampFieldInfo(field)) {
-      return new TimestampField(field, parent);
+      return new TimestampField(field, parent, registry);
     } else if (isStringFieldInfo(field)) {
-      return new StringField(field, parent);
+      return new StringField(field, parent, registry);
     } else if (isNumberFieldInfo(field)) {
-      return new NumberField(field, parent);
+      return new NumberField(field, parent, registry);
     } else if (isSQLNativeFieldInfo(field)) {
-      return new SQLNativeField(field, parent);
+      return new SQLNativeField(field, parent, registry);
     } else {
       throw new Error(`Unknown field type ${field.type.kind}`);
     }
@@ -274,9 +335,33 @@ export abstract class FieldBase {
   protected readonly metadataTag: Tag;
   public readonly renderAs: string;
   public readonly valueSet = new Set<string | number | boolean>();
+  private _pluginData: Map<string, unknown> = new Map();
+  protected registry?: FieldRegistry;
+
+  registerPluginData<T>(pluginType: string, data: T) {
+    this._pluginData.set(pluginType, data);
+  }
+
+  getPluginData<T>(pluginType: string): T | undefined {
+    return this._pluginData.get(pluginType) as T;
+  }
+
+  // Get all field instances that match this field's key from the registry
+  getAllFieldInstances(): Field[] {
+    if (!this.registry) return [this.asField()];
+    return this.registry.fieldInstances.get(this.key) || [this.asField()];
+  }
+
+  // Get the plugins registered for this field
+  getPlugins(): RenderPluginInstance[] {
+    if (!this.registry) return [];
+    return this.registry.plugins.get(this.key) || [];
+  }
+
   constructor(
     public readonly field: Malloy.DimensionInfo,
-    public readonly parent: NestField | undefined
+    public readonly parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
     this.tag = tagFor(this.field);
     this.metadataTag = tagFor(this.field, '#(malloy) ');
@@ -286,6 +371,7 @@ export abstract class FieldBase {
         : [...parent.path, field.name]
       : [];
     this.renderAs = shouldRenderAs(field, parent);
+    this.registry = registry;
   }
 
   isRoot(): boolean {
@@ -506,15 +592,17 @@ export class ArrayField extends FieldBase {
   public readonly eachField: Field;
   constructor(
     public readonly field: ArrayFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
     this.eachField = Field.from(
       {
         name: 'each',
         type: this.field.type.element_type,
       },
-      this
+      this,
+      registry
     );
     this.fields = [this.eachField];
   }
@@ -526,9 +614,10 @@ export class RepeatedRecordField extends ArrayField {
 
   constructor(
     public readonly field: RepeatedRecordFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
     const eachField = this.eachField;
     if (!eachField.isRecord())
       throw new Error('Expected eachField of repeatedRecord to be a record');
@@ -587,9 +676,10 @@ export class RootField extends RepeatedRecordField {
     metadata: {
       modelTag: Tag;
       queryTimezone: string | undefined;
-    }
+    },
+    registry?: FieldRegistry
   ) {
-    super(field, undefined);
+    super(field, undefined, registry);
     this.modelTag = metadata.modelTag;
     this.queryTimezone = metadata.queryTimezone;
   }
@@ -601,10 +691,11 @@ export class RecordField extends FieldBase {
   public readonly maxUniqueFieldValueCounts: Map<string, number> = new Map();
   constructor(
     public readonly field: RecordFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
-    this.fields = field.type.fields.map(f => Field.from(f, this));
+    super(field, parent, registry);
+    this.fields = field.type.fields.map(f => Field.from(f, this, registry));
     this.fieldsByName = Object.fromEntries(this.fields.map(f => [f.name, f]));
   }
 
@@ -638,9 +729,10 @@ export class NumberField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: NumberFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 
   registerValue(value: number) {
@@ -683,9 +775,10 @@ export class DateField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: DateFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 
   get timeframe() {
@@ -741,9 +834,10 @@ export class TimestampField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: TimestampFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 
   get timeframe() {
@@ -791,9 +885,10 @@ export class StringField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: StringFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 
   registerValue(value: string) {
@@ -828,18 +923,20 @@ export class StringField extends FieldBase {
 export class SQLNativeField extends FieldBase {
   constructor(
     public readonly field: SQLNativeFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 }
 
 export class JSONField extends FieldBase {
   constructor(
     public readonly field: JSONFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 }
 
@@ -847,9 +944,10 @@ export class BooleanField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: BooleanFieldInfo,
-    parent: NestField | undefined
+    parent: NestField | undefined,
+    registry?: FieldRegistry
   ) {
-    super(field, parent);
+    super(field, parent, registry);
   }
 
   get maxString(): string | undefined {
@@ -1193,13 +1291,21 @@ export class ArrayCell extends CellBase {
 export class RepeatedRecordCell extends ArrayCell {
   public readonly rows: RecordCell[];
   public readonly fieldValueSets: Map<string, Set<CellValue>> = new Map();
+  private plugins: RenderPlugin[];
+  private registry?: FieldRegistry;
+
   constructor(
     public readonly cell: Malloy.CellWithArrayCell,
     public readonly field: RepeatedRecordField,
-    public readonly parent: NestCell | undefined
+    public readonly parent: NestCell | undefined,
+    plugins: RenderPlugin[] = [],
+    registry?: FieldRegistry
   ) {
-    super(cell, field, parent);
+    super(cell, field, parent, plugins, registry);
+    this.plugins = plugins;
+    this.registry = registry;
     this.rows = this.values as RecordCell[];
+
     // First, create cells for all the rows
     for (const row of this.rows) {
       for (const column of row.columns) {
@@ -1215,6 +1321,12 @@ export class RepeatedRecordCell extends ArrayCell {
     for (const [field, set] of this.fieldValueSets.entries()) {
       this.field.registerValueSetSize(field, set.size);
     }
+
+    // Run plugins for this field
+    const fieldPlugins = this.field.getPlugins();
+    for (const plugin of fieldPlugins) {
+      plugin.processData(this.field, this);
+    }
   }
 
   get value() {
@@ -1225,9 +1337,11 @@ export class RepeatedRecordCell extends ArrayCell {
 export class RootCell extends RepeatedRecordCell {
   constructor(
     public readonly cell: Malloy.CellWithArrayCell,
-    public readonly field: RootField
+    public readonly field: RootField,
+    plugins: RenderPlugin[] = [],
+    registry?: FieldRegistry
   ) {
-    super(cell, field, undefined);
+    super(cell, field, undefined, plugins, registry);
   }
 }
 
@@ -1497,4 +1611,49 @@ export class BooleanCell extends CellBase {
 
     return -1;
   }
+}
+
+export enum FieldType {
+  Array = 'array',
+  RepeatedRecord = 'repeated_record',
+  Record = 'record',
+  Number = 'number',
+  Date = 'date',
+  JSON = 'json',
+  String = 'string',
+  Timestamp = 'timestamp',
+  Boolean = 'boolean',
+  SQLNative = 'sql_native',
+}
+
+export type RenderPluginInstance = {
+  // TODO duplication of name in multiple places...
+  name: string;
+  processData(field: NestField, cell: NestCell): void;
+};
+
+export type RenderPlugin<
+  T extends RenderPluginInstance = {} & RenderPluginInstance,
+> = {
+  name: string;
+  matches: (fieldTag: Tag, fieldType: FieldType) => boolean;
+  plugin: RenderPluginFactory<T>;
+};
+
+export type RenderPluginFactory<T extends RenderPluginInstance> = (
+  field: Field
+) => T;
+
+export function getFieldType(field: Field): FieldType {
+  if (field instanceof RepeatedRecordField) return FieldType.RepeatedRecord;
+  if (field instanceof ArrayField) return FieldType.Array;
+  if (field instanceof RecordField) return FieldType.Record;
+  if (field instanceof NumberField) return FieldType.Number;
+  if (field instanceof DateField) return FieldType.Date;
+  if (field instanceof JSONField) return FieldType.JSON;
+  if (field instanceof StringField) return FieldType.String;
+  if (field instanceof TimestampField) return FieldType.Timestamp;
+  if (field instanceof BooleanField) return FieldType.Boolean;
+  if (field instanceof SQLNativeField) return FieldType.SQLNative;
+  throw new Error('Unknown field type');
 }
