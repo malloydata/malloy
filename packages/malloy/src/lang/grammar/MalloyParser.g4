@@ -285,7 +285,7 @@ includeExceptList
   ;
 
 includeExceptListItem
-  : tags fieldName
+  : tags fieldPath
   | tags collectionWildCard
   ;
 
@@ -294,8 +294,8 @@ includeList
   ;
 
 includeField
-  : tags (as=fieldName isDefine)? name=fieldName
-  | tags name=fieldName
+  : tags (as=fieldName isDefine)? name=fieldPath
+  | tags name=fieldPath
   | tags collectionWildCard
   ;
 

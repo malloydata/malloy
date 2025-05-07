@@ -2102,10 +2102,16 @@ describe('query:', () => {
             measure: aisum is ai.sum() { grouped_by: astr, abool }
           }
           source: aext is compose(
-            abase include { ai, astr, aisum } extend {
+            abase include {
+              except: *
+              public: ai, astr, aisum
+            } extend {
               dimension: x is 1
             },
-            abase include { ai, abool, aisum } extend {
+            abase include {
+              except: *
+              public: ai, abool, aisum
+            } extend {
               dimension: y is 1
             }
           )
@@ -2127,7 +2133,10 @@ describe('query:', () => {
           source: abase is a extend {
             measure: aisum is ai.sum() { grouped_by: astr, abool }
           }
-          source: aext is abase include { ai, astr, aisum } extend {
+          source: aext is abase include {
+            except: *
+            public: ai, astr, aisum
+          } extend {
             dimension: x is 1
           }
           run: aext -> {

@@ -409,7 +409,7 @@ function checkForProblems(
       }
     }
     if (i !== msgs.length) {
-      explain.push(...msgs.slice(i).map(m => `Missing: ${m}`));
+      explain.push(...msgs.slice(i).map(m => `Missing: ${JSON.stringify(m)}`));
     }
     if (!allowAdditionalErrors && i !== errList.length) {
       explain.push(

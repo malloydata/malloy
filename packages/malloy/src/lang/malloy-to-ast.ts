@@ -2007,14 +2007,12 @@ export class MalloyToAST
           {severity: 'warn'}
         );
       }
-      const fieldNameCx = fcx.fieldName();
+      const fieldNameCx = fcx.fieldPath();
       if (fieldNameCx) {
         return this.astAt(
-          new ast.AccessModifierFieldReference([
-            this.astAt(this.getFieldName(fieldNameCx), fcx),
-          ]),
+          this.getFieldPath(fieldNameCx, ast.AccessModifierFieldReference),
           fieldNameCx
-        );
+        ) as ast.AccessModifierFieldReference;
       }
       const wildcardCx = fcx.collectionWildCard();
       if (wildcardCx) {
@@ -2029,25 +2027,26 @@ export class MalloyToAST
     const wildcard = wildcardCx
       ? this.visitCollectionWildCard(wildcardCx)
       : undefined;
-    const as = pcx._as ? pcx._as.text : undefined;
+    const as = pcx._as ? this.getFieldName(pcx._as) : undefined;
     const tags1cx = pcx.tags();
     const tags1 = tags1cx ? this.getNotes(tags1cx) : [];
     const tags2cx = pcx.isDefine();
     const tags2 = tags2cx ? this.getIsNotes(tags2cx) : [];
     const notes = [...tags1, ...tags2];
     const name = pcx._name
-      ? this.astAt(
-          new ast.AccessModifierFieldReference([
-            this.astAt(this.getFieldName(pcx._name), pcx._name),
-          ]),
+      ? (this.astAt(
+          this.getFieldPath(pcx._name, ast.AccessModifierFieldReference),
           pcx._name
-        )
+        ) as ast.AccessModifierFieldReference)
       : undefined;
     const reference = name ?? wildcard;
     if (reference === undefined) {
       throw this.internalError(pcx, 'Expected a field name or wildcard');
     }
-    const item = this.astAt(new ast.IncludeListItem(reference, as), pcx);
+    const item = this.astAt(
+      new ast.IncludeListItem(reference, as?.refString),
+      pcx
+    );
     item.extendNote({notes});
     return item;
   }

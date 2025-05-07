@@ -371,6 +371,7 @@ type MessageParameterTypes = {
   'illegal-record-property-type': string;
   'record-literal-needs-keys': string;
   'not-yet-implemented': string;
+  'cannot-rename-join-field': string;
   'sql-case': string;
   'case-then-type-does-not-match': {
     thenType: ExpressionValueType;
@@ -387,6 +388,7 @@ type MessageParameterTypes = {
   };
   'or-choices-only': string;
   'sql-in': string;
+  'except-star-and-list': string;
   'dialect-cast-unsafe-only': string;
   'field-not-accessible': string;
   'cannot-expand-access': string;
@@ -398,6 +400,7 @@ type MessageParameterTypes = {
   'include-after-exclude': string;
   'duplicate-include': string;
   'exclude-after-include': string;
+  'exclude-after-exclude': string;
   'cannot-rename-non-field': string;
   'array-values-incompatible': string;
   'invalid-resolved-type-for-array': string;
