@@ -21,14 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Dialect} from '../../../dialect/dialect';
 import type {
   Annotation,
-  StructDef,
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
-  AccessModifierLabel,
 } from '../../../model/malloy_types';
 import {
   isAtomicFieldType,
@@ -39,15 +36,10 @@ import {
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import type {ExpressionDef} from '../types/expression-def';
-import type {
-  FieldName,
-  FieldSpace,
-  QueryFieldSpace,
-} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
-import type {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
-import type {MakeEntry, SpaceEntry} from '../types/space-entry';
+import type {MakeEntry} from '../types/space-entry';
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -61,6 +53,7 @@ import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
+import {DefSpace} from '../field-space/def-space';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -240,70 +233,6 @@ export class DimensionFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'dimensionFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckDimension(expr, this);
-  }
-}
-
-/**
- * Used to detect references to fields in the statement which defines them
- */
-export class DefSpace implements FieldSpace {
-  readonly type = 'fieldSpace';
-  foundCircle = false;
-  constructor(
-    readonly realFS: FieldSpace,
-    readonly circular: AtomicFieldDeclaration
-  ) {}
-  structDef(): StructDef {
-    return this.realFS.structDef();
-  }
-  emptyStructDef(): StructDef {
-    return this.realFS.emptyStructDef();
-  }
-  entry(name: string): SpaceEntry | undefined {
-    return this.realFS.entry(name);
-  }
-  lookup(symbol: FieldName[]): LookupResult {
-    if (symbol[0] && symbol[0].refString === this.circular.defineName) {
-      this.foundCircle = true;
-      return {
-        error: {
-          message: `Circular reference to '${this.circular.defineName}' in definition`,
-          code: 'circular-reference-in-field-definition',
-        },
-        found: undefined,
-      };
-    }
-    return this.realFS.lookup(symbol);
-  }
-  entries(): [string, SpaceEntry][] {
-    return this.realFS.entries();
-  }
-  dialectName() {
-    return this.realFS.dialectName();
-  }
-  dialectObj(): Dialect | undefined {
-    return this.realFS.dialectObj();
-  }
-  isQueryFieldSpace(): this is QueryFieldSpace {
-    return this.realFS.isQueryFieldSpace();
-  }
-
-  outputSpace() {
-    if (this.realFS.isQueryFieldSpace()) {
-      return this.realFS.outputSpace();
-    }
-    throw new Error('Not a query field space');
-  }
-
-  inputSpace() {
-    if (this.realFS.isQueryFieldSpace()) {
-      return this.realFS.inputSpace();
-    }
-    throw new Error('Not a query field space');
-  }
-
-  accessProtectionLevel(): AccessModifierLabel {
-    return 'public';
   }
 }
 

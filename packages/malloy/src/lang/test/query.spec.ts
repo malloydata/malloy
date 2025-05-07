@@ -1543,6 +1543,25 @@ describe('query:', () => {
       expect(f.length).toBe(1);
       expect(f[0]).toBeExpr('{filterCondition {private_ai = 2}}');
     });
+    test('can filter on private nest field with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          private view: private_by_ai is {
+            group_by: ai
+          }
+          view: nest_private_by_ai is { nest: private_by_ai }
+        }
+        run: aext -> {
+          drill: nest_private_by_ai.private_by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
     test('can filter on param with drill', () => {
       const m = new TestTranslator(`
         ##! experimental.parameters

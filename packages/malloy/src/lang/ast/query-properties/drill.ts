@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 import type {
   AtomicFieldDef,
   Expr,
@@ -20,6 +19,7 @@ import {
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
 import {ExprCompare} from '../expressions/expr-compare';
+import {PermissiveSpace} from '../field-space/permissive-space';
 import {ViewField} from '../field-space/view-field';
 import type {DrillFieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
@@ -73,6 +73,7 @@ export class Drill
     fs: FieldSpace,
     drill: DrillElement
   ): FilterCondition[] | undefined {
+    const permissiveFS = new PermissiveSpace(fs);
     const collectedWheres: FilterCondition[] = [];
     if (drill.field.list.length === 0) {
       drill.logError('invalid-drill-reference', 'Invalid drill reference`');
@@ -167,11 +168,11 @@ export class Drill
         if (field.type === 'fieldref') {
           const pathFieldNames = field.path.map(n => new FieldName(n));
           this.has({pathFieldNames});
-          const nestLookup = fs.lookup(pathFieldNames);
+          const nestLookup = permissiveFS.lookup(pathFieldNames);
           if (nestLookup.found === undefined) {
             name.logError(
               'drill-view-reference-not-found',
-              `No such field ${name.refString}`
+              `No such field \`${name.refString}\``
             );
             return;
           }
@@ -202,7 +203,7 @@ export class Drill
         if (field.type === 'fieldref') {
           const pathFieldNames = field.path.map(n => new FieldName(n));
           this.has({pathFieldNames});
-          const nestLookup = fs.lookup(pathFieldNames);
+          const nestLookup = permissiveFS.lookup(pathFieldNames);
           if (nestLookup.found === undefined) {
             name.logError(
               'drill-view-reference-not-found',
@@ -259,14 +260,13 @@ export class Drill
       ...fieldDef,
       evalSpace: 'output',
       expressionType: fieldDef.expressionType ?? 'scalar',
-      compositeFieldUsage:
-        fieldDef.compositeFieldUsage ?? emptyCompositeFieldUsage(),
+      fieldUsage: fieldDef.fieldUsage ?? [],
     });
     drill.has({drillField});
     const fExpression = new ExprCompare(drillField, '=', drill.value);
     this.has({fExpression});
 
-    const fExpr = fExpression.getExpression(fs); // TODO might somehow have to bypass private??
+    const fExpr = fExpression.getExpression(permissiveFS);
 
     // TODO valid type of filter condition to be only equality
 
@@ -275,7 +275,7 @@ export class Drill
       code: drill.exprSrc,
       e: fExpr.value,
       expressionType: fExpr.expressionType,
-      compositeFieldUsage: fExpr.compositeFieldUsage,
+      fieldUsage: fExpr.fieldUsage,
     };
     return [...collectedWheres, exprCond];
   }
@@ -308,7 +308,7 @@ export class Drill
       if (fExpr !== undefined) {
         executeFor.filters.push(...fExpr);
         for (const f of fExpr) {
-          executeFor.resultFS.addCompositeFieldUserFromFilter(f, drill);
+          executeFor.resultFS.addFieldUserFromFilter(f, drill);
         }
       }
     }
