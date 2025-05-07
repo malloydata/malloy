@@ -7,6 +7,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   dimension: product is name
   dimension: dcId is distribution_center_id::number
 
+
   # line_chart
   view: topSellingBrands is {
     group_by: brand
@@ -307,6 +308,85 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     aggregate: `Sales $` is retail_price.avg()*500
     where: date_of_sale >= @2001-02-01 and date_of_sale < @2001-04-01
     order_by: date_of_sale
+  }
+
+  dimension: sale_year is year(date_of_sale)
+
+
+  #(story)
+  # line_chart
+  view: lots_of_lines is {
+    # x
+    group_by: sale_year
+
+    # series
+    group_by: brand
+
+    aggregate: total is count()
+
+    order_by: sale_year
+  }
+
+    #(story)
+  view: lots_of_lines_nested is {
+    group_by: department
+
+    # line_chart { series.limit=5 }
+    nest: lots_of_lines is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+     # line_chart { y.independent }
+    nest: lots_of_lines_independent_y is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+    # line_chart { series.independent }
+    nest: lots_of_lines_independent_series is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+
+  }
+
+  #(story)
+  # line_chart
+  view: WithMissingDimensionValue is {
+    group_by:
+      # series
+      department
+      # x
+      `date` is pick null when dcId = 3 else dcId
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 20
+    order_by: `date`
+  }
+}
+
+source: missing_data is duckdb.table("static/data/missing_data.csv") extend {
+
+  #(story)
+  # line_chart
+  view: WithNullMeasureValue is {
+    group_by:
+      id, category
+    aggregate:
+      m is metric.avg()
+    limit: 20
+    order_by: id
   }
 }
 

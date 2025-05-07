@@ -22,7 +22,7 @@
  */
 
 import type {
-  CompositeFieldUsage,
+  FieldUsage,
   FilterCondition,
   PipeSegment,
   Sampling,
@@ -42,8 +42,8 @@ import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {MalloyElement} from '../types/malloy-element';
 import {
-  emptyCompositeFieldUsage,
-  mergeCompositeFieldUsage,
+  emptyFieldUsage,
+  mergeFieldUsage,
 } from '../../../model/composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
@@ -54,6 +54,7 @@ export class IndexBuilder implements QueryBuilder {
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
   alwaysJoins: string[] = [];
+  requiredGroupBys: string[] = [];
   readonly type = 'index';
 
   constructor(
@@ -98,8 +99,8 @@ export class IndexBuilder implements QueryBuilder {
     }
   }
 
-  get compositeFieldUsage(): CompositeFieldUsage {
-    return this.resultFS.compositeFieldUsage;
+  get fieldUsage(): FieldUsage[] {
+    return this.resultFS.fieldUsage;
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
@@ -142,14 +143,11 @@ export class IndexBuilder implements QueryBuilder {
       indexSegment.alwaysJoins = [...this.alwaysJoins];
     }
 
-    const fromCompositeFieldUsage =
+    const fromFieldUsage =
       from && from.type === 'index'
-        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
-        : emptyCompositeFieldUsage();
-    indexSegment.compositeFieldUsage = mergeCompositeFieldUsage(
-      fromCompositeFieldUsage,
-      this.compositeFieldUsage
-    );
+        ? from.fieldUsage ?? emptyFieldUsage()
+        : emptyFieldUsage();
+    indexSegment.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
 
     return indexSegment;
   }

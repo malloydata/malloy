@@ -87,6 +87,7 @@ export abstract class FieldReference
     return {
       type: 'fieldref',
       path: this.list.map(n => n.refString),
+      at: this.location,
     };
   }
 
@@ -158,6 +159,13 @@ export class ExpressionFieldReference extends FieldReference {
 export class PartitionByFieldReference extends FieldReference {
   elementType = 'partitionByFieldReference';
   // We assume that the partition by expression will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
+export class GroupedByReference extends FieldReference {
+  elementType = 'groupedByReference';
   typecheck() {
     return;
   }

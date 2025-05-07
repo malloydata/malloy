@@ -41,6 +41,18 @@ interface QueryRunResult {
   queryTestTag: Tag;
 }
 
+function errInfo(e: {message?: string; stack?: string}) {
+  let err = '';
+  const trace = e.stack ?? '';
+  if (e.message && !trace.includes(e.message)) {
+    err = `ERROR: ${e.message}\n`;
+  }
+  if (e.stack) {
+    err += `STACK: ${e.stack}\n`;
+  }
+  return err;
+}
+
 export async function runQuery(
   tq: TestQuery
 ): Promise<Partial<QueryRunResult>> {
@@ -60,7 +72,7 @@ export async function runQuery(
       fail: {
         pass: false,
         message: () =>
-          `Could not prepare query to run: ${e.message}\n\nQUERY:\n${queryText}`,
+          `Could not prepare query to run:\n${queryText}\n\n${errInfo(e)}`,
       },
     };
   }
@@ -69,7 +81,8 @@ export async function runQuery(
   try {
     result = await query.run();
   } catch (e) {
-    let failMsg = `QUERY RUN FAILED: ${tq.src}\nMESSAGE: ${e.message}\n`;
+    const src = tq.src.replace(/^\n+/m, '').trimEnd();
+    let failMsg = `QUERY RUN FAILED:\n${src}`;
     if (e instanceof MalloyError) {
       failMsg = `Error in query compilation\n${errorLogToString(
         tq.src,
@@ -77,11 +90,11 @@ export async function runQuery(
       )}`;
     } else {
       try {
-        failMsg += `SQL: ${await query.getSQL()}\n`;
+        failMsg += `\nSQL: ${await query.getSQL()}\n`;
       } catch (e2) {
-        failMsg += `SQL FOR FAILING QUERY COULD NOT BE COMPUTED: ${e2.message}\n`;
+        failMsg += '\nSQL FOR QUERY COULD NOT BE COMPUTED\n';
       }
-      failMsg += e.stack;
+      failMsg += errInfo(e);
     }
     return {fail: {pass: false, message: () => failMsg}, query};
   }

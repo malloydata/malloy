@@ -23,12 +23,7 @@
  */
 
 import type {MalloyTranslator, TranslateResponse} from '..';
-import type {
-  CompositeFieldUsage,
-  DocumentLocation,
-  DocumentRange,
-  Expr,
-} from '../../model';
+import type {DocumentLocation, DocumentRange, Expr} from '../../model';
 import {exprToStr} from './expr-to-str';
 import type {MarkedSource} from './test-translator';
 import {BetaExpression, pretty, TestTranslator} from './test-translator';
@@ -80,7 +75,7 @@ declare global {
        */
       compilesTo(exprString: string): R;
       toBeExpr(exprString: string): R;
-      hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
+      hasFieldUsage(paths: string[][]): R;
     }
   }
 }
@@ -286,10 +281,7 @@ expect.extend({
       : this.utils.diff(exprString, rcvExpr);
     return {pass, message: () => `${msg}`};
   },
-  hasCompositeUsage: function (
-    tx: TestSource,
-    compositeFieldUsage: CompositeFieldUsage
-  ) {
+  hasFieldUsage: function (tx: TestSource, paths: string[][]) {
     let bx: BetaExpression;
     if (typeof tx === 'string') {
       bx = new BetaExpression(tx);
@@ -317,11 +309,12 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const actual = bx.generated().compositeFieldUsage;
-    const pass = this.equals(actual, compositeFieldUsage);
+    const actual = bx.generated().fieldUsage;
+    const actualPaths = actual.map(u => u.path);
+    const pass = this.equals(actualPaths, paths);
     const msg = pass
       ? `Matched: ${actual}`
-      : this.utils.diff(compositeFieldUsage, actual);
+      : this.utils.diff(paths, actualPaths);
     return {pass, message: () => `${msg}`};
   },
 });

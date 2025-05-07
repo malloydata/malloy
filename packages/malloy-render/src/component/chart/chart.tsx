@@ -50,9 +50,15 @@ export function Chart(props: ChartProps) {
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
   let values: unknown[] = [];
+  let isDataLimited = false;
+  let dataLimitMessage = 'Showing limited results';
   // New vega charts use mapMalloyDataToChartData handlers
   if (chartProps.mapMalloyDataToChartData) {
-    values = chartProps.mapMalloyDataToChartData(data);
+    const mappedData = chartProps.mapMalloyDataToChartData(data);
+    values = mappedData.data;
+    isDataLimited = mappedData.isDataLimited;
+    if (mappedData.dataLimitMessage)
+      dataLimitMessage = mappedData.dataLimitMessage;
   }
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
@@ -184,7 +190,7 @@ export function Chart(props: ChartProps) {
 
   const chartTitle = chartProps.chartTag.text('title');
   const chartSubtitle = chartProps.chartTag.text('subtitle');
-  const hasTitleBar = chartTitle || chartSubtitle;
+  const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;
 
   return (
     <div
@@ -203,7 +209,14 @@ export function Chart(props: ChartProps) {
         <div class="malloy-chart__titles-bar">
           {chartTitle && <div class="malloy-chart__title">{chartTitle}</div>}
           {chartSubtitle && (
-            <div class="malloy-chart__subtitle">{chartSubtitle}</div>
+            <div class="malloy-chart__subtitle">
+              <div>{chartSubtitle}</div>
+            </div>
+          )}
+          {isDataLimited && (
+            <div class="malloy-chart__subtitle">
+              <div>{dataLimitMessage}</div>
+            </div>
           )}
         </div>
       </Show>

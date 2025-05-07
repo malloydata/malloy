@@ -1145,6 +1145,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'source_annotations': {
+        'type': 'Annotation',
+        'array': true,
+        'optional': true,
+      },
     },
   },
   'RunIndexQueryRequest': {
@@ -2131,6 +2136,7 @@ export type Result = {
   annotations?: Array<Annotation>;
   model_annotations?: Array<Annotation>;
   query_timezone?: string;
+  source_annotations?: Array<Annotation>;
 };
 
 export type RunIndexQueryRequest = {

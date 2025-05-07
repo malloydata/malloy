@@ -58,7 +58,7 @@ export class QueryRefine extends QueryBase implements QueryElement {
 
     const compositeResolvedSourceDef = this.resolveCompositeSource(
       q.inputStruct,
-      query
+      resultPipe
     );
 
     return {

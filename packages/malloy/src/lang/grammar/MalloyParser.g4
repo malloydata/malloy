@@ -376,6 +376,7 @@ fieldPropertyStatement
   | partitionByStatement
   | aggregateOrderByStatement
   | fieldPropertyLimitStatement
+  | groupedByStatement
   ;
 
 filterClauseList
@@ -474,6 +475,10 @@ projectStatement
 
 partitionByStatement
   : PARTITION_BY id (COMMA id)* COMMA?
+  ;
+
+groupedByStatement
+  : GROUPED_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement

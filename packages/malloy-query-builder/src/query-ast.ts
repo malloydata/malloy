@@ -294,18 +294,37 @@ abstract class ASTNode<T> {
     name: string,
     path: string[] | undefined
   ) {
-    let current = schema;
+    let current = schema.fields;
     for (const part of path ?? []) {
-      const field = current.fields.find(f => f.name === part);
+      const field = current.find(f => f.name === part);
       if (field === undefined) {
         throw new Error(`${part} not found`);
       }
-      if (field.kind !== 'join') {
-        throw new Error(`${part} is not a join`);
+      if (field.kind === 'join') {
+        current = field.schema.fields;
+        continue;
       }
-      current = field.schema;
+      if (field.kind === 'dimension' || field.kind === 'measure') {
+        if (field.type.kind === 'record_type') {
+          current = field.type.fields.map(f => ({
+            kind: field.kind,
+            ...f,
+          }));
+          continue;
+        } else if (
+          field.type.kind === 'array_type' &&
+          field.type.element_type.kind === 'record_type'
+        ) {
+          current = field.type.element_type.fields.map(f => ({
+            kind: field.kind,
+            ...f,
+          }));
+          continue;
+        }
+      }
+      throw new Error(`${part} is not a join, record, or repeated record`);
     }
-    const field = current.fields.find(f => f.name === name);
+    const field = current.find(f => f.name === name);
     return field;
   }
 
@@ -934,7 +953,10 @@ export interface IASTReference extends ASTAny {
    * @param name The name of the parameter to set
    * @param value The value of the parameter to set
    */
-  setParameter(name: string, value: RawLiteralValue): void;
+  setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ): void;
 
   tryGetParameter(name: string): ASTParameterValue | undefined;
 
@@ -1004,7 +1026,7 @@ export class ASTReference
   static setParameter(
     reference: IASTReference,
     name: string,
-    value: RawLiteralValue
+    value: RawLiteralValue | Malloy.LiteralValue
   ) {
     const existing = ASTReference.tryGetParameter(reference, name);
     if (existing !== undefined) {
@@ -1030,7 +1052,10 @@ export class ASTReference
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -1099,7 +1124,7 @@ export class ASTParameterValueList extends ASTListNode<
     return this.children;
   }
 
-  addParameter(name: string, value: RawLiteralValue) {
+  addParameter(name: string, value: RawLiteralValue | Malloy.LiteralValue) {
     // TODO validate that the parameter is valid (name and type)
     this.add(
       new ASTParameterValue({
@@ -1165,8 +1190,12 @@ export const ASTLiteralValue = {
         return new ASTFilterExpressionLiteralValue(value);
     }
   },
-  makeLiteral(value: RawLiteralValue): Malloy.LiteralValue {
-    if (typeof value === 'string') {
+  makeLiteral(
+    value: RawLiteralValue | Malloy.LiteralValue
+  ): Malloy.LiteralValue {
+    if (value !== null && typeof value === 'object' && 'kind' in value) {
+      return value;
+    } else if (typeof value === 'string') {
       return {
         kind: 'string_literal',
         string_value: value,
@@ -1639,7 +1668,10 @@ export class ASTReferenceQueryDefinition
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -1755,7 +1787,10 @@ export class ASTReferenceQueryArrowSource
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -1800,6 +1835,7 @@ export interface IASTViewDefinition extends IASTQueryOrViewDefinition {
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition;
+  convertToNest(name: string);
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -1954,6 +1990,22 @@ export class ASTReferenceViewDefinition
     return newView.refinement.as.ReferenceViewDefinition();
   }
 
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
+  }
+
   isValidViewRefinement(
     name: string,
     path?: string[]
@@ -2014,7 +2066,10 @@ export class ASTReferenceViewDefinition
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -2075,6 +2130,22 @@ export class ASTArrowViewDefinition
 
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
     return this.view.addViewRefinement(name, path);
+  }
+
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   getInputSchema(): Malloy.Schema {
@@ -2171,6 +2242,22 @@ export class ASTRefinementViewDefinition
   set base(base: ASTViewDefinition) {
     this.edit();
     this.children.base = base;
+  }
+
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -2288,6 +2375,7 @@ export class ASTSegmentViewDefinition
   }
 
   isRunnable(): boolean {
+    let hasValidNest = false;
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTAggregateViewOperation ||
@@ -2298,13 +2386,30 @@ export class ASTSegmentViewDefinition
         if (!operation.view.definition.isRunnable()) {
           return false;
         }
+        hasValidNest = true;
       }
     }
-    return false;
+    return hasValidNest;
   }
 
   get operations() {
     return this.children.operations;
+  }
+
+  convertToNest(name: string) {
+    const nestedView = ASTViewDefinition.from({
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'nest',
+          name,
+          view: {
+            definition: this.build(),
+          },
+        },
+      ],
+    });
+    swapViewInParent(this, nestedView);
   }
 
   /**
@@ -2507,11 +2612,13 @@ export class ASTSegmentViewDefinition
   }
 
   private DEFAULT_INSERTION_ORDER: Malloy.ViewOperationType[] = [
-    'where',
     'group_by',
     'aggregate',
+    'where',
+    'having',
     'nest',
     'order_by',
+    'limit',
   ];
 
   private findInsertionPoint(kind: Malloy.ViewOperationType): number {
@@ -2533,7 +2640,7 @@ export class ASTSegmentViewDefinition
     );
     for (const laterType of laterOperations) {
       const firstOfType = this.firstIndexOfOperationType(laterType);
-      return firstOfType;
+      if (firstOfType > -1) return firstOfType;
     }
     return this.operations.length;
   }
@@ -3764,7 +3871,10 @@ export class ASTReferenceExpression
     return ASTReference.getOrAddParameters(this);
   }
 
-  public setParameter(name: string, value: RawLiteralValue) {
+  public setParameter(
+    name: string,
+    value: RawLiteralValue | Malloy.LiteralValue
+  ) {
     return ASTReference.setParameter(this, name, value);
   }
 
@@ -4124,7 +4234,7 @@ export class ASTWhereViewOperation extends ASTObjectNode<
     filter: ASTFilter;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'nest';
+  readonly kind: Malloy.ViewOperationType = 'where';
   constructor(public node: Malloy.ViewOperationWithWhere) {
     super(node, {
       kind: 'where',
@@ -4155,7 +4265,7 @@ export class ASTHavingViewOperation extends ASTObjectNode<
     filter: ASTFilter;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'nest';
+  readonly kind: Malloy.ViewOperationType = 'having';
   constructor(public node: Malloy.ViewOperationWithHaving) {
     super(node, {
       kind: 'having',
@@ -4513,8 +4623,6 @@ export class ASTAnnotation extends ASTObjectNode<
     value: string;
   }
 > {
-  readonly kind: Malloy.ViewOperationType = 'limit';
-
   get value() {
     return this.children.value;
   }
@@ -4674,7 +4782,7 @@ function digits(value: number, digits: number) {
 }
 
 function serializeDateAsLiteral(date: Date): string {
-  const year = digits(date.getUTCFullYear(), 2);
+  const year = digits(date.getUTCFullYear(), 4);
   const month = digits(date.getUTCMonth() + 1, 2);
   const day = digits(date.getUTCDate(), 2);
   const hour = digits(date.getUTCHours(), 2);

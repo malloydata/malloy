@@ -42,6 +42,8 @@ type LineDataRecord = {
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
+const DEFAULT_MAX_SERIES = 12;
+const MAX_DATA_POINTS = 5000;
 
 // Helper to invert mapping for object where values are unique
 function invertObject(obj: Record<string, string>): Record<string, string> {
@@ -122,11 +124,17 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
   const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
   const yDomainMax = settings.zeroBaseline ? Math.max(0, yMax) : yMax;
 
+  const maxSeries = chartTag.numeric('series', 'limit') ?? DEFAULT_MAX_SERIES;
+  const isLimitingSeries = Boolean(
+    seriesField && seriesField.valueSet.size > maxSeries
+  );
+
   const chartSettings = getChartLayoutSettings(explore, chartTag, {
     xField,
     yField,
     chartType: 'line_chart',
     getYMinMax: () => [yDomainMin, yDomainMax],
+    independentY: chartTag.has('y', 'independent') || isLimitingSeries,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -143,6 +151,9 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
     chartTag.has('series', 'independent') && !forceSharedSeries;
   const shouldShareSeriesDomain =
     forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
+  const seriesSet = seriesField
+    ? new Set([...seriesField.valueSet].slice(0, maxSeries))
+    : null;
 
   /**************************************
    *
@@ -198,9 +209,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
       enter: {
         x: {scale: 'xscale', field: 'x'},
         y: {scale: 'yscale', field: 'y'},
-        stroke: {scale: 'color', field: 'series'},
         strokeWidth: {value: 2},
-        zindex: {value: 0},
       },
       update: {
         strokeOpacity: [
@@ -210,10 +219,17 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           },
           {value: 1},
         ],
+        stroke: [
+          {
+            test: 'brushSeriesIn && brushSeriesIn != datum.series',
+            value: '#ccc',
+          },
+          {scale: 'color', field: 'series'},
+        ],
         // TODO figure out why this isn't working. We need highlighted line to appear above other lines
         zindex: [
-          {test: 'brushSeriesIn && brushSeriesIn === datum.series', value: 1},
-          {value: 0},
+          {test: 'brushSeriesIn && brushSeriesIn === datum.series', value: 10},
+          {value: 1},
         ],
       },
     },
@@ -589,7 +605,7 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         type: 'ordinal',
         range: 'category',
         domain: shouldShareSeriesDomain
-          ? [...seriesField!.valueSet]
+          ? [...seriesSet!]
           : {
               data: 'values',
               field: 'series',
@@ -728,6 +744,8 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
       return cell.isTime() ? cell.value.valueOf() : cell.value;
     };
 
+    // TODO: How to limit data across nested charts? Which are unaware of their data usage?
+    //    this will only limit data per nested chart
     const mappedData: {
       __values: {[name: string]: CellValue};
       __row: RecordCell;
@@ -735,18 +753,40 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
       y: CellValue;
       series: CellValue;
     }[] = [];
-    data.rows.forEach(row => {
-      // Filter out missing date/time values
-      if (xIsDateorTime && getXValue(row) === null) {
-        return;
+    const localSeriesSet = new Set<string | number | boolean>();
+    function skipSeries(seriesVal: string | number | boolean) {
+      if (shouldShareSeriesDomain && seriesSet) {
+        return !seriesSet.has(seriesVal);
+      } else {
+        if (
+          localSeriesSet.size >= maxSeries &&
+          !localSeriesSet.has(seriesVal)
+        ) {
+          return true;
+        }
+        localSeriesSet.add(seriesVal);
+        return false;
       }
-      // Map data fields to chart properties.  Handle undefined values properly.
+    }
+    data.rows.slice(0, MAX_DATA_POINTS).forEach(row => {
       let seriesVal = seriesField
         ? row.column(seriesField.name).value
         : yField.name;
+      // Limit # of series
+      if (skipSeries(seriesVal)) {
+        return;
+      }
+      // Filter out missing date/time/metric values
+      const isMissingX = xIsDateorTime && getXValue(row) === null;
+      const isMissingY = row.column(yField.name).value === null;
+      if (isMissingX || isMissingY) {
+        return;
+      }
+      // Map data fields to chart properties.  Handle undefined values properly.
       if (seriesVal === undefined || seriesVal === null) {
         seriesVal = NULL_SYMBOL;
       }
+
       mappedData.push({
         __values: row.allCellValues(),
         __row: row,
@@ -755,11 +795,21 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         series: seriesVal,
       });
     });
-    return mappedData;
+
+    return {
+      data: mappedData,
+      isDataLimited: data.rows.length > mappedData.length,
+      // Distinguish between limiting by record count and limiting by series count
+      dataLimitMessage:
+        seriesField && seriesField.valueSet.size > maxSeries
+          ? `Showing ${maxSeries.toLocaleString()} of ${seriesField.valueSet.size.toLocaleString()} series`
+          : '',
+    };
   };
 
   // Memoize tooltip data
   const tooltipEntryMemo = new Map<Item, ChartTooltipEntry | null>();
+  const tooltipItemCountLimit = 10;
 
   return {
     spec,
@@ -802,9 +852,13 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .slice(0, tooltipItemCountLimit);
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => ({
+          entries: sortedRecords.map(rec => ({
             label: rec.series,
             value: formatY(rec),
             highlight: false,
@@ -834,9 +888,20 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
             )
           : itemData.x;
 
+        // If the highlighted item is not included in the first ~20,
+        // then it will probably be cut off.
+
+        const sortedRecords = [...records]
+          .sort((a, b) => b.y - a.y)
+          .filter(
+            (item, index) =>
+              index <= tooltipItemCountLimit ||
+              item.series === highlightedSeries
+          );
+
         tooltipData = {
           title: [title],
-          entries: records.map(rec => {
+          entries: sortedRecords.map(rec => {
             return {
               label: rec.series,
               value: formatY(rec),
@@ -866,6 +931,14 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         records.length === 1
       ) {
         customTooltipRecords = records;
+      }
+
+      customTooltipRecords.sort((a, b) => {
+        return a.y - b.y;
+      });
+
+      if (customTooltipRecords.length > 20) {
+        customTooltipRecords = customTooltipRecords.slice(0, 20);
       }
 
       if (tooltipData) {

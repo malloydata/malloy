@@ -1,4 +1,5 @@
 name: 'DB:MotherDuck'
+permissions: {}
 
 on:
   workflow_call:
