@@ -31,7 +31,6 @@ import {getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import type {
   AggregateFunctionType,
-  Annotation,
   CompiledQuery,
   Expr,
   FieldDef,
@@ -2526,7 +2525,7 @@ class QueryQuery extends QueryField {
   expandField(f: QueryFieldDef) {
     const field =
       f.type === 'fieldref'
-        ? this.parent.getQueryFieldReference(f.path, f.annotation)
+        ? this.parent.getQueryFieldReference(f)
         : this.parent.makeQueryField(f);
     const as = field.getIdentifier();
     return {as, field};
@@ -2870,6 +2869,8 @@ class QueryQuery extends QueryField {
         fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1];
       const limit = isRawSegment(lastSegment) ? undefined : lastSegment.limit;
       let orderBy: OrderBy[] | undefined = undefined;
+      const drillable: boolean =
+        isQuerySegment(lastSegment) && fi.turtleDef.pipeline.length === 1;
       if (isQuerySegment(lastSegment)) {
         orderBy = lastSegment.orderBy;
       }
@@ -2882,6 +2883,7 @@ class QueryQuery extends QueryField {
           fieldKind: 'struct',
           limit,
           orderBy,
+          drillable,
         };
       }
     }
@@ -2952,6 +2954,14 @@ class QueryQuery extends QueryField {
 
           const location = fOut.location;
           const annotation = fOut.annotation;
+          const drillView = isAtomic(fOut) ? fOut.drillView : undefined;
+
+          const common = {
+            resultMetadata,
+            location,
+            annotation,
+            drillView,
+          };
 
           // build out the result fields...
           switch (fOut.type) {
@@ -2961,9 +2971,7 @@ class QueryQuery extends QueryField {
               fields.push({
                 name,
                 type: fOut.type,
-                resultMetadata,
-                location,
-                annotation,
+                ...common,
               });
               break;
             case 'date':
@@ -2976,9 +2984,7 @@ class QueryQuery extends QueryField {
               fields.push({
                 name,
                 ...fd,
-                resultMetadata,
-                location,
-                annotation,
+                ...common,
               });
               break;
             }
@@ -2987,15 +2993,13 @@ class QueryQuery extends QueryField {
                 name,
                 numberType: fOut.numberType,
                 type: 'number',
-                resultMetadata,
-                location,
-                annotation,
+                ...common,
               });
               break;
             case 'sql native':
             case 'record':
             case 'array': {
-              fields.push({...fOut, resultMetadata});
+              fields.push({...fOut, ...common});
               break;
             }
             default:
@@ -4974,12 +4978,10 @@ class QueryStruct {
     return field;
   }
 
-  getQueryFieldReference(
-    path: string[],
-    annotation: Annotation | undefined
-  ): QueryField {
+  getQueryFieldReference(f: RefToField): QueryField {
+    const {path, annotation, drillView} = f;
     const field = this.getFieldByName(path);
-    if (annotation) {
+    if (annotation || drillView) {
       if (field.parent === undefined) {
         throw new Error(
           'Inconcievable, field reference to orphaned query field'
@@ -4988,7 +4990,7 @@ class QueryStruct {
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
-        const newDef = {...field.fieldDef, annotation};
+        const newDef = {...field.fieldDef, annotation, drillView};
         return new QueryFieldStruct(
           newDef,
           undefined,
@@ -4997,7 +4999,7 @@ class QueryStruct {
           field.referenceId
         );
       } else {
-        const newDef = {...field.fieldDef, annotation};
+        const newDef = {...field.fieldDef, annotation, drillView};
         return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }

@@ -529,6 +529,7 @@ export interface ResultMetadataDef {
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
   referenceId?: string;
+  drillable?: boolean;
 }
 
 export interface Ordered {
@@ -698,6 +699,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
+  drillView?: string;
 }
 
 // this field definition represents something in the database.
@@ -1486,6 +1488,7 @@ export interface RefToField {
   path: string[];
   annotation?: Annotation;
   at?: DocumentLocation;
+  drillView?: string;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

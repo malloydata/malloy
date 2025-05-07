@@ -9,6 +9,7 @@ import type {
   AtomicFieldDef,
   Expr,
   FilterCondition,
+  PipeSegment,
   TurtleDef,
   TypeDesc,
 } from '../../../model/malloy_types';
@@ -16,6 +17,7 @@ import {
   expressionIsAggregate,
   expressionIsAnalytic,
   isAtomic,
+  isQuerySegment,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
 import {ExprCompare} from '../expressions/expr-compare';
@@ -330,4 +332,22 @@ export class Drill
       }
     }
   }
+}
+
+export function attachDrillPaths(
+  pipeline: PipeSegment[],
+  name: string
+): PipeSegment[] {
+  if (pipeline.length !== 1) return pipeline;
+  if (!isQuerySegment(pipeline[0])) return pipeline;
+  return [
+    {
+      ...pipeline[0],
+      // TODO only if scalar?
+      queryFields: pipeline[0].queryFields.map(f => ({
+        ...f,
+        drillView: name,
+      })),
+    },
+  ];
 }

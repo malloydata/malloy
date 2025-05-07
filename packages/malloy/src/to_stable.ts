@@ -240,6 +240,16 @@ function getResultMetadataAnnotation(
     tag.set(['calculation']);
     hasAny = true;
   }
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
+  }
+  if (isAtomic(field)) {
+    if (field.drillView !== undefined) {
+      tag.set(['drill_view'], field.drillView);
+      hasAny = true;
+    }
+  }
   if (resultMetadata.filterList) {
     const drillFilters = resultMetadata.filterList
       .filter(f => f.expressionType === 'scalar')
@@ -293,6 +303,10 @@ export function getResultStructMetadataAnnotation(
       tag.set(['drill_filters'], drillFilters);
       hasAny = true;
     }
+  }
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
   }
   if (resultMetadata.orderBy) {
     for (let i = 0; i < resultMetadata.orderBy.length; i++) {

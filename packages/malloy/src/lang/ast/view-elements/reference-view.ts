@@ -32,6 +32,7 @@ import {
 import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
+import {attachDrillPaths} from '../query-properties/drill';
 import {getFinalStruct} from '../struct-utils';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
@@ -129,6 +130,7 @@ export class ReferenceView extends View {
           ...pipeline.slice(1),
         ];
       }
+      pipeline = attachDrillPaths(pipeline, fieldDef.name);
       return {
         pipeline,
         name: fieldDef.name,

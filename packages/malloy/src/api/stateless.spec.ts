@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Tag} from '@malloydata/malloy-tag';
 import {compileModel, compileQuery, compileSource} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -739,6 +740,187 @@ LIMIT 101
       };
       expect(result).toMatchObject(expected);
     });
+    describe('drilling', () => {
+      test('has enough info to produce valid drill', () => {
+        const result = compileQuery({
+          model_url: 'file://test.malloy',
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {kind: 'source_reference', name: 'flights'},
+              view: {
+                kind: 'view_reference',
+                name: 'dashboard',
+              },
+            },
+          },
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+                schema: {
+                  fields: [
+                    {
+                      kind: 'dimension',
+                      name: 'carrier',
+                      type: {kind: 'string_type'},
+                    },
+                  ],
+                },
+              },
+            ],
+            files: [
+              {
+                url: 'file://test.malloy',
+                contents: `
+                  ##! experimental.drill
+                  source: flights is connection.table('flights') extend {
+                    view: by_carrier is {
+                      group_by: carrier
+                      group_by: expression is 1
+                      aggregate: flight_count is count()
+                    }
+                    view: pipeline is {
+                      group_by: carrier
+                    } -> { select: * }
+                    view: dashboard is {
+                      group_by: carrier
+                      group_by: expression is 1
+                      nest: by_carrier
+                      nest: by_carrier_2 is {
+                        group_by: carrier
+                        group_by: expression is 1
+                        aggregate: flight_count is count()
+                      }
+                      nest: pipeline
+                      nest: pipeline_2 is {
+                        group_by: carrier
+                      } -> { select: * }
+                    }
+                  }
+                `,
+              },
+            ],
+            connections: [{name: 'connection', dialect: 'duckdb'}],
+          },
+        });
+        const expected: Malloy.CompileQueryResponse = {
+          result: {
+            connection_name: 'connection',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+                {
+                  kind: 'dimension',
+                  name: 'expression',
+                  type: {kind: 'number_type', subtype: 'integer'},
+                },
+                {
+                  kind: 'dimension',
+                  name: 'by_carrier',
+                  type: {
+                    kind: 'array_type',
+                    element_type: {
+                      kind: 'record_type',
+                      fields: [
+                        {
+                          name: 'carrier',
+                          type: {kind: 'string_type'},
+                        },
+                        {
+                          name: 'expression',
+                          type: {kind: 'number_type', subtype: 'integer'},
+                        },
+                        {
+                          name: 'flight_count',
+                          type: {kind: 'number_type', subtype: 'integer'},
+                        },
+                      ],
+                    },
+                  },
+                },
+                {
+                  kind: 'dimension',
+                  name: 'by_carrier_2',
+                  type: {
+                    kind: 'array_type',
+                    element_type: {
+                      kind: 'record_type',
+                      fields: [
+                        {
+                          name: 'carrier',
+                          type: {kind: 'string_type'},
+                        },
+                        {
+                          name: 'expression',
+                          type: {kind: 'number_type', subtype: 'integer'},
+                        },
+                        {
+                          name: 'flight_count',
+                          type: {kind: 'number_type', subtype: 'integer'},
+                        },
+                      ],
+                    },
+                  },
+                },
+                {
+                  kind: 'dimension',
+                  name: 'pipeline',
+                  type: {
+                    kind: 'array_type',
+                    element_type: {
+                      kind: 'record_type',
+                      fields: [
+                        {
+                          name: 'carrier',
+                          type: {kind: 'string_type'},
+                        },
+                      ],
+                    },
+                  },
+                },
+                {
+                  kind: 'dimension',
+                  name: 'pipeline_2',
+                  type: {
+                    kind: 'array_type',
+                    element_type: {
+                      kind: 'record_type',
+                      fields: [
+                        {
+                          name: 'carrier',
+                          type: {kind: 'string_type'},
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        };
+        expect(result).toMatchObject(expected);
+        const carrier = result.result?.schema.fields[0];
+        const carrierTag = tagFor(carrier);
+        expect(carrierTag?.text('drill_view')).toBe('dashboard');
+        const expression = result.result?.schema.fields[1];
+        const expressionTag = tagFor(expression);
+        expect(expressionTag?.text('drill_view')).toBe('dashboard');
+        const byCarrier = result.result?.schema.fields[2];
+        const byCarrierTag = tagFor(byCarrier);
+        expect(byCarrierTag?.has('drillable')).toBe(true);
+        const pipeline = result.result?.schema.fields[4];
+        const pipelineTag = tagFor(pipeline);
+        expect(pipelineTag?.has('drillable')).toBe(false);
+        const resultTag = tagFor(result.result);
+        expect(resultTag?.has('drillable')).toBe(true);
+      });
+    });
   });
   test('compile and get source annotations', () => {
     const result = compileQuery({
@@ -1058,3 +1240,15 @@ LIMIT 101
     );
   });
 });
+
+interface HasAnnotations {
+  annotations?: Malloy.Annotation[] | undefined;
+}
+
+function tagFor(field: HasAnnotations | undefined) {
+  return Tag.fromTagLines(
+    field?.annotations
+      ?.filter(a => a.value.startsWith('#(malloy) '))
+      .map(a => a.value) ?? []
+  ).tag;
+}
