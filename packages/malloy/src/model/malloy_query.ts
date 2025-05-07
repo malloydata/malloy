@@ -2581,7 +2581,8 @@ class QueryQuery extends QueryField {
       if (expr.node === 'function_call') {
         if (
           expressionIsAnalytic(expr.overload.returnType.expressionType) &&
-          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+          resultStruct.firstSegment.type === 'reduce'
         ) {
           // force the use of a lateral_join_bag
           resultStruct.root().isComplexQuery = true;
@@ -3395,7 +3396,8 @@ class QueryQuery extends QueryField {
           if (isScalarField(fi.f)) {
             if (
               this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
-              this.rootResult.queryUsesPartitioning
+              this.rootResult.queryUsesPartitioning &&
+              resultSet.firstSegment.type === 'reduce'
             ) {
               // BigQuery can't partition aggregate function except when the field has no
               //  expression.  Additionally it can't partition by floats.  We stuff expressions
