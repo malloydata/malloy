@@ -724,50 +724,7 @@ export class MalloyToAST
 
   visitDrillClauseList(pcx: parse.FilterClauseListContext): ast.Drill {
     this.inExperiment('drill', pcx);
-    return new ast.Drill(
-      pcx.fieldExpr().map(f => {
-        const filterElement = this.getFilterElement(f);
-        if (!(filterElement.expr instanceof ast.ExprEquality)) {
-          this.contextError(
-            f,
-            'drill-not-equality',
-            'Drill conditions must be an equality check'
-          );
-        }
-        const expr: ast.ExprEquality = filterElement.expr as ast.ExprEquality; // TS what?
-        if (expr.op !== '=') {
-          this.contextError(
-            f,
-            'drill-not-equality',
-            'Drill conditions must be an equality check'
-          );
-        }
-        if (!(expr.left instanceof ast.ExprIdReference)) {
-          this.contextError(
-            f,
-            'drill-lhs-not-id',
-            'Left hand side of drill condition must be a field reference'
-          );
-        }
-        if (!ast.isLiteral(expr.right)) {
-          this.contextError(
-            f,
-            'drill-rhs-not-literal',
-            'Right hand side of drill condition must be a literal'
-          );
-        }
-        return this.astAt(
-          new ast.DrillElement(
-            new ast.DrillFieldReference(
-              (expr.left as ast.ExprIdReference).fieldReference.list
-            ),
-            expr.right as ast.Literal,
-            this.getSourceCode(f)
-          ),
-          f
-        );
-      })
-    );
+    return new ast.Drill(pcx.fieldExpr().map(f => this.getFilterElement(f)));
   }
 
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {

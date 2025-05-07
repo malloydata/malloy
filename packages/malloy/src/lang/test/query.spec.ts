@@ -1443,6 +1443,34 @@ describe('query:', () => {
       expect(f.length).toBe(1);
       expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
     });
+    test('can include normal filters in drill statement', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+          dimension: is_cool is false
+          dimension: is_special is false
+        }
+        run: aext -> {
+          drill:
+            astr = 'foo',
+            af > 100,
+            is_cool and is_special,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(4);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {af > 100}}');
+      expect(f[2]).toBeExpr('{filterCondition {is_cool and is_special}}');
+      expect(f[3]).toBeExpr('{filterCondition {ai = 2}}');
+    });
     test('drill view is not defined', () => {
       expect(
         markSource`
@@ -1547,6 +1575,34 @@ describe('query:', () => {
         )
       );
     });
+    test('subsequent drill uses illegal paths', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+              }
+            }
+            view: view_two is {
+              nest: nest_two is {
+                group_by: astr
+              }
+            }
+          }
+          run: aext -> {
+            drill: view_one.nest_one.astr = 'foo'
+            drill: ${'view_two.nest_two.astr = "foo"'}
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Drill fields must come from at most one distinct nest level; a previous drill clause restricts this one to `view_one.nest_one`'
+        )
+      );
+    });
     test('drill nest not found', () => {
       expect(
         markSource`
@@ -1599,10 +1655,10 @@ describe('query:', () => {
       expect(m).toTranslate();
       const q = m.modelDef.queryList[0];
       const f = q.pipeline[0].filterList!;
-      expect(f.length).toBe(3);
-      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
-      expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
-      expect(f[2]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{ai = 2} and {abool = true}} and {astr = {"foo"}}}}'
+      );
     });
     test('can filter on private field with drill', () => {
       const m = new TestTranslator(`
@@ -1643,6 +1699,55 @@ describe('query:', () => {
       const f = q.pipeline[0].filterList!;
       expect(f.length).toBe(1);
       expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can filter on join with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          join_one: b on true
+          view: by_b_ai is {
+            group_by: b.ai
+          }
+        }
+        run: aext -> {
+          drill: by_b_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {b.ai = 2}}');
+    });
+    test('resolve composite slice correctly when using drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { composite_sources drill }
+        source: a_with_x is a extend { dimension: x is 1 }
+        source: a_with_y is a extend { dimension: y is 1 }
+        source: a_with_x_and_y is a_with_x extend { dimension: y is 1 }
+        source: aext is compose(
+          a,
+          a_with_x,
+          a_with_y,
+          a_with_x_and_y
+        ) extend {
+          view: by_y is {
+            where: x = 1
+            group_by: y
+          }
+        }
+        run: aext -> {
+          drill: by_y.y = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{x = 1} and {y = 2}}}');
+      expect(q.compositeResolvedSourceDef?.as).toBe('a_with_x_and_y');
     });
     test('can filter on param with drill', () => {
       const m = new TestTranslator(`

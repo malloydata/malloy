@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import type {
   AtomicFieldDef,
   Expr,
+  FieldUsage,
   FilterCondition,
   PipeSegment,
   TurtleDef,
@@ -19,21 +21,20 @@ import {
   isAtomic,
   isQuerySegment,
 } from '../../../model/malloy_types';
-import {isNotUndefined} from '../../utils';
 import {ExprCompare} from '../expressions/expr-compare';
 import {PermissiveSpace} from '../field-space/permissive-space';
 import {ViewField} from '../field-space/view-field';
-import type {DrillFieldReference} from '../query-items/field-references';
+import type {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 import {FieldName, type FieldSpace} from '../types/field-space';
 import type {Literal} from '../types/literal';
-import {ListOf, MalloyElement} from '../types/malloy-element';
-import type {QueryBuilder} from '../types/query-builder';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {SpaceField} from '../types/space-field';
+import type {FilterElement} from './filters';
+import {Filter} from './filters';
 
 export class DrillField extends ExpressionDef {
   elementType = 'drillField';
@@ -52,45 +53,43 @@ export class DrillField extends ExpressionDef {
   }
 }
 
-export class DrillElement extends MalloyElement {
-  elementType = 'filterElement';
-  constructor(
-    readonly field: DrillFieldReference,
-    readonly value: Literal,
-    readonly exprSrc: string
-  ) {
-    super({value, field});
-  }
-}
-
-export class Drill
-  extends ListOf<DrillElement>
-  implements QueryPropertyInterface
-{
+export class Drill extends Filter implements QueryPropertyInterface {
   elementType = 'drill';
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Head;
 
-  protected checkedFilterCondition(
+  protected checkedDrillCondition(
     fs: FieldSpace,
-    drill: DrillElement,
-    restrictNest: string[] | undefined
-  ):
-    | {restrictNest: string[] | undefined; filter: FilterCondition[]}
-    | undefined {
+    filter: FilterElement,
+    reference: FieldReference,
+    value: Literal
+  ): {restrictNest: string[] | undefined; filter: FilterCondition} | undefined {
     const permissiveFS = new PermissiveSpace(fs);
-    const collectedWheres: FilterCondition[] = [];
-    if (drill.field.list.length === 0) {
-      drill.logError('invalid-drill-reference', 'Invalid drill reference`');
+    const normalLookup = fs.lookup(reference.list);
+    if (normalLookup.found) {
+      const cond = super.checkedFilterCondition(fs, filter);
+      if (cond) return {filter: cond, restrictNest: undefined};
+      return undefined;
+    }
+    if (!fs.isQueryFieldSpace()) {
+      // This is really an internal error, this should not happen
+      filter.logError('illegal-drill', 'Drill only allowed in query');
       return;
-    } else if (drill.field.list.length < 2) {
-      drill.logError(
+    }
+    const restrictNest = fs.outputSpace().restrictedDrillNest;
+    let collectedWheres: Expr | undefined = undefined;
+    let collectedWhereFieldUsage: FieldUsage[] | undefined = undefined;
+    if (reference.list.length === 0) {
+      filter.logError('invalid-drill-reference', 'Invalid drill reference`');
+      return;
+    } else if (reference.list.length < 2) {
+      filter.logError(
         'invalid-drill-reference',
         'Drill reference be a view name followed by a path to a field in that view, e.g. `some_view.some_nest.some_field`'
       );
       return;
     }
-    const [viewName, ...path] = drill.field.list;
+    const [viewName, ...path] = reference.list;
     const viewLookup = fs.lookup([viewName]);
     // TODO register reference to view
     if (viewLookup.found === undefined) {
@@ -113,7 +112,7 @@ export class Drill
       !(viewLookup.found instanceof ViewField)
     ) {
       const typeName = isAtomic(typeDesc) ? typeDesc.type : 'join'; // TODO test this?
-      drill.logError(
+      filter.logError(
         'drill-view-reference-not-view',
         `Head of drill reference must be a view, not a ${typeName}`
       );
@@ -146,7 +145,24 @@ export class Drill
         );
         return;
       }
-      collectedWheres.push(...(segment.filterList ?? []));
+      for (const filter of segment.filterList ?? []) {
+        if (collectedWheres === undefined) {
+          collectedWheres = filter.e;
+          collectedWhereFieldUsage = filter.fieldUsage;
+        } else {
+          collectedWheres = {
+            node: 'and',
+            kids: {
+              left: collectedWheres,
+              right: filter.e,
+            },
+          };
+          collectedWhereFieldUsage = mergeFieldUsage(
+            collectedWhereFieldUsage,
+            filter.fieldUsage
+          );
+        }
+      }
       const field = segment.queryFields.find(f => {
         if (f.type === 'fieldref') {
           return f.path[f.path.length - 1] === name.refString;
@@ -239,7 +255,7 @@ export class Drill
     }
 
     if (fieldDef === undefined || compareField === undefined) {
-      drill.logError(
+      filter.logError(
         'invalid-drill-reference',
         'Could not determine drill field'
       );
@@ -249,25 +265,25 @@ export class Drill
     const isAggregate = expressionIsAggregate(fieldDef.expressionType);
     const isAnalytic = expressionIsAnalytic(fieldDef.expressionType);
     if (isAnalytic) {
-      drill.logError(
+      filter.logError(
         'analytic-in-drill',
         'Analytic expressions are not allowed in `drill:`'
       );
       return;
     } else if (isAggregate) {
-      drill.logError(
+      filter.logError(
         'aggregate-in-drill',
         'Aggregate expressions are not allowed in `drill:`'
       );
     }
 
-    if (drill.field.list.length >= 3) {
+    if (reference.list.length >= 3) {
       if (restrictNest !== undefined) {
         if (
-          drill.field.list[0].name !== restrictNest[0] ||
-          drill.field.list[1].name !== restrictNest[1]
+          reference.list[0].name !== restrictNest[0] ||
+          reference.list[1].name !== restrictNest[1]
         ) {
-          drill.logError(
+          filter.logError(
             'illegal-drill',
             `Drill fields must come from at most one distinct nest level; a previous drill clause restricts this one to \`${restrictNest.join(
               '.'
@@ -276,7 +292,9 @@ export class Drill
           return;
         }
       } else {
-        restrictNest = drill.field.list.map(f => f.name).slice(0, 2);
+        fs.outputSpace().restrictedDrillNest = reference.list
+          .map(f => f.name)
+          .slice(0, 2);
       }
     }
 
@@ -286,50 +304,47 @@ export class Drill
       expressionType: fieldDef.expressionType ?? 'scalar',
       fieldUsage: fieldDef.fieldUsage ?? [],
     });
-    drill.has({drillField});
-    const fExpression = new ExprCompare(drillField, '=', drill.value);
+    filter.has({drillField});
+    const fExpression = new ExprCompare(drillField, '=', value);
     this.has({fExpression});
 
     const fExpr = fExpression.getExpression(permissiveFS);
 
-    // TODO valid type of filter condition to be only equality
+    // TODO valid type of filter condition to be only boolean
 
     const exprCond: FilterCondition = {
       node: 'filterCondition',
-      code: drill.exprSrc,
-      e: fExpr.value,
+      code: filter.exprSrc,
+      e:
+        collectedWheres === undefined
+          ? fExpr.value
+          : {
+              node: 'and',
+              kids: {left: collectedWheres, right: fExpr.value},
+            },
       expressionType: fExpr.expressionType,
-      fieldUsage: fExpr.fieldUsage,
+      fieldUsage: mergeFieldUsage(fExpr.fieldUsage, collectedWhereFieldUsage),
     };
     return {
-      filter: [...collectedWheres, exprCond],
+      filter: exprCond,
       restrictNest,
     };
   }
 
-  getFilterList(fs: FieldSpace): FilterCondition[] {
-    return this.list
-      .map(filter => this.checkedFilterCondition(fs, filter, undefined)?.filter)
-      .filter(isNotUndefined)
-      .flat();
-  }
-
-  queryExecute(executeFor: QueryBuilder) {
-    const filterFS = executeFor.inputFS;
-    let restrictNest: string[] | undefined = undefined;
-    for (const drill of this.list) {
-      const compiled = this.checkedFilterCondition(
-        filterFS,
-        drill,
-        restrictNest
-      );
-      if (compiled !== undefined) {
-        restrictNest = compiled.restrictNest;
-        executeFor.filters.push(...compiled.filter);
-        for (const f of compiled.filter) {
-          executeFor.resultFS.addFieldUserFromFilter(f, drill);
-        }
-      }
+  protected checkedFilterCondition(
+    fs: FieldSpace,
+    filter: FilterElement
+  ): FilterCondition | undefined {
+    const drillFilter = filter.drillFilter();
+    if (drillFilter !== undefined) {
+      return this.checkedDrillCondition(
+        fs,
+        filter,
+        drillFilter.reference,
+        drillFilter.value
+      )?.filter;
+    } else {
+      return super.checkedFilterCondition(fs, filter);
     }
   }
 }

@@ -68,6 +68,7 @@ export abstract class QueryOperationSpace
     string,
     {path: string[]; entry: SpaceEntry; at: model.DocumentLocation}
   > = {};
+  restrictedDrillNest: string[] | undefined;
   compositeFieldUsers: (
     | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
     | {

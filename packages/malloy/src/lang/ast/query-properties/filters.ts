@@ -27,9 +27,13 @@ import {
   expressionIsAnalytic,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
+import {ExprEquality} from '../expressions/expr-compare';
+import {ExprIdReference} from '../expressions/expr-id-reference';
+import { FieldReference } from '../query-items/field-references';
 
 import type {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {FieldName, FieldSpace} from '../types/field-space';
+import {isLiteral, type Literal} from '../types/literal';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {QueryBuilder} from '../types/query-builder';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
@@ -67,6 +71,26 @@ export class FilterElement extends MalloyElement {
       fieldUsage: exprVal.fieldUsage,
     };
     return exprCond;
+  }
+
+  drillFilter():
+    | {
+        reference: FieldReference;
+        value: Literal;
+      }
+    | undefined {
+    if (
+      this.expr instanceof ExprEquality &&
+      this.expr.op === '=' &&
+      this.expr.left instanceof ExprIdReference &&
+      isLiteral(this.expr.right)
+    ) {
+      return {
+        reference: this.expr.left.fieldReference,
+        value: this.expr.right as Literal,
+      };
+    }
+    return undefined;
   }
 }
 
