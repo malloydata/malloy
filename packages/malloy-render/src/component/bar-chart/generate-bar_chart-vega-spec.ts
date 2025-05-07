@@ -88,7 +88,9 @@ function getLimitedData({
 
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
-  const maxSizePerXGroup = Math.floor(refinedMaxSizePerBar * subGroupBars);
+  const maxSizePerXGroup = chartSettings.isSpark
+    ? 2
+    : Math.floor(refinedMaxSizePerBar * subGroupBars);
   const barLimitTag = chartTag.numeric('x', 'limit');
   const barLimit =
     barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);

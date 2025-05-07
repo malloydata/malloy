@@ -60,6 +60,7 @@ export type ChartLayoutSettings = {
   };
   totalWidth: number;
   totalHeight: number;
+  isSpark: boolean;
 };
 
 // Later should depend on chart type?
@@ -96,33 +97,31 @@ export function getChartLayoutSettings(
   const tag = field.tag;
 
   // For now, support legacy API of size being its own tag
-  let customWidth =
+  const taggedWidth =
     chartTag.numeric('size', 'width') ?? tag.numeric('size', 'width');
-  let customHeight =
+  const taggedHeight =
     chartTag.numeric('size', 'height') ?? tag.numeric('size', 'height');
-  let presetSize = (chartTag.text('size') ?? tag.text('size')) || 'md';
-  if (!field.isRoot() && presetSize === 'fill') {
-    presetSize = 'md';
-  }
-
-  const isFillMode = presetSize === 'fill';
-  const fillModeWidth = options.metadata.parentSize.width;
-  const fillModeHeight = options.metadata.parentSize.height;
-
+  const taggedPresetSize = chartTag.text('size') ?? tag.text('size');
+  const hasNoDefinedSize = !taggedWidth && !taggedHeight && !taggedPresetSize;
+  const isFillMode =
+    taggedPresetSize === 'fill' || (hasNoDefinedSize && field.isRoot());
+  const presetSize =
+    taggedPresetSize &&
+    Object.prototype.hasOwnProperty.call(CHART_SIZES, taggedPresetSize)
+      ? taggedPresetSize
+      : 'md';
   let chartWidth = 0,
-    chartHeight = 0,
-    heightRows = 0;
+    chartHeight = 0;
 
   if (isFillMode) {
-    customWidth = fillModeWidth;
-    customHeight = fillModeHeight;
+    chartWidth = options.metadata.parentSize.width;
+    chartHeight = options.metadata.parentSize.height;
   } else {
-    [chartWidth, heightRows] = CHART_SIZES[presetSize];
+    const [presetWidth, heightRows] = CHART_SIZES[presetSize];
+    const presetHeight = heightRows * ROW_HEIGHT;
+    chartWidth = taggedWidth ?? presetWidth;
+    chartHeight = taggedHeight ?? presetHeight;
   }
-
-  chartHeight = heightRows * ROW_HEIGHT;
-  if (customWidth) chartWidth = customWidth;
-  if (customHeight) chartHeight = customHeight;
 
   let xAxisHeight = 0;
   let yAxisWidth = 0;
@@ -230,7 +229,6 @@ export function getChartLayoutSettings(
       labelLimit = 0;
       labelAlign = undefined;
       labelBaseline = 'top';
-      xTitleSize = 22;
       xAxisHeight = 14;
     }
   }
@@ -257,15 +255,19 @@ export function getChartLayoutSettings(
   if (isFillMode) {
     padding.left += 24;
     padding.right += 24;
-    padding.top += 24;
-    padding.bottom += 24;
+    padding.bottom += 12;
   }
+  const hasChartTitle = chartTag.text('title');
+  const hasChartSubtitle = chartTag.text('subtitle');
+  padding.top += hasChartTitle ? 24 : 0;
+  padding.bottom += hasChartSubtitle ? 24 : 0;
   const paddingInline = padding.left + padding.right;
   const paddingBlock = padding.top + padding.bottom;
-  const plotWidth = isFillMode ? fillModeWidth - paddingInline : chartWidth;
-  const plotHeight = isFillMode ? fillModeHeight - paddingBlock : chartHeight;
-  const totalWidth = isFillMode ? fillModeWidth : chartWidth + paddingInline;
-  const totalHeight = isFillMode ? fillModeHeight : chartHeight + paddingBlock;
+  // If fill mode, make room around inner plot
+  const plotWidth = isFillMode ? chartWidth - paddingInline : chartWidth;
+  const plotHeight = isFillMode ? chartHeight - paddingBlock : chartHeight;
+  const totalWidth = isFillMode ? chartWidth : chartWidth + paddingInline;
+  const totalHeight = isFillMode ? chartHeight : chartHeight + paddingBlock;
 
   return {
     plotWidth,
@@ -288,17 +290,11 @@ export function getChartLayoutSettings(
     yScale: {
       domain: options.independentY ? null : yDomain,
     },
-    padding: isSpark
-      ? {top: 0, left: 0, bottom: 0, right: 0}
-      : {
-          top: topPadding + 1,
-          left: yAxisWidth,
-          bottom: xAxisHeight + xTitleSize,
-          right: 8,
-        },
+    padding: isSpark ? {top: 0, left: 0, bottom: 0, right: 0} : padding,
     xField,
     yField,
     totalWidth,
     totalHeight,
+    isSpark,
   };
 }
