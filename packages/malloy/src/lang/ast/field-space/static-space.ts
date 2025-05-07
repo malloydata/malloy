@@ -28,6 +28,7 @@ import type {
   StructDef,
   SourceDef,
   JoinFieldDef,
+  AccessModifierLabel,
 } from '../../../model/malloy_types';
 import {isJoined, isTurtle, isSourceDef} from '../../../model/malloy_types';
 
@@ -101,8 +102,8 @@ export class StaticSpace implements FieldSpace {
     return this.memoMap;
   }
 
-  isProtectedAccessSpace(): boolean {
-    return false;
+  accessProtectionLevel(): AccessModifierLabel {
+    return 'internal';
   }
 
   protected dropEntries(): void {
@@ -139,7 +140,8 @@ export class StaticSpace implements FieldSpace {
     return ret;
   }
 
-  lookup(path: FieldName[]): LookupResult {
+  lookup(path: FieldName[], accessLevel?: AccessModifierLabel): LookupResult {
+    accessLevel ??= this.accessProtectionLevel();
     const head = path[0];
     const rest = path.slice(1);
     let found = this.entry(head.refString);
@@ -180,9 +182,8 @@ export class StaticSpace implements FieldSpace {
         // TODO path.length === 1 will not work with namespaces
         if (
           !(
-            this.isProtectedAccessSpace() &&
-            definition.accessModifier === 'internal' &&
-            path.length === 1
+            path.length === 1 &&
+            accessAllowed(accessLevel, definition.accessModifier)
           )
         ) {
           return {
@@ -201,7 +202,13 @@ export class StaticSpace implements FieldSpace {
         : [];
     if (rest.length) {
       if (found instanceof StructSpaceFieldBase) {
-        const restResult = found.fieldSpace.lookup(rest);
+        const restResult = found.fieldSpace.lookup(
+          rest,
+          lessPermissiveAccessLevel(
+            accessLevel,
+            found.fieldSpace.accessProtectionLevel()
+          )
+        );
         if (restResult.found) {
           return {
             ...restResult,
@@ -237,7 +244,7 @@ export class StructSpaceField extends StructSpaceFieldBase {
 
   get fieldSpace(): FieldSpace {
     if (isSourceDef(this.structDef)) {
-      return new StaticSourceSpace(this.structDef);
+      return new StaticSourceSpace(this.structDef, 'internal');
     } else {
       return new StaticSpace(this.structDef, this.forDialect);
     }
@@ -245,7 +252,10 @@ export class StructSpaceField extends StructSpaceFieldBase {
 }
 
 export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
-  constructor(protected source: SourceDef) {
+  constructor(
+    protected source: SourceDef,
+    public readonly _accessProtectionLevel: AccessModifierLabel
+  ) {
     super(source, source.dialect);
   }
   structDef(): SourceDef {
@@ -257,4 +267,27 @@ export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
     ret.fields = [];
     return ret;
   }
+
+  accessProtectionLevel(): AccessModifierLabel {
+    return this._accessProtectionLevel;
+  }
+}
+
+function accessAllowed(
+  accessLevel: AccessModifierLabel,
+  accessModifier: AccessModifierLabel
+): boolean {
+  if (accessModifier === 'public') return true;
+  if (accessLevel === 'internal') return accessModifier === 'internal';
+  if (accessLevel === 'private') return true;
+  return false;
+}
+
+function lessPermissiveAccessLevel(
+  a: AccessModifierLabel,
+  b: AccessModifierLabel
+): AccessModifierLabel {
+  if (a === 'public' || b === 'public') return 'public';
+  if (a === 'internal' || b === 'internal') return 'internal';
+  return 'private';
 }

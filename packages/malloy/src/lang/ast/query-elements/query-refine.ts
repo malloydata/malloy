@@ -45,7 +45,7 @@ export class QueryRefine extends QueryBase implements QueryElement {
 
   queryComp(isRefOk: boolean): QueryComp {
     const q = this.base.queryComp(isRefOk);
-    const inputFS = new StaticSourceSpace(q.inputStruct);
+    const inputFS = new StaticSourceSpace(q.inputStruct, 'public');
     const resultPipe = this.refinement.refine(
       inputFS,
       q.query.pipeline,

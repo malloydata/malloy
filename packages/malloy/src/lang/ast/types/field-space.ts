@@ -22,7 +22,11 @@
  */
 
 import type {Dialect} from '../../../dialect/dialect';
-import type {SourceDef, StructDef} from '../../../model/malloy_types';
+import type {
+  AccessModifierLabel,
+  SourceDef,
+  StructDef,
+} from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
@@ -36,13 +40,16 @@ export interface FieldSpace {
   type: 'fieldSpace';
   structDef(): StructDef;
   emptyStructDef(): StructDef;
-  lookup(symbol: FieldName[]): LookupResult;
+  lookup(
+    symbol: FieldName[],
+    accessLevel?: AccessModifierLabel | undefined
+  ): LookupResult;
   entry(symbol: string): SpaceEntry | undefined;
   entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
   dialectName(): string;
   isQueryFieldSpace(): this is QueryFieldSpace;
-  isProtectedAccessSpace(): boolean;
+  accessProtectionLevel(): AccessModifierLabel;
 }
 
 export interface SourceFieldSpace extends FieldSpace {

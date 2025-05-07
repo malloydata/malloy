@@ -151,7 +151,7 @@ export abstract class DynamicSpace
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {
         const index = this.sourceDef.fields.findIndex(
-          f => f.as ?? f.name === name
+          f => (f.as ?? f.name) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);

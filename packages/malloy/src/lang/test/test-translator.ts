@@ -458,7 +458,7 @@ export class BetaExpression extends TestTranslator {
   private testFS() {
     const aStruct = this.internalModel.contents[this.sourceName];
     if (isSourceDef(aStruct)) {
-      const tstFS = new StaticSourceSpace(aStruct);
+      const tstFS = new StaticSourceSpace(aStruct, 'public');
       return tstFS;
     } else {
       throw new Error("Can't get simple namespace for expression tests");

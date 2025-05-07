@@ -100,7 +100,7 @@ export abstract class QueryOperationSpace
     this.exprSpace = new QueryInputSpace(
       queryInputSpace.structDef(),
       this,
-      queryInputSpace.isProtectedAccessSpace()
+      queryInputSpace.accessProtectionLevel()
     );
     if (refineThis) this.addRefineFromFields(refineThis);
   }
@@ -116,6 +116,10 @@ export abstract class QueryOperationSpace
       this.astEl.logError(code, parameters, options);
     }
     return code;
+  }
+
+  accessProtectionLevel(): model.AccessModifierLabel {
+    return 'public';
   }
 
   inputSpace(): QueryInputSpace {

@@ -122,7 +122,7 @@ export class QOpDescView extends View {
         pipeline.slice(-1)
       );
       pipeline[last] = this.getOp(
-        new StaticSourceSpace(finalIn),
+        new StaticSourceSpace(finalIn, 'public'),
         undefined,
         tailRefinements,
         pipeline[last]
