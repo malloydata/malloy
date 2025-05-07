@@ -36,6 +36,7 @@ import type {NestField, RepeatedRecordField, RootCell} from '../data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
+  parentSize: {width: number; height: number};
 };
 
 export interface FieldVegaInfo {
@@ -47,16 +48,18 @@ export interface RenderMetadata {
   store: ResultStore;
   vega: Record<string, FieldVegaInfo>;
   root: RootCell;
+  parentSize: {width: number; height: number};
 }
 
 export function getResultMetadata(
   root: RootCell,
-  options: GetResultMetadataOptions = {}
+  options: GetResultMetadataOptions = {parentSize: {width: 0, height: 0}}
 ): RenderMetadata {
   const metadata: RenderMetadata = {
     store: createResultStore(),
     vega: {},
     root,
+    parentSize: options.parentSize,
   };
   populateAllVegaSpecs(root.field, metadata, options);
 
@@ -94,9 +97,9 @@ function populateVegaSpec(
   let vegaChartProps: VegaChartProps | null = null;
   const chartType = shouldRenderChartAs(field.tag);
   if (chartType === 'bar_chart') {
-    vegaChartProps = generateBarChartVegaSpec(field);
+    vegaChartProps = generateBarChartVegaSpec(field, metadata);
   } else if (chartType === 'line_chart') {
-    vegaChartProps = generateLineChartVegaSpec(field);
+    vegaChartProps = generateLineChartVegaSpec(field, metadata);
   }
 
   if (vegaChartProps) {

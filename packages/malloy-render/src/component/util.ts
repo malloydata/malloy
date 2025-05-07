@@ -22,6 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {createSignal} from 'solid-js';
+
 export function getTextWidthCanvas(
   text: string,
   font: string,
@@ -52,4 +54,16 @@ export function clamp(s: number, e: number, v: number) {
 
 export function getRangeSize(range: [number, number]) {
   return range[1] - range[0] + 1;
+}
+
+export function createRAFSignal<T>(initialValue: T) {
+  const [signal, setSignal] = createSignal<T>(initialValue);
+  let rafId: number | null = null;
+  const setRAFSignal = (value: Exclude<T, Function> | ((prev: T) => T)) => {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      setSignal(value);
+    });
+  };
+  return [signal, setRAFSignal] as const;
 }
