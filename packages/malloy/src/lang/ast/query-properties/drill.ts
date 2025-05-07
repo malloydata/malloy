@@ -71,8 +71,11 @@ export class Drill
 
   protected checkedFilterCondition(
     fs: FieldSpace,
-    drill: DrillElement
-  ): FilterCondition[] | undefined {
+    drill: DrillElement,
+    restrictNest: string[] | undefined
+  ):
+    | {restrictNest: string[] | undefined; filter: FilterCondition[]}
+    | undefined {
     const permissiveFS = new PermissiveSpace(fs);
     const collectedWheres: FilterCondition[] = [];
     if (drill.field.list.length === 0) {
@@ -256,6 +259,25 @@ export class Drill
       );
     }
 
+    if (drill.field.list.length >= 3) {
+      if (restrictNest !== undefined) {
+        if (
+          drill.field.list[0].name !== restrictNest[0] ||
+          drill.field.list[1].name !== restrictNest[1]
+        ) {
+          drill.logError(
+            'illegal-drill',
+            `Drill fields must come from at most one distinct nest level; a previous drill clause restricts this one to \`${restrictNest.join(
+              '.'
+            )}\``
+          );
+          return;
+        }
+      } else {
+        restrictNest = drill.field.list.map(f => f.name).slice(0, 2);
+      }
+    }
+
     const drillField = new DrillField(compareField, {
       ...fieldDef,
       evalSpace: 'output',
@@ -277,37 +299,32 @@ export class Drill
       expressionType: fExpr.expressionType,
       fieldUsage: fExpr.fieldUsage,
     };
-    return [...collectedWheres, exprCond];
+    return {
+      filter: [...collectedWheres, exprCond],
+      restrictNest,
+    };
   }
 
   getFilterList(fs: FieldSpace): FilterCondition[] {
-    // TODO ensure that the rules for drilling are followed:
-    // - can have any number of top level views
-    // - but can only go deeper than depth 0 in ONE of them
-    // - for each nest deep in that one view; cannot go into any other nests at that level
-    // e.g.
-    // a = 1
-    // b = 1
-    // c.d.e = 1
-    // but not
-    // a.b = 1
-    // c.d = 2
-    // or
-    // a.b.c = 1
-    // a.d.e = 1
     return this.list
-      .map(filter => this.checkedFilterCondition(fs, filter))
+      .map(filter => this.checkedFilterCondition(fs, filter, undefined)?.filter)
       .filter(isNotUndefined)
       .flat();
   }
 
   queryExecute(executeFor: QueryBuilder) {
     const filterFS = executeFor.inputFS;
+    let restrictNest: string[] | undefined = undefined;
     for (const drill of this.list) {
-      const fExpr = this.checkedFilterCondition(filterFS, drill);
-      if (fExpr !== undefined) {
-        executeFor.filters.push(...fExpr);
-        for (const f of fExpr) {
+      const compiled = this.checkedFilterCondition(
+        filterFS,
+        drill,
+        restrictNest
+      );
+      if (compiled !== undefined) {
+        restrictNest = compiled.restrictNest;
+        executeFor.filters.push(...compiled.filter);
+        for (const f of compiled.filter) {
           executeFor.resultFS.addFieldUserFromFilter(f, drill);
         }
       }

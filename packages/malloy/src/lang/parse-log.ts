@@ -414,6 +414,7 @@ type MessageParameterTypes = {
   'invalid-malloy-query-document': string;
   'analytic-in-drill': string;
   'aggregate-in-drill': string;
+  'illegal-drill': string;
   'drill-not-equality': string;
   'drill-lhs-not-id': string;
   'drill-rhs-not-literal': string;

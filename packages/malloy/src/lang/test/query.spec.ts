@@ -1491,6 +1491,62 @@ describe('query:', () => {
       expect(f.length).toBe(1);
       expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
     });
+    test('can drill a nest and a field from another view', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+          view: other_view is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.astr = 'foo',
+            other_view.ai = 1
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {ai = 1}}');
+    });
+    test('drill uses illegal paths', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+              }
+            }
+            view: view_two is {
+              nest: nest_two is {
+                group_by: astr
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              view_one.nest_one.astr = 'foo',
+              ${'view_two.nest_two.astr = "foo"'}
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Drill fields must come from at most one distinct nest level; a previous drill clause restricts this one to `view_one.nest_one`'
+        )
+      );
+    });
     test('drill nest not found', () => {
       expect(
         markSource`
