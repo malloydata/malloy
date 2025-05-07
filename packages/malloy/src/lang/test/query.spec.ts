@@ -1524,7 +1524,7 @@ describe('query:', () => {
       expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
       expect(f[2]).toBeExpr('{filterCondition {astr = {"foo"}}}');
     });
-    test.skip('can filter on private field with drill', () => {
+    test('can filter on private field with drill', () => {
       const m = new TestTranslator(`
         source: aext is a extend {
           private dimension: private_ai is ai
