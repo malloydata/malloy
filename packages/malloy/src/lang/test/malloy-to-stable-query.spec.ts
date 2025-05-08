@@ -231,7 +231,6 @@ describe('Malloy to Stable Query', () => {
   describe('drill', () => {
     test('drill clauses with all the literal types, as well as a filter string comparison', () => {
       idempotent(
-        // a = -10, // TODO
         dedent`
           run: a -> {
             drill:
@@ -239,6 +238,7 @@ describe('Malloy to Stable Query', () => {
               a ~ f\`AA\`,
               a.b = "foo",
               a = 1e+32,
+              a = -10,
               a = @2000,
               a = @2000-01,
               a = @2000-01-01,
@@ -305,6 +305,19 @@ describe('Malloy to Stable Query', () => {
                       value: {
                         kind: 'number_literal',
                         number_value: 1e32,
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'number_literal',
+                        number_value: -10,
                       },
                     },
                     kind: 'drill',

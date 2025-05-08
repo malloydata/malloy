@@ -681,8 +681,8 @@ export class MalloyToQuery
         },
         where,
       };
-    } else if (cx instanceof parse.ExprLiteralContext) {
-      const literal = this.getLiteral(cx.literal());
+    } else {
+      const literal = this.getLiteralIncludingNegativeNumber(cx);
       if (literal === null) return null;
       return {
         kind: 'literal_value',
@@ -754,13 +754,16 @@ export class MalloyToQuery
       } else if (cx.compareOp().EQ()) {
         const lhs = cx.fieldExpr()[0];
         const rhs = cx.fieldExpr()[1];
-        if (
-          lhs instanceof parse.ExprFieldPathContext &&
-          rhs instanceof parse.ExprLiteralContext
-        ) {
+        if (lhs instanceof parse.ExprFieldPathContext) {
           const {path, name} = this.getFieldPath(lhs.fieldPath());
-          const literal = this.getLiteral(rhs.literal());
-          if (literal === null) return null;
+          const literal = this.getLiteralIncludingNegativeNumber(rhs);
+          if (literal === null) {
+            this.notAllowed(
+              cx,
+              'Filters other than comparisons with filter strings or equality with literals'
+            );
+            return null;
+          }
           return {
             filter: {
               kind: 'literal_equality',
@@ -825,6 +828,28 @@ export class MalloyToQuery
         timezone,
       };
     }
+  }
+
+  getLiteralIncludingNegativeNumber(
+    cx: parse.FieldExprContext
+  ): Malloy.LiteralValue | null {
+    if (cx instanceof parse.ExprLiteralContext) {
+      return this.getLiteral(cx.literal());
+    } else if (cx instanceof parse.ExprMinusContext) {
+      const value = cx.fieldExpr();
+      if (value instanceof parse.ExprLiteralContext) {
+        const literal = this.getLiteral(value.literal());
+        if (literal === null) return null;
+        if (literal.kind !== 'number_literal') {
+          return null;
+        }
+        return {
+          kind: 'number_literal',
+          number_value: -literal.number_value,
+        };
+      }
+    }
+    return null;
   }
 
   getLiteral(literalCx: parse.LiteralContext): Malloy.LiteralValue | null {
