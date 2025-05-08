@@ -1285,7 +1285,6 @@ export class MalloyToAST
     return new ast.ExprString(str);
   }
 
-
   visitRawString(pcx: parse.RawStringContext): ast.ExprString {
     const str = pcx.text.slice(1).trimStart();
     const lastChar = str[str.length - 1];
