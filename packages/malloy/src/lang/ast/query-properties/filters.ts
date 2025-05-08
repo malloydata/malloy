@@ -29,10 +29,10 @@ import {
 import {isNotUndefined} from '../../utils';
 import {ExprEquality} from '../expressions/expr-compare';
 import {ExprIdReference} from '../expressions/expr-id-reference';
-import { FieldReference } from '../query-items/field-references';
+import type {FieldReference} from '../query-items/field-references';
 
 import type {ExpressionDef} from '../types/expression-def';
-import type {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {isLiteral, type Literal} from '../types/literal';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {QueryBuilder} from '../types/query-builder';
