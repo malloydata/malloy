@@ -197,7 +197,7 @@ export class MalloyToQuery
         return null;
       }
       const name = getId(idCx);
-      const value = this.getFieldExpression(argCx.fieldExpr());
+      const value = this.getLiteralIncludingNegativeNumber(argCx.fieldExpr());
       if (value === null) return null;
       params.push({name, value});
     }

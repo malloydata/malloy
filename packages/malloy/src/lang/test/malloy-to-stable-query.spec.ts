@@ -209,11 +209,8 @@ describe('Malloy to Stable Query', () => {
                 {
                   name: 'p',
                   value: {
-                    kind: 'literal_value',
-                    literal_value: {
-                      kind: 'number_literal',
-                      number_value: 1,
-                    },
+                    kind: 'number_literal',
+                    number_value: 1,
                   },
                 },
               ],
