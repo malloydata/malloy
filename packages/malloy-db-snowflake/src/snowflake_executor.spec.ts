@@ -38,9 +38,11 @@ class SnowflakeExecutorTestSetup {
     await (async () => {
       const rows = await this.executor_.batch(sqlText);
       return rows;
-    })().then((rows: QueryData) => {
-      ret = rows;
-    });
+    })().then(
+      (rows: {rows: QueryData; runStats: {warehouseQueryId: string}}) => {
+        ret = rows.rows;
+      }
+    );
     return ret;
   }
 

@@ -1683,6 +1683,7 @@ export type QueryData = QueryDataRow[];
 /** Query execution stats. */
 export type QueryRunStats = {
   queryCostBytes?: number;
+  warehouseQueryId?: string;
 };
 
 /** Returned Malloy query data */

@@ -151,7 +151,7 @@ export class SnowflakeExecutor {
     conn: Connection,
     options?: RunSQLOptions,
     timeoutMs?: number
-  ): Promise<QueryData> {
+  ): Promise<{rows: QueryData; runStats: {warehouseQueryId: string}}> {
     let _statement: RowStatement | undefined;
     const cancel = () => {
       _statement?.cancel();
@@ -163,7 +163,7 @@ export class SnowflakeExecutor {
         sqlText,
         complete: (
           err: SnowflakeError | undefined,
-          _stmt: RowStatement,
+          stmt: RowStatement,
           rows?: QueryData
         ) => {
           options?.abortSignal?.removeEventListener('abort', cancel);
@@ -173,7 +173,7 @@ export class SnowflakeExecutor {
           if (err) {
             reject(err);
           } else if (rows) {
-            resolve(rows);
+            resolve({rows, runStats: {warehouseQueryId: stmt.getQueryId()}});
           }
         },
       });
@@ -202,7 +202,7 @@ export class SnowflakeExecutor {
     sqlText: string,
     options?: RunSQLOptions,
     timeoutMs?: number
-  ): Promise<QueryData> {
+  ): Promise<{rows: QueryData; runStats: {warehouseQueryId: string}}> {
     return await this.pool_.use(async (conn: Connection) => {
       await this._setSessionParams(conn);
       return await this._execute(sqlText, conn, options, timeoutMs);
@@ -212,7 +212,12 @@ export class SnowflakeExecutor {
   public async stream(
     sqlText: string,
     options?: RunSQLOptions
-  ): Promise<AsyncIterableIterator<QueryDataRow>> {
+  ): Promise<
+    AsyncIterableIterator<{
+      rows: QueryDataRow;
+      runStats: {warehouseQueryId: string};
+    }>
+  > {
     const pool: Pool<Connection> = this.pool_;
     return await pool.acquire().then(async (conn: Connection) => {
       await this._setSessionParams(conn);
@@ -229,7 +234,10 @@ export class SnowflakeExecutor {
             const stream: Readable = stmt.streamRows();
             function streamSnowflake(
               onError: (error: Error) => void,
-              onData: (data: QueryDataRow) => void,
+              onData: (data: {
+                rows: QueryDataRow;
+                runStats: {warehouseQueryId: string};
+              }) => void,
               onEnd: () => void
             ) {
               function handleEnd() {
@@ -239,7 +247,10 @@ export class SnowflakeExecutor {
 
               let index = 0;
               function handleData(this: Readable, row: QueryDataRow) {
-                onData(row);
+                onData({
+                  rows: row,
+                  runStats: {warehouseQueryId: stmt.getQueryId()},
+                });
                 index += 1;
                 if (
                   options?.rowLimit !== undefined &&
@@ -252,7 +263,12 @@ export class SnowflakeExecutor {
               stream.on('data', handleData);
               stream.on('end', handleEnd);
             }
-            return resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
+            return resolve(
+              toAsyncGenerator<{
+                rows: QueryDataRow;
+                runStats: {warehouseQueryId: string};
+              }>(streamSnowflake)
+            );
           },
         });
       });

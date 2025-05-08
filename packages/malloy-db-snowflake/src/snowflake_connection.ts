@@ -245,7 +245,6 @@ export class SnowflakeConnection
     super();
     let connOptions = options?.connOptions;
     if (connOptions === undefined) {
-      // try to get connection options from ~/.snowflake/connections.toml
       connOptions = SnowflakeExecutor.getConnectionOptionsFromToml();
     }
     this.executor = new SnowflakeExecutor(connOptions, options?.poolOptions);
@@ -293,11 +292,13 @@ export class SnowflakeConnection
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
     const rowLimit = options?.rowLimit ?? this.queryOptions?.rowLimit;
-    let rows = await this.executor.batch(sql, options, this.timeoutMs);
+    const resp = await this.executor.batch(sql, options, this.timeoutMs);
+    let {rows} = resp;
+    const {runStats} = resp;
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
-    return {rows, totalRows: rows.length};
+    return {rows, totalRows: rows.length, runStats};
   }
 
   public async *runSQLStream(
@@ -326,7 +327,7 @@ export class SnowflakeConnection
     structDef: StructDef
   ): Promise<void> {
     const infoQuery = `DESCRIBE TABLE ${tablePath}`;
-    const rows = await this.executor.batch(infoQuery);
+    const {rows} = await this.executor.batch(infoQuery);
     const variants: string[] = [];
     const notVariant = new Map<string, boolean>();
     for (const row of rows) {
@@ -390,7 +391,7 @@ export class SnowflakeConnection
               OR startswith(a.norm_path, b.norm_path || '[')
           )
       ORDER BY a.norm_path;`;
-      const fieldPathRows = await this.executor.batch(sampleQuery);
+      const {rows: fieldPathRows} = await this.executor.batch(sampleQuery);
 
       // take the schema in list form an convert it into a tree.
 
