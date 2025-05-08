@@ -175,7 +175,7 @@ function referenceToFragments(reference: Malloy.Reference): Fragment[] {
       const p = reference.parameters[i];
       parameterFragments.push(maybeQuoteIdentifier(p.name));
       parameterFragments.push(' is ');
-      parameterFragments.push(...literalToFragments(p.value));
+      parameterFragments.push(...expressionToFragments(p.value));
       if (i < reference.parameters.length - 1) {
         parameterFragments.push(',', NEWLINE);
       }
@@ -369,6 +369,8 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
         ...referenceToFragments(expression.field_reference),
         ...wrap(' {', whereToFragments(expression.where), '}'),
       ];
+    case 'literal_value':
+      return literalToFragments(expression.literal_value);
   }
 }
 

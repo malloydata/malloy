@@ -196,6 +196,38 @@ describe('Malloy to Stable Query', () => {
       );
     });
   });
+  describe('parameters', () => {
+    test('parameter is passed properly', () => {
+      idempotent('run: a(p is 1) -> by_carrier', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+              parameters: [
+                {
+                  name: 'p',
+                  value: {
+                    kind: 'literal_value',
+                    literal_value: {
+                      kind: 'number_literal',
+                      number_value: 1,
+                    },
+                  },
+                },
+              ],
+            },
+            view: {
+              kind: 'view_reference',
+              name: 'by_carrier',
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+  });
   describe('drill', () => {
     test('drill clauses with all the literal types, as well as a filter string comparison', () => {
       idempotent(

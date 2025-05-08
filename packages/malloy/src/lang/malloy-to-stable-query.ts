@@ -182,13 +182,37 @@ export class MalloyToQuery
     return null;
   }
 
+  protected getSourceArguments(
+    cx: parse.SourceArgumentsContext
+  ): Malloy.ParameterValue[] | null {
+    const params: Malloy.ParameterValue[] = [];
+    for (const argCx of cx.sourceArgument()) {
+      const idCx = argCx.argumentId();
+      if (idCx === undefined) {
+        this.contextError(
+          argCx,
+          'unnamed-source-argument',
+          'Source argument must be named'
+        );
+        return null;
+      }
+      const name = getId(idCx);
+      const value = this.getFieldExpression(argCx.fieldExpr());
+      if (value === null) return null;
+      params.push({name, value});
+    }
+    return params;
+  }
+
   protected getQueryReference(cx: parse.SQIDContext): Malloy.Reference | null {
-    if (cx.sourceArguments()) {
-      this.illegal(cx, 'Queries do not support parameters');
+    const argsCx = cx.sourceArguments();
+    const name = getId(cx);
+    if (argsCx) {
+      const parameters = this.getSourceArguments(argsCx);
+      if (parameters === null) return null;
+      return {name, parameters};
     } else {
-      return {
-        name: getId(cx),
-      };
+      return {name};
     }
     return null;
   }
@@ -656,6 +680,13 @@ export class MalloyToQuery
           parameters: expr.parameters,
         },
         where,
+      };
+    } else if (cx instanceof parse.ExprLiteralContext) {
+      const literal = this.getLiteral(cx.literal());
+      if (literal === null) return null;
+      return {
+        kind: 'literal_value',
+        literal_value: literal,
       };
     }
     return null;

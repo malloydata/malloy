@@ -391,7 +391,7 @@ struct Reference {
 
 struct ParameterValue {
   1: required string name,
-  2: required LiteralValue value,
+  2: required Expression value,
 }
 
 union LiteralValue {
@@ -435,10 +435,15 @@ struct FilterExpressionLiteral {
   1: required string filter_expression_value,
 }
 
+struct LiteralValueExpression {
+  1: required LiteralValue literal_value,
+}
+
 union Expression {
   1: required Reference field_reference,
   2: required TimeTruncationFieldReference time_truncation,
   3: required FilteredField filtered_field,
+  4: required LiteralValueExpression literal_value,
 }
 
 struct TimeTruncationFieldReference {

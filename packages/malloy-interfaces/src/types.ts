@@ -494,6 +494,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'field_reference': 'Reference',
       'time_truncation': 'TimeTruncationFieldReference',
       'filtered_field': 'FilteredField',
+      'literal_value': 'LiteralValueExpression',
     },
   },
   'Field': {
@@ -706,6 +707,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'boolean_literal': 'BooleanLiteral',
       'null_literal': 'NullLiteral',
       'filter_expression_literal': 'FilterExpressionLiteral',
+    },
+  },
+  'LiteralValueExpression': {
+    'type': 'struct',
+    'name': 'LiteralValueExpression',
+    'fields': {
+      'literal_value': {
+        'type': 'LiteralValue',
+        'optional': false,
+        'array': false,
+      },
     },
   },
   'Location': {
@@ -948,7 +960,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'value': {
-        'type': 'LiteralValue',
+        'type': 'Expression',
         'optional': false,
         'array': false,
       },
@@ -1826,12 +1838,14 @@ export type DrillOperation = {
 export type ExpressionType =
   | 'field_reference'
   | 'time_truncation'
-  | 'filtered_field';
+  | 'filtered_field'
+  | 'literal_value';
 
 export type Expression =
   | ExpressionWithFieldReference
   | ExpressionWithTimeTruncation
-  | ExpressionWithFilteredField;
+  | ExpressionWithFilteredField
+  | ExpressionWithLiteralValue;
 
 export type ExpressionWithFieldReference = {
   kind: 'field_reference';
@@ -1844,6 +1858,10 @@ export type ExpressionWithTimeTruncation = {
 export type ExpressionWithFilteredField = {
   kind: 'filtered_field';
 } & FilteredField;
+
+export type ExpressionWithLiteralValue = {
+  kind: 'literal_value';
+} & LiteralValueExpression;
 
 export type Field = {
   expression: Expression;
@@ -1973,6 +1991,10 @@ export type LiteralValueWithFilterExpressionLiteral = {
   kind: 'filter_expression_literal';
 } & FilterExpressionLiteral;
 
+export type LiteralValueExpression = {
+  literal_value: LiteralValue;
+};
+
 export type Location = {
   url: string;
   range: Range;
@@ -2097,7 +2119,7 @@ export type ParameterTypeWithFilterExpressionType = {
 
 export type ParameterValue = {
   name: string;
-  value: LiteralValue;
+  value: Expression;
 };
 
 export type Position = {
