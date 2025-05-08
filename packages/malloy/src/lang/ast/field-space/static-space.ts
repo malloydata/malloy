@@ -118,6 +118,7 @@ export class StaticSpace implements FieldSpace {
     return this.map[name];
   }
 
+  // TODO: Maybe we shouldn't allow this mutability, even if it supports dynamic-space
   protected setEntry(name: string, value: SpaceEntry): void {
     this.map[name] = value;
   }
@@ -235,6 +236,7 @@ export class StructSpaceField extends StructSpaceFieldBase {
     super(def);
   }
 
+  // TODO: Replace this with getting a Namespace
   get fieldSpace(): FieldSpace {
     if (isSourceDef(this.structDef)) {
       return new StaticSourceSpace(this.structDef);

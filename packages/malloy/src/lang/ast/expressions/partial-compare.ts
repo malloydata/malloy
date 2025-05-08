@@ -39,15 +39,15 @@ export class PartialCompare extends ExpressionDef {
     return this.right.granular();
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(ns: NamespaceStack, op: string, expr: ExpressionDef): ExprValue {
     return this.right.apply(fs, this.op, expr);
   }
 
-  requestExpression(_fs: FieldSpace): ExprValue | undefined {
+  requestExpression(_ns: NamespaceStack): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_ns: NamespaceStack): ExprValue {
     return this.loggedErrorExpr(
       'partial-as-value',
       'Partial comparison does not have a value'

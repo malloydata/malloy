@@ -21,13 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {BinaryMalloyOperator, FieldSpace} from '..';
+import type {BinaryMalloyOperator, NamespaceStack} from '..';
 import type {ExprValue} from '../types/expr-value';
 import {literalExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 
-function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-  const nullCmp = expr.getExpression(fs);
+function doIsNull(
+  ns: NamespaceStack,
+  op: string,
+  expr: ExpressionDef
+): ExprValue {
+  const nullCmp = expr.getExpression(ns);
   nullCmp.type = 'boolean';
   nullCmp.value = {
     node: op === '=' ? 'is-null' : 'is-not-null',
@@ -47,14 +51,14 @@ export class ExprNULL extends ExpressionDef {
   }
 
   apply(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
     if (op === '!=' || op === '=') {
-      return doIsNull(fs, op, left);
+      return doIsNull(ns, op, left);
     }
-    return super.apply(fs, op, left, true);
+    return super.apply(ns, op, left, true);
   }
 }
 
@@ -64,15 +68,15 @@ export class PartialIsNull extends ExpressionDef {
     super();
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    return doIsNull(fs, this.op, expr);
+  apply(ns: NamespaceStack, op: string, expr: ExpressionDef): ExprValue {
+    return doIsNull(ns, this.op, expr);
   }
 
-  requestExpression(_fs: FieldSpace): ExprValue | undefined {
+  requestExpression(_ns: NamespaceStack): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_ns: NamespaceStack): ExprValue {
     return this.loggedErrorExpr(
       'partial-as-value',
       'Partial null check does not have a value'
@@ -94,7 +98,7 @@ export class ExprIsNull extends ExpressionDef {
     this.has({expr});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    return doIsNull(fs, this.op, this.expr);
+  getExpression(ns: NamespaceStack): ExprValue {
+    return doIsNull(ns, this.op, this.expr);
   }
 }

@@ -45,7 +45,7 @@ export class ForRange extends ExpressionDef {
   }
 
   apply(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
@@ -109,11 +109,11 @@ export class ForRange extends ExpressionDef {
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }
 
-  requestExpression(_fs: FieldSpace): undefined {
+  requestExpression(_ns: NamespaceStack): undefined {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_ns: NamespaceStack): ExprValue {
     return this.loggedErrorExpr('range-as-value', 'A Range is not a value');
   }
 }

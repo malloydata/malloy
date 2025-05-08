@@ -23,7 +23,7 @@
 
 import type {ExprValue} from '../types/expr-value';
 import {literalExprValue} from '../types/expr-value';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import type {NumberTypeDef} from '../../../model';
 
@@ -33,7 +33,7 @@ export class ExprNumber extends ExpressionDef {
     super();
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_ns: NamespaceStack): ExprValue {
     return this.constantExpression();
   }
 

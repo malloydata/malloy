@@ -36,7 +36,7 @@ import {PartitionBy} from './partition_by';
 import {mergeGroupedBys, type ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 import {ExprFunc} from './expr-func';
 import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import {GroupedBy} from './grouped_by';
@@ -52,7 +52,7 @@ export class ExprProps extends ExpressionDef {
   }
 
   private getFilteredExpression(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     expr: ExprValue,
     wheres: Filter[]
   ): ExprValue {
@@ -65,12 +65,12 @@ export class ExprProps extends ExpressionDef {
         return expr;
       }
       const filterList: FilterCondition[] = [];
-      for (const where of wheres) {
-        const testList = where.getFilterList(fs);
+      if (wheres.length > 0) {
+        const testList = wheres[0].getFilterList(ns);
         if (
           testList.find(cond => expressionIsCalculation(cond.expressionType))
         ) {
-          where.logError(
+          wheres[0].logError(
             'aggregate-filter-expression-not-scalar',
             'Cannot filter an expresion with an aggregate or analytical computation'
           );
@@ -100,7 +100,7 @@ export class ExprProps extends ExpressionDef {
     return expr;
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(ns: NamespaceStack): ExprValue {
     const partitionBys: PartitionBy[] = [];
     let limit: Limit | undefined;
     const orderBys: FunctionOrdering[] = [];
@@ -147,21 +147,21 @@ export class ExprProps extends ExpressionDef {
     }
     const resultExpr =
       this.expr instanceof ExprFunc
-        ? this.expr.getPropsExpression(fs, {
+        ? this.expr.getPropsExpression(ns, {
             partitionBys,
             limit,
             orderBys,
           })
-        : this.expr.getExpression(fs);
-    const filteredExpr = this.getFilteredExpression(fs, resultExpr, wheres);
-    return this.getGroupedBys(fs, filteredExpr, groupedBys);
+        : this.expr.getExpression(ns);
+    const filteredExpr = this.getFilteredExpression(ns, resultExpr, wheres);
+    return this.getGroupedBys(ns, filteredExpr, groupedBys);
   }
 
-  getGroupedBys(fs: FieldSpace, expr: ExprValue, groupedBys: GroupedBy[]) {
+  getGroupedBys(ns: NamespaceStack, expr: ExprValue, groupedBys: GroupedBy[]) {
     const groupedByFields: string[] = [];
     for (const requiredGroupBy of groupedBys) {
       for (const field of requiredGroupBy.groupedByFields) {
-        const e = field.getField(fs);
+        const e = field.getField(ns);
         if (e.found === undefined) {
           field.logError(
             'grouped-by-not-found',

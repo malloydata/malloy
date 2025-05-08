@@ -28,7 +28,7 @@ import type {FieldSpace} from '../types/field-space';
 
 export class IRViewField extends ViewField {
   constructor(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     protected turtleDef: TurtleDef
   ) {
     super(fs);
@@ -49,7 +49,7 @@ export class IRViewField extends ViewField {
     return this.turtleDef;
   }
 
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
+  getQueryFieldDef(_ns: NamespaceStack): QueryFieldDef | undefined {
     return this.fieldDef();
   }
 }

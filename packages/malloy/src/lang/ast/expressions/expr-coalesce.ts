@@ -25,7 +25,7 @@ import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';
@@ -37,9 +37,9 @@ export class ExprCoalesce extends ExpressionDef {
     super({expr, altExpr});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const maybeNull = this.expr.getExpression(fs);
-    const whenNull = this.altExpr.getExpression(fs);
+  getExpression(ns: NamespaceStack): ExprValue {
+    const maybeNull = this.expr.getExpression(ns);
+    const whenNull = this.altExpr.getExpression(ns);
     if (maybeNull.type === 'null') {
       return whenNull;
     }

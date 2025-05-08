@@ -103,7 +103,7 @@ describe('parameters', () => {
       source: ab_new_new(param::number) is ab_new(param) extend {}
     `).toTranslate();
   });
-  test.skip('can pass parameter into source of query', () => {
+  test('can pass parameter into source of query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
@@ -338,7 +338,7 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
-  test.skip('can pass through parameter to source in joined query', () => {
+  test('can pass through parameter to source in joined query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_ext_1(a_1::string) is ab extend {
@@ -351,7 +351,7 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
-  test.skip('can pass through parameter to view in joined query', () => {
+  test('can pass through parameter to view in joined query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_ext(param::string) is ab extend {
@@ -368,7 +368,7 @@ describe('parameters', () => {
       """)
     `).toTranslate();
   });
-  test.skip('can pass through parameter to view in query in SQL source', () => {
+  test('can pass through parameter to view in query in SQL source', () => {
     expect(`
       ##! experimental.parameters
       source: sql_query(a_1::string) is duckdb.sql("""
@@ -376,7 +376,7 @@ describe('parameters', () => {
       """)
     `).toTranslate();
   });
-  test.skip('can pass through parameter to source in query in joined SQL source', () => {
+  test('can pass through parameter to source in query in joined SQL source', () => {
     expect(`
       ##! experimental.parameters
       source: ab_ext_1(a_1::string) is ab extend {
@@ -457,18 +457,16 @@ describe('parameters', () => {
       `
     ).toTranslate();
   });
-  test('error when declaring parameter with same name as field (not extended)', () => {
+  test('allows declaring parameter with same name as field (not extended)', () => {
     expect(
       markSource`
         ##! experimental.parameters
         source: ab_new(${'ai::string'}) is ab
       `
-    ).toLog(
-      errorMessage(
-        'Illegal shadowing of field `ai` by parameter with the same name'
-      )
-    );
+    ).toTranslate();
   });
+  // TODO: Test to assert that each parameter usage is coming from the correct namespace
+  // TODO: Tests to assert that each namespace is addressable using the expected term
   test('do not inherit parameters from base source', () => {
     expect(
       markSource`
@@ -646,7 +644,7 @@ describe('parameters', () => {
       `
     ).toLog(errorMessage('Only constants allowed in parameter default values'));
   });
-  test.skip('can use param in multi-stage query', () => {
+  test('can use param in multi-stage query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab extend {

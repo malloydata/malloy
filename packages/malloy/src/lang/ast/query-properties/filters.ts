@@ -44,7 +44,7 @@ export class FilterElement extends MalloyElement {
     super({expr: expr});
   }
 
-  filterCondition(fs: FieldSpace): FilterCondition {
+  filterCondition(ns: NamespaceStack): FilterCondition {
     const exprVal = this.expr.getExpression(fs);
     if (exprVal.type !== 'boolean') {
       this.expr.logError(
@@ -88,7 +88,7 @@ export class Filter
   }
 
   protected checkedFilterCondition(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     filter: FilterElement
   ): FilterCondition | undefined {
     const fExpr = filter.filterCondition(fs);
@@ -124,7 +124,7 @@ export class Filter
     return fExpr;
   }
 
-  getFilterList(fs: FieldSpace): FilterCondition[] {
+  getFilterList(ns: NamespaceStack): FilterCondition[] {
     return this.list
       .map(filter => this.checkedFilterCondition(fs, filter))
       .filter(isNotUndefined);

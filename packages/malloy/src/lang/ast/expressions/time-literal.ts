@@ -32,7 +32,7 @@ import {isTemporalType} from '../../../model/malloy_types';
 
 import type {ExprValue} from '../types/expr-value';
 import {literalTimeResult} from '../types/expr-value';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
@@ -113,7 +113,7 @@ abstract class TimeLiteral extends ExpressionDef {
     });
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_ns: NamespaceStack): ExprValue {
     return this.makeValue(this.literalPart, this.timeType);
   }
 
@@ -184,16 +184,16 @@ class GranularLiteral extends TimeLiteral {
   }
 
   apply(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
     // We have a chance to write our own range comparison will all constants.
-    let rangeStart = this.getExpression(fs);
+    let rangeStart = this.getExpression(ns);
     let rangeEnd = this.getNext();
 
     if (rangeEnd) {
-      const testValue = left.getExpression(fs);
+      const testValue = left.getExpression(ns);
 
       if (testValue.type === 'timestamp') {
         const newStart = getMorphicValue(rangeStart, 'timestamp');
@@ -202,7 +202,8 @@ class GranularLiteral extends TimeLiteral {
           rangeStart = newStart;
           rangeEnd = newEnd;
         } else {
-          return super.apply(fs, op, left);
+          // Use ExpressionDef's apply method directly instead of super.apply
+          return ExpressionDef.prototype.apply.call(this, ns, op, left);
         }
       }
 
@@ -213,10 +214,11 @@ class GranularLiteral extends TimeLiteral {
           new ExprTime(rangeType, rangeStart.value),
           new ExprTime(rangeType, rangeEnd.value)
         );
-        return range.apply(fs, op, left);
+        return range.apply(ns, op, left);
       }
     }
-    return super.apply(fs, op, left);
+    // Use ExpressionDef's apply method directly instead of super.apply
+    return ExpressionDef.prototype.apply.call(this, ns, op, left);
   }
 }
 
@@ -254,7 +256,7 @@ abstract class DateBasedLiteral extends GranularLiteral {
     super(tm, units, 'date', nextLit);
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_ns: NamespaceStack): ExprValue {
     const dateValue = this.makeValue(this.literalPart, 'date');
     const timestamp = this.makeLiteral(
       `${this.literalPart} 00:00:00`,

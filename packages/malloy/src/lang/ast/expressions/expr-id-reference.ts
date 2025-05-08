@@ -25,7 +25,7 @@ import type {FieldUsage} from '../../../model/malloy_types';
 import {expressionIsAggregate} from '../../../model/malloy_types';
 import type {ExprValue} from '../types/expr-value';
 import type {FieldReference} from '../query-items/field-references';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprIdReference extends ExpressionDef {
@@ -39,8 +39,8 @@ export class ExprIdReference extends ExpressionDef {
     return this.fieldReference.refString;
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const def = this.fieldReference.getField(fs);
+  getExpression(ns: NamespaceStack): ExprValue {
+    const def = this.fieldReference.getField(ns);
     if (def.found) {
       // TODO Currently the join usage is always equivalent to the reference path here;
       // if/when we add namespaces, this will not be the case, and we will need to get the

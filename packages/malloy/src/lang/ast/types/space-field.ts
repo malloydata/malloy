@@ -27,10 +27,10 @@ import type {
   TypeDesc,
   AtomicFieldDef,
 } from '../../../model/malloy_types';
-import {SpaceEntry} from './space-entry';
-import type {FieldSpace} from './field-space';
+import type {NamespaceStack} from './field-space';
+import type {FieldNamespaceEntry} from './namespace-entry';
 
-export abstract class SpaceField extends SpaceEntry {
+export abstract class SpaceField implements FieldNamespaceEntry {
   readonly refType = 'field';
 
   protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
@@ -51,7 +51,7 @@ export abstract class SpaceField extends SpaceEntry {
     return ref;
   }
 
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
+  getQueryFieldDef(_ns: NamespaceStack): QueryFieldDef | undefined {
     return undefined;
   }
 

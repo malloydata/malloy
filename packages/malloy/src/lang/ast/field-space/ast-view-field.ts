@@ -28,14 +28,14 @@ import {ViewField} from './view-field';
 
 export class ASTViewField extends ViewField {
   constructor(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     readonly view: ViewFieldDeclaration,
     protected name: string
   ) {
     super(fs);
   }
 
-  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
+  getQueryFieldDef(ns: NamespaceStack): QueryFieldDef {
     return this.view.getFieldDef(fs);
   }
 

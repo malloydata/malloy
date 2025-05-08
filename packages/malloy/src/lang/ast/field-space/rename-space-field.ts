@@ -25,7 +25,7 @@ import type {DocumentLocation, FieldDef} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 
-export class RenameSpaceField extends SpaceField {
+export class RenameSpaceField extends FieldNamespaceEntry {
   constructor(
     private readonly otherField: SpaceField,
     private readonly newName: string,

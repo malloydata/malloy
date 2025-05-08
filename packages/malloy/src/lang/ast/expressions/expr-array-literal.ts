@@ -9,7 +9,7 @@ import type {ArrayLiteralNode, ArrayTypeDef, Expr} from '../../../model';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 import * as TDU from '../typedesc-utils';
 import {RecordLiteral} from './expr-record-literal';
 
@@ -20,7 +20,7 @@ export class ArrayLiteral extends ExpressionDef {
     this.has({elements});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(ns: NamespaceStack): ExprValue {
     const values: Expr[] = [];
     const fromValues: ExprValue[] = [];
     let firstValue: ExprValue | undefined = undefined;
@@ -28,8 +28,8 @@ export class ArrayLiteral extends ExpressionDef {
       for (const nextElement of this.elements) {
         const v =
           firstValue && nextElement instanceof RecordLiteral
-            ? nextElement.getNextElement(fs, firstValue)
-            : nextElement.getExpression(fs);
+            ? nextElement.getNextElement(ns, firstValue)
+            : nextElement.getExpression(ns);
         fromValues.push(v);
         if (v.type === 'error') {
           continue;

@@ -32,7 +32,7 @@ import {ReferenceField} from '../field-space/reference-field';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldName, NamespaceStack} from '../types/field-space';
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = TDU.anyAtomicT;
@@ -45,8 +45,8 @@ export class ExprUngroup extends ExpressionDef {
     super({expr: expr, fields: fields});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const exprVal = this.expr.getExpression(fs);
+  getExpression(ns: NamespaceStack): ExprValue {
+    const exprVal = this.expr.getExpression(ns);
     if (!expressionIsAggregate(exprVal.expressionType)) {
       return this.expr.loggedErrorExpr(
         'ungroup-of-non-aggregate',
@@ -69,10 +69,10 @@ export class ExprUngroup extends ExpressionDef {
       // Now every mentioned field must be in the output space of one of the queries
       // of the nest tree leading to this query. If this is a source definition,
       // this is not checked until sql generation time.
-      if (fs.isQueryFieldSpace() && this.fields.length > 0) {
+      if (ns.isQueryFieldSpace() && this.fields.length > 0) {
         const dstFields: string[] = [];
         for (const mentionedField of this.fields) {
-          let ofs: FieldSpace | undefined = fs.outputSpace();
+          let ofs: NamespaceStack | undefined = ns.outputSpace();
           let notFound = true;
           while (ofs) {
             const entryInfo = ofs.lookup([mentionedField]);

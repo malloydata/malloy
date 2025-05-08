@@ -40,7 +40,7 @@ export class ReferenceField extends SpaceField {
   private queryFieldDef?: QueryFieldDef;
   constructor(
     readonly fieldRef: FieldReference,
-    readonly inFS: FieldSpace
+    readonly inns: NamespaceStack
   ) {
     super();
   }
@@ -53,7 +53,7 @@ export class ReferenceField extends SpaceField {
     return this.memoReference;
   }
 
-  getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
+  getQueryFieldDef(ns: NamespaceStack): QueryFieldDef | undefined {
     if (!this.queryFieldDef) {
       const check = this.fieldRef.getField(fs);
       if (check.error) {

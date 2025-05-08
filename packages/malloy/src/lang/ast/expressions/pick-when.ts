@@ -51,7 +51,7 @@ export class Pick extends ExpressionDef {
     this.has({elsePick});
   }
 
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
+  requestExpression(ns: NamespaceStack): ExprValue | undefined {
     // pick statements are sometimes partials which must be applied
     // and sometimes have a value.
     if (this.elsePick === undefined) {
@@ -70,7 +70,7 @@ export class Pick extends ExpressionDef {
     return this.getExpression(fs);
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(ns: NamespaceStack, op: string, expr: ExpressionDef): ExprValue {
     const caseValue: CaseExpr = {
       node: 'case',
       kids: {
@@ -129,7 +129,7 @@ export class Pick extends ExpressionDef {
     });
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(ns: NamespaceStack): ExprValue {
     const pick: CaseExpr = {
       node: 'case',
       kids: {

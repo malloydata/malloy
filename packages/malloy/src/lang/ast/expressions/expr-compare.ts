@@ -30,7 +30,7 @@ import type {
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {NamespaceStack} from '../types/field-space';
 import {BinaryBoolean} from './binary-boolean';
 
 const compareTypes = {
@@ -55,8 +55,8 @@ export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
     this.legalChildTypes = compareTypes[op];
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    return this.right.apply(fs, this.op, this.left);
+  getExpression(ns: NamespaceStack): ExprValue {
+    return this.right.apply(ns, this.op, this.left);
   }
 }
 
@@ -76,16 +76,16 @@ export class ExprEquality extends ExprCompare {
     super(left, op, right);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    return this.right.apply(fs, this.op, this.left, true);
+  getExpression(ns: NamespaceStack): ExprValue {
+    return this.right.apply(ns, this.op, this.left, true);
   }
 
   apply(
-    fs: FieldSpace,
+    ns: NamespaceStack,
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
-    return super.apply(fs, op, left, true);
+    return super.apply(ns, op, left, true);
   }
 }
 
@@ -100,9 +100,9 @@ export class ExprLegacyIn extends ExpressionDef {
     this.has({expr, choices});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const lookFor = this.expr.getExpression(fs);
-    const oneOf = this.choices.map(e => e.getExpression(fs));
+  getExpression(ns: NamespaceStack): ExprValue {
+    const lookFor = this.expr.getExpression(ns);
+    const oneOf = this.choices.map(e => e.getExpression(ns));
     return computedExprValue({
       dataType: {type: 'boolean'},
       value: {

@@ -55,6 +55,7 @@ export abstract class DynamicSpace
     this.sourceDef = undefined;
   }
 
+  // This needs its own entry map. Should not be a subclass of Static Space
   protected setEntry(name: string, value: SpaceEntry): void {
     if (this.complete) {
       throw new Error('Space already final');

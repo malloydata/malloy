@@ -24,7 +24,7 @@
 import type {PipeSegment} from '../../../model';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
-import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
+import type {NamespaceStack, SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
 
@@ -44,9 +44,10 @@ export class ViewArrow extends View {
     super({base, operation});
   }
 
-  pipelineComp(fs: FieldSpace): PipelineComp {
-    const baseComp = this.base.pipelineComp(fs);
+  pipelineComp(ns: NamespaceStack): PipelineComp {
+    const baseComp = this.base.pipelineComp(ns);
     const nextFS = new StaticSourceSpace(baseComp.outputStruct);
+    // TODO: Replace with a Namespace instance instead
     const finalComp = this.operation.pipelineComp(nextFS);
     return {
       pipeline: [...baseComp.pipeline, ...finalComp.pipeline],

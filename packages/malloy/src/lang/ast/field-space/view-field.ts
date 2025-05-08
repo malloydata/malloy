@@ -28,11 +28,12 @@ import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 
 export abstract class ViewField extends SpaceField {
+  // inSpace is a pointer to the parent namespace
   constructor(protected inSpace: FieldSpace) {
     super();
   }
 
-  abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
+  abstract getQueryFieldDef(ns: NamespaceStack): QueryFieldDef | undefined;
   abstract fieldDef(): TurtleDef;
 
   typeDesc() {
