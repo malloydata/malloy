@@ -56,14 +56,13 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
                   default_value: convertParameterDefaultValue(parameter.value),
                 };
               }
-              const filterType = parameter.filterType
-                ? {filter_type: {kind: `${parameter.filterType}_type` as const}}
-                : {};
               return {
                 name,
                 type: {
                   kind: 'filter_expression_type',
-                  ...filterType,
+                  filter_type: {
+                    kind: `${parameter.filterType}_type` as const,
+                  },
                 },
                 default_value: convertParameterDefaultValue(parameter.value),
               };

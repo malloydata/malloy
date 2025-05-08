@@ -177,7 +177,7 @@ struct RecordType {
 }
 
 struct FilterExpressionType {
-  1: optional FilterableType filter_type;
+  1: required FilterableType filter_type;
 }
 
 union FilterableType {

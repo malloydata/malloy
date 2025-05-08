@@ -551,7 +551,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'fields': {
       'filter_type': {
         'type': 'FilterableType',
-        'optional': true,
+        'optional': false,
         'array': false,
       },
     },
@@ -1858,7 +1858,7 @@ export type FilterExpressionLiteral = {
 };
 
 export type FilterExpressionType = {
-  filter_type?: FilterableType;
+  filter_type: FilterableType;
 };
 
 export type FilterOperation = {
