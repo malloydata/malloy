@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 import type {
@@ -111,6 +112,44 @@ export abstract class TimeLiteral extends ExpressionDef {
       dataType: {type: dataType},
       timeframe: this.units,
     });
+  }
+
+  getStableLiteral(): Malloy.LiteralValue {
+    const value = this.getValue();
+    let granularity = value.timeframe;
+    if (value.value.node !== 'timeLiteral') {
+      // TODO should probably just throw...
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: '1970-01-01 00:00:00',
+        granularity,
+      };
+    }
+    const timeValue = value.value.literal;
+    const timezone = value.value.timezone;
+    if (value.type === 'timestamp') {
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: timeValue,
+        granularity,
+        timezone,
+      };
+    } else {
+      if (
+        granularity === 'hour' ||
+        granularity === 'minute' ||
+        granularity === 'second'
+      ) {
+        // TODO should probably just throw...
+        granularity = 'day';
+      }
+      return {
+        kind: 'date_literal',
+        date_value: timeValue,
+        granularity,
+        timezone,
+      };
+    }
   }
 
   getValue() {

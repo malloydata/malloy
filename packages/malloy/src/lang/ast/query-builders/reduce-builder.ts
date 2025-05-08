@@ -179,7 +179,9 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       for (const by of reduceSegment.orderBy) {
         if (typeof by.field === 'number') {
           const by_field = reduceSegment.queryFields[by.field - 1];
-          by.field = queryFieldName(by_field);
+          if (by_field !== undefined) {
+            by.field = queryFieldName(by_field);
+          }
         }
       }
     }

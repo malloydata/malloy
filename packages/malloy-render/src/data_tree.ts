@@ -13,6 +13,7 @@ import {
   renderTimeString,
 } from './util';
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {isDateUnit, isTimestampUnit} from '@malloydata/malloy';
 
 export type DrillEntry =
   | {
@@ -303,6 +304,16 @@ export abstract class FieldBase {
     }
   }
 
+  get drillPath(): string[] {
+    if (this.parent) {
+      const view = this.metadataTag.text('drill_view');
+      const parentPath = this.parent.drillPath;
+      if (view === undefined) return parentPath;
+      return [...parentPath, view];
+    }
+    return [];
+  }
+
   get sourceName() {
     return this.metadataTag.text('source_name') ?? '__source__';
   }
@@ -350,6 +361,117 @@ export abstract class FieldBase {
 
   get drillFilters() {
     return this.metadataTag.textArray('drill_filters') ?? [];
+  }
+
+  get stableDrillFilters(): Malloy.Filter[] {
+    const result: Malloy.Filter[] = [];
+    const filterTags = this.metadataTag.array('drill_filters');
+    for (const filter of filterTags ?? []) {
+      const kind = filter.text('kind');
+      const field = filter.textArray('field_reference');
+      if (kind === undefined || field === undefined) continue;
+      const fieldReference: Malloy.Reference = {
+        name: field[field.length - 1],
+        path: field.slice(0, -1),
+      };
+      if (kind === 'filter_expression') {
+        const filterExpression = filter.text('filter_expression');
+        if (filterExpression === undefined) continue;
+        result.push({
+          kind: 'filter_string',
+          field_reference: fieldReference,
+          filter: filterExpression,
+        });
+      } else if (kind === 'literal_equality') {
+        const value = filter.tag('value');
+        if (value === undefined) continue;
+        const valueKind = value.text('kind');
+        if (valueKind === undefined) continue;
+        switch (valueKind) {
+          case 'string_literal': {
+            const stringValue = value.text('string_value');
+            if (stringValue === undefined) continue;
+            result.push({
+              kind: 'literal_equality',
+              field_reference: fieldReference,
+              value: {
+                kind: 'string_literal',
+                string_value: stringValue,
+              },
+            });
+            break;
+          }
+          case 'number_literal': {
+            const numberValue = value.numeric('number_value');
+            if (numberValue === undefined) continue;
+            result.push({
+              kind: 'literal_equality',
+              field_reference: fieldReference,
+              value: {
+                kind: 'number_literal',
+                number_value: numberValue,
+              },
+            });
+            break;
+          }
+          case 'date_literal': {
+            const dateValue = value.text('date_value');
+            const granularity = value.text('granularity');
+            if (granularity && !isDateUnit(granularity)) continue;
+            if (dateValue === undefined) continue;
+            result.push({
+              kind: 'literal_equality',
+              field_reference: fieldReference,
+              value: {
+                kind: 'date_literal',
+                date_value: dateValue,
+                granularity: granularity as Malloy.DateTimeframe,
+              },
+            });
+            break;
+          }
+          case 'timestamp_literal': {
+            const timestampValue = value.text('timestamp_value');
+            const granularity = value.text('granularity');
+            if (timestampValue === undefined) continue;
+            if (granularity && !isTimestampUnit(granularity)) continue;
+            result.push({
+              kind: 'literal_equality',
+              field_reference: fieldReference,
+              value: {
+                kind: 'timestamp_literal',
+                timestamp_value: timestampValue,
+                granularity: granularity as Malloy.TimestampTimeframe,
+              },
+            });
+            break;
+          }
+          case 'boolean_literal': {
+            const booleanValue = value.text('boolean_value');
+            if (booleanValue === undefined) continue;
+            result.push({
+              kind: 'literal_equality',
+              field_reference: fieldReference,
+              value: {
+                kind: 'boolean_literal',
+                boolean_value: booleanValue === 'true',
+              },
+            });
+            break;
+          }
+          case 'null_literal':
+            result.push({
+              kind: 'literal_equality',
+              field_reference: fieldReference,
+              value: {
+                kind: 'null_literal',
+              },
+            });
+            break;
+        }
+      }
+    }
+    return result;
   }
 
   get referenceId(): string | undefined {
@@ -517,6 +639,10 @@ export class ArrayField extends FieldBase {
       this
     );
     this.fields = [this.eachField];
+  }
+
+  get isDrillable() {
+    return this.metadataTag.has('drillable');
   }
 }
 
@@ -969,6 +1095,10 @@ export abstract class CellBase {
     public readonly parent: NestCell | undefined
   ) {}
 
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return undefined;
+  }
+
   abstract get value(): CellValue;
 
   isNull(): this is NullCell {
@@ -1101,6 +1231,90 @@ export abstract class CellBase {
 
   compareTo(_other: Cell): number {
     return 0;
+  }
+
+  canDrill() {
+    let current: Cell | undefined = this.asCell();
+    while (current) {
+      if (current && current.isArray()) {
+        if (!current.field.isDrillable) {
+          return false;
+        }
+        current = current.parent;
+      }
+    }
+    return true;
+  }
+
+  getStableDrillQuery(): Malloy.Query | undefined {
+    const drillClauses = this.getDrillClauses();
+    if (drillClauses === undefined) return undefined;
+    const drillOperations: Malloy.ViewOperationWithDrill[] = drillClauses.map(
+      d => ({
+        kind: 'drill',
+        ...d,
+      })
+    );
+    return {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: this.field.root().sourceName,
+          // TODO parameters
+        },
+        view: {
+          kind: 'segment',
+          operations: [...drillOperations],
+        },
+      },
+    };
+  }
+
+  getDrillClauses(): Malloy.DrillOperation[] | undefined {
+    let current: Cell | undefined = this.asCell();
+    console.log({root: this.field.root()});
+    const result: Malloy.DrillOperation[] = [];
+    while (current) {
+      if (current && current.isArray()) {
+        // TODO handle filters in views that did not come from a view
+        result.unshift(
+          ...current.field.stableDrillFilters.map(f => ({
+            kind: 'drill',
+            filter: f,
+          }))
+        );
+        current = current.parent;
+      }
+      if (current === undefined) {
+        break;
+      }
+      if (current && current.isRecord()) {
+        const dimensions = current.field.fields.filter(
+          f => f.isBasic() && f.wasDimension()
+        );
+        const newClauses: Malloy.DrillOperation[] = [];
+        for (const dimension of dimensions) {
+          const cell = current.column(dimension.name);
+          const value = cell.literalValue;
+          if (value === undefined) {
+            continue;
+          }
+          const filter: Malloy.FilterWithLiteralEquality = {
+            kind: 'literal_equality',
+            field_reference: {
+              name: dimension.name,
+              path: dimension.drillPath,
+            },
+            value,
+          };
+          newClauses.push({filter});
+        }
+        result.unshift(...newClauses);
+      }
+      current = current.parent;
+    }
+    return result;
   }
 
   private getDrillValues(): DrillValue[] {
@@ -1304,6 +1518,12 @@ export class NullCell extends CellBase {
   get value() {
     return null;
   }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return {
+      kind: 'null_literal',
+    };
+  }
 }
 
 export class NumberCell extends CellBase {
@@ -1330,6 +1550,13 @@ export class NumberCell extends CellBase {
     }
 
     return -1;
+  }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return {
+      kind: 'number_literal',
+      number_value: this.cell.number_value,
+    };
   }
 }
 
@@ -1360,6 +1587,14 @@ export class DateCell extends CellBase {
     }
     return 0;
   }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return {
+      kind: 'date_literal',
+      date_value: this.cell.date_value,
+      granularity: this.timeframe,
+    };
+  }
 }
 
 export class TimestampCell extends CellBase {
@@ -1388,6 +1623,14 @@ export class TimestampCell extends CellBase {
       return -1;
     }
     return 0;
+  }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return {
+      kind: 'timestamp_literal',
+      timestamp_value: this.cell.timestamp_value,
+      granularity: this.timeframe,
+    };
   }
 }
 
@@ -1471,6 +1714,13 @@ export class StringCell extends CellBase {
       .toLocaleLowerCase()
       .localeCompare(other.value.toLocaleLowerCase());
   }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return {
+      kind: 'string_literal',
+      string_value: this.cell.string_value,
+    };
+  }
 }
 
 export class BooleanCell extends CellBase {
@@ -1496,5 +1746,12 @@ export class BooleanCell extends CellBase {
     }
 
     return -1;
+  }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    return {
+      kind: 'boolean_literal',
+      boolean_value: this.cell.boolean_value,
+    };
   }
 }

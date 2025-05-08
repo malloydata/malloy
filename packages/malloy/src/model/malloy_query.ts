@@ -116,6 +116,7 @@ import {
   isJoinedSource,
   isBasicArray,
   mkTemporal,
+  isTurtle,
 } from './malloy_types';
 
 import type {Connection} from '../connection/types';
@@ -2917,6 +2918,7 @@ class QueryQuery extends QueryField {
             join: 'many',
             name,
             resultMetadata,
+            drillView: fi.turtleDef.drillView,
           };
           fields.push(multiLineNest);
         } else {
@@ -2926,6 +2928,7 @@ class QueryQuery extends QueryField {
             join: 'one',
             name,
             resultMetadata,
+            drillView: fi.turtleDef.drillView,
           };
           fields.push(oneLineNest);
         }
@@ -2954,7 +2957,8 @@ class QueryQuery extends QueryField {
 
           const location = fOut.location;
           const annotation = fOut.annotation;
-          const drillView = isAtomic(fOut) ? fOut.drillView : undefined;
+          const drillView =
+            isAtomic(fOut) || isTurtle(fOut) ? fOut.drillView : undefined;
 
           const common = {
             resultMetadata,
@@ -4004,6 +4008,7 @@ class QueryQuery extends QueryField {
         type: 'turtle',
         name: 'starthere',
         pipeline,
+        drillView: fi.turtleDef.drillView,
       };
       const inputStruct: NestSourceDef = {
         type: 'nest_source',
@@ -5065,6 +5070,7 @@ class QueryStruct {
       pipeline,
       annotation,
       location: turtleDef.location,
+      drillView: turtleDef.drillView,
     };
     return flatTurtleDef;
   }

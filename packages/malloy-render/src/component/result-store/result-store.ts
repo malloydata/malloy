@@ -2,6 +2,7 @@ import {createStore, produce, unwrap} from 'solid-js/store';
 import type {DrillData} from '../types';
 import type {Cell} from '../../data_tree';
 import type {RenderMetadata} from '../render-result-metadata';
+import {queryToMalloy} from '@malloydata/malloy-interfaces';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -140,12 +141,14 @@ export async function copyExplorePathQueryToClipboard({
   data: Cell;
   onDrill?: (drillData: DrillData) => void;
 }) {
-  const expressions = data.getDrillExpressions();
+  // const expressions = data.getDrillExpressions();
   const drillEntries = data.getDrillEntries();
 
-  const whereClause = expressions.join(',\n');
+  // const whereClause = expressions.join(',\n');
 
   const query = data.getDrillQuery();
+
+  const stableQuery = data.getStableDrillQuery();
 
   const drillData: DrillData = {
     dimensionFilters: drillEntries,
@@ -158,8 +161,9 @@ export async function copyExplorePathQueryToClipboard({
         console.error('Failed to copy text: ', error);
       }
     },
-    query,
-    whereClause,
+    query:
+      (stableQuery && queryToMalloy(stableQuery)) ?? '<could not make query>',
+    whereClause: '',
   };
   if (onDrill) onDrill(drillData);
   else await drillData.copyQueryToClipboard();

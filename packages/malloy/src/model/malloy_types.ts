@@ -22,6 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { Filter } from "@malloydata/malloy-interfaces";
+
 // clang-format off
 
 /**
@@ -149,6 +151,8 @@ export interface FilterCondition extends ExprE {
   code: string;
   expressionType: ExpressionType;
   fieldUsage?: FieldUsage[];
+  drillView?: string;
+  stableFilter?: Filter;
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -1135,6 +1139,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
+  drillView?: string;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {

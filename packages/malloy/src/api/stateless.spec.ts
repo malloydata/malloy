@@ -914,6 +914,7 @@ LIMIT 101
         const byCarrier = result.result?.schema.fields[2];
         const byCarrierTag = tagFor(byCarrier);
         expect(byCarrierTag?.has('drillable')).toBe(true);
+        expect(byCarrierTag?.text('drill_view')).toBe('dashboard');
         const pipeline = result.result?.schema.fields[4];
         const pipelineTag = tagFor(pipeline);
         expect(pipelineTag?.has('drillable')).toBe(false);

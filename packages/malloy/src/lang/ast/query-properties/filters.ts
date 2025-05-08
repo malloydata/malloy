@@ -21,13 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {FilterCondition} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
-import {ExprEquality} from '../expressions/expr-compare';
+import {ExprCompare, ExprEquality} from '../expressions/expr-compare';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import type {FieldReference} from '../query-items/field-references';
 
@@ -38,6 +39,7 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {QueryBuilder} from '../types/query-builder';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
+import {ExprFilterExpression} from '../expressions/expr-filter-expr';
 
 export class FilterElement extends MalloyElement {
   elementType = 'filterElement';
@@ -46,6 +48,34 @@ export class FilterElement extends MalloyElement {
     readonly exprSrc: string
   ) {
     super({expr: expr});
+  }
+
+  private getStableFilter(): Malloy.Filter | undefined {
+    const drillFilter = this.drillFilter();
+    if (drillFilter !== undefined) {
+      return {
+        kind: 'literal_equality',
+        field_reference: {
+          name: drillFilter.reference.nameString,
+          path: drillFilter.reference.list.map(f => f.name).slice(0, -1),
+        },
+        value: drillFilter.value.getStableLiteral(),
+      };
+    }
+    const filterExpressionFilter = this.filterExpressionFilter();
+    if (filterExpressionFilter !== undefined) {
+      return {
+        kind: 'filter_string',
+        field_reference: {
+          name: filterExpressionFilter.reference.nameString,
+          path: filterExpressionFilter.reference.list
+            .map(f => f.name)
+            .slice(0, -1),
+        },
+        filter: filterExpressionFilter.filterExpression,
+      };
+    }
+    return undefined;
   }
 
   filterCondition(fs: FieldSpace): FilterCondition {
@@ -63,14 +93,36 @@ export class FilterElement extends MalloyElement {
         fieldUsage: exprVal.fieldUsage,
       };
     }
+    const stableFilter = this.getStableFilter();
     const exprCond: FilterCondition = {
       node: 'filterCondition',
       code: this.exprSrc,
       e: exprVal.value,
       expressionType: exprVal.expressionType,
       fieldUsage: exprVal.fieldUsage,
+      stableFilter,
     };
     return exprCond;
+  }
+
+  filterExpressionFilter():
+    | {
+        reference: FieldReference;
+        filterExpression: string;
+      }
+    | undefined {
+    if (
+      this.expr instanceof ExprCompare &&
+      this.expr.op === '~' &&
+      this.expr.left instanceof ExprIdReference &&
+      this.expr.right instanceof ExprFilterExpression
+    ) {
+      return {
+        reference: this.expr.left.fieldReference,
+        filterExpression: this.expr.right.filterText,
+      };
+    }
+    return undefined;
   }
 
   drillFilter():

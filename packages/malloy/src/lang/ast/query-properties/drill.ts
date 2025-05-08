@@ -358,7 +358,10 @@ export function attachDrillPaths(
   return [
     {
       ...pipeline[0],
-      // TODO only if scalar?
+      filterList: pipeline[0].filterList?.map(f => ({
+        ...f,
+        drillView: name,
+      })),
       queryFields: pipeline[0].queryFields.map(f => ({
         ...f,
         drillView: name,
