@@ -50,8 +50,8 @@ export class ViewRefine extends View {
     fs: SourceFieldSpace,
     isNestIn?: QueryOperationSpace
   ): PipelineComp {
-    const query = this.base.pipelineComp(fs);
-    const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
+    const query = this.base.pipelineComp(scope);
+    const resultPipe = this.refinement.refine(scope, query.pipeline, isNestIn);
     return {
       pipeline: resultPipe,
       annotation: query.annotation,

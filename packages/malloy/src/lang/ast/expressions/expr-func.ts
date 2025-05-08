@@ -64,7 +64,7 @@ import type {PartitionBy} from './partition_by';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
@@ -97,8 +97,8 @@ export class ExprFunc extends ExpressionDef {
     return true;
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    return this.getPropsExpression(ns);
+  getExpression(scope: Scope): ExprValue {
+    return this.getPropsExpression(scope);
   }
 
   private findFunctionDef(
@@ -136,14 +136,16 @@ export class ExprFunc extends ExpressionDef {
   }
 
   getPropsExpression(
-    ns: NamespaceStack,
+    scope: Scope,
     props?: {
       partitionBys?: PartitionBy[];
       orderBys?: FunctionOrdering[];
       limit?: Limit;
     }
   ): ExprValue {
-    const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(ns));
+    const argExprsWithoutImplicit = this.args.map(arg =>
+      arg.getExpression(scope)
+    );
     if (this.isRaw) {
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       argExprsWithoutImplicit.forEach((expr, i) => {
@@ -164,7 +166,7 @@ export class ExprFunc extends ExpressionDef {
         from: argExprsWithoutImplicit,
       });
     }
-    const dialect = ns.dialectObj()?.name;
+    const dialect = scope.dialectObj()?.name;
     const {found: func, error} = this.findFunctionDef(dialect);
     if (func === undefined) {
       return errorFor(error);
@@ -174,7 +176,7 @@ export class ExprFunc extends ExpressionDef {
     let implicitExpr: ExprValue | undefined = undefined;
     let structPath = this.source?.path;
     if (this.source) {
-      const lookup = this.source.getField(ns);
+      const lookup = this.source.getField(scope);
       const sourceFoot = lookup.found;
       if (sourceFoot) {
         const footType = sourceFoot.typeDesc();
@@ -320,8 +322,8 @@ export class ExprFunc extends ExpressionDef {
         const allowExpression = overload.supportsOrderBy !== 'only_default';
         const allObs = props.orderBys.flatMap(orderBy =>
           isAnalytic
-            ? orderBy.getAnalyticOrderBy(ns)
-            : orderBy.getAggregateOrderBy(ns, allowExpression)
+            ? orderBy.getAnalyticOrderBy(scope)
+            : orderBy.getAggregateOrderBy(scope, allowExpression)
         );
         frag.kids.orderBy = allObs;
       } else {
@@ -345,7 +347,7 @@ export class ExprFunc extends ExpressionDef {
       const partitionByFields: string[] = [];
       for (const partitionBy of props.partitionBys) {
         for (const partitionField of partitionBy.partitionFields) {
-          const e = partitionField.getField(ns);
+          const e = partitionField.getField(scope);
           if (e.found === undefined) {
             partitionField.logError(
               'partition-by-not-found',
@@ -425,7 +427,7 @@ export class ExprFunc extends ExpressionDef {
           } else {
             const name = new FieldName(part.name);
             this.has({name});
-            const result = ns.lookup([name]);
+            const result = scope.lookup([name]);
             if (result.found === undefined) {
               return this.loggedErrorExpr(
                 'sql-function-interpolation-not-found',

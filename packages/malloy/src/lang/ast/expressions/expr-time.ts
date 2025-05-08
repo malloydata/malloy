@@ -28,7 +28,7 @@ import type {
 } from '../../../model/malloy_types';
 import {isTemporalType} from '../../../model/malloy_types';
 
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -46,7 +46,7 @@ export class ExprTime extends ExpressionDef {
     });
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     return this.translationValue;
   }
 

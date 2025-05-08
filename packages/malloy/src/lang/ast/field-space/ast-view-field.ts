@@ -23,20 +23,20 @@
 
 import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
 import type {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
-import type {FieldSpace} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import {ViewField} from './view-field';
 
 export class ASTViewField extends ViewField {
   constructor(
-    ns: NamespaceStack,
+    scope: Scope,
     readonly view: ViewFieldDeclaration,
     protected name: string
   ) {
-    super(fs);
+    super(scope);
   }
 
-  getQueryFieldDef(ns: NamespaceStack): QueryFieldDef {
-    return this.view.getFieldDef(fs);
+  getQueryFieldDef(scope: Scope): QueryFieldDef {
+    return this.view.getFieldDef(scope);
   }
 
   private turtleDef: TurtleDef | undefined = undefined;

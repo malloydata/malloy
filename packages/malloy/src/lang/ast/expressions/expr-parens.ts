@@ -24,7 +24,7 @@
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {applyBinary, ATNodeType, ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export class ExprParens extends ExpressionDef {
   elementType = '(expression)';
@@ -32,25 +32,25 @@ export class ExprParens extends ExpressionDef {
     super({expr: expr});
   }
 
-  requestExpression(ns: NamespaceStack): ExprValue | undefined {
-    return this.expr.requestExpression(ns);
+  requestExpression(scope: Scope): ExprValue | undefined {
+    return this.expr.requestExpression(scope);
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    const subExpr = this.expr.getExpression(ns);
+  getExpression(scope: Scope): ExprValue {
+    const subExpr = this.expr.getExpression(scope);
     return {...subExpr, value: {node: '()', e: subExpr.value}};
   }
 
   apply(
-    ns: NamespaceStack,
+    scope: Scope,
     op: BinaryMalloyOperator,
     left: ExpressionDef,
     doWarn: boolean
   ): ExprValue {
     if (this.expr.atNodeType() === ATNodeType.Or) {
-      return this.expr.apply(ns, op, left, doWarn);
+      return this.expr.apply(scope, op, left, doWarn);
     }
-    return applyBinary(ns, left, op, this);
+    return applyBinary(scope, left, op, this);
   }
 
   atNodeType(): ATNodeType {

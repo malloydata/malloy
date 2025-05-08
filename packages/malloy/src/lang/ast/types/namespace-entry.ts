@@ -6,7 +6,7 @@
  */
 
 import type {StructDef, TypeDesc} from '../../../model';
-import type {Namespace} from './field-space';
+import type {Namespace} from './namespace';
 
 // Note: We removed 'parameter' from this
 // TODO: Consider splitting out 'join' and 'view'

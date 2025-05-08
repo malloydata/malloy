@@ -24,7 +24,7 @@
 import type {CompareMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export class PartialCompare extends ExpressionDef {
   elementType = '<=> a';
@@ -39,15 +39,15 @@ export class PartialCompare extends ExpressionDef {
     return this.right.granular();
   }
 
-  apply(ns: NamespaceStack, op: string, expr: ExpressionDef): ExprValue {
-    return this.right.apply(fs, this.op, expr);
+  apply(scope: Scope, op: string, expr: ExpressionDef): ExprValue {
+    return this.right.apply(scope, this.op, expr);
   }
 
-  requestExpression(_ns: NamespaceStack): ExprValue | undefined {
+  requestExpression(_scope: Scope): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     return this.loggedErrorExpr(
       'partial-as-value',
       'Partial comparison does not have a value'

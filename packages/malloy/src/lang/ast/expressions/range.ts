@@ -26,7 +26,7 @@ import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export class Range extends ExpressionDef {
   elementType = 'range';
@@ -38,7 +38,7 @@ export class Range extends ExpressionDef {
   }
 
   apply(
-    ns: NamespaceStack,
+    scope: Scope,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
@@ -48,8 +48,8 @@ export class Range extends ExpressionDef {
         const op1 = op === '=' ? '>=' : '<';
         const op2 = op === '=' ? 'and' : 'or';
         const op3 = op === '=' ? '<' : '>=';
-        const fromValue = this.first.apply(ns, op1, expr);
-        const toValue = this.last.apply(ns, op3, expr);
+        const fromValue = this.first.apply(scope, op1, expr);
+        const toValue = this.last.apply(scope, op3, expr);
         return computedExprValue({
           dataType: {type: 'boolean'},
           value: {
@@ -70,22 +70,22 @@ export class Range extends ExpressionDef {
        * val <= begin to end    val < end
        */
       case '>':
-        return this.last.apply(ns, '>=', expr);
+        return this.last.apply(scope, '>=', expr);
       case '>=':
-        return this.first.apply(ns, '>=', expr);
+        return this.first.apply(scope, '>=', expr);
       case '<':
-        return this.first.apply(ns, '<', expr);
+        return this.first.apply(scope, '<', expr);
       case '<=':
-        return this.last.apply(ns, '<', expr);
+        return this.last.apply(scope, '<', expr);
     }
     throw new Error('mysterious error in range computation');
   }
 
-  requestExpression(_ns: NamespaceStack): undefined {
+  requestExpression(_scope: Scope): undefined {
     return undefined;
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     this.logError('range-as-value', 'A Range is not a value');
     return errorFor('a range is not a value');
   }

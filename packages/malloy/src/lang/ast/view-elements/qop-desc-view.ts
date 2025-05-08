@@ -47,7 +47,7 @@ export class QOpDescView extends View {
     fs: SourceFieldSpace,
     isNestIn?: QueryOperationSpace
   ): PipelineComp {
-    const newOperation = this.operation.getOp(fs, isNestIn);
+    const newOperation = this.operation.getOp(scope, isNestIn);
     return {
       pipeline: [newOperation.segment],
       outputStruct: newOperation.outputSpace().structDef(),

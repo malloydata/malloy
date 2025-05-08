@@ -24,7 +24,7 @@
 import {ExprCompare} from './expr-compare';
 import type {ExpressionDef} from '../types/expression-def';
 import type {ExprValue} from '../types/expr-value';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import {isGranularResult} from '../types/granular-result';
 import {ExprGranularTime} from './expr-granular-time';
 
@@ -37,18 +37,18 @@ export class Apply extends ExprCompare {
     super(left, '=', right);
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
+  getExpression(scope: Scope): ExprValue {
     let right = this.right;
     if (!this.right.granular()) {
-      const rhs = this.right.requestExpression(ns);
+      const rhs = this.right.requestExpression(scope);
       if (rhs && isGranularResult(rhs)) {
         // Need to wrap granular computations to get granular behavior
         right = new ExprGranularTime(this.right, rhs.timeframe, false);
       }
     }
     if (right instanceof ExprGranularTime) {
-      return right.toRange(ns).apply(ns, this.op, this.left);
+      return right.toRange(scope).apply(scope, this.op, this.left);
     }
-    return super.getExpression(ns);
+    return super.getExpression(scope);
   }
 }

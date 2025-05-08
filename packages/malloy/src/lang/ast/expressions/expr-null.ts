@@ -21,17 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {BinaryMalloyOperator, NamespaceStack} from '..';
+import type {BinaryMalloyOperator} from '..';
 import type {ExprValue} from '../types/expr-value';
 import {literalExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import type {Scope} from '../types/scope';
 
-function doIsNull(
-  ns: NamespaceStack,
-  op: string,
-  expr: ExpressionDef
-): ExprValue {
-  const nullCmp = expr.getExpression(ns);
+function doIsNull(scope: Scope, op: string, expr: ExpressionDef): ExprValue {
+  const nullCmp = expr.getExpression(scope);
   nullCmp.type = 'boolean';
   nullCmp.value = {
     node: op === '=' ? 'is-null' : 'is-not-null',
@@ -51,14 +48,14 @@ export class ExprNULL extends ExpressionDef {
   }
 
   apply(
-    ns: NamespaceStack,
+    scope: Scope,
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
     if (op === '!=' || op === '=') {
-      return doIsNull(ns, op, left);
+      return doIsNull(scope, op, left);
     }
-    return super.apply(ns, op, left, true);
+    return super.apply(scope, op, left, true);
   }
 }
 
@@ -68,15 +65,15 @@ export class PartialIsNull extends ExpressionDef {
     super();
   }
 
-  apply(ns: NamespaceStack, op: string, expr: ExpressionDef): ExprValue {
-    return doIsNull(ns, this.op, expr);
+  apply(scope: Scope, op: string, expr: ExpressionDef): ExprValue {
+    return doIsNull(scope, this.op, expr);
   }
 
-  requestExpression(_ns: NamespaceStack): ExprValue | undefined {
+  requestExpression(_scope: Scope): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     return this.loggedErrorExpr(
       'partial-as-value',
       'Partial null check does not have a value'
@@ -98,7 +95,7 @@ export class ExprIsNull extends ExpressionDef {
     this.has({expr});
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    return doIsNull(ns, this.op, this.expr);
+  getExpression(scope: Scope): ExprValue {
+    return doIsNull(scope, this.op, this.expr);
   }
 }

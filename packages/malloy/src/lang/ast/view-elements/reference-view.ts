@@ -60,14 +60,14 @@ export class ReferenceView extends View {
     fs: SourceFieldSpace,
     _isNestIn: QueryOperationSpace
   ): PipelineComp {
-    return this._pipelineComp(fs);
+    return this._pipelineComp(scope);
   }
 
   _pipelineComp(
     fs: SourceFieldSpace,
     {forRefinement} = {forRefinement: false}
   ): PipelineComp & {error?: boolean} {
-    const lookup = this.reference.getField(fs);
+    const lookup = this.reference.getField(scope);
     const oops = function () {
       return {
         inputStruct: ErrorFactory.structDef,

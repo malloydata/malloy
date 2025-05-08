@@ -22,13 +22,13 @@
  */
 
 import type {ExprValue} from '../types/expr-value';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNow extends ExpressionDef {
   elementType = 'timestamp';
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     return {
       type: 'timestamp',
       expressionType: 'scalar',

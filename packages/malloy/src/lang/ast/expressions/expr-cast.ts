@@ -26,7 +26,7 @@ import {castTo} from '../time-utils';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
@@ -38,13 +38,13 @@ export class ExprCast extends ExpressionDef {
     super({expr: expr});
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    const expr = this.expr.getExpression(ns);
+  getExpression(scope: Scope): ExprValue {
+    const expr = this.expr.getExpression(scope);
     let dataType: BasicAtomicTypeDef = {type: 'error'};
     if (typeof this.castType === 'string') {
       dataType = {type: this.castType};
     } else {
-      const dialect = ns.dialectObj();
+      const dialect = scope.dialectObj();
       if (dialect) {
         if (dialect.validateTypeName(this.castType.raw)) {
           dataType = dialect.sqlTypeToMalloyType(this.castType.raw);
@@ -57,7 +57,7 @@ export class ExprCast extends ExpressionDef {
         if (this.safe && !dialect.supportsSafeCast) {
           this.logError(
             'dialect-cast-unsafe-only',
-            `The SQL dialect '${ns.dialectName()}' does not supply a safe cast operator`
+            `The SQL dialect '${scope.dialectName()}' does not supply a safe cast operator`
           );
         }
       }

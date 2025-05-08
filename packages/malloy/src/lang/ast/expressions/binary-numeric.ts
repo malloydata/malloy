@@ -25,7 +25,7 @@ import * as TDU from '../typedesc-utils';
 import type {ArithmeticMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export abstract class BinaryNumeric<
   opType extends ArithmeticMalloyOperator,
@@ -40,7 +40,7 @@ export abstract class BinaryNumeric<
     this.legalChildTypes = [TDU.numberT];
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    return this.right.apply(ns, this.op, this.left);
+  getExpression(scope: Scope): ExprValue {
+    return this.right.apply(scope, this.op, this.left);
   }
 }

@@ -29,7 +29,7 @@ import * as TDU from '../typedesc-utils';
 import {timeOffset} from '../time-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import type {GranularResult} from '../types/granular-result';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
@@ -57,9 +57,9 @@ export class ExprGranularTime extends ExpressionDef {
     return true;
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
+  getExpression(scope: Scope): ExprValue {
     const timeframe = this.units;
-    const exprVal = this.expr.getExpression(ns);
+    const exprVal = this.expr.getExpression(scope);
     if (TD.isTemporal(exprVal)) {
       const tsVal: GranularResult = {
         ...exprVal,
@@ -93,8 +93,8 @@ export class ExprGranularTime extends ExpressionDef {
     };
   }
 
-  // apply(ns: NamespaceStack, op: string, left: ExpressionDef): ExprValue {
-  //   return this.getRange(fs).apply(fs, op, left);
+  // apply(scope: Scope, op: string, left: ExpressionDef): ExprValue {
+  //   return this.getRange(scope).apply(scope, op, left);
 
   //   /*
   //     write tests for each of these cases ....
@@ -113,8 +113,8 @@ export class ExprGranularTime extends ExpressionDef {
   //   */
   // }
 
-  toRange(ns: NamespaceStack): Range {
-    const begin = this.getExpression(ns);
+  toRange(scope: Scope): Range {
+    const begin = this.getExpression(scope);
     const one: Expr = {node: 'numberLiteral', literal: '1'};
     if (begin.type === 'timestamp') {
       const beginTS = ExprTime.fromValue('timestamp', begin);

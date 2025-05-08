@@ -2685,7 +2685,7 @@ class QueryQuery extends QueryField {
     const fs = resultStruct.firstSegment;
     return fs.type === 'index'
       ? fs.indexFields
-      : isQuerySegment(fs)
+      : isQuerySegment(scope)
       ? fs.queryFields
       : [];
   }

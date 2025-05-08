@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {JoinElementType, JoinType} from '../../../model';
 import type {MessageCode} from '../../parse-log';
-import {Namespace} from './field-space';
-import type {SpaceEntry} from './space-entry';
+import type {Namespace} from './namespace';
+import type {NamespaceEntry} from './namespace-entry';
 
 export interface NamespaceLookupFound {
   found: NamespaceEntry;

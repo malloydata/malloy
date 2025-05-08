@@ -24,14 +24,14 @@
 import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
 
 import {ViewField} from './view-field';
-import type {FieldSpace} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export class IRViewField extends ViewField {
   constructor(
-    ns: NamespaceStack,
+    scope: Scope,
     protected turtleDef: TurtleDef
   ) {
-    super(fs);
+    super(scope);
   }
 
   rename(name: string): void {
@@ -49,7 +49,7 @@ export class IRViewField extends ViewField {
     return this.turtleDef;
   }
 
-  getQueryFieldDef(_ns: NamespaceStack): QueryFieldDef | undefined {
+  getQueryFieldDef(_scope: Scope): QueryFieldDef | undefined {
     return this.fieldDef();
   }
 }

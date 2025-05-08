@@ -29,7 +29,7 @@ import type {
 import {TD, mkFieldDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import type {FieldReference} from '../query-items/field-references';
-import type {FieldSpace} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
@@ -40,7 +40,7 @@ export class ReferenceField extends SpaceField {
   private queryFieldDef?: QueryFieldDef;
   constructor(
     readonly fieldRef: FieldReference,
-    readonly inns: NamespaceStack
+    readonly inscope: Scope
   ) {
     super();
   }
@@ -53,9 +53,9 @@ export class ReferenceField extends SpaceField {
     return this.memoReference;
   }
 
-  getQueryFieldDef(ns: NamespaceStack): QueryFieldDef | undefined {
+  getQueryFieldDef(scope: Scope): QueryFieldDef | undefined {
     if (!this.queryFieldDef) {
-      const check = this.fieldRef.getField(fs);
+      const check = this.fieldRef.getField(scope);
       if (check.error) {
         this.fieldRef.logError(check.error.code, check.error.message);
       }

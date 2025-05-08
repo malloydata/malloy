@@ -33,7 +33,7 @@ export abstract class ViewField extends SpaceField {
     super();
   }
 
-  abstract getQueryFieldDef(ns: NamespaceStack): QueryFieldDef | undefined;
+  abstract getQueryFieldDef(scope: Scope): QueryFieldDef | undefined;
   abstract fieldDef(): TurtleDef;
 
   typeDesc() {

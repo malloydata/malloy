@@ -26,7 +26,7 @@ import type {SourceDef, StructDef} from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
-import type {NamespaceStack} from './namespace';
+import type {Scope} from './scope';
 import type {SpaceEntry} from './space-entry';
 
 /**
@@ -71,7 +71,7 @@ export class FieldName extends MalloyElement {
     return this.refString;
   }
 
-  getField(ns: NamespaceStack): LookupResult {
-    return ns.lookup([this]);
+  getField(scope: Scope): LookupResult {
+    return scope.lookup([this]);
   }
 }

@@ -341,7 +341,7 @@ Formats a numeric field representing a duration into a human-readable string (e.
 
 - `. [unit]`: Specifies the unit of the input number if not seconds (e.g., `nanoseconds`, `milliseconds`, `minutes`, `hours`, `days`). Default is `seconds`.
   - Syntax: `# duration=milliseconds`
-- `.terse`\*\*: Uses abbreviated units (ns, µs, ms, s, m, h, d).
+- `.terse`\*\*: Uses abbreviated units (scope, µs, ms, s, m, h, d).
   - Syntax: `# duration.terse` or `# duration { terse }`
 - `.number`: Apply an `ssf` format string to the numeric parts of the duration.
   - Syntax: `# duration { number="0.0" }`

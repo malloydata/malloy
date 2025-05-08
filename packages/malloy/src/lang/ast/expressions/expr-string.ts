@@ -22,7 +22,7 @@
  */
 
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import type {ExprValue} from '../types/expr-value';
 import {literalExprValue} from '../types/expr-value';
 
@@ -34,7 +34,7 @@ export class ExprString extends ExpressionDef {
     this.value = src;
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     return literalExprValue({
       dataType: {type: 'string'},
       value: {node: 'stringLiteral', literal: this.value},

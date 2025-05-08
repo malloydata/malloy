@@ -31,7 +31,8 @@ import type {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
 
-import type {FieldName, NamespaceStack} from '../types/field-space';
+import type {FieldName} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import type {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
@@ -120,7 +121,7 @@ export abstract class FieldReference
 
   abstract typecheck(type: TypeDesc): void;
 
-  getField(ns: NamespaceStack): LookupResult {
+  getField(scope: Scope): LookupResult {
     const result = ns.lookup(this.list);
 
     if (result.found) {

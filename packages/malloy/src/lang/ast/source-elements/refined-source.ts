@@ -165,7 +165,7 @@ export class RefinedSource extends Source {
     }
     fs.pushFields(...fields);
     if (primaryKey) {
-      const keyDef = primaryKey.field.getField(fs);
+      const keyDef = primaryKey.field.getField(scope);
       if (keyDef.error) {
         primaryKey.logError(keyDef.error.code, keyDef.error.message);
       }
@@ -178,7 +178,7 @@ export class RefinedSource extends Source {
     let moreFilters = false;
     for (const filter of filters) {
       for (const el of filter.list) {
-        const fc = el.filterCondition(fs);
+        const fc = el.filterCondition(scope);
         if (expressionIsCalculation(fc.expressionType)) {
           el.logError(
             'aggregate-in-source-filter',

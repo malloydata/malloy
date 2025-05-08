@@ -10,7 +10,7 @@ import {TD, mkFieldDef} from '../../../model';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
 import type {ExprIdReference} from './expr-id-reference';
@@ -46,11 +46,11 @@ export class RecordLiteral extends ExpressionDef {
     this.has({pairs});
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    return this.getRecord(ns, []);
+  getExpression(scope: Scope): ExprValue {
+    return this.getRecord(scope, []);
   }
 
-  getRecord(ns: NamespaceStack, kidNames: string[]): ExprValue {
+  getRecord(scope: Scope, kidNames: string[]): ExprValue {
     const recLit: RecordLiteralNode = {
       node: 'recordLiteral',
       kids: {},
@@ -71,7 +71,7 @@ export class RecordLiteral extends ExpressionDef {
         );
         continue;
       }
-      const xVal = el.value.getExpression(ns);
+      const xVal = el.value.getExpression(scope);
       if (TD.isAtomic(xVal)) {
         dependents.push(xVal);
         recLit.kids[key] = xVal.value;
@@ -90,11 +90,11 @@ export class RecordLiteral extends ExpressionDef {
     });
   }
 
-  getNextElement(ns: NamespaceStack, headValue: ExprValue): ExprValue {
+  getNextElement(scope: Scope, headValue: ExprValue): ExprValue {
     const recLit = headValue.value;
     if (recLit.node === 'recordLiteral') {
-      return this.getRecord(ns, Object.keys(recLit.kids));
+      return this.getRecord(scope, Object.keys(recLit.kids));
     }
-    return this.getRecord(ns, []);
+    return this.getRecord(scope, []);
   }
 }

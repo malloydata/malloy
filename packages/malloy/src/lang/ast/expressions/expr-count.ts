@@ -24,7 +24,7 @@
 import type {AggregateExpr} from '../../../model/malloy_types';
 import type {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 
 export class ExprCount extends ExprAggregateFunction {
@@ -52,7 +52,7 @@ export class ExprCount extends ExprAggregateFunction {
     };
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     const ret: AggregateExpr = {
       node: 'aggregate',
       function: 'count',

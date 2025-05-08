@@ -26,11 +26,8 @@ import type {BinaryMalloyOperator} from '../types/binary_operators';
 
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {
-  FieldSpace,
-  NamespaceStack,
-  QueryFieldSpace,
-} from '../types/field-space';
+import type {FieldSpace, QueryFieldSpace} from '../types/field-space';
+import type {Scope} from '../types/scope';
 import type {LookupResult} from '../types/lookup-result';
 import type {SpaceEntry} from '../types/space-entry';
 
@@ -79,7 +76,7 @@ export class ConstantExpression extends ExpressionDef {
     super({expr: expr});
   }
 
-  getExpression(_ns: NamespaceStack): ExprValue {
+  getExpression(_scope: Scope): ExprValue {
     return this.constantValue();
   }
 
@@ -95,14 +92,14 @@ export class ConstantExpression extends ExpressionDef {
   }
 
   apply(
-    ns: NamespaceStack,
+    scope: Scope,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
-    return this.expr.apply(ns, op, expr);
+    return this.expr.apply(scope, op, expr);
   }
 
-  requestExpression(ns: NamespaceStack): ExprValue | undefined {
-    return this.expr.requestExpression(ns);
+  requestExpression(scope: Scope): ExprValue | undefined {
+    return this.expr.requestExpression(scope);
   }
 }

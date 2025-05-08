@@ -25,7 +25,7 @@ import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {NamespaceStack} from '../types/field-space';
+import type {Scope} from '../types/scope';
 
 export class ExprMinus extends ExpressionDef {
   elementType = 'unary minus';
@@ -35,8 +35,8 @@ export class ExprMinus extends ExpressionDef {
     this.legalChildTypes = [TDU.numberT];
   }
 
-  getExpression(ns: NamespaceStack): ExprValue {
-    const expr = this.expr.getExpression(ns);
+  getExpression(scope: Scope): ExprValue {
+    const expr = this.expr.getExpression(scope);
     if (TDU.typeIn(expr, this.legalChildTypes)) {
       return {
         ...expr,
