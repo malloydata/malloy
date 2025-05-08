@@ -394,6 +394,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'timezone': {
+        'type': 'string',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'DateTimeframe': {
@@ -471,6 +476,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
     },
   },
+  'DrillOperation': {
+    'type': 'struct',
+    'name': 'DrillOperation',
+    'fields': {
+      'filter': {
+        'type': 'Filter',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
   'Expression': {
     'type': 'union',
     'name': 'Expression',
@@ -532,6 +548,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'name': 'Filter',
     'options': {
       'filter_string': 'FilterStringApplication',
+      'literal_equality': 'LiteralEqualityComparison',
     },
   },
   'FilterExpressionLiteral': {
@@ -657,6 +674,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'fields': {
       'limit': {
         'type': 'number',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
+  'LiteralEqualityComparison': {
+    'type': 'struct',
+    'name': 'LiteralEqualityComparison',
+    'fields': {
+      'field_reference': {
+        'type': 'Reference',
+        'optional': false,
+        'array': false,
+      },
+      'value': {
+        'type': 'LiteralValue',
         'optional': false,
         'array': false,
       },
@@ -1410,6 +1443,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'timezone': {
+        'type': 'string',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'TimestampTimeframe': {
@@ -1532,6 +1570,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'where': 'FilterOperation',
       'nest': 'Nest',
       'having': 'FilterOperation',
+      'drill': 'DrillOperation',
     },
   },
   'ViewRefinement': {
@@ -1755,6 +1794,7 @@ export type DateCell = {
 export type DateLiteral = {
   date_value: string;
   granularity?: DateTimeframe;
+  timezone?: string;
 };
 
 export type DateTimeframe = 'year' | 'quarter' | 'month' | 'week' | 'day';
@@ -1777,6 +1817,10 @@ export type DocumentPosition = {
 export type DocumentRange = {
   start: DocumentPosition;
   end: DocumentPosition;
+};
+
+export type DrillOperation = {
+  filter: Filter;
 };
 
 export type ExpressionType =
@@ -1828,13 +1872,17 @@ export type File = {
   invalidation_key?: string;
 };
 
-export type FilterType = 'filter_string';
+export type FilterType = 'filter_string' | 'literal_equality';
 
-export type Filter = FilterWithFilterString;
+export type Filter = FilterWithFilterString | FilterWithLiteralEquality;
 
 export type FilterWithFilterString = {
   kind: 'filter_string';
 } & FilterStringApplication;
+
+export type FilterWithLiteralEquality = {
+  kind: 'literal_equality';
+} & LiteralEqualityComparison;
 
 export type FilterExpressionLiteral = {
   filter_expression_value: string;
@@ -1876,6 +1924,11 @@ export type JoinInfo = {
 
 export type Limit = {
   limit: number;
+};
+
+export type LiteralEqualityComparison = {
+  field_reference: Reference;
+  value: LiteralValue;
 };
 
 export type LiteralValueType =
@@ -2217,6 +2270,7 @@ export type TimestampCell = {
 export type TimestampLiteral = {
   timestamp_value: string;
   granularity?: TimestampTimeframe;
+  timezone?: string;
 };
 
 export type TimestampTimeframe =
@@ -2286,7 +2340,8 @@ export type ViewOperationType =
   | 'limit'
   | 'where'
   | 'nest'
-  | 'having';
+  | 'having'
+  | 'drill';
 
 export type ViewOperation =
   | ViewOperationWithGroupBy
@@ -2295,7 +2350,8 @@ export type ViewOperation =
   | ViewOperationWithLimit
   | ViewOperationWithWhere
   | ViewOperationWithNest
-  | ViewOperationWithHaving;
+  | ViewOperationWithHaving
+  | ViewOperationWithDrill;
 
 export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
 
@@ -2310,6 +2366,8 @@ export type ViewOperationWithWhere = {kind: 'where'} & FilterOperation;
 export type ViewOperationWithNest = {kind: 'nest'} & Nest;
 
 export type ViewOperationWithHaving = {kind: 'having'} & FilterOperation;
+
+export type ViewOperationWithDrill = {kind: 'drill'} & DrillOperation;
 
 export type ViewRefinement = {
   base: ViewDefinition;

@@ -76,7 +76,7 @@ const fTimestamp = `${fMinute}:ss`;
 /**
  * Literals specified with an @ in Malloy all become one of these
  */
-abstract class TimeLiteral extends ExpressionDef {
+export abstract class TimeLiteral extends ExpressionDef {
   literalPart: string;
   nextLit?: string;
   timeZone?: string;
@@ -111,6 +111,10 @@ abstract class TimeLiteral extends ExpressionDef {
       dataType: {type: dataType},
       timeframe: this.units,
     });
+  }
+
+  getValue() {
+    return this.makeValue(this.literalPart, this.timeType);
   }
 
   getExpression(_fs: FieldSpace): ExprValue {

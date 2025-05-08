@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ParserRuleContext} from 'antlr4ts';
+import {ParserRuleContext} from 'antlr4ts';
 import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
@@ -18,13 +18,23 @@ import type {
   MessageParameterType,
 } from './parse-log';
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
-import {getId} from './parse-utils';
+import {getId, getPlainString} from './parse-utils';
 import type {DocumentLocation} from '../model/malloy_types';
 import {isTimestampUnit} from '../model/malloy_types';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParseInfo} from './utils';
 import {getSourceInfo, rangeFromContext} from './utils';
 import {mapLogs} from '../api/util';
+import type {TimeLiteral} from './ast';
+import {
+  LiteralDay,
+  LiteralHour,
+  LiteralMonth,
+  LiteralQuarter,
+  LiteralTimestamp,
+  LiteralWeek,
+  LiteralYear,
+} from './ast';
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
@@ -469,6 +479,14 @@ export class MalloyToQuery
         kind: 'where',
         ...w,
       }));
+    } else if (cx.drillStatement()) {
+      const whcx = cx.drillStatement()!;
+      const drill = this.getDrill(whcx);
+      if (drill === null) return null;
+      return drill.map(w => ({
+        kind: 'drill',
+        ...w,
+      }));
     } else if (cx.havingStatement()) {
       const hvcx = cx.havingStatement()!;
       const having = this.getHaving(hvcx);
@@ -495,8 +513,8 @@ export class MalloyToQuery
     path?: string[];
   } {
     const names = pcx.fieldName().map(nameCx => getId(nameCx));
-    const name = names[0];
-    const path = names.slice(1);
+    const name = names[names.length - 1];
+    const path = names.slice(0, -1);
     return {name, path: path.length > 0 ? path : undefined};
   }
 
@@ -702,10 +720,142 @@ export class MalloyToQuery
             };
           }
         }
+      } else if (cx.compareOp().EQ()) {
+        const lhs = cx.fieldExpr()[0];
+        const rhs = cx.fieldExpr()[1];
+        if (
+          lhs instanceof parse.ExprFieldPathContext &&
+          rhs instanceof parse.ExprLiteralContext
+        ) {
+          const {path, name} = this.getFieldPath(lhs.fieldPath());
+          const literal = this.getLiteral(rhs.literal());
+          if (literal === null) return null;
+          return {
+            filter: {
+              kind: 'literal_equality',
+              field_reference: {
+                name,
+                path,
+              },
+              value: literal,
+            },
+          };
+        }
       }
     }
-    this.notAllowed(cx, 'Filters other than comparisons with filter strings');
+    this.notAllowed(
+      cx,
+      'Filters other than comparisons with filter strings or equality with literals'
+    );
     return null;
+  }
+
+  getTimeLiteral(
+    literalCx: parse.LiteralContext,
+    parse: (text: string) => TimeLiteral | undefined
+  ):
+    | Malloy.LiteralValueWithDateLiteral
+    | Malloy.LiteralValueWithTimestampLiteral
+    | null {
+    const def = parse(literalCx.text);
+    if (!def) {
+      this.contextError(
+        literalCx,
+        'failed-to-parse-time-literal',
+        'Time data parse error'
+      );
+      return null;
+    }
+    const value = def.getValue();
+    const granularity = value.timeframe;
+    if (value.value.node !== 'timeLiteral') {
+      return null;
+    }
+    const timeValue = value.value.literal;
+    const timezone = value.value.timezone;
+    if (value.type === 'timestamp') {
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: timeValue,
+        granularity,
+        timezone,
+      };
+    } else {
+      if (
+        granularity === 'hour' ||
+        granularity === 'minute' ||
+        granularity === 'second'
+      )
+        return null;
+      return {
+        kind: 'date_literal',
+        date_value: timeValue,
+        granularity,
+        timezone,
+      };
+    }
+  }
+
+  getLiteral(literalCx: parse.LiteralContext): Malloy.LiteralValue | null {
+    if (literalCx instanceof parse.ExprTimeContext) {
+      const dateCx = literalCx.dateLiteral();
+      if (dateCx instanceof parse.LiteralTimestampContext) {
+        return this.getTimeLiteral(dateCx, LiteralTimestamp.parse);
+      } else if (dateCx instanceof parse.LiteralHourContext) {
+        return this.getTimeLiteral(dateCx, LiteralHour.parse);
+      } else if (dateCx instanceof parse.LiteralDayContext) {
+        return this.getTimeLiteral(dateCx, LiteralDay.parse);
+      } else if (dateCx instanceof parse.LiteralWeekContext) {
+        return this.getTimeLiteral(dateCx, LiteralWeek.parse);
+      } else if (dateCx instanceof parse.LiteralMonthContext) {
+        return this.getTimeLiteral(dateCx, LiteralMonth.parse);
+      } else if (dateCx instanceof parse.LiteralQuarterContext) {
+        return this.getTimeLiteral(dateCx, LiteralQuarter.parse);
+      } else if (dateCx instanceof parse.LiteralYearContext) {
+        return this.getTimeLiteral(dateCx, LiteralYear.parse);
+      }
+      return null;
+    } else if (literalCx instanceof parse.ExprArrayLiteralContext) {
+      this.notAllowed(literalCx, 'array literals');
+      return null;
+    } else if (literalCx instanceof parse.ExprLiteralRecordContext) {
+      this.notAllowed(literalCx, 'record literals');
+      return null;
+    } else if (literalCx instanceof parse.ExprStringContext) {
+      const [result, errors] = getPlainString(literalCx);
+      for (const error of errors) {
+        if (error instanceof ParserRuleContext) {
+          this.contextError(
+            error,
+            'illegal-query-interpolation-outside-sql-block',
+            '%{ query } illegal in this string'
+          );
+        }
+      }
+      return {kind: 'string_literal', string_value: result ?? ''};
+    } else if (literalCx instanceof parse.ExprBoolContext) {
+      return {
+        kind: 'boolean_literal',
+        boolean_value: literalCx.TRUE() !== null,
+      };
+    } else if (literalCx instanceof parse.ExprNumberContext) {
+      const n = Number(literalCx.text);
+      return {kind: 'number_literal', number_value: n};
+    } else if (literalCx instanceof parse.ExprNULLContext) {
+      return {kind: 'null_literal'};
+    }
+    return null;
+  }
+
+  getDrill(
+    drillCx: parse.DrillStatementContext
+  ): Malloy.DrillOperation[] | null {
+    const exprs = drillCx.drillClauseList().fieldExpr();
+    const where = exprs.map(exprCx => this.getFilterExpr(exprCx));
+    if (where.some(w => w === null)) {
+      return null;
+    }
+    return where as Malloy.DrillOperation[];
   }
 
   getWhere(

@@ -83,14 +83,16 @@ function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
       return [
         serializeDateAsLiteral(
           parseDate(literal.date_value),
-          literal.granularity ?? 'day'
+          literal.granularity ?? 'day',
+          literal.timezone
         ),
       ];
     case 'timestamp_literal':
       return [
         serializeDateAsLiteral(
           parseDate(literal.timestamp_value),
-          literal.granularity ?? 'second'
+          literal.granularity ?? 'second',
+          literal.timezone
         ),
       ];
   }
@@ -123,7 +125,8 @@ function parseDate(date: string): string[] {
 
 function serializeDateAsLiteral(
   [year, month, day, hour, minute, second]: string[],
-  granularity: Malloy.TimestampTimeframe
+  granularity: Malloy.TimestampTimeframe,
+  timezone: string | undefined
 ): string {
   switch (granularity) {
     case 'year': {
@@ -149,6 +152,9 @@ function serializeDateAsLiteral(
       return `@${year}-${month}-${day} ${hour}:${minute}`;
     }
     case 'second': {
+      if (timezone !== undefined) {
+        return `@${year}-${month}-${day} ${hour}:${minute}:${second}[${timezone}]`;
+      }
       return `@${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
     default:
@@ -302,6 +308,8 @@ function groupedOperationsToFragments(
       return whereToFragments(operations as Malloy.FilterOperation[]);
     case 'having':
       return havingToFragments(operations as Malloy.FilterOperation[]);
+    case 'drill':
+      return drillToFragments(operations as Malloy.DrillOperation[]);
   }
 }
 
@@ -479,6 +487,10 @@ function whereToFragments(where: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('where', where.map(filterOperationItemToFragments), ',');
 }
 
+function drillToFragments(drill: Malloy.DrillOperation[]): Fragment[] {
+  return formatBlock('drill', drill.map(filterOperationItemToFragments), ',');
+}
+
 function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('having', having.map(filterOperationItemToFragments), ',');
 }
@@ -526,6 +538,12 @@ function filterOperationItemToFragments(
         ...referenceToFragments(whereItem.filter.field_reference),
         ' ~ ',
         quoteFilter(whereItem.filter.filter),
+      ];
+    case 'literal_equality':
+      return [
+        ...referenceToFragments(whereItem.filter.field_reference),
+        ' = ',
+        ...literalToFragments(whereItem.filter.value),
       ];
   }
 }
