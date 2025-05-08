@@ -345,6 +345,15 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
       });
+      it('runs array_agg', async () => {
+        const onetwo = `${databaseName}.sql('SELECT 1 as "n" UNION ALL SELECT 2 UNION ALL SELECT 1')`;
+        await expect(`##! experimental
+          run: ${onetwo}->{aggregate: alln is array_agg(n) {order_by: n desc }}
+        `).matchesRows(runtime, {alln: [2, 1, 1]});
+        await expect(`##! experimental
+          run: ${onetwo}->{aggregate: alln is array_agg_distinct(n) {order_by:n asc}}
+        `).matchesRows(runtime, {alln: [1, 2]});
+      });
       it.when(presto)('runs array_average', async () => {
         await expect(
           `run: ${nums}->{select: tavg is array_average(nums)}`

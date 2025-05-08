@@ -58,6 +58,24 @@ const min_by: DefinitionBlueprint = {
   isSymmetric: true,
 };
 
+const array_agg: DefinitionBlueprint = {
+  takes: {x: T},
+  generic: {'T': ['any']},
+  returns: {measure: {array: T}},
+  supportsOrderBy: true,
+  impl: {sql: 'ARRAY_AGG(${x} ${order_by:})'},
+  isSymmetric: true,
+};
+
+const array_agg_distinct: DefinitionBlueprint = {
+  takes: {x: T},
+  generic: {'T': ['any']},
+  returns: {measure: {array: T}},
+  supportsOrderBy: true,
+  impl: {sql: 'ARRAY_AGG(DISTINCT ${x} ${order_by:})'},
+  isSymmetric: true,
+};
+
 const string_agg: OverloadedDefinitionBlueprint = {
   default_separator: {
     takes: {'value': {dimension: 'string'}},
@@ -361,6 +379,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   percent_rank,
 
   // array function
+  array_agg,
+  array_agg_distinct,
   array_join,
   sequence,
   ...def('array_distinct', {'x': {array: T}}, {array: T}),
