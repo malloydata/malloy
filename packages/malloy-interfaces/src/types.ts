@@ -960,7 +960,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': false,
       },
       'value': {
-        'type': 'Expression',
+        'type': 'LiteralValue',
         'optional': false,
         'array': false,
       },
@@ -2119,7 +2119,7 @@ export type ParameterTypeWithFilterExpressionType = {
 
 export type ParameterValue = {
   name: string;
-  value: Expression;
+  value: LiteralValue;
 };
 
 export type Position = {

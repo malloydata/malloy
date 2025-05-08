@@ -175,7 +175,7 @@ function referenceToFragments(reference: Malloy.Reference): Fragment[] {
       const p = reference.parameters[i];
       parameterFragments.push(maybeQuoteIdentifier(p.name));
       parameterFragments.push(' is ');
-      parameterFragments.push(...expressionToFragments(p.value));
+      parameterFragments.push(...literalToFragments(p.value));
       if (i < reference.parameters.length - 1) {
         parameterFragments.push(',', NEWLINE);
       }

@@ -391,7 +391,7 @@ struct Reference {
 
 struct ParameterValue {
   1: required string name,
-  2: required Expression value,
+  2: required LiteralValue value,
 }
 
 union LiteralValue {
