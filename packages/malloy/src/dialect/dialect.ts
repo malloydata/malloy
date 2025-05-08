@@ -97,6 +97,9 @@ export function qtz(qi: QueryInfo): string | undefined {
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 
+// TODO (vitor): We might want output_name + expression fallback as a single thing.
+export type GroupByClauseType = 'output_name' | 'ordinal' | 'expression';
+
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 
 export abstract class Dialect {
@@ -137,6 +140,8 @@ export abstract class Dialect {
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
 
+  groupByClause: GroupByClauseType = 'ordinal';
+
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
 
@@ -171,6 +176,18 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+
+  // Added field supportsLimit. TSQL Doesn't support limit and limit is not part of the SQL Standard
+  // TODO (vitor): Discuss with malloy
+  supportsLimit = true;
+
+  // Added field supportsRegexp. TSQL Doesn't support regexp. Idk how to use this with = false yet (tsql case). Malloy seems to often go for regexp
+  // TODO (vitor): Discuss with malloy
+  supportsRegexp = true;
+
+  // TSQL doesn't let you do complex operations on GROUP BY for aliased columns.
+  // TODO (vitor): Discuss with malloy. Also don't know how to name it.
+  supportsLateGroupByEval = true;
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];

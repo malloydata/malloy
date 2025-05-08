@@ -28,6 +28,22 @@ Setting up DuckDB:
 1. At top-level, run `npx ts-node scripts/build_duckdb_test_database.ts`
 2. A file called `duckdb_test.db` should be created in the test/data/duckdb folder - tests will automatically look there.
 
+Setting up SQLServer:
+
+# Setup for SQLServer Test Data
+
+1. run `npx dotenv -- npm run test-sqlserver`
+.env
+```
+SQLSERVER_USER=SA
+SQLSERVER_HOST=localhost
+SQLSERVER_PORT=1433
+SQLSERVER_PASSWORD=saTEST_0pword
+SQLSERVER_DATABASE=malloytestdb
+SQLSERVER_ENCRYPT=true
+SQLSERVER_TRUST_SERVER_CERTIFICATE=true
+```
+
 # Using the custom matcher for running queries
 
 There is now a custom matcher, `malloyResultMatches` for running queries.  The customer matcher makes it easy to write readable tests which need to look at query results, and produces useful output when the test fails to make it easier to develop tests or respond to the output of failing tests.

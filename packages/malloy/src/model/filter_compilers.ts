@@ -63,10 +63,12 @@ function unlike(disLiked: string[], x: string) {
  * XXXXFilterCompiler.compile() will move to XXXFilterExpression.compile()
  */
 
+// TODO (vitor): this is where the where clause gets built. I need to change 'true' to 1=1 and check what to do with false
 export const FilterCompilers = {
   compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
     if (c === null) {
-      return 'true';
+      // TODO (vitor): not sure if this is the best place to put it but we need something like this for tsql.
+      return d.booleanAsNumbers ? '(1 = 1)' : 'true';
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
