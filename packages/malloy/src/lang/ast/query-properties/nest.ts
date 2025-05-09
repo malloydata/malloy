@@ -31,6 +31,7 @@ import {
   QueryClass,
 } from '../types/query-property-interface';
 import type {QueryBuilder} from '../types/query-builder';
+import {attachDrillPaths} from './drill';
 
 export class NestFieldDeclaration
   extends ViewFieldDeclaration
@@ -57,10 +58,14 @@ export class NestFieldDeclaration
           ? pipeline[0].fieldUsage
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
+      const pipelineWithDrillPaths = attachDrillPaths(
+        checkedPipeline,
+        this.name
+      );
       this.turtleDef = {
         type: 'turtle',
         name: this.name,
-        pipeline: checkedPipeline,
+        pipeline: pipelineWithDrillPaths,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
         fieldUsage,

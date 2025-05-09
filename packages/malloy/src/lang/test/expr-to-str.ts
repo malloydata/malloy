@@ -31,6 +31,8 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
         return ref;
       }
     }
+    case 'parameter':
+      return `{parameter ${e.path}}`;
     case '()':
       return `(${subExpr(e.e)})`;
     case 'numberLiteral':

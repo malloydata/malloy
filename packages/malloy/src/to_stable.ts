@@ -11,6 +11,7 @@ import type {
   DateUnit,
   Expr,
   FieldDef,
+  FilterCondition,
   JoinType,
   ModelDef,
   Query,
@@ -240,11 +241,21 @@ function getResultMetadataAnnotation(
     tag.set(['calculation']);
     hasAny = true;
   }
-  if (resultMetadata.filterList) {
-    const drillFilters = resultMetadata.filterList
-      .filter(f => f.expressionType === 'scalar')
-      .map(f => f.code);
-    tag.set(['drill_filters'], drillFilters);
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
+  }
+  if (isAtomic(field) || isTurtle(field)) {
+    if (field.drillView !== undefined) {
+      tag.set(['drill_view'], field.drillView);
+      hasAny = true;
+    }
+  }
+  const drillFilters = resultMetadata.filterList?.filter(
+    f => f.expressionType === 'scalar'
+  );
+  if (drillFilters) {
+    addDrillFiltersTag(tag, drillFilters);
     hasAny = true;
   }
   if (resultMetadata.fieldKind === 'dimension') {
@@ -266,6 +277,78 @@ function getResultMetadataAnnotation(
     : undefined;
 }
 
+function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
+  for (let i = 0; i < drillFilters.length; i++) {
+    const filter = drillFilters[i];
+    tag.set(['drill_filters', i, 'code'], filter.code);
+    if (filter.drillView) {
+      tag.set(['drill_filters', i, 'drill_view'], filter.drillView);
+    }
+    if (filter.drillView === undefined && filter.stableFilter !== undefined) {
+      tag.set(
+        ['drill_filters', i, 'field_reference'],
+        [
+          ...(filter.stableFilter.field_reference.path ?? []),
+          filter.stableFilter.field_reference.name,
+        ]
+      );
+      if (filter.stableFilter.kind === 'filter_string') {
+        tag.set(['drill_filters', i, 'kind'], 'filter_expression');
+        tag.set(
+          ['drill_filters', i, 'filter_expression'],
+          filter.stableFilter.filter
+        );
+      } else {
+        tag.set(['drill_filters', i, 'kind'], 'literal_equality');
+        tag.set(
+          ['drill_filters', i, 'value', 'kind'],
+          filter.stableFilter.value.kind
+        );
+        switch (filter.stableFilter.value.kind) {
+          case 'string_literal':
+            tag.set(
+              ['drill_filters', i, 'value', 'string_value'],
+              filter.stableFilter.value.string_value
+            );
+            break;
+          case 'number_literal':
+            tag.set(
+              ['drill_filters', i, 'value', 'number_value'],
+              filter.stableFilter.value.number_value
+            );
+            break;
+          case 'boolean_literal':
+            tag.set(
+              ['drill_filters', i, 'value', 'boolean_value'],
+              filter.stableFilter.value.boolean_value.toString()
+            );
+            break;
+          case 'date_literal':
+            tag.set(
+              ['drill_filters', i, 'value', 'date_value'],
+              filter.stableFilter.value.date_value
+            );
+            tag.set(
+              ['drill_filters', i, 'value', 'granularity'],
+              filter.stableFilter.value.granularity
+            );
+            break;
+          case 'timestamp_literal':
+            tag.set(
+              ['drill_filters', i, 'value', 'timestamp_value'],
+              filter.stableFilter.value.timestamp_value
+            );
+            tag.set(
+              ['drill_filters', i, 'value', 'granularity'],
+              filter.stableFilter.value.granularity
+            );
+            break;
+        }
+      }
+    }
+  }
+}
+
 function escapeIdentifier(str: string) {
   return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 }
@@ -285,14 +368,16 @@ export function getResultStructMetadataAnnotation(
     tag.set(['limit'], resultMetadata.limit);
     hasAny = true;
   }
-  if (resultMetadata.filterList) {
-    const drillFilters = resultMetadata.filterList
-      .filter(f => f.expressionType === 'scalar')
-      .map(f => f.code);
-    if (drillFilters.length > 0) {
-      tag.set(['drill_filters'], drillFilters);
-      hasAny = true;
-    }
+  const drillFilters = resultMetadata.filterList?.filter(
+    f => f.expressionType === 'scalar'
+  );
+  if (drillFilters) {
+    addDrillFiltersTag(tag, drillFilters);
+    hasAny = true;
+  }
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
   }
   if (resultMetadata.orderBy) {
     for (let i = 0; i < resultMetadata.orderBy.length; i++) {
