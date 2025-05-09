@@ -23,6 +23,7 @@ import type {
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
+  expressionIsScalar,
   isAtomic,
   isQuerySegment,
 } from '../../../model/malloy_types';
@@ -162,12 +163,17 @@ export class Drill extends Filter implements QueryPropertyInterface {
             const lookup = fs.lookup(morePathFieldNames);
             if (lookup.found && lookup.found instanceof SpaceField) {
               fieldDef = lookup.found.fieldDef();
-              if (fieldDef && isAtomic(fieldDef))
+              if (
+                fieldDef &&
+                isAtomic(fieldDef) &&
+                expressionIsScalar(fieldDef.expressionType)
+              )
                 return f.path[f.path.length - 1];
             }
             return undefined;
           } else {
-            if (isAtomic(f)) return f.as ?? f.name;
+            if (isAtomic(f) && expressionIsScalar(f.expressionType))
+              return f.as ?? f.name;
           }
         })
         .filter(isNotUndefined);

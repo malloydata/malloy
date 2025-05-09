@@ -1614,6 +1614,24 @@ describe('query:', () => {
       expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
       expect(f[1]).toBeExpr('{filterCondition {ai = 1}}');
     });
+    test('does not think you need to drill on measures', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toTranslate();
+    });
     test('drill missing some fields (sibling)', () => {
       expect(
         markSource`
