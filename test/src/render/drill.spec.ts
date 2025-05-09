@@ -99,10 +99,7 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> {\n' +
-      '  drill:\n' +
-      '    top_carriers.nickname = "Southwest"\n' +
-      '} + { select: * }';
+      'run: flights -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
   });
@@ -114,8 +111,7 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> {\n  drill:\n    ' +
-      'over_time.dep_month = 8\n} + { select: * }';
+      'run: flights -> { drill: over_time.dep_month = 8 } + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
   });
@@ -127,8 +123,7 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> {\n  drill:\n    ' +
-      'by_origin.`Origin Code` = "ATL"\n} + { select: * }';
+      'run: flights -> { drill: by_origin.`Origin Code` = "ATL" } + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
   });
@@ -151,10 +146,7 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> {\n' +
-      '  drill:\n' +
-      '    cool_carriers.`Origin Code` = "ABQ"\n' +
-      '} + { select: * }';
+      'run: flights -> { drill: cool_carriers.`Origin Code` = "ABQ" } + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
   });
@@ -243,10 +235,8 @@ describe('drill query', () => {
       .loadQueryByName('negative_value')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
-    const expDrillQuery = `run: flights -> {
-  drill:
-    negative_value.negative_one = -1
-} + { select: * }`;
+    const expDrillQuery =
+      'run: flights -> { drill: negative_value.negative_one = -1 } + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
     expect(row.getStableDrillQuery()).toMatchObject({

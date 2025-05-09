@@ -145,6 +145,7 @@ export async function copyExplorePathQueryToClipboard({
 
   const whereClause = expressions.join(',\n');
 
+  const stableDrillClauses = data.getStableDrillClauses();
   const stableQuery = data.getStableDrillQuery();
   const query = data.getDrillQueryMalloy();
 
@@ -162,6 +163,7 @@ export async function copyExplorePathQueryToClipboard({
     query,
     whereClause,
     stableQuery,
+    stableDrillClauses,
   };
   if (onDrill) onDrill(drillData);
   else await drillData.copyQueryToClipboard();

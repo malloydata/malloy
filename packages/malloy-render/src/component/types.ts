@@ -107,4 +107,5 @@ export type DrillData = {
   query: string;
   whereClause: string;
   stableQuery: Malloy.Query | undefined;
+  stableDrillClauses: Malloy.DrillOperation[] | undefined;
 };

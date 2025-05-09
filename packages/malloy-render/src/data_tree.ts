@@ -1259,7 +1259,7 @@ export abstract class CellBase {
   }
 
   getStableDrillQuery(): Malloy.Query | undefined {
-    const drillClauses = this.getDrillClauses();
+    const drillClauses = this.getStableDrillClauses();
     if (drillClauses === undefined) return undefined;
     const drillOperations: Malloy.ViewOperationWithDrill[] = drillClauses.map(
       d => ({
@@ -1283,7 +1283,7 @@ export abstract class CellBase {
     };
   }
 
-  getDrillClauses(): Malloy.DrillOperation[] | undefined {
+  getStableDrillClauses(): Malloy.DrillOperation[] | undefined {
     let current: Cell | undefined = this.asCell();
     const result: Malloy.DrillOperation[] = [];
     while (current) {
@@ -1398,9 +1398,12 @@ export abstract class CellBase {
   }
 
   getStableDrillQueryMalloy(): string | undefined {
+    if (this.getStableDrillClauses()?.length === 0) {
+      return `run: ${this.field.root().sourceName} -> { select: * }`;
+    }
     const query = this.getStableDrillQuery();
     if (query === undefined) return undefined;
-    return Malloy.queryToMalloy(query) + ' { select: * }';
+    return Malloy.queryToMalloy(query) + ' + { select: * }';
   }
 
   getDrillQueryMalloy(): string {
