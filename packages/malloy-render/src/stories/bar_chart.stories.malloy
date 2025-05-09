@@ -423,6 +423,20 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   #(story)
+  # bar_chart
+  view: auto_select_time_axis is
+    {
+    group_by:
+      department
+      `date` is @2001-02-03 + id day
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 10
+    order_by: `date`
+  }
+
+
+  #(story)
   view: indepenent_axis is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()

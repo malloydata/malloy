@@ -108,8 +108,13 @@ export function getLineChartSettings(
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
+    // Pick date/time field first if it exists
+    const dateTimeField = explore.fields.find(
+      f => f.wasDimension() && f.isTime()
+    );
+    if (dateTimeField) xChannel.fields.push(explore.pathTo(dateTimeField));
     // Pick first dimension field for x
-    if (dimensions.length > 0) {
+    else if (dimensions.length > 0) {
       xChannel.fields.push(explore.pathTo(dimensions[0]));
     }
   }
