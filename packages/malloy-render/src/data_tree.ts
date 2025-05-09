@@ -1400,10 +1400,12 @@ export abstract class CellBase {
   getStableDrillQueryMalloy(): string | undefined {
     const query = this.getStableDrillQuery();
     if (query === undefined) return undefined;
-    return Malloy.queryToMalloy(query);
+    return Malloy.queryToMalloy(query) + ' { select: * }';
   }
 
   getDrillQueryMalloy(): string {
+    const stableMalloy = this.getStableDrillQueryMalloy();
+    if (stableMalloy !== undefined) return stableMalloy;
     const expressions = this.getDrillExpressions();
     let query = `run: ${this.field.root().sourceName} ->`;
     if (expressions.length > 0) {
