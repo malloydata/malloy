@@ -281,6 +281,9 @@ function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
   for (let i = 0; i < drillFilters.length; i++) {
     const filter = drillFilters[i];
     tag.set(['drill_filters', i, 'code'], filter.code);
+    if (filter.drillView) {
+      tag.set(['drill_filters', i, 'drill_view'], filter.drillView);
+    }
     if (filter.drillView === undefined && filter.stableFilter !== undefined) {
       tag.set(
         ['drill_filters', i, 'field_reference'],

@@ -363,6 +363,7 @@ export abstract class FieldBase {
   get drillFilters(): string[] {
     return (this.metadataTag.array('drill_filters') ?? [])
       .map(filterTag => {
+        if (filterTag.text('drill_view')) return undefined;
         const stableFilter = this.getStableDrillFilter(filterTag);
         if (stableFilter === undefined) {
           return filterTag.text('code');
@@ -477,6 +478,7 @@ export abstract class FieldBase {
     const result: Malloy.Filter[] = [];
     const filterTags = this.metadataTag.array('drill_filters');
     for (const filterTag of filterTags ?? []) {
+      if (filterTag.text('drill_view')) continue;
       const stableFilter = this.getStableDrillFilter(filterTag);
       if (stableFilter === undefined) return undefined;
       result.push(stableFilter);
@@ -1362,34 +1364,6 @@ export abstract class CellBase {
           newClauses.push({where: Malloy.filterToMalloy(filter)});
         }
         result.unshift(...newClauses);
-      }
-      current = current.parent;
-    }
-    return result;
-  }
-
-  private gdsetDrillValues(): DrillValue[] {
-    let current: Cell | undefined = this.asCell();
-    const result: DrillValue[] = [];
-    while (current) {
-      if (current && current.isArray()) {
-        result.unshift(...current.field.drillFilters.map(f => ({where: f})));
-        current = current.parent;
-      }
-      if (current === undefined) {
-        break;
-      }
-      if (current && current.isRecord()) {
-        const parentRecord = current;
-        const dimensions = current.field.fields.filter(
-          f => f.isBasic() && f.wasDimension()
-        );
-        result.unshift(
-          ...dimensions.map(dim => ({
-            field: dim,
-            value: parentRecord.column(dim.name),
-          }))
-        );
       }
       current = current.parent;
     }
