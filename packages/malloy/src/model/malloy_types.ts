@@ -22,7 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Filter } from "@malloydata/malloy-interfaces";
+import type {Filter} from '@malloydata/malloy-interfaces';
 
 // clang-format off
 
