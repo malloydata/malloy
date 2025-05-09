@@ -2,7 +2,6 @@ import {createStore, produce, unwrap} from 'solid-js/store';
 import type {DrillData} from '../types';
 import type {Cell} from '../../data_tree';
 import type {RenderMetadata} from '../render-result-metadata';
-import {queryToMalloy} from '@malloydata/malloy-interfaces';
 
 interface BrushDataBase {
   fieldRefId: string;
