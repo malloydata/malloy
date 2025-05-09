@@ -1443,6 +1443,74 @@ describe('query:', () => {
       expect(f.length).toBe(1);
       expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
     });
+    test('do not double-collect view filters for multiple dimensions in the same nest', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai, abool
+          }
+          dimension: is_cool is false
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.abool = true
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in overlapping nests', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai
+            nest: nested is {
+              where: is_awesome
+              group_by: abool
+            }
+          }
+          dimension: is_cool is false
+          dimension: is_awesome is true
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.nested.abool = true
+          group_by: astr
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.abool = true,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q1 = m.modelDef.queryList[0];
+      const f1 = q1.pipeline[0].filterList!;
+      expect(f1.length).toBe(2);
+      expect(f1[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f1[1]).toBeExpr(
+        '{filterCondition {is_awesome and {abool = true}}}'
+      );
+      const q2 = m.modelDef.queryList[1];
+      const f2 = q2.pipeline[0].filterList!;
+      expect(f2.length).toBe(2);
+      expect(f2[0]).toBeExpr(
+        '{filterCondition {{is_cool and is_awesome} and {abool = true}}}'
+      );
+      expect(f2[1]).toBeExpr('{filterCondition {ai = 2}}');
+    });
     test('can include normal filters in drill statement', () => {
       const m = new TestTranslator(`
         ##! experimental.drill
@@ -1546,7 +1614,7 @@ describe('query:', () => {
       expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
       expect(f[1]).toBeExpr('{filterCondition {ai = 1}}');
     });
-    test('drill missing some fields', () => {
+    test('drill missing some fields (sibling)', () => {
       expect(
         markSource`
           ##! experimental.drill
@@ -1567,6 +1635,30 @@ describe('query:', () => {
       ).toLog(
         errorMessage(
           'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill missing some fields (parent)', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: abool
+              nest: nest_one is {
+                group_by: astr
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.abool`'
         )
       );
     });

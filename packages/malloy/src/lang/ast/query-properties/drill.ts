@@ -5,7 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {mergeFieldUsage, pathEq} from '../../../model/composite_source_utils';
+import {
+  mergeFieldUsage,
+  pathBegins,
+  pathEq,
+} from '../../../model/composite_source_utils';
 import type {
   AtomicFieldDef,
   Expr,
@@ -78,7 +82,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
       filter.logError('illegal-drill', 'Drill only allowed in query');
       return;
     }
-    const drillNests = fs.outputSpace().drillNests;
+    const drillDimensions = fs.outputSpace().drillDimensions;
     let collectedWheres: Expr | undefined = undefined;
     let collectedWhereFieldUsage: FieldUsage[] | undefined = undefined;
     if (reference.list.length === 0) {
@@ -168,22 +172,25 @@ export class Drill extends Filter implements QueryPropertyInterface {
         })
         .filter(isNotUndefined);
       requiredDimensions.push(...segmentDimensions.map(f => [...pathSoFar, f]));
-      for (const filter of segment.filterList ?? []) {
-        if (collectedWheres === undefined) {
-          collectedWheres = filter.e;
-          collectedWhereFieldUsage = filter.fieldUsage;
-        } else {
-          collectedWheres = {
-            node: 'and',
-            kids: {
-              left: collectedWheres,
-              right: filter.e,
-            },
-          };
-          collectedWhereFieldUsage = mergeFieldUsage(
-            collectedWhereFieldUsage,
-            filter.fieldUsage
-          );
+      // Only collect filters from nests if they haven't been collected in a previous drill clause
+      if (!drillDimensions.some(n => pathBegins(n.nestPath, pathSoFar))) {
+        for (const filter of segment.filterList ?? []) {
+          if (collectedWheres === undefined) {
+            collectedWheres = filter.e;
+            collectedWhereFieldUsage = filter.fieldUsage;
+          } else {
+            collectedWheres = {
+              node: 'and',
+              kids: {
+                left: collectedWheres,
+                right: filter.e,
+              },
+            };
+            collectedWhereFieldUsage = mergeFieldUsage(
+              collectedWhereFieldUsage,
+              filter.fieldUsage
+            );
+          }
         }
       }
       const field = segment.queryFields.find(f => {
@@ -301,25 +308,29 @@ export class Drill extends Filter implements QueryPropertyInterface {
       );
     }
 
-    const drillNestPath = [viewName, ...path.slice(0, -1)].map(f => f.name);
-    const dimensionPath = reference.list.map(f => f.name);
-
-    let drillNest = drillNests.find(drillNest => {
-      return pathEq(drillNest.nestPath, drillNestPath);
-    });
-    if (drillNest === undefined) {
-      drillNest = {
-        nestPath: drillNestPath,
-        firstDrill: filter,
-        unfilteredDimensions: requiredDimensions,
-      };
-      drillNests.push(drillNest);
+    // Add entries for all the other dimensions (to make sure they get satisfied eventually)
+    for (const dimensionPath of requiredDimensions) {
+      let drillDimension = drillDimensions.find(drillDimension => {
+        return pathEq(drillDimension.dimensionPath, dimensionPath);
+      });
+      if (drillDimension === undefined) {
+        drillDimension = {
+          nestPath: dimensionPath.slice(0, -1),
+          firstDrill: filter,
+          dimensionPath,
+          satisfied: false,
+        };
+        drillDimensions.push(drillDimension);
+      }
     }
-    const dimensionIndex = drillNest.unfilteredDimensions.findIndex(d =>
-      pathEq(d, dimensionPath)
-    );
-    if (dimensionIndex !== -1) {
-      drillNest.unfilteredDimensions.splice(dimensionIndex, 1);
+
+    // Find the entry for this one, and mark it as satisfied
+    const dimensionPath = reference.list.map(f => f.name);
+    const drillDimension = drillDimensions.find(drillDimension => {
+      return pathEq(drillDimension.dimensionPath, dimensionPath);
+    });
+    if (drillDimension !== undefined) {
+      drillDimension.satisfied = true;
     }
 
     const drillField = new DrillField(compareField, {
