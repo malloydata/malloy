@@ -52,12 +52,17 @@ describe('drill query', () => {
         where: carrier = 'AA' or carrier = 'WN'
         group_by: \`Origin Code\`
       }
+
+      view: negative_value is {
+        group_by: negative_one is -1
+      }
     }
     query: top_carriers is flights -> top_carriers
     query: over_time is flights -> over_time
     query: by_origin is flights -> by_origin
     query: no_filter is flights -> no_filter
     query: cool_carriers is flights -> cool_carriers
+    query: negative_value is flights -> negative_value
     query: literal_with_nested_view_stable is flights -> {
       where:
         \`Origin Code\` ~ f'SFO, ORD',
@@ -230,5 +235,47 @@ describe('drill query', () => {
 } + { select: * }`;
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('negative number can be used in stable query filter', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('negative_value')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery = `run: flights -> {
+  drill:
+    negative_value.negative_one = -1
+} + { select: * }`;
+    const row = table.rows[0];
+    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQuery()).toMatchObject({
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              filter: {
+                field_reference: {
+                  name: 'negative_one',
+                  path: ['negative_value'],
+                },
+                kind: 'literal_equality',
+                value: {
+                  kind: 'number_literal',
+                  number_value: -1,
+                },
+              },
+              kind: 'drill',
+            },
+          ],
+        },
+      },
+    });
   });
 });
