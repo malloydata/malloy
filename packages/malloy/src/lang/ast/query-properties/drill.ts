@@ -160,7 +160,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
           if (f.type === 'fieldref') {
             const morePathFieldNames = f.path.map(n => new FieldName(n));
             this.has({morePathFieldNames});
-            const lookup = fs.lookup(morePathFieldNames);
+            const lookup = permissiveFS.lookup(morePathFieldNames);
             if (lookup.found && lookup.found instanceof SpaceField) {
               fieldDef = lookup.found.fieldDef();
               if (

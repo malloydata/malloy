@@ -1656,6 +1656,30 @@ describe('query:', () => {
         )
       );
     });
+    test('drill missing some fields (private sibling)', () => {
+      expect(
+        markSource`
+          ##! experimental {drill access_modifiers}
+          source: aext is a include { public: *; private: abool } extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
     test('drill missing some fields (parent)', () => {
       expect(
         markSource`
