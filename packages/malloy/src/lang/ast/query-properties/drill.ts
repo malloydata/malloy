@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage, pathEq} from '../../../model/composite_source_utils';
 import type {
   AtomicFieldDef,
   Expr,
+  FieldDef,
   FieldUsage,
   FilterCondition,
   PipeSegment,
@@ -21,6 +22,7 @@ import {
   isAtomic,
   isQuerySegment,
 } from '../../../model/malloy_types';
+import {isNotUndefined} from '../../utils';
 import {ExprCompare} from '../expressions/expr-compare';
 import {PermissiveSpace} from '../field-space/permissive-space';
 import {ViewField} from '../field-space/view-field';
@@ -63,12 +65,12 @@ export class Drill extends Filter implements QueryPropertyInterface {
     filter: FilterElement,
     reference: FieldReference,
     value: Literal
-  ): {restrictNest: string[] | undefined; filter: FilterCondition} | undefined {
+  ): FilterCondition | undefined {
     const permissiveFS = new PermissiveSpace(fs);
     const normalLookup = fs.lookup(reference.list);
     if (normalLookup.found) {
       const cond = super.checkedFilterCondition(fs, filter);
-      if (cond) return {filter: cond, restrictNest: undefined};
+      if (cond) return cond;
       return undefined;
     }
     if (!fs.isQueryFieldSpace()) {
@@ -76,7 +78,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
       filter.logError('illegal-drill', 'Drill only allowed in query');
       return;
     }
-    const restrictNest = fs.outputSpace().restrictedDrillNest;
+    const drillNests = fs.outputSpace().drillNests;
     let collectedWheres: Expr | undefined = undefined;
     let collectedWhereFieldUsage: FieldUsage[] | undefined = undefined;
     if (reference.list.length === 0) {
@@ -123,6 +125,8 @@ export class Drill extends Filter implements QueryPropertyInterface {
     let previousName = viewName;
     let fieldDef: AtomicFieldDef | undefined = undefined;
     let compareField: Expr | undefined = undefined;
+    const requiredDimensions: string[][] = [];
+    const pathSoFar: string[] = [viewName.name];
     for (const name of path) {
       // TODO can you even `drill` with a pipelined view?
       const segment = currentView.pipeline[currentView.pipeline.length - 1];
@@ -145,6 +149,25 @@ export class Drill extends Filter implements QueryPropertyInterface {
         );
         return;
       }
+      const segmentDimensions = segment.queryFields
+        .map(f => {
+          let fieldDef: FieldDef | undefined = undefined;
+          if (f.type === 'fieldref') {
+            const morePathFieldNames = f.path.map(n => new FieldName(n));
+            this.has({morePathFieldNames});
+            const lookup = fs.lookup(morePathFieldNames);
+            if (lookup.found && lookup.found instanceof SpaceField) {
+              fieldDef = lookup.found.fieldDef();
+              if (fieldDef && isAtomic(fieldDef))
+                return f.path[f.path.length - 1];
+            }
+            return undefined;
+          } else {
+            if (isAtomic(f)) return f.as ?? f.name;
+          }
+        })
+        .filter(isNotUndefined);
+      requiredDimensions.push(...segmentDimensions.map(f => [...pathSoFar, f]));
       for (const filter of segment.filterList ?? []) {
         if (collectedWheres === undefined) {
           collectedWheres = filter.e;
@@ -251,6 +274,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
         }
         currentView = nestDef;
         previousName = name;
+        pathSoFar.push(name.name);
       }
     }
 
@@ -277,25 +301,25 @@ export class Drill extends Filter implements QueryPropertyInterface {
       );
     }
 
-    if (reference.list.length >= 3) {
-      if (restrictNest !== undefined) {
-        if (
-          reference.list[0].name !== restrictNest[0] ||
-          reference.list[1].name !== restrictNest[1]
-        ) {
-          filter.logError(
-            'illegal-drill',
-            `Drill fields must come from at most one distinct nest level; a previous drill clause restricts this one to \`${restrictNest.join(
-              '.'
-            )}\``
-          );
-          return;
-        }
-      } else {
-        fs.outputSpace().restrictedDrillNest = reference.list
-          .map(f => f.name)
-          .slice(0, 2);
-      }
+    const drillNestPath = [viewName, ...path.slice(0, -1)].map(f => f.name);
+    const dimensionPath = reference.list.map(f => f.name);
+
+    let drillNest = drillNests.find(drillNest => {
+      return pathEq(drillNest.nestPath, drillNestPath);
+    });
+    if (drillNest === undefined) {
+      drillNest = {
+        nestPath: drillNestPath,
+        firstDrill: filter,
+        unfilteredDimensions: requiredDimensions,
+      };
+      drillNests.push(drillNest);
+    }
+    const dimensionIndex = drillNest.unfilteredDimensions.findIndex(d =>
+      pathEq(d, dimensionPath)
+    );
+    if (dimensionIndex !== -1) {
+      drillNest.unfilteredDimensions.splice(dimensionIndex, 1);
     }
 
     const drillField = new DrillField(compareField, {
@@ -325,10 +349,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
       expressionType: fExpr.expressionType,
       fieldUsage: mergeFieldUsage(fExpr.fieldUsage, collectedWhereFieldUsage),
     };
-    return {
-      filter: exprCond,
-      restrictNest,
-    };
+    return exprCond;
   }
 
   protected checkedFilterCondition(
@@ -342,7 +363,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
         filter,
         drillFilter.reference,
         drillFilter.value
-      )?.filter;
+      );
     } else {
       return super.checkedFilterCondition(fs, filter);
     }
