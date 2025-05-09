@@ -166,7 +166,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           'padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;';
         drillElement.onclick = () => {
           if (this.options.onDrill) {
-            const drillQuery = row.getDrillQuery();
+            const drillQuery = row.getDrillQueryMalloy();
             const drillFilters = row.getDrillExpressions();
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }

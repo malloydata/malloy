@@ -141,14 +141,15 @@ export async function copyExplorePathQueryToClipboard({
   data: Cell;
   onDrill?: (drillData: DrillData) => void;
 }) {
-  // const expressions = data.getDrillExpressions();
+  const expressions = data.getDrillExpressions();
   const drillEntries = data.getDrillEntries();
 
-  // const whereClause = expressions.join(',\n');
-
-  const query = data.getDrillQuery();
+  const whereClause = expressions.join(',\n');
 
   const stableQuery = data.getStableDrillQuery();
+  const query = stableQuery
+    ? queryToMalloy(stableQuery) + ' + { select: * }'
+    : data.getDrillQueryMalloy();
 
   const drillData: DrillData = {
     dimensionFilters: drillEntries,
@@ -161,9 +162,9 @@ export async function copyExplorePathQueryToClipboard({
         console.error('Failed to copy text: ', error);
       }
     },
-    query:
-      (stableQuery && queryToMalloy(stableQuery)) ?? '<could not make query>',
-    whereClause: '',
+    query,
+    whereClause,
+    stableQuery,
   };
   if (onDrill) onDrill(drillData);
   else await drillData.copyQueryToClipboard();

@@ -9,6 +9,14 @@ export function queryToMalloy(
   return codeFromFragments(fragments, {tabWidth});
 }
 
+export function filterToMalloy(
+  filter: Malloy.Filter,
+  {tabWidth} = {tabWidth: 2}
+): string {
+  const fragments = filterToFragments(filter);
+  return codeFromFragments(fragments, {tabWidth});
+}
+
 const INDENT = Symbol('indent');
 const NEWLINE = Symbol('newline');
 const OUTDENT = Symbol('outdent');
@@ -531,23 +539,27 @@ function escapeFilter(filter: string, quote: string): string {
   return result;
 }
 
-function filterOperationItemToFragments(
-  whereItem: Malloy.FilterOperation
-): Fragment[] {
-  switch (whereItem.filter.kind) {
+function filterToFragments(filter: Malloy.Filter): Fragment[] {
+  switch (filter.kind) {
     case 'filter_string':
       return [
-        ...referenceToFragments(whereItem.filter.field_reference),
+        ...referenceToFragments(filter.field_reference),
         ' ~ ',
-        quoteFilter(whereItem.filter.filter),
+        quoteFilter(filter.filter),
       ];
     case 'literal_equality':
       return [
-        ...referenceToFragments(whereItem.filter.field_reference),
+        ...referenceToFragments(filter.field_reference),
         ' = ',
-        ...literalToFragments(whereItem.filter.value),
+        ...literalToFragments(filter.value),
       ];
   }
+}
+
+function filterOperationItemToFragments(
+  whereItem: Malloy.FilterOperation
+): Fragment[] {
+  return filterToFragments(whereItem.filter);
 }
 
 function annotationsToFragments(
