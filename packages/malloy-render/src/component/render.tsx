@@ -33,6 +33,7 @@ import {Result, API} from '@malloydata/malloy';
 import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
 import {createRAFSignal} from './util';
+import { CohortTable } from '../component/cohort/cohort-table';
 
 export type MalloyRenderProps = {
   malloyResult?: Malloy.Result;
