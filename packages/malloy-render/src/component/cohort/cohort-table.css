@@ -1,0 +1,92 @@
+/* Cohort Table Styling */
+.malloy-cohort-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  font-family: var(--malloy-render--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  margin: 0;
+}
+
+.malloy-cohort-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  background: var(--malloy-render--table-background, #ffffff);
+  font-size: var(--malloy-render--font-size-small, 14px);
+  color: var(--malloy-render--table-body-color, #333);
+  font-weight: normal;
+}
+
+.malloy-cohort-table th,
+.malloy-cohort-table td {
+  padding: 6px 8px;
+  border: var(--malloy-render--table-border, 1px solid #f0f0f0);
+  white-space: nowrap;
+  font-weight: normal;
+}
+
+.malloy-cohort-table thead {
+  background-color: var(--malloy-render--table-background, #ffffff);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.malloy-corner-header {
+  font-weight: normal;
+  text-align: left;
+  min-width: 120px;
+  background-color: var(--malloy-render--table-background, #ffffff);
+  color: var(--malloy-render--table-header-color, #666);
+  border-top: var(--malloy-render--table-border, 1px solid #f0f0f0);
+}
+
+.malloy-period-header {
+  font-weight: normal;
+  min-width: 30px;
+  color: var(--malloy-render--table-header-color, #666);
+  border-top: var(--malloy-render--table-border, 1px solid #f0f0f0);
+}
+
+.malloy-cohort-label {
+  font-weight: normal;
+  text-align: left;
+  background-color: var(--malloy-render--table-background, #ffffff);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  color: var(--malloy-render--table-header-color, #666);
+}
+
+.malloy-cohort-cell {
+  transition: background-color 0.2s ease;
+  color: var(--malloy-render--table-body-color, #333);
+  font-weight: normal;
+}
+
+.malloy-cohort-cell:hover {
+  filter: brightness(0.99);
+}
+
+/* Alternating row colors for better readability */
+.malloy-cohort-table tbody tr:nth-child(even) {
+  background-color: var(--malloy-render--table-row-even-background, #fbfbfb);
+}
+
+.malloy-cohort-table tbody tr:nth-child(even) .malloy-cohort-label {
+  background-color: var(--malloy-render--table-row-even-background, #fbfbfb);
+}
+
+.malloy-cohort-table tr {
+  background-color: var(--malloy-render--table-background, #ffffff);
+  font-weight: normal;
+}
+
+/* Error message styling */
+.malloy-error {
+  color: var(--malloy-render--error-color, #e53e3e);
+  padding: 12px;
+  font-size: var(--malloy-render--font-size, 14px);
+  font-weight: normal;
+  margin: 10px 0;
+  background-color: var(--malloy-render--error-background, rgba(229, 62, 62, 0.1));
+} 

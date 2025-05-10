@@ -17,6 +17,7 @@ import {renderTime} from './render-time';
 import {LegacyChart} from './legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '../util';
 import type {RendererProps} from './types';
+import { CohortTable } from './cohort/cohort-table';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
@@ -63,6 +64,7 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       case 'dashboard': {
+        console.log('dataColumn', dataColumn);
         if (dataColumn.isRecordOrRepeatedRecord())
           renderValue = <Dashboard data={dataColumn} {...propsToPass} />;
         else
@@ -88,6 +90,17 @@ export function applyRenderer(props: RendererProps) {
         else
           throw new Error(
             `Malloy render: wrong data type passed to the table renderer for field ${field.name}`
+          );
+        break;
+      }
+      case 'cohort_table': {
+        if (dataColumn.isRecordOrRepeatedRecord())
+          renderValue = (
+            <CohortTable data={dataColumn} />
+          );
+          else
+          throw new Error(
+            `Malloy render: wrong data type passed to the cohort_table renderer for field ${field.name}`
           );
         break;
       }

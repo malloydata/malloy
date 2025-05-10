@@ -238,6 +238,7 @@ const RENDER_TAG_LIST = [
   'scatter_chart',
   'shape_map',
   'segment_map',
+  'cohort_table',
 ];
 
 type DrillValue = {field: Field; value: Cell} | {where: string};
