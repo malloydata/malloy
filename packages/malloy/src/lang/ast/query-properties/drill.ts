@@ -133,6 +133,13 @@ export class Drill extends Filter implements QueryPropertyInterface {
     const requiredDimensions: string[][] = [];
     const pathSoFar: string[] = [viewName.name];
     for (const name of path) {
+      if (currentView.pipeline.length > 1) {
+        previousName.logError(
+          'drill-incompatible-segment',
+          '`drill:` may not be used with multi-segment views'
+        );
+        return;
+      }
       // TODO can you even `drill` with a pipelined view?
       const segment = currentView.pipeline[currentView.pipeline.length - 1];
       if (segment.type === 'index') {

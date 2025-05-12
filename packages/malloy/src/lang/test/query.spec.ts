@@ -1656,6 +1656,42 @@ describe('query:', () => {
         )
       );
     });
+    test('drill multi-stage view', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+            } -> { select: * }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage('`drill:` may not be used with multi-segment views')
+      );
+    });
+    test('drill index view', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              index: *
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.fieldName = "astr"'},
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('Index segments are not compatible with `drill:`'));
+    });
     test('drill missing some fields (private sibling)', () => {
       expect(
         markSource`
