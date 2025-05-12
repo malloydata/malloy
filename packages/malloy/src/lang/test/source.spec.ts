@@ -316,6 +316,24 @@ describe('source:', () => {
             run: d -> { group_by: c.ai }
           `).toLog(errorMessage("'c' is internal"));
         });
+        test('private field in view does not blow up', () => {
+          expect(markSource`
+            ##! experimental.access_modifiers
+            source: c is a
+            source: d is a extend {
+              join_one: c on true
+
+              view: x is {
+                group_by: c.ai
+              }
+            } include {
+              private: *
+              public: x
+            }
+            run: d -> x
+            run: d -> {nest: x}
+          `).toTranslate();
+        });
         test('except join and include join fields', () => {
           expect(markSource`
             ##! experimental.access_modifiers

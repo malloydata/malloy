@@ -219,7 +219,7 @@ export abstract class QueryOperationSpace
   private getJoinOnFieldUsage(joinPath: string[]): model.FieldUsage[] {
     const reference = joinPath.map(n => new FieldName(n));
     this.astEl.has({reference});
-    const lookup = this.exprSpace.lookup(reference);
+    const lookup = this.exprSpace.lookup(reference, 'private');
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
       return joinedFieldUsage(
