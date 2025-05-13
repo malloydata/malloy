@@ -7,6 +7,10 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
+import {
+  ExtractSourceDependenciesRequest,
+  ExtractSourceDependenciesResponse,
+} from '../extractSourceDeps';
 
 export function compileModel(
   request: Malloy.CompileModelRequest
@@ -27,25 +31,7 @@ export function compileQuery(
 }
 
 export function extractSourceDependencies(
-  request: Malloy.ExtractSourceDependenciesRequest
-): Malloy.ExtractSourceDependenciesResponse {
-  const resp = Core.extractSourceDependencies(request);
-
-  resp.sql_sources = [
-    {
-      connection_name: 'connection',
-      name: 'flights',
-      schema: {
-        fields: [
-          {
-            kind: 'dimension',
-            name: 'carrier',
-            type: {kind: 'string_type'},
-          },
-        ],
-      },
-    },
-  ];
-
-  return resp;
+  request: ExtractSourceDependenciesRequest
+): ExtractSourceDependenciesResponse {
+  return Core.extractSourceDependencies(request);
 }

@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {compileModel, compileQuery, compileSource} from './stateless';
+import {
+  compileModel,
+  compileQuery,
+  compileSource,
+  extractSourceDependencies,
+} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 type DeepPartial<T> = T extends object
@@ -1012,18 +1017,31 @@ LIMIT 101
               name: 'carrier',
               type: {kind: 'string_type'},
             },
+            {
+              kind: 'dimension',
+              name: 'origin',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'destination',
+              type: {kind: 'string_type'},
+            },
           ],
         },
       };
 
-      const result = compileModel({
+      const result = extractSourceDependencies({
         model_url: 'file://test.malloy',
+        source_name: 'flights',
         compiler_needs: {
           table_schemas: [flightsTable],
           files: [
             {
               url: 'file://test.malloy',
-              contents: "source: flights is connection.table('flights')",
+              contents: `
+                source: flights is connection.table('flights')
+              `,
             },
           ],
           connections: [{name: 'connection', dialect: 'presto'}],
@@ -1035,6 +1053,302 @@ LIMIT 101
 
       expect(result).toMatchObject(expected);
     });
+    test('source with a sql query dependency', () => {
+      const _result = extractSourceDependencies({
+        model_url: 'file://test.malloy',
+        source_name: 'sql_source',
+        compiler_needs: {
+          sql_schemas: [
+            {
+              connection_name: 'connection',
+              sql: 'SELECT carrier FROM flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'presto'}],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: sql_source is connection.sql('SELECT carrier FROM flights')
+              `,
+            },
+          ],
+        },
+      });
+      // const expected: Malloy.ExtractSourceDependenciesResponse = {
+      //   sql_sources: [{sql, connection_name: 'connection'}],
+      // };
+
+      // expect(result).toMatchObject(expected);
+    });
+    test('source extends another source', () => {
+      const flightsTable: Malloy.SQLTable = {
+        connection_name: 'connection',
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              kind: 'dimension',
+              name: 'carrier',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'origin',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'destination',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+      };
+
+      const _result = extractSourceDependencies({
+        model_url: 'file://test.malloy',
+        source_name: 'flights',
+        compiler_needs: {
+          table_schemas: [flightsTable],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.access_modifiers
+                source: flights is connection.table('flights')
+                source: pared_flights is flights include {
+                  except: destination
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'presto'}],
+        },
+      });
+    });
+    test('source with joins', () => {
+      const flightsTable: Malloy.SQLTable = {
+        connection_name: 'connection',
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              kind: 'dimension',
+              name: 'carrier',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'origin',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'destination',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+      };
+      const carriersTable: Malloy.SQLTable = {
+        connection_name: 'connection',
+        name: 'carriers',
+        schema: {
+          fields: [
+            {
+              kind: 'dimension',
+              name: 'carrier',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'year_founded',
+              type: {kind: 'number_type'},
+            },
+          ],
+        },
+      };
+
+      const _result = extractSourceDependencies({
+        model_url: 'file://test.malloy',
+        source_name: 'flights',
+        compiler_needs: {
+          table_schemas: [flightsTable, carriersTable],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: flights is connection.table('flights')
+                source: carriers is connection.table('carriers')
+
+                source: flights_with_carrier_dim is flights extend {
+                  join_many: carriers on carrier = carriers.carrier
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'presto'}],
+        },
+      });
+    });
+    test('source with pipeline', () => {
+      const flightsTable: Malloy.SQLTable = {
+        connection_name: 'connection',
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              kind: 'dimension',
+              name: 'carrier',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'origin',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'destination',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+      };
+
+      const _result = extractSourceDependencies({
+        model_url: 'file://test.malloy',
+        source_name: 'derived',
+        compiler_needs: {
+          table_schemas: [flightsTable],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: flights is connection.table('flights')
+
+                source: derived is flights -> {select: origin, destination} extend {
+                  dimension: trip is concat(origin, '-', destination)
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'presto'}],
+        },
+      });
+    });
+    test('source with filters', () => {
+      const flightsTable: Malloy.SQLTable = {
+        connection_name: 'connection',
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              kind: 'dimension',
+              name: 'carrier',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'origin',
+              type: {kind: 'string_type'},
+            },
+            {
+              kind: 'dimension',
+              name: 'destination',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+      };
+
+      const _result = extractSourceDependencies({
+        model_url: 'file://test.malloy',
+        source_name: 'derived',
+        compiler_needs: {
+          table_schemas: [flightsTable],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: flights is connection.table('flights') extend {
+                  where: carrier ? 'UA' | 'AA'
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'presto'}],
+        },
+      });
+    });
+    test('composite source', () => {});
+  });
+  describe('annotations in schemas', () => {
+    test('annotations should be carried through the schema', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                    annotations: [{value: '# hello'}],
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                    annotations: [{value: '# hello'}],
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test.todo(
+      'locations of annotations should match the location of the table call'
+    );
   });
   describe('annotations in schemas', () => {
     test('annotations should be carried through the schema', () => {
