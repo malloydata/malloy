@@ -67,11 +67,10 @@ describe('composite sources', () => {
     describe('compose type errors', () => {
       test('compose incompatible scalar types', () => {
         expect(`
-          ##! experimental {composite_sources access_modifiers}
-          source: a_without_aun is a include { except: aun }
+          ##! experimental {composite_sources}
           source: c is compose(
-            a_without_aun extend { dimension: x is 'foo' },
-            ${'a_without_aun extend { dimension: x is 1 }'}
+            a extend { dimension: x is 'foo' },
+            ${'a extend { dimension: x is 1 }'}
           )
         `).toLog(
           errorMessage(

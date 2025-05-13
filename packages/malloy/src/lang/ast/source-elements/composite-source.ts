@@ -143,7 +143,16 @@ function composeSources(
           if (field.accessModifier === 'internal') {
             existing.accessModifier = 'internal';
           }
-          if (!TD.eq(field, existing)) {
+          if (
+            !(
+              TD.eq(field, existing) ||
+              // Handle the case where both fields don't have a raw type...
+              // TODO ask MToy about this
+              (field.type === 'sql native' &&
+                existing.type === 'sql native' &&
+                field.rawType === existing.rawType)
+            )
+          ) {
             source.logTo.logError(
               'composite-field-type-mismatch',
               `field \`${
