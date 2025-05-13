@@ -200,6 +200,7 @@ type MessageParameterTypes = {
   'field-list-edit-not-found': string;
   'unexpected-element-type': string;
   'field-not-found': string;
+  'composite-field-type-mismatch': string;
   'invalid-composite-source-input': string;
   'invalid-composite-field-usage': {
     newUsage: FieldUsage[];
