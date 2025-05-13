@@ -11,9 +11,10 @@ import type {
   FieldDef,
   JoinFieldDef,
   JoinType,
+  MatrixOperation,
   SourceDef,
 } from '../../../model/malloy_types';
-import {isAtomic, isJoined, isSourceDef} from '../../../model/malloy_types';
+import {isAtomic, isJoined, isSourceDef, TD} from '../../../model/malloy_types';
 
 import type {HasParameter} from '../parameters/has-parameter';
 import {Source} from './source';
@@ -66,6 +67,8 @@ function composeSources(
     {
       sources: (JoinFieldDef & SourceDef)[];
       join: JoinType;
+      matrixOperation?: MatrixOperation;
+      accessModifier?: 'internal' | undefined;
     }
   >();
   sources.forEach(source => {
@@ -95,10 +98,27 @@ function composeSources(
         const existingJoins = joinsToCompose.get(fieldName);
         if (existingJoins) {
           existingJoins.sources.push(field);
+          if (field.join !== existingJoins.join) {
+            source.logTo.logError(
+              'composite-source-connection-mismatch',
+              `Composited joins must have the same join type; \`${field.join}\` differs from previous type \`${existingJoins.join}\``
+            );
+          }
+          if (field.matrixOperation !== existingJoins.matrixOperation) {
+            source.logTo.logError(
+              'composite-source-connection-mismatch',
+              `Composited joins must have the same matrix operation; \`${field.matrixOperation}\` differs from previous operation \`${existingJoins.matrixOperation}\``
+            );
+          }
+          if (field.accessModifier === 'internal') {
+            existingJoins.accessModifier = 'internal';
+          }
         } else {
           joinsToCompose.set(fieldName, {
             sources: [field],
             join: field.join,
+            matrixOperation: field.matrixOperation,
+            accessModifier: field.accessModifier,
           });
         }
         // TODO ensure that there isn't also a normal field with this name...
@@ -119,8 +139,20 @@ function composeSources(
             requiresGroupBy: undefined,
           };
           fieldsByName.set(fieldName, compositeField);
-        } else if (field.accessModifier === 'internal') {
-          existing.accessModifier = 'internal';
+        } else {
+          if (field.accessModifier === 'internal') {
+            existing.accessModifier = 'internal';
+          }
+          if (!TD.eq(field, existing)) {
+            source.logTo.logError(
+              'composite-field-type-mismatch',
+              `field \`${
+                field.name
+              }\` must have the same type in all composite inputs: ${prettyType(
+                field
+              )} does not match ${prettyType(existing)}`
+            );
+          }
         }
       } else {
         source.logTo.logWarning(
@@ -132,6 +164,12 @@ function composeSources(
     }
   });
   for (const [joinName, sourcesInJoin] of joinsToCompose.entries()) {
+    if (fieldsByName.has(joinName)) {
+      compositeCodeSource.logError(
+        'composite-field-type-mismatch',
+        `field \`${joinName}\` must be a join in all sources or none`
+      );
+    }
     const composedSource = composeSources(
       sourcesInJoin.sources.map(s => ({
         sourceDef: s,
@@ -143,10 +181,10 @@ function composeSources(
       ...composedSource,
       join: sourcesInJoin.join,
       name: joinName,
-      // matrixOperation?: MatrixOperation;
+      matrixOperation: sourcesInJoin.matrixOperation,
       onExpression: undefined,
       onCompositeFieldUsage: [],
-      // accessModifier?: NonDefaultAccessModifierLabel | undefined;
+      accessModifier: sourcesInJoin.accessModifier,
     };
     fieldsByName.set(joinName, compositeJoin);
   }
@@ -162,4 +200,8 @@ function composeSources(
     // TODO actually compose the parameters?
     parameters: sources[0].sourceDef.parameters,
   };
+}
+
+function prettyType(a: FieldDef): string {
+  return `\`${a.type}\``;
 }

@@ -64,6 +64,22 @@ describe('composite sources', () => {
   });
 
   describe('composite source resolution and validation', () => {
+    describe('compose type errors', () => {
+      test('compose incompatible scalar types', () => {
+        expect(`
+          ##! experimental {composite_sources access_modifiers}
+          source: a_without_aun is a include { except: aun }
+          source: c is compose(
+            a_without_aun extend { dimension: x is 'foo' },
+            ${'a_without_aun extend { dimension: x is 1 }'}
+          )
+        `).toLog(
+          errorMessage(
+            'field `x` must have the same type in all composite inputs: `number` does not match `string`'
+          )
+        );
+      });
+    });
     test('compose fails on group_by that is relevant', () => {
       expect(`
         ##! experimental.composite_sources
