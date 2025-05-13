@@ -1667,7 +1667,7 @@ describe('query:', () => {
           }
           run: aext -> {
             drill:
-              ${'view_one.astr = "foo"'},
+              ${'view_one'}.astr = "foo",
             group_by: ai
           }
         `
@@ -1686,7 +1686,7 @@ describe('query:', () => {
           }
           run: aext -> {
             drill:
-              ${'view_one.fieldName = "astr"'},
+              ${'view_one'}.fieldName = "astr",
             group_by: ai
           }
         `
