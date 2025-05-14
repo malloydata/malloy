@@ -318,4 +318,33 @@ describe('tags in results', () => {
     const fromVal = nestedTags.tag.text('from');
     expect(fromVal).toEqual('notes');
   });
+  test('run: from turtle inherits can disable turtle tags', async () => {
+    const run1 = runtime.loadQuery(`
+      source: one is duckdb.sql("SELECT 1 as one") extend {
+        # blockNote b1
+        view:
+        # note n2
+        view1 is { select: * }
+      }
+      # -blockNote b3
+      run:
+        # -note n4
+        one -> view1
+    `);
+    const result = await run1.run();
+    const lineSrc = result.resultExplore.getTaglines().map(s => s.trim());
+    expect(lineSrc).toEqual([
+      '# blockNote b1',
+      '# note n2',
+      '# -blockNote b3',
+      '# -note n4',
+    ]);
+    const tags = result.resultExplore.tagParse().tag;
+    expect(tags.has('blockNote')).toBeFalsy();
+    expect(tags.has('note')).toBeFalsy();
+    expect(tags.has('b1')).toBeTruthy();
+    expect(tags.has('b3')).toBeTruthy();
+    expect(tags.has('n2')).toBeTruthy();
+    expect(tags.has('n4')).toBeTruthy();
+  });
 });
