@@ -188,6 +188,9 @@ function composeSources(
     ) as SourceDef & JoinFieldDef;
     const compositeJoin = {
       ...composedSource,
+      // We don't need to store the sources, since this is just a placeholder for typechecking
+      // the composite resolver will use the joins from the original input sources regardless.
+      sources: [],
       join: sourcesInJoin.join,
       name: joinName,
       matrixOperation: sourcesInJoin.matrixOperation,

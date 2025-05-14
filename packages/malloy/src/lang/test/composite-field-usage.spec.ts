@@ -170,6 +170,29 @@ describe('composite sources', () => {
         )
       );
     });
+    test('composited join cannot use join from other source (with incompatible fields)', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: s1 is a extend {
+          join_one: j is a extend {
+            dimension: jf1 is 1
+          } on true
+          dimension: f1 is 1
+        }
+        source: s2 is a extend {
+          join_one: j is a extend {
+            dimension: jf2 is 2
+          } on true
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: f1, ${'j.jf2'} }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `j.jf2`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and `j.jf2`\nFields required in source: `f1` and `j.jf2`'
+        )
+      );
+    });
     test('error message when composited join (join is not nested composite) results in failure', () => {
       expect(`
         ##! experimental.composite_sources

@@ -62,6 +62,26 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         run: c -> { group_by: j.f2 }
       `).malloyResultMatches(runtime, {f2: 2});
     });
+    it('selects correct join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: s1 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: jf is 1
+          } on true
+          dimension: f1 is 1
+        }
+        source: s2 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: jf is 2
+          } on true
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.jf, f2 }
+      `).malloyResultMatches(runtime, {f2: 2, jf: 2});
+    });
     it('join on depends on selected join', async () => {
       await expect(`
         ##! experimental.composite_sources
