@@ -22,7 +22,11 @@
  */
 
 import type {FilterableType} from '@malloydata/malloy-filter';
-import type {Parameter, ParameterType} from '../../../model/malloy_types';
+import type {
+  Parameter,
+  ParameterType,
+  ParameterTypeDef,
+} from '../../../model/malloy_types';
 import {isCastType, isParameterType} from '../../../model/malloy_types';
 
 import type {ConstantExpression} from '../expressions/constant-expression';
@@ -57,7 +61,7 @@ export class HasParameter extends MalloyElement {
   }
 
   parameter(): Parameter {
-    let paramReturn: Parameter;
+    let paramReturn: Parameter = {value: null, name: this.name, type: 'error'};
     if (this.default !== undefined) {
       const constant = this.default.constantValue();
       if (
@@ -74,7 +78,7 @@ export class HasParameter extends MalloyElement {
       if (constant.type === 'null') {
         if (this.type) {
           return {
-            type: this.type,
+            ...this.typeDef(),
             value: constant.value,
             name: this.name,
           };
@@ -91,19 +95,19 @@ export class HasParameter extends MalloyElement {
         }
       }
       if (constant.type === 'filter expression') {
-        if (this.type !== 'filter expression') {
+        if (this.filterType === undefined) {
           this.logError(
             'parameter-missing-default-or-type',
             `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>'`
           );
+          return paramReturn;
         }
-        if (this.filterType) {
-          checkFilterExpression(this, this.filterType, constant.value);
-        }
+        checkFilterExpression(this, this.filterType, constant.value);
         return {
           value: constant.value,
           name: this.name,
-          type: constant.type,
+          type: 'filter expression',
+          filterType: this.filterType,
         };
       }
       if (!isCastType(constant.type) && constant.type !== 'error') {
@@ -119,9 +123,9 @@ export class HasParameter extends MalloyElement {
       }
 
       paramReturn = {
+        ...this.typeDef(),
         value: constant.value,
         name: this.name,
-        type: constant.type,
       };
     } else {
       if (this.type === undefined) {
@@ -130,11 +134,29 @@ export class HasParameter extends MalloyElement {
           'Parameter must have default value or declared type'
         );
       }
-      paramReturn = {value: null, name: this.name, type: this.type ?? 'error'};
+      paramReturn = {...this.typeDef(), value: null, name: this.name};
     }
     if (paramReturn.type === 'filter expression' && this.filterType) {
       paramReturn.filterType = this.filterType;
     }
     return paramReturn;
+  }
+
+  private typeDef(): ParameterTypeDef {
+    if (this.type) {
+      if (this.type === 'filter expression') {
+        if (this.filterType) {
+          return {type: 'filter expression', filterType: this.filterType};
+        } else {
+          this.logError(
+            'parameter-missing-default-or-type',
+            'Filter expression parameter missing filter expression type'
+          );
+        }
+      } else {
+        return {type: this.type};
+      }
+    }
+    return {type: 'error'};
   }
 }
