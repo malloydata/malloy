@@ -177,8 +177,16 @@ struct RecordType {
 }
 
 struct FilterExpressionType {
+  1: required FilterableType filter_type;
 }
 
+union FilterableType {
+  1: required StringType string_type;
+  2: required BooleanType boolean_type;
+  3: required NumberType number_type;
+  6: required DateType date_type;
+  7: required TimestampType timestamp_type;
+}
 
 union AtomicType {
   1: required StringType string_type,
