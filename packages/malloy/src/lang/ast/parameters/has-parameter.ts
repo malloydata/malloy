@@ -106,10 +106,6 @@ export class HasParameter extends MalloyElement {
           return {...paramReturn, type: 'error'};
         }
         checkFilterExpression(this, this.typeDef.filterType, constant.value);
-        return {
-          ...paramReturn,
-          value: constant.value,
-        };
       }
       if (!isParameterType(constant.type)) {
         this.default.logError(
