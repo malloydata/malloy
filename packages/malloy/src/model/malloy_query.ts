@@ -3332,52 +3332,52 @@ class QueryQuery extends QueryField {
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
         );
       }
-      s += indent(fields.join(',\n')) + '\n';
+    }
+    s += indent(fields.join(',\n')) + '\n';
 
-      s += this.generateSQLJoins(stageWriter);
-      s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+    s += this.generateSQLJoins(stageWriter);
+    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-      // group by
-      if (this.firstSegment.type === 'reduce') {
-        const groupByColumns: string[] = [];
-        const dialectGroupByClause = this.parent.dialect.groupByClause;
-        for (const field of this.rootResult.fields()) {
-          const fi = field as FieldInstanceField;
-          if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-            if (dialectGroupByClause === 'expression') {
-              groupByColumns.push(fi.f.generateExpression(this.rootResult));
-            } else {
-              groupByColumns.push(fi.fieldUsage.resultIndex.toString());
-            }
-          }
-          if (groupByColumns.length > 0) {
-            s += `\nGROUP BY ${groupByColumns.join(',')}\n`;
+    // group by
+    if (this.firstSegment.type === 'reduce') {
+      const groupByColumns: string[] = [];
+      const dialectGroupByClause = this.parent.dialect.groupByClause;
+      for (const field of this.rootResult.fields()) {
+        const fi = field as FieldInstanceField;
+        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+          if (dialectGroupByClause === 'expression') {
+            groupByColumns.push(fi.f.generateExpression(this.rootResult));
+          } else {
+            groupByColumns.push(fi.fieldUsage.resultIndex.toString());
           }
         }
-      }
-
-      s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
-
-      const orderBy = this.genereateSQLOrderBy(
-        this.firstSegment as QuerySegment,
-        this.rootResult
-      );
-      if (orderBy) {
-        s += orderBy;
-      } else if (!this.parent.dialect.supportsLimit) {
-        s += '\nORDER BY 1\n';
-      }
-
-      // limit
-      if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-        s += this.parent.dialect.supportsLimit
-          ? `LIMIT ${this.firstSegment.limit}\n`
-          : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
-      } else {
-        // TODO (vitor): This does not bring me joy. But I can't throw it away just now
-        if (this.parent.dialect.name === 'tsql') {
-          s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        if (groupByColumns.length > 0) {
+          s += `\nGROUP BY ${groupByColumns.join(',')}\n`;
         }
+      }
+    }
+
+    s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
+
+    const orderBy = this.genereateSQLOrderBy(
+      this.firstSegment as QuerySegment,
+      this.rootResult
+    );
+    if (orderBy) {
+      s += orderBy;
+    } else if (!this.parent.dialect.supportsLimit) {
+      s += '\nORDER BY 1\n';
+    }
+
+    // limit
+    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
+      s += this.parent.dialect.supportsLimit
+        ? `LIMIT ${this.firstSegment.limit}\n`
+        : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+    } else {
+      // TODO (vitor): This does not bring me joy. But I can't throw it away just now
+      if (this.parent.dialect.name === 'tsql') {
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
 
