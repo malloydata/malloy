@@ -339,12 +339,10 @@ class StageWriter {
       return {sql: this.withs[0], lastStageName: this.withs[0]};
     }
     let lastStageName = this.getName(0);
-
     let prefix = 'WITH ';
     let w = '';
     for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
       const sql = this.withs[i];
-
       lastStageName = this.getName(i);
       if (sql === undefined) {
         throw new Error(
@@ -3320,8 +3318,76 @@ class QueryQuery extends QueryField {
     return s;
   }
 
+  // TODO (vitor): Mark CHECK when done
+  generateSimpleSQL(stageWriter: StageWriter): string {
+    let s = '';
+    s += 'SELECT \n';
+    const fields: string[] = [];
+
+    for (const [name, field] of this.rootResult.allFields) {
+      const fi = field as FieldInstanceField;
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      if (fi.fieldUsage.type === 'result') {
+        fields.push(
+          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+        );
+      }
+
+      s += indent(fields.join(',\n')) + '\n';
+
+      s += this.generateSQLJoins(stageWriter);
+      s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+
+      // group by
+      if (this.firstSegment.type === 'reduce') {
+        const groupByColumns: string[] = [];
+        const dialectGroupByClause = this.parent.dialect.groupByClause;
+        for (const field of this.rootResult.fields()) {
+          const fi = field as FieldInstanceField;
+          if (dialectGroupByClause === 'expression') {
+            groupByColumns.push(fi.f.generateExpression(this.rootResult));
+          } else {
+            if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+              groupByColumns.push(fi.fieldUsage.resultIndex.toString());
+            }
+            // Use column names (output_name) or positions (ordinal)
+          }
+          if (groupByColumns.length > 0) {
+            s += `GROUP BY ${groupByColumns.join(',')}\n`;
+          }
+        }
+      }
+
+      s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
+
+      const orderBy = this.genereateSQLOrderBy(
+        this.firstSegment as QuerySegment,
+        this.rootResult
+      );
+      if (orderBy) {
+        s += orderBy;
+      } else if (!this.parent.dialect.supportsLimit) {
+        s += '\nORDER BY 1\n';
+      }
+
+      // limit
+      if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
+        s += this.parent.dialect.supportsLimit
+          ? `LIMIT ${this.firstSegment.limit}\n`
+          : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+      } else {
+        // TODO (vitor): This does not bring me joy. But I can't throw it away just now
+        if (this.parent.dialect.name === 'tsql') {
+          s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        }
+      }
+      this.resultStage = stageWriter.addStage(s);
+      return this.resultStage;
+    }
+  }
+
   // This probably should be generated in a dialect independat way.
-  // but for now, it is just googleSQL.
+  //but for now, it is just googleSQL.
   generatePipelinedStages(
     outputPipelinedSQL: OutputPipelinedSQL[],
     lastStageName: string,
@@ -4097,73 +4163,6 @@ class QueryQuery extends QueryField {
     return {lastStageName, outputStruct};
   }
 
-  // TODO (vitor): Mark CHECK when done
-  generateSimpleSQL(stageWriter: StageWriter): string {
-    let s = '';
-    s += 'SELECT \n';
-    const fields: string[] = [];
-
-    for (const [name, field] of this.rootResult.allFields) {
-      const fi = field as FieldInstanceField;
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-      if (fi.fieldUsage.type === 'result') {
-        fields.push(
-          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-        );
-      }
-
-      s += indent(fields.join(',\n')) + '\n';
-
-      s += this.generateSQLJoins(stageWriter);
-      s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-
-      // group by
-      if (this.firstSegment.type === 'reduce') {
-        const groupByColumns: string[] = [];
-        const dialectGroupByClause = this.parent.dialect.groupByClause;
-        for (const field of this.rootResult.fields()) {
-          const fi = field as FieldInstanceField;
-          if (dialectGroupByClause === 'expression') {
-            groupByColumns.push(fi.f.generateExpression(this.rootResult));
-          } else {
-            if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-              groupByColumns.push(fi.fieldUsage.resultIndex.toString());
-            }
-            // Use column names (output_name) or positions (ordinal)
-          }
-          if (groupByColumns.length > 0) {
-            s += `GROUP BY ${groupByColumns.join(',')}\n`;
-          }
-        }
-      }
-
-      s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
-
-      const orderBy = this.genereateSQLOrderBy(
-        this.firstSegment as QuerySegment,
-        this.rootResult
-      );
-      if (orderBy) {
-        s += orderBy;
-      } else if (!this.parent.dialect.supportsLimit) {
-        s += '\nORDER BY 1\n';
-      }
-
-      // limit
-      if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-        s += this.parent.dialect.supportsLimit
-          ? `LIMIT ${this.firstSegment.limit}\n`
-          : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
-      } else {
-        // TODO (vitor): This does not bring me joy. But I can't throw it away just now
-        if (this.parent.dialect.name === 'tsql') {
-          s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
-        }
-      }
-      this.resultStage = stageWriter.addStage(s);
-      return this.resultStage;
-    }
-  }
 }
 
 class QueryQueryReduce extends QueryQuery {}
