@@ -3343,16 +3343,15 @@ class QueryQuery extends QueryField {
         const dialectGroupByClause = this.parent.dialect.groupByClause;
         for (const field of this.rootResult.fields()) {
           const fi = field as FieldInstanceField;
-          if (dialectGroupByClause === 'expression') {
-            groupByColumns.push(fi.f.generateExpression(this.rootResult));
-          } else {
-            if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+          if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+            if (dialectGroupByClause === 'expression') {
+              groupByColumns.push(fi.f.generateExpression(this.rootResult));
+            } else {
               groupByColumns.push(fi.fieldUsage.resultIndex.toString());
             }
-            // Use column names (output_name) or positions (ordinal)
           }
           if (groupByColumns.length > 0) {
-            s += `GROUP BY ${groupByColumns.join(',')}\n`;
+            s += `\nGROUP BY ${groupByColumns.join(',')}\n`;
           }
         }
       }
@@ -3380,9 +3379,10 @@ class QueryQuery extends QueryField {
           s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
         }
       }
-      this.resultStage = stageWriter.addStage(s);
-      return this.resultStage;
     }
+
+    this.resultStage = stageWriter.addStage(s);
+    return this.resultStage;
   }
 
   // This probably should be generated in a dialect independat way.
