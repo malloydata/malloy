@@ -473,25 +473,6 @@ class QueryField extends QueryNode {
     return parent;
   }
 
-  getReferencedFields(_resultSet: FieldInstanceResult): string[] {
-    // For simple fields with no expression, just return the field itself
-    if (!hasExpression(this.fieldDef)) {
-      return [this.getIdentifier()];
-    }
-
-    // For fields with expressions, collect all field references using exprWalk
-    const references: string[] = [];
-
-    // Use the existing exprWalk utility to find all field references
-    for (const subExpr of exprWalk(this.fieldDef.e)) {
-      if (subExpr.node === 'field') {
-        references.push(subExpr.path.join('.'));
-      }
-    }
-
-    return references;
-  }
-
   isAtomic() {
     return isAtomic(this.fieldDef);
   }
@@ -1812,9 +1793,6 @@ class FieldInstanceField implements FieldInstance {
     }
   }
 
-  getReferencedColumns(): string[] {
-    return this.f.getReferencedFields(this.parent);
-  }
 }
 
 type RepeatedResultType = 'nested' | 'inline_all_numbers' | 'inline';
@@ -3361,81 +3339,34 @@ class QueryQuery extends QueryField {
 
   // TODO (vitor): Mark CHECK when done
   generateSimpleSQL(stageWriter: StageWriter): string {
-    let sOuter = 'SELECT \n';
-    let sInner = 'SELECT \n';
-    const sOuterFields: string[] = [];
-    const sInnerFields: string[] = [];
-
-    const nonAggregates: string[] = [];
-    const aggregates: string[] = [];
-    const fieldDependencies = new Map<string, string[]>();
+    let s = '';
+    s += 'SELECT \n';
+    const fields: string[] = [];
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
-        const dependencies = fi.getReferencedColumns();
-        fieldDependencies.set(name, dependencies);
-
-        const isAggregate = isBasicAggregate(fi.f);
-
-        if (isAggregate) {
-          aggregates.push(name);
-        } else {
-          nonAggregates.push(name);
-        }
-      }
+        fields.push(
+          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+        );
     }
 
-    for (const name of nonAggregates) {
-      const fi = this.rootResult.getField(name);
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+    s += indent(fields.join(',\n')) + '\n';
 
-      sInnerFields.push(
-        ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-      );
+    s += this.generateSQLJoins(stageWriter);
+    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-      sOuterFields.push(` ${sqlName}`);
-    }
-
-    for (const name of aggregates) {
-      const fi = this.rootResult.getField(name);
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-
-      sOuterFields.push(
-        ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-      );
-    }
-
-    const addedFields = new Set(nonAggregates);
-
-    for (const aggrName of aggregates) {
-      const deps = fieldDependencies.get(aggrName) || [];
-      for (const dep of deps) {
-        if (!addedFields.has(dep) && this.rootResult.hasField(dep)) {
-          const depField = this.rootResult.getField(dep);
-          const depSqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(dep);
-
-          sInnerFields.push(
-            ` ${depField.f.generateExpression(
-              this.rootResult
-            )} AS ${depSqlName}`
-          );
-
-          addedFields.add(dep);
-        }
-      }
-    }
-
-    sInner += indent(sInnerFields.join(',\n') || '*') + '\n';
-    sInner += this.generateSQLJoins(stageWriter);
-    sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+    s += indent(sInnerFields.join(',\n') || '*') + '\n';
+    s += this.generateSQLJoins(stageWriter);
+    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // Check if the query already has an alias, otherwise generate a new one
-    const existingAlias = extractExistingAlias(sInner);
+    const existingAlias = extractExistingAlias(s);
     const innerTableAlias =
       existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
-    sOuter += indent(sOuterFields.join(',\n')) + '\n';
-    sOuter += `FROM (${sInner}) AS ${innerTableAlias}\n`;
+    s += indent(sOuterFields.join(',\n')) + '\n';
+    s += `FROM (${s}) AS ${innerTableAlias}\n`;
 
     // group by - use non-aggregate field names from outer query
     if (this.firstSegment.type === 'reduce') {
@@ -3444,11 +3375,22 @@ class QueryQuery extends QueryField {
       );
 
       if (groupByColumns.length > 0) {
-        sOuter += `GROUP BY ${groupByColumns.join(', ')}\n`;
+        const dialectGroupByClause = this.parent.dialect.groupByClause;
+        if (dialectGroupByClause === 'expression') {
+          // Some dialects (like SQL Server) need expressions instead of output names
+          const groupByExpressions = nonAggregates.map(name => {
+            const fi = this.rootResult.getField(name);
+            return fi.f.generateExpression(this.rootResult);
+          });
+          s += `GROUP BY ${groupByExpressions.join(', ')}\n`;
+        } else {
+          // Use column names (output_name) or positions (ordinal)
+          s += `GROUP BY ${groupByColumns.join(', ')}\n`;
+        }
       }
     }
 
-    sOuter += this.generateSQLFilters(this.rootResult, 'having').sql('having');
+    s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
     // order by
     const orderBy = this.genereateSQLOrderBy(
@@ -3456,20 +3398,20 @@ class QueryQuery extends QueryField {
       this.rootResult
     );
 
-    sOuter += orderBy || 'ORDER BY 1 ';
+    s += orderBy || 'ORDER BY 1 ';
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      sOuter += this.parent.dialect.supportsLimit
+      s += this.parent.dialect.supportsLimit
         ? `LIMIT ${this.firstSegment.limit}\n`
         : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
     } else {
       // TODO (vitor): This does not bring me joy. But I can't throw it away just now
       if (this.parent.dialect.name === 'tsql') {
-        sOuter += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
-    this.resultStage = stageWriter.addStage(sOuter);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -3765,9 +3707,9 @@ class QueryQuery extends QueryField {
       }
     }
 
-    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
-
     sInner += indent(sInnerFields.join(',\n') || '*') + '\n';
+
+    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
     // this should only happen on standard SQL, BigQuery can't partition by expressions and aggregates
     if (f.lateralJoinSQLExpressions.length > 0) {
@@ -3788,11 +3730,24 @@ class QueryQuery extends QueryField {
 
     let groupBy = '';
     if (dimensionFields.length > 0) {
-      groupBy = 'GROUP BY group_set';
+      // This section handles group_set-based GROUP BY
+      if (this.parent.dialect.groupByClause === 'expression') {
+        // For dialects that need expressions
+        groupBy = 'GROUP BY group_set';
 
-      for (const dimension of f.dimensions || []) {
-        if (dimension.name !== 'group_set') {
-          groupBy += ', ' + dimension.name;
+        for (const dimension of f.dimensions || []) {
+          if (dimension.name !== 'group_set') {
+            groupBy += ', ' + dimension.expression;
+          }
+        }
+      } else {
+        // For dialects that use column names
+        groupBy = 'GROUP BY group_set';
+
+        for (const dimension of f.dimensions || []) {
+          if (dimension.name !== 'group_set') {
+            groupBy += ', ' + dimension.name;
+          }
         }
       }
 
@@ -3880,7 +3835,6 @@ class QueryQuery extends QueryField {
     stageName: string
   ): string {
     // Use inner/outer query pattern for SQL Server compatibility
-    let sInner = 'SELECT\n';
     let sOuter = 'SELECT\n';
     const sInnerFields: string[] = [];
     const sOuterFields: string[] = [];
@@ -3934,7 +3888,17 @@ class QueryQuery extends QueryField {
     sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
 
     if (dimensionFields.length > 0) {
-      sOuter += `GROUP BY ${dimensionFields.join(', ')}\n`;
+      if (this.parent.dialect.groupByClause === 'expression') {
+        // For dialects like SQL Server that need expressions for GROUP BY
+        const dimensionExpressions = dimensionFields.map(name => {
+          const fi = this.rootResult.getField(name);
+          return fi.f.generateExpression(this.rootResult);
+        });
+        sOuter += `GROUP BY ${dimensionExpressions.join(', ')}\n`;
+      } else {
+        // Use column names (default)
+        sOuter += `GROUP BY ${dimensionFields.join(', ')}\n`;
+      }
     }
 
     this.resultStage = stageWriter.addStage(sOuter);
@@ -4026,11 +3990,17 @@ class QueryQuery extends QueryField {
       let groupBy = '';
       if (this.parent.dialect.supportsLateGroupByEval) {
         if (this.parent.dialect.groupByClause === 'expression') {
+          // For dialects like SQL Server that need expressions for GROUP BY
+          groupBy = dimensions?.map(v => v.expression).join(',') + '\n';
+        } else if (this.parent.dialect.groupByClause === 'output_name') {
+          // For dialects that use column names
           groupBy = dimensions?.map(v => v.name).join(',') + '\n';
         } else {
+          // For dialects that use ordinal positions (default)
           groupBy = dimensionIndexes.join(',') + '\n';
         }
       } else {
+        // For dialects that don't support late GROUP BY evaluation
         groupBy =
           dimensions
             ?.map(v =>
@@ -4038,7 +4008,7 @@ class QueryQuery extends QueryField {
             )!
             .join(',') + '\n';
       }
-      groupBy = groupBy ? 'GROUP BY' + groupBy : '';
+      groupBy = groupBy ? 'GROUP BY ' + groupBy : '';
       s += groupBy;
     }
 
@@ -4547,6 +4517,8 @@ class QueryQueryIndexStage extends QueryQuery {
       existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
     sOuter += `FROM (${s}) AS ${innerTableAlias}\n`;
 
+    // For index search, we use the column names directly regardless of dialect
+    // This is a special case where we don't need to use expressions
     sOuter += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
 
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
