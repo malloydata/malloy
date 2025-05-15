@@ -430,16 +430,40 @@ interface ParameterInfo {
   value: ConstantExpr | null;
 }
 
-export interface FilterExpressionDef {
+interface FilterExpressionParamTypeDef {
   type: 'filter expression';
-  filterType?: FilterExprType;
+  filterType: FilterExprType;
 }
 
-export type ParameterType = CastType | 'filter expression';
+export type ParameterType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'timestamp'
+  | 'filter expression'
+  | 'error';
+
 export function isParameterType(t: string): t is ParameterType {
-  return isCastType(t) || t === 'filter expression';
+  return [
+    'string',
+    'number',
+    'boolean',
+    'date',
+    'timestamp',
+    'filter expression',
+    'error',
+  ].includes(t);
 }
-export type ParameterTypeDef = AtomicTypeDef | FilterExpressionDef;
+
+export type ParameterTypeDef =
+  | StringTypeDef
+  | NumberTypeDef
+  | BooleanTypeDef
+  | TemporalTypeDef
+  | FilterExpressionParamTypeDef
+  | ErrorTypeDef;
+
 export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
