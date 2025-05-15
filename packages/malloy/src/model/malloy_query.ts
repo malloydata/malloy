@@ -151,6 +151,22 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
+function extractExistingAlias(_sql: string): string | undefined {
+  // const lastAsMatch = sql.match(/AS\s+([a-zA-Z0-9_]+)\s*$/is);
+  // if (lastAsMatch) {
+  //   return lastAsMatch[1];
+  // }
+
+  // const fromAsMatch = sql.match(
+  //   /FROM\s+.*AS\s+([a-zA-Z0-9_]+)\s*($|\n|WHERE|GROUP|ORDER|HAVING)/is
+  // );
+  // if (fromAsMatch) {
+  //   return fromAsMatch[1];
+  // }
+
+  return undefined;
+}
+
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
@@ -3402,7 +3418,7 @@ class QueryQuery extends QueryField {
           sInnerFields.push(
             ` ${depField.f.generateExpression(
               this.rootResult
-            )} as ${depSqlName}`
+            )} AS ${depSqlName}`
           );
 
           addedFields.add(dep);
@@ -3414,9 +3430,12 @@ class QueryQuery extends QueryField {
     sInner += this.generateSQLJoins(stageWriter);
     sInner += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
+    // Check if the query already has an alias, otherwise generate a new one
+    const existingAlias = extractExistingAlias(sInner);
+    const innerTableAlias =
+      existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
     sOuter += indent(sOuterFields.join(',\n')) + '\n';
-    sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
+    sOuter += `FROM (${sInner}) AS ${innerTableAlias}\n`;
 
     // group by - use non-aggregate field names from outer query
     if (this.firstSegment.type === 'reduce') {
@@ -3759,10 +3778,13 @@ class QueryQuery extends QueryField {
 
     sInner += from + wheres;
 
-    const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
+    // Check if the query already has an alias, otherwise generate a new one
+    const existingAlias = extractExistingAlias(sInner);
+    const innerTableAlias =
+      existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
 
     sOuter += indent(sOuterFields.join(',\n')) + '\n';
-    sOuter += `FROM (${sInner}) as ${innerTableAlias}\n`;
+    sOuter += `FROM (${sInner}) AS ${innerTableAlias}\n`;
 
     let groupBy = '';
     if (dimensionFields.length > 0) {
@@ -4510,34 +4532,37 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    let outerSQL = 'SELECT\n';
+    let sOuter = 'SELECT\n';
 
-    outerSQL += `  ${fieldNameColumn},\n`;
-    outerSQL += `  ${fieldPathColumn},\n`;
-    outerSQL += `  ${fieldTypeColumn},\n`;
-    outerSQL += `  ${fieldValueColumn},\n`;
-    outerSQL += `  ${weightColumn},\n`;
-    outerSQL += `  ${fieldRangeColumn}\n`;
+    sOuter += `  ${fieldNameColumn},\n`;
+    sOuter += `  ${fieldPathColumn},\n`;
+    sOuter += `  ${fieldTypeColumn},\n`;
+    sOuter += `  ${fieldValueColumn},\n`;
+    sOuter += `  ${weightColumn},\n`;
+    sOuter += `  ${fieldRangeColumn}\n`;
 
-    const innerTableAlias = 'inner_' + uuidv4().replace(/-/g, '');
-    outerSQL += `FROM (${s}) as ${innerTableAlias}\n`;
+    // Check if the query already has an alias, otherwise generate a new one
+    const existingAlias = extractExistingAlias(s);
+    const innerTableAlias =
+      existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
+    sOuter += `FROM (${s}) AS ${innerTableAlias}\n`;
 
-    outerSQL += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
+    sOuter += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
 
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       if (dialect.supportsLimit) {
-        outerSQL += `LIMIT ${this.firstSegment.limit}\n`;
+        sOuter += `LIMIT ${this.firstSegment.limit}\n`;
       } else {
-        outerSQL += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+        sOuter += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
       }
     } else {
       //  TODO (vitor): This does not bring me joy.
       if (dialect.name === 'tsql') {
-        outerSQL += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        sOuter += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
 
-    const resultStage = stageWriter.addStage(outerSQL);
+    const resultStage = stageWriter.addStage(sOuter);
     this.resultStage = stageWriter.addStage(
       `SELECT
   ${fieldNameColumn},
