@@ -3366,6 +3366,7 @@ class QueryQuery extends QueryField {
     if (orderBy) {
       s += orderBy;
     } else if (!this.parent.dialect.supportsLimit) {
+      // TODO (vitor): At this point idk if it's worth it to continue with OFFSET instead of just using TOP
       s += '\nORDER BY 1\n';
     }
 
@@ -3630,8 +3631,56 @@ class QueryQuery extends QueryField {
     return lastStageName;
   }
 
-  generateSQLStage0(_stageWriter: StageWriter): string {
-    return '';
+  generateSQLStage0(stageWriter: StageWriter): string {
+    let s = 'SELECT\n';
+    let from = this.generateSQLJoins(stageWriter);
+    const wheres = this.generateSQLWhereTurtled();
+
+    const f: StageOutputContext = {
+      dimensionIndexes: [1],
+      fieldIndex: 2,
+      sql: ['group_set'],
+      lateralJoinSQLExpressions: [],
+      groupsAggregated: [],
+      outputPipelinedSQL: [],
+    };
+    this.generateStage0Fields(this.rootResult, f, stageWriter);
+
+    if (
+      this.firstSegment.type === 'project' &&
+      !this.parent.modelCompilerFlags().has('unsafe_complex_select_query')
+    ) {
+      throw new Error('PROJECT cannot be used on queries with turtles');
+    }
+
+    const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
+
+    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
+
+    s += indent(f.sql.join(',\n')) + '\n';
+
+    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
+    //  aggregates.
+    if (f.lateralJoinSQLExpressions.length > 0) {
+      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
+        ',\n'
+      )})]) as __lateral_join_bag\n`;
+    }
+    s += from + wheres + groupBy + this.rootResult.havings.sql('having');
+
+    // generate the stage
+    const resultStage = stageWriter.addStage(s);
+
+    // generate stages for havings and limits
+    this.resultStage = this.generateSQLHavingLimit(stageWriter, resultStage);
+
+    this.resultStage = this.generatePipelinedStages(
+      f.outputPipelinedSQL,
+      this.resultStage,
+      stageWriter
+    );
+
+    return this.resultStage;
   }
 
   generateDepthNFields(
