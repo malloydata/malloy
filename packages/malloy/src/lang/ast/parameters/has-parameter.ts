@@ -21,13 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {FilterableType} from '@malloydata/malloy-filter';
 import type {
   Parameter,
   ParameterType,
   ParameterTypeDef,
 } from '../../../model/malloy_types';
-import {isCastType, isParameterType} from '../../../model/malloy_types';
+import {isParameterType} from '../../../model/malloy_types';
 
 import type {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
@@ -35,33 +34,38 @@ import {checkFilterExpression} from '../types/expression-def';
 
 interface HasInit {
   name: string;
-  type?: ParameterType;
-  filterType?: FilterableType;
+  typeDef?: ParameterTypeDef;
   default?: ConstantExpression;
 }
 
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  readonly type?: ParameterType;
+  readonly typeDef?: ParameterTypeDef;
   readonly default?: ConstantExpression;
-  readonly filterType?: FilterableType;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
-    if (init.type && isParameterType(init.type)) {
-      this.type = init.type;
+    if (init.typeDef) {
+      this.typeDef = init.typeDef;
     }
     if (init.default) {
       this.default = init.default;
       this.has({default: this.default});
     }
-    if (init.filterType) this.filterType = init.filterType;
+  }
+
+  private get type(): ParameterType | undefined {
+    return this.typeDef?.type;
   }
 
   parameter(): Parameter {
-    let paramReturn: Parameter = {value: null, name: this.name, type: 'error'};
+    const paramReturn: Parameter = {
+      ...(this.typeDef || {type: 'error'}),
+      value: null,
+      name: this.name,
+    };
     if (this.default !== undefined) {
       const constant = this.default.constantValue();
       if (
@@ -78,9 +82,8 @@ export class HasParameter extends MalloyElement {
       if (constant.type === 'null') {
         if (this.type) {
           return {
-            ...this.typeDef(),
+            ...paramReturn,
             value: constant.value,
-            name: this.name,
           };
         } else {
           this.default.logError(
@@ -95,68 +98,39 @@ export class HasParameter extends MalloyElement {
         }
       }
       if (constant.type === 'filter expression') {
-        if (this.filterType === undefined) {
+        if (this.typeDef?.type !== 'filter expression') {
           this.logError(
             'parameter-missing-default-or-type',
             `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>'`
           );
-          return paramReturn;
+          return {...paramReturn, type: 'error'};
         }
-        checkFilterExpression(this, this.filterType, constant.value);
+        checkFilterExpression(this, this.typeDef.filterType, constant.value);
         return {
+          ...paramReturn,
           value: constant.value,
-          name: this.name,
-          type: 'filter expression',
-          filterType: this.filterType,
         };
       }
-      if (!isCastType(constant.type) && constant.type !== 'error') {
+      if (!isParameterType(constant.type)) {
         this.default.logError(
           'parameter-illegal-default-type',
           `Default value cannot have type \`${constant.type}\``
         );
         return {
-          value: constant.value,
-          name: this.name,
+          ...paramReturn,
           type: 'error',
         };
       }
-
-      paramReturn = {
-        ...this.typeDef(),
-        value: constant.value,
-        name: this.name,
-      };
+      paramReturn.value = constant.value;
     } else {
       if (this.type === undefined) {
         this.logError(
           'parameter-missing-default-or-type',
           'Parameter must have default value or declared type'
         );
+        paramReturn.type = 'error';
       }
-      paramReturn = {...this.typeDef(), value: null, name: this.name};
-    }
-    if (paramReturn.type === 'filter expression' && this.filterType) {
-      paramReturn.filterType = this.filterType;
     }
     return paramReturn;
-  }
-
-  private typeDef(): ParameterTypeDef {
-    if (this.type) {
-      if (this.type === 'filter expression') {
-        if (this.filterType) {
-          return {type: 'filter expression', filterType: this.filterType};
-        } else {
-          this.logError(
-            'parameter-missing-default-or-type',
-            'Filter expression parameter missing filter expression type'
-          );
-        }
-      } else {
-        return {type: this.type};
-      }
-    }
-    return {type: 'error'};
   }
 }

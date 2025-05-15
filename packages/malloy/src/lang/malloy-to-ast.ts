@@ -54,7 +54,7 @@ import type {
   DocumentLocation,
   DocumentRange,
   Note,
-  ParameterType,
+  ParameterTypeDef,
 } from '../model/malloy_types';
 import {
   isCastType,
@@ -63,7 +63,6 @@ import {
 } from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {isNotUndefined, rangeFromContext} from './utils';
-import type {FilterableType} from '@malloydata/malloy-filter';
 import {isFilterable} from '@malloydata/malloy-filter';
 
 class ErrorNode extends ast.SourceQueryElement {
@@ -368,15 +367,13 @@ export class MalloyToAST
   ): ast.HasParameter | null {
     const name = getId(pcx.parameterNameDef());
 
-    let pType: ParameterType | undefined;
-    let filterType: FilterableType | undefined;
+    let pType: ParameterTypeDef | undefined;
     const typeCx = pcx.legalParamType();
     if (typeCx) {
-      const fTypeCx = typeCx.malloyType();
-      if (fTypeCx) {
-        const t = this.getMalloyType(fTypeCx);
+      const t = this.getMalloyType(typeCx.malloyType());
+      if (typeCx.FILTER()) {
         if (isFilterable(t)) {
-          filterType = t;
+          pType = {type: 'filter expression', filterType: t};
         } else {
           this.contextError(
             typeCx,
@@ -384,32 +381,28 @@ export class MalloyToAST
             `Unknown filter type ${t}`
           );
         }
-      }
-      const parseType = typeCx.FILTER()
-        ? 'filter expression'
-        : typeCx.text.toLowerCase();
-      if (!isParameterType(parseType)) {
+      } else if (isParameterType(t)) {
+        pType = {type: t};
+      } else {
         this.contextError(
           typeCx,
           'parameter-illegal-default-type',
-          `Unknown parameter type ${parseType}`
+          `Unknown parameter type ${t}`
         );
-        return null;
       }
-      pType = parseType;
     }
 
     const defaultCx = pcx.fieldExpr();
     let defVal;
     if (defaultCx) {
-      const defaultExpr = new ast.ConstantExpression(
-        this.getFieldExpr(defaultCx)
+      defVal = this.astAt(
+        new ast.ConstantExpression(this.getFieldExpr(defaultCx)),
+        defaultCx
       );
-      defVal = this.astAt(defaultExpr, defaultCx);
     }
 
     return this.astAt(
-      new ast.HasParameter({name, type: pType, default: defVal, filterType}),
+      new ast.HasParameter({name, typeDef: pType, default: defVal}),
       pcx
     );
   }
