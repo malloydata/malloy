@@ -66,13 +66,13 @@ export class QueryArrow extends QueryBase implements QueryElement {
       inputStruct = refIsStructDef(invoked.structRef)
         ? invoked.structRef
         : this.source.getSourceDef(undefined);
-      fieldSpace = new StaticSourceSpace(inputStruct);
+      fieldSpace = new StaticSourceSpace(inputStruct, 'public');
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
-      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct);
+      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);

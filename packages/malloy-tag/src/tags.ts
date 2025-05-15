@@ -387,7 +387,7 @@ export class Tag implements TagInterface {
         }
       }
     }
-    return currentTag;
+    return currentTag.deleted ? undefined : currentTag;
   }
 
   has(...path: Path): boolean {

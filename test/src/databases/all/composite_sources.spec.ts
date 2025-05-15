@@ -43,6 +43,70 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> multistage
     `).malloyResultMatches(runtime, {foo: 1});
   });
+  describe('composited joins', () => {
+    it('basic composited join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: s1 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: f1 is 1
+          } on j.state = state
+        }
+        source: s2 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: f2 is 2
+          } on j.state = state
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.f2 }
+      `).malloyResultMatches(runtime, {f2: 2});
+    });
+    it('selects correct join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: s1 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: jf is 1
+          } on true
+          dimension: f1 is 1
+        }
+        source: s2 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: jf is 2
+          } on true
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.jf, f2 }
+      `).malloyResultMatches(runtime, {f2: 2, jf: 2});
+    });
+    it('join on depends on selected join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: jbase is compose(
+          state_facts extend {
+            dimension: jf1 is 1
+          },
+          state_facts extend {
+            dimension: jf2 is 2
+          }
+        )
+        source: s1 is state_facts extend {
+          join_one: j is jbase on j.jf1 = 1 and j.state = 'CA'
+          dimension: f1 is 1
+        }
+        source: s2 is state_facts extend {
+          join_one: j is jbase on j.jf2 = 2 and j.state = 'IL'
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.jf2, f2, j.state }
+      `).malloyResultMatches(runtime, {jf2: 2, f2: 2, state: 'IL'});
+    });
+  });
   it('composite source used in join', async () => {
     await expect(`
       ##! experimental.composite_sources

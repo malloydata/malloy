@@ -36,6 +36,7 @@ import type {CellValue, RecordCell, RepeatedRecordField} from '../../data_tree';
 import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {Tag} from '@malloydata/malloy-tag';
+import type {RenderMetadata} from '../render-result-metadata';
 
 type BarDataRecord = {
   x: string | number;
@@ -87,7 +88,9 @@ function getLimitedData({
 
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
-  const maxSizePerXGroup = Math.floor(refinedMaxSizePerBar * subGroupBars);
+  const maxSizePerXGroup = chartSettings.isSpark
+    ? 2
+    : Math.floor(refinedMaxSizePerBar * subGroupBars);
   const barLimitTag = chartTag.numeric('x', 'limit');
   const barLimit =
     barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
@@ -102,7 +105,8 @@ function getLimitedData({
 }
 
 export function generateBarChartVegaSpec(
-  explore: RepeatedRecordField
+  explore: RepeatedRecordField,
+  metadata: RenderMetadata
 ): VegaChartProps {
   const tag = explore.tag;
   const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
@@ -182,6 +186,7 @@ export function generateBarChartVegaSpec(
   const yDomainMax = Math.max(0, yMax);
 
   const chartSettings = getChartLayoutSettings(explore, chartTag, {
+    metadata,
     xField,
     yField,
     chartType: 'bar_chart',

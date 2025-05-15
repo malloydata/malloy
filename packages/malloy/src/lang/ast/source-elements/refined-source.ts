@@ -24,7 +24,6 @@
 import type {
   AccessModifierLabel,
   Annotation,
-  DocumentLocation,
   SourceDef,
 } from '../../../model/malloy_types';
 import {expressionIsCalculation} from '../../../model/malloy_types';
@@ -46,11 +45,9 @@ import {ParameterSpace} from '../field-space/parameter-space';
 import {JoinStatement} from '../source-properties/join';
 import type {IncludeItem} from '../source-query-elements/include-item';
 import {
-  IncludeAccessItem,
-  IncludeExceptItem,
-} from '../source-query-elements/include-item';
-import type {FieldReference} from '../query-items/field-references';
-import {WildcardFieldReference} from '../query-items/field-references';
+  getIncludeStateForJoin,
+  processIncludeList,
+} from '../field-space/include-utils';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -135,13 +132,11 @@ export class RefinedSource extends Source {
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
     const from = structuredClone(this.source.getSourceDef(paramSpace));
-    const {fieldsToInclude, modifiers, renames, notes} = processIncludeList(
-      this.includeList,
-      from
-    );
+    const includeState = processIncludeList(this.includeList, from);
+    const thisIncludeState = getIncludeStateForJoin([], includeState);
     for (const modifier of inlineAccessModifiers) {
       for (const field of modifier.fields) {
-        modifiers.set(field, modifier.access);
+        thisIncludeState.modifiers.set(field, modifier.access);
       }
     }
     // Note that this is explicitly not:
@@ -153,8 +148,7 @@ export class RefinedSource extends Source {
     const fs = RefinedSpace.filteredFrom(
       from,
       fieldListEdit,
-      fieldsToInclude,
-      renames,
+      includeState,
       paramSpace
     );
     if (newTimezone) {
@@ -170,8 +164,8 @@ export class RefinedSource extends Source {
         primaryKey.logError(keyDef.error.code, keyDef.error.message);
       }
     }
-    fs.addAccessModifiers(modifiers);
-    fs.addNotes(notes);
+    fs.addAccessModifiers(thisIncludeState.modifiers);
+    fs.addNotes(thisIncludeState.notes);
     const retStruct = fs.structDef();
 
     const filterList = retStruct.filterList || [];
@@ -196,157 +190,4 @@ export class RefinedSource extends Source {
     this.document()?.rememberToAddModelAnnotations(retStruct);
     return retStruct;
   }
-}
-
-function processIncludeList(
-  includeItems: IncludeItem[] | undefined,
-  from: SourceDef
-) {
-  // TODO error/warning if you include both star and specific fields with the same modifier...
-  const allFields = new Set(from.fields.map(f => f.name));
-  const alreadyPrivateFields = new Set(
-    from.fields.filter(f => f.accessModifier === 'private').map(f => f.name)
-  );
-  let mode: 'exclude' | 'include' | undefined = undefined;
-  const fieldsMentioned = new Set<string>();
-  let star: AccessModifierLabel | 'inherit' | undefined = undefined;
-  let starNote: Annotation | undefined = undefined;
-  const modifiers = new Map<string, AccessModifierLabel>();
-  const renames: {
-    as: string;
-    name: FieldReference;
-    location: DocumentLocation;
-  }[] = [];
-  const notes = new Map<string, Annotation>();
-  if (includeItems === undefined) {
-    return {fieldsToInclude: undefined, modifiers, renames, notes};
-  }
-  for (const item of includeItems) {
-    if (item instanceof IncludeAccessItem) {
-      for (const f of item.fields) {
-        if (f.name instanceof WildcardFieldReference) {
-          if (f.name.joinPath) {
-            f.logError(
-              'unsupported-path-in-include',
-              'Wildcards with paths are not supported in `include` blocks'
-            );
-          }
-          if (star !== undefined) {
-            item.logError(
-              'already-used-star-in-include',
-              'Wildcard already used in this include block'
-            );
-          } else {
-            star = item.kind ?? 'inherit';
-            starNote = {
-              notes: f.note?.notes ?? [],
-              blockNotes: item.note?.blockNotes ?? [],
-            };
-          }
-        } else {
-          if (mode === 'exclude') {
-            item.logError(
-              'include-after-exclude',
-              'Cannot include specific fields if specific fields are already excluded'
-            );
-            continue;
-          }
-          mode = 'include';
-          const name = f.name.refString;
-          if (alreadyPrivateFields.has(name)) {
-            f.logError(
-              'cannot-expand-access',
-              `Cannot expand access of \`${name}\` from private to ${item.kind}`
-            );
-          }
-          if (modifiers.has(name)) {
-            f.logError(
-              'duplicate-include',
-              `Field \`${name}\` already referenced in include list`
-            );
-          } else {
-            if (item.kind !== undefined) {
-              modifiers.set(name, item.kind);
-            }
-            fieldsMentioned.add(name);
-            if (f.note || item.note) {
-              notes.set(name, {
-                notes: f.note?.notes ?? [],
-                blockNotes: item.note?.blockNotes ?? [],
-              });
-            }
-          }
-          if (f.as) {
-            if (f.name instanceof WildcardFieldReference) {
-              f.logError(
-                'wildcard-include-rename',
-                'Cannot rename a wildcard field in an `include` block'
-              );
-            } else {
-              renames.push({
-                name: f.name,
-                as: f.as,
-                location: f.location,
-              });
-            }
-          }
-        }
-      }
-    } else if (item instanceof IncludeExceptItem) {
-      for (const f of item.fields) {
-        if (f instanceof WildcardFieldReference) {
-          if (f.joinPath) {
-            f.logError(
-              'unsupported-path-in-include',
-              'Wildcards with paths are not supported in `include` blocks'
-            );
-          } else {
-            f.logWarning(
-              'wildcard-except-redundant',
-              '`except: *` is implied, unless another clause uses *'
-            );
-          }
-        } else {
-          if (mode === 'include') {
-            item.logError(
-              'exclude-after-include',
-              'Cannot exclude specific fields if specific fields are already included'
-            );
-          } else {
-            mode = 'exclude';
-            star = 'inherit';
-            fieldsMentioned.add(f.refString);
-          }
-        }
-      }
-    }
-  }
-  const starFields: Set<string> = new Set(allFields);
-  fieldsMentioned.forEach(f => starFields.delete(f));
-  alreadyPrivateFields.forEach(f => starFields.delete(f));
-  let fieldsToInclude: Set<string>;
-  if (star !== undefined) {
-    for (const field of starFields) {
-      if (star !== 'inherit') {
-        modifiers.set(field, star);
-      }
-      if (starNote) {
-        notes.set(field, {...starNote});
-      }
-    }
-  }
-  if (mode !== 'exclude') {
-    if (star !== undefined) {
-      fieldsToInclude = allFields;
-    } else {
-      fieldsToInclude = fieldsMentioned;
-    }
-  } else {
-    fieldsToInclude = starFields;
-  }
-  // TODO: validate that a field isn't renamed more than once
-  // TODO: validate that excluded fields are not referenced by included fields
-  // TODO: make renames fields work in existing references
-  // TODO: make renames that would replace an excluded field don't do that
-  return {fieldsToInclude, modifiers, renames, notes};
 }

@@ -114,7 +114,8 @@ export class QOpDesc extends ListOf<QueryProperty> {
         // If the `build.resultFS` is correct, then we should be able to just use that
         // in a more direct way.
         new StaticSourceSpace(
-          opOutputStruct(this, inputFS.structDef(), segment)
+          opOutputStruct(this, inputFS.structDef(), segment),
+          'public'
         ),
     };
   }

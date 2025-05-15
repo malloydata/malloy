@@ -100,7 +100,7 @@ export abstract class QueryOperationSpace
     this.exprSpace = new QueryInputSpace(
       queryInputSpace.structDef(),
       this,
-      queryInputSpace.isProtectedAccessSpace()
+      queryInputSpace.accessProtectionLevel()
     );
     if (refineThis) this.addRefineFromFields(refineThis);
   }
@@ -116,6 +116,10 @@ export abstract class QueryOperationSpace
       this.astEl.logError(code, parameters, options);
     }
     return code;
+  }
+
+  accessProtectionLevel(): model.AccessModifierLabel {
+    return 'public';
   }
 
   inputSpace(): QueryInputSpace {
@@ -215,7 +219,7 @@ export abstract class QueryOperationSpace
   private getJoinOnFieldUsage(joinPath: string[]): model.FieldUsage[] {
     const reference = joinPath.map(n => new FieldName(n));
     this.astEl.has({reference});
-    const lookup = this.exprSpace.lookup(reference);
+    const lookup = this.exprSpace.lookup(reference, 'private');
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
       return joinedFieldUsage(

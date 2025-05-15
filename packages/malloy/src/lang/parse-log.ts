@@ -200,6 +200,7 @@ type MessageParameterTypes = {
   'field-list-edit-not-found': string;
   'unexpected-element-type': string;
   'field-not-found': string;
+  'composite-field-type-mismatch': string;
   'invalid-composite-source-input': string;
   'invalid-composite-field-usage': {
     newUsage: FieldUsage[];
@@ -371,6 +372,7 @@ type MessageParameterTypes = {
   'illegal-record-property-type': string;
   'record-literal-needs-keys': string;
   'not-yet-implemented': string;
+  'cannot-rename-join-field': string;
   'sql-case': string;
   'case-then-type-does-not-match': {
     thenType: ExpressionValueType;
@@ -387,6 +389,7 @@ type MessageParameterTypes = {
   };
   'or-choices-only': string;
   'sql-in': string;
+  'except-star-and-list': string;
   'dialect-cast-unsafe-only': string;
   'field-not-accessible': string;
   'cannot-expand-access': string;
@@ -398,6 +401,7 @@ type MessageParameterTypes = {
   'include-after-exclude': string;
   'duplicate-include': string;
   'exclude-after-include': string;
+  'exclude-after-exclude': string;
   'cannot-rename-non-field': string;
   'array-values-incompatible': string;
   'invalid-resolved-type-for-array': string;

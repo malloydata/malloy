@@ -85,8 +85,7 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    limit: number | undefined,
-    abortSignal?: AbortSignal
+    options: RunSQLOptions
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -115,13 +114,11 @@ class PrestoRunner implements BaseRunner {
     }
     this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(
-    sql: string,
-    limit: number | undefined,
-    _abortSignal?: AbortSignal
-  ) {
+  async runSQL(sql: string, options: RunSQLOptions = {}) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
+    const q = options.rowLimit
+      ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
+      : sql;
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -152,11 +149,7 @@ class TrinoRunner implements BaseRunner {
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(
-    sql: string,
-    limit: number | undefined,
-    _abortSignal?: AbortSignal
-  ) {
+  async runSQL(sql: string, options: RunSQLOptions = {}) {
     const result = await this.client.query(sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -169,10 +162,13 @@ class TrinoRunner implements BaseRunner {
     const columns = queryResult.value.columns;
 
     const outputRows: unknown[][] = [];
-    while (queryResult !== null && (!limit || outputRows.length < limit)) {
+    while (
+      queryResult !== null &&
+      (!options.rowLimit || outputRows.length < options.rowLimit)
+    ) {
       const rows = queryResult.value.data ?? [];
       for (const row of rows) {
-        if (!limit || outputRows.length < limit) {
+        if (!options.rowLimit || outputRows.length < options.rowLimit) {
           outputRows.push(row as unknown[]);
         }
       }
@@ -277,11 +273,7 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const r = await this.client.runSQL(
-      sqlCommand,
-      options.rowLimit,
-      options.abortSignal
-    );
+    const r = await this.client.runSQL(sqlCommand, options);
 
     if (r.error) {
       throw new Error(r.error);
@@ -379,7 +371,7 @@ export abstract class TrinoPrestoConnection
   ): Promise<void>;
 
   protected async executeAndWait(sqlBlock: string): Promise<void> {
-    await this.client.runSQL(sqlBlock, undefined);
+    await this.client.runSQL(sqlBlock, {});
     // TODO: make sure failure is handled correctly.
     //while (!(await result.next()).done);
   }
@@ -404,7 +396,7 @@ export abstract class TrinoPrestoConnection
     element: string
   ): Promise<StructDef> {
     try {
-      const queryResult = await this.client.runSQL(sqlBlock, undefined);
+      const queryResult = await this.client.runSQL(sqlBlock, {});
 
       if (queryResult.error) {
         // TODO: handle.

@@ -3913,6 +3913,11 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
     return this.children.truncation;
   }
 
+  set truncation(truncation: Malloy.TimestampTimeframe) {
+    this.edit();
+    this.children.truncation = truncation;
+  }
+
   get name() {
     return this.fieldReference.name;
   }

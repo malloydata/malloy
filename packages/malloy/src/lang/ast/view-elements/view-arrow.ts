@@ -46,7 +46,7 @@ export class ViewArrow extends View {
 
   pipelineComp(fs: FieldSpace): PipelineComp {
     const baseComp = this.base.pipelineComp(fs);
-    const nextFS = new StaticSourceSpace(baseComp.outputStruct);
+    const nextFS = new StaticSourceSpace(baseComp.outputStruct, 'public');
     const finalComp = this.operation.pipelineComp(nextFS);
     return {
       pipeline: [...baseComp.pipeline, ...finalComp.pipeline],

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {StructDef} from '../../../model/malloy_types';
+import type {AccessModifierLabel, StructDef} from '../../../model/malloy_types';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 
 import type {ExprValue} from '../types/expr-value';
@@ -63,8 +63,8 @@ export class ConstantFieldSpace implements FieldSpace {
     return false;
   }
 
-  isProtectedAccessSpace(): boolean {
-    return false;
+  accessProtectionLevel(): AccessModifierLabel {
+    return 'private';
   }
 }
 

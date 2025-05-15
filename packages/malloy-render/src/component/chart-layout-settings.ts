@@ -27,6 +27,7 @@ import {scale, locale} from 'vega';
 import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
 import type {Field, NestField} from '../data_tree';
+import type {RenderMetadata} from './render-result-metadata';
 
 export type ChartLayoutSettings = {
   plotWidth: number;
@@ -59,6 +60,7 @@ export type ChartLayoutSettings = {
   };
   totalWidth: number;
   totalHeight: number;
+  isSpark: boolean;
 };
 
 // Later should depend on chart type?
@@ -79,6 +81,7 @@ export function getChartLayoutSettings(
   field: NestField,
   chartTag: Tag,
   options: {
+    metadata: RenderMetadata;
     xField?: Field;
     yField?: Field;
     chartType: string;
@@ -94,18 +97,31 @@ export function getChartLayoutSettings(
   const tag = field.tag;
 
   // For now, support legacy API of size being its own tag
-  const customWidth =
+  const taggedWidth =
     chartTag.numeric('size', 'width') ?? tag.numeric('size', 'width');
-  const customHeight =
+  const taggedHeight =
     chartTag.numeric('size', 'height') ?? tag.numeric('size', 'height');
-  const presetSize = (chartTag.text('size') ?? tag.text('size')) || 'md';
+  const taggedPresetSize = chartTag.text('size') ?? tag.text('size');
+  const hasNoDefinedSize = !taggedWidth && !taggedHeight && !taggedPresetSize;
+  const isFillMode =
+    taggedPresetSize === 'fill' || (hasNoDefinedSize && field.isRoot());
+  const presetSize =
+    taggedPresetSize &&
+    Object.prototype.hasOwnProperty.call(CHART_SIZES, taggedPresetSize)
+      ? taggedPresetSize
+      : 'md';
   let chartWidth = 0,
-    chartHeight = 0,
-    heightRows = 0;
-  [chartWidth, heightRows] = CHART_SIZES[presetSize];
-  chartHeight = heightRows * ROW_HEIGHT;
-  if (customWidth) chartWidth = customWidth;
-  if (customHeight) chartHeight = customHeight;
+    chartHeight = 0;
+
+  if (isFillMode) {
+    chartWidth = options.metadata.parentSize.width;
+    chartHeight = options.metadata.parentSize.height;
+  } else {
+    const [presetWidth, heightRows] = CHART_SIZES[presetSize];
+    const presetHeight = heightRows * ROW_HEIGHT;
+    chartWidth = taggedWidth ?? presetWidth;
+    chartHeight = taggedHeight ?? presetHeight;
+  }
 
   let xAxisHeight = 0;
   let yAxisWidth = 0;
@@ -213,7 +229,6 @@ export function getChartLayoutSettings(
       labelLimit = 0;
       labelAlign = undefined;
       labelBaseline = 'top';
-      xTitleSize = 22;
       xAxisHeight = 14;
     }
   }
@@ -225,9 +240,38 @@ export function getChartLayoutSettings(
 
   const isSpark = tag.text('size') === 'spark';
 
+  const padding = isSpark
+    ? {top: 0, left: 0, bottom: 0, right: 0}
+    : {
+        top: topPadding + 1,
+        left: yAxisWidth,
+        bottom: xAxisHeight + xTitleSize,
+        right: 8,
+      };
+
+  // TODO: kinda hacky, to account for titles and such. Need to think how to get better chart sizing availability
+  // It might be a thing where at vega chart level, it can decide to shrink chart based on titles? like override that spec value?
+  // Add extra padding for fill mode
+  if (isFillMode) {
+    padding.left += 24;
+    padding.right += 24;
+    padding.bottom += 12;
+  }
+  const hasChartTitle = chartTag.text('title');
+  const hasChartSubtitle = chartTag.text('subtitle');
+  padding.top += hasChartTitle ? 24 : 0;
+  padding.bottom += hasChartSubtitle ? 24 : 0;
+  const paddingInline = padding.left + padding.right;
+  const paddingBlock = padding.top + padding.bottom;
+  // If fill mode, make room around inner plot
+  const plotWidth = isFillMode ? chartWidth - paddingInline : chartWidth;
+  const plotHeight = isFillMode ? chartHeight - paddingBlock : chartHeight;
+  const totalWidth = isFillMode ? chartWidth : chartWidth + paddingInline;
+  const totalHeight = isFillMode ? chartHeight : chartHeight + paddingBlock;
+
   return {
-    plotWidth: chartWidth,
-    plotHeight: chartHeight,
+    plotWidth,
+    plotHeight,
     xAxis: {
       labelAngle,
       labelAlign,
@@ -246,21 +290,11 @@ export function getChartLayoutSettings(
     yScale: {
       domain: options.independentY ? null : yDomain,
     },
-    padding: isSpark
-      ? {top: 0, left: 0, bottom: 0, right: 0}
-      : {
-          top: topPadding + 1,
-          left: yAxisWidth,
-          bottom: xAxisHeight + xTitleSize,
-          right: 8,
-        },
+    padding: isSpark ? {top: 0, left: 0, bottom: 0, right: 0} : padding,
     xField,
     yField,
-    get totalWidth() {
-      return this.plotWidth + this.padding.left + this.padding.right;
-    },
-    get totalHeight() {
-      return this.plotHeight + this.padding.top + this.padding.bottom;
-    },
+    totalWidth,
+    totalHeight,
+    isSpark,
   };
 }

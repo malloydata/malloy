@@ -45,6 +45,12 @@ type CompositeError =
     };
 
 type CompositeIssue =
+  | {
+      type: 'join-failed';
+      failures: CompositeFailure[];
+      path: string[];
+      firstUsage: FieldUsage;
+    }
   | {type: 'missing-field'; field: FieldUsage}
   | {
       type: 'missing-required-group-by';
@@ -184,9 +190,21 @@ function _resolveCompositeSources(
         nests,
         expandedCategorized
       );
-      // Fourth point where we abort: if a join failed we just completely give up
-      if (joinError.error !== undefined) {
-        return {error: joinError.error};
+      // Fourth point where we abort: if a join failed
+      if (joinError.errors.length > 0) {
+        for (const error of joinError.errors) {
+          if (error.error.code !== 'no_suitable_composite_source_input') {
+            return {error: error.error};
+          }
+          fail({
+            type: 'join-failed',
+            failures: error.error.data.failures,
+            path: error.error.data.path,
+            firstUsage: error.firstUsage,
+          });
+        }
+        abort();
+        continue overSources;
       }
       joinsProcessed = true;
 
@@ -241,8 +259,8 @@ function _resolveCompositeSources(
       nests,
       categorizeFieldUsage(expanded.result)
     );
-    if (joinResult.error !== undefined) {
-      return {error: joinResult.error};
+    if (joinResult.errors.length > 0) {
+      return {error: joinResult.errors[0].error};
     }
     anyComposites ||= joinResult.anyComposites;
   }
@@ -416,11 +434,13 @@ function processJoins(
   rootFields: FieldDef[],
   nests: NestLevels | undefined,
   categorizedFieldUsage: CategorizedFieldUsage
-):
-  | {error: CompositeError; anyComposites?: undefined}
-  | {anyComposites: boolean; error?: undefined} {
+): {
+  errors: {error: CompositeError; firstUsage: FieldUsage}[];
+  anyComposites: boolean;
+} {
   let anyComposites = false;
   const fieldsByName: {[name: string]: FieldDef} = {};
+  const errors: {error: CompositeError; firstUsage: FieldUsage}[] = [];
   for (const field of base.fields) {
     fieldsByName[field.as ?? field.name] = field;
   }
@@ -430,20 +450,24 @@ function processJoins(
     const newPath = [...path, joinName];
     const join = fieldsByName[joinName];
     if (join === undefined) {
-      return {
+      errors.push({
         error: {
           code: 'composite_source_not_defined',
           data: {path: newPath},
         },
-      };
+        firstUsage: joinedUsage[0],
+      });
+      continue;
     }
     if (!isJoined(join)) {
-      return {
+      errors.push({
         error: {
           code: 'composite_source_not_a_join',
           data: {path: newPath},
         },
-      };
+        firstUsage: joinedUsage[0],
+      });
+      continue;
     } else if (!isSourceDef(join)) {
       // Non-source join, like an array, skip it (no need to resolve)
       continue;
@@ -456,19 +480,25 @@ function processJoins(
       joinedUsage
     );
     if ('error' in resolved) {
-      return resolved;
+      errors.push({
+        error: resolved.error,
+        firstUsage: joinedUsage[0],
+      });
+      continue;
     }
     if (!resolved.anyComposites) {
       continue;
     }
     anyComposites = true;
     if (!isJoinable(resolved.success)) {
-      return {
+      errors.push({
         error: {
           code: 'composite_source_is_not_joinable',
           data: {path: newPath},
         },
-      };
+        firstUsage: joinedUsage[0],
+      });
+      continue;
     }
     fieldsByName[joinName] = {
       ...resolved.success,
@@ -478,7 +508,7 @@ function processJoins(
     };
     base.fields = Object.values(fieldsByName);
   }
-  return {anyComposites};
+  return {anyComposites, errors};
 }
 
 type SingleNarrowedCompositeFieldResolution = {
@@ -620,7 +650,10 @@ export function fieldUsageJoinPaths(fieldUsage: FieldUsage[]): string[][] {
 }
 
 function isCompositeField(fieldDef: FieldDef): boolean {
-  return 'e' in fieldDef && fieldDef.e?.node === 'compositeField';
+  return (
+    ('e' in fieldDef && fieldDef.e?.node === 'compositeField') ||
+    (isJoined(fieldDef) && fieldDef.type === 'composite')
+  );
 }
 
 function getNonCompositeFields(source: SourceDef): FieldDef[] {
@@ -916,7 +949,7 @@ function getUnsatisfiedRequiredGroupBys(
   ];
 }
 
-function pathEq(a: string[], b: string[]) {
+export function pathEq(a: string[], b: string[]) {
   return a.length === b.length && a.every((s, i) => b[i] === s);
 }
 
@@ -1021,12 +1054,19 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
               `Could not resolve composite source: missing field ${fieldRef} in ${source}${requiredFields}`,
               {at: issue.field.at}
             );
-          } else {
+          } else if (issue.type === 'missing-required-group-by') {
             const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
             logTo.logError(
               'could-not-resolve-composite-source',
               `Could not resolve composite source: missing group by ${fieldRef} as required in ${source}${requiredFields}`,
               {at: issue.requiredGroupBy.at}
+            );
+          } else {
+            const joinRef = `\`${issue.path.join('.')}\``;
+            logTo.logError(
+              'could-not-resolve-composite-source',
+              `Could not resolve composite source: join ${joinRef} could not be resolved in ${source}${requiredFields}`,
+              {at: issue.firstUsage.at}
             );
           }
         }

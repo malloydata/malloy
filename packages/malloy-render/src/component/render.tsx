@@ -32,6 +32,7 @@ import type {ModelDef, QueryResult} from '@malloydata/malloy';
 import {Result, API} from '@malloydata/malloy';
 import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
+import {createRAFSignal} from './util';
 
 export type MalloyRenderProps = {
   malloyResult?: Malloy.Result;
@@ -180,9 +181,31 @@ export function MalloyRenderInner(props: {
   vegaConfigOverride?: VegaConfigHandler;
 }) {
   const rootCell = createMemo(() => getDataTree(props.result));
+
+  const wrapper = props.element['parentElement'];
+  const [parentSize, setParentSize] = createRAFSignal({
+    width: wrapper.clientWidth,
+    height: wrapper.clientHeight,
+  });
+  const o = new ResizeObserver(entries => {
+    const {width, height} = entries[0].contentRect;
+    if (width !== parentSize().width || height !== parentSize().height) {
+      setParentSize({
+        width,
+        height,
+      });
+    }
+  });
+
+  o.observe(wrapper);
+
+  // This is where chart rendering happens for now
+  // If size in fill mode, easiest thing would be to just recalculate entire thing
+  // This is expensive but we can optimize later to make size responsive
   const metadata = createMemo(() =>
     getResultMetadata(rootCell(), {
       getVegaConfigOverride: props.vegaConfigOverride,
+      parentSize: parentSize(),
     })
   );
   const tags = () => {
@@ -209,6 +232,9 @@ export function MalloyRenderInner(props: {
 
   const rendering = () => {
     const data = rootCell();
+    // TODO hack: forcing re-render based on metadata. Fix this; result context should return a reactive store probably
+    //  that store is where we can store the size info, probably
+    metadata();
     return applyRenderer({
       dataColumn: data,
       tag: data.field.tag,
@@ -225,7 +251,7 @@ export function MalloyRenderInner(props: {
 
   return (
     <>
-      <ResultContext.Provider value={metadata()}>
+      <ResultContext.Provider value={metadata}>
         {rendering().renderValue}
       </ResultContext.Provider>
       <Show when={metadata().store.store.showCopiedModal}>

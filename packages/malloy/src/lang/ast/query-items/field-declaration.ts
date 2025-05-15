@@ -28,6 +28,7 @@ import type {
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
+  AccessModifierLabel,
 } from '../../../model/malloy_types';
 import {
   isAtomicFieldType,
@@ -301,8 +302,8 @@ export class DefSpace implements FieldSpace {
     throw new Error('Not a query field space');
   }
 
-  isProtectedAccessSpace(): boolean {
-    return true;
+  accessProtectionLevel(): AccessModifierLabel {
+    return 'public';
   }
 }
 

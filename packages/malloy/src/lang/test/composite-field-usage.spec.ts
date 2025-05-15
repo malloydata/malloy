@@ -64,6 +64,21 @@ describe('composite sources', () => {
   });
 
   describe('composite source resolution and validation', () => {
+    describe('compose type errors', () => {
+      test('compose incompatible scalar types', () => {
+        expect(`
+          ##! experimental {composite_sources}
+          source: c is compose(
+            a extend { dimension: x is 'foo' },
+            ${'a extend { dimension: x is 1 }'}
+          )
+        `).toLog(
+          errorMessage(
+            'field `x` must have the same type in all composite inputs: `number` does not match `string`'
+          )
+        );
+      });
+    });
     test('compose fails on group_by that is relevant', () => {
       expect(`
         ##! experimental.composite_sources
@@ -126,6 +141,78 @@ describe('composite sources', () => {
           run: y -> { group_by: x.foo }
         `
       ).toTranslate();
+    });
+    test('error message when composited join (join is a nested composite) results in failure', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: jbase is compose(
+          a extend {
+            dimension: jf1 is 1
+          },
+          a extend {
+            dimension: jf2 is 2
+          }
+        )
+        source: s1 is a extend {
+          join_one: j is jbase on j.jf1 = 1
+        }
+        source: s2 is a extend {
+          join_one: j is jbase on j.jf2 = 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: ${'j.jf2'}, j.jf1 }
+      `).toLog(
+        errorMessage(
+          'Could not resolve composite source: join `j` could not be resolved in composed source #1 (`s1`)\nFields required in source: `j.jf2` and `j.jf1`'
+        ),
+        errorMessage(
+          'Could not resolve composite source: join `j` could not be resolved in composed source #2 (`s2`)\nFields required in source: `j.jf2` and `j.jf1`'
+        )
+      );
+    });
+    test('composited join cannot use join from other source (with incompatible fields)', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: s1 is a extend {
+          join_one: j is a extend {
+            dimension: jf1 is 1
+          } on true
+          dimension: f1 is 1
+        }
+        source: s2 is a extend {
+          join_one: j is a extend {
+            dimension: jf2 is 2
+          } on true
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: f1, ${'j.jf2'} }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `j.jf2`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and `j.jf2`\nFields required in source: `f1` and `j.jf2`'
+        )
+      );
+    });
+    test('error message when composited join (join is not nested composite) results in failure', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: s1 is a extend {
+          join_one: j is b extend {
+            dimension: jf1 is 1
+          } on true
+        }
+        source: s2 is a extend {
+          join_one: j is b extend {
+            dimension: jf2 is 1
+          } on true
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.jf2, ${'j.jf1'} }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `j.jf1`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `j.jf2` and `j.jf1`\nFields required in source: `j.jf2` and `j.jf1`'
+        )
+      );
     });
     test('compose fails on scalar lens that is dimension', () => {
       expect(`
