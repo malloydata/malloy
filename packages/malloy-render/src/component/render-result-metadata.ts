@@ -84,8 +84,11 @@ function populateAllVegaSpecs(
 const CHART_TAG_LIST = ['bar_chart', 'line_chart'];
 
 export function shouldRenderChartAs(tag: Tag) {
-  const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
-  return tagNamesInOrder.find(name => CHART_TAG_LIST.includes(name));
+  const properties = tag.properties ?? {};
+  const tagNamesInOrder = Object.keys(properties).reverse();
+  return tagNamesInOrder.find(
+    name => CHART_TAG_LIST.includes(name) && !properties[name].deleted
+  );
 }
 
 function populateVegaSpec(

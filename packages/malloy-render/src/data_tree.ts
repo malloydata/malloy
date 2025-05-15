@@ -248,9 +248,10 @@ export function shouldRenderAs(
   tagOverride?: Tag
 ) {
   const tag = tagOverride ?? tagFor(field);
-  const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
+  const properties = tag.properties ?? {};
+  const tagNamesInOrder = Object.keys(properties).reverse();
   for (const tagName of tagNamesInOrder) {
-    if (RENDER_TAG_LIST.includes(tagName)) {
+    if (RENDER_TAG_LIST.includes(tagName) && !properties[tagName].deleted) {
       if (['list', 'list_detail'].includes(tagName)) return 'list';
       if (['bar_chart', 'line_chart'].includes(tagName)) return 'chart';
       return tagName;
