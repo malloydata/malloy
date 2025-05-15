@@ -3363,13 +3363,15 @@ class QueryQuery extends QueryField {
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
-    // order by
     const orderBy = this.genereateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
-
-    s += orderBy || 'ORDER BY 1 ';
+    if (orderBy){
+      s += orderBy;
+    } else if (!this.parent.dialect.supportsLimit){
+      s += '\nORDER BY 1\n'
+    }
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
