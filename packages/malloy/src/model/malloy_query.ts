@@ -3332,7 +3332,6 @@ class QueryQuery extends QueryField {
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
         );
       }
-
       s += indent(fields.join(',\n')) + '\n';
 
       s += this.generateSQLJoins(stageWriter);
