@@ -5,13 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// In general, `...Info` structs represent "information about" an entity,
+// but not necessarily the _definition_ of that entity. E.g. a `Query` represents
+// an actual `query` object which can be serialized into Malloy code, compiled,
+// and run, whereas a `QueryInfo` represents the presence of a query in a model,
+// its name, its schema, and any other relevant information about it. A `QueryInfo`
+// may have a `definition`, which indicates that it is a query that is representable
+// as a `Query`. Not all queries are representable as such, because this interface
+// has more limited capabilities than the full Malloy language (e.g. index queries
+// are not representable here).
+
 struct ModelInfo {
-  1: required list<ModelEntryValue> entries,
+  1: required list<ModelEntry> entries,
   2: optional list<Annotation> annotations,
   3: required list<AnonymousQueryInfo> anonymous_queries,
 }
 
-union ModelEntryValue {
+union ModelEntry {
   1: required SourceInfo source,
   2: required QueryInfo query,
 }
@@ -33,19 +43,9 @@ struct QueryInfo {
   1: required string name,
   2: required Schema schema,
   3: optional list<Annotation> annotations,
-  // "openable query"
   4: optional Query definition,
-  // TODO consider code and location for ALL objects in the model
-  // TODO should this be optional or always present? or not here at all?
-    // Argument against: if all objects have their code, then there is tons of repetition
-    // Instead, maybe just have all the code in the model (or not at all, rely on user?)
-    // and use locations
-    // What about definitions from other files?
-    // Should Location have a url at all, or just be the Range -- does Thrift handle repetition of
-    // strings well?
   5: optional string code,
-  // TODO should this be optional or always present? or not here at all?
-  6: optional Location location,
+  6: optional DocumentLocation location,
 }
 
 struct AnonymousQueryInfo {
@@ -63,22 +63,7 @@ struct AnonymousQueryInfo {
     // strings well?
   6: optional string code,
   // TODO should this be optional or always present? or not here at all?
-  7: optional Location location,
-}
-
-struct Location {
-  1: required string url,
-  2: required Range range,
-}
-
-struct Range {
-  1: required Position start,
-  2: required Position end,
-}
-
-struct Position {
-  1: required i32 line,
-  2: required i32 character,
+  7: optional DocumentLocation location,
 }
 
 struct Schema {
@@ -248,10 +233,10 @@ Generate typescript?
     - https://www.internalfb.com/diff/D68557062
 */
 
-union ViewOperation {
+union ViewStatement {
   1: required GroupBy group_by,
   2: required Aggregate aggregate,
-  3: OrderBy order_by,
+  3: required OrderBy order_by,
   4: required Limit limit,
   5: required FilterOperation where,
   6: required Nest nest,
@@ -277,10 +262,12 @@ struct Field {
   1: required Expression expression,
   // TODO only two kinds of distinguishable annotations are before `aggregate:` and before `name is value`
   // between `name` and `is`, or between `is` and `value` are converted to before `name`.
+  // TODO consider having an annotation tree with inheritance
   2: optional list<Annotation> annotations,
 }
 
 struct OrderBy {
+  // TODO consider making this a specialized reference like an "OrderByReference"
   1: required Reference field_reference,
   2: optional OrderByDirection direction,
 }
@@ -306,25 +293,6 @@ struct FilterStringApplication {
   2: required string filter,
 }
 
-/**
-
-stages: [
-  {ref: ff}
-  {refin: {base: ff}, {seg}}
-  {seg}
-]
-
-stages: [
-  {
-    refinements: [
-      {ref}
-      {ref}
-      {seg}
-    ]
-  }
-]
-*/
-
 struct Query {
   1: required QueryDefinition definition,
   2: optional list<Annotation> annotations,
@@ -348,19 +316,19 @@ struct QueryArrow {
 
 struct QueryRefinement {
   1: required QueryDefinition base,
-  2: required ViewDefinition refinement,
+  2: required ViewDefinition refining_view,
 }
 
 union ViewDefinition {
   1: ViewArrow arrow,
   2: Reference view_reference,
   3: ViewRefinement refinement,
-  4: ViewSegment segment,
+  4: ViewBlock block,
 }
 
 struct ViewRefinement {
   1: required ViewDefinition base,
-  2: required ViewDefinition refinement,
+  2: required ViewDefinition refining_view,
 }
 
 struct ViewArrow {
@@ -368,8 +336,9 @@ struct ViewArrow {
   2: required ViewDefinition view,
 }
 
-struct ViewSegment {
-  1: required list<ViewOperation> operations,
+// TODO: I'm not conviced about just calling this "block"
+struct ViewBlock {
+  1: required list<ViewStatement> operations,
 }
 
 struct Reference {
