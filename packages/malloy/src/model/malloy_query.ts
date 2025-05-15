@@ -3341,35 +3341,22 @@ class QueryQuery extends QueryField {
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    s += indent(sInnerFields.join(',\n') || '*') + '\n';
-    s += this.generateSQLJoins(stageWriter);
-    s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-
-    // Check if the query already has an alias, otherwise generate a new one
-    const existingAlias = extractExistingAlias(s);
-    const innerTableAlias =
-      existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
-    s += indent(sOuterFields.join(',\n')) + '\n';
-    s += `FROM (${s}) AS ${innerTableAlias}\n`;
-
-    // group by - use non-aggregate field names from outer query
+    // group by
     if (this.firstSegment.type === 'reduce') {
-      const groupByColumns = nonAggregates.map(name =>
-        this.parent.dialect.sqlMaybeQuoteIdentifier(name)
-      );
-
-      if (groupByColumns.length > 0) {
-        const dialectGroupByClause = this.parent.dialect.groupByClause;
+      const groupByColumns: string[] = []
+      const dialectGroupByClause = this.parent.dialect.groupByClause;
+      for (const field of this.rootResult.fields()) {
+        const fi = field as FieldInstanceField;
         if (dialectGroupByClause === 'expression') {
-          // Some dialects (like SQL Server) need expressions instead of output names
-          const groupByExpressions = nonAggregates.map(name => {
-            const fi = this.rootResult.getField(name);
-            return fi.f.generateExpression(this.rootResult);
-          });
-          s += `GROUP BY ${groupByExpressions.join(', ')}\n`;
+          groupByColumns.push(fi.f.generateExpression(this.rootResult));
         } else {
+          if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+            groupByColumns.push(fi.fieldUsage.resultIndex.toString());
+          }
           // Use column names (output_name) or positions (ordinal)
-          s += `GROUP BY ${groupByColumns.join(', ')}\n`;
+        }
+        if (groupByColumns.length > 0) {
+          s += `GROUP BY ${groupByColumns.join(',')}\n`;
         }
       }
     }
