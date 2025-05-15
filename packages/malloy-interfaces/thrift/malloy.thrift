@@ -51,7 +51,6 @@ struct QueryInfo {
 struct AnonymousQueryInfo {
   2: required Schema schema,
   4: optional list<Annotation> annotations,
-  // "openable query"
   5: optional Query definition,
   // TODO consider code and location for ALL objects in the model
   // TODO should this be optional or always present? or not here at all?
