@@ -16,42 +16,42 @@
 // are not representable here).
 
 struct ModelInfo {
-  1: required list<ModelEntry> entries,
-  2: optional list<Annotation> annotations,
-  3: required list<AnonymousQueryInfo> anonymous_queries,
+  1: required list<ModelEntry> entries;
+  2: optional list<Annotation> annotations;
+  3: required list<AnonymousQueryInfo> anonymous_queries;
 }
 
 union ModelEntry {
-  1: required SourceInfo source,
-  2: required QueryInfo query,
+  1: required SourceInfo source;
+  2: required QueryInfo query;
 }
 
 struct SourceInfo {
-  1: required string name,
-  2: required Schema schema,
-  3: optional list<Annotation> annotations,
-  4: optional list<ParameterInfo> parameters,
+  1: required string name;
+  2: required Schema schema;
+  3: optional list<Annotation> annotations;
+  4: optional list<ParameterInfo> parameters;
 }
 
 struct ParameterInfo {
-  1: required string name,
-  2: required ParameterType type,
-  3: optional LiteralValue default_value,
+  1: required string name;
+  2: required ParameterType type;
+  3: optional LiteralValue default_value;
 }
 
 struct QueryInfo {
-  1: required string name,
-  2: required Schema schema,
-  3: optional list<Annotation> annotations,
-  4: optional Query definition,
-  5: optional string code,
-  6: optional DocumentLocation location,
+  1: required string name;
+  2: required Schema schema;
+  3: optional list<Annotation> annotations;
+  4: optional Query definition;
+  5: optional string code;
+  6: optional DocumentLocation location;
 }
 
 struct AnonymousQueryInfo {
-  2: required Schema schema,
-  4: optional list<Annotation> annotations,
-  5: optional Query definition,
+  2: required Schema schema;
+  4: optional list<Annotation> annotations;
+  5: optional Query definition;
   // TODO consider code and location for ALL objects in the model
   // TODO should this be optional or always present? or not here at all?
     // Argument against: if all objects have their code, then there is tons of repetition
@@ -60,32 +60,32 @@ struct AnonymousQueryInfo {
     // What about definitions from other files?
     // Should Location have a url at all, or just be the Range -- does Thrift handle repetition of
     // strings well?
-  6: optional string code,
+  6: optional string code;
   // TODO should this be optional or always present? or not here at all?
-  7: optional DocumentLocation location,
+  7: optional DocumentLocation location;
 }
 
 struct Schema {
-  1: required list<FieldInfo> fields,
+  1: required list<FieldInfo> fields;
 }
 
 struct Annotation {
-  1: required string value,
+  1: required string value;
 }
 
 union FieldInfo {
-  // 1: required AtomicField atomic_field,
-  1: required DimensionInfo dimension,
-  2: required MeasureInfo measure,
-  3: required JoinInfo join,
-  4: required ViewInfo view,
+  // 1: required AtomicField atomic_field;
+  1: required DimensionInfo dimension;
+  2: required MeasureInfo measure;
+  3: required JoinInfo join;
+  4: required ViewInfo view;
 }
 
 // TODO should these just be "AtomicField" with a "fieldtype"
 struct DimensionInfo {
-  1: required string name,
-  2: required AtomicType type,
-  3: optional list<Annotation> annotations,
+  1: required string name;
+  2: required AtomicType type;
+  3: optional list<Annotation> annotations;
   // TODO possibly need "wasDimension vs wasMeasure"
   // TODO possibly need "isExpression" depending on how we do drills
   // TODO possibly need "isParameter" depending on how we do drills
@@ -95,40 +95,40 @@ struct DimensionInfo {
 }
 
 struct MeasureInfo {
-  1: required string name,
-  2: required AtomicType type,
-  3: optional list<Annotation> annotations,
+  1: required string name;
+  2: required AtomicType type;
+  3: optional list<Annotation> annotations;
 }
 
 // TODO do I need the full "nested"/"query"/"one_to_one" etc?
 enum Relationship {
-  ONE = 1,
-  MANY = 2,
+  ONE = 1;
+  MANY = 2;
   CROSS = 3
 }
 
 struct JoinInfo {
-  1: required string name,
-  2: required Schema schema,
-  3: optional list<Annotation> annotations,
-  4: required Relationship relationship,
+  1: required string name;
+  2: required Schema schema;
+  3: optional list<Annotation> annotations;
+  4: required Relationship relationship;
 }
 
 struct ViewInfo {
-  1: required string name,
-  2: required Schema schema,
-  3: optional list<Annotation> annotations,
-  4: optional View definition,
+  1: required string name;
+  2: required Schema schema;
+  3: optional list<Annotation> annotations;
+  4: optional View definition;
 }
 
 struct View {
-  2: required ViewDefinition definition,
-  3: optional list<Annotation> annotations,
+  2: required ViewDefinition definition;
+  3: optional list<Annotation> annotations;
 }
 
 enum OrderByDirection {
-  ASC = 1,
-  DESC = 2,
+  ASC = 1;
+  DESC = 2;
 }
 
 struct StringType {
@@ -138,12 +138,12 @@ struct BooleanType {
 }
 
 enum NumberSubtype {
-  INTEGER = 1,
-  DECIMAL = 2,
+  INTEGER = 1;
+  DECIMAL = 2;
 }
 
 struct NumberType {
-  1: optional NumberSubtype subtype,
+  1: optional NumberSubtype subtype;
 }
 
 struct JSONType {
@@ -162,102 +162,102 @@ struct FilterExpressionType {
 
 
 union AtomicType {
-  1: required StringType string_type,
-  2: required BooleanType boolean_type,
-  3: required NumberType number_type,
-  4: required JSONType json_type,
-  5: required SQLNativeType sql_native_type,
-  6: required DateType date_type,
-  7: required TimestampType timestamp_type,
-  9: required ArrayType array_type,
-  10: required RecordType record_type,
+  1: required StringType string_type;
+  2: required BooleanType boolean_type;
+  3: required NumberType number_type;
+  4: required JSONType json_type;
+  5: required SQLNativeType sql_native_type;
+  6: required DateType date_type;
+  7: required TimestampType timestamp_type;
+  9: required ArrayType array_type;
+  10: required RecordType record_type;
 }
 
 union ParameterType {
-  1: required StringType string_type,
-  2: required BooleanType boolean_type,
-  3: required NumberType number_type,
-  4: required JSONType json_type,
-  5: required SQLNativeType sql_native_type,
-  6: required DateType date_type,
-  7: required TimestampType timestamp_type,
-  9: required ArrayType array_type,
-  10: required RecordType record_type,
-  11: required FilterExpressionType filter_expression_type,
+  1: required StringType string_type;
+  2: required BooleanType boolean_type;
+  3: required NumberType number_type;
+  4: required JSONType json_type;
+  5: required SQLNativeType sql_native_type;
+  6: required DateType date_type;
+  7: required TimestampType timestamp_type;
+  9: required ArrayType array_type;
+  10: required RecordType record_type;
+  11: required FilterExpressionType filter_expression_type;
 }
 
 struct SQLNativeType {
-  1: optional string sql_type,
+  1: optional string sql_type;
 }
 
 enum DateTimeframe {
-  YEAR = 1,
-  QUARTER = 2,
-  MONTH = 3,
-  WEEK = 4,
-  DAY = 5,
+  YEAR = 1;
+  QUARTER = 2;
+  MONTH = 3;
+  WEEK = 4;
+  DAY = 5;
 }
 
 enum TimestampTimeframe {
-  YEAR = 1,
-  QUARTER = 2,
-  MONTH = 3,
-  WEEK = 4,
-  DAY = 5,
-  HOUR = 6,
-  MINUTE = 7,
-  SECOND = 8,
+  YEAR = 1;
+  QUARTER = 2;
+  MONTH = 3;
+  WEEK = 4;
+  DAY = 5;
+  HOUR = 6;
+  MINUTE = 7;
+  SECOND = 8;
 }
 
 struct DateType {
-  2: optional DateTimeframe timeframe,
+  2: optional DateTimeframe timeframe;
 }
 
 struct TimestampType {
-  2: optional TimestampTimeframe timeframe,
+  2: optional TimestampTimeframe timeframe;
 }
 
 union ViewStatement {
-  1: required GroupBy group_by,
-  2: required Aggregate aggregate,
-  3: required OrderBy order_by,
-  4: required Limit limit,
-  5: required FilterOperation where,
-  6: required Nest nest,
-  7: required FilterOperation having,
+  1: required GroupBy group_by;
+  2: required Aggregate aggregate;
+  3: required OrderBy order_by;
+  4: required Limit limit;
+  5: required FilterOperation where;
+  6: required Nest nest;
+  7: required FilterOperation having;
 }
 
 struct GroupBy {
-  1: optional string name,
-  2: required Field field,
+  1: optional string name;
+  2: required Field field;
 }
 
 struct Nest {
-  1: optional string name,
-  2: required View view,
+  1: optional string name;
+  2: required View view;
 }
 
 struct Aggregate {
-  1: optional string name,
-  2: required Field field,
+  1: optional string name;
+  2: required Field field;
 }
 
 struct Field {
-  1: required Expression expression,
+  1: required Expression expression;
   // TODO only two kinds of distinguishable annotations are before `aggregate:` and before `name is value`
   // between `name` and `is`, or between `is` and `value` are converted to before `name`.
   // TODO consider having an annotation tree with inheritance
-  2: optional list<Annotation> annotations,
+  2: optional list<Annotation> annotations;
 }
 
 struct OrderBy {
   // TODO consider making this a specialized reference like an "OrderByReference"
-  1: required Reference field_reference,
-  2: optional OrderByDirection direction,
+  1: required Reference field_reference;
+  2: optional OrderByDirection direction;
 }
 
 struct Limit {
-  1: required i32 limit,
+  1: required i32 limit;
 }
 
 // TODO this is a bit annoying, but the current typescript system doesn't really
@@ -265,239 +265,239 @@ struct Limit {
 // into an intersection type of `{__type: } & Where`. If Where is also a union, then
 // there would be two `__type` fields...
 struct FilterOperation {
-  1: required Filter filter,
+  1: required Filter filter;
 }
 
 union Filter {
-  1: required FilterStringApplication filter_string,
+  1: required FilterStringApplication filter_string;
 }
 
 struct FilterStringApplication {
-  1: required Reference field_reference,
-  2: required string filter,
+  1: required Reference field_reference;
+  2: required string filter;
 }
 
 struct Query {
-  1: required QueryDefinition definition,
-  2: optional list<Annotation> annotations,
+  1: required QueryDefinition definition;
+  2: optional list<Annotation> annotations;
 }
 
 union QueryDefinition {
-  1: QueryArrow arrow,
-  2: Reference query_reference,
-  3: QueryRefinement refinement,
+  1: QueryArrow arrow;
+  2: Reference query_reference;
+  3: QueryRefinement refinement;
 }
 
 union QueryArrowSource {
-  3: QueryRefinement refinement,
-  2: Reference source_reference,
+  3: QueryRefinement refinement;
+  2: Reference source_reference;
 }
 
 struct QueryArrow {
-  1: required QueryArrowSource source,
-  2: required ViewDefinition view,
+  1: required QueryArrowSource source;
+  2: required ViewDefinition view;
 }
 
 struct QueryRefinement {
-  1: required QueryDefinition base,
-  2: required ViewDefinition refining_view,
+  1: required QueryDefinition base;
+  2: required ViewDefinition refining_view;
 }
 
 union ViewDefinition {
-  1: ViewArrow arrow,
-  2: Reference view_reference,
-  3: ViewRefinement refinement,
-  4: ViewBlock block,
+  1: ViewArrow arrow;
+  2: Reference view_reference;
+  3: ViewRefinement refinement;
+  4: ViewBlock block;
 }
 
 struct ViewRefinement {
-  1: required ViewDefinition base,
-  2: required ViewDefinition refining_view,
+  1: required ViewDefinition base;
+  2: required ViewDefinition refining_view;
 }
 
 struct ViewArrow {
-  1: required ViewDefinition source,
-  2: required ViewDefinition view,
+  1: required ViewDefinition source;
+  2: required ViewDefinition view;
 }
 
 // TODO: I'm not conviced about just calling this "block"
 struct ViewBlock {
-  1: required list<ViewStatement> operations,
+  1: required list<ViewStatement> operations;
 }
 
 struct Reference {
-  1: required string name,
-  2: optional list<string> path,
-  3: optional list<ParameterValue> parameters,
+  1: required string name;
+  2: optional list<string> path;
+  3: optional list<ParameterValue> parameters;
 }
 
 struct ParameterValue {
-  1: required string name,
-  2: required LiteralValue value,
+  1: required string name;
+  2: required LiteralValue value;
 }
 
 union LiteralValue {
-  1: required StringLiteral string_literal,
-  2: required NumberLiteral number_literal,
-  3: required DateLiteral date_literal,
-  4: required TimestampLiteral timestamp_literal,
-  5: required BooleanLiteral boolean_literal,
-  6: required NullLiteral null_literal,
-  7: required FilterExpressionLiteral filter_expression_literal,
+  1: required StringLiteral string_literal;
+  2: required NumberLiteral number_literal;
+  3: required DateLiteral date_literal;
+  4: required TimestampLiteral timestamp_literal;
+  5: required BooleanLiteral boolean_literal;
+  6: required NullLiteral null_literal;
+  7: required FilterExpressionLiteral filter_expression_literal;
 }
 
 struct StringLiteral {
-  1: required string string_value,
+  1: required string string_value;
 }
 
 struct NumberLiteral {
-  1: required double number_value,
+  1: required double number_value;
 }
 
 struct BooleanLiteral {
-  1: required bool boolean_value,
+  1: required bool boolean_value;
 }
 
 struct DateLiteral {
-  1: required string date_value,
-  2: optional DateTimeframe granularity,
+  1: required string date_value;
+  2: optional DateTimeframe granularity;
 }
 
 struct TimestampLiteral {
-  1: required string timestamp_value,
-  2: optional TimestampTimeframe granularity,
+  1: required string timestamp_value;
+  2: optional TimestampTimeframe granularity;
 }
 
 struct NullLiteral {
 }
 
 struct FilterExpressionLiteral {
-  1: required string filter_expression_value,
+  1: required string filter_expression_value;
 }
 
 union Expression {
-  1: required Reference field_reference,
-  2: required TimeTruncationFieldReference time_truncation,
-  3: required FilteredField filtered_field,
+  1: required Reference field_reference;
+  2: required TimeTruncationFieldReference time_truncation;
+  3: required FilteredField filtered_field;
 }
 
 struct TimeTruncationFieldReference {
   // TODO do I make this circular, referring back to `Expression`, more like actual grammar?
   // e.g. TimeTruncation rather than TimeTruncationFieldReference
-  1: required Reference field_reference,
-  2: required TimestampTimeframe truncation,
+  1: required Reference field_reference;
+  2: required TimestampTimeframe truncation;
 }
 
 struct FilteredField {
-  1: required Reference field_reference,
-  2: required list<FilterOperation> where,
+  1: required Reference field_reference;
+  2: required list<FilterOperation> where;
 }
 
 struct StringCell {
-  1: required string string_value,
+  1: required string string_value;
 }
 
 struct BooleanCell {
-  1: required bool boolean_value,
+  1: required bool boolean_value;
 }
 
 struct NumberCell {
-  1: required double number_value,
+  1: required double number_value;
 }
 
 struct NullCell {}
 
 struct TimestampCell {
   // TODO another way to represent dates?
-  1: required string timestamp_value,
+  1: required string timestamp_value;
 }
 
 struct DateCell {
   // TODO another way to represent dates?
-  1: required string date_value,
+  1: required string date_value;
 }
 
 struct JSONCell {
-  1: required string json_value,
+  1: required string json_value;
 }
 
 struct SQLNativeCell {
-  1: required string sql_native_value,
+  1: required string sql_native_value;
 }
 
 struct ArrayCell {
-  1: required list<Cell> array_value,
+  1: required list<Cell> array_value;
 }
 
 // A record is also just a list of values, because we don't need to store the names in the data
 struct RecordCell {
-  1: required list<Cell> record_value,
+  1: required list<Cell> record_value;
 }
 
 union Cell {
-  1: required StringCell string_cell,
-  2: required BooleanCell boolean_cell,
-  3: required DateCell date_cell,
-  4: required TimestampCell timestamp_cell, // TODO does this need to be separate?
-  5: required NumberCell number_cell,
-  6: required JSONCell json_cell, // TODO does this need to be here?
-  7: required RecordCell record_cell,
-  8: required ArrayCell array_cell,
-  9: required NullCell null_cell,
-  10: required SQLNativeCell sql_native_cell,
+  1: required StringCell string_cell;
+  2: required BooleanCell boolean_cell;
+  3: required DateCell date_cell;
+  4: required TimestampCell timestamp_cell; // TODO does this need to be separate?
+  5: required NumberCell number_cell;
+  6: required JSONCell json_cell; // TODO does this need to be here?
+  7: required RecordCell record_cell;
+  8: required ArrayCell array_cell;
+  9: required NullCell null_cell;
+  10: required SQLNativeCell sql_native_cell;
 }
 
 union Data {
-  1: required RecordCell record_cell,
-  2: required ArrayCell array_cell,
+  1: required RecordCell record_cell;
+  2: required ArrayCell array_cell;
 }
 
 // should this be one type "Result" with optional data/sql, or three different types?
 struct Result {
-  1: optional Data data,
-  2: required Schema schema,
-  3: optional string sql,
-  4: required string connection_name,
-  5: optional list<Annotation> annotations,
-  6: optional list<Annotation> model_annotations,
-  7: optional string query_timezone,
-  8: optional list<Annotation> source_annotations,
+  1: optional Data data;
+  2: required Schema schema;
+  3: optional string sql;
+  4: required string connection_name;
+  5: optional list<Annotation> annotations;
+  6: optional list<Annotation> model_annotations;
+  7: optional string query_timezone;
+  8: optional list<Annotation> source_annotations;
 }
 
 struct SQLTable {
-  1: required string name,
-  2: optional Schema schema,
-  3: required string connection_name,
+  1: required string name;
+  2: optional Schema schema;
+  3: required string connection_name;
 }
 
 struct SQLQuery {
-  1: required string sql,
-  2: optional Schema schema,
-  3: required string connection_name,
+  1: required string sql;
+  2: optional Schema schema;
+  3: required string connection_name;
 }
 
 struct File {
-  1: required string url,
-  2: optional string contents,
-  3: optional string invalidation_key,
+  1: required string url;
+  2: optional string contents;
+  3: optional string invalidation_key;
 }
 
 struct Connection {
-  1: required string name,
-  2: optional string dialect,
+  1: required string name;
+  2: optional string dialect;
 }
 
 struct Translation {
-  1: required string url,
-  2: optional string compiled_model_json,
+  1: required string url;
+  2: optional string compiled_model_json;
 }
 
 struct CompilerNeeds {
-  1: optional list<SQLTable> table_schemas,
-  2: optional list<SQLQuery> sql_schemas,
-  3: optional list<File> files,
-  4: optional list<Connection> connections,
-  5: optional list<Translation> translations,
+  1: optional list<SQLTable> table_schemas;
+  2: optional list<SQLQuery> sql_schemas;
+  3: optional list<File> files;
+  4: optional list<Connection> connections;
+  5: optional list<Translation> translations;
 }
 
 struct DocumentPosition {
@@ -511,9 +511,9 @@ struct DocumentRange {
 }
 
 enum LogSeverity {
-  DEBUG = 1,
-  INFO = 2,
-  WARN = 3,
+  DEBUG = 1;
+  INFO = 2;
+  WARN = 3;
   ERROR = 4
 }
 
@@ -528,17 +528,17 @@ struct LogMessage {
  * Given the URL to a model, return the `ModelInfo` for that model
  */
 struct CompileModelRequest {
-  1: required string model_url,
-  2: optional string extend_model_url,
+  1: required string model_url;
+  2: optional string extend_model_url;
 
-  9: optional CompilerNeeds compiler_needs,
+  9: optional CompilerNeeds compiler_needs;
 }
 
 struct CompileModelResponse {
-  1: optional ModelInfo model,
+  1: optional ModelInfo model;
 
-  8: optional list<LogMessage> logs,
-  9: optional CompilerNeeds compiler_needs,
+  8: optional list<LogMessage> logs;
+  9: optional CompilerNeeds compiler_needs;
   10: optional list<Translation> translations;
 }
 
@@ -546,56 +546,56 @@ struct CompileModelResponse {
  * Given the URL to a model and a name of a source or query, get a `SourceInfo`
  */
 struct CompileSourceRequest {
-  1: required string model_url,
-  2: required string name,
-  3: optional string extend_model_url,
+  1: required string model_url;
+  2: required string name;
+  3: optional string extend_model_url;
 
-  9: optional CompilerNeeds compiler_needs,
+  9: optional CompilerNeeds compiler_needs;
 }
 
 struct CompileSourceResponse {
-  1: optional SourceInfo source,
+  1: optional SourceInfo source;
 
-  8: optional list<LogMessage> logs,
-  9: optional CompilerNeeds compiler_needs,
+  8: optional list<LogMessage> logs;
+  9: optional CompilerNeeds compiler_needs;
 }
 
 /*
  * Given a `Query` and the URL to a model, run it and return a `Result` (with data)
  */
 struct RunQueryRequest {
-  1: required string model_url,
-  2: required Query query,
-  3: optional i32 default_row_limit,
+  1: required string model_url;
+  2: required Query query;
+  3: optional i32 default_row_limit;
 
-  9: optional CompilerNeeds compiler_needs,
+  9: optional CompilerNeeds compiler_needs;
 }
 
 struct RunQueryResponse {
-  1: optional Result result,
+  1: optional Result result;
 
-  7: optional i32 default_row_limit_added,
-  8: optional list<LogMessage> logs,
-  9: optional CompilerNeeds compiler_needs,
+  7: optional i32 default_row_limit_added;
+  8: optional list<LogMessage> logs;
+  9: optional CompilerNeeds compiler_needs;
 }
 
 /*
  * Given a `Query` and the URL to a model, compile it and return a `Result` (with no data)
  */
 struct CompileQueryRequest {
-  1: required string model_url,
-  2: required Query query,
-  3: optional i32 default_row_limit,
+  1: required string model_url;
+  2: required Query query;
+  3: optional i32 default_row_limit;
 
-  9: optional CompilerNeeds compiler_needs,
+  9: optional CompilerNeeds compiler_needs;
 }
 
 struct CompileQueryResponse {
-  1: optional Result result,
+  1: optional Result result;
 
-  7: optional i32 default_row_limit_added,
-  8: optional list<LogMessage> logs,
-  9: optional CompilerNeeds compiler_needs,
+  7: optional i32 default_row_limit_added;
+  8: optional list<LogMessage> logs;
+  9: optional CompilerNeeds compiler_needs;
   10: optional list<Translation> translations;
 }
 
@@ -603,14 +603,14 @@ struct CompileQueryResponse {
  * Given a URL to a model and the name of a source, run the indexing query and return a `Result` (with data)
  */
 struct RunIndexQueryRequest {
-  1: required string model_url,
-  2: required string source_name,
+  1: required string model_url;
+  2: required string source_name;
 
-  9: optional CompilerNeeds compiler_needs,
+  9: optional CompilerNeeds compiler_needs;
 }
 
 struct RunIndexQueryResponse {
-  1: optional Result result,
+  1: optional Result result;
 
-  9: optional CompilerNeeds compiler_needs,
+  9: optional CompilerNeeds compiler_needs;
 }
