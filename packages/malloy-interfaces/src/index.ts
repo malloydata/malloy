@@ -7,7 +7,7 @@
 
 import type * as Malloy from './types';
 export * from './types';
-export {queryToMalloy} from './to_malloy';
+export {queryToMalloy, filterToMalloy} from './to_malloy';
 export {
   nestUnions,
   unnestUnions,

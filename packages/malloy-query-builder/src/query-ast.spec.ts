@@ -613,6 +613,92 @@ describe('query builder', () => {
       }`,
     });
   });
+  test('add some drills', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const segment = q.getOrAddDefaultSegment();
+      segment.addDrill({
+        filter: {
+          kind: 'filter_string',
+          field_reference: {
+            name: 'carrier',
+          },
+          filter: 'WN, AA',
+        },
+      });
+      segment.addDrill({
+        filter: {
+          kind: 'literal_equality',
+          field_reference: {
+            name: 'carrier',
+            path: ['by_carrier'],
+          },
+          value: {
+            kind: 'string_literal',
+            string_value: 'WN',
+          },
+        },
+      });
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'drill',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: 'WN, AA',
+                },
+              },
+              {
+                kind: 'drill',
+                filter: {
+                  kind: 'literal_equality',
+                  field_reference: {
+                    name: 'carrier',
+                    path: ['by_carrier'],
+                  },
+                  value: {
+                    kind: 'string_literal',
+                    string_value: 'WN',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: dedent`
+        run: flights -> {
+          drill:
+            carrier ~ f\`WN, AA\`,
+            by_carrier.carrier = "WN"
+        }
+      `,
+    });
+  });
   test('add a having', () => {
     const from: Malloy.Query = {
       definition: {

@@ -430,7 +430,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
         `;
         drillCell.onclick = () => {
           if (this.options.onDrill) {
-            const drillQuery = row.getDrillQuery();
+            const drillQuery = row.getDrillQueryMalloy();
             const drillFilters = row.getDrillExpressions();
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }
