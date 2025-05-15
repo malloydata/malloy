@@ -151,22 +151,6 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-function extractExistingAlias(_sql: string): string | undefined {
-  // const lastAsMatch = sql.match(/AS\s+([a-zA-Z0-9_]+)\s*$/is);
-  // if (lastAsMatch) {
-  //   return lastAsMatch[1];
-  // }
-
-  // const fromAsMatch = sql.match(
-  //   /FROM\s+.*AS\s+([a-zA-Z0-9_]+)\s*($|\n|WHERE|GROUP|ORDER|HAVING)/is
-  // );
-  // if (fromAsMatch) {
-  //   return fromAsMatch[1];
-  // }
-
-  return undefined;
-}
-
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
