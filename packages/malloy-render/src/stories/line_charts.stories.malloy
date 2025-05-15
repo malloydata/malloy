@@ -409,6 +409,10 @@ source: missing_data is duckdb.table("static/data/missing_data.csv") extend {
     limit: 20
     order_by: id
   }
+
+  #(story)
+  # -line_chart table
+    view: OverrideLineChartWithTable is WithNullMeasureValue + {}
 }
 
 run: products -> { group_by: distribution_center_id}
