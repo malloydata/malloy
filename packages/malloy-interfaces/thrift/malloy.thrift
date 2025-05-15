@@ -119,10 +119,7 @@ struct ViewInfo {
   1: required string name,
   2: required Schema schema,
   3: optional list<Annotation> annotations,
-  // TODO naming of this
-  // "openable view"
   4: optional View definition,
-  // Possibly need `filterList` depending on how we do drills
 }
 
 struct View {
@@ -220,18 +217,6 @@ struct DateType {
 struct TimestampType {
   2: optional TimestampTimeframe timeframe,
 }
-
-/*
-
-Questions:
-- Should `fields`, `sources`, etc. be Map<string, Field> or Field[]
-- Any way to have an "either" type? use unions?
-- How to represent a refinement of a model query
-
-Generate typescript?
-- https://github.com/creditkarma/thrift-typescript
-    - https://www.internalfb.com/diff/D68557062
-*/
 
 union ViewStatement {
   1: required GroupBy group_by,
@@ -398,7 +383,9 @@ union Expression {
 }
 
 struct TimeTruncationFieldReference {
-  1: required Reference field_reference, // TODO do I make this circular, more like actual grammar? e.g. TimeTruncation rather than TimeTruncationFieldReference
+  // TODO do I make this circular, referring back to `Expression`, more like actual grammar?
+  // e.g. TimeTruncation rather than TimeTruncationFieldReference
+  1: required Reference field_reference,
   2: required TimestampTimeframe truncation,
 }
 
@@ -422,11 +409,13 @@ struct NumberCell {
 struct NullCell {}
 
 struct TimestampCell {
-  1: required string timestamp_value, // TODO another way to represent dates?
+  // TODO another way to represent dates?
+  1: required string timestamp_value,
 }
 
 struct DateCell {
-  1: required string date_value, // TODO another way to represent dates?
+  // TODO another way to represent dates?
+  1: required string date_value,
 }
 
 struct JSONCell {
@@ -475,49 +464,6 @@ struct Result {
   7: optional string query_timezone,
   8: optional list<Annotation> source_annotations,
 }
-
-/*
-
-Result metadata:
-
-  // I think not used
-
-  sourceField: string;
-
-  // used by drill to drill on fields which were expressions (probably in future replaced with `where: view_name.field ? ...`)
-
-  sourceExpression?: string;
-
-  // only used by legacy renderer
-
-  sourceClasses: string[];
-
-  // used by drill to collect filters
-
-  filterList?: FilterCondition[];
-
-  // used by renderer to pick default axes
-
-  fieldKind: 'measure' | 'dimension' | 'struct';
-
-  // used by renderer to know whether two fields in the result are the same, for hover syncing and axis sharing etc
-
-  referenceId?: string;
-*/
-
-
-/*
-TODO
-- formalize difference between a "Summary" of a thing and a "Definition" of a thing
-  this will make the naming of things clearer: ViewSummary vs ViewDefinition
-- Openable views
-- code for things
-- openable dimensions/measures?
-
-*/
-
-// concern: shape of FieldInfo and GroupBy (no object for "Field") are funadmentally pretty different,
-// but it might be nice for them to be more similar.
 
 struct SQLTable {
   1: required string name,
@@ -579,8 +525,9 @@ struct LogMessage {
   4: required string message;
 }
 
-// Given the URL to a model, return the StableModelDef for that model
-
+/*
+ * Given the URL to a model, return the `ModelInfo` for that model
+ */
 struct CompileModelRequest {
   1: required string model_url,
   2: optional string extend_model_url,
@@ -596,8 +543,9 @@ struct CompileModelResponse {
   10: optional list<Translation> translations;
 }
 
-// Given the URL to a model and a name of a queryable thing, get a StableSourceDef
-
+/*
+ * Given the URL to a model and a name of a source or query, get a `SourceInfo`
+ */
 struct CompileSourceRequest {
   1: required string model_url,
   2: required string name,
@@ -613,8 +561,9 @@ struct CompileSourceResponse {
   9: optional CompilerNeeds compiler_needs,
 }
 
-// Given a StableQueryDef and the URL to a model, run it and return a StableResult
-
+/*
+ * Given a `Query` and the URL to a model, run it and return a `Result` (with data)
+ */
 struct RunQueryRequest {
   1: required string model_url,
   2: required Query query,
@@ -631,8 +580,9 @@ struct RunQueryResponse {
   9: optional CompilerNeeds compiler_needs,
 }
 
-// Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
-
+/*
+ * Given a `Query` and the URL to a model, compile it and return a `Result` (with no data)
+ */
 struct CompileQueryRequest {
   1: required string model_url,
   2: required Query query,
@@ -650,8 +600,9 @@ struct CompileQueryResponse {
   10: optional list<Translation> translations;
 }
 
-// Given a URL to a model and the name of a source, run the indexing query
-
+/*
+ * Given a URL to a model and the name of a source, run the indexing query and return a `Result` (with data)
+ */
 struct RunIndexQueryRequest {
   1: required string model_url,
   2: required string source_name,
