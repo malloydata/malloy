@@ -3246,7 +3246,7 @@ class QueryQuery extends QueryField {
     return s;
   }
 
-  genereateSQLOrderBy(
+  generateSQLOrderBy(
     queryDef: QuerySegment,
     resultStruct: FieldInstanceResult
   ): string {
@@ -3319,71 +3319,38 @@ class QueryQuery extends QueryField {
     return s;
   }
 
-  genereateSQLGroupBy(
-    queryDef: QuerySegment,
-    resultStruct: FieldInstanceResult
-  ): string {
-    let s = '';
-    if (this.firstSegment.type === 'project' && !queryDef.orderBy) {
-      return ''; // No default ordering for project.
-    }
-    // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
-    //  Some database don't have this optimization.
-    if (this.fieldDef.pipeline.length > 1 && queryDef.limit === undefined) {
-      return '';
-    }
-    // ignore orderby if all aggregates.
-    if (resultStruct.getRepeatedResultType() === 'inline_all_numbers') {
-      return '';
-    }
-
-    // if we are in the last stage of a query and the query is a subquery
-    //  and has no limit, ORDER BY is superfluous
-    if (
-      this.isJoinedSubquery &&
-      this.fieldDef.pipeline.length === 1 &&
-      queryDef.limit === undefined
-    ) {
-      return '';
-    }
-
-    const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
+  // TODO (vitor): Really not sure about this.
+  generateSQLGroupBy(fields: FieldInstanceField[]): string {
     const groupBy: string[] = [];
-    for (const f of orderBy) {
-      if (typeof f.field === 'string') {
-        // convert name to an index
-        const fi = resultStruct.getField(f.field);
-        if (fi && fi.fieldUsage.type === 'result') {
-          if (this.parent.dialect.groupByClause === 'ordinal') {
-            groupBy.push(`${fi.fieldUsage.resultIndex}`);
-          } else if (this.parent.dialect.groupByClause === 'output_name') {
-            groupBy.push(this.parent.dialect.sqlMaybeQuoteIdentifier(f.field));
-          } else if (this.parent.dialect.groupByClause === 'expression') {
-            const fieldExpr = fi.getSQL();
-            groupBy.push(`${fieldExpr}`);
-          }
-        } else {
-          throw new Error(`Unknown field in GROUP BY ${f.field}`);
-        }
-      } else {
+
+    for (const field of fields) {
+      if (
+        field &&
+        field.fieldUsage.type === 'result' &&
+        isScalarField(field.f)
+      ) {
         if (this.parent.dialect.groupByClause === 'ordinal') {
-          groupBy.push(String(f.field));
+          groupBy.push(String(field.fieldUsage.resultIndex));
         } else if (this.parent.dialect.groupByClause === 'output_name') {
-          const groupingField = resultStruct.getFieldByNumber(f.field);
           groupBy.push(
-            this.parent.dialect.sqlMaybeQuoteIdentifier(groupingField.name)
+            this.parent.dialect.sqlMaybeQuoteIdentifier(field.f.fieldDef.name)
           );
         } else if (this.parent.dialect.groupByClause === 'expression') {
-          const groupingField = resultStruct.getFieldByNumber(f.field);
-          const fieldExpr = groupingField.fif.getSQL();
-          groupBy.push(fieldExpr);
+          // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
+          const fieldExpr = field.f.generateExpression(this.rootResult);
+          // Avoiding GROUP BY const expression
+          if (!/d+|'.*'/.test(fieldExpr)) {
+            groupBy.push(fieldExpr);
+          }
         }
+        // TODO (vitor): Add an else here maybe?
+        // } else {
+        //   throw new Error(`Unknown field in GROUP BY ${field.f}`);
+        // }
       }
     }
-    if (groupBy.length > 0) {
-      s = 'GROUP BY' + groupBy.join(', ') + '\n';
-    }
-    return s;
+
+    return groupBy.length ? 'GROUP BY ' + groupBy.join(', ') + '\n' : '';
   }
 
   // TODO (vitor): Mark CHECK when done
@@ -3405,32 +3372,11 @@ class QueryQuery extends QueryField {
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-
-    // group by
-    // TODO (vitor): Not sure about this
-    if (this.firstSegment.type === 'reduce') {
-      const groupByFields: string[] = [];
-      const dialectGroupByClause = this.parent.dialect.groupByClause;
-
-      for (const field of this.rootResult.fields()) {
-        const fi = field as FieldInstanceField;
-        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          if (dialectGroupByClause === 'expression') {
-            groupByFields.push(fi.f.generateExpression(this.rootResult));
-          } else {
-            groupByFields.push(fi.fieldUsage.resultIndex.toString());
-          }
-        }
-      }
-
-      if (groupByFields.length > 0) {
-        s += `\nGROUP BY ${groupByFields.join(',')}\n`;
-      }
-    }
+    s += this.generateSQLGroupBy(this.rootResult.fields());
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
-    const orderBy = this.genereateSQLOrderBy(
+    const orderBy = this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
@@ -3736,17 +3682,7 @@ class QueryQuery extends QueryField {
       )})]) as __lateral_join_bag\n`;
     }
 
-    const groupByFields = (f.dimensions || [])
-      .map(d => {
-        return this.parent.dialect.groupByClause === 'expression'
-          ? !/d+/.test(d.expression) && d.expression
-          : String(d.index);
-      })
-      .filter((v): v is string => !!v);
-
-    const groupBy = groupByFields.length
-      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
-      : '';
+    const groupBy = this.generateSQLGroupBy(this.rootResult.fields());
 
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 
@@ -3882,8 +3818,8 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
-    // TODO (vitor): Not sure about dimensions array
-    const dimensions: Dimension[] = [];
+    // TODO (vitor): Not sure about dimensionFields
+    const dimensionFields: FieldInstanceField[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -3895,11 +3831,7 @@ class QueryQuery extends QueryField {
               ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex);
-            dimensions.push({
-              name: sqlName,
-              expression: fi.getSQL(),
-              index: fieldIndex,
-            });
+            dimensionFields.push(fi);
             fieldIndex++;
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
@@ -3946,23 +3878,12 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    // TODO (vitor): Figure out with the malloy team about this supportsLateGroupByEval situation
-    const groupByFields = (dimensions || [])
-      .map(d => {
-        return this.parent.dialect.groupByClause === 'expression'
-          ? !/d+/.test(d.expression) && d.expression
-          : String(d.index);
-      })
-      .filter((v): v is string => !!v);
-
-    const groupBy = groupByFields.length
-      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
-      : '';
+    const groupBy = this.generateSQLGroupBy(dimensionFields);
 
     s += groupBy;
 
     // order by
-    s += this.genereateSQLOrderBy(
+    s += this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
@@ -4389,54 +4310,62 @@ class QueryQueryIndexStage extends QueryQuery {
 
     let s = 'SELECT\n  group_set,\n';
 
-    s += '  CASE group_set\n';
+    let fieldNameExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
-      s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
+      fieldNameExpr += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    s += `  END as ${fieldNameColumn},\n`;
+    fieldNameExpr += ' END';
+    s += `  ${fieldNameExpr} as ${fieldNameColumn},\n`;
 
-    s += '  CASE group_set\n';
+    let fieldPathExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       const path = pathToCol(fields[i].path);
-      s += `    WHEN ${i} THEN '${path}'\n`;
+      fieldPathExpr += `    WHEN ${i} THEN '${path}'\n`;
     }
-    s += `  END as ${fieldPathColumn},\n`;
+    fieldPathExpr += ' END';
+    s += `  ${fieldPathExpr} as ${fieldPathColumn},\n`;
 
-    s += '  CASE group_set\n';
+    let fieldTypeExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
-      s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
+      fieldTypeExpr += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    s += `  END as ${fieldTypeColumn},`;
+    fieldTypeExpr += ' END';
+    s += `  ${fieldTypeExpr} as ${fieldTypeColumn},`;
 
-    s += `  CASE group_set WHEN 99999 THEN ${dialect.castToString('NULL')}\n`;
+    let fieldValueExpr = `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
+      'NULL'
+    )}\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'string') {
-        s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+        fieldValueExpr += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    s += `  END as ${fieldValueColumn},\n`;
+    fieldValueExpr += ' END';
+    s += `  ${fieldValueExpr} as ${fieldValueColumn},\n`;
 
+    const weightExpr = measureSQL;
     s += ` ${measureSQL} as ${weightColumn},\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
-    s += "  CASE group_set\n    WHEN 99999 THEN ''";
+    let fieldRangeExpr = "  CASE group_set\n    WHEN 99999 THEN ''";
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'number') {
-        s += `    WHEN ${i} THEN ${dialect.concat(
+        fieldRangeExpr += `    WHEN ${i} THEN ${dialect.concat(
           `MIN(${dialect.castToString(fields[i].expression)})`,
           "' to '",
           dialect.castToString(`MAX(${fields[i].expression})`)
         )}\n`;
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
-        s += `    WHEN ${i} THEN ${dialect.concat(
+        fieldRangeExpr += `    WHEN ${i} THEN ${dialect.concat(
           `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
           "' to '",
           `MAX(${dialect.sqlDateToString(fields[i].expression)})`
         )}\n`;
       }
     }
-    s += `  END as ${fieldRangeColumn}\n`;
+    fieldRangeExpr += ' END';
+    s += `  ${fieldRangeExpr} as ${fieldRangeColumn}\n`;
 
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
@@ -4455,11 +4384,11 @@ class QueryQueryIndexStage extends QueryQuery {
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
       groupByFields.push(
-        fieldNameColumn,
-        fieldPathColumn,
-        fieldTypeColumn,
-        `COALESCE(${fieldValueColumn}, ${fieldRangeColumn}) as ${fieldValueColumn}`,
-        weightColumn
+        fieldNameExpr,
+        fieldPathExpr,
+        fieldTypeExpr,
+        `COALESCE(${fieldValueExpr}, ${fieldRangeExpr})`,
+        weightExpr
       );
     } else {
       groupByFields.push('1', '2', '3', '4', '5');
