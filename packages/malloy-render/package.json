@@ -18,11 +18,11 @@
       "default": "./dist/module/index.umd.js"
     },
     "./webcomponent": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/component/render-webcomponent.d.ts",
       "default": "./dist/webcomponent/malloy-render.umd.js"
     },
     "./webcomponent/register": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/component/register-webcomponent.d.ts",
       "default": "./dist/register/register.umd.js"
     }
   },
