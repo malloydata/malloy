@@ -521,24 +521,36 @@ export class TSQLDialect extends Dialect {
     return tableSQL;
   }
 
+  // sqlOrderBy(orderTerms: string[], obr?: OrderByRequest): string {
+  //   if (obr === 'analytical' || obr === 'turtle') {
+  //     return `ORDER BY ${orderTerms.join(',')}`;
+  //   }
+  //   return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
+  // }
+
   // TODO (vitor): Revisit this function
   sqlOrderBy(orderTerms: string[]): string {
     // SQL Server doesn't support NULLS LAST syntax directly
     // Use CASE expression to push NULLs to the end
     // Default to ORDER BY 1 to allow for OFFSET
-    const base = 'ORDER BY ';
-
-    const built = orderTerms
+    const wrappedTerms = orderTerms
       .map((t, i) => {
-        const parts = t.split(' ');
-        const field = parts[0];
-        const dir = parts.length > 1 ? parts[1] : '';
-        return `(SELECT CASE WHEN ${field} IS NULL THEN ${
+        const match = t.match(/\b(asc|desc)\b/i);
+        let field = '';
+        let dir = '';
+        if (match) {
+          const index = match.index;
+          [field, dir] = [t.slice(0, index), t.slice(index)];
+        } else {
+          field = t;
+        }
+        return `(SELECT CASE WHEN (${field}) IS NULL THEN ${
           i + 1
         } ELSE 0 END), ${field} ${dir} `;
       })
       .join(',');
-    return base + built || '1 ';
+
+    return 'ORDER BY ' + wrappedTerms || '1 ';
   }
 
   // TODO (vitor): I think the point in other dialects is to allow escaping
