@@ -38,6 +38,7 @@ export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
       sql: 'REPLACE(${value}, ${pattern}, ${replacement})',
     },
   },
+  length: {sql: 'LEN(${value})'},
   round: {
     to_integer: {sql: 'ROUND(${value}, 0)'},
     to_precision: {sql: 'ROUND(${value}, ${precision})'},
