@@ -18,18 +18,18 @@ import type {
   StructDef,
   TableSourceDef,
 } from '../model';
-import {mkFieldDef, QueryModel, refIsStructDef} from '../model';
+import {isSourceDef, mkFieldDef, QueryModel, refIsStructDef} from '../model';
 import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
-import {
-  extractSourceDependenciesFromModel,
-  ExtractSourceDependenciesRequest,
-  ExtractSourceDependenciesResponse,
-} from '../extractSourceDeps';
 import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 import {DEFAULT_LOG_RANGE, mapLogs} from './util';
+import type {
+  DescribeSourceRequest,
+  DescribeSourceResponse,
+} from '../model/describe_source';
+import SourceDescriber from '../model/describe_source';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -265,12 +265,9 @@ export function compileQuery(
   return statedCompileQuery(state);
 }
 
-export function extractSourceDependencies(
-  request: ExtractSourceDependenciesRequest
-  // todo: maybe add CompiledModelState if we want a stateful endpoint for this
-  // for now statefulness is not too important
-): ExtractSourceDependenciesResponse {
-  // AR note: this is where what I'm interested in happens
+export function describeSource(
+  request: DescribeSourceRequest
+): DescribeSourceResponse {
   const state = newCompileModelState(request);
   const compileModelResponse = _statedCompileModel(state);
 
@@ -282,12 +279,17 @@ export function extractSourceDependencies(
     return {compiler_needs: compileModelResponse.compilerNeeds, logs};
   }
 
+  const source = compileModelResponse.modelDef.contents[request.source_name];
+
+  if (!source || !isSourceDef(source)) {
+    throw new Error('Cannot describe a source that does not exist.');
+  }
+
+  const sd = new SourceDescriber(source);
+
   return {
     logs,
-    sql_sources: extractSourceDependenciesFromModel(
-      compileModelResponse.modelDef,
-      request.source_name
-    ),
+    sql_artifacts: sd.describe(),
   };
 }
 

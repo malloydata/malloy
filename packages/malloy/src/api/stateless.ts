@@ -7,10 +7,10 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
-import {
-  ExtractSourceDependenciesRequest,
-  ExtractSourceDependenciesResponse,
-} from '../extractSourceDeps';
+import type {
+  DescribeSourceRequest,
+  DescribeSourceResponse,
+} from '../model/describe_source';
 
 export function compileModel(
   request: Malloy.CompileModelRequest
@@ -30,8 +30,8 @@ export function compileQuery(
   return Core.compileQuery(request);
 }
 
-export function extractSourceDependencies(
-  request: ExtractSourceDependenciesRequest
-): ExtractSourceDependenciesResponse {
-  return Core.extractSourceDependencies(request);
+export function describeSource(
+  request: DescribeSourceRequest
+): DescribeSourceResponse {
+  return Core.describeSource(request);
 }
