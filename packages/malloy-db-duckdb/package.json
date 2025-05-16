@@ -8,11 +8,15 @@
     "node": ">=20"
   },
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
     "./package.json": "./package.json",
     "./wasm": {
       "browser": "./dist/duckdb_wasm_connection_browser.js",
-      "node": "./dist/duckdb_wasm_connection_node.js"
+      "node": "./dist/duckdb_wasm_connection_node.js",
+      "types": "./dist/duckdb_wasm_connection_browser.d.ts"
     }
   },
   "typesVersions": {
