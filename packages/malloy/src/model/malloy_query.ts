@@ -3339,21 +3339,24 @@ class QueryQuery extends QueryField {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // group by
+    // TODO (vitor): Not sure about this
     if (this.firstSegment.type === 'reduce') {
-      const groupByColumns: string[] = [];
+      const groupByFields: string[] = [];
       const dialectGroupByClause = this.parent.dialect.groupByClause;
+
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
           if (dialectGroupByClause === 'expression') {
-            groupByColumns.push(fi.f.generateExpression(this.rootResult));
+            groupByFields.push(fi.f.generateExpression(this.rootResult));
           } else {
-            groupByColumns.push(fi.fieldUsage.resultIndex.toString());
+            groupByFields.push(fi.fieldUsage.resultIndex.toString());
           }
         }
-        if (groupByColumns.length > 0) {
-          s += `\nGROUP BY ${groupByColumns.join(',')}\n`;
-        }
+      }
+
+      if (groupByFields.length > 0) {
+        s += `\nGROUP BY ${groupByFields.join(',')}\n`;
       }
     }
 
@@ -3653,8 +3656,6 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
-
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
     s += indent(f.sql.join(',\n')) + '\n';
@@ -3666,6 +3667,19 @@ class QueryQuery extends QueryField {
         ',\n'
       )})]) as __lateral_join_bag\n`;
     }
+
+    const groupByFields = (f.dimensions || [])
+      .map(d => {
+        return this.parent.dialect.groupByClause === 'expression'
+          ? !/d+/.test(d.expression) && d.expression
+          : String(d.index);
+      })
+      .filter((v): v is string => !!v);
+
+    const groupBy = groupByFields.length
+      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
+      : '';
+
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 
     // generate the stage
@@ -3765,6 +3779,8 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
     if (f.dimensionIndexes.length > 0) {
+      // In this case we're not using generateGroupByColumns as it's a different pattern
+      // using dimensionIndexes from the stage context
       s += `GROUP BY ${f.dimensionIndexes.join(',')}\n`;
     }
 
@@ -3852,32 +3868,20 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    if (dimensionIndexes.length > 0) {
-      // TODO (vitor): Figure out with the malloy team about this supportsLateGroupByEval situation
-      let groupBy = '';
-      if (this.parent.dialect.supportsLateGroupByEval) {
-        if (this.parent.dialect.groupByClause === 'expression') {
-          // For dialects like SQL Server that need expressions for GROUP BY
-          groupBy = dimensions?.map(v => v.expression).join(',') + '\n';
-        } else if (this.parent.dialect.groupByClause === 'output_name') {
-          // For dialects that use column names
-          groupBy = dimensions?.map(v => v.name).join(',') + '\n';
-        } else {
-          // For dialects that use ordinal positions (default)
-          groupBy = dimensionIndexes.join(',') + '\n';
-        }
-      } else {
-        // For dialects that don't support late GROUP BY evaluation
-        groupBy =
-          dimensions
-            ?.map(v =>
-              /\d+/.test(v.expression) ? `${v.expression}` : v.expression
-            )!
-            .join(',') + '\n';
-      }
-      groupBy = groupBy ? 'GROUP BY ' + groupBy : '';
-      s += groupBy;
-    }
+    // TODO (vitor): Figure out with the malloy team about this supportsLateGroupByEval situation
+    const groupByFields = (dimensions || [])
+      .map(d => {
+        return this.parent.dialect.groupByClause === 'expression'
+          ? !/d+/.test(d.expression) && d.expression
+          : String(d.index);
+      })
+      .filter((v): v is string => !!v);
+
+    const groupBy = groupByFields.length
+      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
+      : '';
+
+    s += groupBy;
 
     // order by
     s += this.genereateSQLOrderBy(
@@ -4379,14 +4383,8 @@ class QueryQueryIndexStage extends QueryQuery {
     sOuter += `  ${weightColumn},\n`;
     sOuter += `  ${fieldRangeColumn}\n`;
 
-    // Check if the query already has an alias, otherwise generate a new one
-    const existingAlias = [];
-    const innerTableAlias =
-      existingAlias || 'inner_' + uuidv4().replace(/-/g, '');
-    sOuter += `FROM (${s}) AS ${innerTableAlias}\n`;
-
     // For index search, we use the column names directly regardless of dialect
-    // This is a special case where we don't need to use expressions
+    // This is a special case where we don't need to use expressions and can't use generateGroupByColumns
     sOuter += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
 
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
