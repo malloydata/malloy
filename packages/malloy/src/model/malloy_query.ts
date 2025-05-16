@@ -3324,6 +3324,10 @@ class QueryQuery extends QueryField {
     const groupBy: string[] = [];
 
     for (const field of fields) {
+      if (field.f.fieldDef.name === 'group_set') {
+        groupBy.push('group_set');
+        continue;
+      }
       if (
         field &&
         field.fieldUsage.type === 'result' &&
