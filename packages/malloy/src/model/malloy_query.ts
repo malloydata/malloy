@@ -4383,6 +4383,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
+      // TODO (vitor): That coalesce is an issue. The expression will have aggregates but we can't have aggregates in there for tsql.
       groupByFields.push(
         fieldNameExpr,
         fieldPathExpr,
