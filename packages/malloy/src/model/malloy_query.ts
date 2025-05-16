@@ -3778,11 +3778,20 @@ class QueryQuery extends QueryField {
     if (where.length > 0) {
       s += `WHERE ${where}\n`;
     }
-    if (f.dimensionIndexes.length > 0) {
-      // In this case we're not using generateGroupByColumns as it's a different pattern
-      // using dimensionIndexes from the stage context
-      s += `GROUP BY ${f.dimensionIndexes.join(',')}\n`;
-    }
+
+    const groupByFields = (f.dimensions || [])
+      .map(d => {
+        return this.parent.dialect.groupByClause === 'expression'
+          ? !/d+/.test(d.expression) && d.expression
+          : String(d.index);
+      })
+      .filter((v): v is string => !!v);
+
+    const groupBy = groupByFields.length
+      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
+      : '';
+
+    s += groupBy;
 
     this.resultStage = stageWriter.addStage(s);
 
@@ -4374,33 +4383,36 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    let sOuter = 'SELECT\n';
-
-    sOuter += `  ${fieldNameColumn},\n`;
-    sOuter += `  ${fieldPathColumn},\n`;
-    sOuter += `  ${fieldTypeColumn},\n`;
-    sOuter += `  ${fieldValueColumn},\n`;
-    sOuter += `  ${weightColumn},\n`;
-    sOuter += `  ${fieldRangeColumn}\n`;
-
+    const groupByFields: string[] = [];
+    if (this.parent.dialect.groupByClause === 'expression') {
+      groupByFields.push(
+        fieldNameColumn,
+        fieldPathColumn,
+        fieldTypeColumn,
+        `COALESCE(${fieldValueColumn}, ${fieldRangeColumn}) as ${fieldValueColumn}`,
+        weightColumn
+      );
+    } else {
+      groupByFields.push('1', '2', '3', '4', '5');
+    }
     // For index search, we use the column names directly regardless of dialect
     // This is a special case where we don't need to use expressions and can't use generateGroupByColumns
-    sOuter += `GROUP BY ${fieldNameColumn}, ${fieldPathColumn}, ${fieldTypeColumn}, ${fieldValueColumn}, ${weightColumn}\n`;
+    s += `GROUP BY ${groupByFields.join(', ')}\n`;
 
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       if (dialect.supportsLimit) {
-        sOuter += `LIMIT ${this.firstSegment.limit}\n`;
+        s += `LIMIT ${this.firstSegment.limit}\n`;
       } else {
-        sOuter += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+        s += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
       }
     } else {
       //  TODO (vitor): This does not bring me joy.
       if (dialect.name === 'tsql') {
-        sOuter += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
     // console.log(s);
-    const resultStage = stageWriter.addStage(sOuter);
+    const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
       `SELECT
   ${fieldNameColumn},
