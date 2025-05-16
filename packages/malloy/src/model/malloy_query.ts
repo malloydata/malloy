@@ -871,6 +871,7 @@ class QueryField extends QueryNode {
     );
   }
 
+  // TODO (vitor): Maybe fix orderBy here?
   generateDimFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -3318,6 +3319,73 @@ class QueryQuery extends QueryField {
     return s;
   }
 
+  genereateSQLGroupBy(
+    queryDef: QuerySegment,
+    resultStruct: FieldInstanceResult
+  ): string {
+    let s = '';
+    if (this.firstSegment.type === 'project' && !queryDef.orderBy) {
+      return ''; // No default ordering for project.
+    }
+    // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
+    //  Some database don't have this optimization.
+    if (this.fieldDef.pipeline.length > 1 && queryDef.limit === undefined) {
+      return '';
+    }
+    // ignore orderby if all aggregates.
+    if (resultStruct.getRepeatedResultType() === 'inline_all_numbers') {
+      return '';
+    }
+
+    // if we are in the last stage of a query and the query is a subquery
+    //  and has no limit, ORDER BY is superfluous
+    if (
+      this.isJoinedSubquery &&
+      this.fieldDef.pipeline.length === 1 &&
+      queryDef.limit === undefined
+    ) {
+      return '';
+    }
+
+    const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
+    const groupBy: string[] = [];
+    for (const f of orderBy) {
+      if (typeof f.field === 'string') {
+        // convert name to an index
+        const fi = resultStruct.getField(f.field);
+        if (fi && fi.fieldUsage.type === 'result') {
+          if (this.parent.dialect.groupByClause === 'ordinal') {
+            groupBy.push(`${fi.fieldUsage.resultIndex}`);
+          } else if (this.parent.dialect.groupByClause === 'output_name') {
+            groupBy.push(this.parent.dialect.sqlMaybeQuoteIdentifier(f.field));
+          } else if (this.parent.dialect.groupByClause === 'expression') {
+            const fieldExpr = fi.getSQL();
+            groupBy.push(`${fieldExpr}`);
+          }
+        } else {
+          throw new Error(`Unknown field in GROUP BY ${f.field}`);
+        }
+      } else {
+        if (this.parent.dialect.groupByClause === 'ordinal') {
+          groupBy.push(String(f.field));
+        } else if (this.parent.dialect.groupByClause === 'output_name') {
+          const groupingField = resultStruct.getFieldByNumber(f.field);
+          groupBy.push(
+            this.parent.dialect.sqlMaybeQuoteIdentifier(groupingField.name)
+          );
+        } else if (this.parent.dialect.groupByClause === 'expression') {
+          const groupingField = resultStruct.getFieldByNumber(f.field);
+          const fieldExpr = groupingField.fif.getSQL();
+          groupBy.push(fieldExpr);
+        }
+      }
+    }
+    if (groupBy.length > 0) {
+      s = 'GROUP BY' + groupBy.join(', ') + '\n';
+    }
+    return s;
+  }
+
   // TODO (vitor): Mark CHECK when done
   generateSimpleSQL(stageWriter: StageWriter): string {
     let s = '';
@@ -3697,6 +3765,7 @@ class QueryQuery extends QueryField {
     return this.resultStage;
   }
 
+  // TODO (vitor): Handle group by here maybe?
   generateDepthNFields(
     depth: number,
     resultSet: FieldInstanceResult,

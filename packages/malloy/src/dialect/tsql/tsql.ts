@@ -131,7 +131,7 @@ export class TSQLDialect extends Dialect {
   supportsLimit = false;
   supportsRegexp = false;
   supportsLateGroupByEval = false;
-  orderByClause = 'output_name' as const;
+  orderByClause = 'expression' as const;
   groupByClause = 'expression' as const;
 
   // SQL Server does have ESCAPE but Synapse doesn't
