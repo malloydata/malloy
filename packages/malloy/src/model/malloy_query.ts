@@ -3387,7 +3387,7 @@ class QueryQuery extends QueryField {
   }
 
   // This probably should be generated in a dialect independat way.
-  //but for now, it is just googleSQL.
+  //  but for now, it is just googleSQL.
   generatePipelinedStages(
     outputPipelinedSQL: OutputPipelinedSQL[],
     lastStageName: string,
@@ -3748,22 +3748,27 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stageName: string
   ): string {
-    return '';
-    if (dimensionFields.length > 0) {
-      if (this.parent.dialect.groupByClause === 'expression') {
-        // For dialects like SQL Server that need expressions for GROUP BY
-        const dimensionExpressions = dimensionFields.map(name => {
-          const fi = this.rootResult.getField(name);
-          return fi.f.generateExpression(this.rootResult);
-        });
-        sOuter += `GROUP BY ${dimensionExpressions.join(', ')}\n`;
-      } else {
-        // Use column names (default)
-        sOuter += `GROUP BY ${dimensionFields.join(', ')}\n`;
-      }
+    let s = 'SELECT \n';
+    const f: StageOutputContext = {
+      dimensionIndexes: [1],
+      fieldIndex: 2,
+      sql: ['group_set'],
+      lateralJoinSQLExpressions: [],
+      groupsAggregated: [],
+      outputPipelinedSQL: [],
+    };
+    this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
+    s += indent(f.sql.join(',\n')) + '\n';
+    s += `FROM ${stageName}\n`;
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
+    if (f.dimensionIndexes.length > 0) {
+      s += `GROUP BY ${f.dimensionIndexes.join(',')}\n`;
     }
 
-    this.resultStage = stageWriter.addStage(sOuter);
+    this.resultStage = stageWriter.addStage(s);
 
     this.resultStage = this.generatePipelinedStages(
       f.outputPipelinedSQL,
@@ -4210,7 +4215,6 @@ class QueryQuery extends QueryField {
     }
     return {lastStageName, outputStruct};
   }
-
 }
 
 class QueryQueryReduce extends QueryQuery {}
@@ -4397,7 +4401,7 @@ class QueryQueryIndexStage extends QueryQuery {
         sOuter += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
       }
     }
-
+    // console.log(s);
     const resultStage = stageWriter.addStage(sOuter);
     this.resultStage = stageWriter.addStage(
       `SELECT
@@ -4706,10 +4710,12 @@ class QueryStruct {
     }
     this._arguments = {};
     if (isSourceDef(this.structDef)) {
+      // First, copy over all parameters, to get default values
       const params = this.structDef.parameters ?? {};
       for (const parameterName in params) {
         this._arguments[parameterName] = params[parameterName];
       }
+      // Then, copy over arguments to override default values
       const args = {...this.structDef.arguments, ...this.sourceArguments};
       for (const parameterName in args) {
         const orig = args[parameterName];
