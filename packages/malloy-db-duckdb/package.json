@@ -16,7 +16,7 @@
     "./wasm": {
       "browser": "./dist/duckdb_wasm_connection_browser.js",
       "node": "./dist/duckdb_wasm_connection_node.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/duckdb_wasm_connection_browser.d.ts"
     }
   },
   "typesVersions": {
