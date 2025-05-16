@@ -4308,65 +4308,59 @@ class QueryQueryIndexStage extends QueryQuery {
       }
     }
 
-    let s = 'SELECT\n  group_set,\n';
+    let sInner = 'SELECT\n  group_set,\n';
 
-    let fieldNameExpr = '  CASE group_set\n';
+    sInner += '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
-      fieldNameExpr += `    WHEN ${i} THEN '${fields[i].name}'\n`;
+      sInner += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    fieldNameExpr += ' END';
-    s += `  ${fieldNameExpr} as ${fieldNameColumn},\n`;
+    sInner += `  END as ${fieldNameColumn},\n`;
 
-    let fieldPathExpr = '  CASE group_set\n';
+    sInner += '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       const path = pathToCol(fields[i].path);
-      fieldPathExpr += `    WHEN ${i} THEN '${path}'\n`;
+      sInner += `    WHEN ${i} THEN '${path}'\n`;
     }
-    fieldPathExpr += ' END';
-    s += `  ${fieldPathExpr} as ${fieldPathColumn},\n`;
+    sInner += `  END as ${fieldPathColumn},\n`;
 
-    let fieldTypeExpr = '  CASE group_set\n';
+    sInner += '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
-      fieldTypeExpr += `    WHEN ${i} THEN '${fields[i].type}'\n`;
+      sInner += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    fieldTypeExpr += ' END';
-    s += `  ${fieldTypeExpr} as ${fieldTypeColumn},`;
+    sInner += `  END as ${fieldTypeColumn},`;
 
-    let fieldValueExpr = `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
+    sInner += `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
       'NULL'
     )}\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'string') {
-        fieldValueExpr += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+        sInner += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    fieldValueExpr += ' END';
-    s += `  ${fieldValueExpr} as ${fieldValueColumn},\n`;
+    sInner += `  END as ${fieldValueColumn},\n`;
 
-    const weightExpr = measureSQL;
-    s += ` ${measureSQL} as ${weightColumn},\n`;
+    sInner += ` ${measureSQL} as ${weightColumn},\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
-    let fieldRangeExpr = "  CASE group_set\n    WHEN 99999 THEN ''";
+    sInner += "  CASE group_set\n    WHEN 99999 THEN ''";
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'number') {
-        fieldRangeExpr += `    WHEN ${i} THEN ${dialect.concat(
+        sInner += `    WHEN ${i} THEN ${dialect.concat(
           `MIN(${dialect.castToString(fields[i].expression)})`,
           "' to '",
           dialect.castToString(`MAX(${fields[i].expression})`)
         )}\n`;
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
-        fieldRangeExpr += `    WHEN ${i} THEN ${dialect.concat(
+        sInner += `    WHEN ${i} THEN ${dialect.concat(
           `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
           "' to '",
           `MAX(${dialect.sqlDateToString(fields[i].expression)})`
         )}\n`;
       }
     }
-    fieldRangeExpr += ' END';
-    s += `  ${fieldRangeExpr} as ${fieldRangeColumn}\n`;
-
+    sInner += `  END as ${fieldRangeColumn}\n`;
+    let s = `SELECT * FROM (${sInner})`;
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
     //     THEN MIN(field_value) || ' to ' || MAX(field_value)
@@ -4383,13 +4377,12 @@ class QueryQueryIndexStage extends QueryQuery {
 
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
-      // TODO (vitor): That coalesce is an issue. The expression will have aggregates but we can't have aggregates in there for tsql.
       groupByFields.push(
-        fieldNameExpr,
-        fieldPathExpr,
-        fieldTypeExpr,
-        `COALESCE(${fieldValueExpr}, ${fieldRangeExpr})`,
-        weightExpr
+        fieldNameColumn,
+        fieldPathColumn,
+        fieldTypeColumn,
+        `COALESCE(${fieldValueColumn}, ${fieldRangeColumn})`,
+        weightColumn
       );
     } else {
       groupByFields.push('1', '2', '3', '4', '5');
