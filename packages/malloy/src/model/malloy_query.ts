@@ -4378,11 +4378,11 @@ class QueryQueryIndexStage extends QueryQuery {
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
       groupByFields.push(
+        'group_set',
         fieldNameColumn,
         fieldPathColumn,
         fieldTypeColumn,
-        `COALESCE(${fieldValueColumn}, ${fieldRangeColumn})`,
-        weightColumn
+        fieldValueColumn
       );
     } else {
       groupByFields.push('1', '2', '3', '4', '5');
