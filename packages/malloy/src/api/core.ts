@@ -25,10 +25,6 @@ import type {SQLSourceRequest} from '../lang/translate-response';
 import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 import {DEFAULT_LOG_RANGE, mapLogs} from './util';
-import type {
-  DescribeSourceRequest,
-  DescribeSourceResponse,
-} from '../model/describe_source';
 import SourceDescriber from '../model/describe_source';
 
 // TODO find where this should go...
@@ -266,8 +262,8 @@ export function compileQuery(
 }
 
 export function describeSource(
-  request: DescribeSourceRequest
-): DescribeSourceResponse {
+  request: Malloy.DescribeSourceRequest
+): Malloy.DescribeSourceResponse {
   const state = newCompileModelState(request);
   const compileModelResponse = _statedCompileModel(state);
 

@@ -7,7 +7,6 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {describeSource} from '../api/core';
-import type {DescribeSourceResponse} from './describe_source';
 
 describe('describe_source', () => {
   describe('sql artifact filters from a source', () => {
@@ -62,7 +61,7 @@ describe('describe_source', () => {
           connections: [{name: 'connection', dialect: 'presto'}],
         },
       });
-      const expected: DescribeSourceResponse = {
+      const expected: Malloy.DescribeSourceResponse = {
         sql_artifacts: [
           {
             name: 'flights',
@@ -126,7 +125,7 @@ describe('describe_source', () => {
           connections: [{name: 'connection', dialect: 'presto'}],
         },
       });
-      const expected: DescribeSourceResponse = {
+      const expected: Malloy.DescribeSourceResponse = {
         sql_artifacts: [
           {
             name: 'flights',
@@ -171,7 +170,7 @@ describe('describe_source', () => {
         },
       });
 
-      const expected: DescribeSourceResponse = {
+      const expected: Malloy.DescribeSourceResponse = {
         sql_artifacts: [
           {
             sql,
@@ -238,10 +237,16 @@ describe('describe_source', () => {
             {
               url: 'file://test.malloy',
               contents: `
-                source: flights is connection.table('flights')
+                source: flights is connection.table('flights') extend {
+                  where:
+                    destination = 'seattle'
+                }
                 source: carriers is connection.sql('${sql}')
 
                 source: flights_with_carrier_dim is flights extend {
+                  where:
+                    origin = 'spokane'
+                    and carriers.year_founded = '1999'
                   join_many: carriers on carrier = carriers.carrier
                 }
               `,
@@ -251,7 +256,7 @@ describe('describe_source', () => {
         },
       });
 
-      const expected: DescribeSourceResponse = {
+      const expected: Malloy.DescribeSourceResponse = {
         sql_artifacts: [
           {
             name: 'flights',
@@ -260,7 +265,7 @@ describe('describe_source', () => {
               {name: 'origin'},
               {name: 'destination'},
             ],
-            filters: [],
+            filters: [{sql: "(destination='seattle')"}],
           },
           {
             sql,
@@ -333,7 +338,7 @@ describe('describe_source', () => {
         },
       });
 
-      const expected: DescribeSourceResponse = {
+      const expected: Malloy.DescribeSourceResponse = {
         sql_artifacts: [
           {
             name: 'flights',

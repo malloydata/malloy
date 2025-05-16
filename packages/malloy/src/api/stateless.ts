@@ -7,10 +7,6 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
-import type {
-  DescribeSourceRequest,
-  DescribeSourceResponse,
-} from '../model/describe_source';
 
 export function compileModel(
   request: Malloy.CompileModelRequest
@@ -31,7 +27,7 @@ export function compileQuery(
 }
 
 export function describeSource(
-  request: DescribeSourceRequest
-): DescribeSourceResponse {
+  request: Malloy.DescribeSourceRequest
+): Malloy.DescribeSourceResponse {
   return Core.describeSource(request);
 }

@@ -32,16 +32,18 @@ export default class SourceDescriber {
     this.dialect = getDialect(source.dialect);
   }
 
-  describe(): SQLArtifact[] {
+  describe(): Malloy.SQLArtifactDesc[] {
     return this.describeImpl(this.source);
   }
 
-  private describeImpl(s: SourceDef): SQLArtifact[] {
+  private describeImpl(s: SourceDef): Malloy.SQLArtifactDesc[] {
     const sourceSQLArtifact = this.getCurrentSQLArtifact(s);
     sourceSQLArtifact.filters = this.getFilterSet(s);
     sourceSQLArtifact.columns = this.getColumnSet(s);
 
-    const artifactsAcc: SQLArtifact[] = [sourceSQLArtifact as SQLArtifact];
+    const artifactsAcc: Malloy.SQLArtifactDesc[] = [
+      sourceSQLArtifact as Malloy.SQLArtifactDesc,
+    ];
 
     const joined = this.getJoins(s.fields);
     for (const j of joined) {
@@ -63,7 +65,7 @@ export default class SourceDescriber {
     return sources;
   }
 
-  private getColumnSet(s: SourceDef): Column[] {
+  private getColumnSet(s: SourceDef): Malloy.Column[] {
     switch (s.type) {
       case 'table':
       case 'sql_select':
@@ -76,8 +78,8 @@ export default class SourceDescriber {
     }
   }
 
-  getColumnSetSQLSource(s: SourceDef): Column[] {
-    const cols: Column[] = [];
+  getColumnSetSQLSource(s: SourceDef): Malloy.Column[] {
+    const cols: Malloy.Column[] = [];
     // 'except'ed fields won't appear in this list
     for (const field of s.fields) {
       if (!isAtomic(field) || 'e' in field) {
@@ -94,7 +96,7 @@ export default class SourceDescriber {
    * included in the generated SQL as a CTE, so all cols must be included
    * even if unreachable in a descendant source
    */
-  getColumnSetQuerySource(s: QuerySourceDef): Column[] {
+  getColumnSetQuerySource(s: QuerySourceDef): Malloy.Column[] {
     // 1. get the first query source after the root source
     if (
       typeof s.query.structRef !== 'string' &&
@@ -111,6 +113,7 @@ export default class SourceDescriber {
     // 2. pull fields from first segment of query
     const segmentFieldNameAcc: string[] = [];
     for (const f of firstSeg.fieldUsage ?? []) {
+      // ignore joins
       segmentFieldNameAcc.push(f.path[0]);
     }
 
@@ -120,7 +123,7 @@ export default class SourceDescriber {
       throw new Error('Could not parse columns.');
     }
 
-    const colAcc: Column[] = [];
+    const colAcc: Malloy.Column[] = [];
     for (const sf of segmentFieldNameAcc) {
       colAcc.push({name: this.getColumnNameFromNamedField(sf, parent)});
     }
@@ -141,7 +144,7 @@ export default class SourceDescriber {
   parseFieldNamesFromExpr(e: Expr): string[] {
     const acc: string[] = [];
     if (e.node === 'field') {
-      // what is 'path'?
+      // ignore joins
       e.path[0] && acc.push(e.path[0]);
       return acc;
     }
@@ -165,7 +168,7 @@ export default class SourceDescriber {
     return acc;
   }
 
-  private getCurrentSQLArtifact(s: SourceDef): Partial<SQLArtifact> {
+  private getCurrentSQLArtifact(s: SourceDef): Partial<Malloy.SQLArtifactDesc> {
     switch (s.type) {
       case 'table':
         return {name: s.tablePath};
@@ -186,7 +189,10 @@ export default class SourceDescriber {
     }
   }
 
-  private getFilterSet(s: SourceDef): Filter[] {
+  // getFilterSet will fail when there's a filter across a join
+  // if there's a join, there's no guarantee this filter is commutative
+  // with the joined source, so ignore
+  private getFilterSet(s: SourceDef): Malloy.RowFilter[] {
     switch (s.type) {
       case 'table':
       case 'sql_select':
@@ -198,16 +204,18 @@ export default class SourceDescriber {
     }
   }
 
-  private getFilterSetSQLSource(s: TableSourceDef | SQLSourceDef): Filter[] {
+  private getFilterSetSQLSource(
+    s: TableSourceDef | SQLSourceDef
+  ): Malloy.RowFilter[] {
     return this.getFilterListFilterSet(s.filterList ?? [], s);
   }
 
   /**
    * Reasoning: both a projection & reduction can change the shape of
-   * data (projection via window function, for example), so filters
-   * on post-query data are not commutative & cannot be applied
+   * data (e.g. projection via window function), so filters on post-
+   * query data are not commutative & cannot be applied
    */
-  getFilterSetQuerySource(s: QuerySourceDef): Filter[] {
+  getFilterSetQuerySource(s: QuerySourceDef): Malloy.RowFilter[] {
     if (
       typeof s.query.structRef !== 'string' &&
       s.query.structRef.type === 'query_source'
@@ -215,7 +223,6 @@ export default class SourceDescriber {
       return this.getFilterSetQuerySource(s.query.structRef);
     }
 
-    // first stage in the pipeline
     const firstSeg = s.query.pipeline[0];
     if (firstSeg.type !== 'project' && firstSeg.type !== 'reduce') {
       throw new Error(`Pipeline stage type ${firstSeg.type} not supported`);
@@ -225,7 +232,7 @@ export default class SourceDescriber {
     if (typeof parent === 'string') {
       throw new Error('Could not parse fields.');
     }
-    const acc: Filter[] = [];
+    const acc: Malloy.RowFilter[] = [];
     // safe to use the root source for pulling column names from fields
     // in the pipeline query?
     acc.push(...this.getFilterListFilterSet(firstSeg.filterList ?? [], parent));
@@ -239,8 +246,8 @@ export default class SourceDescriber {
   private getFilterListFilterSet(
     filterList: FilterCondition[],
     s: SourceDef
-  ): Filter[] {
-    const acc: Filter[] = [];
+  ): Malloy.RowFilter[] {
+    const acc: Malloy.RowFilter[] = [];
     for (const fc of filterList ?? []) {
       try {
         const sql = this.exprToSQL(fc, s);
@@ -289,8 +296,11 @@ export default class SourceDescriber {
 
     switch (expr.node) {
       case 'field':
-        // ignoring path (oops?)
-        // need to go through 'fieldUsage'?
+        if (expr.path.length > 1) {
+          // filters on joins not supported
+          // & can't push them down because of commutativity
+          throw new Error('Could not parse filters from source');
+        }
         return this.getColumnNameFromNamedField(expr.path[0], s);
       case 'parameter':
         return '1=1'; // parameters not supported - use ineffectual clause
@@ -349,7 +359,7 @@ export default class SourceDescriber {
           return expr.sql;
         }
         return '';
-      case 'filterMatch':
+      case 'filterMatch': // TODO support this
       default:
         throw new Error('Could not parse filters from source');
     }
@@ -372,37 +382,4 @@ export default class SourceDescriber {
       return fDef.name;
     }
   }
-}
-
-// for API:
-export type DescribeSourceRequest = {
-  model_url: string;
-  source_name: string;
-  extend_model_url?: string;
-  compiler_needs?: Malloy.CompilerNeeds;
-};
-export type DescribeSourceResponse = {
-  sql_artifacts?: Array<SQLArtifact>;
-  logs?: Array<Malloy.LogMessage>;
-  compiler_needs?: Malloy.CompilerNeeds;
-};
-
-export type SQLArtifact = SQLTable | SQLQuery;
-export type Filter = {
-  sql: string;
-};
-export type Column = {
-  name: string;
-};
-
-export interface SQLQuery extends ConstrainedSQLArtifact {
-  sql: string;
-}
-export interface SQLTable extends ConstrainedSQLArtifact {
-  name: string;
-}
-
-export interface ConstrainedSQLArtifact {
-  filters: Filter[];
-  columns: Column[];
 }

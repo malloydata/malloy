@@ -1703,6 +1703,10 @@ export type CellWithNullCell = {kind: 'null_cell'} & NullCell;
 
 export type CellWithSQLNativeCell = {kind: 'sql_native_cell'} & SQLNativeCell;
 
+export type Column = {
+  name: string;
+};
+
 export type CompileModelRequest = {
   model_url: string;
   extend_model_url?: string;
@@ -1743,6 +1747,7 @@ export type CompileSourceResponse = {
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
+
 export type CompilerNeeds = {
   table_schemas?: Array<SQLTable>;
   sql_schemas?: Array<SQLQuery>;
@@ -1755,6 +1760,10 @@ export type Connection = {
   name: string;
   dialect?: string;
 };
+export interface ConstrainedSQLArtifact {
+  filters: RowFilter[];
+  columns: Column[];
+}
 
 export type DataType = 'record_cell' | 'array_cell';
 
@@ -1777,6 +1786,18 @@ export type DateTimeframe = 'year' | 'quarter' | 'month' | 'week' | 'day';
 
 export type DateType = {
   timeframe?: DateTimeframe;
+};
+
+export type DescribeSourceRequest = {
+  model_url: string;
+  source_name: string;
+  extend_model_url?: string;
+  compiler_needs?: CompilerNeeds;
+};
+export type DescribeSourceResponse = {
+  sql_artifacts?: Array<SQLArtifactDesc>;
+  logs?: Array<LogMessage>;
+  compiler_needs?: CompilerNeeds;
 };
 
 export type DimensionInfo = {
@@ -2185,6 +2206,10 @@ export type Result = {
   source_annotations?: Array<Annotation>;
 };
 
+export type RowFilter = {
+  sql: string;
+};
+
 export type RunIndexQueryRequest = {
   model_url: string;
   source_name: string;
@@ -2210,6 +2235,8 @@ export type RunQueryResponse = {
   compiler_needs?: CompilerNeeds;
 };
 
+export type SQLArtifactDesc = SQLTableDesc | SQLQueryDesc;
+
 export type SQLNativeCell = {
   sql_native_value: string;
 };
@@ -2224,11 +2251,20 @@ export type SQLQuery = {
   connection_name: string;
 };
 
+export interface SQLQueryDesc extends ConstrainedSQLArtifact {
+  sql: string;
+}
+
 export type SQLTable = {
   name: string;
   schema?: Schema;
   connection_name: string;
 };
+
+export interface SQLTableDesc extends ConstrainedSQLArtifact {
+  name: string;
+}
+
 export type Schema = {
   fields: Array<FieldInfo>;
 };
