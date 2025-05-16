@@ -8,10 +8,8 @@ jobs:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-motherduck:
-    uses: './.github/workflows/db-motherduck.yaml'
-    secrets:
-      MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
+  db-duckdb:
+    uses: './.github/workflows/db-duckdb.yaml'
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-snowflake:
@@ -28,7 +26,7 @@ jobs:
   npm-release:
     needs:
       - db-bigquery
-      - db-motherduck
+      - db-duckdb
       - db-publisher
       - db-postgres
       - db-snowflake
