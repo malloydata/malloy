@@ -29,6 +29,6 @@
   "devDependencies": {
     "http-server": "^14.1.1",
     "rimraf": "^6.0.1",
-    "typedoc": "^0.27.7"
+    "typedoc": "^0.28.4"
   }
 }
