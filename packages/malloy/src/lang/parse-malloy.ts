@@ -951,7 +951,8 @@ export abstract class MalloyTranslation {
     return true;
   }
 
-  allDialectsEnabled = false;
+  // TODO (vitor): set allDialectsEnabled to false
+  allDialectsEnabled = true;
   experimentalDialectEnabled(dialect: string): boolean {
     if (this.allDialectsEnabled) {
       return true;
