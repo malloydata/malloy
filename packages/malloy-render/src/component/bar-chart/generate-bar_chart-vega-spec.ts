@@ -15,10 +15,7 @@ import type {
   VegaSignalRef,
 } from '../types';
 import type {ChartLayoutSettings} from '../chart-layout-settings';
-import {
-  getChartLayoutSettings,
-  getXAxisSettings,
-} from '../chart-layout-settings';
+import {getChartLayoutSettings} from '../chart-layout-settings';
 import type {
   Data,
   EncodeEntry,
@@ -87,7 +84,7 @@ function getLimitedData({
     : [];
 
   const refinedMaxSizePerBar =
-    maxSizePerBar ?? (seriesField && isGrouping) ? 8 : 8;
+    maxSizePerBar ?? (seriesField && isGrouping) ? 6 : 16;
 
   // Limit x axis values shown
   const subGroupBars = seriesField && isGrouping ? seriesLimit : 1;
@@ -188,14 +185,6 @@ export function generateBarChartVegaSpec(
   const yDomainMin = Math.min(0, yMin);
   const yDomainMax = Math.max(0, yMax);
 
-  // TODO Chart settings and data limits interdependence...
-  // Could we have chartSettings be calculated from data limits so we don't have to recalculate xAxisSettings later?
-  // for xAxisSettings and data limits, just need the y sizing? to then know the plot area?
-  // so getChartLayoutSettings could...
-  //   - get y axis sizing
-  //   - determine x axis available space
-  //   - get max string (this is where data limits code comes in to play? is it just a callback fn for getMaxString() to be passed in?)
-  //   - calculate xAxisSettings correctly
   const chartSettings = getChartLayoutSettings(explore, chartTag, {
     metadata,
     xField,
@@ -203,10 +192,6 @@ export function generateBarChartVegaSpec(
     chartType: 'bar_chart',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent'),
-    // TODO implement this so can calculate data limits here
-    // but then how do we get the data limits stuff back? we don't know the plotWidth until this fn runs
-    // do we separate out getYLayout vs getXLayout? there is weird interplay between the two
-    // getMaxString: ({isSpark, plotWidth}) => "foo"
   });
 
   // Data limits
@@ -216,25 +201,6 @@ export function generateBarChartVegaSpec(
     isGrouping,
     chartSettings,
     chartTag,
-  });
-
-  let maxString = '';
-  for (const value of dataLimits.barValuesToPlot) {
-    const stringValue = value.toString();
-    if (stringValue.length > maxString.length) {
-      maxString = stringValue;
-    }
-  }
-
-  // Recalculate xAxisSettings based on data limits
-  // TODO: do max string calcs for different data types (numbers / dates will be formatted)
-  const xAxisSettings = getXAxisSettings({
-    maxString,
-    chartHeight: chartSettings.plotHeight,
-    chartWidth: chartSettings.plotWidth,
-    xField,
-    parentField: explore,
-    parentTag: tag,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -671,7 +637,7 @@ export function generateBarChartVegaSpec(
     autosize: {
       type: 'none',
       resize: true,
-      contains: 'padding',
+      contains: 'content',
     },
     data: [valuesData],
     padding: {...chartSettings.padding},
@@ -725,7 +691,6 @@ export function generateBarChartVegaSpec(
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
-        titleY: xAxisSettings.height,
         encode: {
           labels: {
             enter: {
