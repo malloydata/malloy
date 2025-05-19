@@ -1301,7 +1301,7 @@ export class RepeatedRecordCell extends ArrayCell {
     plugins: RenderPlugin[] = [],
     registry?: FieldRegistry
   ) {
-    super(cell, field, parent, plugins, registry);
+    super(cell, field, parent);
     this.plugins = plugins;
     this.registry = registry;
     this.rows = this.values as RecordCell[];
