@@ -157,11 +157,6 @@ const SQL_CONST_EXPR = new RegExp(
   `(?:${FLOAT_EXPR.source})|(?:${SQL_STR_LITERAL_EXPR.source})`
 );
 
-function genPlaceholder() {
-  // TODO (vitor): Idk about this idea. Also one uuid should be fine
-  return (uuidv4() + uuidv4()).replace(/-/g, '');
-}
-
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
@@ -3211,25 +3206,6 @@ class QueryQuery extends QueryField {
     return ret;
   }
 
-  formatLimit(
-    sqlStr: string,
-    limitStyle: string,
-    limitPlaceholder: string,
-    limit?: string | number | null
-  ): string {
-    if (limit) {
-      if (limitStyle === 'limit') {
-        return sqlStr.replace(limitPlaceholder, ` LIMIT ${limit}\n`);
-      } else if (limitStyle === 'top') {
-        return sqlStr.replace(limitPlaceholder, ` TOP ${limit}\n`);
-      } else {
-        throw new Error(`limitStyle ${limitStyle} not implemented`);
-      }
-    } else {
-      return sqlStr.replace(limitPlaceholder, '');
-    }
-  }
-
   generateSQLJoins(stageWriter: StageWriter): string {
     let s = '';
     // get the first value from the map (weird, I know)
@@ -3246,21 +3222,16 @@ class QueryQuery extends QueryField {
         const limit =
           (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
 
-        const limitPlaceholder = genPlaceholder();
-
         structSQL = stageWriter.addStage(
           `SELECT ${
-            this.parent.dialect.limitClause === 'top' ? limitPlaceholder : ''
+            limit && this.parent.dialect.limitClause === 'top'
+              ? `TOP ${limit}`
+              : ''
           } * from ${structSQL} as x ${
-            this.parent.dialect.limitClause === 'limit' ? limitPlaceholder : ''
+            limit && this.parent.dialect.limitClause === 'limit'
+              ? `LIMIT ${limit}`
+              : ''
           }`
-        );
-
-        structSQL = this.formatLimit(
-          structSQL,
-          this.parent.dialect.limitClause,
-          limitPlaceholder,
-          limit
         );
       }
     }
