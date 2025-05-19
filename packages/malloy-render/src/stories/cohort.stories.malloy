@@ -1,0 +1,63 @@
+# Stories for the Cohort Table (user retention/behavior by cohort)
+source: customer is duckdb.table("static/data/customers.parquet") extend {
+    dimension:
+        customer_id_ is customer_id::string
+}
+
+source: orders is duckdb.table("static/data/orders.parquet") extend {
+    dimension:
+        customer_id_ is customer_id::string
+        order_date_ is order_date::date
+    measure:
+        order_count is count(order_id)
+        avg_order_amount is order_amount.avg()
+    join_one: customer
+    on customer.customer_id_ = customer_id_
+}
+
+query: user_cohort is orders -> {
+        group_by:
+            customer_id_
+            order_date_
+            cohort_month is order_date_.month
+        calculate: cohort_id is row_number() {
+            partition_by: customer_id_
+            order_by: order_date_
+        }
+    } -> {
+        group_by:
+            customer_id_
+            cohort_month
+        where:
+            cohort_id = 1
+    }
+
+source: cohorts_orders is orders extend {
+    join_one: user_cohort
+    on user_cohort.customer_id_ = customer_id_
+    dimension:
+        cohort_month is user_cohort.cohort_month
+    #(story) story="Weekly Cohort Table"
+    # cohort_table
+    view: cohorts_orders_weeks is {
+    group_by: 
+    cohort_month
+    order_week is order_date_.week
+    where:
+        cohort_month is not null
+    aggregate: order_count
+    order_by: cohort_month
+    }
+
+    #(story) story="Monthly Cohort Table"
+    # cohort_table
+    view: cohorts_orders_months is {
+    group_by: 
+    cohort_month
+    order_month is order_date_.month
+    where:
+        cohort_month is not null
+    aggregate: order_count
+    order_by: cohort_month
+    }
+}
