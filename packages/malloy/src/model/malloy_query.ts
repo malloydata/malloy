@@ -3408,16 +3408,9 @@ class QueryQuery extends QueryField {
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s += this.parent.dialect.supportsLimit
         ? `LIMIT ${this.firstSegment.limit}\n`
-        : `${orderBy || 'ORDER BY 1'} OFFSET 0 ROWS FETCH NEXT ${
+        : `${orderBy ? '' : 'ORDER BY 1'} OFFSET 0 ROWS FETCH NEXT ${
             this.firstSegment.limit
           } ROWS ONLY\n`;
-    } else {
-      // TODO (vitor): This does not bring me joy. But I can't throw it away just now
-      if (this.parent.dialect.name === 'tsql') {
-        s += `${
-          orderBy || 'ORDER BY 1'
-        } OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n`;
-      }
     }
 
     this.resultStage = stageWriter.addStage(s);
