@@ -192,25 +192,9 @@ export function Chart(props: ChartProps) {
   const chartSubtitle = chartProps.chartTag.text('subtitle');
   const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;
 
-  const [chartSpace, setChartSpace] = createSignal({
-    width: chartProps.plotWidth,
-    height: chartProps.plotHeight,
-  });
-
-  const observer = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const {width, height} = entry.contentRect;
-      setChartSpace({width, height});
-    }
-  });
-
   return (
     <div
       class="malloy-chart"
-      style={{
-        width: chartProps.totalWidth + 'px',
-        height: chartProps.totalHeight + 'px',
-      }}
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
@@ -236,16 +220,14 @@ export function Chart(props: ChartProps) {
           )}
         </div>
       </Show>
-      <div class="malloy-chart__container" ref={el => observer.observe(el)}>
-        <VegaChart
-          width={chartSpace().width}
-          height={chartSpace().height}
-          onMouseOver={mouseOverHandler}
-          onViewInterface={setViewInterface}
-          explore={field}
-          runtime={runtime}
-        />
-      </div>
+      <VegaChart
+        width={chartProps.plotWidth}
+        height={chartProps.plotHeight}
+        onMouseOver={mouseOverHandler}
+        onViewInterface={setViewInterface}
+        explore={field}
+        runtime={runtime}
+      />
       <Tooltip show={showTooltip()}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>

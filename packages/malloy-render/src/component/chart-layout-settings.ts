@@ -29,99 +29,6 @@ import {renderNumericField} from './render-numeric-field';
 import type {Field, NestField} from '../data_tree';
 import type {RenderMetadata} from './render-result-metadata';
 
-type XAxisSettings = {
-  labelAngle: number;
-  labelAlign?: AlignValue;
-  labelBaseline?: TextBaselineValue;
-  labelLimit: number;
-  height: number;
-  titleSize: number;
-  hidden: boolean;
-};
-
-export function getXAxisSettings({
-  maxString,
-  chartHeight,
-  chartWidth,
-  xField,
-  parentField,
-  parentTag,
-}: {
-  maxString: string;
-  chartHeight: number;
-  chartWidth: number;
-  xField: Field;
-  parentField: NestField;
-  parentTag: Tag;
-}): XAxisSettings {
-  let xAxisHeight = 0;
-  let labelAngle = -90;
-  let labelAlign: AlignValue | undefined = 'right';
-  let labelBaseline: TextBaselineValue | undefined = 'middle';
-  let labelLimit = 0;
-  const xTitleSize = 20;
-
-  // TODO use vega config styles
-  const maxStringSize =
-    getTextWidthDOM(maxString, {
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '10px',
-      width: 'fit-content',
-      opacity: '0',
-      fontVariantNumeric: 'tabular-nums',
-      position: 'absolute',
-    }) + 4;
-
-  const ellipsesSize =
-    getTextWidthDOM('...', {
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '10px',
-      width: 'fit-content',
-      opacity: '0',
-      fontVariantNumeric: 'tabular-nums',
-      position: 'absolute',
-    }) + 4;
-
-  const X_AXIS_THRESHOLD = 0.35;
-  const xAxisBottomPadding = 12;
-  const plotHeight =
-    chartHeight - xAxisBottomPadding - xTitleSize - ellipsesSize;
-
-  xAxisHeight =
-    Math.min(maxStringSize, X_AXIS_THRESHOLD * plotHeight) + xAxisBottomPadding;
-  labelLimit = xAxisHeight;
-  if (xAxisHeight < maxStringSize) {
-    xAxisHeight += ellipsesSize;
-  }
-
-  // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
-  const uniqueValuesCt = xField.valueSet.size;
-  const isSharedDomain = uniqueValuesCt <= 20;
-  const recordsToFit = isSharedDomain
-    ? uniqueValuesCt
-    : parentField.maxUniqueFieldValueCounts.get(xField.name)!;
-  // TODO: shouldn't yTitleSize and yAxisWidth be subtracted from this chartWidth?
-  const xSpacePerLabel = chartWidth / recordsToFit;
-  if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
-    labelAngle = 0;
-    // Remove label limit; our vega specs should use labelOverlap setting to hide overlapping labels
-    labelLimit = 0;
-    labelAlign = undefined;
-    labelBaseline = 'top';
-    xAxisHeight = 28;
-  }
-
-  return {
-    labelAngle,
-    labelLimit,
-    labelBaseline,
-    labelAlign,
-    height: xAxisHeight,
-    titleSize: xTitleSize,
-    hidden: parentTag.text('size') === 'spark',
-  };
-}
-
 export type ChartLayoutSettings = {
   plotWidth: number;
   plotHeight: number;
@@ -156,15 +63,15 @@ export type ChartLayoutSettings = {
   isSpark: boolean;
 };
 
-// [width, height multiplier of row height]
+// Later should depend on chart type?
 const CHART_SIZES = {
-  'spark': [180, 1],
-  'xs': [170, 4],
-  'sm': [315, 6],
-  'md': [355, 9],
-  'lg': [570, 12],
-  'xl': [606, 16],
-  '2xl': [828, 20],
+  'spark': [180, 1], // row height
+  'xs': [170, 2], // 2x row height
+  'sm': [216, 3], // 3x row height
+  'md': [256, 4], // 4x row height
+  'lg': [472, 7], // 7x row height
+  'xl': [508, 10], // 10x row height
+  '2xl': [730, 14], // 14x row height
 };
 
 // TODO: read from theme CSS
@@ -216,8 +123,15 @@ export function getChartLayoutSettings(
     chartHeight = taggedHeight ?? presetHeight;
   }
 
+  let xAxisHeight = 0;
   let yAxisWidth = 0;
+  let labelAngle = -90;
+  let labelAlign: AlignValue | undefined = 'right';
+  let labelBaseline: TextBaselineValue | undefined = 'middle';
+  let labelLimit = 0;
+  let xTitleSize = 0;
   let yTitleSize = 0;
+  const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
@@ -241,6 +155,8 @@ export function getChartLayoutSettings(
     const formattedMax = yField.isBasic()
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
+    // const formattedMin = l.format(',')(minAxisVal);
+    // const formattedMax = l.format(',')(maxAxisVal);
     yTitleSize = 31; // Estimate for now, can be dynamic later
     const yLabelOffset = 5;
     yAxisWidth =
@@ -275,41 +191,96 @@ export function getChartLayoutSettings(
       const newChartHeight = chartHeight / (1 - offRatio);
       // adjust chart padding
       topPadding = Math.max(0, topPadding - (newChartHeight - chartHeight));
+      chartHeight = newChartHeight;
+
       // Hardcode # of ticks, or the resize could make room for more ticks and then screw things up
       yTickCount = noOfTicks;
     }
   }
 
-  const xAxisSettings = getXAxisSettings({
-    maxString: xField.maxString!,
-    chartHeight,
-    chartWidth,
-    xField,
-    parentField: field,
-    parentTag: tag,
-  });
+  if (hasXAxis) {
+    // TODO: add type checking here for axis. for now assume number, string
+    const maxString = xField.maxString!;
+    const maxStringSize =
+      getTextWidthDOM(maxString, {
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '10px',
+        width: 'fit-content',
+        opacity: '0',
+        fontVariantNumeric: 'tabular-nums',
+        position: 'absolute',
+      }) + 4;
+
+    const X_AXIS_THRESHOLD = 1;
+    xTitleSize = 26;
+    xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
+    labelLimit = xAxisHeight;
+
+    // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
+    const uniqueValuesCt = xField.valueSet.size;
+    const isSharedDomain = uniqueValuesCt <= 20;
+    const recordsToFit = isSharedDomain
+      ? uniqueValuesCt
+      : field.maxUniqueFieldValueCounts.get(xField.name)!;
+    const xSpacePerLabel = chartWidth / recordsToFit;
+    if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
+      labelAngle = 0;
+      // Remove label limit; our vega specs should use labelOverlap setting to hide overlapping labels
+      labelLimit = 0;
+      labelAlign = undefined;
+      labelBaseline = 'top';
+      xAxisHeight = 14;
+    }
+  }
+
+  // Additional xTitle padding to snap to row height grid
+  const totalSize = chartHeight + xAxisHeight + xTitleSize;
+  const roundedUpRowHeight = Math.ceil(totalSize / ROW_HEIGHT) * ROW_HEIGHT;
+  xTitleSize += roundedUpRowHeight - totalSize;
 
   const isSpark = tag.text('size') === 'spark';
 
-  const padding = xAxisSettings.hidden
+  const padding = isSpark
     ? {top: 0, left: 0, bottom: 0, right: 0}
     : {
         top: topPadding + 1,
         left: yAxisWidth,
-        bottom: xAxisSettings.height + xAxisSettings.titleSize,
+        bottom: xAxisHeight + xTitleSize,
         right: 8,
       };
 
-  // TODO: do we need these different sizes anymore, since all the same?
-  const plotWidth = chartWidth;
-  const plotHeight = chartHeight;
-  const totalWidth = chartWidth;
-  const totalHeight = chartHeight;
+  // TODO: kinda hacky, to account for titles and such. Need to think how to get better chart sizing availability
+  // It might be a thing where at vega chart level, it can decide to shrink chart based on titles? like override that spec value?
+  // Add extra padding for fill mode
+  if (isFillMode) {
+    padding.left += 24;
+    padding.right += 24;
+    padding.bottom += 12;
+  }
+  const hasChartTitle = chartTag.text('title');
+  const hasChartSubtitle = chartTag.text('subtitle');
+  padding.top += hasChartTitle ? 24 : 0;
+  padding.bottom += hasChartSubtitle ? 24 : 0;
+  const paddingInline = padding.left + padding.right;
+  const paddingBlock = padding.top + padding.bottom;
+  // If fill mode, make room around inner plot
+  const plotWidth = isFillMode ? chartWidth - paddingInline : chartWidth;
+  const plotHeight = isFillMode ? chartHeight - paddingBlock : chartHeight;
+  const totalWidth = isFillMode ? chartWidth : chartWidth + paddingInline;
+  const totalHeight = isFillMode ? chartHeight : chartHeight + paddingBlock;
 
   return {
     plotWidth,
     plotHeight,
-    xAxis: xAxisSettings,
+    xAxis: {
+      labelAngle,
+      labelAlign,
+      labelBaseline,
+      labelLimit,
+      height: xAxisHeight,
+      titleSize: xTitleSize,
+      hidden: isSpark,
+    },
     yAxis: {
       width: yAxisWidth,
       tickCount: yTickCount,

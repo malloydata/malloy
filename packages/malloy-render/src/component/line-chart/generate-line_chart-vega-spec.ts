@@ -34,7 +34,6 @@ import type {CellValue, NestField, RecordCell} from '../../data_tree';
 import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {RenderMetadata} from '../render-result-metadata';
-import type {LineChartSeriesPluginInstance} from '../../plugins/line-chart-series-plugin';
 
 type LineDataRecord = {
   x: string | number;
@@ -62,18 +61,6 @@ export function generateLineChartVegaSpec(
   explore: NestField,
   metadata: RenderMetadata
 ): VegaChartProps {
-  const lineChartPlugin = explore
-    .getPlugins()
-    .find(p => p.name === 'line_chart_series') as
-    | LineChartSeriesPluginInstance
-    | undefined;
-
-  if (!lineChartPlugin) {
-    throw new Error(
-      'Trying to render a line chart when Line chart series plugin not found'
-    );
-  }
-
   const tag = explore.tag;
   const chartTag = tag.tag('line_chart');
   if (!chartTag)
@@ -169,9 +156,9 @@ export function generateLineChartVegaSpec(
     chartTag.has('series', 'independent') && !forceSharedSeries;
   const shouldShareSeriesDomain =
     forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
-
+  
   const seriesSet = seriesField
-    ? new Set(lineChartPlugin.getTopNSeries(maxSeries))
+    ? new Set([...seriesField.valueSet].slice(0, maxSeries))
     : null;
 
   /**************************************
@@ -579,7 +566,7 @@ export function generateLineChartVegaSpec(
     autosize: {
       type: 'none',
       resize: true,
-      contains: 'padding',
+      contains: 'content',
     },
     padding: chartSettings.padding,
     data: [
@@ -668,16 +655,11 @@ export function generateLineChartVegaSpec(
 
   // Legend
   let maxCharCt = 0;
-  let legendSize = 0;
   if (hasSeries) {
     // Get legend dimensions
     if (isDimensionalSeries) {
-      // This is for global; how to do across nests for local?
-      maxCharCt = [...seriesSet!].reduce<number>(
-        // TODO better handle the null symbol here
-        (a, b) => Math.max(a, b?.toString().length ?? 1),
-        0
-      );
+      // Legend size is by legend title or the longest legend value
+      maxCharCt = seriesField!.maxString?.length ?? 0;
       maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
@@ -687,11 +669,10 @@ export function generateLineChartVegaSpec(
     }
 
     // Limit legend size to a hard max, then percentage of chart width, then the max text size
-    // TODO need better way to estimate size since vega config can change legend text formatting
-    legendSize = Math.min(
+    const legendSize = Math.min(
       LEGEND_MAX,
       chartSettings.totalWidth * LEGEND_PERC,
-      maxCharCt * 8 + 20
+      maxCharCt * 10 + 20
     );
 
     const legendSettings: Legend = {
@@ -701,6 +682,7 @@ export function generateLineChartVegaSpec(
       padding: 8,
       offset: 4,
     };
+
     (spec.padding as VegaPadding).right = legendSize;
     spec.legends!.push({
       fill: 'color',
@@ -708,10 +690,6 @@ export function generateLineChartVegaSpec(
       title: seriesField ? seriesField.name : '',
       orient: 'right',
       ...legendSettings,
-      values:
-        isDimensionalSeries && shouldShareSeriesDomain
-          ? [...seriesSet!]
-          : undefined,
       encode: {
         entries: {
           name: 'legend_entries',
@@ -797,12 +775,11 @@ export function generateLineChartVegaSpec(
           localSeriesSet.add(seriesVal);
           return false;
         }
+        localSeriesSet.add(seriesVal);
+        return false;
       }
-      return false;
     }
-
-    // need to limit to max data points AFTER the series is filtered
-    data.rows.forEach(row => {
+    data.rows.slice(0, MAX_DATA_POINTS).forEach(row => {
       let seriesVal = seriesField
         ? row.column(seriesField.name).value
         : yField.name;
@@ -830,11 +807,9 @@ export function generateLineChartVegaSpec(
       });
     });
 
-    const mappedAndLimitedData = mappedData.slice(0, MAX_DATA_POINTS);
-
     return {
-      data: mappedAndLimitedData,
-      isDataLimited: data.rows.length > mappedAndLimitedData.length,
+      data: mappedData,
+      isDataLimited: data.rows.length > mappedData.length,
       // Distinguish between limiting by record count and limiting by series count
       dataLimitMessage:
         seriesField && seriesField.valueSet.size > maxSeries
@@ -849,7 +824,6 @@ export function generateLineChartVegaSpec(
 
   return {
     spec,
-    // TODO refactor the padding mode to fit
     plotWidth: chartSettings.plotWidth,
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
