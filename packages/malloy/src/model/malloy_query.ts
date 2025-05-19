@@ -690,12 +690,6 @@ class QueryField extends QueryNode {
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
 
-    // TODO (vitor): Figure out if this is the way. Offset requires Order By.
-    const aggregateLimit = frag.limit
-      ? this.parent.dialect.supportsLimit
-        ? `LIMIT ${frag.limit}`
-        : `OFFSET 0 ROWS FETCH NEXT ${frag.limit} ROWS ONLY`
-      : undefined;
     if (
       frag.name === 'string_agg' &&
       distinctKey &&
@@ -752,24 +746,22 @@ class QueryField extends QueryNode {
             .map((e, i) => {
               return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
             });
-          const orderBySQL =
-            this.getFunctionOrderBy(
-              resultSet,
-              context,
-              state,
-              orderBy,
-              newArgs,
-              overload
-            ) ||
-            (!this.parent.dialect.supportsLimit && aggregateLimit && '1') ||
-            undefined;
+          const orderBySQL = this.getFunctionOrderBy(
+            resultSet,
+            context,
+            state,
+            orderBy,
+            newArgs,
+            overload
+          );
+          undefined;
 
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
             newArgs,
             orderBySQL,
-            aggregateLimit
+            frag.limit?.toString()
           );
           return this.exprToSQL(resultSet, context, funcCall, state);
         }
@@ -814,7 +806,7 @@ class QueryField extends QueryNode {
         overload,
         mappedArgs,
         orderBySql,
-        aggregateLimit
+        frag.limit?.toString()
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
@@ -3227,13 +3219,16 @@ class QueryQuery extends QueryField {
         this.firstSegment.sample
       );
       if (this.firstSegment.sample) {
+        const limit =
+          (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
+
         // TODO (vitor): double check this
         // maybe we don't want that order by here.
         structSQL = stageWriter.addStage(
-          `SELECT * from ${structSQL} as x ${
-            this.parent.dialect.supportsLimit
-              ? 'limit 100000\n'
-              : 'ORDER BY 1 OFFSET 0 ROWS FETCH NEXT 100000 ROWS ONLY'
+          `SELECT${
+            this.parent.dialect.limitStyle === 'top' ? ` TOP ${limit}` : ''
+          } * from ${structSQL} as x ${
+            this.parent.dialect.limitStyle === 'limit' ? `LIMIT ${limit}\n` : ''
           }`
         );
       }
@@ -3343,7 +3338,7 @@ class QueryQuery extends QueryField {
       ) {
         const groupByClause = this.parent.dialect.groupByClause;
         if (groupByClause === 'ordinal') {
-          groupBy.push(String(field.fieldUsage.resultIndex));
+          groupBy.push(field.fieldUsage.resultIndex.toString());
         } else if (groupByClause === 'expression') {
           // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
           const fieldExpr = field.f.generateExpression(this.rootResult);
@@ -3362,8 +3357,17 @@ class QueryQuery extends QueryField {
 
   // TODO (vitor): Mark CHECK when done
   generateSimpleSQL(stageWriter: StageWriter): string {
-    let s = '';
-    s += 'SELECT \n';
+    let s = 'SELECT';
+
+    const limit =
+      (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
+
+    // top
+    if (limit && this.parent.dialect.limitStyle === 'top') {
+      s += ` TOP ${limit}`;
+    }
+    s += '\n';
+
     const fields: string[] = [];
 
     for (const [name, field] of this.rootResult.allFields) {
@@ -3415,12 +3419,8 @@ class QueryQuery extends QueryField {
     s += orderBy;
 
     // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += this.parent.dialect.supportsLimit
-        ? `LIMIT ${this.firstSegment.limit}\n`
-        : `${orderBy ? '' : 'ORDER BY 1'} OFFSET 0 ROWS FETCH NEXT ${
-            this.firstSegment.limit
-          } ROWS ONLY\n`;
+    if (limit && this.parent.dialect.limitStyle === 'limit') {
+      s += `LIMIT ${limit}\n`;
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -3710,7 +3710,7 @@ class QueryQuery extends QueryField {
 
     let groupByFields: string[];
     if (groupByClause === 'ordinal') {
-      groupByFields = f.dimensionIndexes.map(String);
+      groupByFields = f.dimensionIndexes.filter(Boolean).map(String);
     } else if (groupByClause === 'expression') {
       groupByFields = (f.dimensions || [])
         .map(v => v.expression)
@@ -3826,7 +3826,7 @@ class QueryQuery extends QueryField {
       .map(d => {
         return this.parent.dialect.groupByClause === 'expression'
           ? !SQL_CONST_EXPR.test(d.expression) && d.expression
-          : String(d.index);
+          : d.index.toString();
       })
       .filter((v): v is string => !!v);
 
@@ -3851,7 +3851,17 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     stage0Name: string
   ): string {
-    let s = 'SELECT\n';
+    const limit =
+      (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
+
+    let s = 'SELECT';
+
+    // top
+    if (limit && this.parent.dialect.limitStyle === 'top') {
+      s += ` TOP ${limit}`;
+    }
+    s += '\n';
+
     const fieldsSQL: string[] = [];
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
@@ -3927,10 +3937,8 @@ class QueryQuery extends QueryField {
     );
 
     // limit
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      s += this.parent.dialect.supportsLimit
-        ? `LIMIT ${this.firstSegment.limit}\n`
-        : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+    if (limit && this.parent.dialect.limitStyle === 'limit') {
+      s += `LIMIT ${limit}\n`;
     }
 
     this.resultStage = stageWriter.addStage(s);
@@ -4404,9 +4412,15 @@ class QueryQueryIndexStage extends QueryQuery {
         ? this.firstSegment.limit
         : null;
 
-    let s = ` SELECT ${
-      limit && this.parent.dialect.limitStyle === 'top' ? ` TOP ${limit} ` : ''
-    } * FROM (${sInner})\n`;
+    let s = 'SELECT';
+
+    // top
+    if (limit && this.parent.dialect.limitStyle === 'top') {
+      s += ` TOP ${limit}`;
+    }
+    s += '\n';
+
+    s += `* FROM (${sInner})\n`;
 
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
@@ -5501,7 +5515,9 @@ export class QueryModel {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 
-    let query = `SELECT
+    let query = `SELECT ${
+      this.dialect.limitStyle === 'top' ? `TOP ${limit}` : ''
+    }
               ${fieldNameColumn},
               ${fieldPathColumn},
               ${fieldValueColumn},
@@ -5521,11 +5537,7 @@ export class QueryModel {
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
               searchValue + '%'
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
-          ${
-            this.dialect.supportsLimit
-              ? `LIMIT ${limit}\n`
-              : `ORDER BY 1 OFFSET 0 ROWS FETCH NEXT ${limit} ROWS ONLY\n`
-          }
+          ${this.dialect.limitStyle === 'limit' ? `LIMIT ${limit}\n` : ''}
           `;
     if (struct.dialect.hasFinalStage) {
       query = `WITH __stage0 AS(\n${query}\n)\n${struct.dialect.sqlFinalStage(

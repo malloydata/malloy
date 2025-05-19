@@ -180,10 +180,6 @@ export abstract class Dialect {
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
 
-  // Added field supportsLimit. TSQL Doesn't support limit and limit is not part of the SQL Standard
-  // TODO (vitor): Discuss with malloy
-  supportsLimit = true;
-
   // Added field supportsRegexp. TSQL Doesn't support regexp. Idk how to use this with = false yet (tsql case). Malloy seems to often go for regexp
   // TODO (vitor): Discuss with malloy
   supportsRegexp = true;
