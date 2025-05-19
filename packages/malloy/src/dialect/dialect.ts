@@ -360,6 +360,11 @@ export abstract class Dialect {
     }
   }
 
+  // tsql has no real boolean value, override this function with a boolean expression only if needed to
+  booleanValue(boolStr: 'true' | 'false'): string {
+    return boolStr;
+  }
+
   sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
     return 'sqlSumDistinct called but not implemented';
   }

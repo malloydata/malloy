@@ -142,6 +142,10 @@ export class TSQLDialect extends Dialect {
   // There's a problem with non top level CTE's with sqlserver
   cantPartitionWindowFunctionsOnExpressions = false;
 
+  booleanValue(boolStr: 'true' | 'false'): string {
+    return boolStr === 'true' ? '(1=1)' : '(1=0)';
+  }
+
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
     return tablePath

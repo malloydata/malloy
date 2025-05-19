@@ -1384,11 +1384,8 @@ class QueryField extends QueryNode {
       case 'is-not-null':
         return `${expr.e.sql} IS NOT NULL`;
       case 'true':
-        // TODO (vitor): check with the malloy team
-        return this.parent.dialect.booleanAsNumbers ? '1=1' : expr.node;
       case 'false':
-        // TODO (vitor): check with the malloy team
-        return this.parent.dialect.booleanAsNumbers ? '1=0' : expr.node;
+        return this.parent.dialect.booleanValue(expr.node);
       case 'null':
         return 'NULL';
       case 'case':
