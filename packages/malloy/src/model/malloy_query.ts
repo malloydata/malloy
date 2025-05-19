@@ -3250,15 +3250,15 @@ class QueryQuery extends QueryField {
 
         structSQL = stageWriter.addStage(
           `SELECT ${
-            this.parent.dialect.limitStyle === 'top' ? limitPlaceholder : ''
+            this.parent.dialect.limitClause === 'top' ? limitPlaceholder : ''
           } * from ${structSQL} as x ${
-            this.parent.dialect.limitStyle === 'limit' ? limitPlaceholder : ''
+            this.parent.dialect.limitClause === 'limit' ? limitPlaceholder : ''
           }`
         );
 
         structSQL = this.formatLimit(
           structSQL,
-          this.parent.dialect.limitStyle,
+          this.parent.dialect.limitClause,
           limitPlaceholder,
           limit
         );
@@ -3394,7 +3394,7 @@ class QueryQuery extends QueryField {
       (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
 
     // top
-    if (limit && this.parent.dialect.limitStyle === 'top') {
+    if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
     s += '\n';
@@ -3450,7 +3450,7 @@ class QueryQuery extends QueryField {
     s += orderBy;
 
     // limit
-    if (limit && this.parent.dialect.limitStyle === 'limit') {
+    if (limit && this.parent.dialect.limitClause === 'limit') {
       s += `LIMIT ${limit}\n`;
     }
 
@@ -3888,7 +3888,7 @@ class QueryQuery extends QueryField {
     let s = 'SELECT';
 
     // top
-    if (limit && this.parent.dialect.limitStyle === 'top') {
+    if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
     s += '\n';
@@ -3968,7 +3968,7 @@ class QueryQuery extends QueryField {
     );
 
     // limit
-    if (limit && this.parent.dialect.limitStyle === 'limit') {
+    if (limit && this.parent.dialect.limitClause === 'limit') {
       s += `LIMIT ${limit}\n`;
     }
 
@@ -4446,7 +4446,7 @@ class QueryQueryIndexStage extends QueryQuery {
     let s = 'SELECT';
 
     // top
-    if (limit && this.parent.dialect.limitStyle === 'top') {
+    if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
     s += '\n';
@@ -4484,7 +4484,7 @@ class QueryQueryIndexStage extends QueryQuery {
     // This is a special case where we don't need to use expressions and can't use generateGroupByColumns
     s += `GROUP BY ${groupByFields.join(', ')}\n`;
 
-    if (limit && this.parent.dialect.limitStyle === 'limit') {
+    if (limit && this.parent.dialect.limitClause === 'limit') {
       s += `LIMIT ${limit}\n`;
     }
 
@@ -5547,7 +5547,7 @@ export class QueryModel {
     }
 
     let query = `SELECT ${
-      this.dialect.limitStyle === 'top' ? `TOP ${limit}` : ''
+      this.dialect.limitClause === 'top' ? `TOP ${limit}` : ''
     }
               ${fieldNameColumn},
               ${fieldPathColumn},
@@ -5568,7 +5568,7 @@ export class QueryModel {
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
               searchValue + '%'
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
-          ${this.dialect.limitStyle === 'limit' ? `LIMIT ${limit}\n` : ''}
+          ${this.dialect.limitClause === 'limit' ? `LIMIT ${limit}\n` : ''}
           `;
     if (struct.dialect.hasFinalStage) {
       query = `WITH __stage0 AS(\n${query}\n)\n${struct.dialect.sqlFinalStage(
