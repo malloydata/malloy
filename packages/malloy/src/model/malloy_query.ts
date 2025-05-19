@@ -746,14 +746,18 @@ class QueryField extends QueryNode {
             .map((e, i) => {
               return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
             });
-          const orderBySQL = this.getFunctionOrderBy(
-            resultSet,
-            context,
-            state,
-            orderBy,
-            newArgs,
-            overload
-          );
+          const orderBySQL =
+            this.getFunctionOrderBy(
+              resultSet,
+              context,
+              state,
+              orderBy,
+              newArgs,
+              overload
+            ) ||
+            (!this.parent.dialect.supportsLimit && aggregateLimit && '1') ||
+            undefined;
+
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
