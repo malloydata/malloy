@@ -3319,15 +3319,12 @@ class QueryQuery extends QueryField {
     return s;
   }
 
-  // TODO (vitor): Really not sure about this.
+  // TODO (vitor): Really not sure about all of this.
+  // Seems like group_set makes a generic function too complicated. Maybe discuss with malloy
   generateSQLGroupBy(fields: FieldInstanceField[]): string {
     const groupBy: string[] = [];
 
     for (const field of fields) {
-      if (field.f.fieldDef.name === 'group_set') {
-        groupBy.push('group_set');
-        continue;
-      }
       if (
         field &&
         field.fieldUsage.type === 'result' &&
