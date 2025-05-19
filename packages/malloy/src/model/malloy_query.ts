@@ -151,6 +151,12 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
+const FLOAT_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
+const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
+const SQL_CONST_EXPR = new RegExp(
+  `(?:${FLOAT_EXPR.source})|(?:${SQL_STR_LITERAL_EXPR.source})`
+);
+
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
@@ -3342,7 +3348,7 @@ class QueryQuery extends QueryField {
           // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
           const fieldExpr = field.f.generateExpression(this.rootResult);
           // Avoiding GROUP BY const expression
-          if (!/d+|'.*'/.test(fieldExpr)) {
+          if (!SQL_CONST_EXPR.test(fieldExpr)) {
             groupBy.push(fieldExpr);
           }
         } else {
@@ -3387,7 +3393,7 @@ class QueryQuery extends QueryField {
             // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
             const fieldExpr = field.f.generateExpression(this.rootResult);
             // Avoiding GROUP BY const expression
-            if (!/d+|'.*'/.test(fieldExpr)) {
+            if (!SQL_CONST_EXPR.test(fieldExpr)) {
               groupBy.push(fieldExpr);
             }
           }
@@ -3708,7 +3714,7 @@ class QueryQuery extends QueryField {
     } else if (groupByClause === 'expression') {
       groupByFields = (f.dimensions || [])
         .map(v => v.expression)
-        .filter((v): v is string => /\d+|'.*'/.test(v) && !!v);
+        .filter((v): v is string => SQL_CONST_EXPR.test(v) && !!v);
     } else {
       throw new Error(`groupByClause ${groupByClause} not implemented`);
     }
@@ -3819,7 +3825,7 @@ class QueryQuery extends QueryField {
     const groupByFields = (f.dimensions || [])
       .map(d => {
         return this.parent.dialect.groupByClause === 'expression'
-          ? !/d+/.test(d.expression) && d.expression
+          ? !SQL_CONST_EXPR.test(d.expression) && d.expression
           : String(d.index);
       })
       .filter((v): v is string => !!v);
