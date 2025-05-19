@@ -35,7 +35,6 @@ import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
 import type {QueryBuilder} from '../types/query-builder';
 import type {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
 import type {ModelEntryReference} from '../types/malloy-element';
 import {MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
@@ -46,6 +45,8 @@ import {ErrorFactory} from '../error-factory';
 import type {ParameterSpace} from '../field-space/parameter-space';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
+import type {BaseScope} from '../types/scope';
+import type {Scope} from '../types/namespace';
 
 export abstract class Join
   extends MalloyElement
@@ -53,7 +54,7 @@ export abstract class Join
 {
   abstract name: ModelEntryReference;
   abstract getStructDef(parameterSpace: ParameterSpace): JoinFieldDef;
-  abstract fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void;
+  abstract fixupJoinOn(namespace: Scope, inStruct: JoinFieldDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   abstract sourceExpr: SourceQueryElement;
@@ -116,7 +117,7 @@ export class KeyJoin extends Join {
     return joinStruct;
   }
 
-  fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void {
+  fixupJoinOn(outer: BaseScope, inStruct: JoinFieldDef): void {
     const exprX = this.keyExpr.getExpression(outer);
     if (isSourceDef(inStruct) && inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
@@ -180,7 +181,7 @@ export class ExpressionJoin extends Join {
     return this.expr;
   }
 
-  fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef) {
+  fixupJoinOn(outer: BaseScope, inStruct: JoinFieldDef) {
     if (this.expr === undefined) {
       return;
     }

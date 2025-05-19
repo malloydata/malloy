@@ -28,7 +28,6 @@ import type {
   DocumentReference,
   ModelDef,
   ModelAnnotation,
-  NamedModelObject,
   Query,
   StructDef,
 } from '../../../model/malloy_types';
@@ -47,12 +46,15 @@ import {errorFor} from '../ast-utils';
 import {DialectNameSpace} from './dialect-name-space';
 import type {DocumentCompileResult} from './document-compile-result';
 import type {ExprValue} from './expr-value';
-import {GlobalNameSpace} from './global-name-space';
+import {GlobalScope} from './global-namespace';
 import type {ModelEntry} from './model-entry';
 import type {NameSpace} from './name-space';
 import type {Noteable} from './noteable';
 import {isNoteable, extendNoteMethod} from './noteable';
 import {v5 as uuidv5} from 'uuid';
+import {BaseScope} from './scope';
+import type {Binding} from './bindings';
+import {makeSymbolFromNamedModelObject} from './bindings';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -121,11 +123,12 @@ export abstract class MalloyElement {
     return this.parent?.document();
   }
 
-  protected namespace(): NameSpace | undefined {
+  // TODO: Rename this symbol to Scope, or modelScope, as appropriate
+  protected scope(): BaseScope | undefined {
     if (this instanceof Document) {
-      return this;
+      return this.modelScope;
     } else if (this.parent) {
-      return this.parent.namespace();
+      return this.parent.scope();
     }
     throw new Error('INTERNAL ERROR: Translation without document scope');
   }
@@ -134,23 +137,27 @@ export abstract class MalloyElement {
     return this.document()?.getDialectNamespace(dialectName);
   }
 
-  modelEntry(reference: string | ModelEntryReference): ModelEntry | undefined {
+  // TODO: This appears to be replicating the behavior of the Scope.
+  // It is unclear if this can be fully handed off the to Scope.
+  // Figure that out and simplify if and only if it can be done without
+  // regressions
+  lookupSymbol(reference: string | ModelEntryReference): Binding | undefined {
     const key =
       reference instanceof ModelEntryReference ? reference.name : reference;
-    const result = this.namespace()?.getEntry(key);
+    const result = this.scope()?.getEntry(key);
     if (reference instanceof ModelEntryReference) {
-      if (result?.entry.type === 'query') {
+      if (result?.isQuery()) {
         this.addReference({
           type: 'queryReference',
           text: key,
-          definition: result.entry,
+          definition: result.getNamedQuery(),
           location: reference.location,
         });
-      } else if (result && isSourceDef(result.entry)) {
+      } else if (result && result.isSource()) {
         this.addReference({
           type: 'exploreReference',
           text: key,
-          definition: result.entry,
+          definition: result.getSourceDef(),
           location: reference.location,
         });
       }
@@ -181,6 +188,8 @@ export abstract class MalloyElement {
     this.xlate = x;
   }
 
+  // TODO: What exactly are these references doing? Should this relate
+  // more closely to the Scope system?
   addReference(reference: DocumentReference): void {
     this.translator()?.addReference(reference);
   }
@@ -308,9 +317,9 @@ export abstract class MalloyElement {
     return new Error(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
   }
 
-  needs(doc: Document): ModelDataRequest | undefined {
+  needs(scope: BaseScope): ModelDataRequest | undefined {
     for (const child of this.walk()) {
-      const childNeeds = child.needs(doc);
+      const childNeeds = child.needs(scope);
       if (childNeeds) return childNeeds;
     }
   }
@@ -352,13 +361,13 @@ export class ModelEntryReference extends MalloyElement {
     return this.refString;
   }
 
-  getNamed(): NamedModelObject | undefined {
-    return this.modelEntry(this)?.entry;
+  getNamed(): Binding | undefined {
+    return this.lookupSymbol(this);
   }
 }
 
 export interface DocStatement extends MalloyElement {
-  execute(doc: Document): void;
+  execute(doc: Document, scope: BaseScope): void;
 }
 
 export class ExperimentalExperiment
@@ -370,7 +379,7 @@ export class ExperimentalExperiment
     super();
   }
 
-  execute(_doc: Document) {
+  execute(_doc: Document, _scope: BaseScope) {
     this.inExperiment(this.id);
   }
 }
@@ -413,9 +422,9 @@ export abstract class ListOf<ET extends MalloyElement> extends MalloyElement {
     return this.elements;
   }
 
-  needs(doc: Document): ModelDataRequest | undefined {
+  needs(scope: BaseScope): ModelDataRequest | undefined {
     for (const element of this.elements) {
-      const elementNeeds = element.needs(doc);
+      const elementNeeds = element.needs(scope);
       if (elementNeeds) return elementNeeds;
     }
   }
@@ -431,7 +440,7 @@ export class DocStatementList
   extendNote = extendNoteMethod;
   note?: Annotation;
   noteCursor = 0;
-  executeList(doc: Document): ModelDataRequest {
+  executeList(doc: Document, scope: BaseScope): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
       const el = this.elements[this.execCursor];
       if (this.noteCursor === this.execCursor) {
@@ -450,12 +459,12 @@ export class DocStatementList
       // DocStatements, we first check their needs and return them
       // if there are any; otherwise we execute the statement.
       if (el instanceof DocStatementList) {
-        const needs = el.executeList(doc);
+        const needs = el.executeList(doc, scope);
         if (needs) return needs;
       } else {
-        const needs = el.needs(doc);
+        const needs = el.needs(scope);
         if (needs) return needs;
-        el.execute(doc);
+        el.execute(doc, scope);
       }
       this.execCursor += 1;
     }
@@ -495,10 +504,11 @@ function annotationID(a: Annotation): string {
  * that can be tomorrow
  */
 
-export class Document extends MalloyElement implements NameSpace {
+export class Document extends MalloyElement {
   elementType = 'document';
-  globalNameSpace: NameSpace = new GlobalNameSpace();
-  documentModel: Record<string, ModelEntry> = {};
+  globalScope: BaseScope = new GlobalScope();
+  modelScope: BaseScope = new BaseScope(this.globalScope);
+  REPLACE_ME_WITH_NAMESPACE: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
@@ -515,21 +525,29 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.didInitModel) {
       return;
     }
-    this.documentModel = {};
+    this.REPLACE_ME_WITH_NAMESPACE = {};
     this.queryList = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
         this.annotation.inherits = extendingModelDef.annotation;
       }
-      for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
-        const entry = structuredClone(orig);
+      for (const [name, originalModelObject] of Object.entries(
+        extendingModelDef.contents
+      )) {
+        const modelObject = structuredClone(originalModelObject);
         if (
-          isSourceDef(entry) ||
-          entry.type === 'query' ||
-          entry.type === 'function'
+          isSourceDef(modelObject) ||
+          modelObject.type === 'query' ||
+          modelObject.type === 'function'
         ) {
-          const exported = extendingModelDef.exports.includes(nm);
-          this.setEntry(nm, {entry, exported});
+          const isExported = extendingModelDef.exports.includes(name);
+          const symbol = makeSymbolFromNamedModelObject(modelObject);
+          if (!symbol) {
+            // TODO: Is it appropriate to simply throw an error here?
+            throw new Error('Failed to convert modelObject into Symbol');
+          }
+          symbol.setIsExported(isExported);
+          this.setEntry(name, symbol);
         }
       }
     }
@@ -537,7 +555,8 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   compile(): DocumentCompileResult {
-    const needs = this.statements.executeList(this);
+    const modelScope = new BaseScope(this.globalScope);
+    const needs = this.statements.executeList(this, modelScope);
     const modelDef = this.modelDef();
     if (needs === undefined) {
       for (const q of this.queryList) {
@@ -592,10 +611,10 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }
-    for (const entry in this.documentModel) {
-      const entryDef = this.documentModel[entry].entry;
+    for (const entry in this.REPLACE_ME_WITH_NAMESPACE) {
+      const entryDef = this.REPLACE_ME_WITH_NAMESPACE[entry].entry;
       if (isSourceDef(entryDef) || entryDef.type === 'query') {
-        if (this.documentModel[entry].exported) {
+        if (this.REPLACE_ME_WITH_NAMESPACE[entry].exported) {
           def.exports.push(entry);
         }
         const newEntry = structuredClone(entryDef);
@@ -608,23 +627,27 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  getEntry(str: string): ModelEntry {
-    return this.globalNameSpace.getEntry(str) ?? this.documentModel[str];
-  }
+  // TODO: This function is really doing a lookup, not a getEntry. Should the document
+  // consider the global namespace as being in an identical namespace? I think not.
+  // But this function shouldn't even exist, as it will defer to the modelScope
+  // getEntry(str: string): ModelEntry {
+  // return this.globalNamespace.getEntry(str) ?? this.REPLACE_ME_WITH_NAMESPACE[str];
+  // return this.
+  // }
 
-  setEntry(str: string, ent: ModelEntry): void {
+  setEntry(str: string, entry: Binding): void {
     // TODO this error message is going to be in the wrong place everywhere...
-    if (this.globalNameSpace.getEntry(str) !== undefined) {
+    if (this.globalScope.getEntry(str) !== undefined) {
       this.logError(
         'name-conflict-with-global',
         `Cannot redefine '${str}', which is in global namespace`
       );
     }
-    if (isSourceDef(ent.entry)) {
-      this.checkExperimentalDialect(this, ent.entry.dialect);
+    if (entry.isSource()) {
+      this.checkExperimentalDialect(this, entry.getSourceDef().dialect);
     }
 
-    this.documentModel[str] = ent;
+    this.modelScope.setEntry(str, entry);
   }
 
   /**

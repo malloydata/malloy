@@ -26,11 +26,13 @@ import type {BinaryMalloyOperator} from '../types/binary_operators';
 
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace, QueryFieldSpace} from '../types/field-space';
-import type {LookupResult} from '../types/lookup-result';
-import type {SpaceEntry} from '../types/space-entry';
+import type {QueryFieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
+import type {Scope} from '../types/namespace';
+import type {Binding} from '../types/bindings';
+import type {NamespaceLookupResult} from '../types/namespace-lookup-result';
 
-export class ConstantFieldSpace implements FieldSpace {
+export class ConstantFieldSpace implements Scope {
   readonly type = 'fieldSpace';
   structDef(): StructDef {
     throw new Error('ConstantFieldSpace cannot generate a structDef');
@@ -38,7 +40,7 @@ export class ConstantFieldSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     throw new Error('ConstantFieldSpace cannot generate a structDef');
   }
-  lookup(_name: unknown): LookupResult {
+  lookup(_name: unknown): NamespaceLookupResult {
     return {
       error: {
         message: 'Only constants allowed in parameter default values',
@@ -47,10 +49,10 @@ export class ConstantFieldSpace implements FieldSpace {
       found: undefined,
     };
   }
-  entries(): [string, SpaceEntry][] {
+  entries(): [string, Binding][] {
     return [];
   }
-  entry(): undefined {
+  getEntry(): undefined {
     return undefined;
   }
   dialectName() {
@@ -75,11 +77,11 @@ export class ConstantExpression extends ExpressionDef {
     super({expr: expr});
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_scope: BaseScope): ExprValue {
     return this.constantValue();
   }
 
-  private get constantFs(): FieldSpace {
+  private get constantFs(): Scope {
     if (!this.cfs) {
       this.cfs = new ConstantFieldSpace();
     }
@@ -87,18 +89,20 @@ export class ConstantExpression extends ExpressionDef {
   }
 
   constantValue(): ExprValue {
+    // TODO: If getExpression requires a Scope, how do I get a scope for this
+    // namespace?
     return this.expr.getExpression(this.constantFs);
   }
 
   apply(
-    fs: FieldSpace,
+    scope: BaseScope,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
-    return this.expr.apply(fs, op, expr);
+    return this.expr.apply(scope, op, expr);
   }
 
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
-    return this.expr.requestExpression(fs);
+  requestExpression(scope: BaseScope): ExprValue | undefined {
+    return this.expr.requestExpression(scope);
   }
 }

@@ -8,19 +8,18 @@
 import type {Dialect} from '../../../dialect';
 import type {StructDef} from '../../../model';
 import type {HasParameter} from '../parameters/has-parameter';
-import type {
-  FieldName,
-  FieldSpace,
-  QueryFieldSpace,
-} from '../types/field-space';
+import type {FieldName} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
+import type {Scope} from '../types/namespace';
+import type {Binding} from '../types/bindings';
+import { NamespaceLookupResult } from '../types/namespace-lookup-result';
 import type {SpaceEntry} from '../types/space-entry';
 import {AbstractParameter} from '../types/space-param';
 
-export class ParameterSpace implements FieldSpace {
+export class ParameterSpace implements Scope {
   readonly type = 'fieldSpace';
 
-  private readonly _map: Record<string, SpaceEntry>;
+  private readonly _map: Record<string, Binding>;
   constructor(parameters: HasParameter[]) {
     this._map = {};
     for (const parameter of parameters) {
@@ -36,11 +35,11 @@ export class ParameterSpace implements FieldSpace {
     throw new Error('Parameter space does not have an emptyStructDef');
   }
 
-  entry(name: string): SpaceEntry | undefined {
+  getEntry(name: string): Binding | undefined {
     return this._map[name];
   }
 
-  lookup(symbol: FieldName[]): LookupResult {
+  lookup(symbol: FieldName[]): NamespaceLookupResult {
     const name = symbol[0];
     if (name === undefined) {
       return {
@@ -51,7 +50,7 @@ export class ParameterSpace implements FieldSpace {
         found: undefined,
       };
     }
-    const entry = this.entry(name.refString);
+    const entry = this.getEntry(name.refString);
     if (entry === undefined) {
       return {
         error: {
@@ -75,12 +74,10 @@ export class ParameterSpace implements FieldSpace {
     return {
       found: entry,
       error: undefined,
-      joinPath: [],
-      isOutputField: false,
     };
   }
 
-  entries(): [string, SpaceEntry][] {
+  entries(): [string, Binding][] {
     return Object.entries(this._map);
   }
 
@@ -91,9 +88,10 @@ export class ParameterSpace implements FieldSpace {
     return undefined;
   }
 
-  isQueryFieldSpace(): this is QueryFieldSpace {
-    return false;
-  }
+  // TODO: re-enable this once I come across the code that requires it
+  // isQueryFieldSpace(): this is QueryFieldSpace {
+  //   return false;
+  // }
 
   isProtectedAccessSpace(): boolean {
     return false;

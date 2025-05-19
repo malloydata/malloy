@@ -23,16 +23,17 @@
 
 import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
+import type {Scope} from '../types/namespace';
+import type {BaseScope} from '../types/scope';
 
-import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 
 export abstract class ViewField extends SpaceField {
-  constructor(protected inSpace: FieldSpace) {
+  constructor(protected parentNamespace: Scope) {
     super();
   }
 
-  abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
+  abstract getQueryFieldDef(scope: BaseScope): QueryFieldDef | undefined;
   abstract fieldDef(): TurtleDef;
 
   typeDesc() {

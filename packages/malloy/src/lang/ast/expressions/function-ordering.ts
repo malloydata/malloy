@@ -28,7 +28,7 @@ import {
 } from '../../../model/malloy_types';
 import type {ExpressionDef} from '../types/expression-def';
 
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {ExprIdReference} from './expr-id-reference';
 
@@ -42,7 +42,7 @@ export class FunctionOrderBy extends MalloyElement {
     if (field) this.has({field});
   }
 
-  getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
+  getAnalyticOrderBy(scope: BaseScope): ModelFunctionOrderBy {
     if (!this.field) {
       this.logError(
         'analytic-order-by-missing-field',
@@ -50,7 +50,7 @@ export class FunctionOrderBy extends MalloyElement {
       );
       return {node: 'functionOrderBy', e: {node: 'error'}, dir: this.dir};
     }
-    const expr = this.field.getExpression(fs);
+    const expr = this.field.getExpression(scope);
     if (expressionIsAggregate(expr.expressionType)) {
       // Aggregates are okay
     } else if (expressionIsScalar(expr.expressionType)) {
@@ -73,11 +73,11 @@ export class FunctionOrderBy extends MalloyElement {
   }
 
   getAggregateOrderBy(
-    fs: FieldSpace,
+    scope: BaseScope,
     allowExpression: boolean
   ): ModelFunctionOrderBy {
     if (this.field) {
-      const expr = this.field.getExpression(fs);
+      const expr = this.field.getExpression(scope);
       if (!expressionIsScalar(expr.expressionType)) {
         this.field.logError(
           'aggregate-order-by-not-scalar',
@@ -112,14 +112,14 @@ export class FunctionOrdering extends ListOf<FunctionOrderBy> {
     super(list);
   }
 
-  getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy[] {
-    return this.list.map(el => el.getAnalyticOrderBy(fs));
+  getAnalyticOrderBy(scope: BaseScope): ModelFunctionOrderBy[] {
+    return this.list.map(el => el.getAnalyticOrderBy(scope));
   }
 
   getAggregateOrderBy(
-    fs: FieldSpace,
+    scope: BaseScope,
     allowExpression: boolean
   ): ModelFunctionOrderBy[] {
-    return this.list.map(el => el.getAggregateOrderBy(fs, allowExpression));
+    return this.list.map(el => el.getAggregateOrderBy(scope, allowExpression));
   }
 }

@@ -27,9 +27,10 @@ import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
 import {getFinalStruct} from '../struct-utils';
-import type {SourceFieldSpace} from '../types/field-space';
+import type {Scope} from '../types/namespace';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
+import type {SourceScope} from '../types/scope';
 import {View} from './view';
 
 /**
@@ -43,11 +44,8 @@ export class QOpDescView extends View {
     super({operation});
   }
 
-  pipelineComp(
-    fs: SourceFieldSpace,
-    isNestIn?: QueryOperationSpace
-  ): PipelineComp {
-    const newOperation = this.operation.getOp(fs, isNestIn);
+  pipelineComp(scope: Scope, isNestIn?: QueryOperationSpace): PipelineComp {
+    const newOperation = this.operation.getOp(scope, isNestIn);
     return {
       pipeline: [newOperation.segment],
       outputStruct: newOperation.outputSpace().structDef(),
@@ -55,7 +53,7 @@ export class QOpDescView extends View {
   }
 
   private getOp(
-    inputFS: SourceFieldSpace,
+    inputScope: SourceScope,
     isNestIn: QueryOperationSpace | undefined,
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
@@ -65,11 +63,11 @@ export class QOpDescView extends View {
       return refineThis;
     }
     qOpDesc.refineFrom(refineThis);
-    return qOpDesc.getOp(inputFS, isNestIn).segment;
+    return qOpDesc.getOp(inputScope, isNestIn).segment;
   }
 
   refine(
-    inputFS: SourceFieldSpace,
+    inputScope: SourceScope,
     _pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
@@ -79,7 +77,7 @@ export class QOpDescView extends View {
     }
     if (pipeline.length === 1) {
       this.operation.refineFrom(pipeline[0]);
-      return [this.getOp(inputFS, isNestIn, this.operation, pipeline[0])];
+      return [this.getOp(inputScope, isNestIn, this.operation, pipeline[0])];
     }
     const headRefinements = new QOpDesc([]);
     const tailRefinements = new QOpDesc([]);
@@ -107,7 +105,7 @@ export class QOpDescView extends View {
     if (headRefinements.notEmpty()) {
       this.has({headRefinements});
       pipeline[0] = this.getOp(
-        inputFS,
+        inputScope,
         undefined,
         headRefinements,
         pipeline[0]
@@ -118,7 +116,7 @@ export class QOpDescView extends View {
       this.has({tailRefinements});
       const finalIn = getFinalStruct(
         this,
-        inputFS.structDef(),
+        inputScope.structDef(),
         pipeline.slice(-1)
       );
       pipeline[last] = this.getOp(

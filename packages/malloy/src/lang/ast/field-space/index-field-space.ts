@@ -147,7 +147,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         ...joinPath,
         name,
       ]);
-      if (this.entry(indexName)) {
+      if (this.getEntry(indexName)) {
         const conflict = this.expandedWild[indexName].path?.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',

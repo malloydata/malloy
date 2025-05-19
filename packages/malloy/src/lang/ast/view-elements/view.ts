@@ -23,9 +23,10 @@
 
 import type {PipeSegment} from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
-import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import type {PipelineComp} from '../types/pipeline-comp';
+import type {Scope} from '../types/namespace';
+import type {SourceScope} from '../types/scope';
 
 /**
  * A `View` represents a sequence of operations to be performed on a
@@ -44,16 +45,16 @@ import type {PipelineComp} from '../types/pipeline-comp';
  */
 export abstract class View extends MalloyElement {
   abstract pipelineComp(
-    fs: FieldSpace,
+    scope: Scope,
     isNestIn?: QueryOperationSpace
   ): PipelineComp;
 
-  pipeline(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipeSegment[] {
-    return this.pipelineComp(fs, isNestIn).pipeline;
+  pipeline(scope: Scope, isNestIn?: QueryOperationSpace): PipeSegment[] {
+    return this.pipelineComp(scope, isNestIn).pipeline;
   }
 
   abstract refine(
-    inputFS: SourceFieldSpace,
+    inputScope: SourceScope,
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[];

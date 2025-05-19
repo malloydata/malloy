@@ -27,11 +27,13 @@ import type {
   TypeDesc,
   AtomicFieldDef,
 } from '../../../model/malloy_types';
-import {SpaceEntry} from './space-entry';
-import type {FieldSpace} from './field-space';
+import {BaseBinding, type FieldBinding} from './bindings';
+import type {BaseScope} from './scope';
 
-export abstract class SpaceField extends SpaceEntry {
-  readonly refType = 'field';
+// TODO: Why is this called 'SpaceField'? Can I rename it something
+// more aligned with the current set of Namespace/Scope terminology?
+export abstract class SpaceField extends BaseBinding implements FieldBinding {
+  readonly symbolKind = 'field';
 
   protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
     const expressionType = def.expressionType || 'scalar';
@@ -51,7 +53,15 @@ export abstract class SpaceField extends SpaceEntry {
     return ref;
   }
 
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
+  // TODO: Did I implement the correct interface, if this is supposed to exist?
+  // or is this handled by fieldTypeFromFieldDef? It sounds like this class
+  // doesn't have any typedesc
+  getTypeDesc(): TypeDesc {
+    throw new Error('Method not implemented.');
+  }
+
+  // TODO: Why does this need to exist here on this class?
+  getQueryFieldDef(_scope: BaseScope): QueryFieldDef | undefined {
     return undefined;
   }
 

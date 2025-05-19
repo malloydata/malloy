@@ -22,13 +22,13 @@
  */
 
 import type {ExprValue} from '../types/expr-value';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNow extends ExpressionDef {
   elementType = 'timestamp';
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_scope: BaseScope): ExprValue {
     return {
       type: 'timestamp',
       expressionType: 'scalar',

@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {JoinElementType, JoinType} from '../../../model';
 import type {MessageCode} from '../../parse-log';
-import {Namespace} from './field-space';
-import type {SpaceEntry} from './space-entry';
+import type {Scope} from './namespace';
+import type {Binding} from './bindings';
 
 export interface NamespaceLookupFound {
-  found: NamespaceEntry;
-  namespace: Namespace;
+  found: Binding;
+  scope: Scope;
   error: undefined;
 }
 export interface NamespaceLookupError {

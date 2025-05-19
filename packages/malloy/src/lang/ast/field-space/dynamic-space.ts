@@ -35,11 +35,12 @@ import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
 import type {SourceDef} from '../../../model/malloy_types';
-import type {SourceFieldSpace} from '../types/field-space';
+import type {SourceNamespace} from '../types/namespace';
+import type {Binding} from '../types/bindings';
 
 export abstract class DynamicSpace
   extends StaticSpace
-  implements SourceFieldSpace
+  implements SourceNamespace
 {
   protected sourceDef: model.SourceDef | undefined;
   protected fromSource: model.SourceDef;
@@ -55,7 +56,8 @@ export abstract class DynamicSpace
     this.sourceDef = undefined;
   }
 
-  protected setEntry(name: string, value: SpaceEntry): void {
+  // This needs its own entry map. Should not be a subclass of Static Space
+  protected setEntry(name: string, value: Binding): void {
     if (this.complete) {
       throw new Error('Space already final');
     }
@@ -64,7 +66,7 @@ export abstract class DynamicSpace
 
   addParameters(parameters: HasParameter[]): DynamicSpace {
     for (const parameter of parameters) {
-      if (this.entry(parameter.name) === undefined) {
+      if (this.getEntry(parameter.name) === undefined) {
         this.parameters.push(parameter);
         this.setEntry(parameter.name, new AbstractParameter(parameter));
       }
@@ -76,15 +78,15 @@ export abstract class DynamicSpace
     return new ParameterSpace(this.parameters);
   }
 
-  newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
-    if (this.entry(name)) {
+  newEntry(name: string, logTo: MalloyElement, entry: Binding): void {
+    if (this.getEntry(name)) {
       logTo.logError('definition-name-conflict', `Cannot redefine '${name}'`);
       return;
     }
     this.setEntry(name, entry);
   }
 
-  renameEntry(oldName: string, newName: string, entry: SpaceEntry) {
+  renameEntry(oldName: string, newName: string, entry: Binding) {
     this.dropEntry(oldName);
     this.setEntry(newName, entry);
   }
@@ -133,6 +135,7 @@ export abstract class DynamicSpace
           if (!ErrorFactory.didCreate(joinStruct)) {
             fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
+            // TODO: Get the scope for this namespace?
             field.join.fixupJoinOn(this, joinStruct);
           }
         } else {

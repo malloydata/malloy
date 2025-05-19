@@ -62,11 +62,11 @@ export class SQLSource extends Source {
   }
 
   validateConnectionName(): boolean {
-    const connection = this.modelEntry(this.connectionName);
+    const connection = this.lookupSymbol(this.connectionName);
     const name = this.connectionName.refString;
     if (this.connectionNameInvalid) return false;
     if (connection === undefined) {
-      this.namespace()?.setEntry(
+      this.scope()?.setEntry(
         name,
         {entry: {type: 'connection', name}, exported: true},
         true

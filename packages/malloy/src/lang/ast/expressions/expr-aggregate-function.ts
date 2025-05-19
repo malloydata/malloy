@@ -42,7 +42,7 @@ import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import type {JoinPath, JoinPathElement} from '../types/lookup-result';
@@ -69,16 +69,16 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
   abstract returns(fromExpr: ExprValue): ExprValue;
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(scope: BaseScope): ExprValue {
     // It is never useful to use output fields in an aggregate expression
     // so we don't even allow them to be referenced at all
-    const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
+    const inputNS = scope.isQueryFieldSpace() ? scope.inputSpace() : scope;
     let expr: FieldReference | ExpressionDef | undefined = this.expr;
-    let exprVal = this.expr?.getExpression(inputFS);
+    let exprVal = this.expr?.getExpression(inputNS);
     let structPath = this.source?.path;
     let sourceRelationship: JoinPathElement[] = [];
     if (this.source) {
-      const result = this.source.getField(inputFS);
+      const result = this.source.getField(inputNS);
       if (result.found) {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
@@ -104,7 +104,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
             // dimension which uses only one distinct join path; in this case, we set the
             // locality to be that join path
-            const joinUsage = this.getJoinUsage(inputFS);
+            const joinUsage = this.getJoinUsage(inputNS);
             const allUsagesSame =
               joinUsage.length === 1 ||
               (joinUsage.length > 1 &&
@@ -141,7 +141,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     }
     const isAnError = exprVal.type === 'error';
     if (!isAnError) {
-      const joinUsage = this.getJoinUsage(inputFS);
+      const joinUsage = this.getJoinUsage(inputNS);
       // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
       const sourceSpecified = this.source !== undefined || this.explicitSource;
       if (expr) {
@@ -200,22 +200,22 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     return true;
   }
 
-  getJoinUsage(fs: FieldSpace) {
+  getJoinUsage(scope: BaseScope) {
     const result: JoinPath[] = [];
     if (this.source) {
-      const lookup = this.source.getField(fs);
+      const lookup = this.source.getField(scope);
       if (lookup.found) {
         const sfd: Expr = {
           node: 'field',
           path: this.source.path,
           at: this.source.location,
         };
-        result.push(...getJoinUsage(fs, sfd));
+        result.push(...getJoinUsage(scope, sfd));
       }
     }
     if (this.expr) {
-      const efd = this.expr.getExpression(fs).value;
-      result.push(...getJoinUsage(fs, efd));
+      const efd = this.expr.getExpression(scope).value;
+      result.push(...getJoinUsage(scope, efd));
     }
     return result;
   }
@@ -235,19 +235,19 @@ function joinPathEq(a1: JoinPath, a2: JoinPath): boolean {
   return true;
 }
 
-function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
+function getJoinUsage(scope: BaseScope, expr: Expr): JoinPath[] {
   const result: JoinPath[] = [];
   const lookupWithPath = (
-    fs: FieldSpace,
+    scope: BaseScope,
     path: string[]
   ): {
-    fs: FieldSpace;
+    scope: BaseScope;
     def: FieldDef;
     joinPath: JoinPath;
   } => {
     const head = path[0];
     const rest = path.slice(1);
-    const def = fs.entry(head);
+    const def = scope.getEntry(head);
     if (def === undefined) {
       throw new Error(`Invalid field lookup ${head}`);
     }
@@ -264,7 +264,7 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
       const fieldDef = def.fieldDef();
       if (fieldDef) {
         return {
-          fs,
+          scope,
           def: fieldDef,
           joinPath: [],
         };
@@ -276,11 +276,11 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
   };
   for (const frag of exprWalk(expr)) {
     if (frag.node === 'field') {
-      const def = lookupWithPath(fs, frag.path);
+      const def = lookupWithPath(scope, frag.path);
       const field = def.def;
       if (isAtomic(field) && !isJoined(field)) {
         if (hasExpression(field)) {
-          const defUsage = getJoinUsage(def.fs, field.e);
+          const defUsage = getJoinUsage(def.scope, field.e);
           result.push(...defUsage.map(r => [...def.joinPath, ...r]));
         } else {
           result.push(def.joinPath);
@@ -288,7 +288,7 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
       }
     } else if (frag.node === 'source-reference') {
       if (frag.path) {
-        const def = lookupWithPath(fs, frag.path);
+        const def = lookupWithPath(scope, frag.path);
         result.push(def.joinPath);
       } else {
         result.push([]);

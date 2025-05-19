@@ -1,60 +1,23 @@
-import type {Dialect} from '../../../dialect';
-import type {StructDef} from '../../../model';
 import type {FieldName} from './field-space';
-import type {LookupResult} from './lookup-result';
-import type {NamespaceEntry} from './namespace-entry';
-import type {SpaceEntry} from './space-entry';
+import type {Binding} from './bindings';
+import type {NamespaceLookupResult} from './namespace-lookup-result';
 
-export class NamespaceStack {
-  private namespaces: Namespace[] = [];
+// TODO: I currently have a tangled mess of things named Namespace
+// (and these are interfaces, mostly) and a general migration of
+// things to use the Scope class. Except Scope is a class and not an
+// interface and I'm not 100% sure I've figured out the ideal class
+// relationships to represent the needs here.
+export interface Scope {
+  lookup(symbol: FieldName[]): NamespaceLookupResult;
 
-  constructor(
-    public namespace: Namespace,
-    public parentStack?: NamespaceStack
-  ) {
-    // TODO: Instantiate
-  }
+  // Return the entries for this specific layer of scope,
+  // without including anything from the outer or inner scopes.
+  entries(): [string, Binding][];
 
-  // Looks up an entry by full symbol path from the full namespace stack,
-  // walking up the stack until the entry is found, or returns
-  // a LookupError if nothing is found.
-  lookup(_symbol: FieldName[]): LookupResult {
-    throw new Error('Method not implemented.');
-  }
+  getEntry(name: string): Binding | undefined;
 
-  dialectObj(): Dialect | undefined {
-    throw new Error('Method not implemented.');
-  }
-
-  isQueryFieldSpace(): boolean {
-    throw new Error('Method not implemented.');
-  }
-
-  outputSpace(): NamespaceStack {
-    throw new Error('Method not implemented.');
-  }
-
-  dialectName(): string | undefined {
-    throw new Error('Method not implemented.');
-  }
-
-  // Look up an entry from a single symbol
-  // TODO: Does this look up the stack, or is it restricted to only
-  // looking at the top of the stack? If so, what differentiates this from
-  // calling lookup with a length of 1?
-  entry(name: string): SpaceEntry | undefined {
-    throw new Error('Method not implemented.');
-  }
-
-  emptyStructDef(): StructDef {
-    throw new Error('Method not implemented.');
-  }
-  structDef(): StructDef {
-    throw new Error('Method not implemented.');
-  }
-}
-
-export interface Namespace {
-  getEntries(): NamespaceEntry;
-  getEntry(name: string): NamespaceEntry;
+  // TODO: Commented this out because many of the FieldSpace implementations
+  // have a 'protected' setEntry. I want to see if I can enable that
+  // rather than forcing them to be public.
+  // setEntry(name: string, value: Symbol): void;
 }

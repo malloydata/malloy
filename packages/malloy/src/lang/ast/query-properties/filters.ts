@@ -44,8 +44,8 @@ export class FilterElement extends MalloyElement {
     super({expr: expr});
   }
 
-  filterCondition(fs: FieldSpace): FilterCondition {
-    const exprVal = this.expr.getExpression(fs);
+  filterCondition(scope: Scope): FilterCondition {
+    const exprVal = this.expr.getExpression(scope);
     if (exprVal.type !== 'boolean') {
       this.expr.logError(
         'non-boolean-filter',
@@ -88,10 +88,10 @@ export class Filter
   }
 
   protected checkedFilterCondition(
-    fs: FieldSpace,
+    scope: Scope,
     filter: FilterElement
   ): FilterCondition | undefined {
-    const fExpr = filter.filterCondition(fs);
+    const fExpr = filter.filterCondition(scope);
 
     // Aggregates are ALSO checked at SQL generation time, but checking
     // here allows better reflection of errors back to user.
@@ -124,9 +124,9 @@ export class Filter
     return fExpr;
   }
 
-  getFilterList(fs: FieldSpace): FilterCondition[] {
+  getFilterList(scope: Scope): FilterCondition[] {
     return this.list
-      .map(filter => this.checkedFilterCondition(fs, filter))
+      .map(filter => this.checkedFilterCondition(scope, filter))
       .filter(isNotUndefined);
   }
 

@@ -45,7 +45,7 @@ export class NestFieldDeclaration
     executeFor.resultFS.pushFields(this);
   }
 
-  getFieldDef(fs: FieldSpace): model.TurtleDef {
+  getFieldDef(scope: Scope): model.TurtleDef {
     if (this.turtleDef) return this.turtleDef;
     if (fs.isQueryFieldSpace()) {
       const {pipeline, annotation} = this.view.pipelineComp(

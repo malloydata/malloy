@@ -36,6 +36,8 @@ import {StaticSourceSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
+import { Scope, SourceNamespace } from '../types/namespace';
+import { BaseScope, SourceScope } from '../types/scope';
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -82,27 +84,24 @@ export class QOpDesc extends ListOf<QueryProperty> {
   }
 
   private getBuilder(
-    baseFS: SourceFieldSpace,
+    scope: SourceScope,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ): QueryBuilder {
     switch (this.computeType()) {
       case QueryClass.Grouping:
-        return new ReduceBuilder(baseFS, this.refineThis, isNestIn, astEl);
+        return new ReduceBuilder(scope, this.refineThis, isNestIn, astEl);
       case QueryClass.Project:
-        return new ProjectBuilder(baseFS, this.refineThis, isNestIn, astEl);
+        return new ProjectBuilder(scope, this.refineThis, isNestIn, astEl);
       case QueryClass.Index:
-        return new IndexBuilder(baseFS, this.refineThis, isNestIn, astEl);
+        return new IndexBuilder(scope, this.refineThis, isNestIn, astEl);
       case undefined:
-        return new PartialBuilder(baseFS, this.refineThis, isNestIn, astEl);
+        return new PartialBuilder(scope, this.refineThis, isNestIn, astEl);
     }
   }
 
-  getOp(
-    inputFS: SourceFieldSpace,
-    isNestIn: QueryOperationSpace | undefined
-  ): OpDesc {
-    const build = this.getBuilder(inputFS, isNestIn, this);
+  getOp(inputScope: Scope, isNestIn: QueryOperationSpace | undefined): OpDesc {
+    const build = this.getBuilder(inputScope, isNestIn, this);
     for (const qp of this.list) {
       build.execute(qp);
     }
@@ -114,7 +113,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
         // If the `build.resultFS` is correct, then we should be able to just use that
         // in a more direct way.
         new StaticSourceSpace(
-          opOutputStruct(this, inputFS.structDef(), segment)
+          opOutputStruct(this, inputNamespace.structDef(), segment)
         ),
     };
   }

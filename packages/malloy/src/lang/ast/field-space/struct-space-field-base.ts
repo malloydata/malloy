@@ -24,8 +24,8 @@
 import type {JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
 import {isSourceDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
-import type {FieldSpace} from '../types/field-space';
 import type {JoinPathElement} from '../types/lookup-result';
+import type {Scope} from '../types/namespace';
 import {SpaceField} from '../types/space-field';
 
 export abstract class StructSpaceFieldBase extends SpaceField {
@@ -33,7 +33,7 @@ export abstract class StructSpaceFieldBase extends SpaceField {
     super();
   }
 
-  abstract get fieldSpace(): FieldSpace;
+  abstract get fieldSpace(): Scope;
 
   fieldDef(): JoinFieldDef {
     return this.structDef;

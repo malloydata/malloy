@@ -22,7 +22,7 @@
  */
 
 import type * as model from '../../../model/malloy_types';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {MalloyElement} from '../types/malloy-element';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import type {View} from '../view-elements/view';
@@ -48,8 +48,9 @@ export class ViewFieldDeclaration
     super({view});
   }
 
+  // TODO: Update to namespace type
   makeEntry(fs: DynamicSpace) {
-    const qf = new ASTViewField(fs, this, this.name);
+    const qf = new ASTViewField(scope, this, this.name);
     fs.newEntry(this.name, this, qf);
   }
 
@@ -57,8 +58,8 @@ export class ViewFieldDeclaration
     return this.name;
   }
 
-  getFieldDef(fs: FieldSpace): model.TurtleDef {
-    const {pipeline, annotation} = this.view.pipelineComp(fs);
+  getFieldDef(scope: BaseScope): model.TurtleDef {
+    const {pipeline, annotation} = this.view.pipelineComp(scope);
     const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
     const def: model.TurtleDef = {
       type: 'turtle',

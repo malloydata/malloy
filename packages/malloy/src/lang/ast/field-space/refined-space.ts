@@ -36,6 +36,7 @@ import type {FieldReference} from '../query-items/field-references';
 import {RenameSpaceField} from './rename-space-field';
 import {SpaceField} from '../types/space-field';
 
+// A refined space should be higher on the stack than the static space representing the extendee
 export class RefinedSpace extends DynamicSpace {
   /**
    * Factory for FieldSpace when there are accept/except edits
@@ -109,7 +110,7 @@ export class RefinedSpace extends DynamicSpace {
       for (const name of names) {
         const existing = oldMap.find(([symb]) => symb === name.refString);
         if (existing === undefined) {
-          if (parameters?.entry(name.refString)) {
+          if (parameters?.getEntry(name.refString)) {
             name.logError(
               `${choose.edit}-parameter`,
               `Illegal \`${choose.edit}:\` of parameter`

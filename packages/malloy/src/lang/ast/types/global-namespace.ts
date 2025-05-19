@@ -26,31 +26,23 @@ import {getMalloyStandardFunctions} from '../../../dialect';
 import {getDialects} from '../../../dialect/dialect_map';
 import type {FunctionDef, FunctionOverloadDef} from '../../../model';
 import {TD} from '../../../model';
-import type {ModelEntry} from './model-entry';
-import type {NameSpace} from './name-space';
+import {BaseScope} from './scope';
+import {
+  FunctionNamespaceEntryInstance,
+  type FunctionBinding,
+  type Binding,
+} from './bindings';
 
 /**
  * This is a global namespace which exists in the root of all Documents
  * and includes SQL function definitions.
  */
-export class GlobalNameSpace implements NameSpace {
-  entries: Map<string, FunctionDef>;
+export class GlobalScope extends BaseScope {
   constructor() {
-    this.entries = getDialectFunctions();
+    super(undefined, getDialectFunctions());
   }
 
-  getEntry(name: string): ModelEntry | undefined {
-    const func = this.entries.get(name);
-    if (func === undefined) {
-      return undefined;
-    }
-    return {
-      entry: func,
-      exported: false,
-    };
-  }
-
-  setEntry(_name: string, _value: ModelEntry, _exported: boolean): void {
+  override setEntry(_name: string, _value: Binding): void {
     throw new Error('The global namespace is immutable!');
   }
 }
@@ -77,7 +69,7 @@ function paramsEqual(
   );
 }
 
-export function getDialectFunctions(): Map<string, FunctionDef> {
+export function getDialectFunctions(): Map<string, Binding> {
   const baseImplementations = getMalloyStandardFunctions();
   const dialectOverrides: {
     [dialectName: string]: {
@@ -88,10 +80,10 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
   for (const dialect of dialects) {
     dialectOverrides[dialect.name] = dialect.getDialectFunctionOverrides();
   }
-  const functions = new Map<string, FunctionDef>();
+  const functions = new Map<string, FunctionBinding>();
   for (const name in baseImplementations) {
     const baseOverloads = baseImplementations[name];
-    const func: FunctionDef = {
+    const functionDef: FunctionDef = {
       type: 'function',
       name,
       overloads: [],
@@ -117,9 +109,9 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
           defaultOrderByArgIndex: dialectOverload.defaultOrderByArgIndex,
         };
       }
-      func.overloads.push(overload);
+      functionDef.overloads.push(overload);
     }
-    functions.set(name, func);
+    functions.set(name, new FunctionNamespaceEntryInstance(functionDef));
   }
   return functions;
 }

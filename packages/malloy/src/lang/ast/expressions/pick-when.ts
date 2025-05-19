@@ -27,8 +27,8 @@ import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import type {BaseScope} from '../types/scope';
 
 interface Choice {
   pick: ExprValue;
@@ -51,7 +51,7 @@ export class Pick extends ExpressionDef {
     this.has({elsePick});
   }
 
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
+  requestExpression(scope: BaseScope): ExprValue | undefined {
     // pick statements are sometimes partials which must be applied
     // and sometimes have a value.
     if (this.elsePick === undefined) {
@@ -61,16 +61,16 @@ export class Pick extends ExpressionDef {
       if (c.pick === undefined) {
         return undefined;
       }
-      const whenResp = c.when.requestExpression(fs);
+      const whenResp = c.when.requestExpression(scope);
       if (whenResp === undefined || whenResp.type !== 'boolean') {
         // If when is not a boolean, we'll treat it like a partial compare
         return undefined;
       }
     }
-    return this.getExpression(fs);
+    return this.getExpression(scope);
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(scope: BaseScope, op: string, expr: ExpressionDef): ExprValue {
     const caseValue: CaseExpr = {
       node: 'case',
       kids: {
@@ -81,10 +81,10 @@ export class Pick extends ExpressionDef {
     let returnType: ExprValue | undefined;
     const dependents: ExprValue[] = [];
     for (const choice of this.choices) {
-      const whenExpr = choice.when.apply(fs, '=', expr);
+      const whenExpr = choice.when.apply(scope, '=', expr);
       const thenExpr = choice.pick
-        ? choice.pick.getExpression(fs)
-        : expr.getExpression(fs);
+        ? choice.pick.getExpression(scope)
+        : expr.getExpression(scope);
       dependents.push(whenExpr, thenExpr);
       if (returnType && !TDU.typeEq(returnType, thenExpr, true)) {
         return this.loggedErrorExpr('pick-type-does-not-match', {
@@ -96,8 +96,8 @@ export class Pick extends ExpressionDef {
       caseValue.kids.caseWhen.push(whenExpr.value);
       caseValue.kids.caseThen.push(thenExpr.value);
     }
-    const elseVal = this.elsePick?.getExpression(fs);
-    const exprVal = expr.getExpression(fs);
+    const elseVal = this.elsePick?.getExpression(scope);
+    const exprVal = expr.getExpression(scope);
     dependents.push(exprVal);
     if (elseVal) dependents.push(elseVal);
     const defaultVal = elseVal ?? exprVal;
@@ -129,7 +129,7 @@ export class Pick extends ExpressionDef {
     });
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(scope: BaseScope): ExprValue {
     const pick: CaseExpr = {
       node: 'case',
       kids: {
@@ -153,15 +153,15 @@ export class Pick extends ExpressionDef {
           'pick with no value can only be used with apply'
         );
       }
-      const caseWhen = c.when.requestExpression(fs);
+      const caseWhen = c.when.requestExpression(scope);
       if (caseWhen === undefined) {
         this.loggedErrorExpr(
           'pick-illegal-partial',
           'pick with partial when can only be used with apply'
         );
       }
-      const pick = c.pick.getExpression(fs);
-      const when = c.when.getExpression(fs);
+      const pick = c.pick.getExpression(scope);
+      const when = c.when.getExpression(scope);
       choiceValues.push({pick, when});
       dependents.push(pick, when);
     }
@@ -182,7 +182,7 @@ export class Pick extends ExpressionDef {
       pick.kids.caseWhen.push(aChoice.when.value);
       pick.kids.caseThen.push(aChoice.pick.value);
     }
-    const defVal = this.elsePick.getExpression(fs);
+    const defVal = this.elsePick.getExpression(scope);
     dependents.push(defVal);
     const definedReturnType = typeCoalesce(returnType, defVal);
     if (!TDU.typeEq(definedReturnType, defVal, true)) {

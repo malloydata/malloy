@@ -28,6 +28,7 @@ import {MalloyElement, DocStatementList} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
+import { BaseScope } from '../types/scope';
 
 export class DefineQuery
   extends MalloyElement
@@ -46,8 +47,8 @@ export class DefineQuery
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  execute(doc: Document): void {
-    const existing = doc.getEntry(this.name);
+  execute(scope: BaseScope): void {
+    const existing = scope.getEntry(this.name);
     if (existing) {
       this.logError(
         'query-definition-name-conflict',
@@ -74,7 +75,7 @@ export class DefineQuery
         ? {...this.note, inherits: entry.annotation}
         : this.note;
     }
-    doc.setEntry(this.name, {entry, exported: true});
+    scope.setEntry(this.name, {entry, exported: true});
   }
 }
 

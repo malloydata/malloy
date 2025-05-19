@@ -46,7 +46,7 @@ export class OrderBy extends MalloyElement {
     return typeof this.field === 'number' ? this.field : this.field.refString;
   }
 
-  getOrderBy(fs: FieldSpace): ModelOrderBy {
+  getOrderBy(scope: Scope): ModelOrderBy {
     // TODO jump-to-definition now that we can lookup fields in the output space,
     // we need to actually add the reference when we do so.
     if (this.field instanceof FieldName && fs.isQueryFieldSpace()) {
@@ -88,7 +88,7 @@ export class Ordering
     super(list);
   }
 
-  getOrderBy(fs: FieldSpace): ModelOrderBy[] {
-    return this.list.map(el => el.getOrderBy(fs));
+  getOrderBy(scope: Scope): ModelOrderBy[] {
+    return this.list.map(el => el.getOrderBy(scope));
   }
 }

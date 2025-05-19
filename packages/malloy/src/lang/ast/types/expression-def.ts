@@ -42,7 +42,7 @@ import {
   computedTimeResult,
 } from './expr-value';
 import {timeOffset} from '../time-utils';
-import type {FieldSpace} from './field-space';
+import type {BaseScope} from './scope';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';
 import type {
@@ -86,9 +86,9 @@ export abstract class ExpressionDef extends MalloyElement {
    * Returns the "translation" or template for SQL generation. When asking
    * for a translation you may pass the types you can accept, allowing
    * the translation code a chance to convert to match your expectations
-   * @param space Namespace for looking up field references
+   * @param space Namespace for looking up references
    */
-  abstract getExpression(fs: FieldSpace): ExprValue;
+  abstract getExpression(scope: BaseScope): ExprValue;
   legalChildTypes = TDU.anyAtomicT;
 
   /**
@@ -98,8 +98,8 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param fs FieldSpace
    * @return Translated expression or undefined
    */
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
-    return this.getExpression(fs);
+  requestExpression(scope: BaseScope): ExprValue | undefined {
+    return this.getExpression(scope);
   }
 
   defaultFieldName(): string | undefined {
@@ -139,12 +139,12 @@ export abstract class ExpressionDef extends MalloyElement {
    * @return The translated expression
    */
   apply(
-    fs: FieldSpace,
+    scope: BaseScope,
     op: BinaryMalloyOperator,
     left: ExpressionDef,
     _warnOnComplexTree = false
   ): ExprValue {
-    return applyBinary(fs, left, op, this);
+    return applyBinary(scope, left, op, this);
   }
 
   canSupportPartitionBy() {
@@ -183,14 +183,14 @@ export class ExprDuration extends ExpressionDef {
   }
 
   apply(
-    fs: FieldSpace,
+    scope: BaseScope,
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
-    const lhs = left.getExpression(fs);
+    const lhs = left.getExpression(scope);
     this.typeCheck(this, lhs);
     if (isTemporalType(lhs.type) && (op === '+' || op === '-')) {
-      const num = this.n.getExpression(fs);
+      const num = this.n.getExpression(scope);
       if (!TDU.typeEq(num, TDU.numberT)) {
         this.logError(
           'invalid-duration-quantity',
@@ -218,11 +218,11 @@ export class ExprDuration extends ExpressionDef {
         from: [lhs, num],
       });
     }
-    return super.apply(fs, op, left);
+    return super.apply(scope, op, left);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const num = this.n.getExpression(fs);
+  getExpression(scope: BaseScope): ExprValue {
+    const num = this.n.getExpression(scope);
     return computedErrorExprValue({
       dataType: {type: 'duration'},
       error: 'Duration is not a value',
@@ -309,13 +309,13 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
 }
 
 function equality(
-  fs: FieldSpace,
+  scope: BaseScope,
   left: ExpressionDef,
   op: EqualityMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const lhs = left.getExpression(scope);
+  const rhs = right.getExpression(scope);
   const node = getExprNode(op);
 
   const err = errorCascade('boolean', lhs, rhs);
@@ -400,13 +400,13 @@ function equality(
 }
 
 function compare(
-  fs: FieldSpace,
+  scope: BaseScope,
   left: ExpressionDef,
   op: CompareMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const lhs = left.getExpression(scope);
+  const rhs = right.getExpression(scope);
 
   const err = errorCascade('boolean', lhs, rhs);
   if (err) return err;
@@ -428,13 +428,13 @@ function compare(
 }
 
 function numeric(
-  fs: FieldSpace,
+  scope: BaseScope,
   left: ExpressionDef,
   op: ArithmeticMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const lhs = left.getExpression(scope);
+  const rhs = right.getExpression(scope);
 
   const err = errorCascade('number', lhs, rhs);
   if (err) return err;
@@ -463,13 +463,13 @@ function numeric(
 }
 
 function delta(
-  fs: FieldSpace,
+  scope: BaseScope,
   left: ExpressionDef,
   op: '+' | '-',
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.getExpression(fs);
-  const rhs = right.getExpression(fs);
+  const lhs = left.getExpression(scope);
+  const rhs = right.getExpression(scope);
   const noGo = unsupportError(left, lhs, right, rhs);
   if (noGo) {
     return noGo;
@@ -494,9 +494,9 @@ function delta(
         );
       }
     }
-    return duration.apply(fs, op, left);
+    return duration.apply(scope, op, left);
   }
-  return numeric(fs, left, op, right);
+  return numeric(scope, left, op, right);
 }
 
 /**
@@ -511,26 +511,26 @@ function delta(
  * @return ExprValue of the expression
  */
 export function applyBinary(
-  fs: FieldSpace,
+  scope: BaseScope,
   left: ExpressionDef,
   op: BinaryMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   if (isEquality(op)) {
-    return equality(fs, left, op, right);
+    return equality(scope, left, op, right);
   }
   if (isComparison(op)) {
-    return compare(fs, left, op, right);
+    return compare(scope, left, op, right);
   }
   if (op === '+' || op === '-') {
-    return delta(fs, left, op, right);
+    return delta(scope, left, op, right);
   }
   if (op === '*') {
-    return numeric(fs, left, op, right);
+    return numeric(scope, left, op, right);
   }
   if (op === '/' || op === '%') {
-    const num = left.getExpression(fs);
-    const denom = right.getExpression(fs);
+    const num = left.getExpression(scope);
+    const denom = right.getExpression(scope);
     const noGo = unsupportError(left, num, right, denom);
     if (noGo) return noGo;
 

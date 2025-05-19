@@ -23,13 +23,14 @@
 
 import {type Parameter, type TypeDesc} from '../../../model/malloy_types';
 
-import {SpaceEntry} from './space-entry';
 import type {HasParameter} from '../parameters/has-parameter';
 import * as TDU from '../typedesc-utils';
+import {BaseBinding} from './bindings';
 
-export abstract class SpaceParam extends SpaceEntry {
+export abstract class SpaceParam extends BaseBinding {
   abstract parameter(): Parameter;
-  readonly refType = 'parameter';
+  // TODO: Note that this was 'parameter' previously. What are the implications?
+  readonly symbolKind = 'field';
 }
 
 export class AbstractParameter extends SpaceParam {

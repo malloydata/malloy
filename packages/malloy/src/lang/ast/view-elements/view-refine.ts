@@ -25,8 +25,8 @@ import type {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {getFinalStruct} from '../struct-utils';
-import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
+import type {SourceScope} from '../types/scope';
 import {refine} from './refine-utils';
 import {View} from './view';
 
@@ -47,27 +47,27 @@ export class ViewRefine extends View {
   }
 
   pipelineComp(
-    fs: SourceFieldSpace,
+    scope: SourceScope,
     isNestIn?: QueryOperationSpace
   ): PipelineComp {
-    const query = this.base.pipelineComp(fs);
-    const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
+    const query = this.base.pipelineComp(scope);
+    const resultPipe = this.refinement.refine(scope, query.pipeline, isNestIn);
     return {
       pipeline: resultPipe,
       annotation: query.annotation,
       outputStruct:
         resultPipe.length > 0
-          ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
+          ? getFinalStruct(this.refinement, scope.structDef(), resultPipe)
           : ErrorFactory.structDef,
     };
   }
 
   refine(
-    inputFS: SourceFieldSpace,
+    inputScope: SourceScope,
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
-    const refineFrom = this.pipelineComp(inputFS, isNestIn);
+    const refineFrom = this.pipelineComp(inputScope, isNestIn);
     if (refineFrom.pipeline.length !== 1) {
       this.refinement.logError(
         'refinement-with-multistage-view',

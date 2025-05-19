@@ -54,6 +54,7 @@ import {DefinitionList} from '../types/definition-list';
 import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import { BaseScope, SourceScope } from '../types/scope';
 
 function queryFieldName(qf: QueryFieldDef): string {
   if (qf.type === 'fieldref') {
@@ -148,13 +149,14 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
   readonly type = 'grouping';
 
   constructor(
-    baseFS: SourceFieldSpace,
+    // baseFS: SourceFieldSpace,
+    scope: SourceScope,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ) {
     super();
-    this.resultFS = new ReduceFieldSpace(baseFS, refineThis, isNestIn, astEl);
+    this.resultFS = new ReduceFieldSpace(scope, refineThis, isNestIn, astEl);
     this.inputFS = this.resultFS.inputSpace();
   }
 

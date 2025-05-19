@@ -23,18 +23,13 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameFromDef} from '../../field-utils';
-import type {
-  FieldSpace,
-  QueryFieldSpace,
-  SourceFieldSpace,
-} from '../types/field-space';
+import type {QueryFieldSpace} from '../types/field-space';
 import {FieldName} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
 import {WildcardFieldReference} from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
-import type {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
@@ -51,6 +46,9 @@ import {
   mergeFieldUsage,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
+import type {Scope} from '../types/namespace';
+import type {QueryScope, SourceScope} from '../types/scope';
+import type {NamespaceLookupResult} from '../types/namespace-lookup-result';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -60,7 +58,7 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
  */
 export abstract class QueryOperationSpace
   extends RefinedSpace
-  implements QueryFieldSpace
+  implements QueryScope
 {
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
@@ -90,17 +88,18 @@ export abstract class QueryOperationSpace
   }
 
   constructor(
-    readonly queryInputSpace: SourceFieldSpace,
+    // readonly queryInputSpace: SourceFieldSpace,
+    queryInputScope: SourceScope,
     refineThis: model.PipeSegment | undefined,
     readonly nestParent: QueryOperationSpace | undefined,
     readonly astEl: MalloyElement
   ) {
-    super(queryInputSpace.emptyStructDef());
+    super(queryInputScope.emptyStructDef());
 
     this.exprSpace = new QueryInputSpace(
-      queryInputSpace.structDef(),
+      queryInputScope.structDef(),
       this,
-      queryInputSpace.isProtectedAccessSpace()
+      queryInputScope.isProtectedAccessSpace()
     );
     if (refineThis) this.addRefineFromFields(refineThis);
   }
@@ -126,8 +125,9 @@ export abstract class QueryOperationSpace
     return this;
   }
 
+  // TODO: Is this naming 'addWild' meaningful beyond a shorthand for WildcardFieldReference?
   protected addWild(wild: WildcardFieldReference): void {
-    let current: FieldSpace = this.exprSpace;
+    let current: Scope = this.exprSpace;
     const joinPath: string[] = [];
     if (wild.joinPath) {
       // walk path to determine namespace for *
@@ -135,10 +135,12 @@ export abstract class QueryOperationSpace
         const part = pathPart.refString;
         joinPath.push(part);
 
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
+        const symbol = current.getEntry(part);
+        if (symbol) {
+          // TODO: A symbol currently wouldn't ever be an instance
+          // of a StructSpaceField, right?
+          if (symbol instanceof StructSpaceField) {
+            current = symbol.fieldSpace;
           } else {
             pathPart.logError(
               'invalid-wildcard-source',
@@ -161,10 +163,13 @@ export abstract class QueryOperationSpace
       if (wild.except.has(name)) {
         continue;
       }
-      if (entry.refType === 'parameter') {
+      // TODO: We removed the 'parameter' type from the refType
+      // list, but I don't really remember what the plan was to
+      // replace it with, when we need to distinguish...
+      if (entry.symbolKind === 'parameter') {
         continue;
       }
-      if (this.entry(name)) {
+      if (this.getEntry(name)) {
         const conflict = this.expandedWild[name]?.path.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',
@@ -336,7 +341,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         } else {
           const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
           if (fieldQueryDef) {
-            const typeDesc = field.typeDesc();
+            const typeDesc = field.getTypeDesc();
             nextFieldUsage = typeDesc.fieldUsage;
             // Filter out fields whose type is 'error', which means that a totally bad field
             // isn't sent to the compiler, where it will wig out.
@@ -424,10 +429,13 @@ export abstract class QuerySpace extends QueryOperationSpace {
     return segment;
   }
 
-  lookup(path: FieldName[]): LookupResult {
+  lookup(path: FieldName[]): NamespaceLookupResult {
     const result = super.lookup(path);
     if (result.found) {
-      return {...result, isOutputField: true};
+      // TODO: Here I removed a property, isOutputField: true
+      // I should confirm that all uses of isOutputField instead
+      // are checking the namespace associated with the result.
+      return result;
     }
     return this.exprSpace.lookup(path);
   }

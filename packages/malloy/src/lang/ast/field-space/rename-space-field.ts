@@ -22,23 +22,20 @@
  */
 
 import type {DocumentLocation, FieldDef} from '../../../model/malloy_types';
+import {FieldBindingInstance, type FieldBinding} from '../types/bindings';
 
-import {SpaceField} from '../types/space-field';
-
-export class RenameSpaceField extends SpaceField {
+// TODO: Does this need to extend a class?
+export class RenameSpaceField extends FieldBindingInstance {
   constructor(
-    private readonly otherField: SpaceField,
+    private readonly otherField: FieldBinding,
     private readonly newName: string,
     private readonly location: DocumentLocation
   ) {
-    super();
+    super(otherField.fieldDef());
   }
 
-  fieldDef(): FieldDef | undefined {
+  fieldDef(): FieldDef {
     const renamedFieldRaw = this.otherField.fieldDef();
-    if (renamedFieldRaw === undefined) {
-      return undefined;
-    }
     return {
       ...renamedFieldRaw,
       as: this.newName,
@@ -47,6 +44,6 @@ export class RenameSpaceField extends SpaceField {
   }
 
   typeDesc() {
-    return this.otherField.typeDesc();
+    return this.otherField.getTypeDesc();
   }
 }

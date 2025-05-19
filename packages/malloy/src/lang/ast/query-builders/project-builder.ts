@@ -29,7 +29,6 @@ import type {
 import {isPartialSegment, isProjectSegment} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import type {SourceFieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import type {QueryProperty} from '../types/query-property';
@@ -38,6 +37,7 @@ import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {MalloyElement} from '../types/malloy-element';
 import type {QueryBuilder} from '../types/query-builder';
 import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {SourceScope} from '../types/scope';
 
 export class ProjectBuilder
   extends QuerySegmentBuilder
@@ -48,13 +48,18 @@ export class ProjectBuilder
   readonly type = 'project';
 
   constructor(
-    baseFS: SourceFieldSpace,
+    baseScope: SourceScope,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ) {
     super();
-    this.resultFS = new ProjectFieldSpace(baseFS, refineThis, isNestIn, astEl);
+    this.resultFS = new ProjectFieldSpace(
+      baseScope,
+      refineThis,
+      isNestIn,
+      astEl
+    );
     this.inputFS = this.resultFS.inputSpace();
   }
 

@@ -44,7 +44,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    const headEntry = this.modelEntry(this.name);
+    const headEntry = this.lookupSymbol(this.name);
     const query = headEntry?.entry;
     const oops = function () {
       return {

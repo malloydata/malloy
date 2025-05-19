@@ -31,25 +31,22 @@ import type {
 } from '../../../model/malloy_types';
 import {isJoined, isTurtle, isSourceDef} from '../../../model/malloy_types';
 
-import type {SpaceEntry} from '../types/space-entry';
-import type {LookupResult} from '../types/lookup-result';
-import type {
-  FieldName,
-  FieldSpace,
-  QueryFieldSpace,
-  SourceFieldSpace,
-} from '../types/field-space';
+import type {FieldName, QueryFieldSpace} from '../types/field-space';
 import {DefinedParameter} from '../types/space-param';
 import {SpaceField} from '../types/space-field';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ColumnSpaceField} from './column-space-field';
 import {IRViewField} from './ir-view-field';
+import type {Scope} from '../types/namespace';
+import type {NamespaceLookupResult} from '../types/namespace-lookup-result';
+import type {Binding} from '../types/bindings';
 
-type FieldMap = Record<string, SpaceEntry>;
+type SymbolTable = Record<string, Binding>;
 
-export class StaticSpace implements FieldSpace {
+// TODO: Write a comment describing StaticSpace and what role it plays
+export class StaticSpace implements Scope {
   readonly type = 'fieldSpace';
-  private memoMap?: FieldMap;
+  private memoMap?: SymbolTable;
   protected fromStruct: StructDef;
   protected structDialect: string;
 
@@ -79,7 +76,7 @@ export class StaticSpace implements FieldSpace {
     return new ColumnSpaceField(from);
   }
 
-  private get map(): FieldMap {
+  private get map(): SymbolTable {
     if (this.memoMap === undefined) {
       this.memoMap = {};
       for (const f of this.fromStruct.fields) {
@@ -114,15 +111,16 @@ export class StaticSpace implements FieldSpace {
   }
 
   // TODO this was protected
-  entry(name: string): SpaceEntry | undefined {
+  getEntry(name: string): Binding | undefined {
     return this.map[name];
   }
 
-  protected setEntry(name: string, value: SpaceEntry): void {
+  // TODO: Maybe we shouldn't allow this mutability, even if it supports dynamic-space
+  protected setEntry(name: string, value: Binding): void {
     this.map[name] = value;
   }
 
-  entries(): [string, SpaceEntry][] {
+  entries(): [string, Binding][] {
     return Object.entries(this.map);
   }
 
@@ -139,10 +137,10 @@ export class StaticSpace implements FieldSpace {
     return ret;
   }
 
-  lookup(path: FieldName[]): LookupResult {
+  lookup(path: FieldName[]): NamespaceLookupResult {
     const head = path[0];
     const rest = path.slice(1);
-    let found = this.entry(head.refString);
+    let found = this.getEntry(head.refString);
     if (!found) {
       return {
         error: {
@@ -195,17 +193,18 @@ export class StaticSpace implements FieldSpace {
         }
       }
     } // cswenson review todo { else this is SpaceEntry not a field which can only be a param and what is going on? }
-    const joinPath =
-      found instanceof StructSpaceFieldBase
-        ? [{...found.joinPathElement, name: head.refString}]
-        : [];
+    // const joinPath =
+    //   found instanceof StructSpaceFieldBase
+    //     ? [{...found.joinPathElement, name: head.refString}]
+    //     : [];
     if (rest.length) {
       if (found instanceof StructSpaceFieldBase) {
         const restResult = found.fieldSpace.lookup(rest);
         if (restResult.found) {
           return {
             ...restResult,
-            joinPath: [...joinPath, ...restResult.joinPath],
+            // TODO: What replaces this join path, if anything?
+            // joinPath: [...joinPath, ...restResult.joinPath],
           };
         } else {
           return restResult;
@@ -219,7 +218,14 @@ export class StaticSpace implements FieldSpace {
         found: undefined,
       };
     }
-    return {found, error: undefined, joinPath, isOutputField: false};
+    return {
+      found,
+      scope: this,
+      error: undefined,
+      // joinPath,
+      // This should be fully replaceable by the consumer looking up which namespace the binding is in.
+      // isOutputField: false,
+    };
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
@@ -235,7 +241,8 @@ export class StructSpaceField extends StructSpaceFieldBase {
     super(def);
   }
 
-  get fieldSpace(): FieldSpace {
+  // TODO: Replace this with getting a Namespace
+  get fieldSpace(): Scope {
     if (isSourceDef(this.structDef)) {
       return new StaticSourceSpace(this.structDef);
     } else {
@@ -244,7 +251,9 @@ export class StructSpaceField extends StructSpaceFieldBase {
   }
 }
 
-export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
+// TODO: Does this need to be more specific than Scope for any reason?
+// It was initially a SourceFieldSpace
+export class StaticSourceSpace extends StaticSpace implements Scope {
   constructor(protected source: SourceDef) {
     super(source, source.dialect);
   }

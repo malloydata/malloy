@@ -38,15 +38,11 @@ import {
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import type {ExpressionDef} from '../types/expression-def';
-import type {
-  FieldName,
-  FieldSpace,
-  QueryFieldSpace,
-} from '../types/field-space';
+import type {FieldName, QueryFieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import type {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
-import type {MakeEntry, SpaceEntry} from '../types/space-entry';
+import type {MakeEntry} from '../types/space-entry';
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -60,6 +56,9 @@ import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
+import type {BaseScope} from '../types/scope';
+import type {Binding} from '../types/bindings';
+import type {Scope} from '../types/namespace';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -87,7 +86,7 @@ export abstract class AtomicFieldDeclaration
     return this.defineName;
   }
 
-  fieldDef(fs: FieldSpace, exprName: string): FieldDef {
+  fieldDef(scope: BaseScope, exprName: string): FieldDef {
     /*
      * In an explore we cannot reference the thing we are defining, you need
      * to use rename. In a query, the output space is a new thing, and expressions
@@ -97,7 +96,7 @@ export abstract class AtomicFieldDeclaration
      * a refactor of QueryFieldSpace might someday be the place where this should
      * happen.
      */
-    return this.queryFieldDef(new DefSpace(fs, this), exprName);
+    return this.queryFieldDef(new DefSpace(scope, this), exprName);
   }
 
   abstract typecheckExprValue(expr: ExprValue): void;
@@ -106,19 +105,19 @@ export abstract class AtomicFieldDeclaration
     return false;
   }
 
-  queryFieldDef(exprFS: FieldSpace, exprName: string): AtomicFieldDef {
+  queryFieldDef(exprScope: BaseScope, exprName: string): AtomicFieldDef {
     let exprValue: ExprValue;
 
-    function getOutputFS() {
-      if (exprFS.isQueryFieldSpace()) {
-        return exprFS.outputSpace();
+    function getOutputScope() {
+      if (exprScope.isQueryFieldSpace()) {
+        return exprScope.outputSpace();
       }
       throw new Error('must be in a query -- weird internal error');
     }
 
     try {
-      const fs = this.executesInOutputSpace() ? getOutputFS() : exprFS;
-      exprValue = this.expr.getExpression(fs);
+      const scope = this.executesInOutputSpace() ? getOutputScope() : exprScope;
+      exprValue = this.expr.getExpression(scope);
     } catch (error) {
       this.logError(
         'failed-field-definition',
@@ -169,7 +168,7 @@ export abstract class AtomicFieldDeclaration
       }
       return ret;
     }
-    const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
+    const circularDef = exprNs instanceof DefSpace && exprNs.foundCircle;
     if (!circularDef) {
       if (exprValue.type !== 'error') {
         const badType = TDU.inspect(exprValue);
@@ -185,8 +184,12 @@ export abstract class AtomicFieldDeclaration
     };
   }
 
-  makeEntry(fs: DynamicSpace) {
-    fs.newEntry(this.defineName, this, new FieldDefinitionValue(fs, this));
+  makeEntry(scope: DynamicSpace) {
+    scope.newEntry(
+      this.defineName,
+      this,
+      new FieldDefinitionValue(scope, this)
+    );
   }
 }
 
@@ -245,21 +248,21 @@ export class DimensionFieldDeclaration extends AtomicFieldDeclaration {
 /**
  * Used to detect references to fields in the statement which defines them
  */
-export class DefSpace implements FieldSpace {
+export class DefSpace implements Scope {
   readonly type = 'fieldSpace';
   foundCircle = false;
   constructor(
-    readonly realFS: FieldSpace,
+    readonly realScope: BaseScope,
     readonly circular: AtomicFieldDeclaration
   ) {}
   structDef(): StructDef {
-    return this.realFS.structDef();
+    return this.realScope.structDef();
   }
   emptyStructDef(): StructDef {
-    return this.realFS.emptyStructDef();
+    return this.realScope.emptyStructDef();
   }
-  entry(name: string): SpaceEntry | undefined {
-    return this.realFS.entry(name);
+  getEntry(name: string): Binding | undefined {
+    return this.realScope.getEntry(name);
   }
   lookup(symbol: FieldName[]): LookupResult {
     if (symbol[0] && symbol[0].refString === this.circular.defineName) {
@@ -272,31 +275,31 @@ export class DefSpace implements FieldSpace {
         found: undefined,
       };
     }
-    return this.realFS.lookup(symbol);
+    return this.realScope.lookup(symbol);
   }
-  entries(): [string, SpaceEntry][] {
-    return this.realFS.entries();
+  entries(): [string, NamespaceEntry][] {
+    return this.realScope.entries();
   }
   dialectName() {
-    return this.realFS.dialectName();
+    return this.realScope.dialectName();
   }
   dialectObj(): Dialect | undefined {
-    return this.realFS.dialectObj();
+    return this.realScope.dialectObj();
   }
   isQueryFieldSpace(): this is QueryFieldSpace {
-    return this.realFS.isQueryFieldSpace();
+    return this.realScope.isQueryFieldSpace();
   }
 
   outputSpace() {
-    if (this.realFS.isQueryFieldSpace()) {
-      return this.realFS.outputSpace();
+    if (this.realScope.isQueryFieldSpace()) {
+      return this.realScope.outputSpace();
     }
     throw new Error('Not a query field space');
   }
 
   inputSpace() {
-    if (this.realFS.isQueryFieldSpace()) {
-      return this.realFS.inputSpace();
+    if (this.realScope.isQueryFieldSpace()) {
+      return this.realScope.inputSpace();
     }
     throw new Error('Not a query field space');
   }
@@ -309,7 +312,7 @@ export class DefSpace implements FieldSpace {
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
   constructor(
-    readonly space: FieldSpace,
+    readonly space: NamespaceStack,
     readonly exprDef: AtomicFieldDeclaration
   ) {
     super();
@@ -331,9 +334,9 @@ export class FieldDefinitionValue extends SpaceField {
 
   // A query will call this when it defines the field
   private defInQuery?: AtomicFieldDef;
-  getQueryFieldDef(fs: FieldSpace): AtomicFieldDef {
+  getQueryFieldDef(scope: BaseScope): AtomicFieldDef {
     if (!this.defInQuery) {
-      const def = this.exprDef.queryFieldDef(fs, this.name);
+      const def = this.exprDef.queryFieldDef(scope, this.name);
       this.defInQuery = def;
     }
     return this.defInQuery;

@@ -45,6 +45,7 @@ import {
   emptyFieldUsage,
   mergeFieldUsage,
 } from '../../../model/composite_source_utils';
+import { SourceScope } from '../types/scope';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];
@@ -58,12 +59,12 @@ export class IndexBuilder implements QueryBuilder {
   readonly type = 'index';
 
   constructor(
-    inputFS: SourceFieldSpace,
+    inputScope: SourceScope,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ) {
-    this.resultFS = new IndexFieldSpace(inputFS, refineThis, isNestIn, astEl);
+    this.resultFS = new IndexFieldSpace(inputScope, refineThis, isNestIn, astEl);
     this.inputFS = this.resultFS.inputSpace();
   }
 

@@ -33,8 +33,8 @@ import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
-import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
+import type {SourceScope} from '../types/scope';
 import {SpaceField} from '../types/space-field';
 import {refine} from './refine-utils';
 import {View} from './view';
@@ -57,17 +57,17 @@ export class ReferenceView extends View {
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
   pipelineComp(
-    fs: SourceFieldSpace,
+    scope: SourceScope,
     _isNestIn: QueryOperationSpace
   ): PipelineComp {
-    return this._pipelineComp(fs);
+    return this._pipelineComp(scope);
   }
 
   _pipelineComp(
-    fs: SourceFieldSpace,
+    scope: SourceScope,
     {forRefinement} = {forRefinement: false}
   ): PipelineComp & {error?: boolean} {
-    const lookup = this.reference.getField(fs);
+    const lookup = this.reference.getField(scope);
     const oops = function () {
       return {
         inputStruct: ErrorFactory.structDef,
@@ -96,7 +96,7 @@ export class ReferenceView extends View {
       };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
-        ...sourceBase(fs.structDef()),
+        ...sourceBase(scope.structDef()),
         type: 'query_result',
         name,
         fields: [fieldDef],
@@ -135,7 +135,7 @@ export class ReferenceView extends View {
         annotation: fieldDef.annotation,
         outputStruct: getFinalStruct(
           this.reference,
-          fs.structDef(),
+          scope.structDef(),
           fieldDef.pipeline
         ),
       };
@@ -155,8 +155,8 @@ export class ReferenceView extends View {
     }
   }
 
-  private getRefinement(inputFS: SourceFieldSpace): PipeSegment | undefined {
-    const {pipeline, error} = this._pipelineComp(inputFS, {
+  private getRefinement(inputScope: SourceScope): PipeSegment | undefined {
+    const {pipeline, error} = this._pipelineComp(inputScope, {
       forRefinement: true,
     });
     if (error) return undefined;
@@ -182,11 +182,11 @@ export class ReferenceView extends View {
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
   refine(
-    inputFS: SourceFieldSpace,
+    inputScope: SourceScope,
     pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
-    const refineFrom = this.getRefinement(inputFS);
+    const refineFrom = this.getRefinement(inputScope);
     if (refineFrom) {
       return refine(this, pipeline, refineFrom);
     }

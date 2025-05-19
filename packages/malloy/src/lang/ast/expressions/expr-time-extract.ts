@@ -33,7 +33,7 @@ import {
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {Range} from './range';
 
 export class ExprTimeExtract extends ExpressionDef {
@@ -66,7 +66,7 @@ export class ExprTimeExtract extends ExpressionDef {
     super({args: args});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(scope: BaseScope): ExprValue {
     const extractTo = ExprTimeExtract.extractor(this.extractText);
     if (extractTo) {
       if (this.args.length !== 1) {
@@ -77,8 +77,8 @@ export class ExprTimeExtract extends ExpressionDef {
       }
       const from = this.args[0];
       if (from instanceof Range) {
-        let first = from.first.getExpression(fs);
-        let last = from.last.getExpression(fs);
+        let first = from.first.getExpression(scope);
+        let last = from.last.getExpression(scope);
         if (first.type === 'error' || last.type === 'error') {
           return computedErrorExprValue({
             dataType: {type: 'number'},
@@ -147,7 +147,7 @@ export class ExprTimeExtract extends ExpressionDef {
           from: [first, last],
         });
       } else {
-        const argV = from.getExpression(fs);
+        const argV = from.getExpression(scope);
         if (isTemporalType(argV.type)) {
           return computedExprValue({
             dataType: {type: 'number', numberType: 'integer'},

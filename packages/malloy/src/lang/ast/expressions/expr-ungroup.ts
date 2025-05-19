@@ -32,7 +32,8 @@ import {ReferenceField} from '../field-space/reference-field';
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldName} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = TDU.anyAtomicT;
@@ -45,8 +46,8 @@ export class ExprUngroup extends ExpressionDef {
     super({expr: expr, fields: fields});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const exprVal = this.expr.getExpression(fs);
+  getExpression(scope: BaseScope): ExprValue {
+    const exprVal = this.expr.getExpression(scope);
     if (!expressionIsAggregate(exprVal.expressionType)) {
       return this.expr.loggedErrorExpr(
         'ungroup-of-non-aggregate',
@@ -69,13 +70,13 @@ export class ExprUngroup extends ExpressionDef {
       // Now every mentioned field must be in the output space of one of the queries
       // of the nest tree leading to this query. If this is a source definition,
       // this is not checked until sql generation time.
-      if (fs.isQueryFieldSpace() && this.fields.length > 0) {
+      if (scope.isQueryFieldSpace() && this.fields.length > 0) {
         const dstFields: string[] = [];
         for (const mentionedField of this.fields) {
-          let ofs: FieldSpace | undefined = fs.outputSpace();
+          let outputScope: BaseScope | undefined = scope.outputSpace();
           let notFound = true;
-          while (ofs) {
-            const entryInfo = ofs.lookup([mentionedField]);
+          while (outputScope) {
+            const entryInfo = outputScope.lookup([mentionedField]);
             if (entryInfo.found && entryInfo.isOutputField) {
               dstFields.push(mentionedField.refString);
               if (entryInfo.found instanceof ReferenceField) {
@@ -84,9 +85,9 @@ export class ExprUngroup extends ExpressionDef {
                 );
               }
               notFound = false;
-            } else if (ofs instanceof QuerySpace) {
+            } else if (outputScope instanceof QuerySpace) {
               // should always be true, but don't have types right, thus the if
-              ofs = ofs.nestParent;
+              outputScope = outputScope.nestParent;
               continue;
             }
             break;

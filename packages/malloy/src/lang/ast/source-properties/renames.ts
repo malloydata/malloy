@@ -46,7 +46,7 @@ export class RenameField extends MalloyElement implements MakeEntry {
       );
       return;
     }
-    const oldValue = this.oldName.getField(fs);
+    const oldValue = this.oldName.getField(scope);
     if (oldValue.found) {
       if (oldValue.found instanceof SpaceField) {
         fs.renameEntry(

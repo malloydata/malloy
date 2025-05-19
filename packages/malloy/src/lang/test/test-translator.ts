@@ -55,7 +55,7 @@ import type {
 } from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
 import type {ExprValue} from '../ast/types/expr-value';
-import {GlobalNameSpace} from '../ast/types/global-name-space';
+import {GlobalScope} from '../ast/types/global-namespace';
 import type {
   LogSeverity,
   MessageCode,
@@ -212,7 +212,7 @@ const bJoinedIntoA: TableSourceDef & JoinBase = {
  */
 class TestRoot extends MalloyElement implements NameSpace {
   elementType = 'test root';
-  globalNameSpace: NameSpace = new GlobalNameSpace();
+  globalNameSpace: NameSpace = new GlobalScope();
 
   constructor(
     child: MalloyElement,
@@ -223,7 +223,7 @@ class TestRoot extends MalloyElement implements NameSpace {
     this.setTranslator(forTranslator);
   }
 
-  namespace(): NameSpace {
+  scope(): NameSpace {
     return this;
   }
 

@@ -28,10 +28,10 @@ import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
 import type {Timeframe} from './time-frame';
+import { BaseScope } from '../types/scope';
 
 export class ForRange extends ExpressionDef {
   elementType = 'forRange';
@@ -45,16 +45,16 @@ export class ForRange extends ExpressionDef {
   }
 
   apply(
-    fs: FieldSpace,
+    scope: BaseScope,
     op: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
-    const startV = this.from.getExpression(fs);
-    const checkV = expr.getExpression(fs);
+    const startV = this.from.getExpression(scope);
+    const checkV = expr.getExpression(scope);
     if (!this.typeCheck(expr, checkV)) {
       return errorFor('no time for range');
     }
-    const nV = this.duration.getExpression(fs);
+    const nV = this.duration.getExpression(scope);
     if (nV.type !== 'number') {
       if (nV.type !== 'error') {
         this.logError(
@@ -85,7 +85,7 @@ export class ForRange extends ExpressionDef {
       const rangeStart = this.from;
       const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
       const rangeEnd = new ExprTime('date', rangeEndV);
-      return new Range(rangeStart, rangeEnd).apply(fs, op, expr);
+      return new Range(rangeStart, rangeEnd).apply(scope, op, expr);
     }
 
     // Now it doesn't matter if the range is a date or a timestamp,
@@ -106,14 +106,14 @@ export class ForRange extends ExpressionDef {
     const to = timeOffset('timestamp', from, '+', nV.value, units);
     const rangeEnd = new ExprTime('timestamp', to, [startV, nV]);
 
-    return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
+    return new Range(rangeStart, rangeEnd).apply(scope, op, applyTo);
   }
 
-  requestExpression(_fs: FieldSpace): undefined {
+  requestExpression(_scope: BaseScope): undefined {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_scope: BaseScope): ExprValue {
     return this.loggedErrorExpr('range-as-value', 'A Range is not a value');
   }
 }

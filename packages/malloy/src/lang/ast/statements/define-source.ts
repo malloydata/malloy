@@ -55,7 +55,7 @@ export class DefineSource
   note?: Annotation;
 
   execute(doc: Document): void {
-    if (doc.modelEntry(this.name)) {
+    if (doc.lookupSymbol(this.name)) {
       this.logError(
         'source-definition-name-conflict',
         `Cannot redefine '${this.name}'`

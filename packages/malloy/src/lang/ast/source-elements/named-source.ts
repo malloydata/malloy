@@ -71,7 +71,7 @@ export class NamedSource extends Source {
   }
 
   structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
-    const modelEnt = this.modelEntry(this.ref);
+    const modelEnt = this.lookupSymbol(this.ref);
     // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
       return {
@@ -97,7 +97,7 @@ export class NamedSource extends Source {
   }
 
   modelStruct(): SourceDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
+    const modelEnt = this.lookupSymbol(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
       this.refLogError(

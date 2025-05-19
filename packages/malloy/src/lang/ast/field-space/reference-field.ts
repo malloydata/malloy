@@ -29,33 +29,33 @@ import type {
 import {TD, mkFieldDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import type {FieldReference} from '../query-items/field-references';
-import type {FieldSpace} from '../types/field-space';
-import type {SpaceEntry} from '../types/space-entry';
+import type {BaseScope} from '../types/scope';
+import type {Binding} from '../types/bindings';
 import {SpaceField} from '../types/space-field';
 
 export class ReferenceField extends SpaceField {
   private didLookup = false;
-  private memoReference?: SpaceEntry;
+  private memoReference?: Binding;
   private memoTypeDesc?: TypeDesc;
   private queryFieldDef?: QueryFieldDef;
   constructor(
     readonly fieldRef: FieldReference,
-    readonly inFS: FieldSpace
+    readonly inScope: BaseScope
   ) {
     super();
   }
 
-  get referenceTo(): SpaceEntry | undefined {
+  get referenceTo(): Binding | undefined {
     if (!this.didLookup) {
-      this.memoReference = this.inFS.lookup(this.fieldRef.list).found;
+      this.memoReference = this.inScope.lookup(this.fieldRef.list).found;
       this.didLookup = true;
     }
     return this.memoReference;
   }
 
-  getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
+  getQueryFieldDef(scope: BaseScope): QueryFieldDef | undefined {
     if (!this.queryFieldDef) {
-      const check = this.fieldRef.getField(fs);
+      const check = this.fieldRef.getField(scope);
       if (check.error) {
         this.fieldRef.logError(check.error.code, check.error.message);
       }
@@ -105,7 +105,7 @@ export class ReferenceField extends SpaceField {
     const refTo = this.referenceTo;
     if (refTo) {
       const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
-      const typeDesc = refTo.typeDesc();
+      const typeDesc = refTo.getTypeDesc();
       this.memoTypeDesc = {
         ...typeDesc,
         fieldUsage: [

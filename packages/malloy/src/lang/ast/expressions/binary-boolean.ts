@@ -28,7 +28,7 @@ import {getExprNode} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 
 export abstract class BinaryBoolean<
   opType extends BinaryMalloyOperator,
@@ -43,9 +43,9 @@ export abstract class BinaryBoolean<
     super({left, right});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const left = this.left.getExpression(fs);
-    const right = this.right.getExpression(fs);
+  getExpression(scope: BaseScope): ExprValue {
+    const left = this.left.getExpression(scope);
+    const right = this.right.getExpression(scope);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return computedExprValue({
         dataType: {type: 'boolean'},

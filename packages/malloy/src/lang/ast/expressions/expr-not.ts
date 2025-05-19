@@ -24,7 +24,7 @@
 import * as TDU from '../typedesc-utils';
 import type {ExprValue} from '../types/expr-value';
 import type {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {Unary} from './unary';
 
 export class ExprNot extends Unary {
@@ -34,9 +34,9 @@ export class ExprNot extends Unary {
     super(expr);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const notThis = this.expr.getExpression(fs);
-    if (fs.dialectObj()?.booleanAsNumbers) {
+  getExpression(scope: BaseScope): ExprValue {
+    const notThis = this.expr.getExpression(scope);
+    if (scope.dialectObj()?.booleanAsNumbers) {
       if (this.legalChildTypes.find(t => t.type === 'number') === undefined) {
         this.legalChildTypes.push(TDU.numberT);
       }

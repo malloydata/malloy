@@ -8,7 +8,7 @@
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
 import type {CaseExpr} from '../../../model';
@@ -35,7 +35,7 @@ export class Case extends ExpressionDef {
     this.has({elseValue, value});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(scope: BaseScope): ExprValue {
     const resultExpr: CaseExpr = {
       node: 'case',
       kids: {
@@ -46,15 +46,15 @@ export class Case extends ExpressionDef {
     const dependents: ExprValue[] = [];
     let value: ExprValue | undefined = undefined;
     if (this.value) {
-      const v = this.value.getExpression(fs);
+      const v = this.value.getExpression(scope);
       dependents.push(v);
       resultExpr.kids.caseValue = v.value;
       value = v;
     }
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
-      const when = c.when.getExpression(fs);
-      const then = c.then.getExpression(fs);
+      const when = c.when.getExpression(scope);
+      const then = c.then.getExpression(scope);
       choiceValues.push({when, then});
       dependents.push(when, then);
     }
@@ -85,7 +85,7 @@ export class Case extends ExpressionDef {
       resultExpr.kids.caseThen.push(aChoice.then.value);
     }
     if (this.elseValue) {
-      const elseValue = this.elseValue.getExpression(fs);
+      const elseValue = this.elseValue.getExpression(scope);
       if (returnType && !TDU.typeEq(returnType, elseValue, true)) {
         return this.loggedErrorExpr('case-else-type-does-not-match', {
           elseType: elseValue.type,

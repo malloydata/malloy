@@ -23,7 +23,7 @@
 
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import {isEquality} from '../types/binary_operators';
@@ -78,7 +78,7 @@ export class ExprAlternationTree extends ExpressionDef {
   }
 
   apply(
-    fs: FieldSpace,
+    scope: BaseScope,
     applyOp: BinaryMalloyOperator,
     expr: ExpressionDef,
     warnOnComplexTree: boolean
@@ -86,8 +86,8 @@ export class ExprAlternationTree extends ExpressionDef {
     if (isEquality(applyOp)) {
       const inList = this.equalityList();
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
-        const isIn = expr.getExpression(fs);
-        const values = inList.map(v => v.getExpression(fs));
+        const isIn = expr.getExpression(scope);
+        const values = inList.map(v => v.getExpression(scope));
         return computedExprValue({
           dataType: {type: 'boolean'},
           value: {
@@ -105,8 +105,8 @@ export class ExprAlternationTree extends ExpressionDef {
         );
       }
     }
-    const choice1 = this.left.apply(fs, applyOp, expr);
-    const choice2 = this.right.apply(fs, applyOp, expr);
+    const choice1 = this.left.apply(scope, applyOp, expr);
+    const choice2 = this.right.apply(scope, applyOp, expr);
     return computedExprValue({
       dataType: {type: 'boolean'},
       value: {
@@ -117,11 +117,11 @@ export class ExprAlternationTree extends ExpressionDef {
     });
   }
 
-  requestExpression(_fs: FieldSpace): ExprValue | undefined {
+  requestExpression(_scope: BaseScope): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_scope: BaseScope): ExprValue {
     return this.loggedErrorExpr(
       'alternation-as-value',
       'Alternation tree has no value'

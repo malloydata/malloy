@@ -10,7 +10,7 @@ import {TD, mkFieldDef} from '../../../model';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import type {FieldSpace} from '../types/field-space';
+import type {BaseScope} from '../types/scope';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
 import type {ExprIdReference} from './expr-id-reference';
@@ -46,11 +46,11 @@ export class RecordLiteral extends ExpressionDef {
     this.has({pairs});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    return this.getRecord(fs, []);
+  getExpression(scope: BaseScope): ExprValue {
+    return this.getRecord(scope, []);
   }
 
-  getRecord(fs: FieldSpace, kidNames: string[]): ExprValue {
+  getRecord(scope: BaseScope, kidNames: string[]): ExprValue {
     const recLit: RecordLiteralNode = {
       node: 'recordLiteral',
       kids: {},
@@ -71,7 +71,7 @@ export class RecordLiteral extends ExpressionDef {
         );
         continue;
       }
-      const xVal = el.value.getExpression(fs);
+      const xVal = el.value.getExpression(scope);
       if (TD.isAtomic(xVal)) {
         dependents.push(xVal);
         recLit.kids[key] = xVal.value;
@@ -90,11 +90,11 @@ export class RecordLiteral extends ExpressionDef {
     });
   }
 
-  getNextElement(fs: FieldSpace, headValue: ExprValue): ExprValue {
+  getNextElement(scope: BaseScope, headValue: ExprValue): ExprValue {
     const recLit = headValue.value;
     if (recLit.node === 'recordLiteral') {
-      return this.getRecord(fs, Object.keys(recLit.kids));
+      return this.getRecord(scope, Object.keys(recLit.kids));
     }
-    return this.getRecord(fs, []);
+    return this.getRecord(scope, []);
   }
 }

@@ -31,7 +31,7 @@ import type {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
 
-import type {FieldName, FieldSpace} from '../types/field-space';
+import type {FieldName} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
@@ -48,6 +48,7 @@ import {
   typecheckMeasure,
   typecheckProject,
 } from './typecheck_utils';
+import type {Scope} from '../types/namespace';
 
 export type FieldReferenceConstructor = new (
   names: FieldName[]
@@ -67,7 +68,7 @@ export abstract class FieldReference
 
   makeEntry(fs: DynamicSpace) {
     const refName = this.outputName;
-    if (fs.entry(refName)) {
+    if (fs.getEntry(refName)) {
       this.logError(
         'output-name-conflict',
         `Output already has a field named '${refName}'`
@@ -120,8 +121,8 @@ export abstract class FieldReference
 
   abstract typecheck(type: TypeDesc): void;
 
-  getField(fs: FieldSpace): LookupResult {
-    const result = fs.lookup(this.list);
+  getField(scope: Scope): LookupResult {
+    const result = scope.lookup(this.list);
 
     if (result.found) {
       const actualType = result.found.typeDesc();
