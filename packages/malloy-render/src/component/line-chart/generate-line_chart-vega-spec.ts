@@ -168,9 +168,7 @@ export function generateLineChartVegaSpec(
   const forceIndependentSeries =
     chartTag.has('series', 'independent') && !forceSharedSeries;
   const shouldShareSeriesDomain =
-    explore.isRoot() ||
-    forceSharedSeries ||
-    (autoSharedSeries && !forceIndependentSeries);
+    forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
 
   const seriesSet = seriesField
     ? new Set(lineChartPlugin.getTopNSeries(maxSeries))
@@ -606,7 +604,7 @@ export function generateLineChartVegaSpec(
         type: xIsDateorTime ? 'time' : 'point',
         domain: shouldShareXDomain
           ? xIsDateorTime
-            ? [xField.minNumber!, xField.maxNumber!]
+            ? [Number(xField.minValue), Number(xField.maxValue)]
             : xIsBoolean
             ? [true, false]
             : [...xField.valueSet]
@@ -625,12 +623,13 @@ export function generateLineChartVegaSpec(
         name: 'color',
         type: 'ordinal',
         range: 'category',
-        domain: shouldShareSeriesDomain
-          ? [...seriesSet!]
-          : {
-              data: 'values',
-              field: 'series',
-            },
+        domain:
+          isDimensionalSeries && shouldShareSeriesDomain
+            ? [...seriesSet!]
+            : {
+                data: 'values',
+                field: 'series',
+              },
       },
     ],
     axes: [
@@ -786,7 +785,7 @@ export function generateLineChartVegaSpec(
     const localSeriesSet = new Set<string | number | boolean>();
     function skipSeries(seriesVal: string | number | boolean) {
       if (seriesSet) {
-        if (shouldShareSeriesDomain) {
+        if (explore.isRoot() || shouldShareSeriesDomain) {
           return !seriesSet.has(seriesVal);
         } else {
           if (
