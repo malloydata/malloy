@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {createEffect, createSignal, on, untrack} from 'solid-js';
+import {createEffect, createSignal, untrack} from 'solid-js';
 import type {EventListenerHandler, SignalListenerHandler, Runtime} from 'vega';
 import {View} from 'vega';
 import './vega-expr-addons';
@@ -78,18 +78,14 @@ export function VegaChart(props: VegaChartProps) {
   });
 
   // Update size
-  createEffect(
-    on(
-      [() => props.width, () => props.height, view],
-      ([width, height, _view]) => {
-        if (_view) {
-          if (width) _view.width(width);
-          if (height) _view.height(height);
-          _view.run();
-        }
-      }
-    )
-  );
+  createEffect(() => {
+    const _view = view();
+    if (_view) {
+      if (props.width) _view.width(props.width);
+      if (props.height) _view.height(props.height);
+      _view.run();
+    }
+  });
 
   return <div ref={el}></div>;
 }
