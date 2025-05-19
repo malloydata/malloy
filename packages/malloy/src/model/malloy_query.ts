@@ -4398,7 +4398,16 @@ class QueryQueryIndexStage extends QueryQuery {
       }
     }
     sInner += `  END as ${fieldRangeColumn}\n`;
-    let s = `SELECT * FROM (${sInner})`;
+
+    const limit =
+      !isRawSegment(this.firstSegment) && this.firstSegment.limit
+        ? this.firstSegment.limit
+        : null;
+
+    let s = ` SELECT ${
+      limit && this.parent.dialect.limitStyle === 'top' ? ` TOP ${limit} ` : ''
+    } * FROM (${sInner})\n`;
+
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
     //     THEN MIN(field_value) || ' to ' || MAX(field_value)
@@ -4415,6 +4424,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
+      // TODO (vitor): === 'expression' and then using names is not telling the truth...
       groupByFields.push(
         'group_set',
         fieldNameColumn,
@@ -4429,18 +4439,10 @@ class QueryQueryIndexStage extends QueryQuery {
     // This is a special case where we don't need to use expressions and can't use generateGroupByColumns
     s += `GROUP BY ${groupByFields.join(', ')}\n`;
 
-    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
-      if (dialect.supportsLimit) {
-        s += `LIMIT ${this.firstSegment.limit}\n`;
-      } else {
-        s += `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
-      }
-    } else {
-      //  TODO (vitor): This does not bring me joy.
-      if (dialect.name === 'tsql') {
-        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
-      }
+    if (limit && this.parent.dialect.limitStyle === 'limit') {
+      s += `LIMIT ${limit}\n`;
     }
+
     // console.log(s);
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(

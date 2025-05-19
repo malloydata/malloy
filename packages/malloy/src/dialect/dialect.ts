@@ -99,6 +99,7 @@ export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 
 // TODO (vitor): check with malloy.
 export type GroupByClauseType = 'ordinal' | 'expression';
+export type LimitStyle = 'limit' | 'top';
 
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 
@@ -141,6 +142,8 @@ export abstract class Dialect {
   orderByClause: OrderByClauseType = 'ordinal';
 
   groupByClause: GroupByClauseType = 'ordinal';
+
+  limitStyle: LimitStyle = 'limit';
 
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
