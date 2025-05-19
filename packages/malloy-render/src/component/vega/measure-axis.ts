@@ -37,6 +37,8 @@ export function createMeasureAxis({
     ...axisSettings,
     tickCount: {'signal': `${tickCount}`},
     labelLimit: labelLimit,
+    labelOverlap: true,
+    labelSeparation: 8,
     encode: {
       labels: {
         enter: {

@@ -3,6 +3,9 @@
   height: fit-content;
   font-variant-numeric: tabular-nums;
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 .malloy-chart_debug_menu {
@@ -46,8 +49,14 @@
   flex-direction: column;
   gap: 0px;
   line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+  grid-row: 1;
 }
 
 .malloy-chart__title {
   font-weight: bold;
+}
+
+.malloy-chart__container {
+  grid-row: 2;
+  overflow: hidden;
 }

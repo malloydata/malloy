@@ -33,6 +33,7 @@ import {Result, API} from '@malloydata/malloy';
 import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
 import {createRAFSignal} from './util';
+import {LineChartSeriesPluginFactory} from '../plugins/line-chart-series-plugin';
 
 export type MalloyRenderProps = {
   malloyResult?: Malloy.Result;
@@ -180,8 +181,6 @@ export function MalloyRenderInner(props: {
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
 }) {
-  const rootCell = createMemo(() => getDataTree(props.result));
-
   const wrapper = props.element['parentElement'];
   const [parentSize, setParentSize] = createRAFSignal({
     width: wrapper.clientWidth,
@@ -202,6 +201,10 @@ export function MalloyRenderInner(props: {
   // This is where chart rendering happens for now
   // If size in fill mode, easiest thing would be to just recalculate entire thing
   // This is expensive but we can optimize later to make size responsive
+  const rootCell = createMemo(() =>
+    getDataTree(props.result, [LineChartSeriesPluginFactory])
+  );
+
   const metadata = createMemo(() =>
     getResultMetadata(rootCell(), {
       getVegaConfigOverride: props.vegaConfigOverride,
