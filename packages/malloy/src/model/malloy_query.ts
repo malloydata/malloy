@@ -3218,6 +3218,7 @@ class QueryQuery extends QueryField {
       );
       if (this.firstSegment.sample) {
         // TODO (vitor): double check this
+        // maybe we don't want that order by here.
         structSQL = stageWriter.addStage(
           `SELECT * from ${structSQL} as x ${
             this.parent.dialect.supportsLimit
@@ -3330,24 +3331,19 @@ class QueryQuery extends QueryField {
         field.fieldUsage.type === 'result' &&
         isScalarField(field.f)
       ) {
-        if (this.parent.dialect.groupByClause === 'ordinal') {
+        const groupByClause = this.parent.dialect.groupByClause;
+        if (groupByClause === 'ordinal') {
           groupBy.push(String(field.fieldUsage.resultIndex));
-        } else if (this.parent.dialect.groupByClause === 'output_name') {
-          groupBy.push(
-            this.parent.dialect.sqlMaybeQuoteIdentifier(field.f.fieldDef.name)
-          );
-        } else if (this.parent.dialect.groupByClause === 'expression') {
+        } else if (groupByClause === 'expression') {
           // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
           const fieldExpr = field.f.generateExpression(this.rootResult);
           // Avoiding GROUP BY const expression
           if (!/d+|'.*'/.test(fieldExpr)) {
             groupBy.push(fieldExpr);
           }
+        } else {
+          throw new Error(`groupByClause ${groupByClause} not implemented`);
         }
-        // TODO (vitor): Add an else here maybe?
-        // } else {
-        //   throw new Error(`Unknown field in GROUP BY ${field.f}`);
-        // }
       }
     }
 
@@ -3374,6 +3370,31 @@ class QueryQuery extends QueryField {
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
     s += this.generateSQLGroupBy(this.rootResult.fields());
+
+    // group by
+    if (this.firstSegment.type === 'reduce') {
+      const groupBy: string[] = [];
+      for (const field of this.rootResult.fields()) {
+        const fi = field as FieldInstanceField;
+        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+          const groupByCluase = this.parent.dialect.groupByClause;
+          if (groupByCluase === 'ordinal') {
+            groupBy.push(fi.fieldUsage.resultIndex.toString());
+          } else if (groupByCluase === 'expression') {
+            // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
+            const fieldExpr = field.f.generateExpression(this.rootResult);
+            // Avoiding GROUP BY const expression
+            if (!/d+|'.*'/.test(fieldExpr)) {
+              groupBy.push(fieldExpr);
+            }
+          }
+        }
+      }
+
+      if (groupBy.length > 0) {
+        s += `GROUP BY ${groupBy.join(',')}\n`;
+      }
+    }
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
