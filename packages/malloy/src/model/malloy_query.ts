@@ -3700,7 +3700,21 @@ class QueryQuery extends QueryField {
       )})]) as __lateral_join_bag\n`;
     }
 
-    const groupBy = this.generateSQLGroupBy(this.rootResult.fields());
+    const groupByClause = this.parent.dialect.groupByClause;
+
+    let groupByFields: string[];
+    if (groupByClause === 'ordinal') {
+      groupByFields = f.dimensionIndexes.map(String);
+    } else if (groupByClause === 'expression') {
+      groupByFields = (f.dimensions || [])
+        .map(v => v.expression)
+        .filter((v): v is string => /\d+|'.*'/.test(v) && !!v);
+    } else {
+      throw new Error(`groupByClause ${groupByClause} not implemented`);
+    }
+    const groupBy = groupByFields.length
+      ? ` GROUP BY ${groupByFields.join(', ')}\n`
+      : '';
 
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 
