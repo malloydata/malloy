@@ -3369,7 +3369,6 @@ class QueryQuery extends QueryField {
 
     s += this.generateSQLJoins(stageWriter);
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
-    s += this.generateSQLGroupBy(this.rootResult.fields());
 
     // group by
     if (this.firstSegment.type === 'reduce') {
@@ -3402,22 +3401,22 @@ class QueryQuery extends QueryField {
       this.firstSegment as QuerySegment,
       this.rootResult
     );
-    if (orderBy) {
-      s += orderBy;
-    } else if (!this.parent.dialect.supportsLimit) {
-      // TODO (vitor): At this point idk if it's worth it to continue with OFFSET instead of just using TOP
-      s += '\nORDER BY 1\n';
-    }
+
+    s += orderBy;
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s += this.parent.dialect.supportsLimit
         ? `LIMIT ${this.firstSegment.limit}\n`
-        : `OFFSET 0 ROWS FETCH NEXT ${this.firstSegment.limit} ROWS ONLY\n`;
+        : `${orderBy || 'ORDER BY 1'} OFFSET 0 ROWS FETCH NEXT ${
+            this.firstSegment.limit
+          } ROWS ONLY\n`;
     } else {
       // TODO (vitor): This does not bring me joy. But I can't throw it away just now
       if (this.parent.dialect.name === 'tsql') {
-        s += 'OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n';
+        s += `${
+          orderBy || 'ORDER BY 1'
+        } OFFSET 0 ROWS FETCH NEXT 2147483647 ROWS ONLY\n`;
       }
     }
 
