@@ -194,13 +194,11 @@ export class TSQLDialect extends Dialect {
     // SQL Server doesn't have JSONB functions like PostgreSQL
     // Use FOR JSON PATH to create JSON array
     const sql = `COALESCE((
-      SELECT ${this.mapFields(fieldList)}
+      SELECT ${limit ? `TOP ${limit}` : ''} ${this.mapFields(fieldList)}
       FROM (SELECT 1) AS __dummy
       WHERE group_set=${groupSet}
       ${orderBy || ''}
-      ${
-        limit !== undefined ? `OFFSET 0 ROWS FETCH NEXT ${limit} ROWS ONLY` : ''
-      }
+      ${orderBy && !limit ? 'OFFSET 0 ROWS' : ''}
       FOR JSON PATH
     ), '[]')`;
     return sql;
@@ -224,11 +222,14 @@ export class TSQLDialect extends Dialect {
     // console.info('sqlAnyValueLastTurtle');
     // Using TOP 1 with aggregation to get the last non-null value
     return `
-    (SELECT TOP 1 ${name} FROM (
-      SELECT ${name}
-      WHERE group_set=${groupSet} AND ${name} IS NOT NULL
-    ) t
-    ORDER BY (SELECT NULL)) as ${sqlName}\n`;
+    (
+      SELECT TOP 1 ${name}
+      FROM (
+        SELECT ${name}
+        WHERE group_set=${groupSet} AND ${name} IS NOT NULL
+      ) t
+      ORDER BY (SELECT NULL)
+    ) as ${sqlName}\n`;
   }
 
   sqlCoaleseMeasuresInline(
@@ -526,18 +527,10 @@ export class TSQLDialect extends Dialect {
     return tableSQL;
   }
 
-  // sqlOrderBy(orderTerms: string[], obr?: OrderByRequest): string {
-  //   if (obr === 'analytical' || obr === 'turtle') {
-  //     return `ORDER BY ${orderTerms.join(',')}`;
-  //   }
-  //   return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
-  // }
-
   // TODO (vitor): Revisit this function
   sqlOrderBy(orderTerms: string[]): string {
     // SQL Server doesn't support NULLS LAST syntax directly
     // Use CASE expression to push NULLs to the end
-    // Default to ORDER BY 1 to allow for OFFSET
     const wrappedTerms = orderTerms
       .map((t, i) => {
         const match = t.match(/\b(asc|desc)\b/i);
@@ -555,7 +548,7 @@ export class TSQLDialect extends Dialect {
       })
       .join(',');
 
-    return 'ORDER BY ' + wrappedTerms || '1 ';
+    return 'ORDER BY ' + wrappedTerms;
   }
 
   // TODO (vitor): I think the point in other dialects is to allow escaping
