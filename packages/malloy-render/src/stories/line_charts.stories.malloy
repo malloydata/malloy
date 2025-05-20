@@ -193,6 +193,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     `Top Selling Brands` is topSellingBrands
     # size=spark
     spark is topSellingBrands
+    # size=xs
+    xs is topSellingBrands
     # size=sm
     sm is topSellingBrands
     # size=md
@@ -203,6 +205,17 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     xl is topSellingBrands
     # size=2xl
     `2xl` is topSellingBrands
+  }
+
+    #(story)
+  # line_chart
+  view: month_truncation is {
+    group_by:
+      `date` is (@2001-02-03 00:00  + id day).month
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 10
+    order_by: `date`
   }
 
   #(story)
@@ -338,7 +351,6 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     #(story)
   view: lots_of_lines_nested is {
     group_by: department
-
     # line_chart { series.limit=5 }
     nest: lots_of_lines is {
       # x
@@ -356,6 +368,13 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       group_by: brand
       aggregate: total is count()
       order_by: sale_year
+    }
+    nest: tabular is {
+      group_by: sale_year
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+      where: brand='Motherhood Maternity'
     }
     # line_chart { series.independent }
     nest: lots_of_lines_independent_series is {
