@@ -4392,20 +4392,23 @@ class QueryQueryIndexStage extends QueryQuery {
     for (let i = 0; i < fields.length; i++) {
       fieldNameExpr += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    s += ` ${fieldNameExpr} END as ${fieldNameColumn},\n`;
+    fieldNameExpr += ' END ';
+    s += ` ${fieldNameExpr} as ${fieldNameColumn},\n`;
 
     let fieldPathExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       const path = pathToCol(fields[i].path);
       fieldPathExpr += `    WHEN ${i} THEN '${path}'\n`;
     }
-    s += ` ${fieldPathExpr} END as ${fieldPathColumn},\n`;
+    fieldPathExpr += ' END ';
+    s += ` ${fieldPathExpr} as ${fieldPathColumn},\n`;
 
     let fieldTypeExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       fieldTypeExpr += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    s += ` ${fieldTypeExpr} END as ${fieldTypeColumn},`;
+    fieldTypeExpr += ' END ';
+    s += ` ${fieldTypeExpr} as ${fieldTypeColumn},`;
 
     let fieldValueExpr = `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
       'NULL'
@@ -4415,7 +4418,8 @@ class QueryQueryIndexStage extends QueryQuery {
         fieldValueExpr += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    s += ` ${fieldValueExpr} END as ${fieldValueColumn},\n`;
+    fieldValueExpr += ' END ';
+    s += ` ${fieldValueExpr} as ${fieldValueColumn},\n`;
 
     s += ` ${measureSQL} as ${weightColumn},\n`;
 
