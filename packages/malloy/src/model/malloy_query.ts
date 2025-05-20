@@ -690,6 +690,8 @@ class QueryField extends QueryNode {
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
 
+    // TODO (vitor): This is complicated for tsql... It gets passed down to this.expandFunctionCall( where things become unclear
+    const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
     if (
       frag.name === 'string_agg' &&
       distinctKey &&
@@ -761,7 +763,7 @@ class QueryField extends QueryNode {
             overload,
             newArgs,
             orderBySQL,
-            frag.limit?.toString()
+            aggregateLimit
           );
           return this.exprToSQL(resultSet, context, funcCall, state);
         }
@@ -806,7 +808,7 @@ class QueryField extends QueryNode {
         overload,
         mappedArgs,
         orderBySql,
-        frag.limit?.toString()
+        aggregateLimit
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
