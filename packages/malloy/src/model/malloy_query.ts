@@ -4461,7 +4461,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
-      // TODO (vitor): === 'expression' and then using names is not telling the truth...
+      // TODO (vitor): doing if foo === 'expression' and then using names is not telling the truth...
       groupByFields.push(
         'group_set',
         fieldNameColumn,
