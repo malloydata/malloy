@@ -159,10 +159,26 @@ export class TrinoDialect extends PostgresBase {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${fieldName} END)`;
   }
 
+  escapeFieldName(fieldName: string): string {
+    let nameToEscape = fieldName;
+    if (fieldName.startsWith('"') && fieldName.endsWith('"')) {
+      nameToEscape = fieldName.substring(1, fieldName.length() - 2);
+    }
+
+    const escapedName = nameToEscape.replace(
+      /["'\\::.,(){}[\]=<>!@#]/g,
+      match => '\\' + match
+    );
+    return `"${escapedName}"`;
+  }
+
   buildTypeExpression(fieldList: DialectFieldList): string {
     return fieldList
       .map(
-        dlf => `${dlf.sqlOutputName} ${this.malloyTypeToSQLType(dlf.typeDef)}`
+        dlf =>
+          `${this.escapeFieldName(
+            dlf.sqlOutputName
+          )} ${this.malloyTypeToSQLType(dlf.typeDef)}`
       )
       .join(', \n');
   }

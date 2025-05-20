@@ -571,6 +571,19 @@ describe.each(runtimes.runtimeList)(
         """) -> { aggregate: n is count() }
       `).matchesRows(runtime, {n: 1});
     });
+
+    it(`runs the to_unixtime function - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.sql("""
+                SELECT 1 as n1
+      UNION ALL SELECT 2 as n1
+      UNION ALL SELECT 3 as n1
+      """) -> {
+        select: *
+        // group_by: \`A name + some ] interesting [  characters \\ \` is name
+        //group_by: name
+        //aggregate: \`Some more weird :: characts\` is count()
+      }`).malloyResultMatches(runtime, {x: 1726142384});
+    });
   }
 );
 
