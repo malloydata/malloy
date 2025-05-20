@@ -151,11 +151,10 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
+// TODO (vitor): THESE REGEXP ARE SO SUS
 const FLOAT_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
-const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
-const SQL_CONST_EXPR = new RegExp(
-  `(?:${FLOAT_EXPR.source})|(?:${SQL_STR_LITERAL_EXPR.source})`
-);
+// const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
+const SQL_CONST_EXPR = new RegExp(`(?:${FLOAT_EXPR.source})`);
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -691,7 +690,18 @@ class QueryField extends QueryNode {
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
 
     // TODO (vitor): This is complicated for tsql... It gets passed down to this.expandFunctionCall( where things become unclear
-    const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
+    // TODO (vitor): This IIFE is hack-ish but I want tsql not to fail here
+    const aggregateLimit = (() => {
+      if (frag.limit === undefined) {
+        return frag.limit;
+      }
+      if (this.parent.dialect.limitClause === 'limit') {
+        return `LIMIT ${frag.limit}`;
+      }
+      // TODO (vitor): ORDER BY must be available where this is used. Need to check that, but this might not make it to main anyway.
+      return `OFFSET 0 FETCH NEXT ${frag.limit} ROWS ONLY`;
+    })();
+
     if (
       frag.name === 'string_agg' &&
       distinctKey &&
@@ -1308,7 +1318,8 @@ class QueryField extends QueryNode {
       }
       case 'function_parameter':
         throw new Error(
-          'Internal Error: Function parameter fragment remaining during SQL generation'
+          'Internal Error: Function parameter fragment remaining during SQL generation' +
+            expr.node
         );
       case 'outputField':
         return this.generateOutputFieldFragment(
@@ -3419,6 +3430,11 @@ class QueryQuery extends QueryField {
 
     s += orderBy;
 
+    // TODO (vitor): Double check this, this is one of the ways to make it work in views and subqueries
+    if (orderBy && !limit && this.parent.dialect.limitClause === 'top') {
+      s += '\nOFFSET 0 ROWS\n';
+    }
+
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
       s += `LIMIT ${limit}\n`;
@@ -3931,11 +3947,17 @@ class QueryQuery extends QueryField {
 
     s += groupBy;
 
-    // order by
-    s += this.generateSQLOrderBy(
+    const orderBy = this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
+
+    s += orderBy;
+
+    // TODO (vitor): Double check this, this is one of the ways to make it work in views and subqueries
+    if (orderBy && !limit && this.parent.dialect.limitClause === 'top') {
+      s += '\nOFFSET 0 ROWS\n';
+    }
 
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
