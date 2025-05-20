@@ -3376,10 +3376,10 @@ class QueryQuery extends QueryField {
           if (groupByCluase === 'ordinal') {
             groupByFields.push(fi.fieldUsage.resultIndex.toString());
           } else if (groupByCluase === 'expression') {
-            // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
+            // TODO (vitor): Double check this
             const fieldExpr = field.getSQL();
             // Avoiding GROUP BY const expression
-            if (!SQL_CONST_EXPR.test(fieldExpr)) {
+            if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
               groupByFields.push(fieldExpr);
             }
           }
@@ -3566,8 +3566,6 @@ class QueryQuery extends QueryField {
         output.fieldIndex++;
       }
     }
-
-    console.warn('dimensions', output.dimensions);
   }
 
   generateSQLWhereChildren(resultStruct: FieldInstanceResult): AndChain {
@@ -3700,7 +3698,7 @@ class QueryQuery extends QueryField {
     } else if (groupByClause === 'expression') {
       groupByFields = (f.dimensions || [])
         .map(v => v.expression)
-        .filter((v): v is string => SQL_CONST_EXPR.test(v) && !!v);
+        .filter((v): v is string => !SQL_CONST_EXPR.test(v) && !!v);
     } else {
       throw new Error(`groupByClause ${groupByClause} not implemented`);
     }
@@ -3811,7 +3809,7 @@ class QueryQuery extends QueryField {
     const groupByFields = (f.dimensions || [])
       .map(d => {
         return this.parent.dialect.groupByClause === 'expression'
-          ? !SQL_CONST_EXPR.test(d.expression) && d.expression
+          ? d.expression && !SQL_CONST_EXPR.test(d.expression)
           : d.index.toString();
       })
       .filter((v): v is string => !!v);
@@ -3923,10 +3921,10 @@ class QueryQuery extends QueryField {
         if (groupByClause === 'ordinal') {
           groupBy.push(field.fieldUsage.resultIndex.toString());
         } else if (groupByClause === 'expression') {
-          // TODO (vitor): We need to avoid aliases here somehow.
+          // TODO (vitor): Double check this
           const fieldExpr = field.getSQL();
           // Avoiding GROUP BY const expression
-          if (!SQL_CONST_EXPR.test(fieldExpr)) {
+          if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
             groupBy.push(fieldExpr);
           }
         } else {
