@@ -827,6 +827,18 @@ export function generateLineChartVegaSpec(
 
     const mappedAndLimitedData = mappedData.slice(0, MAX_DATA_POINTS);
 
+    console.log('mappedAndLimitedData', {
+      data: data.rows,
+      MAX_DATA_POINTS,
+      mappedData: mappedAndLimitedData,
+      isDataLimited: data.rows.length > mappedAndLimitedData.length,
+      // Distinguish between limiting by record count and limiting by series count
+      dataLimitMessage:
+        seriesField && seriesField.valueSet.size > maxSeries
+          ? `Showing ${maxSeries.toLocaleString()} of ${seriesField.valueSet.size.toLocaleString()} series`
+          : '',
+    });
+
     return {
       data: mappedAndLimitedData,
       isDataLimited: data.rows.length > mappedAndLimitedData.length,
