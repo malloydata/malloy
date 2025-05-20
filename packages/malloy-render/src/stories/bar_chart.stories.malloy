@@ -702,6 +702,7 @@ source: random_data_nulls is duckdb.sql("""
     independent_dim_500: i%500,
     null_dim_6: CASE WHEN i%6=0 THEN NULL ELSE i%6 END,
     null_measure: CASE WHEN random()<0.2 THEN NULL ELSE ceil(random()*1000) END,
+    null_measure_2: CASE WHEN i%6=0 THEN NULL ELSE ceil(random()*1000) END,
   """) extend {
 
     view: nulls is {
@@ -742,6 +743,20 @@ source: random_data_nulls is duckdb.sql("""
     # bar_chart
     view: with_null_x_and_measure is {
       group_by: null_dim_6
+      aggregate: null_measure_2.sum()
+    }
+
+    #(story)
+    view: with_null_series_stacked_nested is {
+      group_by: dim_2
+      # bar_chart.stack
+      nest: chart is {
+        group_by:
+          # series
+          null_dim_6
+          # x
+          dim_3
       aggregate: id.sum()
+      }
     }
   }

@@ -14,7 +14,7 @@ import type {
 import {RepeatedRecordCell, RecordCell, FieldType} from '../data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
 import {getLineChartSettings} from '../component/line-chart/get-line_chart-settings';
-
+import {NULL_SYMBOL} from '../util';
 interface SeriesStats {
   sum: number;
   count: number;
@@ -70,7 +70,8 @@ export const LineChartSeriesPluginFactory: RenderPlugin<LineChartPluginInstance>
         // Process all rows in this cell, aggregating by series value
         for (const row of rows) {
           if (seriesField) {
-            const seriesValue = row.column(seriesField.name).value;
+            const seriesValue =
+              row.column(seriesField.name).value ?? NULL_SYMBOL;
             const yValue = row.column(yField.name).value;
             const stats = globalSeriesStats.get(seriesValue) ?? {
               sum: 0,
