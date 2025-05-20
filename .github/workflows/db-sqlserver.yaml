@@ -33,5 +33,5 @@ jobs:
           SQLSERVER_PASSWORD: saTEST_0pword
           SQLSERVER_DATABASE: malloytestdb
           SQLSERVER_SCHEMA: malloytest
-          SQLSERVER_ENCRYPT: ntrue
+          SQLSERVER_ENCRYPT: true
           SQLSERVER_TRUST_SERVER_CERTIFICATE: true
