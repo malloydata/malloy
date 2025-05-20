@@ -3692,7 +3692,8 @@ class QueryQuery extends QueryField {
 
     const groupByClause = this.parent.dialect.groupByClause;
 
-    let groupByFields: string[];
+    // TODO (vitor): Seems like 'group_set' is always required here. Double check
+    let groupByFields = ['group_set'];
     if (groupByClause === 'ordinal') {
       groupByFields = f.dimensionIndexes.filter(Boolean).map(String);
     } else if (groupByClause === 'expression') {
@@ -3743,7 +3744,14 @@ class QueryQuery extends QueryField {
               sqlFieldName
             );
             output.sql.push(`${exp} as ${sqlFieldName}`);
-            output.dimensionIndexes.push(output.fieldIndex++);
+            output.dimensionIndexes.push(output.fieldIndex);
+            // TODO (vitor): Double check here
+            output.dimensions?.push({
+              index: output.fieldIndex,
+              expression: exp,
+              name: sqlFieldName,
+            });
+            output.fieldIndex++;
           } else if (isBasicCalculation(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
