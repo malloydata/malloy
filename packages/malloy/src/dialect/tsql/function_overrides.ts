@@ -64,4 +64,8 @@ export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
     },
   },
   unicode: {function: 'ASCII'},
+  // TODO (vitor): Double check this
+  string_repeat: {
+    sql: 'REPLICATE(${value}, ${count})',
+  },
 };
