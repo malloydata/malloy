@@ -1265,10 +1265,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    // TODO (vitor): Check with the malloy folk
-    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
-      expect(result.sql).not.toContain('ORDER BY');
-    }
+
+    expect(result.sql).not.toContain('ORDER BY');
   });
 
   it(`removes surpuflous order_by - pipeline - ${databaseName}`, async () => {
@@ -1286,10 +1284,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    // TODO (vitor): Check with the malloy folk
-    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
-      expect(result.sql).not.toContain('ORDER BY');
-    }
+
+    expect(result.sql).not.toContain('ORDER BY');
   });
 
   it(`removes surpuflous order_by - joined_query - ${databaseName}`, async () => {
@@ -1311,10 +1307,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    // TODO (vitor): Check with the malloy folk
-    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
-      expect(result.sql).not.toContain('ORDER BY');
-    }
+
+    expect(result.sql).not.toContain('ORDER BY');
   });
 
   it(`removes surpuflous order_by - joined_query pipeline - ${databaseName}`, async () => {
@@ -1340,10 +1334,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    // TODO (vitor): Check with the malloy folk
-    if (runtime.dialect.supportsLimit || !/\boffset\b/i.test(result.sql)) {
-      expect(result.sql).not.toContain('ORDER BY');
-    }
+
+    expect(result.sql).not.toContain('ORDER BY');
   });
 
   describe('quoting and strings', () => {
