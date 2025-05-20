@@ -794,29 +794,12 @@ export function generateLineChartVegaSpec(
       }
       localSeriesSet.add(seriesVal);
       return false;
-
-      // if (seriesSet) {
-      //   if (explore.isRoot() || shouldShareSeriesDomain) {
-      //     return !seriesSet.has(seriesVal);
-      //   } else {
-      //     if (
-      //       localSeriesSet.size >= maxSeries &&
-      //       !localSeriesSet.has(seriesVal)
-      //     ) {
-      //       return true;
-      //     }
-      //     localSeriesSet.add(seriesVal);
-      //     return false;
-      //   }
-      //   localSeriesSet.add(seriesVal);
-      //   return false;
-      // }
     }
 
     // need to limit to max data points AFTER the series is filtered
     data.rows.forEach(row => {
       let seriesVal = seriesField
-        ? row.column(seriesField.name).value
+        ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
       // Limit # of series
       if (skipSeries(seriesVal)) {

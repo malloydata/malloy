@@ -866,7 +866,9 @@ export function generateBarChartVegaSpec(
     const localXSet = new Set();
     const skipX = xValue => {
       if (shouldShareXDomain) {
-        const isXOutOfLimit = !dataLimits.barValuesToPlot.includes(xValue);
+        const isXOutOfLimit = !dataLimits.barValuesToPlot.includes(
+          xValue ?? NULL_SYMBOL
+        );
         // Filter out missing date/time values
         // TODO: figure out how we can show null values in continuous axes
         const isXMissingDateTime = xIsDateorTime && xValue === null;
@@ -902,7 +904,9 @@ export function generateBarChartVegaSpec(
     const skipRecord = (row: RecordCell) => {
       return (
         skipX(getXValue(row)) ||
-        (seriesField ? skipSeries(row.column(seriesField.name).value) : false)
+        (seriesField
+          ? skipSeries(row.column(seriesField.name).value ?? NULL_SYMBOL)
+          : false)
       );
     };
 
@@ -918,7 +922,7 @@ export function generateBarChartVegaSpec(
       const row = data.rows[i];
       const xValue = getXValue(row);
       const seriesVal = seriesField
-        ? row.column(seriesField.name).value
+        ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
 
       if (skipRecord(row)) continue;
