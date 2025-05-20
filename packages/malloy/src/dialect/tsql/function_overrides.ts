@@ -64,8 +64,14 @@ export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
     },
   },
   unicode: {function: 'ASCII'},
-  // TODO (vitor): Double check this
+  // TODO (vitor): Double check all bellow
   string_repeat: {
     sql: 'REPLICATE(${value}, ${count})',
+  },
+  div: {
+    sql: '${dividend} / ${divisor}',
+  },
+  starts_with: {
+    sql: 'LEFT(${value}, LEN(${prefix}) = ${prefix}',
   },
 };
