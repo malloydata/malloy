@@ -152,9 +152,9 @@ import {
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
 // TODO (vitor): THESE REGEXP ARE SO SUS
-const FLOAT_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
+const NUMBER_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
 // const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
-const SQL_CONST_EXPR = new RegExp(`(?:${FLOAT_EXPR.source})`);
+const SQL_CONST_EXPR = new RegExp(`(?:${NUMBER_EXPR.source})`);
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');

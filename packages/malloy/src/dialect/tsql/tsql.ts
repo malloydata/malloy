@@ -55,6 +55,13 @@ import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // DATEADD's first parameter is a datepart value so we will be referencing those dateparts, just not the function.
 // DATETRUNC is also based on @@DATEFIRST so we will avoid that for weeks too.
 
+// TODO (vitor): Organize this, this is duplicated
+// TODO (vitor): THESE REGEXP ARE SO SUS
+const NON_NATURAL_NUMBER_EXPR =
+  /[-+]?(?:\d*\.\d+|\d+\.\d*|\d+(?:\.\d+)?[eE][-+]?\d+)/;
+// const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
+const INVALID_ORDER_BY_EXPR = NON_NATURAL_NUMBER_EXPR;
+
 const tsqlDatePartMap: Record<string, string> = {
   'microsecond': 'microsecond',
   'millisecond': 'millisecond',
@@ -534,7 +541,7 @@ export class TSQLDialect extends Dialect {
     const wrappedTerms = orderTerms
       .map((t, i) => {
         const match = t.match(/\b(asc|desc)\b/i);
-        let field = '';
+        let field: string | null = '';
         let dir = '';
         if (match) {
           const index = match.index;
@@ -542,13 +549,15 @@ export class TSQLDialect extends Dialect {
         } else {
           field = t;
         }
-        return `(SELECT CASE WHEN (${field}) IS NULL THEN ${
-          i + 1
-        } ELSE 0 END), ${field} ${dir} `;
+        return !INVALID_ORDER_BY_EXPR.test(field)
+          ? `(SELECT CASE WHEN (${field}) IS NULL THEN ${
+              i + 1
+            } ELSE 0 END), ${field} ${dir}`
+          : null;
       })
-      .join(',');
+      .filter((v): v is string => !!v);
 
-    return 'ORDER BY ' + wrappedTerms;
+    return wrappedTerms.length ? 'ORDER BY ' + wrappedTerms.join(', ') : '';
   }
 
   // TODO (vitor): I think the point in other dialects is to allow escaping
