@@ -3337,36 +3337,6 @@ class QueryQuery extends QueryField {
     return s;
   }
 
-  // TODO (vitor): Really not sure about all of this.
-  // Seems like group_set makes a generic function too complicated. Maybe discuss with malloy
-  generateSQLGroupBy(fields: FieldInstanceField[]): string {
-    const groupBy: string[] = [];
-
-    for (const field of fields) {
-      if (
-        field &&
-        field.fieldUsage.type === 'result' &&
-        isScalarField(field.f)
-      ) {
-        const groupByClause = this.parent.dialect.groupByClause;
-        if (groupByClause === 'ordinal') {
-          groupBy.push(field.fieldUsage.resultIndex.toString());
-        } else if (groupByClause === 'expression') {
-          // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
-          const fieldExpr = field.f.generateExpression(this.rootResult);
-          // Avoiding GROUP BY const expression
-          if (!SQL_CONST_EXPR.test(fieldExpr)) {
-            groupBy.push(fieldExpr);
-          }
-        } else {
-          throw new Error(`groupByClause ${groupByClause} not implemented`);
-        }
-      }
-    }
-
-    return groupBy.length ? 'GROUP BY ' + groupBy.join(', ') + '\n' : '';
-  }
-
   // TODO (vitor): Mark CHECK when done
   generateSimpleSQL(stageWriter: StageWriter): string {
     let s = 'SELECT';
@@ -3397,29 +3367,26 @@ class QueryQuery extends QueryField {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // group by
+    const groupByFields: string[] = [];
     if (this.firstSegment.type === 'reduce') {
-      const groupBy: string[] = [];
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
           const groupByCluase = this.parent.dialect.groupByClause;
           if (groupByCluase === 'ordinal') {
-            groupBy.push(fi.fieldUsage.resultIndex.toString());
+            groupByFields.push(fi.fieldUsage.resultIndex.toString());
           } else if (groupByCluase === 'expression') {
             // TODO (vitor): We need to avoid aliases here somehow. field.getSQL() Doens't seem to cut it.
-            const fieldExpr = field.f.generateExpression(this.rootResult);
+            const fieldExpr = field.getSQL();
             // Avoiding GROUP BY const expression
             if (!SQL_CONST_EXPR.test(fieldExpr)) {
-              groupBy.push(fieldExpr);
+              groupByFields.push(fieldExpr);
             }
           }
         }
       }
-
-      if (groupBy.length > 0) {
-        s += `GROUP BY ${groupBy.join(',')}\n`;
-      }
     }
+    s += groupByFields.length ? `GROUP BY ${groupByFields.join(',')}\n` : '';
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
@@ -3599,6 +3566,8 @@ class QueryQuery extends QueryField {
         output.fieldIndex++;
       }
     }
+
+    console.warn('dimensions', output.dimensions);
   }
 
   generateSQLWhereChildren(resultStruct: FieldInstanceResult): AndChain {
@@ -3943,9 +3912,30 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    const groupBy = this.generateSQLGroupBy(dimensionFields);
+    const groupBy: string[] = [];
+    for (const field of dimensionFields) {
+      if (
+        field &&
+        field.fieldUsage.type === 'result' &&
+        isScalarField(field.f)
+      ) {
+        const groupByClause = this.parent.dialect.groupByClause;
+        if (groupByClause === 'ordinal') {
+          groupBy.push(field.fieldUsage.resultIndex.toString());
+        } else if (groupByClause === 'expression') {
+          // TODO (vitor): We need to avoid aliases here somehow.
+          const fieldExpr = field.getSQL();
+          // Avoiding GROUP BY const expression
+          if (!SQL_CONST_EXPR.test(fieldExpr)) {
+            groupBy.push(fieldExpr);
+          }
+        } else {
+          throw new Error(`groupByClause ${groupByClause} not implemented`);
+        }
+      }
+    }
 
-    s += groupBy;
+    s += groupBy.length ? 'GROUP BY ' + groupBy.join(', ') + '\n' : '';
 
     const orderBy = this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
@@ -4345,7 +4335,7 @@ class QueryQueryIndexStage extends QueryQuery {
     this.expandFilters(resultStruct);
   }
 
-  // TODO (vitor): check group by 1
+  // TODO (vitor): check the group bys are working
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = 'COUNT(*)';
     const dialect = this.parent.dialect;
@@ -4377,73 +4367,71 @@ class QueryQueryIndexStage extends QueryQuery {
       }
     }
 
-    let sInner = 'SELECT\n  group_set,\n';
-
-    sInner += '  CASE group_set\n';
-    for (let i = 0; i < fields.length; i++) {
-      sInner += `    WHEN ${i} THEN '${fields[i].name}'\n`;
-    }
-    sInner += `  END as ${fieldNameColumn},\n`;
-
-    sInner += '  CASE group_set\n';
-    for (let i = 0; i < fields.length; i++) {
-      const path = pathToCol(fields[i].path);
-      sInner += `    WHEN ${i} THEN '${path}'\n`;
-    }
-    sInner += `  END as ${fieldPathColumn},\n`;
-
-    sInner += '  CASE group_set\n';
-    for (let i = 0; i < fields.length; i++) {
-      sInner += `    WHEN ${i} THEN '${fields[i].type}'\n`;
-    }
-    sInner += `  END as ${fieldTypeColumn},`;
-
-    sInner += `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
-      'NULL'
-    )}\n`;
-    for (let i = 0; i < fields.length; i++) {
-      if (fields[i].type === 'string') {
-        sInner += `    WHEN ${i} THEN ${fields[i].expression}\n`;
-      }
-    }
-    sInner += `  END as ${fieldValueColumn},\n`;
-
-    sInner += ` ${measureSQL} as ${weightColumn},\n`;
-
-    // just in case we don't have any field types, force the case statement to have at least one value.
-    sInner += "  CASE group_set\n    WHEN 99999 THEN ''";
-    for (let i = 0; i < fields.length; i++) {
-      if (fields[i].type === 'number') {
-        sInner += `    WHEN ${i} THEN ${dialect.concat(
-          `MIN(${dialect.castToString(fields[i].expression)})`,
-          "' to '",
-          dialect.castToString(`MAX(${fields[i].expression})`)
-        )}\n`;
-      }
-      if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
-        sInner += `    WHEN ${i} THEN ${dialect.concat(
-          `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
-          "' to '",
-          `MAX(${dialect.sqlDateToString(fields[i].expression)})`
-        )}\n`;
-      }
-    }
-    sInner += `  END as ${fieldRangeColumn}\n`;
+    let s = 'SELECT';
 
     const limit =
       !isRawSegment(this.firstSegment) && this.firstSegment.limit
         ? this.firstSegment.limit
         : null;
 
-    let s = 'SELECT';
-
     // top
     if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
     s += '\n';
+    s += 'group_set,\n';
 
-    s += `* FROM (${sInner})\n`;
+    // TODO (vitor): This one does WHEN INT
+    let fieldNameExpr = '  CASE group_set\n';
+    for (let i = 0; i < fields.length; i++) {
+      fieldNameExpr += `    WHEN ${i} THEN '${fields[i].name}'\n`;
+    }
+    s += ` ${fieldNameExpr} END as ${fieldNameColumn},\n`;
+
+    let fieldPathExpr = '  CASE group_set\n';
+    for (let i = 0; i < fields.length; i++) {
+      const path = pathToCol(fields[i].path);
+      fieldPathExpr += `    WHEN ${i} THEN '${path}'\n`;
+    }
+    s += ` ${fieldPathExpr} END as ${fieldPathColumn},\n`;
+
+    let fieldTypeExpr = '  CASE group_set\n';
+    for (let i = 0; i < fields.length; i++) {
+      fieldTypeExpr += `    WHEN ${i} THEN '${fields[i].type}'\n`;
+    }
+    s += ` ${fieldTypeExpr} END as ${fieldTypeColumn},`;
+
+    let fieldValueExpr = `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
+      'NULL'
+    )}\n`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === 'string') {
+        fieldValueExpr += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+      }
+    }
+    s += ` ${fieldValueExpr} END as ${fieldValueColumn},\n`;
+
+    s += ` ${measureSQL} as ${weightColumn},\n`;
+
+    // just in case we don't have any field types, force the case statement to have at least one value.
+    s += "  CASE group_set\n    WHEN 99999 THEN ''";
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === 'number') {
+        s += `    WHEN ${i} THEN ${dialect.concat(
+          `MIN(${dialect.castToString(fields[i].expression)})`,
+          "' to '",
+          dialect.castToString(`MAX(${fields[i].expression})`)
+        )}\n`;
+      }
+      if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
+        s += `    WHEN ${i} THEN ${dialect.concat(
+          `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
+          "' to '",
+          `MAX(${dialect.sqlDateToString(fields[i].expression)})`
+        )}\n`;
+      }
+    }
+    s += `  END as ${fieldRangeColumn}\n`;
 
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
@@ -4461,13 +4449,12 @@ class QueryQueryIndexStage extends QueryQuery {
 
     const groupByFields: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
-      // TODO (vitor): doing if foo === 'expression' and then using names is not telling the truth...
       groupByFields.push(
         'group_set',
-        fieldNameColumn,
-        fieldPathColumn,
-        fieldTypeColumn,
-        fieldValueColumn
+        fieldNameExpr,
+        fieldPathExpr,
+        fieldTypeExpr,
+        fieldValueExpr
       );
     } else {
       groupByFields.push('1', '2', '3', '4', '5');

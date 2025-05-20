@@ -32,7 +32,10 @@ export const TSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   },
   log: {sql: 'LOG(${value}, ${base})'},
   rand: {function: 'RAND'},
-  regexp_extract: {sql: 'STRING_SPLIT(${value}, ${pattern})'},
+  // TODO (vitor): Find a way to make this work or check if its not needed
+  // regexp_extract: {
+  //   sql: "-- ",
+  // },
   replace: {
     regular_expression: {
       sql: 'REPLACE(${value}, ${pattern}, ${replacement})',
