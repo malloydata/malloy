@@ -30,8 +30,7 @@ import {
   mkSqlEqWith,
 } from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 function modelText(databaseName: string): string {
   return `
