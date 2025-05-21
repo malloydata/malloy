@@ -708,9 +708,10 @@ export function generateBarChartVegaSpec(
       {
         name: 'xOffset',
         type: 'band',
-        domain: shouldShareSeriesDomain
-          ? [...seriesField!.valueSet]
-          : {data: 'values', field: 'series'},
+        domain:
+          isDimensionalSeries && seriesField && shouldShareSeriesDomain
+            ? [...seriesField!.valueSet]
+            : {data: 'values', field: 'series'},
         range: {
           signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
         },
