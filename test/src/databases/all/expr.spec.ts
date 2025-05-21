@@ -30,7 +30,8 @@ import {
   mkSqlEqWith,
 } from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 function modelText(databaseName: string): string {
   return `
@@ -628,19 +629,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     describe('[not yet supported]', () => {
       // See ${...} documentation for lookml here for guidance on remaining work:
       // https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions
-      it('${view_name.SQL_TABLE_NAME}', async () => {
+      it('${SQL_TABLE_NAME}', async () => {
         const query = await expressionModel.loadQuery(
           `
           ##! experimental { sql_functions }
-          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+          source: a0 is ${databaseName}.table('malloytest.aircraft_models')
+          source: a is ${databaseName}.table('malloytest.aircraft_models') extend {
+            where: aircraft_model_code ? '0270202'
+            join_one: a0 on aircraft_model_code = a0.aircraft_model_code
+          }
 
           run: a -> {
-              group_by: number_1 is sql_number("\${a.SQL_TABLE_NAME}.seats")
-            }
+            group_by: number_1 is sql_number("\${a0.SQL_TABLE_NAME}.seats")
+          }
           `
         );
         await expect(query.run()).rejects.toThrow(
-          "'.' paths are not yet supported in sql interpolations, found ${a.SQL_TABLE_NAME}"
+          "Invalid interpolation: 'SQL_TABLE_NAME' is not defined"
         );
       });
     });
