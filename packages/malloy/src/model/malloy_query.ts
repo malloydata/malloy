@@ -3399,7 +3399,7 @@ class QueryQuery extends QueryField {
             const aggExpr = (() => {
               // TODO (vitor): Revisit this. This is basically a safe version of function anyValue(col) {
               if (fieldType === 'boolean') {
-                return `MAX(CASE ${naiveExpression} WHEN 1 THEN 1 ELSE 0 END)`;
+                return `MAX(CASE WHEN ${naiveExpression} THEN 1 ELSE 0 END)`;
               } else {
                 return `MAX(${naiveExpression})`;
               }
