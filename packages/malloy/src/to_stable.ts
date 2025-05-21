@@ -38,6 +38,36 @@ import {
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
 
+export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
+  const parameters: Malloy.ParameterInfo[] | undefined =
+    sourceDef.parameters && Object.entries(sourceDef.parameters).length > 0
+      ? Object.entries(sourceDef.parameters).map(([name, parameter]) => {
+          if (isAtomic(parameter)) {
+            return {
+              name,
+              type: typeDefToType(parameter),
+              default_value: convertParameterDefaultValue(parameter.value),
+            };
+          }
+          return {
+            name,
+            type: {kind: 'filter_expression_type'},
+            default_value: convertParameterDefaultValue(parameter.value),
+          };
+        })
+      : undefined;
+
+  const sourceInfo: Malloy.SourceInfo = {
+    name: sourceDef.as ?? sourceDef.name,
+    schema: {
+      fields: convertFieldInfos(sourceDef, sourceDef.fields),
+    },
+    parameters,
+    annotations: getAnnotationsFromField(sourceDef),
+  };
+  return sourceInfo;
+}
+
 export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   const modelInfo: Malloy.ModelInfo = {
     entries: [],
@@ -46,34 +76,11 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   for (const [name, entry] of Object.entries(modelDef.contents)) {
     if (!modelDef.exports.includes(name)) continue;
     if (isSourceDef(entry)) {
-      const parameters: Malloy.ParameterInfo[] | undefined =
-        entry.parameters && Object.entries(entry.parameters).length > 0
-          ? Object.entries(entry.parameters).map(([name, parameter]) => {
-              if (isAtomic(parameter)) {
-                return {
-                  name,
-                  type: typeDefToType(parameter),
-                  default_value: convertParameterDefaultValue(parameter.value),
-                };
-              }
-              return {
-                name,
-                type: {kind: 'filter_expression_type'},
-                default_value: convertParameterDefaultValue(parameter.value),
-              };
-            })
-          : undefined;
-
-      const sourceInfo: Malloy.ModelEntryValueWithSource = {
+      const sourceInfo = sourceDefToSourceInfo(entry);
+      modelInfo.entries.push({
         kind: 'source',
-        name,
-        schema: {
-          fields: convertFieldInfos(entry, entry.fields),
-        },
-        parameters,
-        annotations: getAnnotationsFromField(entry),
-      };
-      modelInfo.entries.push(sourceInfo);
+        ...sourceInfo,
+      });
     } else if (entry.type === 'query') {
       const outputStruct = getResultStructDefForQuery(modelDef, entry);
       const annotations = getAnnotationsFromField(entry);

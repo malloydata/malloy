@@ -225,7 +225,7 @@ export type {
   StreamingConnection,
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
-export {modelDefToModelInfo} from './to_stable';
+export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
 export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
