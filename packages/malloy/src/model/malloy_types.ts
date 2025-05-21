@@ -1367,8 +1367,12 @@ export type BasicArrayFunctionParameterTypeDef =
 export type FunctionParameterFieldDef =
   ExtFieldDef<FunctionParameterTypeExtensions>;
 
+type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 export type RecordFunctionParameterTypeDef =
-  RecordExtTypeDef<FunctionParameterTypeExtensions>;
+  Prettify<RecordExtTypeDef<FunctionParameterTypeExtensions>>;
 
 export type RepeatedRecordFunctionParameterTypeDef =
   RepeatedRecordExtTypeDef<FunctionParameterTypeExtensions>;
