@@ -1,6 +1,6 @@
 module.exports = {
   ...require('./jest.config.ts'),
-  testTimeout: 60000, // Some tests are very slow because of the limitations of sqlserver
+  testTimeout: 120000, // Some tests are very slow because of the limitations of sqlserver
   roots: [
     '<rootDir>/packages/malloy-db-sqlserver/',
     '<rootDir>/test/src/databases/sqlserver/',
