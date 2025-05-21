@@ -625,12 +625,13 @@ export function generateLineChartVegaSpec(
         name: 'color',
         type: 'ordinal',
         range: 'category',
-        domain: shouldShareSeriesDomain
-          ? [...seriesSet!]
-          : {
-              data: 'values',
-              field: 'series',
-            },
+        domain:
+          shouldShareSeriesDomain && seriesSet
+            ? [...seriesSet!]
+            : {
+                data: 'values',
+                field: 'series',
+              },
       },
     ],
     axes: [
