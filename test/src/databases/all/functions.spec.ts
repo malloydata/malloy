@@ -459,6 +459,25 @@ expressionModels.forEach((x, databaseName) => {
       expect(result.data.path(3, 'r').value).toBe(3);
     });
 
+    it(`dense_rank is supported - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          ` run: state_facts -> {
+            group_by:
+              first_letter is substr(state, 1, 1)
+            aggregate: state_count is count()
+            calculate: r is dense_rank() {order_by: state_count desc}
+          }`
+        )
+        .run();
+      // console.log(result.sql);
+      // console.log(result.data);
+      expect(result.data.path(0, 'r').value).toBe(1);
+      expect(result.data.path(1, 'r').value).toBe(1);
+      expect(result.data.path(2, 'r').value).toBe(2);
+      expect(result.data.path(3, 'r').value).toBe(2);
+    });
+
     it(`works using unary minus in calculate block - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
