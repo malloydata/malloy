@@ -606,7 +606,7 @@ export function generateLineChartVegaSpec(
         type: xIsDateorTime ? 'time' : 'point',
         domain: shouldShareXDomain
           ? xIsDateorTime
-            ? [xField.minNumber!, xField.maxNumber!]
+            ? [Number(xField.minValue), Number(xField.maxValue)]
             : xIsBoolean
             ? [true, false]
             : [...xField.valueSet]
@@ -626,7 +626,7 @@ export function generateLineChartVegaSpec(
         type: 'ordinal',
         range: 'category',
         domain:
-          shouldShareSeriesDomain && seriesSet
+          isDimensionalSeries && shouldShareSeriesDomain && seriesSet
             ? [...seriesSet!]
             : {
                 data: 'values',
@@ -786,27 +786,20 @@ export function generateLineChartVegaSpec(
     }[] = [];
     const localSeriesSet = new Set<string | number | boolean>();
     function skipSeries(seriesVal: string | number | boolean) {
-      if (seriesSet) {
-        if (shouldShareSeriesDomain) {
-          return !seriesSet.has(seriesVal);
-        } else {
-          if (
-            localSeriesSet.size >= maxSeries &&
-            !localSeriesSet.has(seriesVal)
-          ) {
-            return true;
-          }
-          localSeriesSet.add(seriesVal);
-          return false;
-        }
+      if (seriesSet && (explore.isRoot() || shouldShareSeriesDomain)) {
+        return !seriesSet.has(seriesVal);
       }
+      if (localSeriesSet.size >= maxSeries && !localSeriesSet.has(seriesVal)) {
+        return true;
+      }
+      localSeriesSet.add(seriesVal);
       return false;
     }
 
     // need to limit to max data points AFTER the series is filtered
     data.rows.forEach(row => {
       let seriesVal = seriesField
-        ? row.column(seriesField.name).value
+        ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
       // Limit # of series
       if (skipSeries(seriesVal)) {
