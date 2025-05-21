@@ -136,8 +136,8 @@ export class TSQLDialect extends Dialect {
   experimental = true;
   booleanAsNumbers = true;
   supportsLimit = false;
-  supportsRegexp = false;
-  supportsLateGroupByEval = false;
+  // TODO (vitor): Split tsql into different dialects maybe
+  supportsRegexpMatch = false;
   orderByClause = 'expression' as const;
   groupByClause = 'expression' as const;
   limitClause = 'top' as const;

@@ -2426,21 +2426,14 @@ export function getResultStructDefForQuery(
 
 type StageGroupMaping = {fromGroup: number; toGroup: number};
 
-type Dimension = {
-  index: number;
-  name: string;
-  expr: string;
-};
-
 // TODO (vitor): Check with malloy about replacing dimensionsIndexes with Dimension[]
 type StageOutputContext = {
   sql: string[]; // sql expressions
   lateralJoinSQLExpressions: string[];
+  dimensionIndexes: number[]; // which indexes are dimensions
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
   outputPipelinedSQL: OutputPipelinedSQL[]; // secondary stages for turtles.
-  // TODO (vitor): not sure about this dimensions here. I'm using it elsewhere too.
-  dimensions: Dimension[];
 };
 
 /** Query builder object. */
@@ -3450,8 +3443,6 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
-    // TODO (vitor): Not sure about this
-    output.dimensions = [];
     const scalarFields: [string, FieldInstanceField][] = [];
     const otherFields: [string, FieldInstance][] = [];
     for (const [name, fi] of resultSet.allFields) {
@@ -3490,12 +3481,7 @@ class QueryQuery extends QueryField {
                   );
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
-                output.dimensions.push({
-                  index: output.fieldIndex,
-                  name: outputFieldNameString,
-                  expr: exp,
-                });
-                output.fieldIndex++;
+                output.dimensionIndexes.push(output.fieldIndex++);
                 output.lateralJoinSQLExpressions.push(
                   `CAST(${exp} as STRING) as ${outputNameString}`
                 );
@@ -3505,12 +3491,7 @@ class QueryQuery extends QueryField {
               // just treat it like a regular field.
               output.sql.push(`${exp} as ${outputName}`);
             }
-            output.dimensions.push({
-              index: output.fieldIndex,
-              name: outputName,
-              expr: exp,
-            });
-            output.fieldIndex++;
+            output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isBasicCalculation(fi.f)) {
             output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
@@ -3659,13 +3640,7 @@ class QueryQuery extends QueryField {
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
-      dimensions: [
-        {
-          index: 1,
-          name: 'group_set',
-          expr: 'group_set',
-        },
-      ],
+      dimensionIndexes: [1],
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
@@ -3688,20 +3663,21 @@ class QueryQuery extends QueryField {
       )})]) as __lateral_join_bag\n`;
     }
 
-    const groupByClause = this.parent.dialect.groupByClause;
-
-    let groupByFields: string[] = [];
-    if (groupByClause === 'ordinal') {
-      groupByFields = f.dimensions.map(v => v.index.toString());
-    } else if (groupByClause === 'expression') {
-      groupByFields = (f.dimensions || [])
-        .map(v => v.expr)
-        .filter((v): v is string => !SQL_CONST_EXPR.test(v) && !!v);
-    } else {
-      throw new Error(`groupByClause ${groupByClause} not implemented`);
-    }
+    const groupByFields = (() => {
+      const groupByClause = this.parent.dialect.groupByClause;
+      if (groupByClause === 'ordinal') {
+        return f.dimensionIndexes;
+      } else if (groupByClause === 'expression') {
+        return f.dimensionIndexes
+          .map(this.rootResult.getFieldByNumber)
+          .map(fbn => fbn.fif.getSQL())
+          .filter((v): v is string => !!v && !SQL_CONST_EXPR.test(v));
+      } else {
+        throw new Error(`groupByClause ${groupByClause} not implemented`);
+      }
+    })();
     const groupBy = groupByFields.length
-      ? ` GROUP BY ${groupByFields.join(', ')}\n`
+      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
       : '';
 
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
@@ -3728,8 +3704,6 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
-    output.dimensions ??= [];
-
     const groupsToMap: number[] = [];
     for (const [name, fi] of resultSet.allFields) {
       const sqlFieldName = this.parent.dialect.sqlMaybeQuoteIdentifier(
@@ -3743,12 +3717,7 @@ class QueryQuery extends QueryField {
               sqlFieldName
             );
             output.sql.push(`${exp} as ${sqlFieldName}`);
-            output.dimensions.push({
-              index: output.fieldIndex,
-              expr: exp,
-              name: sqlFieldName,
-            });
-            output.fieldIndex++;
+            output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isBasicCalculation(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
@@ -3801,13 +3770,7 @@ class QueryQuery extends QueryField {
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
-      dimensions: [
-        {
-          index: 1,
-          name: 'group_set',
-          expr: 'group_set',
-        },
-      ],
+      dimensionIndexes: [1],
     };
 
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
@@ -3818,14 +3781,20 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    const groupByFields = (f.dimensions || [])
-      .map(d => {
-        return this.parent.dialect.groupByClause === 'expression'
-          ? d.expr && !SQL_CONST_EXPR.test(d.expr)
-          : d.index.toString();
-      })
-      .filter((v): v is string => !!v);
-
+    // group by
+    const groupByFields = (() => {
+      const groupByClause = this.parent.dialect.groupByClause;
+      if (groupByClause === 'ordinal') {
+        return f.dimensionIndexes;
+      } else if (groupByClause === 'expression') {
+        return f.dimensionIndexes
+          .map(this.rootResult.getFieldByNumber)
+          .map(fbn => fbn.fif.getSQL())
+          .filter((v): v is string => !!v && !SQL_CONST_EXPR.test(v));
+      } else {
+        throw new Error(`groupByClause ${groupByClause} not implemented`);
+      }
+    })();
     const groupBy = groupByFields.length
       ? 'GROUP BY ' + groupByFields.join(',') + '\n'
       : '';
