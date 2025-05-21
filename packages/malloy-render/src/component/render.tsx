@@ -174,7 +174,8 @@ export function MalloyRender(
     </Show>
   );
 }
-
+// Prevent charts from growing unbounded as they autofill
+const CHART_SIZE_BUFFER = 4;
 export function MalloyRenderInner(props: {
   result: Malloy.Result;
   element: ICustomElement;
@@ -183,15 +184,15 @@ export function MalloyRenderInner(props: {
 }) {
   const wrapper = props.element['parentElement'];
   const [parentSize, setParentSize] = createRAFSignal({
-    width: wrapper.clientWidth,
-    height: wrapper.clientHeight,
+    width: wrapper.clientWidth - CHART_SIZE_BUFFER,
+    height: wrapper.clientHeight - CHART_SIZE_BUFFER,
   });
   const o = new ResizeObserver(entries => {
     const {width, height} = entries[0].contentRect;
     if (width !== parentSize().width || height !== parentSize().height) {
       setParentSize({
-        width,
-        height,
+        width: width - CHART_SIZE_BUFFER,
+        height: height - CHART_SIZE_BUFFER,
       });
     }
   });

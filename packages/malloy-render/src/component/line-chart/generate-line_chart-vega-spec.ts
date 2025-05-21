@@ -626,7 +626,7 @@ export function generateLineChartVegaSpec(
         type: 'ordinal',
         range: 'category',
         domain:
-          isDimensionalSeries && shouldShareSeriesDomain
+          isDimensionalSeries && shouldShareSeriesDomain && seriesSet
             ? [...seriesSet!]
             : {
                 data: 'values',
