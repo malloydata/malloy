@@ -3311,7 +3311,7 @@ class QueryQuery extends QueryField {
               if (!SQL_CONST_EXPR.test(naiveFieldExpr)) {
                 const aggExpr = (() => {
                   if (fi.f.fieldDef.type === 'boolean') {
-                    return `MAX(CASE ${naiveFieldExpr} WHEN 1 THEN 1 ELSE 0 END)`;
+                    return `MAX(CASE WHEN ${naiveFieldExpr} THEN 1 ELSE 0 END)`;
                   } else {
                     return `MAX(${naiveFieldExpr})`;
                   }
@@ -3348,7 +3348,7 @@ class QueryQuery extends QueryField {
             if (!SQL_CONST_EXPR.test(naiveFieldExpr)) {
               const aggExpr = (() => {
                 if (naiveOrderingField.fif.f.fieldDef.type === 'boolean') {
-                  return `MAX(CASE ${naiveFieldExpr} WHEN 1 THEN 1 ELSE 0 END)`;
+                  return `MAX(CASE WHEN ${naiveFieldExpr} THEN 1 ELSE 0 END)`;
                 } else {
                   return `MAX(${naiveFieldExpr})`;
                 }
