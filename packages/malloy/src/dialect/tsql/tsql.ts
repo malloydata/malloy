@@ -150,7 +150,7 @@ export class TSQLDialect extends Dialect {
   cantPartitionWindowFunctionsOnExpressions = false;
 
   booleanValue(boolStr: 'true' | 'false'): string {
-    return boolStr === 'true' ? '(1=1)' : '(1=0)';
+    return boolStr === 'true' ? '1=1' : '1=0';
   }
 
   quoteTablePath(tablePath: string): string {
