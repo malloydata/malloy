@@ -391,41 +391,17 @@ export class ExprFunc extends ExpressionDef {
       } else {
         const literal = str.literal;
         const parts = parseSQLInterpolation(literal);
-        const unsupportedInterpolations = parts
-          .filter(
-            part => part.type === 'interpolation' && part.name.includes('.')
-          )
-          .map(unsupportedPart =>
-            unsupportedPart.type === 'interpolation'
-              ? `\${${unsupportedPart.name}}`
-              : `\${${unsupportedPart.value}}`
-          );
-
-        if (unsupportedInterpolations.length > 0) {
-          const unsupportedInterpolationMsg =
-            unsupportedInterpolations.length === 1
-              ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
-                  0
-                )}`
-              : `'.' paths are not yet supported in sql interpolations, found (${unsupportedInterpolations.join(
-                  ', '
-                )})`;
-          return this.loggedErrorExpr(
-            'unsupported-sql-function-interpolation',
-            unsupportedInterpolationMsg
-          );
-        }
 
         const expr: SQLExprElement[] = [];
         for (const part of parts) {
           if (part.type === 'string') {
             expr.push(part.value);
-          } else if (part.name === 'TABLE') {
+          } else if (part.path.length === 1 && part.path[0] === 'TABLE') {
             expr.push({node: 'source-reference'});
           } else {
-            const name = new FieldName(part.name);
-            this.has({name});
-            const result = fs.lookup([name]);
+            const names = part.path.map(p => new FieldName(p));
+            this.has({names});
+            const result = fs.lookup(names);
             if (result.found === undefined) {
               return this.loggedErrorExpr(
                 'sql-function-interpolation-not-found',
@@ -439,11 +415,12 @@ export class ExprFunc extends ExpressionDef {
               );
             }
             if (result.found.refType === 'parameter') {
-              expr.push({node: 'parameter', path: [part.name]});
+              expr.push({node: 'parameter', path: part.path});
             } else {
               expr.push({
                 node: 'field',
-                path: [part.name],
+                // TODO when we have namespaces, this will need to be replaced with the resolved path
+                path: part.path,
                 at: this.args[0].location,
               });
             }
@@ -621,7 +598,7 @@ function findOverload(
 
 type InterpolationPart =
   | {type: 'string'; value: string}
-  | {type: 'interpolation'; name: string};
+  | {type: 'interpolation'; path: string[]};
 
 function parseSQLInterpolation(template: string): InterpolationPart[] {
   const parts: InterpolationPart[] = [];
@@ -642,7 +619,9 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
       }
       parts.push({
         type: 'interpolation',
-        name: remaining.slice(nextInterp + 2, interpEnd + nextInterp),
+        path: remaining
+          .slice(nextInterp + 2, interpEnd + nextInterp)
+          .split('.'),
       });
       remaining = remaining.slice(interpEnd + nextInterp + 1);
     }
