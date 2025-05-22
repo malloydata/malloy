@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-publisher",
-  "version": "0.0.281",
+  "version": "0.0.282",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
     "generate-api-types": "openapi-generator-cli generate -i publisher-api-doc.yaml -g typescript-axios -o src/client/"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.281",
+    "@malloydata/malloy": "0.0.282",
     "axios": "^1.6.7"
   },
   "devDependencies": {
