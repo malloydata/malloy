@@ -34,6 +34,7 @@ import type {
   RegexMatchExpr,
   TimeExtractExpr,
   TimeTruncExpr,
+  Expr,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -144,6 +145,7 @@ export class TSQLDialect extends Dialect {
   orderByClause = 'expression' as const;
   groupByClause = 'expression' as const;
   limitClause = 'top' as const;
+  booleanType = 'none' as const;
 
   // SQL Server does have ESCAPE but Synapse doesn't
   likeEscape = false;
@@ -151,10 +153,6 @@ export class TSQLDialect extends Dialect {
   // TODO (vitor): idk about this cantPartitionWindowFunctionsOnExpressions...
   // There's a problem with non top level CTE's with sqlserver
   cantPartitionWindowFunctionsOnExpressions = false;
-
-  booleanValue(boolStr: 'true' | 'false'): string {
-    return boolStr === 'true' ? '1=1' : '1=0';
-  }
 
   quoteTablePath(tablePath: string): string {
     // console.info('quoteTablePath');
@@ -175,6 +173,16 @@ export class TSQLDialect extends Dialect {
       WHERE n <= ${groupSetCount}
     ) AS group_set
     `;
+  }
+
+  exprToSQL(_qi: QueryInfo, expr: Expr) {
+    switch (expr.node) {
+      case 'not':
+        // -vitor: Sorry! I feel like woody the woodpecker saying i did not not not not not eat all the pizza
+        return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1 END, 0) = 1`;
+      default:
+        return;
+    }
   }
 
   // TODO (vitor): Figure out if i need to use groupSet here.

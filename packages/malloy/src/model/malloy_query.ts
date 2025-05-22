@@ -1380,15 +1380,8 @@ class QueryField extends QueryNode {
       case '()':
         return `(${expr.e.sql})`;
       case 'not':
+        // TODO (vitor): Is the following comment still true?
         // Malloy not operator always returns a boolean
-        // TODO (vitor): Sorry! I feel like woody the woodpecker saying i did not not not not not eat all the pizza
-        /**
-                In databases deep and wide,
-                Where logic twists and bits collide,
-                There lurk the double negatives,
-                Entwined in tangled predicates.
-         */
-        // I guess i can override and call super for the other cases? And put this poetic following statement in the tsql dialect...
         return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1 END, 0) = 1`;
       case 'unary-':
         return `-${expr.e.sql}`;
@@ -1398,7 +1391,7 @@ class QueryField extends QueryNode {
         return `${expr.e.sql} IS NOT NULL`;
       case 'true':
       case 'false':
-        return this.parent.dialect.booleanValue(expr.node);
+        return expr.node;
       case 'null':
         return 'NULL';
       case 'case':
