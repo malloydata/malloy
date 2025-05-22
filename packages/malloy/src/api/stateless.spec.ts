@@ -567,7 +567,7 @@ describe('api', () => {
           annotations: [
             {value: '#(test) hello\n'},
             {value: '#(malloy) drillable ordered_by = [{ carrier = asc }]\n'},
-            {value: '#(malloy) source { name = flights }\n'},
+            {value: '#(malloy) source.name = flights\n'},
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
@@ -640,7 +640,7 @@ ORDER BY 1 asc NULLS LAST
           connection_name: 'connection',
           annotations: [
             {value: '#(malloy) drillable ordered_by = [{ carrier = asc }]\n'},
-            {value: '#(malloy) source { name = flights }\n'},
+            {value: '#(malloy) source.name = flights\n'},
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
@@ -721,7 +721,7 @@ LIMIT 100
               value:
                 '#(malloy) limit = 101 drillable ordered_by = [{ carrier = asc }]\n',
             },
-            {value: '#(malloy) source { name = flights }\n'},
+            {value: '#(malloy) source.name = flights\n'},
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
