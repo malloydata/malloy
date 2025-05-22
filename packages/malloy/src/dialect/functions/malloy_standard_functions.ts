@@ -83,6 +83,7 @@ type Standard = {
   min_cumulative: D;
   min_window: D;
   rank: D;
+  dense_rank: D;
   row_number: D;
   sum_cumulative: D;
   sum_moving: {preceding: D; following: D};
@@ -596,6 +597,12 @@ const rank: DefinitionFor<Standard['rank']> = {
   impl: {function: 'RANK', needsWindowOrderBy: true},
 };
 
+const dense_rank: DefinitionFor<Standard['dense_rank']> = {
+  takes: {},
+  returns: {calculation: 'number'},
+  impl: {function: 'DENSE_RANK', needsWindowOrderBy: true},
+};
+
 const row_number: DefinitionFor<Standard['row_number']> = {
   takes: {},
   returns: {calculation: 'number'},
@@ -732,6 +739,7 @@ export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
 
   // Analytic functions
   avg_moving,
+  dense_rank,
   first_value,
   lag,
   last_value,

@@ -44,11 +44,11 @@ jobs:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-motherduck:
-    needs: check-permission
-    uses: './.github/workflows/db-motherduck.yaml'
-    secrets:
-      MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
+  # db-motherduck:
+  #   needs: check-permission
+  #   uses: './.github/workflows/db-motherduck.yaml'
+  #   secrets:
+  #     MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-publisher:
@@ -77,7 +77,7 @@ jobs:
       - db-trino
       - db-publisher
       - db-postgres
-      - db-motherduck
+      # - db-motherduck
       - db-mysql
     runs-on: ubuntu-latest
     steps:

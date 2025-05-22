@@ -50,6 +50,7 @@ import {
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import type {
+  BooleanTypeSupport,
   DialectFieldList,
   FieldReferenceType,
   OrderByClauseType,
@@ -126,7 +127,7 @@ export class MySQLDialect extends Dialect {
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
   compoundObjectInSchema = false;
-  booleanType = 'simulated' as const;
+  booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {

@@ -96,16 +96,10 @@ export function qtz(qi: QueryInfo): string | undefined {
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
-
-// TODO (vitor): check with malloy.
+export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type GroupByClauseType = 'ordinal' | 'expression';
 export type LimitingClause = 'limit' | 'top';
-
-export type OrderByRequest = 'query' | 'turtle' | 'analytical';
-export type BooleanType =
-  | 'supported' // Booleans are supported in the schema
-  | 'simulated' // Boolean expressions evaluate to 0/1
-  | 'none'; // Boolean values cannot be stored in the database
+export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
 export abstract class Dialect {
   abstract name: string;
@@ -178,7 +172,7 @@ export abstract class Dialect {
   // An array or record will reveal type of contents on schema read
   compoundObjectInSchema = true;
 
-  booleanType: BooleanType = 'supported';
+  booleanType: BooleanTypeSupport = 'supported';
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
@@ -498,5 +492,25 @@ export abstract class Dialect {
     }
     const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
     return escapeClause ? `${compare} ESCAPE '^'` : compare;
+  }
+
+  /**
+   * SQL to generate to get a boolean value for a boolean expression
+   */
+  sqlBoolean(bv: boolean): string {
+    if (this.booleanType === 'none') {
+      return bv ? '(1=1)' : '(1-0)';
+    }
+    return bv ? 'true' : 'false';
+  }
+
+  /**
+   * What a boolean value looks like in a query result
+   */
+  resultBoolean(bv: boolean) {
+    if (this.booleanType !== 'supported') {
+      return bv ? 1 : 0;
+    }
+    return bv ? true : false;
   }
 }

@@ -155,14 +155,12 @@ export abstract class AtomicFieldDeclaration
         ret.timeframe = exprValue.timeframe;
       }
       ret.location = this.location;
-
       if (
         exprValue.type === 'boolean' &&
         exprFS.dialectObj()?.booleanType === 'none'
       ) {
         // when generating a boolean field on a database without boolean support
         // map it to integers
-        ret.type = 'number';
         ret.e = {
           node: 'case',
           kids: {
@@ -174,7 +172,6 @@ export abstract class AtomicFieldDeclaration
       } else {
         ret.e = exprValue.value;
       }
-
       ret.fieldUsage = exprValue.fieldUsage;
       ret.ungroupings = exprValue.ungroupings;
       ret.requiresGroupBy = exprValue.requiresGroupBy;
