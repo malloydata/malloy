@@ -179,6 +179,14 @@ export class ParameterFieldReference extends FieldReference {
   }
 }
 
+export class DrillFieldReference extends FieldReference {
+  elementType = 'drillFieldReference';
+  // This is typechecked in the drill statement
+  typecheck() {
+    return;
+  }
+}
+
 export class CalculateFieldReference extends FieldReference {
   elementType = 'calculateFieldReference';
   typecheck(type: TypeDesc) {

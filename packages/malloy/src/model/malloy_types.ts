@@ -22,6 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {Filter} from '@malloydata/malloy-interfaces';
+
 // clang-format off
 
 /**
@@ -149,6 +151,8 @@ export interface FilterCondition extends ExprE {
   code: string;
   expressionType: ExpressionType;
   fieldUsage?: FieldUsage[];
+  drillView?: string;
+  stableFilter?: Filter;
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -553,6 +557,7 @@ export interface ResultMetadataDef {
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
   referenceId?: string;
+  drillable?: boolean;
 }
 
 export interface Ordered {
@@ -722,6 +727,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
+  drillView?: string;
 }
 
 // this field definition represents something in the database.
@@ -1157,6 +1163,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
+  drillView?: string;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1510,6 +1517,7 @@ export interface RefToField {
   path: string[];
   annotation?: Annotation;
   at?: DocumentLocation;
+  drillView?: string;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
@@ -1597,6 +1605,7 @@ export type MalloyQueryData = {
 export interface DrillSource {
   sourceExplore: string;
   sourceFilters?: FilterCondition[];
+  sourceArguments?: Record<string, Argument>;
 }
 
 export type QueryToMaterialize = {

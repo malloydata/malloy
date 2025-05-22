@@ -264,6 +264,7 @@ union ViewOperation {
   5: required FilterOperation where,
   6: required Nest nest,
   7: required FilterOperation having,
+  8: required DrillOperation drill,
 }
 
 struct GroupBy {
@@ -305,13 +306,23 @@ struct FilterOperation {
   1: required Filter filter,
 }
 
+struct DrillOperation {
+  1: required Filter filter,
+}
+
 union Filter {
   1: required FilterStringApplication filter_string,
+  2: required LiteralEqualityComparison literal_equality,
 }
 
 struct FilterStringApplication {
   1: required Reference field_reference,
   2: required string filter,
+}
+
+struct LiteralEqualityComparison {
+  1: required Reference field_reference,
+  2: required LiteralValue value,
 }
 
 /**
@@ -416,11 +427,13 @@ struct BooleanLiteral {
 struct DateLiteral {
   1: required string date_value,
   2: optional DateTimeframe granularity,
+  3: optional string timezone,
 }
 
 struct TimestampLiteral {
   1: required string timestamp_value,
   2: optional TimestampTimeframe granularity,
+  3: optional string timezone,
 }
 
 struct NullLiteral {
@@ -430,10 +443,15 @@ struct FilterExpressionLiteral {
   1: required string filter_expression_value,
 }
 
+struct LiteralValueExpression {
+  1: required LiteralValue literal_value,
+}
+
 union Expression {
   1: required Reference field_reference,
   2: required TimeTruncationFieldReference time_truncation,
   3: required FilteredField filtered_field,
+  4: required LiteralValueExpression literal_value,
 }
 
 struct TimeTruncationFieldReference {

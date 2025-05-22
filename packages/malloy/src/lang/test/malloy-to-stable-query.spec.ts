@@ -196,10 +196,56 @@ describe('Malloy to Stable Query', () => {
       );
     });
   });
-  describe('query combinations', () => {
-    describe('filters', () => {
-      test('where clause with one filter', () => {
-        idempotent('run: a -> { where: carrier ~ f`AA` }', {
+  describe('parameters', () => {
+    test('parameter is passed properly', () => {
+      idempotent('run: a(p is 1) -> by_carrier', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+              parameters: [
+                {
+                  name: 'p',
+                  value: {
+                    kind: 'number_literal',
+                    number_value: 1,
+                  },
+                },
+              ],
+            },
+            view: {
+              kind: 'view_reference',
+              name: 'by_carrier',
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+  });
+  describe('drill', () => {
+    test('drill clauses with all the literal types, as well as a filter string comparison', () => {
+      idempotent(
+        dedent`
+          run: a -> {
+            drill:
+              a = 1,
+              a ~ f\`AA\`,
+              a.b = "foo",
+              a = 1e+32,
+              a = -10,
+              a = @2000,
+              a = @2000-01,
+              a = @2000-01-01,
+              a = @2000-01-01 10,
+              a = @2000-01-01 10:00,
+              a = @2000-01-01 10:00:00,
+              a = @2000-01-01 10:00:00[America/Los_Angeles]
+          }
+        `,
+        {
           query: {
             definition: {
               kind: 'arrow',
@@ -211,75 +257,297 @@ describe('Malloy to Stable Query', () => {
                 kind: 'segment',
                 operations: [
                   {
-                    kind: 'where',
                     filter: {
-                      kind: 'filter_string',
                       field_reference: {
-                        name: 'carrier',
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'number_literal',
+                        number_value: 1,
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
                       },
                       filter: 'AA',
+                      kind: 'filter_string',
                     },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'b',
+                        path: ['a'],
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'string_literal',
+                        string_value: 'foo',
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'number_literal',
+                        number_value: 1e32,
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'number_literal',
+                        number_value: -10,
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'date_literal',
+                        date_value: '2000-01-01',
+                        granularity: 'year',
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'date_literal',
+                        date_value: '2000-01-01',
+                        granularity: 'month',
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'date_literal',
+                        date_value: '2000-01-01',
+                        granularity: 'day',
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'timestamp_literal',
+                        timestamp_value: '2000-01-01 10:00:00',
+                        granularity: 'hour',
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'timestamp_literal',
+                        timestamp_value: '2000-01-01 10:00:00',
+                        granularity: 'minute',
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'timestamp_literal',
+                        timestamp_value: '2000-01-01 10:00:00',
+                        granularity: undefined,
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'timestamp_literal',
+                        timestamp_value: '2000-01-01 10:00:00',
+                        timezone: 'America/Los_Angeles',
+                        granularity: undefined,
+                      },
+                    },
+                    kind: 'drill',
                   },
                 ],
               },
             },
           },
           logs: [],
-        });
-      });
-      test('all different filter quotings', () => {
-        const where: Malloy.ViewOperationWithWhere = {
-          kind: 'where',
-          filter: {
-            kind: 'filter_string',
-            field_reference: {
-              name: 'carrier',
-            },
-            filter: 'AA',
-          },
-        };
-        simplified(
-          dedent`
-            run: a -> {
-              where:
-                carrier ~ f'AA',
-                carrier ~ f"AA",
-                carrier ~ f\`AA\`,
-                carrier ~ f\`\`\`AA\`\`\`,
-                carrier ~ f'''AA''',
-                carrier ~ f"""AA""",
-            }
-          `,
-          dedent`
-            run: a -> {
-              where:
-                carrier ~ f\`AA\`,
-                carrier ~ f\`AA\`,
-                carrier ~ f\`AA\`,
-                carrier ~ f\`AA\`,
-                carrier ~ f\`AA\`,
-                carrier ~ f\`AA\`
-            }
-          `,
-          {
-            query: {
-              definition: {
-                kind: 'arrow',
-                source: {
-                  kind: 'source_reference',
-                  name: 'a',
-                },
-                view: {
-                  kind: 'segment',
-                  operations: [where, where, where, where, where, where],
-                },
+        }
+      );
+    });
+    test('timestamp with T in it is simplified', () => {
+      simplified(
+        'run: a -> { drill: a = @2000-01-01T10:00:00 }',
+        'run: a -> { drill: a = @2000-01-01 10:00:00 }',
+        {
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {
+                kind: 'source_reference',
+                name: 'a',
+              },
+              view: {
+                kind: 'segment',
+                operations: [
+                  {
+                    filter: {
+                      field_reference: {
+                        name: 'a',
+                      },
+                      kind: 'literal_equality',
+                      value: {
+                        kind: 'timestamp_literal',
+                        timestamp_value: '2000-01-01 10:00:00',
+                        granularity: undefined,
+                      },
+                    },
+                    kind: 'drill',
+                  },
+                ],
               },
             },
-            logs: [],
-          }
-        );
+          },
+          logs: [],
+        }
+      );
+    });
+  });
+  describe('filters', () => {
+    test('where clause with one filter', () => {
+      idempotent('run: a -> { where: carrier ~ f`AA` }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    field_reference: {
+                      name: 'carrier',
+                    },
+                    filter: 'AA',
+                  },
+                },
+              ],
+            },
+          },
+        },
+        logs: [],
       });
     });
+    test('all different filter quotings', () => {
+      const where: Malloy.ViewOperationWithWhere = {
+        kind: 'where',
+        filter: {
+          kind: 'filter_string',
+          field_reference: {
+            name: 'carrier',
+          },
+          filter: 'AA',
+        },
+      };
+      simplified(
+        dedent`
+          run: a -> {
+            where:
+              carrier ~ f'AA',
+              carrier ~ f"AA",
+              carrier ~ f\`AA\`,
+              carrier ~ f\`\`\`AA\`\`\`,
+              carrier ~ f'''AA''',
+              carrier ~ f"""AA""",
+          }
+        `,
+        dedent`
+          run: a -> {
+            where:
+              carrier ~ f\`AA\`,
+              carrier ~ f\`AA\`,
+              carrier ~ f\`AA\`,
+              carrier ~ f\`AA\`,
+              carrier ~ f\`AA\`,
+              carrier ~ f\`AA\`
+          }
+        `,
+        {
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {
+                kind: 'source_reference',
+                name: 'a',
+              },
+              view: {
+                kind: 'segment',
+                operations: [where, where, where, where, where, where],
+              },
+            },
+          },
+          logs: [],
+        }
+      );
+    });
+  });
+  describe('query combinations', () => {
     test('a -> b -> c', () => {
       idempotent('run: a -> b -> c', {
         query: {

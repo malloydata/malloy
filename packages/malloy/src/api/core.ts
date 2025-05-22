@@ -18,13 +18,13 @@ import type {
   StructDef,
   TableSourceDef,
 } from '../model';
-import {mkFieldDef, QueryModel, refIsStructDef} from '../model';
-import {modelDefToModelInfo} from '../to_stable';
+import {isSourceDef, mkFieldDef, QueryModel, refIsStructDef} from '../model';
+import {modelDefToModelInfo, writeLiteralToTag} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
 import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
-import {DEFAULT_LOG_RANGE, mapLogs} from './util';
+import {DEFAULT_LOG_RANGE, mapLogs, nodeToLiteralValue} from './util';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -573,10 +573,30 @@ export function statedCompileQuery(
           value: l,
         })
       );
+      const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
+      sourceMetadataTag.set(['source', 'name'], translatedQuery.sourceExplore);
+      const sourceArguments =
+        translatedQuery.sourceArguments ??
+        (isSourceDef(source) ? source.arguments : undefined);
+      if (sourceArguments) {
+        const args = Object.entries(sourceArguments);
+        for (let i = 0; i < args.length; i++) {
+          const [name, value] = args[i];
+          const literal: Malloy.LiteralValue | undefined = nodeToLiteralValue(
+            value.value
+          );
+          if (literal !== undefined) {
+            writeLiteralToTag(
+              sourceMetadataTag,
+              ['source', 'parameters', i, 'value'],
+              literal
+            );
+          }
+          sourceMetadataTag.set(['source', 'parameters', i, 'name'], name);
+        }
+      }
       annotations.push({
-        value: Tag.withPrefix('#(malloy) ')
-          .set(['source_name'], translatedQuery.sourceExplore)
-          .toString(),
+        value: sourceMetadataTag.toString(),
       });
       if (translatedQuery.queryName) {
         annotations.push({

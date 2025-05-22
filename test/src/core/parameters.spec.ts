@@ -192,6 +192,32 @@ describe('parameters', () => {
       `
     ).malloyResultMatches(runtime, {param_value: 11});
   });
+  it('default value modified through extension propagates', async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(param::number is 10) is duckdb.table('malloytest.state_facts') extend {
+          dimension: param_value is param
+        }
+        source: ab_new_new(param::number is 11) is ab_new(param is param + 1) extend {}
+        run: ab_new_new -> { group_by: param_value }
+      `
+    ).malloyResultMatches(runtime, {param_value: 12});
+  });
+  // Fix this with namespaces!
+  it.skip('default value modified through extension twice propagates', async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_plus_0(param::number is 0) is duckdb.table('malloytest.state_facts') extend {
+          dimension: param_value is param
+        }
+        source: ab_plus_one(param::number is 0) is ab_plus_0(param is param + 1) extend {}
+        source: ab_plus_two(param::number is 0) is ab_plus_one(param is param + 1) extend {}
+        run: ab_plus_two -> { group_by: param_value }
+      `
+    ).malloyResultMatches(runtime, {param_value: 2});
+  });
   it('use parameter in nested view', async () => {
     await expect(
       `

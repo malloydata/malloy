@@ -139,6 +139,8 @@ export {
   expressionIsUngroupedAggregate,
   indent,
   composeSQLExpr,
+  isTimestampUnit,
+  isDateUnit,
 } from './model';
 export {
   malloyToQuery,

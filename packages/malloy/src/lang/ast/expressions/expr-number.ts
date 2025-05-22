@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {ExprValue} from '../types/expr-value';
 import {literalExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
@@ -46,5 +47,12 @@ export class ExprNumber extends ExpressionDef {
       dataType,
       value: {node: 'numberLiteral', literal: this.n},
     });
+  }
+
+  getStableLiteral(): Malloy.LiteralValue {
+    return {
+      kind: 'number_literal',
+      number_value: Number(this.n),
+    };
   }
 }
