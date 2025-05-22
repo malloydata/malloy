@@ -238,7 +238,6 @@ export class SQLServerConnection
           encrypt,
           trustServerCertificate,
         },
-        requestTimeout: 2 * 60 * 1000, // SQL Server hacks make it slow.
       }
     );
   }
@@ -488,7 +487,6 @@ export class PooledSQLServerConnection
             encrypt,
             trustServerCertificate,
           },
-          requestTimeout: 2 * 60 * 1000,
         });
       }
       this._pool.on('acquire', _client => {
