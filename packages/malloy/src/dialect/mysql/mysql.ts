@@ -126,7 +126,7 @@ export class MySQLDialect extends Dialect {
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
   compoundObjectInSchema = false;
-  booleanAsNumbers = true;
+  booleanType = 'simulated' as const;
   orderByClause: OrderByClauseType = 'ordinal';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {

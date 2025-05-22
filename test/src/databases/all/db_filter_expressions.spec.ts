@@ -322,7 +322,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   });
 
   // mysql doesn't have true booleans ...
-  const testBoolean = !db.dialect.booleanAsNumbers;
+  const testBoolean = db.dialect.booleanType === 'supported';
   describe('boolean filter expressions', () => {
     const facts = db.loadModel(`
       source: facts is ${dbName}.sql("""

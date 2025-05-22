@@ -102,6 +102,10 @@ export type GroupByClauseType = 'ordinal' | 'expression';
 export type LimitingClause = 'limit' | 'top';
 
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
+export type BooleanType =
+  | 'supported' // Booleans are supported in the schema
+  | 'simulated' // Boolean expressions evaluate to 0/1
+  | 'none'; // Boolean values cannot be stored in the database
 
 export abstract class Dialect {
   abstract name: string;
@@ -174,8 +178,7 @@ export abstract class Dialect {
   // An array or record will reveal type of contents on schema read
   compoundObjectInSchema = true;
 
-  // No true boolean type, e.g. true=1 and false=0, set this to true
-  booleanAsNumbers = false;
+  booleanType: BooleanType = 'supported';
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
