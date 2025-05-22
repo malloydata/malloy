@@ -260,15 +260,17 @@ describe.each(runtimes.runtimeList)(
       await expect(`run: ${databaseName}.sql("""
                 SELECT 1 as y, 55 as x, 10 as z
       UNION ALL SELECT 50 as y, 22 as x, 10 as z
-      UNION ALL SELECT 100 as y, 1 as x, 20 as z
+      UNION ALL SELECT 1 as y, 10 as x, 20 as z
+      UNION ALL SELECT 100 as y, 15 as x, 20 as z
       """) -> {
       group_by:
         z
       aggregate:
         m1 is max_by(x, y)
+        m2 is max_by(y, x)
       }`).malloyResultMatches(runtime, [
-        {z: 10, m1: 22},
-        {z: 20, m1: 1},
+        {z: 10, m1: 22, m2: 1},
+        {z: 20, m1: 15, m2: 100},
       ]);
     });
 
