@@ -24,11 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {
-  booleanResult,
-  databasesFromEnvironmentOr,
-  mkSqlEqWith,
-} from '../../util';
+import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -534,8 +530,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: boolean_2 is sql_boolean("\${engines} = 2")
         }
   `).malloyResultMatches(expressionModel, {
-        boolean_1: booleanResult(true, databaseName),
-        boolean_2: booleanResult(false, databaseName),
+        boolean_1: runtime.dialect.resultBoolean(true),
+        boolean_2: runtime.dialect.resultBoolean(false),
       });
     });
 
@@ -861,57 +857,59 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  describe('null safe booleans', () => {
-    const nulls = `${databaseName}.sql("""
-      SELECT
-        0 as ${q`n`},
-        1 as ${q`x`}, 2 as ${q`y`},
-        'a' as ${q`a`}, 'b' as ${q`b`},
-        (1 = 1) as ${q`tf`}
-      UNION ALL SELECT
-        5,
-        null, null, null, null, null
-    """) extend { where: n > 0 }`;
-    const is_true = databaseName === 'mysql' ? 1 : true;
+  if (runtime.dialect.booleanType !== 'none') {
+    describe('null safe booleans', () => {
+      const nulls = `${databaseName}.sql("""
+        SELECT
+          0 as ${q`n`},
+          1 as ${q`x`}, 2 as ${q`y`},
+          'a' as ${q`a`}, 'b' as ${q`b`},
+          (1=1) as ${q`tf`}
+        UNION ALL SELECT
+          5,
+          null, null, null, null, null
+      """) extend { where: n > 0 }`;
+      const is_true = runtime.dialect.resultBoolean(true);
 
-    it('select boolean', async () => {
-      await expect(`run: ${nulls} -> {
-        select:
-          null_boolean is tf
-      }`).malloyResultMatches(runtime, {null_boolean: null});
+      it('select boolean', async () => {
+        await expect(`run: ${nulls} -> {
+          select:
+            null_boolean is tf
+        }`).malloyResultMatches(runtime, {null_boolean: null});
+      });
+      it('not boolean', async () => {
+        await expect(`run: ${nulls} -> {
+          select:
+            not_null_boolean is not tf
+        }`).malloyResultMatches(runtime, {not_null_boolean: is_true});
+      });
+      it('numeric != non-null to null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: val_ne_null is x != 9 }`
+        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+      });
+      it('string !~ non-null to null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
+        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+      });
+      it('regex !~ non-null to null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
+        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+      });
+      it('numeric != null-to-null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: null_ne_null is x != y }`
+        ).malloyResultMatches(runtime, {null_ne_null: is_true});
+      });
+      it('string !~ null-to-null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: null_ne_null is a !~ b }`
+        ).malloyResultMatches(runtime, {null_ne_null: is_true});
+      });
     });
-    it('not boolean', async () => {
-      await expect(`run: ${nulls} -> {
-        select:
-          not_null_boolean is not tf
-      }`).malloyResultMatches(runtime, {not_null_boolean: is_true});
-    });
-    it('numeric != non-null to null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: val_ne_null is x != 9 }`
-      ).malloyResultMatches(runtime, {val_ne_null: is_true});
-    });
-    it('string !~ non-null to null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
-      ).malloyResultMatches(runtime, {val_ne_null: is_true});
-    });
-    it('regex !~ non-null to null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
-      ).malloyResultMatches(runtime, {val_ne_null: is_true});
-    });
-    it('numeric != null-to-null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: null_ne_null is x != y }`
-      ).malloyResultMatches(runtime, {null_ne_null: is_true});
-    });
-    it('string !~ null-to-null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: null_ne_null is a !~ b }`
-      ).malloyResultMatches(runtime, {null_ne_null: is_true});
-    });
-  });
+  }
 
   test('dimension expressions expanded with parens properly', async () => {
     await expect(
@@ -923,8 +921,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           paren is    false and (fot)
       }`
     ).malloyResultMatches(runtime, {
-      paren: booleanResult(false, databaseName),
-      no_paren: booleanResult(false, databaseName),
+      paren: runtime.dialect.resultBoolean(false),
+      no_paren: runtime.dialect.resultBoolean(false),
     });
   });
 });

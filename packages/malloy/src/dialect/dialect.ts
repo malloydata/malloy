@@ -96,8 +96,8 @@ export function qtz(qi: QueryInfo): string | undefined {
 }
 
 export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
-
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
+export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
 export abstract class Dialect {
   abstract name: string;
@@ -166,8 +166,7 @@ export abstract class Dialect {
   // An array or record will reveal type of contents on schema read
   compoundObjectInSchema = true;
 
-  // No true boolean type, e.g. true=1 and false=0, set this to true
-  booleanAsNumbers = false;
+  booleanType: BooleanTypeSupport = 'supported';
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
@@ -474,5 +473,19 @@ export abstract class Dialect {
     }
     const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
     return escapeClause ? `${compare} ESCAPE '^'` : compare;
+  }
+
+  sqlBoolean(bv: boolean): string {
+    if (this.booleanType === 'none') {
+      return bv ? '(1=1)' : '(1-0)';
+    }
+    return bv ? 'true' : 'false';
+  }
+
+  resultBoolean(bv: boolean) {
+    if (this.booleanType === 'none') {
+      return bv ? 1 : 0;
+    }
+    return bv ? true : false;
   }
 }
