@@ -67,8 +67,16 @@ function unlike(disLiked: string[], x: string) {
 export const FilterCompilers = {
   compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
     if (c === null) {
-      // TODO (vitor): not sure if this is the best place to put it but we need something like this for tsql.
-      return d.booleanAsNumbers ? '(1 = 1)' : 'true';
+      if (d.booleanType === 'supported') {
+        return 'true';
+      } else if (d.booleanType === 'simulated') {
+        return '1=1';
+      } else if (d.booleanType === 'none') {
+        // TODO (vitor): Idk if we need to support === 'none'.
+        throw new Error(`booleanType ${d.booleanType} not supported`);
+      } else {
+        throw new Error(`booleanType ${d.booleanType} not supported`);
+      }
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);

@@ -36,7 +36,8 @@ export class ExprNot extends Unary {
 
   getExpression(fs: FieldSpace): ExprValue {
     const notThis = this.expr.getExpression(fs);
-    if (fs.dialectObj()?.booleanAsNumbers) {
+    // TODO (vitor): Idk if I need to support === 'none' here.
+    if (fs.dialectObj()?.booleanType === 'simulated') {
       if (this.legalChildTypes.find(t => t.type === 'number') === undefined) {
         this.legalChildTypes.push(TDU.numberT);
       }
