@@ -155,7 +155,23 @@ export abstract class AtomicFieldDeclaration
         ret.timeframe = exprValue.timeframe;
       }
       ret.location = this.location;
-      ret.e = exprValue.value;
+      if (
+        exprValue.type === 'boolean' &&
+        exprFS.dialectObj()?.booleanType === 'none'
+      ) {
+        // when generating a boolean field on a database without boolean support
+        // map it to integers
+        ret.e = {
+          node: 'case',
+          kids: {
+            caseWhen: [exprValue.value],
+            caseThen: [{node: 'numberLiteral', literal: '1'}],
+            caseElse: {node: 'numberLiteral', literal: '0'},
+          },
+        };
+      } else {
+        ret.e = exprValue.value;
+      }
       ret.fieldUsage = exprValue.fieldUsage;
       ret.ungroupings = exprValue.ungroupings;
       ret.requiresGroupBy = exprValue.requiresGroupBy;

@@ -29,6 +29,7 @@ import type {
   Result,
   Runtime,
   Expr,
+  SingleConnectionRuntime,
 } from '@malloydata/malloy';
 import {composeSQLExpr} from '@malloydata/malloy';
 export * from '@malloydata/malloy/test';
@@ -102,7 +103,7 @@ function sqlSafe(str: string): string {
 }
 
 export function mkSqlEqWith(
-  runtime: Runtime,
+  runtime: SingleConnectionRuntime,
   cName: string,
   initV?: InitValues
 ) {
@@ -197,20 +198,4 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
   }
 
   return result;
-}
-
-export function booleanResult(value: boolean, dbName: string) {
-  if (dbName === 'mysql') {
-    return value ? 1 : 0;
-  } else {
-    return value;
-  }
-}
-
-export function booleanCode(value: boolean, dbName: string) {
-  if (dbName === 'mysql') {
-    return value ? '1' : '0';
-  } else {
-    return value ? 'true' : 'false';
-  }
 }

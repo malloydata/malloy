@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {booleanResult, databasesFromEnvironmentOr} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -45,7 +45,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is count()
       }
     `).malloyResultMatches(orderByModel, {
-      big: booleanResult(false, databaseName),
+      big: runtime.dialect.resultBoolean(false),
       model_count: 58451,
     });
   });
@@ -62,7 +62,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is model_count.sum()
       }
     `).malloyResultMatches(orderByModel, {
-      big: booleanResult(false, databaseName),
+      big: runtime.dialect.resultBoolean(false),
       model_count: 58500,
     });
   });
