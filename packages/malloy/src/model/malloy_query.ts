@@ -154,7 +154,7 @@ interface TurtleDefPlus extends TurtleDef, Filtered {}
 // TODO (vitor): THESE REGEXP ARE SO SUS
 const NUMBER_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
 // const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
-const SQL_CONST_EXPR = NUMBER_EXPR;
+const SQL_CONST_EXPR = new RegExp(`(?:${NUMBER_EXPR.source})`);
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -3301,26 +3301,8 @@ class QueryQuery extends QueryField {
               }`
             );
           } else if (this.parent.dialect.orderByClause === 'expression') {
-            const naiveFieldExpr = fi.f.generateExpression(resultStruct);
-            // TODO (vitor): This is duplicate knowledge, refactor
-            if (
-              fi.fieldUsage.type === 'result' &&
-              this.firstSegment.type === 'reduce' &&
-              isScalarField(fi.f)
-            ) {
-              if (!SQL_CONST_EXPR.test(naiveFieldExpr)) {
-                const aggExpr = (() => {
-                  if (fi.f.fieldDef.type === 'boolean') {
-                    return `MAX(CASE ${naiveFieldExpr} WHEN 1 THEN 1 ELSE 0 END)`;
-                  } else {
-                    return `MAX(${naiveFieldExpr})`;
-                  }
-                })();
-                o.push(`${aggExpr} ${f.dir || 'ASC'}`);
-              }
-            } else {
-              o.push(`${naiveFieldExpr} ${f.dir || 'ASC'}`);
-            }
+            const fieldExpr = fi.getSQL();
+            o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
@@ -3336,28 +3318,9 @@ class QueryQuery extends QueryField {
             )} ${f.dir || 'ASC'}`
           );
         } else if (this.parent.dialect.orderByClause === 'expression') {
-          const naiveOrderingField = resultStruct.getFieldByNumber(f.field);
-          const naiveFieldExpr =
-            naiveOrderingField.fif.f.generateExpression(resultStruct);
-          // TODO (vitor): This is duplicate knowledge, refactor
-          if (
-            naiveOrderingField.fif.fieldUsage.type === 'result' &&
-            this.firstSegment.type === 'reduce' &&
-            isScalarField(naiveOrderingField.fif.f)
-          ) {
-            if (!SQL_CONST_EXPR.test(naiveFieldExpr)) {
-              const aggExpr = (() => {
-                if (naiveOrderingField.fif.f.fieldDef.type === 'boolean') {
-                  return `MAX(CASE ${naiveFieldExpr} WHEN 1 THEN 1 ELSE 0 END)`;
-                } else {
-                  return `MAX(${naiveFieldExpr})`;
-                }
-              })();
-              o.push(`${aggExpr} ${f.dir || 'ASC'}`);
-            }
-          } else {
-            o.push(`${naiveFieldExpr} ${f.dir || 'ASC'}`);
-          }
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          const fieldExpr = orderingField.fif.getSQL();
+          o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
         }
       }
     }
@@ -3380,56 +3343,42 @@ class QueryQuery extends QueryField {
     s += '\n';
 
     const fields: string[] = [];
-    const groupByFields: string[] = [];
+
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
-        const naiveExpression = fi.f.generateExpression(this.rootResult);
-        const groupByClause = this.parent.dialect.groupByClause;
-        const fieldIndex = fi.fieldUsage.resultIndex.toString();
-        if (groupByClause === 'ordinal') {
-          if (this.firstSegment.type === 'reduce' && isScalarField(fi.f)) {
-            groupByFields.push(fieldIndex);
-          }
-          fields.push(` ${naiveExpression} as ${sqlName}`);
-        } else if (groupByClause === 'expression') {
-          if (this.firstSegment.type === 'reduce' && isScalarField(fi.f)) {
-            const fieldType = fi.f.fieldDef.type;
-            const aggExpr = (() => {
-              // TODO (vitor): Revisit this. This is basically a safe version of function anyValue(col) {
-              if (fieldType === 'boolean') {
-                return `MAX(CASE ${naiveExpression} WHEN 1 THEN 1 ELSE 0 END)`;
-              } else {
-                return `MAX(${naiveExpression})`;
-              }
-            })();
-            fields.push(`${aggExpr} as ${sqlName}`);
-            if (!SQL_CONST_EXPR.test(naiveExpression)) {
-              groupByFields.push(`CAST(${naiveExpression} AS varchar)`);
-            }
-          } else {
-            fields.push(` ${naiveExpression} AS ${sqlName}`);
-          }
-        } else {
-          throw new Error(`groupByClause ${groupByClause} not implemented`);
-        }
+        fields.push(
+          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+        );
       }
     }
     s += indent(fields.join(',\n')) + '\n';
 
     s += this.generateSQLJoins(stageWriter);
-
-    if (
-      this.parent.dialect.groupByClause === 'expression' &&
-      groupByFields.length
-    ) {
-      s += `\nOUTER APPLY (SELECT ${groupByFields
-        .map((f, i) => `${f} AS str_agg_${i}`)
-        .join(', ')}) str_agg_t_${uuidv4().replace(/-/g, '')}\n`;
-    }
-
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
+
+    // group by
+    // TODO (vitor): Do we need 'group_set' here?
+    const groupByFields: string[] = [];
+    if (this.firstSegment.type === 'reduce') {
+      for (const field of this.rootResult.fields()) {
+        const fi = field as FieldInstanceField;
+        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+          const groupByCluase = this.parent.dialect.groupByClause;
+          if (groupByCluase === 'ordinal') {
+            groupByFields.push(fi.fieldUsage.resultIndex.toString());
+          } else if (groupByCluase === 'expression') {
+            // TODO (vitor): Double check this
+            const fieldExpr = field.getSQL();
+            // Avoiding GROUP BY const expression
+            if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
+              groupByFields.push(fieldExpr);
+            }
+          }
+        }
+      }
+    }
     s += groupByFields.length ? `GROUP BY ${groupByFields.join(',')}\n` : '';
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
