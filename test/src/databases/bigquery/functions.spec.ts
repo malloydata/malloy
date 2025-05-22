@@ -33,29 +33,8 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
-describe('time specific tests for standardsql', () => {
+describe('dialect specific function tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
-
-  const utc_2020 = DateTime.fromObject(
-    {
-      year: 2020,
-      month: 2,
-      day: 20,
-      hour: 0,
-      minute: 0,
-      second: 0,
-    },
-    {
-      zone: 'UTC',
-    }
-  );
-  test('can cast unsupported DATETIME to timestamp', async () => {
-    await expect(
-      `run: bigquery.sql("SELECT DATETIME '2020-02-20 00:00:00' as t_datetime") -> {
-          select: mex_220 is t_datetime::timestamp
-      }`
-    ).malloyResultMatches(runtime!, {mex_220: utc_2020.toJSDate()});
-  });
 
   it(`runs the max_by function - bigquery`, async () => {
     await expect(`run: bigquery.sql("""
@@ -85,5 +64,17 @@ describe('time specific tests for standardsql', () => {
       {z: 10, m1: 22, m2: 1},
       {z: 20, m1: 15, m2: 100},
     ]);
+  });
+
+  it(`runs the min_by function - bigquery`, async () => {
+    await expect(`run: bigquery.sql("""
+              SELECT 1 as y, 55 as x
+    UNION ALL SELECT 50 as y, 22 as x
+    UNION ALL SELECT 100 as y, 1 as x
+    """) -> {
+    aggregate:
+      m1 is min_by(x, y)
+      m2 is min_by(y, x)
+    }`).malloyResultMatches(runtime!, {m1: 55, m2: 100});
   });
 });
