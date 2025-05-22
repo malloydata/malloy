@@ -316,7 +316,27 @@ export abstract class FieldBase {
   }
 
   get sourceName() {
-    return this.metadataTag.text('source_name') ?? '__source__';
+    return this.metadataTag.text('source', 'name') ?? '__source__';
+  }
+
+  get sourceArguments(): Malloy.ParameterValue[] | undefined {
+    const argTags = this.metadataTag.array('source', 'parameters');
+    if (argTags === undefined) return undefined;
+    const args: Malloy.ParameterValue[] = [];
+    for (const argTag of argTags) {
+      const name = argTag.text('name');
+      const valueTag = argTag.tag('value');
+      if (name === undefined || valueTag === undefined) continue;
+      const literal = extractLiteralFromTag(valueTag);
+      if (literal !== undefined) {
+        args.push({
+          name,
+          value: literal,
+        });
+      }
+    }
+    if (args.length === 0) return undefined;
+    return args;
   }
 
   get name() {
@@ -391,84 +411,13 @@ export abstract class FieldBase {
       };
     } else if (kind === 'literal_equality') {
       const value = filter.tag('value');
-      if (value === undefined) return undefined;
-      const valueKind = value.text('kind');
-      if (valueKind === undefined) return undefined;
-      switch (valueKind) {
-        case 'string_literal': {
-          const stringValue = value.text('string_value');
-          if (stringValue === undefined) return undefined;
-          return {
-            kind: 'literal_equality',
-            field_reference: fieldReference,
-            value: {
-              kind: 'string_literal',
-              string_value: stringValue,
-            },
-          };
-        }
-        case 'number_literal': {
-          const numberValue = value.numeric('number_value');
-          if (numberValue === undefined) return undefined;
-          return {
-            kind: 'literal_equality',
-            field_reference: fieldReference,
-            value: {
-              kind: 'number_literal',
-              number_value: numberValue,
-            },
-          };
-        }
-        case 'date_literal': {
-          const dateValue = value.text('date_value');
-          const granularity = value.text('granularity');
-          if (granularity && !isDateUnit(granularity)) return undefined;
-          if (dateValue === undefined) return undefined;
-          return {
-            kind: 'literal_equality',
-            field_reference: fieldReference,
-            value: {
-              kind: 'date_literal',
-              date_value: dateValue,
-              granularity: granularity as Malloy.DateTimeframe,
-            },
-          };
-        }
-        case 'timestamp_literal': {
-          const timestampValue = value.text('timestamp_value');
-          const granularity = value.text('granularity');
-          if (timestampValue === undefined) return undefined;
-          if (granularity && !isTimestampUnit(granularity)) return undefined;
-          return {
-            kind: 'literal_equality',
-            field_reference: fieldReference,
-            value: {
-              kind: 'timestamp_literal',
-              timestamp_value: timestampValue,
-              granularity: granularity as Malloy.TimestampTimeframe,
-            },
-          };
-        }
-        case 'boolean_literal': {
-          const booleanValue = value.text('boolean_value');
-          if (booleanValue === undefined) return undefined;
-          return {
-            kind: 'literal_equality',
-            field_reference: fieldReference,
-            value: {
-              kind: 'boolean_literal',
-              boolean_value: booleanValue === 'true',
-            },
-          };
-        }
-        case 'null_literal':
-          return {
-            kind: 'literal_equality',
-            field_reference: fieldReference,
-            value: {
-              kind: 'null_literal',
-            },
-          };
+      const literal = extractLiteralFromTag(value);
+      if (literal !== undefined) {
+        return {
+          kind: 'literal_equality',
+          field_reference: fieldReference,
+          value: literal,
+        };
       }
     }
     return undefined;
@@ -1267,13 +1216,14 @@ export abstract class CellBase {
         ...d,
       })
     );
+    const root = this.field.root();
     return {
       definition: {
         kind: 'arrow',
         source: {
           kind: 'source_reference',
-          name: this.field.root().sourceName,
-          // TODO parameters
+          name: root.sourceName,
+          parameters: root.sourceArguments,
         },
         view: {
           kind: 'segment',
@@ -1790,4 +1740,77 @@ export class BooleanCell extends CellBase {
       boolean_value: this.cell.boolean_value,
     };
   }
+}
+
+function extractLiteralFromTag(
+  value: Tag | undefined
+): Malloy.LiteralValue | undefined {
+  if (value === undefined) return undefined;
+  const valueKind = value.text('kind');
+  if (valueKind === undefined) return undefined;
+  switch (valueKind) {
+    case 'string_literal': {
+      const stringValue = value.text('string_value');
+      if (stringValue === undefined) return undefined;
+      return {
+        kind: 'string_literal',
+        string_value: stringValue,
+      };
+    }
+    case 'number_literal': {
+      const numberValue = value.numeric('number_value');
+      if (numberValue === undefined) return undefined;
+      return {
+        kind: 'number_literal',
+        number_value: numberValue,
+      };
+    }
+    case 'date_literal': {
+      const dateValue = value.text('date_value');
+      const granularity = value.text('granularity');
+      const timezone = value.text('timezone');
+      if (granularity && !isDateUnit(granularity)) return undefined;
+      if (dateValue === undefined) return undefined;
+      return {
+        kind: 'date_literal',
+        date_value: dateValue,
+        granularity: granularity as Malloy.DateTimeframe,
+        timezone,
+      };
+    }
+    case 'timestamp_literal': {
+      const timestampValue = value.text('timestamp_value');
+      const granularity = value.text('granularity');
+      const timezone = value.text('timezone');
+      if (timestampValue === undefined) return undefined;
+      if (granularity && !isTimestampUnit(granularity)) return undefined;
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: timestampValue,
+        granularity: granularity as Malloy.TimestampTimeframe,
+        timezone,
+      };
+    }
+    case 'boolean_literal': {
+      const booleanValue = value.text('boolean_value');
+      if (booleanValue === undefined) return undefined;
+      return {
+        kind: 'boolean_literal',
+        boolean_value: booleanValue === 'true',
+      };
+    }
+    case 'null_literal':
+      return {
+        kind: 'null_literal',
+      };
+    case 'filter_expression_literal': {
+      const filterExpressionValue = value.text('filter_expression_value');
+      if (filterExpressionValue === undefined) return undefined;
+      return {
+        kind: 'filter_expression_literal',
+        filter_expression_value: filterExpressionValue,
+      };
+    }
+  }
+  return undefined;
 }

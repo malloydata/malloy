@@ -300,52 +300,48 @@ function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
         );
       } else {
         tag.set(['drill_filters', i, 'kind'], 'literal_equality');
-        tag.set(
-          ['drill_filters', i, 'value', 'kind'],
-          filter.stableFilter.value.kind
+        writeLiteralToTag(
+          tag,
+          ['drill_filters', i, 'value'],
+          filter.stableFilter.value
         );
-        switch (filter.stableFilter.value.kind) {
-          case 'string_literal':
-            tag.set(
-              ['drill_filters', i, 'value', 'string_value'],
-              filter.stableFilter.value.string_value
-            );
-            break;
-          case 'number_literal':
-            tag.set(
-              ['drill_filters', i, 'value', 'number_value'],
-              filter.stableFilter.value.number_value
-            );
-            break;
-          case 'boolean_literal':
-            tag.set(
-              ['drill_filters', i, 'value', 'boolean_value'],
-              filter.stableFilter.value.boolean_value.toString()
-            );
-            break;
-          case 'date_literal':
-            tag.set(
-              ['drill_filters', i, 'value', 'date_value'],
-              filter.stableFilter.value.date_value
-            );
-            tag.set(
-              ['drill_filters', i, 'value', 'granularity'],
-              filter.stableFilter.value.granularity
-            );
-            break;
-          case 'timestamp_literal':
-            tag.set(
-              ['drill_filters', i, 'value', 'timestamp_value'],
-              filter.stableFilter.value.timestamp_value
-            );
-            tag.set(
-              ['drill_filters', i, 'value', 'granularity'],
-              filter.stableFilter.value.granularity
-            );
-            break;
-        }
       }
     }
+  }
+}
+
+export function writeLiteralToTag(
+  tag: Tag,
+  path: (string | number)[],
+  literal: Malloy.LiteralValue
+) {
+  tag.set([...path, 'kind'], literal.kind);
+  switch (literal.kind) {
+    case 'string_literal':
+      tag.set([...path, 'string_value'], literal.string_value);
+      break;
+    case 'number_literal':
+      tag.set([...path, 'number_value'], literal.number_value);
+      break;
+    case 'boolean_literal':
+      tag.set([...path, 'boolean_value'], literal.boolean_value.toString());
+      break;
+    case 'date_literal':
+      tag.set([...path, 'date_value'], literal.date_value);
+      tag.set([...path, 'timezone'], literal.timezone);
+      tag.set([...path, 'granularity'], literal.granularity);
+      break;
+    case 'timestamp_literal':
+      tag.set([...path, 'timestamp_value'], literal.timestamp_value);
+      tag.set([...path, 'timezone'], literal.timezone);
+      tag.set([...path, 'granularity'], literal.granularity);
+      break;
+    case 'filter_expression_literal':
+      tag.set(
+        [...path, 'filter_expression_value'],
+        literal.filter_expression_value
+      );
+      break;
   }
 }
 

@@ -29,7 +29,7 @@ import type {
   TimestampUnit,
   TimeLiteralNode,
 } from '../../../model/malloy_types';
-import {isTemporalType} from '../../../model/malloy_types';
+import {isDateUnit, isTemporalType} from '../../../model/malloy_types';
 
 import type {ExprValue} from '../types/expr-value';
 import {literalTimeResult} from '../types/expr-value';
@@ -93,11 +93,22 @@ export abstract class TimeLiteral extends ExpressionDef {
     }
   }
 
-  protected makeLiteral(val: string, typ: TemporalFieldType): TimeLiteralNode {
+  protected makeLiteral(
+    val: string,
+    typ: TemporalFieldType,
+    units: TimestampUnit | undefined
+  ): TimeLiteralNode {
     const timeFrag: TimeLiteralNode = {
       node: 'timeLiteral',
       literal: val,
-      typeDef: {type: typ},
+      typeDef:
+        typ === 'timestamp'
+          ? {type: typ, timeframe: units}
+          : {
+              type: typ,
+              timeframe:
+                units !== undefined && isDateUnit(units) ? units : undefined,
+            },
     };
     if (this.timeZone) {
       timeFrag.timezone = this.timeZone;
@@ -106,10 +117,10 @@ export abstract class TimeLiteral extends ExpressionDef {
   }
 
   protected makeValue(val: string, dataType: TemporalFieldType): TimeResult {
-    const value = this.makeLiteral(val, dataType);
+    const value = this.makeLiteral(val, dataType, this.units);
     return literalTimeResult({
       value,
-      dataType: {type: dataType},
+      dataType: value.typeDef,
       timeframe: this.units,
     });
   }
@@ -301,14 +312,19 @@ abstract class DateBasedLiteral extends GranularLiteral {
     const dateValue = this.makeValue(this.literalPart, 'date');
     const timestamp = this.makeLiteral(
       `${this.literalPart} 00:00:00`,
-      'timestamp'
+      'timestamp',
+      this.units
     );
     return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
   }
 
   getNext(): ExprValue | undefined {
     const dateValue = this.makeValue(this.nextLit, 'date');
-    const timestamp = this.makeLiteral(`${this.nextLit} 00:00:00`, 'timestamp');
+    const timestamp = this.makeLiteral(
+      `${this.nextLit} 00:00:00`,
+      'timestamp',
+      this.units
+    );
     return {...dateValue, morphic: {timestamp}};
   }
 }

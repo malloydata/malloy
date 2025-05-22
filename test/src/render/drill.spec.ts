@@ -13,7 +13,7 @@ const duckdb = runtimeFor('duckdb');
 
 describe('drill query', () => {
   const model = `
-    ##! experimental.drill
+    ##! experimental { drill parameters }
     source: carriers is duckdb.table('test/data/duckdb/carriers.parquet') extend {
       primary_key: code
       measure: carrier_count is count()
@@ -57,6 +57,17 @@ describe('drill query', () => {
         group_by: negative_one is -1
       }
     }
+    source: flights_with_parameters(
+      number_param is 1,
+      string_param is 'foo',
+      boolean_param is true,
+      date_param is @2000,
+      timestamp_param is @2004-01-01 10:00,
+      filter_expression_param::filter<number> is f'> 3'
+    ) is flights
+    source: flights_with_timestamp_param(
+      timestamp_param is @2004-01-01 10:00
+    ) is flights
     query: top_carriers is flights -> top_carriers
     query: over_time is flights -> over_time
     query: by_origin is flights -> by_origin
@@ -86,6 +97,18 @@ describe('drill query', () => {
         carrier = "AA",
         cool_carriers.\`Origin Code\` = "ORD"
     } + over_time
+    query: source_has_parameters is flights_with_parameters(
+      number_param is 1,
+      string_param is 'foo',
+      boolean_param is true,
+      date_param is @2000,
+      timestamp_param is @2004-01-01 10:00,
+      filter_expression_param is f'> 3'
+    ) -> top_carriers
+    query: source_has_timezone_param is flights_with_timestamp_param(
+      timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]
+    ) -> top_carriers
+    query: only_default_params is flights_with_parameters -> top_carriers
   `;
 
   beforeEach(() => {
@@ -266,6 +289,50 @@ describe('drill query', () => {
           ],
         },
       },
+    });
+  });
+
+  describe('source parameters', () => {
+    test('can handle source parameters', async () => {
+      const result = await duckdb
+        .loadModel(model)
+        .loadQueryByName('source_has_parameters')
+        .run();
+      const table = getDataTree(API.util.wrapResult(result));
+      const expDrillQuery = `run: flights_with_parameters(
+  number_param is 1,
+  string_param is "foo",
+  boolean_param is true,
+  date_param is @2000,
+  timestamp_param is @2004-01-01 10:00,
+  filter_expression_param is f\`> 3\`
+) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }`;
+      const row = table.rows[0];
+      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    });
+
+    test('can handle timezone in source parameter', async () => {
+      const result = await duckdb
+        .loadModel(model)
+        .loadQueryByName('source_has_timezone_param')
+        .run();
+      const table = getDataTree(API.util.wrapResult(result));
+      const expDrillQuery =
+        'run: flights_with_timestamp_param(timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
+      const row = table.rows[0];
+      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    });
+
+    test.skip('default_params_are_not_included', async () => {
+      const result = await duckdb
+        .loadModel(model)
+        .loadQueryByName('only_default_params')
+        .run();
+      const table = getDataTree(API.util.wrapResult(result));
+      const expDrillQuery =
+        'run: flights_with_parameters -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
+      const row = table.rows[0];
+      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
     });
   });
 });

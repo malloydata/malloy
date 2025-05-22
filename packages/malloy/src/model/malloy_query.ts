@@ -5263,6 +5263,9 @@ export class QueryModel {
       typeof structRef === 'string'
         ? structRef
         : structRef.as || structRef.name;
+    const sourceArguments =
+      query.sourceArguments ??
+      (typeof structRef === 'string' ? undefined : structRef.arguments);
     // LTNote:  I don't understand why this might be here.  It should have happened in loadQuery...
     if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
@@ -5285,6 +5288,7 @@ export class QueryModel {
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,
+      sourceArguments,
       queryName: query.name,
       connectionName: ret.connectionName,
       annotation: query.annotation,

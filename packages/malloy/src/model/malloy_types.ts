@@ -1581,6 +1581,7 @@ export type MalloyQueryData = {
 export interface DrillSource {
   sourceExplore: string;
   sourceFilters?: FilterCondition[];
+  sourceArguments?: Record<string, Argument>;
 }
 
 export type QueryToMaterialize = {

@@ -12,10 +12,17 @@ import type {
   Connection as LegacyConnection,
 } from '../connection';
 import type {Result} from '../malloy';
-import type {QueryData, QueryDataRow, QueryValue} from '../model';
+import type {Expr} from '../model';
+import {
+  isDateUnit,
+  type QueryData,
+  type QueryDataRow,
+  type QueryValue,
+} from '../model';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
+  writeLiteralToTag,
 } from '../to_stable';
 import type {Connection, InfoConnection} from './connection';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -219,13 +226,30 @@ export function wrapResult(result: Result): Malloy.Result {
     annotations.push(metadataAnnot);
   }
   annotations.push(...(struct.resultMetadata ? [] : []));
+
+  const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
   if (result.sourceExplore) {
-    annotations.push({
-      value: Tag.withPrefix('#(malloy) ')
-        .set(['source_name'], result.sourceExplore.name)
-        .toString(),
-    });
+    sourceMetadataTag.set(['source', 'name'], result.sourceExplore.name);
   }
+  if (result._sourceArguments) {
+    const args = Object.entries(result._sourceArguments);
+    for (let i = 0; i < args.length; i++) {
+      const [name, value] = args[i];
+      const literal: Malloy.LiteralValue | undefined = nodeToLiteralValue(
+        value.value
+      );
+      if (literal !== undefined) {
+        writeLiteralToTag(
+          sourceMetadataTag,
+          ['source', 'parameters', i, 'value'],
+          literal
+        );
+      }
+      sourceMetadataTag.set(['source', 'parameters', i, 'name'], name);
+    }
+  }
+  annotations.push({value: sourceMetadataTag.toString()});
+
   annotations.push({
     value: Tag.withPrefix('#(malloy) ')
       .set(['query_name'], result.resultExplore.name)
@@ -239,6 +263,57 @@ export function wrapResult(result: Result): Malloy.Result {
     query_timezone: result.data.field.queryTimezone,
     sql: result.sql,
   };
+}
+
+export function nodeToLiteralValue(
+  expr?: Expr | null
+): Malloy.LiteralValue | undefined {
+  switch (expr?.node) {
+    case 'numberLiteral':
+      return {
+        kind: 'number_literal',
+        number_value: Number.parseFloat(expr.literal),
+      };
+    case 'null':
+      return {kind: 'null_literal'};
+    case 'stringLiteral':
+      return {kind: 'string_literal', string_value: expr.literal};
+    case 'filterLiteral':
+      return {
+        kind: 'filter_expression_literal',
+        filter_expression_value: expr.filterSrc,
+        // TODO type?
+      };
+    case 'true':
+      return {kind: 'boolean_literal', boolean_value: true};
+    case 'false':
+      return {kind: 'boolean_literal', boolean_value: false};
+    case 'timeLiteral': {
+      if (expr.typeDef.type === 'date') {
+        if (
+          expr.typeDef.timeframe === undefined ||
+          isDateUnit(expr.typeDef.timeframe)
+        ) {
+          return {
+            kind: 'date_literal',
+            date_value: expr.literal,
+            timezone: expr.timezone,
+            granularity: expr.typeDef.timeframe,
+          };
+        }
+        return undefined;
+      } else {
+        return {
+          kind: 'timestamp_literal',
+          timestamp_value: expr.literal,
+          timezone: expr.timezone,
+          granularity: expr.typeDef.timeframe,
+        };
+      }
+    }
+    default:
+      return undefined;
+  }
 }
 
 export const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {

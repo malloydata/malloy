@@ -62,6 +62,7 @@ import type {
   SourceDef,
   QueryToMaterialize,
   DependencyTree,
+  Argument,
 } from './model';
 import {
   fieldIsIntrinsic,
@@ -1377,6 +1378,10 @@ export class PreparedResult implements Taggable {
 
   public get _sourceExploreName(): string {
     return this.inner.sourceExplore;
+  }
+
+  public get _sourceArguments(): Record<string, Argument> | undefined {
+    return this.inner.sourceArguments;
   }
 
   public get _sourceFilters(): FilterCondition[] {
