@@ -610,6 +610,7 @@ expressionModels.forEach((x, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
+          # test.debug
           run: state_facts -> {
             group_by: state
             calculate: lag_val is lag(@2011-11-11 11:11:11, 1, now).year = now.year

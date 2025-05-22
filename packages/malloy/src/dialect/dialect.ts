@@ -475,6 +475,9 @@ export abstract class Dialect {
     return escapeClause ? `${compare} ESCAPE '^'` : compare;
   }
 
+  /**
+   * SQL to generate to get a boolean value for a boolean expression
+   */
   sqlBoolean(bv: boolean): string {
     if (this.booleanType === 'none') {
       return bv ? '(1=1)' : '(1-0)';
@@ -482,8 +485,11 @@ export abstract class Dialect {
     return bv ? 'true' : 'false';
   }
 
+  /**
+   * What a boolean value looks like in a query result
+   */
   resultBoolean(bv: boolean) {
-    if (this.booleanType === 'none') {
+    if (this.booleanType !== 'supported') {
       return bv ? 1 : 0;
     }
     return bv ? true : false;
