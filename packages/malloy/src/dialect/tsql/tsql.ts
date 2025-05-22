@@ -138,6 +138,9 @@ export class TSQLDialect extends Dialect {
   supportsLimit = false;
   // TODO (vitor): Split tsql into different dialects maybe
   supportsRegexpMatch = false;
+
+  // tsql doesn't support nulls last, so we are using orderByClause expression for now to make things easier
+  // wether or not it actually makes it easier idk, but I can make nulls last with CASE expressions.
   orderByClause = 'expression' as const;
   groupByClause = 'expression' as const;
   limitClause = 'top' as const;
