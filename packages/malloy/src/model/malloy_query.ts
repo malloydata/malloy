@@ -4564,14 +4564,12 @@ class QueryStruct {
           ? null
           : exprMap(param.value, frag => {
               if (frag.node === 'parameter') {
-                if (this.parent === undefined) {
-                  throw new Error(
-                    'No parent from which to retrieve parameter value'
-                  );
-                }
-                const resolved1 = this.parent.arguments()[frag.path[0]];
-                const resolved2 =
-                  this.parent.resolveParentParameterReferences(resolved1);
+                const resolved1 = (
+                  this.parent ? this.parent.arguments() : this.arguments()
+                )[frag.path[0]];
+                const resolved2 = this.parent
+                  ? this.parent.resolveParentParameterReferences(resolved1)
+                  : resolved1;
                 if (resolved2.value === null) {
                   throw new Error('Invalid parameter value');
                 } else {

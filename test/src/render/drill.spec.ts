@@ -323,7 +323,7 @@ describe('drill query', () => {
       expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
     });
 
-    test.skip('default_params_are_not_included', async () => {
+    test('default_params_are_not_included', async () => {
       const result = await duckdb
         .loadModel(model)
         .loadQueryByName('only_default_params')
