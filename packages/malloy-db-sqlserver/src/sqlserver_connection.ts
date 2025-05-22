@@ -238,6 +238,7 @@ export class SQLServerConnection
           encrypt,
           trustServerCertificate,
         },
+        requestTimeout: 2 * 60 * 1000,
       }
     );
   }
@@ -487,6 +488,7 @@ export class PooledSQLServerConnection
             encrypt,
             trustServerCertificate,
           },
+          requestTimeout: 2 * 60 * 1000,
         });
       }
       this._pool.on('acquire', _client => {
