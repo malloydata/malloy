@@ -506,155 +506,155 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
 run: products -> { group_by: distribution_center_id}
 
--- source: random_data is duckdb.sql("""
---   from (SELECT i  FROM range(0, 1000) t(i))
---   select
---     id: i,
---     id_text: i::text,
---     dim_2: floor(random()*2),
---     dim_3: floor(random()*3),
---     dim_6: floor(random()*6),
---     dim_10: floor(random()*10),
---     dim_25: floor(random()*25),
---     dim_50: floor(random()*50),
---     dim_100: floor(random()*100),
---     dim_250: floor(random()*250),
---     dim_500: floor(random()*500),
---     independent_dim_2: i%2,
---     independent_dim_3: i%3,
---     independent_dim_6: i%6,
---     independent_dim_10: i%10,
---     independent_dim_25: i%25,
---     independent_dim_50: i%50,
---     independent_dim_100: i%100,
---     independent_dim_250: i%250,
---     independent_dim_500: i%500,
---   """) extend {
+source: random_data is duckdb.sql("""
+  from (SELECT i  FROM range(0, 1000) t(i))
+  select
+    id: i,
+    id_text: i::text,
+    dim_2: floor(random()*2),
+    dim_3: floor(random()*3),
+    dim_6: floor(random()*6),
+    dim_10: floor(random()*10),
+    dim_25: floor(random()*25),
+    dim_50: floor(random()*50),
+    dim_100: floor(random()*100),
+    dim_250: floor(random()*250),
+    dim_500: floor(random()*500),
+    independent_dim_2: i%2,
+    independent_dim_3: i%3,
+    independent_dim_6: i%6,
+    independent_dim_10: i%10,
+    independent_dim_25: i%25,
+    independent_dim_50: i%50,
+    independent_dim_100: i%100,
+    independent_dim_250: i%250,
+    independent_dim_500: i%500,
+  """) extend {
 
 
---   #(story) story="Lots of Bars"
---   view: lots_of_bars is {
---     # bar_chart
---     nest: s is {
---       group_by:
---         dim_50
---         dim_3
---       aggregate: id.sum()
---       order_by: 1, 2
---       limit: 1000
---     }
---     nest: nests is {
---       group_by: dim_2
---       # bar_chart
---       nest: `Limited bars` is {
---         group_by:
---           dim_500
---         aggregate: id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---       # bar_chart { x.limit=100 }
---       nest: `Limited bars override` is {
---         group_by:
---           dim_500
---         aggregate: id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---       # bar_chart
---       nest: `Limited with shared axis and legend` is {
---         group_by:
---           dim_50
---           dim_3
---         aggregate: id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---       # bar_chart { x.independent }
---       nest: `Limited with independent axis, shared legend` is {
---         group_by:
---           id_text
---           dim_3
---         aggregate: id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---        # bar_chart {  x.independent }
---       nest: `Limited with group, independent axis, shared legend` is {
---         group_by:
---           dim_50
---           dim_10
---         aggregate: id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---       # bar_chart { stack x.independent }
---       nest: `Limited with stack, independent axis, shared legend` is {
---         group_by:
---           dim_50
---           dim_10
---         aggregate: id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---       # bar_chart
---       nest: `Limited with series, shared all` is {
---         group_by:
---           dim_10
---         aggregate:
---           # y
---           m1 is id.sum()
---           # y
---           m2 is id.avg()
---         order_by: 1, 2
---         limit: 1000
---       }
---       # bar_chart { x.independent }
---       nest: `Limited with measures, indie x` is {
---         group_by:
---           dim_10
---         aggregate:
---           # y
---           m1 is id.sum()
---           # y
---           m2 is id.avg()
---         order_by:
---           dim_10
---         limit: 1000
---       }
---       # bar_chart
---       nest: `Limited with shared all, large series` is {
---         group_by:
---           dim_10, dim_50
---         aggregate:
---           # y
---           m1 is id.sum()
---         order_by:
---           1,2
---         limit: 1000
---       }
---       # bar_chart { x.independent }
---       nest: `Limited with indie x, shared series` is {
---         group_by:
---           dim_10, dim_50
---         aggregate:
---           # y
---           m1 is id.sum()
---         order_by:
---           1,2
---         limit: 1000
---       }
---       // independent series?
---       # bar_chart { x.independent series.independent  }
---       nest: `Limited with indie x, indie series` is {
---         group_by:
---           dim_10, dim_50
---         aggregate:
---           # y
---           m1 is id.sum()
---         order_by: 1, 2
---         limit: 1000
---       }
---     }
---   }
--- }
+  #(story) story="Lots of Bars"
+  view: lots_of_bars is {
+    # bar_chart
+    nest: s is {
+      group_by:
+        dim_50
+        dim_3
+      aggregate: id.sum()
+      order_by: 1, 2
+      limit: 1000
+    }
+    nest: nests is {
+      group_by: dim_2
+      # bar_chart
+      nest: `Limited bars` is {
+        group_by:
+          dim_500
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.limit=100 }
+      nest: `Limited bars override` is {
+        group_by:
+          dim_500
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart
+      nest: `Limited with shared axis and legend` is {
+        group_by:
+          dim_50
+          dim_3
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.independent }
+      nest: `Limited with independent axis, shared legend` is {
+        group_by:
+          id_text
+          dim_3
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+       # bar_chart {  x.independent }
+      nest: `Limited with group, independent axis, shared legend` is {
+        group_by:
+          dim_50
+          dim_10
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { stack x.independent }
+      nest: `Limited with stack, independent axis, shared legend` is {
+        group_by:
+          dim_50
+          dim_10
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart
+      nest: `Limited with series, shared all` is {
+        group_by:
+          dim_10
+        aggregate:
+          # y
+          m1 is id.sum()
+          # y
+          m2 is id.avg()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.independent }
+      nest: `Limited with measures, indie x` is {
+        group_by:
+          dim_10
+        aggregate:
+          # y
+          m1 is id.sum()
+          # y
+          m2 is id.avg()
+        order_by:
+          dim_10
+        limit: 1000
+      }
+      # bar_chart
+      nest: `Limited with shared all, large series` is {
+        group_by:
+          dim_10, dim_50
+        aggregate:
+          # y
+          m1 is id.sum()
+        order_by:
+          1,2
+        limit: 1000
+      }
+      # bar_chart { x.independent }
+      nest: `Limited with indie x, shared series` is {
+        group_by:
+          dim_10, dim_50
+        aggregate:
+          # y
+          m1 is id.sum()
+        order_by:
+          1,2
+        limit: 1000
+      }
+      // independent series?
+      # bar_chart { x.independent series.independent  }
+      nest: `Limited with indie x, indie series` is {
+        group_by:
+          dim_10, dim_50
+        aggregate:
+          # y
+          m1 is id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+    }
+  }
+}
