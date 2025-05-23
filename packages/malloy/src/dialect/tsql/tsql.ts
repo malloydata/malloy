@@ -217,7 +217,7 @@ export class TSQLDialect extends Dialect {
     // SQL Server doesn't have JSONB functions like PostgreSQL
     // Use FOR JSON PATH to create JSON array
     const sql = `COALESCE((
-      SELECT ${limit ? `TOP ${limit}` : ''} ${this.mapFields(fieldList)}
+      SELECT ${limit ? `TOP ${limit} ` : ''} ${this.mapFields(fieldList)}
       FROM (SELECT 1) AS __dummy
       WHERE group_set=${groupSet}
       ${orderBy || ''}

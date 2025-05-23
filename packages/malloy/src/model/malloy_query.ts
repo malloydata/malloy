@@ -689,17 +689,23 @@ class QueryField extends QueryNode {
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
 
-    // TODO (vitor): This is complicated for tsql... It gets passed down to this.expandFunctionCall( where things become unclear
-    // TODO (vitor): This IIFE is hack-ish but I want tsql not to fail here
     const aggregateLimit = (() => {
-      if (frag.limit === undefined) {
-        return frag.limit;
-      }
-      if (this.parent.dialect.limitClause === 'limit') {
+      if (!frag.limit) {
+        const hasOrderBy = frag.kids.orderBy && frag.kids.orderBy.length;
+        if (hasOrderBy && this.parent.dialect.limitClause === 'top') {
+          // TODO (vitor): If ORDER BY is used without TOP or OFFSET in tsql views, it crashes.
+        }
+        return;
+      } else if (this.parent.dialect.limitClause === 'top') {
+        // It's hard to add a TOP clause here, so using offset.
+        return `OFFSET 0 FETCH NEXT ${frag.limit} ROWS ONLY`;
+      } else if (this.parent.dialect.limitClause === 'limit') {
         return `LIMIT ${frag.limit}`;
+      } else {
+        throw new Error(
+          `limitClause ${this.parent.dialect.limitClause} not implemented`
+        );
       }
-      // TODO (vitor): ORDER BY must be available where this is used. Need to check that, but this might not make it to main anyway.
-      return `OFFSET 0 FETCH NEXT ${frag.limit} ROWS ONLY`;
     })();
 
     if (
@@ -3384,7 +3390,7 @@ class QueryQuery extends QueryField {
 
     // TODO (vitor): Double check this, this is one of the ways to make it work in views and subqueries
     if (orderBy && !limit && this.parent.dialect.limitClause === 'top') {
-      s += '\nOFFSET 0 ROWS\n';
+      s += 'OFFSET 0 ROWS\n';
     }
 
     // limit
@@ -3916,7 +3922,7 @@ class QueryQuery extends QueryField {
 
     // TODO (vitor): Double check this, this is one of the ways to make it work in views and subqueries
     if (orderBy && !limit && this.parent.dialect.limitClause === 'top') {
-      s += '\nOFFSET 0 ROWS\n';
+      s += 'OFFSET 0 ROWS\n';
     }
 
     // limit
