@@ -113,6 +113,7 @@ const tsqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 };
 
 export class TSQLDialect extends Dialect {
+  // TODO (vitor): Split tsql into different dialects maybe
   name = 'tsql';
   defaultNumberType = 'float(53)';
   defaultDecimalType = 'numeric(38)';
@@ -137,8 +138,6 @@ export class TSQLDialect extends Dialect {
   experimental = true;
   booleanAsNumbers = true;
   supportsLimit = false;
-  // TODO (vitor): Split tsql into different dialects maybe
-  supportsRegexpMatch = false;
 
   // tsql doesn't support nulls last, so we are using orderByClause expression for now to make things easier
   // wether or not it actually makes it easier idk, but I can make nulls last with CASE expressions.
