@@ -35,6 +35,8 @@ import type {
   TimeExtractExpr,
   TimeTruncExpr,
   Expr,
+  RegexLiteralNode,
+  StringLiteralNode,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -736,104 +738,91 @@ export class TSQLDialect extends Dialect {
     }
   }
 
-  /**
-   * Translates a Malloy regular expression into a T-SQL `PATINDEX` compatible pattern.
-   *
-   * This function attempts to bridge the gap between common regex syntax and T-SQL's `PATINDEX` capabilities.
-   * Due to the inherent limitations of `PATINDEX` (which uses SQL LIKE-style wildcards),
-   * full regex parity is not possible.
-   *
-   * Supported Features & Translations:
-   * - Alternation `|`: Splits the regex into sub-patterns, each processed independently and combined with `OR`.
-   *   e.g., `^A|B$` translates to `PATINDEX(N'^A%', ...) > 0 OR PATINDEX(N'%B$', ...)`
-   * - Anchors:
-   *   - `^`: Matches the beginning of the string.
-   *   - `$`: Matches the end of the string.
-   * - Character Classes:
-   *   - `\d`: Translated to `[0-9]` (digits).
-   *   - `\w`: Translated to `[a-zA-Z0-9_]` (alphanumeric and underscore).
-   *   - `\s`: Translated to `[
-FF VT]` (whitespace characters).
-   *   - `\D`: Translated to `[^0-9]` (non-digits).
-   *   - `\W`: Translated to `[^a-zA-Z0-9_]` (non-word characters).
-   * - Wildcards (PATINDEX style):
-   *   - `%`: Automatically added for non-anchored patterns. User-supplied `%` is respected.
-   *   - `_`: User-supplied `_` acts as a single character wildcard.
-   * - Literal Wildcard Escaping (for matching literal % and _):
-   *   - `\%`: Translated to `[%]` to match a literal percent sign.
-   *   - `\_`: Translated to `[_]` to match a literal underscore.
-   * - Empty/Blank Matches:
-   *   - Regex `^$`, `''`, or patterns that effectively mean "match an empty string" (e.g. `^` applied to an empty string)
-   *     are translated to `[expression] = ''`.
-   *
-   * Limitations (Not Supported):
-   * - Quantifiers: `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` are not supported.
-   * - Groups and Capturing: `(...)` for grouping or capturing is not supported.
-   *   `PATINDEX` only returns the starting position of the first match.
-   * - Lookaheads/Lookbehinds: Not supported.
-   * - Backreferences: Not supported.
-   * - Most POSIX character classes (e.g., `[:alpha:]`): Not supported beyond the `\d`, `\w`, etc. translations.
-   * - Complex escape sequences beyond those listed (e.g., `BS` for word boundary, `	` is handled by `\s` translation).
-   * - Modifiers (e.g., case-insensitivity `i`): `PATINDEX` behavior depends on the database/column collation.
-   *
-   * The function processes the input regex string (assumed to be from `df.kids.regex.value.source`)
-   * and constructs one or more `PATINDEX(...) > 0` conditions.
-   */
   sqlRegexpMatch(df: RegexMatchExpr): string {
     const exprSql = df.kids.expr.sql;
+    const regexOperandNode = df.kids.regex;
 
-    if (!exprSql) {
-      return '1=0';
+    if (
+      regexOperandNode.node === 'stringLiteral' ||
+      regexOperandNode.node === 'regexpLiteral'
+    ) {
+      let rawRegexValue: string | undefined;
+
+      if (regexOperandNode.node === 'stringLiteral') {
+        rawRegexValue = (regexOperandNode as StringLiteralNode).literal;
+      } else {
+        rawRegexValue = (regexOperandNode as RegexLiteralNode).literal;
+      }
+
+      // Handle cases for the raw regex string from the literal
+      if (rawRegexValue === '') {
+        return `${exprSql} = ''`;
+      }
+      if (rawRegexValue === null || rawRegexValue === undefined) {
+        return '1=0';
+      }
+
+      const subPatterns = rawRegexValue.split('|');
+      const conditions: string[] = [];
+
+      for (const subPattern of subPatterns) {
+        let currentPattern = subPattern.trim();
+        if (currentPattern === '') {
+          conditions.push(`${exprSql} = ''`);
+          continue;
+        }
+
+        let anchoredStart = false;
+        if (currentPattern.startsWith('^')) {
+          currentPattern = currentPattern.substring(1);
+          anchoredStart = true;
+        }
+        let anchoredEnd = false;
+        if (currentPattern.endsWith('$')) {
+          currentPattern = currentPattern.substring(
+            0,
+            currentPattern.length - 1
+          );
+          anchoredEnd = true;
+        }
+
+        if (currentPattern === '') {
+          conditions.push(`${exprSql} = ''`);
+          continue;
+        }
+
+        currentPattern = currentPattern.replace(/\\%/g, '[%]');
+        currentPattern = currentPattern.replace(/\\_/g, '[_]');
+
+        currentPattern = currentPattern.replace(/\\d/g, '[0-9]');
+        currentPattern = currentPattern.replace(/\\w/g, '[a-zA-Z0-9_]');
+        currentPattern = currentPattern.replace(/\\s/g, '[ \t\r\n\f\v]');
+        currentPattern = currentPattern.replace(/\\D/g, '[^0-9]');
+        currentPattern = currentPattern.replace(/\\W/g, '[^a-zA-Z0-9_]');
+
+        if (!anchoredStart && !currentPattern.startsWith('%')) {
+          currentPattern = '%' + currentPattern;
+        }
+        if (!anchoredEnd && !currentPattern.endsWith('%')) {
+          currentPattern = currentPattern + '%';
+        }
+
+        const sqlSafePattern = currentPattern.replace(/'/g, "''");
+        const sqlLiteral = `N'${sqlSafePattern}'`;
+        conditions.push(`PATINDEX(${sqlLiteral}, ${exprSql}) > 0`);
+      }
+
+      if (conditions.length === 0) {
+        return '1=0';
+      }
+      return conditions.join(' OR ');
+    } else {
+      const patternSql = regexOperandNode.sql;
+      if (!patternSql) {
+        return '1=0';
+      }
+      return `PATINDEX(${patternSql}, ${exprSql}) > 0`;
     }
-
-    const subPatterns = exprSql.split('|');
-    const conditions: string[] = [];
-
-    for (const subPattern of subPatterns) {
-      let currentPattern = subPattern.trim();
-      let anchoredStart = false;
-      if (currentPattern.startsWith('^')) {
-        currentPattern = currentPattern.substring(1);
-        anchoredStart = true;
-      }
-
-      let anchoredEnd = false;
-      if (currentPattern.endsWith('$')) {
-        currentPattern = currentPattern.substring(0, currentPattern.length - 1);
-        anchoredEnd = true;
-      }
-
-      if (currentPattern === '') {
-        conditions.push(`${exprSql} = ''`);
-        continue;
-      }
-
-      currentPattern = currentPattern.replace(/\\%/g, '[%]');
-      currentPattern = currentPattern.replace(/\\_/g, '[_]');
-
-      currentPattern = currentPattern.replace(/\\d/g, '[0-9]');
-      currentPattern = currentPattern.replace(/\\w/g, '[a-zA-Z0-9_]');
-      currentPattern = currentPattern.replace(/\\s/g, '[ \t\r\n\f\v]');
-      currentPattern = currentPattern.replace(/\\D/g, '[^0-9]');
-      currentPattern = currentPattern.replace(/\\W/g, '[^a-zA-Z0-9_]');
-
-      if (!anchoredStart && !currentPattern.startsWith('%')) {
-        currentPattern = '%' + currentPattern;
-      }
-      if (!anchoredEnd && !currentPattern.endsWith('%')) {
-        currentPattern = currentPattern + '%';
-      }
-
-      const sqlSafePattern = currentPattern.replace(/'/g, "''");
-      const sqlLiteral = `N'${sqlSafePattern}'`;
-
-      conditions.push(`PATINDEX(${sqlLiteral}, ${exprSql}) > 0`);
-    }
-
-    if (conditions.length === 0) {
-      return '1=0';
-    }
-    return conditions.join(' OR ');
   }
 
   sqlLiteralTime(
