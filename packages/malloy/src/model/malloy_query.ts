@@ -3626,12 +3626,12 @@ class QueryQuery extends QueryField {
     const wheres = this.generateSQLWhereTurtled();
 
     const f: StageOutputContext = {
+      dimensionIndexes: [1],
       fieldIndex: 2,
       sql: ['group_set'],
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
-      dimensionIndexes: [1],
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
@@ -3756,12 +3756,12 @@ class QueryQuery extends QueryField {
   ): string {
     let s = 'SELECT \n';
     const f: StageOutputContext = {
+      dimensionIndexes: [1],
       fieldIndex: 2,
       sql: ['group_set'],
       lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
-      dimensionIndexes: [1],
     };
 
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
