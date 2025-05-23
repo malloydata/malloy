@@ -3824,8 +3824,7 @@ class QueryQuery extends QueryField {
                 `${name}__${this.rootResult.groupSet}`
               ) + ` as ${sqlName}`
             );
-            dimensionIndexes.push(fieldIndex);
-            fieldIndex++;
+            dimensionIndexes.push(fieldIndex++);
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
