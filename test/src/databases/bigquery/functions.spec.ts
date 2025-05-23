@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
@@ -36,25 +35,25 @@ afterAll(async () => {
 describe('dialect specific function tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
 
-  it(`runs the max_by function - bigquery`, async () => {
-    await expect(`run: bigquery.sql("""
+  it('runs the max_by function - bigquery', async () => {
+    await expect(`run: bigquery.sql("
               SELECT 1 as y, 55 as x
     UNION ALL SELECT 50 as y, 22 as x
     UNION ALL SELECT 100 as y, 1 as x
-    """) -> {
+    ") -> {
     aggregate:
       m1 is max_by(x, y)
       m2 is max_by(y, x)
     }`).malloyResultMatches(runtime!, {m1: 1, m2: 1});
   });
 
-  it(`runs the max_by function by grouping - bigquery`, async () => {
-    await expect(`run: bigquery.sql("""
+  it('runs the max_by function by grouping - bigquery', async () => {
+    await expect(`run: bigquery.sql("
               SELECT 1 as y, 55 as x, 10 as z
     UNION ALL SELECT 50 as y, 22 as x, 10 as z
     UNION ALL SELECT 1 as y, 10 as x, 20 as z
     UNION ALL SELECT 100 as y, 15 as x, 20 as z
-    """) -> {
+    ") -> {
     group_by:
       z
     aggregate:
@@ -66,12 +65,12 @@ describe('dialect specific function tests for standardsql', () => {
     ]);
   });
 
-  it(`runs the min_by function - bigquery`, async () => {
-    await expect(`run: bigquery.sql("""
+  it('runs the min_by function - bigquery', async () => {
+    await expect(`run: bigquery.sql("
               SELECT 1 as y, 55 as x
     UNION ALL SELECT 50 as y, 22 as x
     UNION ALL SELECT 100 as y, 1 as x
-    """) -> {
+    ") -> {
     aggregate:
       m1 is min_by(x, y)
       m2 is min_by(y, x)
