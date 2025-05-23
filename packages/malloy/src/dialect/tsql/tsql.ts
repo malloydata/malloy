@@ -736,62 +736,99 @@ export class TSQLDialect extends Dialect {
     }
   }
 
+  /**
+   * Translates a Malloy regular expression into a T-SQL `PATINDEX` compatible pattern.
+   *
+   * This function attempts to bridge the gap between common regex syntax and T-SQL's `PATINDEX` capabilities.
+   * Due to the inherent limitations of `PATINDEX` (which uses SQL LIKE-style wildcards),
+   * full regex parity is not possible.
+   *
+   * Supported Features & Translations:
+   * - Alternation `|`: Splits the regex into sub-patterns, each processed independently and combined with `OR`.
+   *   e.g., `^A|B$` translates to `PATINDEX(N'^A%', ...) > 0 OR PATINDEX(N'%B$', ...)`
+   * - Anchors:
+   *   - `^`: Matches the beginning of the string.
+   *   - `$`: Matches the end of the string.
+   * - Character Classes:
+   *   - `\d`: Translated to `[0-9]` (digits).
+   *   - `\w`: Translated to `[a-zA-Z0-9_]` (alphanumeric and underscore).
+   *   - `\s`: Translated to `[
+FF VT]` (whitespace characters).
+   *   - `\D`: Translated to `[^0-9]` (non-digits).
+   *   - `\W`: Translated to `[^a-zA-Z0-9_]` (non-word characters).
+   * - Wildcards (PATINDEX style):
+   *   - `%`: Automatically added for non-anchored patterns. User-supplied `%` is respected.
+   *   - `_`: User-supplied `_` acts as a single character wildcard.
+   * - Literal Wildcard Escaping (for matching literal % and _):
+   *   - `\%`: Translated to `[%]` to match a literal percent sign.
+   *   - `\_`: Translated to `[_]` to match a literal underscore.
+   * - Empty/Blank Matches:
+   *   - Regex `^$`, `''`, or patterns that effectively mean "match an empty string" (e.g. `^` applied to an empty string)
+   *     are translated to `[expression] = ''`.
+   *
+   * Limitations (Not Supported):
+   * - Quantifiers: `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` are not supported.
+   * - Groups and Capturing: `(...)` for grouping or capturing is not supported.
+   *   `PATINDEX` only returns the starting position of the first match.
+   * - Lookaheads/Lookbehinds: Not supported.
+   * - Backreferences: Not supported.
+   * - Most POSIX character classes (e.g., `[:alpha:]`): Not supported beyond the `\d`, `\w`, etc. translations.
+   * - Complex escape sequences beyond those listed (e.g., `BS` for word boundary, `	` is handled by `\s` translation).
+   * - Modifiers (e.g., case-insensitivity `i`): `PATINDEX` behavior depends on the database/column collation.
+   *
+   * The function processes the input regex string (assumed to be from `df.kids.regex.value.source`)
+   * and constructs one or more `PATINDEX(...) > 0` conditions.
+   */
   sqlRegexpMatch(df: RegexMatchExpr): string {
-    // TODO (vitor): This is mostly a hack. SQL Server doesn't have native regex, fallback to PATINDEX
     const exprSql = df.kids.expr.sql;
-    const rawRegexInputValue = df.kids.regex.sql || '';
 
-    // Assuming rawRegexInputValue can be a |-separated list of patterns
-    const individualSqlPatterns = rawRegexInputValue.split('|');
+    if (!exprSql) {
+      return '1=0';
+    }
 
-    const conditions = individualSqlPatterns.map(singleSqlPatternUntrimmed => {
-      const singleSqlPattern = singleSqlPatternUntrimmed.trim();
+    const subPatterns = exprSql.split('|');
+    const conditions: string[] = [];
 
-      let corePattern = singleSqlPattern;
-      let patindexLiteralPrefix = "'";
-
-      const sqlStringLiteralMatch = /^(N)?'(.*)'$/.exec(singleSqlPattern);
-      if (sqlStringLiteralMatch) {
-        const nPrefix = sqlStringLiteralMatch[1] || ''; // 'N' or empty
-        corePattern = sqlStringLiteralMatch[2];
-        patindexLiteralPrefix = `${nPrefix}'`;
+    for (const subPattern of subPatterns) {
+      let currentPattern = subPattern.trim();
+      let anchoredStart = false;
+      if (currentPattern.startsWith('^')) {
+        currentPattern = currentPattern.substring(1);
+        anchoredStart = true;
       }
 
-      // Special Case Handling for "Is Empty" or "Is Blank"
-      if (corePattern === '^$' || corePattern === '') {
-        return `${exprSql} = ''`;
+      let anchoredEnd = false;
+      if (currentPattern.endsWith('$')) {
+        currentPattern = currentPattern.substring(0, currentPattern.length - 1);
+        anchoredEnd = true;
       }
 
-      let patindexPattern = corePattern;
-
-      const startsWithAnchor = patindexPattern.startsWith('^');
-      if (startsWithAnchor) {
-        patindexPattern = patindexPattern.substring(1);
+      if (currentPattern === '') {
+        conditions.push(`${exprSql} = ''`);
+        continue;
       }
 
-      const endsWithAnchor = patindexPattern.endsWith('$');
-      if (endsWithAnchor) {
-        patindexPattern = patindexPattern.substring(
-          0,
-          patindexPattern.length - 1
-        );
+      currentPattern = currentPattern.replace(/\\%/g, '[%]');
+      currentPattern = currentPattern.replace(/\\_/g, '[_]');
+
+      currentPattern = currentPattern.replace(/\\d/g, '[0-9]');
+      currentPattern = currentPattern.replace(/\\w/g, '[a-zA-Z0-9_]');
+      currentPattern = currentPattern.replace(/\\s/g, '[ \t\r\n\f\v]');
+      currentPattern = currentPattern.replace(/\\D/g, '[^0-9]');
+      currentPattern = currentPattern.replace(/\\W/g, '[^a-zA-Z0-9_]');
+
+      if (!anchoredStart && !currentPattern.startsWith('%')) {
+        currentPattern = '%' + currentPattern;
+      }
+      if (!anchoredEnd && !currentPattern.endsWith('%')) {
+        currentPattern = currentPattern + '%';
       }
 
-      // Add PATINDEX wildcards (%) if not anchored
-      if (!startsWithAnchor && patindexPattern !== '') {
-        patindexPattern = '%' + patindexPattern;
-      }
-      if (!endsWithAnchor && patindexPattern !== '') {
-        patindexPattern = patindexPattern + '%';
-      }
+      const sqlSafePattern = currentPattern.replace(/'/g, "''");
+      const sqlLiteral = `N'${sqlSafePattern}'`;
 
-      patindexPattern = patindexPattern.replace(/\\d/g, '[0-9]');
-      patindexPattern = patindexPattern.replace(/\\w/g, '[a-zA-Z0-9_]');
-
-      const sqlSafePattern = patindexPattern.replace(/'/g, "''");
-
-      return `PATINDEX(${patindexLiteralPrefix}${sqlSafePattern}', ${exprSql}) > 0`;
-    });
+      conditions.push(`PATINDEX(${sqlLiteral}, ${exprSql}) > 0`);
+    }
 
     if (conditions.length === 0) {
       return '1=0';
