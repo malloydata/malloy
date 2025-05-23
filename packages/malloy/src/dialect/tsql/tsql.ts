@@ -754,7 +754,22 @@ export class TSQLDialect extends Dialect {
         rawRegexValue = (regexOperandNode as RegexLiteralNode).literal;
       }
 
-      // Handle cases for the raw regex string from the literal
+      const hasStartAnchor = rawRegexValue.startsWith('^');
+      const hasEndAnchor = rawRegexValue.endsWith('$');
+
+      let core = rawRegexValue;
+      if (hasStartAnchor) core = core.slice(1);
+      if (hasEndAnchor) core = core.slice(0, -1);
+      core = core.replace(/[()]/g, '');
+
+      rawRegexValue = core
+        .split('|')
+        .map(
+          part =>
+            `${hasStartAnchor ? '^' : ''}${part}${hasEndAnchor ? '$' : ''}`
+        )
+        .join('|');
+
       if (rawRegexValue === '') {
         return `${exprSql} = ''`;
       }
