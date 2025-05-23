@@ -4314,29 +4314,29 @@ class QueryQueryIndexStage extends QueryQuery {
       s += ` TOP ${limit}`;
     }
     s += '\n';
-    s += 'group_set,\n';
+    s += ' group_set,\n';
 
     let fieldNameExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       fieldNameExpr += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    fieldNameExpr += ' END ';
-    s += ` ${fieldNameExpr} as ${fieldNameColumn},\n`;
+    fieldNameExpr += '  END ';
+    s += `${fieldNameExpr} as ${fieldNameColumn},\n`;
 
     let fieldPathExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       const path = pathToCol(fields[i].path);
       fieldPathExpr += `    WHEN ${i} THEN '${path}'\n`;
     }
-    fieldPathExpr += ' END ';
-    s += ` ${fieldPathExpr} as ${fieldPathColumn},\n`;
+    fieldPathExpr += '  END ';
+    s += `${fieldPathExpr} as ${fieldPathColumn},\n`;
 
     let fieldTypeExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       fieldTypeExpr += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    fieldTypeExpr += ' END ';
-    s += ` ${fieldTypeExpr} as ${fieldTypeColumn},`;
+    fieldTypeExpr += '  END ';
+    s += `${fieldTypeExpr} as ${fieldTypeColumn},`;
 
     let fieldValueExpr = `  CASE group_set WHEN 99999 THEN ${dialect.castToString(
       'NULL'
@@ -4346,8 +4346,8 @@ class QueryQueryIndexStage extends QueryQuery {
         fieldValueExpr += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    fieldValueExpr += ' END ';
-    s += ` ${fieldValueExpr} as ${fieldValueColumn},\n`;
+    fieldValueExpr += '  END ';
+    s += `${fieldValueExpr} as ${fieldValueColumn},\n`;
 
     s += ` ${measureSQL} as ${weightColumn},\n`;
 
@@ -5465,7 +5465,7 @@ export class QueryModel {
     }
 
     let query = `SELECT ${
-      this.dialect.limitClause === 'top' && limit ? `TOP ${limit}` : ''
+      this.dialect.limitClause === 'top' ? `TOP ${limit}` : ''
     }
               ${fieldNameColumn},
               ${fieldPathColumn},
@@ -5486,11 +5486,7 @@ export class QueryModel {
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
               searchValue + '%'
             )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
-          ${
-            this.dialect.limitClause === 'limit' && limit
-              ? `LIMIT ${limit}\n`
-              : ''
-          }
+           ${this.dialect.limitClause === 'limit' ? `LIMIT ${limit}\n` : ''}
           `;
     if (struct.dialect.hasFinalStage) {
       query = `WITH __stage0 AS(\n${query}\n)\n${struct.dialect.sqlFinalStage(
