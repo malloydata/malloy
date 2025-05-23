@@ -69,11 +69,8 @@ export const FilterCompilers = {
     if (c === null) {
       if (d.booleanType === 'supported') {
         return 'true';
-      } else if (d.booleanType === 'simulated') {
+      } else if (d.booleanType === 'simulated' || d.booleanType === 'none') {
         return '1=1';
-      } else if (d.booleanType === 'none') {
-        // TODO (vitor): Idk if we need to support === 'none'.
-        throw new Error(`booleanType ${d.booleanType} not supported`);
       } else {
         throw new Error(`booleanType ${d.booleanType} not supported`);
       }
