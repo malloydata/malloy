@@ -151,10 +151,7 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-// TODO (vitor): THESE REGEXP ARE SO SUS
 const NUMBER_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
-// const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
-const SQL_CONST_EXPR = new RegExp(`(?:${NUMBER_EXPR.source})`);
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -3366,7 +3363,7 @@ class QueryQuery extends QueryField {
             // TODO (vitor): Double check this
             const fieldExpr = fi.f.generateExpression(this.rootResult);
             // Avoiding GROUP BY const expression
-            if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
+            if (fieldExpr && !NUMBER_EXPR.test(fieldExpr)) {
               groupByFields.push(fieldExpr);
             }
           }
@@ -3660,7 +3657,7 @@ class QueryQuery extends QueryField {
         return f.dimensionIndexes
           .map(this.rootResult.getFieldByNumber)
           .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !SQL_CONST_EXPR.test(v));
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v));
       } else {
         throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
@@ -3779,7 +3776,7 @@ class QueryQuery extends QueryField {
         return f.dimensionIndexes
           .map(this.rootResult.getFieldByNumber)
           .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !SQL_CONST_EXPR.test(v));
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v));
       } else {
         throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
@@ -3890,7 +3887,7 @@ class QueryQuery extends QueryField {
           // TODO (vitor): Double check this
           const fieldExpr = fif.getSQL();
           // Avoiding GROUP BY const expression
-          if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
+          if (fieldExpr && !NUMBER_EXPR.test(fieldExpr)) {
             groupByFields.push(fieldExpr);
           }
         } else {
