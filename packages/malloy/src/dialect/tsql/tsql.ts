@@ -174,13 +174,14 @@ export class TSQLDialect extends Dialect {
     `;
   }
 
-  exprToSQL(_qi: QueryInfo, expr: Expr) {
-    switch (expr.node) {
+  exprToSQL(qi: QueryInfo, df: Expr) {
+    switch (df.node) {
       case 'not':
         // -vitor: Sorry! I feel like woody the woodpecker saying i did not not not not not eat all the pizza
-        return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1 END, 0) = 1`;
+        return `NOT COALESCE(CASE WHEN (${df.e.sql}) THEN 1 END, 0) = 1`;
+      // TODO (vitor): Maybe i need to handle true/false here?
       default:
-        return;
+        return super.exprToSQL(qi, df);
     }
   }
 
@@ -527,6 +528,10 @@ export class TSQLDialect extends Dialect {
         FROM __temp_table
       ) t
     )`;
+  }
+
+  sqlLiteralNumber(literal: string): string {
+    return literal;
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
