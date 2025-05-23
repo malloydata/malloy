@@ -179,7 +179,12 @@ export class TSQLDialect extends Dialect {
       case 'not':
         // -vitor: Sorry! I feel like woody the woodpecker saying i did not not not not not eat all the pizza
         return `NOT COALESCE(CASE WHEN (${df.e.sql}) THEN 1 END, 0) = 1`;
-      // TODO (vitor): Maybe i need to handle true/false here?
+      // TODO (vitor): Maybe this should be handled on super?
+      // But then it would be based on dialect, idk. This is needed either way.
+      // Otherwise youre gonna get joins `ON false`
+      case 'true':
+      case 'false':
+        return df.node === 'true' ? '1=1' : '1=0';
       default:
         return super.exprToSQL(qi, df);
     }
@@ -528,10 +533,6 @@ export class TSQLDialect extends Dialect {
         FROM __temp_table
       ) t
     )`;
-  }
-
-  sqlLiteralNumber(literal: string): string {
-    return literal;
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
