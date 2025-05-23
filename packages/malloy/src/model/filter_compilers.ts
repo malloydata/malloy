@@ -132,6 +132,7 @@ export const FilterCompilers = {
           .join(` ${nc.operator.toUpperCase()} `);
     }
   },
+  // TODO (vitor): Check what to do here for non supported boolean
   booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
     switch (bc.operator) {
       case 'false':
@@ -258,6 +259,7 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
+          // TODO (vitor): Check what to do here for unsupported boolean
           return 'false';
         }
         let includeSQL = '';
