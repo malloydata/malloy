@@ -3292,7 +3292,7 @@ class QueryQuery extends QueryField {
               }`
             );
           } else if (this.parent.dialect.orderByClause === 'expression') {
-            const fieldExpr = fi.getSQL();
+            const fieldExpr = fi.f.generateExpression(resultStruct);
             o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
@@ -3310,7 +3310,8 @@ class QueryQuery extends QueryField {
           );
         } else if (this.parent.dialect.orderByClause === 'expression') {
           const orderingField = resultStruct.getFieldByNumber(f.field);
-          const fieldExpr = orderingField.fif.getSQL();
+          const fieldExpr =
+            orderingField.fif.f.generateExpression(resultStruct);
           o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
         }
       }
@@ -3361,7 +3362,7 @@ class QueryQuery extends QueryField {
             groupByFields.push(fi.fieldUsage.resultIndex.toString());
           } else if (groupByCluase === 'expression') {
             // TODO (vitor): Double check this
-            const fieldExpr = field.getSQL();
+            const fieldExpr = fi.f.generateExpression(this.rootResult);
             // Avoiding GROUP BY const expression
             if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
               groupByFields.push(fieldExpr);
@@ -3451,7 +3452,7 @@ class QueryQuery extends QueryField {
       );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          const exp = fi.getSQL();
+          const exp = fi.f.generateExpression(resultSet);
           if (isScalarField(fi.f)) {
             if (
               this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
@@ -3822,8 +3823,7 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
-    // TODO (vitor): Not sure about dimensionFields
-    const dimensionFields: FieldInstanceField[] = [];
+
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -3835,7 +3835,6 @@ class QueryQuery extends QueryField {
               ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex);
-            dimensionFields.push(fi);
             fieldIndex++;
           } else if (isBasicCalculation(fi.f)) {
             fieldsSQL.push(
@@ -3882,19 +3881,17 @@ class QueryQuery extends QueryField {
       s += `WHERE ${where}\n`;
     }
 
-    const groupByFields: string[] = [''];
-    for (const field of dimensionFields) {
-      if (
-        field &&
-        field.fieldUsage.type === 'result' &&
-        isScalarField(field.f)
-      ) {
+    const groupByFields: string[] = [];
+    for (const idx of dimensionIndexes) {
+      const field = this.rootResult.getFieldByNumber(idx);
+      const fif = field.fif;
+      if (fif && fif.fieldUsage.type === 'result' && isScalarField(fif.f)) {
         const groupByClause = this.parent.dialect.groupByClause;
         if (groupByClause === 'ordinal') {
-          groupByFields.push(field.fieldUsage.resultIndex.toString());
+          groupByFields.push(fif.fieldUsage.resultIndex.toString());
         } else if (groupByClause === 'expression') {
           // TODO (vitor): Double check this
-          const fieldExpr = field.getSQL();
+          const fieldExpr = fif.getSQL();
           // Avoiding GROUP BY const expression
           if (fieldExpr && !SQL_CONST_EXPR.test(fieldExpr)) {
             groupByFields.push(fieldExpr);
@@ -4437,7 +4434,6 @@ class QueryQueryIndexStage extends QueryQuery {
       groupByFields.push('1', '2', '3', '4', '5');
     }
     // For index search, we use the column names directly regardless of dialect
-    // This is a special case where we don't need to use expressions and can't use generateGroupByColumns
     s += `GROUP BY ${groupByFields.join(', ')}\n`;
 
     if (limit && this.parent.dialect.limitClause === 'limit') {
