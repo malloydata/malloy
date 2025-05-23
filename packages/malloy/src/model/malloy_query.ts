@@ -689,11 +689,11 @@ class QueryField extends QueryNode {
     const aggregateLimit = (() => {
       if (!frag.limit) {
         return;
+      } else if (this.parent.dialect.limitClause === 'limit') {
+        return `LIMIT ${frag.limit}`;
       } else if (this.parent.dialect.limitClause === 'top') {
         // It's hard to add a TOP clause here, so using offset.
         return `OFFSET 0 FETCH NEXT ${frag.limit} ROWS ONLY`;
-      } else if (this.parent.dialect.limitClause === 'limit') {
-        return `LIMIT ${frag.limit}`;
       } else {
         throw new Error(
           `limitClause ${this.parent.dialect.limitClause} not implemented`
@@ -1315,8 +1315,7 @@ class QueryField extends QueryNode {
       }
       case 'function_parameter':
         throw new Error(
-          'Internal Error: Function parameter fragment remaining during SQL generation' +
-            expr.node
+          'Internal Error: Function parameter fragment remaining during SQL generation'
         );
       case 'outputField':
         return this.generateOutputFieldFragment(
@@ -3212,20 +3211,19 @@ class QueryQuery extends QueryField {
         this.firstSegment.sample
       );
       if (this.firstSegment.sample) {
-        const limit =
-          (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
-
-        structSQL = stageWriter.addStage(
-          `SELECT ${
-            limit && this.parent.dialect.limitClause === 'top'
-              ? `TOP ${limit}`
-              : ''
-          } * from ${structSQL} as x ${
-            limit && this.parent.dialect.limitClause === 'limit'
-              ? `LIMIT ${limit}`
-              : ''
-          }`
-        );
+        const limit = 100000;
+        const limitClause = this.parent.dialect.limitClause;
+        if (limitClause === 'limit') {
+          structSQL = stageWriter.addStage(
+            `SELECT * from ${structSQL} as x limit ${limit}`
+          );
+        } else if (limitClause === 'top') {
+          structSQL = stageWriter.addStage(
+            `SELECT TOP ${limit} * from ${structSQL} as x`
+          );
+        } else {
+          throw new Error(`limitClause ${limitClause} not implemented`)
+        }
       }
     }
 
