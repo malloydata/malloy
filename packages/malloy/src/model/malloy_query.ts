@@ -3348,35 +3348,35 @@ class QueryQuery extends QueryField {
 
     // group by
     // TODO (vitor): Do we need 'group_set' here?
-    const groupByFields: string[] = [];
+    const n: string[] = [];
     if (this.firstSegment.type === 'reduce') {
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          const groupByCluase = this.parent.dialect.groupByClause;
-          if (groupByCluase === 'ordinal') {
-            groupByFields.push(fi.fieldUsage.resultIndex.toString());
-          } else if (groupByCluase === 'expression') {
-            // TODO (vitor): Double check this
+          const groupByClause = this.parent.dialect.groupByClause;
+          if (groupByClause === 'ordinal') {
+            n.push(fi.fieldUsage.resultIndex.toString());
+          } else if (groupByClause === 'expression') {
             const fieldExpr = fi.f.generateExpression(this.rootResult);
-            // Avoiding GROUP BY const expression
+            // TODO (vitor): Fix this. Avoiding numbers is not enough to avoid constant expressions
             if (fieldExpr && !NUMBER_EXPR.test(fieldExpr)) {
-              groupByFields.push(fieldExpr);
+              n.push(fieldExpr);
             }
+          } else {
+            throw new Error(`groupByClause ${groupByClause} not implemented`);
           }
         }
       }
     }
-    s += groupByFields.length ? `GROUP BY ${groupByFields.join(',')}\n` : '';
+    s += n.length ? `GROUP BY ${n.join(',')}\n` : '';
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
-    const orderBy = this.generateSQLOrderBy(
+    // order by
+    s += this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
       this.rootResult
     );
-
-    s += orderBy;
 
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
@@ -3646,7 +3646,7 @@ class QueryQuery extends QueryField {
       )})]) as __lateral_join_bag\n`;
     }
 
-    const groupByFields = (() => {
+    const n = (() => {
       const groupByClause = this.parent.dialect.groupByClause;
       if (groupByClause === 'ordinal') {
         return f.dimensionIndexes;
@@ -3654,14 +3654,13 @@ class QueryQuery extends QueryField {
         return f.dimensionIndexes
           .map(this.rootResult.getFieldByNumber)
           .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v));
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
       } else {
         throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
     })();
-    const groupBy = groupByFields.length
-      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
-      : '';
+
+    const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 
