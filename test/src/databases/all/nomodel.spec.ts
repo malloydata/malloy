@@ -1265,7 +1265,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-
     expect(result.sql).not.toContain('ORDER BY');
   });
 
@@ -1284,7 +1283,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-
     expect(result.sql).not.toContain('ORDER BY');
   });
 
@@ -1307,7 +1305,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-
     expect(result.sql).not.toContain('ORDER BY');
   });
 
@@ -1334,7 +1331,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-
     expect(result.sql).not.toContain('ORDER BY');
   });
 
