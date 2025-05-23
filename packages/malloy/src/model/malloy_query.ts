@@ -689,7 +689,6 @@ class QueryField extends QueryNode {
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
 
-    // Calculate limit logic separately - only related to actual LIMIT clauses
     const aggregateLimit = (() => {
       if (!frag.limit) {
         return;
@@ -704,11 +703,6 @@ class QueryField extends QueryNode {
         );
       }
     })();
-
-    // TODO (vitor): not sure about this
-    const hasOrderBy = frag.kids.orderBy && frag.kids.orderBy.length;
-    const needsOrderByOffset =
-      hasOrderBy && !frag.limit && this.parent.dialect.limitClause === 'top';
 
     if (
       frag.name === 'string_agg' &&
@@ -766,7 +760,7 @@ class QueryField extends QueryNode {
             .map((e, i) => {
               return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
             });
-          const generalOrderBySQL = this.getFunctionOrderBy(
+          const orderBySQL = this.getFunctionOrderBy(
             resultSet,
             context,
             state,
@@ -774,13 +768,6 @@ class QueryField extends QueryNode {
             newArgs,
             overload
           );
-
-          // Add OFFSET clause to orderBy SQL if needed for TSQL views
-          const orderBySQL =
-            generalOrderBySQL && needsOrderByOffset
-              ? `${generalOrderBySQL} OFFSET 0 FETCH NEXT 2147483647 ROWS ONLY`
-              : generalOrderBySQL;
-
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
@@ -826,18 +813,11 @@ class QueryField extends QueryNode {
             overload
           )
         : '';
-
-      // Add OFFSET clause to orderBy SQL if needed for TSQL views
-      const finalOrderBySql =
-        orderBySql && needsOrderByOffset
-          ? `${orderBySql} OFFSET 0 FETCH NEXT 2147483647 ROWS ONLY`
-          : orderBySql;
-
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
         mappedArgs,
-        finalOrderBySql,
+        orderBySql,
         aggregateLimit
       );
 
@@ -854,7 +834,7 @@ class QueryField extends QueryNode {
           state,
           args,
           extraPartitions,
-          finalOrderBySql
+          orderBySql
         );
       }
       return this.exprToSQL(resultSet, context, funcCall, state);
@@ -3404,11 +3384,6 @@ class QueryQuery extends QueryField {
 
     s += orderBy;
 
-    // TODO (vitor): Double check this, this is one of the ways to make it work in views and subqueries
-    if (orderBy && !limit && this.parent.dialect.limitClause === 'top') {
-      s += 'OFFSET 0 ROWS\n';
-    }
-
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
       s += `LIMIT ${limit}\n`;
@@ -3935,11 +3910,6 @@ class QueryQuery extends QueryField {
     );
 
     s += orderBy;
-
-    // TODO (vitor): Double check this, this is one of the ways to make it work in views and subqueries
-    if (orderBy && !limit && this.parent.dialect.limitClause === 'top') {
-      s += 'OFFSET 0 ROWS\n';
-    }
 
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
