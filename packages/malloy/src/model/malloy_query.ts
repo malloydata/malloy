@@ -766,8 +766,6 @@ class QueryField extends QueryNode {
             newArgs,
             overload
           );
-          undefined;
-
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
@@ -1382,7 +1380,7 @@ class QueryField extends QueryNode {
       case 'not':
         // TODO (vitor): Is the following comment still true?
         // Malloy not operator always returns a boolean
-        return `NOT COALESCE(CASE WHEN (${expr.e.sql}) THEN 1 END, 0) = 1`;
+        return `COALESCE(NOT ${expr.e.sql},TRUE)`;
       case 'unary-':
         return `-${expr.e.sql}`;
       case 'is-null':
