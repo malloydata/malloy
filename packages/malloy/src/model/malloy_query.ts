@@ -692,7 +692,7 @@ class QueryField extends QueryNode {
       } else if (this.parent.dialect.limitClause === 'limit') {
         return `LIMIT ${frag.limit}`;
       } else if (this.parent.dialect.limitClause === 'top') {
-        // It's hard to add a TOP clause here, so using offset.
+        // It's hard to add a TOP clause here, so using offset fetch.
         return `OFFSET 0 FETCH NEXT ${frag.limit} ROWS ONLY`;
       } else {
         throw new Error(
@@ -882,7 +882,6 @@ class QueryField extends QueryNode {
     );
   }
 
-  // TODO (vitor): Maybe fix orderBy here?
   generateDimFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -2415,7 +2414,6 @@ export function getResultStructDefForQuery(
 
 type StageGroupMaping = {fromGroup: number; toGroup: number};
 
-// TODO (vitor): Check with malloy about replacing dimensionsIndexes with Dimension[]
 type StageOutputContext = {
   sql: string[]; // sql expressions
   lateralJoinSQLExpressions: string[];
@@ -3347,9 +3345,8 @@ class QueryQuery extends QueryField {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // group by
-    // TODO (vitor): Do we need 'group_set' here?
-    const n: string[] = [];
     if (this.firstSegment.type === 'reduce') {
+      const n: string[] = [];
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
@@ -3367,8 +3364,10 @@ class QueryQuery extends QueryField {
           }
         }
       }
+      if (n.length > 0) {
+        s += `GROUP BY ${n.join(',')}\n`;
+      }
     }
-    s += n.length ? `GROUP BY ${n.join(',')}\n` : '';
 
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
@@ -3443,7 +3442,7 @@ class QueryQuery extends QueryField {
       );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          const exp = fi.f.generateExpression(resultSet);
+          const exp = fi.getSQL();
           if (isScalarField(fi.f)) {
             if (
               this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
@@ -3634,18 +3633,6 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
-
-    s += indent(f.sql.join(',\n')) + '\n';
-
-    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
-    //  aggregates.
-    if (f.lateralJoinSQLExpressions.length > 0) {
-      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
-        ',\n'
-      )})]) as __lateral_join_bag\n`;
-    }
-
     const n = (() => {
       const groupByClause = this.parent.dialect.groupByClause;
       if (groupByClause === 'ordinal') {
@@ -3660,7 +3647,19 @@ class QueryQuery extends QueryField {
       }
     })();
 
-    const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
+    const groupBy = `GROUP BY ${n.join(', ')}\n`;
+
+    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
+
+    s += indent(f.sql.join(',\n')) + '\n';
+
+    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
+    //  aggregates.
+    if (f.lateralJoinSQLExpressions.length > 0) {
+      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
+        ',\n'
+      )})]) as __lateral_join_bag\n`;
+    }
 
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 
@@ -3679,7 +3678,6 @@ class QueryQuery extends QueryField {
     return this.resultStage;
   }
 
-  // TODO (vitor): Handle group by here maybe?
   generateDepthNFields(
     depth: number,
     resultSet: FieldInstanceResult,
@@ -3754,7 +3752,6 @@ class QueryQuery extends QueryField {
       groupsAggregated: [],
       outputPipelinedSQL: [],
     };
-
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
     s += indent(f.sql.join(',\n')) + '\n';
     s += `FROM ${stageName}\n`;
@@ -3764,7 +3761,7 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const groupByFields = (() => {
+    const n = (() => {
       const groupByClause = this.parent.dialect.groupByClause;
       if (groupByClause === 'ordinal') {
         return f.dimensionIndexes;
@@ -3777,9 +3774,7 @@ class QueryQuery extends QueryField {
         throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
     })();
-    const groupBy = groupByFields.length
-      ? 'GROUP BY ' + groupByFields.join(',') + '\n'
-      : '';
+    const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += groupBy;
 
@@ -3813,7 +3808,6 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes: number[] = [];
-
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -3871,26 +3865,22 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const n: string[] = [];
-    for (const idx of dimensionIndexes) {
-      const field = this.rootResult.getFieldByNumber(idx);
-      const fif = field.fif;
-      if (fif && fif.fieldUsage.type === 'result' && isScalarField(fif.f)) {
-        const groupByClause = this.parent.dialect.groupByClause;
-        if (groupByClause === 'ordinal') {
-          n.push(fif.fieldUsage.resultIndex.toString());
-        } else if (groupByClause === 'expression') {
-          const fieldExpr = fif.getSQL();
-          if (fieldExpr && !NUMBER_EXPR.test(fieldExpr)) {
-            // TODO (vitor): !NUMBER_EXPR is not enough
-            n.push(fieldExpr);
-          }
-        } else {
-          throw new Error(`groupByClause ${groupByClause} not implemented`);
-        }
+    const n = (() => {
+      const groupByClause = this.parent.dialect.groupByClause;
+      if (groupByClause === 'ordinal') {
+        return dimensionIndexes;
+      } else if (groupByClause === 'expression') {
+        return dimensionIndexes
+          .map(this.rootResult.getFieldByNumber)
+          .map(fbn => fbn.fif.getSQL())
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v));
+      } else {
+        throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
-    }
-    s += n.length ? `GROUP BY ${n.join(', ')}\n` : '';
+    })();
+    const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
+
+    s += groupBy;
 
     s += this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
