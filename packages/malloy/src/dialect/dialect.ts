@@ -486,7 +486,7 @@ export abstract class Dialect {
    */
   sqlBoolean(bv: boolean): string {
     if (this.booleanType === 'none') {
-      return bv ? '(1=1)' : '(1-0)';
+      return bv ? '(1=1)' : '(1=0)';
     }
     return bv ? 'true' : 'false';
   }

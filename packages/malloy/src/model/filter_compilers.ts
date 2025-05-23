@@ -67,13 +67,7 @@ function unlike(disLiked: string[], x: string) {
 export const FilterCompilers = {
   compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
     if (c === null) {
-      if (d.booleanType === 'supported') {
-        return 'true';
-      } else if (d.booleanType === 'simulated' || d.booleanType === 'none') {
-        return '1=1';
-      } else {
-        throw new Error(`booleanType ${d.booleanType} not supported`);
-      }
+      return d.sqlBoolean(true);
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
