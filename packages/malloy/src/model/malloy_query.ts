@@ -689,12 +689,9 @@ class QueryField extends QueryNode {
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
 
+    // Calculate limit logic separately - only related to actual LIMIT clauses
     const aggregateLimit = (() => {
       if (!frag.limit) {
-        const hasOrderBy = frag.kids.orderBy && frag.kids.orderBy.length;
-        if (hasOrderBy && this.parent.dialect.limitClause === 'top') {
-          // TODO (vitor): If ORDER BY is used without TOP or OFFSET in tsql views, it crashes.
-        }
         return;
       } else if (this.parent.dialect.limitClause === 'top') {
         // It's hard to add a TOP clause here, so using offset.
@@ -707,6 +704,11 @@ class QueryField extends QueryNode {
         );
       }
     })();
+
+    // TODO (vitor): not sure about this
+    const hasOrderBy = frag.kids.orderBy && frag.kids.orderBy.length;
+    const needsOrderByOffset =
+      hasOrderBy && !frag.limit && this.parent.dialect.limitClause === 'top';
 
     if (
       frag.name === 'string_agg' &&
@@ -764,7 +766,7 @@ class QueryField extends QueryNode {
             .map((e, i) => {
               return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
             });
-          const orderBySQL = this.getFunctionOrderBy(
+          const generalOrderBySQL = this.getFunctionOrderBy(
             resultSet,
             context,
             state,
@@ -772,6 +774,13 @@ class QueryField extends QueryNode {
             newArgs,
             overload
           );
+
+          // Add OFFSET clause to orderBy SQL if needed for TSQL views
+          const orderBySQL =
+            generalOrderBySQL && needsOrderByOffset
+              ? `${generalOrderBySQL} OFFSET 0 FETCH NEXT 2147483647 ROWS ONLY`
+              : generalOrderBySQL;
+
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
@@ -817,11 +826,18 @@ class QueryField extends QueryNode {
             overload
           )
         : '';
+
+      // Add OFFSET clause to orderBy SQL if needed for TSQL views
+      const finalOrderBySql =
+        orderBySql && needsOrderByOffset
+          ? `${orderBySql} OFFSET 0 FETCH NEXT 2147483647 ROWS ONLY`
+          : orderBySql;
+
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
         mappedArgs,
-        orderBySql,
+        finalOrderBySql,
         aggregateLimit
       );
 
@@ -838,7 +854,7 @@ class QueryField extends QueryNode {
           state,
           args,
           extraPartitions,
-          orderBySql
+          finalOrderBySql
         );
       }
       return this.exprToSQL(resultSet, context, funcCall, state);
