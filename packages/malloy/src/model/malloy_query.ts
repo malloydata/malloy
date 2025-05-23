@@ -3890,7 +3890,7 @@ class QueryQuery extends QueryField {
         }
       }
     }
-    s += n.length ? `GROUP BY ${n}.join(', ')\n` : '';
+    s += n.length ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += this.generateSQLOrderBy(
       this.firstSegment as QuerySegment,
@@ -4395,9 +4395,10 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    const groupByFields: string[] = [];
+    // group by
+    const n: string[] = [];
     if (this.parent.dialect.groupByClause === 'expression') {
-      groupByFields.push(
+      n.push(
         'group_set',
         fieldNameExpr,
         fieldPathExpr,
@@ -4405,10 +4406,10 @@ class QueryQueryIndexStage extends QueryQuery {
         fieldValueExpr
       );
     } else {
-      groupByFields.push('1', '2', '3', '4', '5');
+      n.push('1', '2', '3', '4', '5');
     }
     // For index search, we use the column names directly regardless of dialect
-    s += `GROUP BY ${groupByFields.join(', ')}\n`;
+    s += `GROUP BY ${n.join(', ')}\n`;
 
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
