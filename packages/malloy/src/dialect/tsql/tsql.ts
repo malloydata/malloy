@@ -482,37 +482,32 @@ export class TSQLDialect extends Dialect {
     throw new Error(`Unknown or unhandled tsql time unit: ${df.units}`);
   }
 
-  // TODO (vitor): Idk, this seems to be coming back wrong but the bug might be somewhere else.
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    const sqlDistinctKey = `CONCAT(${key}, '')`; // Ensures key is treated as string for HASHBYTES
+    const sqlDistinctKey = `CONCAT(${key}, '')`;
 
-    // Generate a unique representation for the key using MD5 hash
-    // Use only the first 8 bytes of the hash and scale it down to avoid overflow
-    // This creates a reliable hash value within SQL Server's numeric limits
-    const hashKey = `
-        CAST(
-            ABS(CAST(
-                CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8))
-                AS DECIMAL(19,0)
-            )) * 0.000001
-        AS DECIMAL(28,6))
-    `;
+    const valueScale = 6;
+    const intermediatePrecision = 28; // Must be >= 19 (for BIGINT hash) and accommodate value's integer part.
 
-    // Coalesce the value to 0 if it's NULL
-    const v = `COALESCE(${value}, 0)`;
+    const integerHash = `ABS(CONVERT(BIGINT, SUBSTRING(HASHBYTES('MD5', ${sqlDistinctKey}), 1, 8)))`;
+    const hashKeyDecimal = `CAST(${integerHash} AS DECIMAL(${intermediatePrecision},${valueScale}))`;
 
-    // The core calculation: SUM(DISTINCT hashKey + value) - SUM(DISTINCT hashKey)
-    // This avoids arithmetic overflow by using appropriate decimal precision
+    const v = `CAST(COALESCE(${value}, 0) AS DECIMAL(${intermediatePrecision},${valueScale}))`;
+
+    const sumItemPrecision = intermediatePrecision + 1;
+
+    const term1 = `CAST((${hashKeyDecimal} + ${v}) AS DECIMAL(${sumItemPrecision},${valueScale}))`;
+    const term2 = hashKeyDecimal; // Already DECIMAL(intermediatePrecision, valueScale)
+
     const sqlSum = `(
-        CAST(SUM(DISTINCT CAST((${hashKey} + CAST(${v} AS DECIMAL(28,6))) AS DECIMAL(28,6)))
-        - SUM(DISTINCT CAST(${hashKey} AS DECIMAL(28,6))) AS DECIMAL(38,0))
+        CAST(
+            (SUM(DISTINCT ${term1})) - (SUM(DISTINCT ${term2}))
+        AS DECIMAL(38, ${valueScale}))
     )`;
 
     if (funcName === 'SUM') {
       return sqlSum;
     } else if (funcName === 'AVG') {
-      // For AVG, divide the distinct sum by the count of distinct keys with non-null values
-      return `(${sqlSum}) / NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
+      return `(${sqlSum} * 1.0 / NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${sqlDistinctKey} END), 0))`;
     }
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
@@ -706,42 +701,7 @@ export class TSQLDialect extends Dialect {
       -- trunc ${datePart} end ${id}
       `;
     }
-    // switch (datePart) {
-    //   case 'WEEK':
-    //   case 'QUARTER':
-    //     return `DATETRUNC()`
-    // }
-    // if (df.units === 'week') {
-    //   return '';
-    // } else if (df.units === 'quarter') {
-    //   return `DATEADD(QUARTER, DATEDIFF(QUARTER, 0, ${df.e.sql}), 0)`;
-    // } else if (df.units === 'month') {
-    //   return `DATEADD(MONTH, DATEDIFF(MONTH, 0, ${df.e.sql}), 0)`;
-    // } else if (df.units === 'year') {
-    //   return `DATEADD(YEAR, DATEDIFF(YEAR, 0, ${df.e.sql}), 0)`;
-    // } else if (df.units === 'day') {
-    //   return `CAST(CAST(${df.e.sql} AS DATE) AS DATETIME2)`;
-    // } else if (df.units === 'hour') {
-    //   return `DATEADD(HOUR, DATEDIFF(HOUR, 0, ${df.e.sql}), 0)`;
-    // } else if (df.units === 'minute') {
-    //   return `DATEADD(MINUTE, DATEDIFF(MINUTE, 0, ${df.e.sql}), 0)`;
-    // } else if (df.units === 'second') {
-    //   return `DATEADD(SECOND, DATEDIFF(SECOND, 0, ${df.e.sql}), 0)`;
-    // } else {
-    //   throw new Error(`Unsupported date truncation unit: ${df.units}`);
-    // }
   }
-
-  // const units = timeExtractMap[from.units] || from.units;
-  // let extractFrom = from.e.sql;
-  // if (TD.isTimestamp(from.e.typeDef)) {
-  //   const tz = qtz(qi);
-  //   if (tz) {
-  //     extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-  //   }
-  // }
-  // const extracted = `EXTRACT(${units} FROM ${extractFrom})`;
-  // return from.units === 'day_of_week' ? `(${extracted}+1)` : extracted;
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const datePart = tsqlDatePartMap[from.units];
@@ -776,31 +736,67 @@ export class TSQLDialect extends Dialect {
     }
   }
 
-  // TODO (vitor): This is mostly a hack.
   sqlRegexpMatch(df: RegexMatchExpr): string {
-    // SQL Server doesn't have native regex, fallback to PATINDEX
-    const rawPatterns = df.kids.regex.sql?.split('|') || [];
-    const patterns = rawPatterns.map(ogPattern => {
-      const groups = /(^N)(')(.*)(')/.exec(ogPattern) || [];
-      const literal = groups[1] || '';
-      const leading = groups[2] || "'";
-      const trailing = groups[4] || "'";
-      let pattern = groups[3] || '';
-      if (pattern?.startsWith('^')) {
-        pattern = pattern.substring(1);
-      } else if (pattern) {
-        pattern = '%' + pattern;
+    // TODO (vitor): This is mostly a hack. SQL Server doesn't have native regex, fallback to PATINDEX
+    const exprSql = df.kids.expr.sql;
+    const rawRegexInputValue = df.kids.regex.sql || '';
+
+    // Assuming rawRegexInputValue can be a |-separated list of patterns
+    const individualSqlPatterns = rawRegexInputValue.split('|');
+
+    const conditions = individualSqlPatterns.map(singleSqlPatternUntrimmed => {
+      const singleSqlPattern = singleSqlPatternUntrimmed.trim();
+
+      let corePattern = singleSqlPattern;
+      let patindexLiteralPrefix = "'";
+
+      const sqlStringLiteralMatch = /^(N)?'(.*)'$/.exec(singleSqlPattern);
+      if (sqlStringLiteralMatch) {
+        const nPrefix = sqlStringLiteralMatch[1] || ''; // 'N' or empty
+        corePattern = sqlStringLiteralMatch[2];
+        patindexLiteralPrefix = `${nPrefix}'`;
       }
-      if (pattern?.endsWith('$')) {
-        pattern = pattern.substring(0, -1);
-      } else if (pattern) {
-        pattern = pattern + '%';
+
+      // Special Case Handling for "Is Empty" or "Is Blank"
+      if (corePattern === '^$' || corePattern === '') {
+        return `${exprSql} = ''`;
       }
-      pattern = pattern.replace('\\d', '[0-9]');
-      pattern = pattern.replace('\\w', '[a-zA-Z]');
-      return `PATINDEX(${literal}${leading}${pattern}${trailing}, ${df.kids.expr.sql}) > 0`;
+
+      let patindexPattern = corePattern;
+
+      const startsWithAnchor = patindexPattern.startsWith('^');
+      if (startsWithAnchor) {
+        patindexPattern = patindexPattern.substring(1);
+      }
+
+      const endsWithAnchor = patindexPattern.endsWith('$');
+      if (endsWithAnchor) {
+        patindexPattern = patindexPattern.substring(
+          0,
+          patindexPattern.length - 1
+        );
+      }
+
+      // Add PATINDEX wildcards (%) if not anchored
+      if (!startsWithAnchor && patindexPattern !== '') {
+        patindexPattern = '%' + patindexPattern;
+      }
+      if (!endsWithAnchor && patindexPattern !== '') {
+        patindexPattern = patindexPattern + '%';
+      }
+
+      patindexPattern = patindexPattern.replace(/\\d/g, '[0-9]');
+      patindexPattern = patindexPattern.replace(/\\w/g, '[a-zA-Z0-9_]');
+
+      const sqlSafePattern = patindexPattern.replace(/'/g, "''");
+
+      return `PATINDEX(${patindexLiteralPrefix}${sqlSafePattern}', ${exprSql}) > 0`;
     });
-    return patterns.join(' OR ');
+
+    if (conditions.length === 0) {
+      return '1=0';
+    }
+    return conditions.join(' OR ');
   }
 
   sqlLiteralTime(
