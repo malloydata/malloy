@@ -3222,7 +3222,7 @@ class QueryQuery extends QueryField {
             `SELECT TOP ${limit} * from ${structSQL} as x`
           );
         } else {
-          throw new Error(`limitClause ${limitClause} not implemented`)
+          throw new Error(`limitClause ${limitClause} not implemented`);
         }
       }
     }
@@ -3289,7 +3289,7 @@ class QueryQuery extends QueryField {
               }`
             );
           } else if (this.parent.dialect.orderByClause === 'expression') {
-            const fieldExpr = fi.f.generateExpression(resultStruct);
+            const fieldExpr = fi.getSQL();
             o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
           }
         } else {
@@ -3307,8 +3307,7 @@ class QueryQuery extends QueryField {
           );
         } else if (this.parent.dialect.orderByClause === 'expression') {
           const orderingField = resultStruct.getFieldByNumber(f.field);
-          const fieldExpr =
-            orderingField.fif.f.generateExpression(resultStruct);
+          const fieldExpr = orderingField.fif.getSQL();
           o.push(`${fieldExpr} ${f.dir || 'ASC'}`);
         }
       }
