@@ -3317,8 +3317,7 @@ class QueryQuery extends QueryField {
   }
 
   generateSimpleSQL(stageWriter: StageWriter): string {
-    let s = 'SELECT';
-
+    let s = 'SELECT ';
     const limit =
       (!isRawSegment(this.firstSegment) && this.firstSegment.limit) || null;
 
