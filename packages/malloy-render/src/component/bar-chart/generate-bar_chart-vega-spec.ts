@@ -785,7 +785,7 @@ export function generateBarChartVegaSpec(
     const legendSize = Math.min(
       LEGEND_MAX,
       chartSettings.totalWidth * LEGEND_PERC,
-      maxCharCt * 10 + 20
+      maxCharCt * 10 + 32
     );
 
     const legendSettings: Legend = {

@@ -693,7 +693,7 @@ export function generateLineChartVegaSpec(
     legendSize = Math.min(
       LEGEND_MAX,
       chartSettings.totalWidth * LEGEND_PERC,
-      maxCharCt * 8 + 20
+      maxCharCt * 8 + 32
     );
 
     const legendSettings: Legend = {
