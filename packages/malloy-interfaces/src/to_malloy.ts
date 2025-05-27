@@ -9,6 +9,14 @@ export function queryToMalloy(
   return codeFromFragments(fragments, {tabWidth});
 }
 
+export function filterToMalloy(
+  filter: Malloy.Filter,
+  {tabWidth} = {tabWidth: 2}
+): string {
+  const fragments = filterToFragments(filter);
+  return codeFromFragments(fragments, {tabWidth});
+}
+
 const INDENT = Symbol('indent');
 const NEWLINE = Symbol('newline');
 const OUTDENT = Symbol('outdent');
@@ -83,14 +91,16 @@ function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
       return [
         serializeDateAsLiteral(
           parseDate(literal.date_value),
-          literal.granularity ?? 'day'
+          literal.granularity ?? 'day',
+          literal.timezone
         ),
       ];
     case 'timestamp_literal':
       return [
         serializeDateAsLiteral(
           parseDate(literal.timestamp_value),
-          literal.granularity ?? 'second'
+          literal.granularity ?? 'second',
+          literal.timezone
         ),
       ];
   }
@@ -123,7 +133,8 @@ function parseDate(date: string): string[] {
 
 function serializeDateAsLiteral(
   [year, month, day, hour, minute, second]: string[],
-  granularity: Malloy.TimestampTimeframe
+  granularity: Malloy.TimestampTimeframe,
+  timezone: string | undefined
 ): string {
   switch (granularity) {
     case 'year': {
@@ -149,6 +160,9 @@ function serializeDateAsLiteral(
       return `@${year}-${month}-${day} ${hour}:${minute}`;
     }
     case 'second': {
+      if (timezone !== undefined) {
+        return `@${year}-${month}-${day} ${hour}:${minute}:${second}[${timezone}]`;
+      }
       return `@${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
     default:
@@ -302,6 +316,8 @@ function groupedOperationsToFragments(
       return whereToFragments(operations as Malloy.FilterOperation[]);
     case 'having':
       return havingToFragments(operations as Malloy.FilterOperation[]);
+    case 'drill':
+      return drillToFragments(operations as Malloy.DrillOperation[]);
   }
 }
 
@@ -361,6 +377,8 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
         ...referenceToFragments(expression.field_reference),
         ...wrap(' {', whereToFragments(expression.where), '}'),
       ];
+    case 'literal_value':
+      return literalToFragments(expression.literal_value);
   }
 }
 
@@ -479,6 +497,10 @@ function whereToFragments(where: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('where', where.map(filterOperationItemToFragments), ',');
 }
 
+function drillToFragments(drill: Malloy.DrillOperation[]): Fragment[] {
+  return formatBlock('drill', drill.map(filterOperationItemToFragments), ',');
+}
+
 function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('having', having.map(filterOperationItemToFragments), ',');
 }
@@ -517,17 +539,27 @@ function escapeFilter(filter: string, quote: string): string {
   return result;
 }
 
+function filterToFragments(filter: Malloy.Filter): Fragment[] {
+  switch (filter.kind) {
+    case 'filter_string':
+      return [
+        ...referenceToFragments(filter.field_reference),
+        ' ~ ',
+        quoteFilter(filter.filter),
+      ];
+    case 'literal_equality':
+      return [
+        ...referenceToFragments(filter.field_reference),
+        ' = ',
+        ...literalToFragments(filter.value),
+      ];
+  }
+}
+
 function filterOperationItemToFragments(
   whereItem: Malloy.FilterOperation
 ): Fragment[] {
-  switch (whereItem.filter.kind) {
-    case 'filter_string':
-      return [
-        ...referenceToFragments(whereItem.filter.field_reference),
-        ' ~ ',
-        quoteFilter(whereItem.filter.filter),
-      ];
-  }
+  return filterToFragments(whereItem.filter);
 }
 
 function annotationsToFragments(

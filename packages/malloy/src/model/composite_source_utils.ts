@@ -953,6 +953,10 @@ export function pathEq(a: string[], b: string[]) {
   return a.length === b.length && a.every((s, i) => b[i] === s);
 }
 
+export function pathBegins(path: string[], prefix: string[]) {
+  return path.length >= prefix.length && prefix.every((s, i) => path[i] === s);
+}
+
 function lookup(field: string[], fields: FieldDef[]): FieldDef {
   const [head, ...rest] = field;
   const def = fields.find(f => (f.as ?? f.name) === head);

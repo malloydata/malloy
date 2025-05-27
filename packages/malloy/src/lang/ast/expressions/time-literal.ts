@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 import type {
@@ -28,7 +29,7 @@ import type {
   TimestampUnit,
   TimeLiteralNode,
 } from '../../../model/malloy_types';
-import {isTemporalType} from '../../../model/malloy_types';
+import {isDateUnit, isTemporalType} from '../../../model/malloy_types';
 
 import type {ExprValue} from '../types/expr-value';
 import {literalTimeResult} from '../types/expr-value';
@@ -76,7 +77,7 @@ const fTimestamp = `${fMinute}:ss`;
 /**
  * Literals specified with an @ in Malloy all become one of these
  */
-abstract class TimeLiteral extends ExpressionDef {
+export abstract class TimeLiteral extends ExpressionDef {
   literalPart: string;
   nextLit?: string;
   timeZone?: string;
@@ -92,11 +93,22 @@ abstract class TimeLiteral extends ExpressionDef {
     }
   }
 
-  protected makeLiteral(val: string, typ: TemporalFieldType): TimeLiteralNode {
+  protected makeLiteral(
+    val: string,
+    typ: TemporalFieldType,
+    units: TimestampUnit | undefined
+  ): TimeLiteralNode {
     const timeFrag: TimeLiteralNode = {
       node: 'timeLiteral',
       literal: val,
-      typeDef: {type: typ},
+      typeDef:
+        typ === 'timestamp'
+          ? {type: typ, timeframe: units}
+          : {
+              type: typ,
+              timeframe:
+                units !== undefined && isDateUnit(units) ? units : undefined,
+            },
     };
     if (this.timeZone) {
       timeFrag.timezone = this.timeZone;
@@ -105,12 +117,54 @@ abstract class TimeLiteral extends ExpressionDef {
   }
 
   protected makeValue(val: string, dataType: TemporalFieldType): TimeResult {
-    const value = this.makeLiteral(val, dataType);
+    const value = this.makeLiteral(val, dataType, this.units);
     return literalTimeResult({
       value,
-      dataType: {type: dataType},
+      dataType: value.typeDef,
       timeframe: this.units,
     });
+  }
+
+  getStableLiteral(): Malloy.LiteralValue {
+    const value = this.getValue();
+    let granularity = value.timeframe;
+    if (value.value.node !== 'timeLiteral') {
+      // TODO should probably just throw...
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: '1970-01-01 00:00:00',
+        granularity,
+      };
+    }
+    const timeValue = value.value.literal;
+    const timezone = value.value.timezone;
+    if (value.type === 'timestamp') {
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: timeValue,
+        granularity,
+        timezone,
+      };
+    } else {
+      if (
+        granularity === 'hour' ||
+        granularity === 'minute' ||
+        granularity === 'second'
+      ) {
+        // TODO should probably just throw...
+        granularity = 'day';
+      }
+      return {
+        kind: 'date_literal',
+        date_value: timeValue,
+        granularity,
+        timezone,
+      };
+    }
+  }
+
+  getValue() {
+    return this.makeValue(this.literalPart, this.timeType);
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -258,14 +312,19 @@ abstract class DateBasedLiteral extends GranularLiteral {
     const dateValue = this.makeValue(this.literalPart, 'date');
     const timestamp = this.makeLiteral(
       `${this.literalPart} 00:00:00`,
-      'timestamp'
+      'timestamp',
+      this.units
     );
     return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
   }
 
   getNext(): ExprValue | undefined {
     const dateValue = this.makeValue(this.nextLit, 'date');
-    const timestamp = this.makeLiteral(`${this.nextLit} 00:00:00`, 'timestamp');
+    const timestamp = this.makeLiteral(
+      `${this.nextLit} 00:00:00`,
+      'timestamp',
+      this.units
+    );
     return {...dateValue, morphic: {timestamp}};
   }
 }

@@ -11,6 +11,7 @@ import type {
   DateUnit,
   Expr,
   FieldDef,
+  FilterCondition,
   JoinType,
   ModelDef,
   Query,
@@ -252,11 +253,21 @@ function getResultMetadataAnnotation(
     tag.set(['calculation']);
     hasAny = true;
   }
-  if (resultMetadata.filterList) {
-    const drillFilters = resultMetadata.filterList
-      .filter(f => f.expressionType === 'scalar')
-      .map(f => f.code);
-    tag.set(['drill_filters'], drillFilters);
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
+  }
+  if (isAtomic(field) || isTurtle(field)) {
+    if (field.drillView !== undefined) {
+      tag.set(['drill_view'], field.drillView);
+      hasAny = true;
+    }
+  }
+  const drillFilters = resultMetadata.filterList?.filter(
+    f => f.expressionType === 'scalar'
+  );
+  if (drillFilters) {
+    addDrillFiltersTag(tag, drillFilters);
     hasAny = true;
   }
   if (resultMetadata.fieldKind === 'dimension') {
@@ -278,6 +289,74 @@ function getResultMetadataAnnotation(
     : undefined;
 }
 
+function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
+  for (let i = 0; i < drillFilters.length; i++) {
+    const filter = drillFilters[i];
+    tag.set(['drill_filters', i, 'code'], filter.code);
+    if (filter.drillView) {
+      tag.set(['drill_filters', i, 'drill_view'], filter.drillView);
+    }
+    if (filter.drillView === undefined && filter.stableFilter !== undefined) {
+      tag.set(
+        ['drill_filters', i, 'field_reference'],
+        [
+          ...(filter.stableFilter.field_reference.path ?? []),
+          filter.stableFilter.field_reference.name,
+        ]
+      );
+      if (filter.stableFilter.kind === 'filter_string') {
+        tag.set(['drill_filters', i, 'kind'], 'filter_expression');
+        tag.set(
+          ['drill_filters', i, 'filter_expression'],
+          filter.stableFilter.filter
+        );
+      } else {
+        tag.set(['drill_filters', i, 'kind'], 'literal_equality');
+        writeLiteralToTag(
+          tag,
+          ['drill_filters', i, 'value'],
+          filter.stableFilter.value
+        );
+      }
+    }
+  }
+}
+
+export function writeLiteralToTag(
+  tag: Tag,
+  path: (string | number)[],
+  literal: Malloy.LiteralValue
+) {
+  tag.set([...path, 'kind'], literal.kind);
+  switch (literal.kind) {
+    case 'string_literal':
+      tag.set([...path, 'string_value'], literal.string_value);
+      break;
+    case 'number_literal':
+      tag.set([...path, 'number_value'], literal.number_value);
+      break;
+    case 'boolean_literal':
+      tag.set([...path, 'boolean_value'], literal.boolean_value.toString());
+      break;
+    case 'date_literal':
+      tag.set([...path, 'date_value'], literal.date_value);
+      tag.set([...path, 'timezone'], literal.timezone);
+      tag.set([...path, 'granularity'], literal.granularity);
+      break;
+    case 'timestamp_literal':
+      tag.set([...path, 'timestamp_value'], literal.timestamp_value);
+      tag.set([...path, 'timezone'], literal.timezone);
+      tag.set([...path, 'granularity'], literal.granularity);
+      break;
+    case 'filter_expression_literal':
+      tag.set(
+        [...path, 'filter_expression_value'],
+        literal.filter_expression_value
+      );
+      break;
+  }
+}
+
 function escapeIdentifier(str: string) {
   return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 }
@@ -297,14 +376,16 @@ export function getResultStructMetadataAnnotation(
     tag.set(['limit'], resultMetadata.limit);
     hasAny = true;
   }
-  if (resultMetadata.filterList) {
-    const drillFilters = resultMetadata.filterList
-      .filter(f => f.expressionType === 'scalar')
-      .map(f => f.code);
-    if (drillFilters.length > 0) {
-      tag.set(['drill_filters'], drillFilters);
-      hasAny = true;
-    }
+  const drillFilters = resultMetadata.filterList?.filter(
+    f => f.expressionType === 'scalar'
+  );
+  if (drillFilters) {
+    addDrillFiltersTag(tag, drillFilters);
+    hasAny = true;
+  }
+  if (resultMetadata.drillable) {
+    tag.set(['drillable']);
+    hasAny = true;
   }
   if (resultMetadata.orderBy) {
     for (let i = 0; i < resultMetadata.orderBy.length; i++) {

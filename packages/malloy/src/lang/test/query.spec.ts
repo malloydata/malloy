@@ -1406,6 +1406,529 @@ describe('query:', () => {
       ).toTranslate();
     });
   });
+  describe('drill:', () => {
+    test('need experimental flag', () => {
+      expect(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `).toLog(
+        errorMessage(
+          'Experimental flag `drill` is not set, feature not available'
+        )
+      );
+    });
+    test('basic drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in the same nest', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai, abool
+          }
+          dimension: is_cool is false
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.abool = true
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in overlapping nests', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai
+            nest: nested is {
+              where: is_awesome
+              group_by: abool
+            }
+          }
+          dimension: is_cool is false
+          dimension: is_awesome is true
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.nested.abool = true
+          group_by: astr
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.abool = true,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q1 = m.modelDef.queryList[0];
+      const f1 = q1.pipeline[0].filterList!;
+      expect(f1.length).toBe(2);
+      expect(f1[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f1[1]).toBeExpr(
+        '{filterCondition {is_awesome and {abool = true}}}'
+      );
+      const q2 = m.modelDef.queryList[1];
+      const f2 = q2.pipeline[0].filterList!;
+      expect(f2.length).toBe(2);
+      expect(f2[0]).toBeExpr(
+        '{filterCondition {{is_cool and is_awesome} and {abool = true}}}'
+      );
+      expect(f2[1]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can include normal filters in drill statement', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+          dimension: is_cool is false
+          dimension: is_special is false
+        }
+        run: aext -> {
+          drill:
+            astr = 'foo',
+            af > 100,
+            is_cool and is_special,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(4);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {af > 100}}');
+      expect(f[2]).toBeExpr('{filterCondition {is_cool and is_special}}');
+      expect(f[3]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('drill view is not defined', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          run: a -> {
+            drill: ${'by_ai'}.ai = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such view `by_ai`'));
+    });
+    test('drill field is not defined', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.${'ai'} = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such field `ai` found in `by_ai`'));
+    });
+    test('drill nest found', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+    test('can drill a nest and a field from another view', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+          view: other_view is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.astr = 'foo',
+            other_view.ai = 1
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {ai = 1}}');
+    });
+    test('does not think you need to drill on measures', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toTranslate();
+    });
+    test('drill missing some fields (sibling)', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill multi-stage view', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+            } -> { select: * }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one'}.astr = "foo",
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage('`drill:` may not be used with multi-segment views')
+      );
+    });
+    test('drill index view', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              index: *
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one'}.fieldName = "astr",
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('Index segments are not compatible with `drill:`'));
+    });
+    test('drill missing some fields (private sibling)', () => {
+      expect(
+        markSource`
+          ##! experimental {drill access_modifiers}
+          source: aext is a include { public: *; private: abool } extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill missing some fields (parent)', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: abool
+              nest: nest_one is {
+                group_by: astr
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.abool`'
+        )
+      );
+    });
+    test('drill nest not found', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.nested.astr = 'foo'
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('No such nest `nested` found in `by_ai`'));
+    });
+    test.skip('drill wrong type', () => {
+      expect(
+        markSource`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: ai
+            }
+          }
+          run: aext -> {
+            drill: by_ai.ai = 'foo'
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('Mismathcing type??'));
+    });
+    test('drill picks up wheres', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          view: by_ai is {
+            where: ai = 2
+            nest: nested is {
+              where: abool = true
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{ai = 2} and {abool = true}} and {astr = {"foo"}}}}'
+      );
+    });
+    test('can filter on private field with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          private dimension: private_ai is ai
+          view: by_private_ai is {
+            group_by: private_ai
+          }
+        }
+        run: aext -> {
+          drill: by_private_ai.private_ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {private_ai = 2}}');
+    });
+    test('can filter on private nest field with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          private view: private_by_ai is {
+            group_by: ai
+          }
+          view: nest_private_by_ai is { nest: private_by_ai }
+        }
+        run: aext -> {
+          drill: nest_private_by_ai.private_by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can filter on join with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental.drill
+        source: aext is a extend {
+          join_one: b on true
+          view: by_b_ai is {
+            group_by: b.ai
+          }
+        }
+        run: aext -> {
+          drill: by_b_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {b.ai = 2}}');
+    });
+    test('resolve composite slice correctly when using drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { composite_sources drill }
+        source: a_with_x is a extend { dimension: x is 1 }
+        source: a_with_y is a extend { dimension: y is 1 }
+        source: a_with_x_and_y is a_with_x extend { dimension: y is 1 }
+        source: aext is compose(
+          a,
+          a_with_x,
+          a_with_y,
+          a_with_x_and_y
+        ) extend {
+          view: by_y is {
+            where: x = 1
+            group_by: y
+          }
+        }
+        run: aext -> {
+          drill: by_y.y = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{x = 1} and {y = 2}}}');
+      expect(q.compositeResolvedSourceDef?.as).toBe('a_with_x_and_y');
+    });
+    test('can filter on param with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { parameters drill }
+        source: aext(param is 1) is a extend {
+          view: by_param is {
+            group_by: param
+          }
+        }
+        run: aext -> {
+          drill: by_param.param = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{parameter param} = 2}}');
+    });
+    test.todo('cannot drill on joined view');
+    test('can filter on expression with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { parameters drill }
+        source: aext(param is 1) is a extend {
+          dimension: private_field is 1
+          view: by_param is {
+            group_by: x is param + private_field
+          }
+        }
+        run: aext -> {
+          drill: by_param.x = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{parameter param} + private_field} = 2}}'
+      );
+    });
+  });
   describe('grouped_by', () => {
     test('grouped_by requires compiler flag', () => {
       expect(

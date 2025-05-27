@@ -216,9 +216,7 @@ export class NamedSource extends Source {
 
     for (const paramName in parametersIn) {
       if (!(paramName in outArguments)) {
-        if (paramHasValue(parametersIn[paramName])) {
-          outArguments[paramName] = {...parametersIn[paramName]};
-        } else {
+        if (!paramHasValue(parametersIn[paramName])) {
           this.refLogError(
             'missing-source-argument',
             `Argument not provided for required parameter \`${paramName}\``
@@ -272,6 +270,14 @@ export class NamedSource extends Source {
       base.parameters,
       pList
     );
+    for (const paramName in base.parameters) {
+      if (
+        !(paramName in outArguments) &&
+        paramHasValue(base.parameters[paramName])
+      ) {
+        outArguments[paramName] = {...base.parameters[paramName]};
+      }
+    }
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};
     this.document()?.rememberToAddModelAnnotations(ret);

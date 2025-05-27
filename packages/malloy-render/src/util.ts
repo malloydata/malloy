@@ -220,3 +220,7 @@ export function walkFields(e: NestField, cb: (f: Field) => void) {
     }
   });
 }
+
+export function notUndefined<T>(x: T | undefined): x is T {
+  return x !== undefined;
+}

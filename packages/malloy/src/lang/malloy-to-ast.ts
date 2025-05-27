@@ -715,10 +715,20 @@ export class MalloyToAST
     return new ast.Filter(pcx.fieldExpr().map(f => this.getFilterElement(f)));
   }
 
+  visitDrillClauseList(pcx: parse.FilterClauseListContext): ast.Drill {
+    this.inExperiment('drill', pcx);
+    return new ast.Drill(pcx.fieldExpr().map(f => this.getFilterElement(f)));
+  }
+
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
     const where = this.visitFilterClauseList(pcx.filterClauseList());
     where.having = false;
     return this.astAt(where, pcx);
+  }
+
+  visitDrillStatement(pcx: parse.DrillStatementContext): ast.Drill {
+    const drill = this.visitDrillClauseList(pcx.drillClauseList());
+    return this.astAt(drill, pcx);
   }
 
   visitHavingStatement(pcx: parse.HavingStatementContext): ast.Filter {
