@@ -294,13 +294,36 @@ abstract class ASTNode<T> {
     name: string,
     path: string[] | undefined
   ) {
+    return ASTNode._schemaTryGet(schema, name, path, false);
+  }
+
+  /**
+   * @internal
+   */
+  static schemaTryGetDrillField(
+    schema: Malloy.Schema,
+    name: string,
+    path: string[] | undefined
+  ) {
+    return ASTNode._schemaTryGet(schema, name, path, true);
+  }
+
+  /**
+   * @internal
+   */
+  private static _schemaTryGet(
+    schema: Malloy.Schema,
+    name: string,
+    path: string[] | undefined,
+    isDrill: boolean
+  ) {
     let current = schema.fields;
     for (const part of path ?? []) {
       const field = current.find(f => f.name === part);
       if (field === undefined) {
         throw new Error(`${part} not found`);
       }
-      if (field.kind === 'join') {
+      if (field.kind === 'join' || (isDrill && field.kind === 'view')) {
         current = field.schema.fields;
         continue;
       }
@@ -337,6 +360,21 @@ abstract class ASTNode<T> {
     path: string[] | undefined
   ) {
     const field = ASTNode.schemaTryGet(schema, name, path);
+    if (field === undefined) {
+      throw new Error(`${name} not found`);
+    }
+    return field;
+  }
+
+  /**
+   * @internal
+   */
+  static schemaGetDrillField(
+    schema: Malloy.Schema,
+    name: string,
+    path: string[] | undefined
+  ) {
+    const field = ASTNode.schemaTryGetDrillField(schema, name, path);
     if (field === undefined) {
       throw new Error(`${name} not found`);
     }
@@ -1068,7 +1106,8 @@ type ASTFieldReferenceParent =
   | ASTFilterWithFilterString
   | ASTOrderByViewOperation
   | ASTTimeTruncationExpression
-  | ASTFilteredFieldExpression;
+  | ASTFilteredFieldExpression
+  | ASTFilterWithLiteralEquality;
 
 export class ASTFieldReference extends ASTReference {
   /**
@@ -1081,7 +1120,10 @@ export class ASTFieldReference extends ASTReference {
       parent instanceof ASTTimeTruncationExpression
     ) {
       return parent.field.segment;
-    } else if (parent instanceof ASTFilterWithFilterString) {
+    } else if (
+      parent instanceof ASTFilterWithFilterString ||
+      parent instanceof ASTFilterWithLiteralEquality
+    ) {
       const grand = parent.parent as
         | ASTFilterOperation
         | ASTWhereViewOperation
@@ -1106,7 +1148,14 @@ export class ASTFieldReference extends ASTReference {
 
   getFieldInfo() {
     const schema = this.getReferenceSchema();
-    return ASTNode.schemaGet(schema, this.name, this.path);
+    const isDrill =
+      this.parent instanceof ASTFilterWithLiteralEquality &&
+      this.parent.parent instanceof ASTDrillViewOperation;
+    if (isDrill) {
+      return ASTNode.schemaGetDrillField(schema, this.name, this.path);
+    } else {
+      return ASTNode.schemaGet(schema, this.name, this.path);
+    }
   }
 }
 
