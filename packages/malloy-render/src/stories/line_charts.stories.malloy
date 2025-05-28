@@ -35,7 +35,6 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     order_by: dcId
   }
 
-
   # dashboard { table.max_height=100000 }
   view: seriesCharts is {
     group_by: ` ` is 'Line Charts'
@@ -461,7 +460,6 @@ source: random_data_nulls is duckdb.sql("""
     null_dim_6: CASE WHEN i%6=0 THEN NULL ELSE i%6 END,
     null_measure: CASE WHEN random()<0.2 THEN NULL ELSE ceil(random()*1000) END,
     null_measure_2: CASE WHEN i%6=0 THEN NULL ELSE ceil(random()*1000) END,
-    measure_with_large_null: CASE WHEN i%6=0 THEN 2000 ELSE ceil(random()*1000) END,
   """) extend {
 
     view: nulls is {
@@ -474,36 +472,6 @@ source: random_data_nulls is duckdb.sql("""
     view: with_null_x is {
       group_by: null_dim_6
       aggregate: id.sum()
-    }
-
-    #(story)
-    # line_chart
-    view: with_null_x_date is {
-      group_by:
-        `date` is @2001-02-03 + null_dim_6 day
-      aggregate: m1 is id.sum()
-    }
-
-    #(story)
-    # line_chart
-    view: with_null_x_date_series is {
-      group_by:
-        # series
-        dim_2
-        # x
-        `date` is @2001-02-03 + null_dim_6 day
-      aggregate:
-        measure_with_large_null.sum()
-    }
-
-    #(story)
-    # line_chart
-    view: with_null_x_date_measure_series is {
-      group_by:
-        # x
-        `date` is @2001-02-03 + null_dim_6 day
-      # y
-      aggregate: m1 is id.sum(), m2 is id.sum()*.75
     }
 
     #(story)
