@@ -187,7 +187,9 @@ export class Drill extends Filter implements QueryPropertyInterface {
       requiredDimensions.push(...segmentDimensions.map(f => [...pathSoFar, f]));
       // Only collect filters from nests if they haven't been collected in a previous drill clause
       if (!drillDimensions.some(n => pathBegins(n.nestPath, pathSoFar))) {
-        for (const filter of segment.filterList ?? []) {
+        const wheres = segment.filterList ?? [];
+        for (const filter of wheres) {
+          if (expressionIsAggregate(filter.expressionType)) continue;
           if (collectedWheres === undefined) {
             collectedWheres = filter.e;
             collectedWhereFieldUsage = filter.fieldUsage;

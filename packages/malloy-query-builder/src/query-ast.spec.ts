@@ -642,12 +642,12 @@ describe('query builder', () => {
         filter: {
           kind: 'literal_equality',
           field_reference: {
-            name: 'carrier',
-            path: ['by_carrier'],
+            name: 'nickname',
+            path: ['top_carriers'],
           },
           value: {
             kind: 'string_literal',
-            string_value: 'WN',
+            string_value: 'Southwest',
           },
         },
       });
@@ -677,12 +677,12 @@ describe('query builder', () => {
                 filter: {
                   kind: 'literal_equality',
                   field_reference: {
-                    name: 'carrier',
-                    path: ['by_carrier'],
+                    name: 'nickname',
+                    path: ['top_carriers'],
                   },
                   value: {
                     kind: 'string_literal',
-                    string_value: 'WN',
+                    string_value: 'Southwest',
                   },
                 },
               },
@@ -694,9 +694,43 @@ describe('query builder', () => {
         run: flights -> {
           drill:
             carrier ~ f\`WN, AA\`,
-            by_carrier.carrier = "WN"
+            top_carriers.nickname = "Southwest"
         }
       `,
+    });
+  });
+  test('can get drill field info', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    const q = new ASTQuery({model: flights_model, query: from});
+    const segment = q.getOrAddDefaultSegment();
+    const drill = segment.addDrill({
+      filter: {
+        kind: 'literal_equality',
+        field_reference: {
+          name: 'nickname',
+          path: ['top_carriers'],
+        },
+        value: {
+          kind: 'string_literal',
+          string_value: 'Southwest',
+        },
+      },
+    });
+    expect(drill.filter.fieldReference.getFieldInfo()).toMatchObject({
+      kind: 'dimension',
+      type: {kind: 'string_type'},
     });
   });
   test('add a having', () => {
