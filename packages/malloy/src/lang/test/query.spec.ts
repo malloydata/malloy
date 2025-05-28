@@ -1632,6 +1632,27 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
+    test('does not collect havings', () => {
+      const m = new TestTranslator(`
+          ##! experimental.drill
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+              having: c > 100
+            }
+          }
+          run: aext -> {
+            drill: view_one.astr = "foo",
+            group_by: ai
+          }
+        `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
     test('drill missing some fields (sibling)', () => {
       expect(
         markSource`
