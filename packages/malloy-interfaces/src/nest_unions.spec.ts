@@ -301,6 +301,21 @@ describe('convert between default thrift and Malloy types', () => {
     };
     thriftBidirectional(typescript, thrift, 'Data');
   });
+  test('handles null values in enum', () => {
+    const typescript: Malloy.AtomicTypeWithNumberType = {
+      kind: 'number_type',
+      subtype: 'integer',
+    };
+    const thrift = {
+      boolean_type: null,
+      string_type: null,
+      number_type: {subtype: 1},
+      _type: 3,
+    };
+    const actualTypescript = convertFromThrift(thrift, 'AtomicType');
+    console.log('Actual typescript', actualTypescript);
+    expect(actualTypescript).toMatchObject(typescript);
+  });
 });
 
 function thriftBidirectional(typescript: {}, thrift: {}, type: string) {
