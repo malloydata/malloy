@@ -157,6 +157,11 @@ export function viteMalloyStoriesPlugin(): PluginOption {
                 enableDrill: true
               };
 
+
+              el.onInitialState = (state) => {
+                console.log("Malloy render initial state", state);
+              };
+
               const button = document.createElement('button');
               button.innerHTML = "Copy HTML";
               button.addEventListener("click", () => copyMalloyRenderHTML(el));
