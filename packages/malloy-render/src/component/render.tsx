@@ -253,6 +253,13 @@ export function MalloyRenderInner(props: {
     });
   };
 
+  createEffect(() => {
+    if (props.element && metadata().renderAs) {
+      // @ts-ignore will refactor this as part of web component removal
+      props.element.renderAs = metadata().renderAs;
+    }
+  });
+
   return (
     <>
       <ResultContext.Provider value={metadata}>
