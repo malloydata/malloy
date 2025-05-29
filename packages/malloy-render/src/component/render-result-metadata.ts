@@ -44,8 +44,9 @@ export type GetResultMetadataOptions = {
 };
 
 export interface FieldVegaInfo {
-  runtime: Runtime;
-  props: VegaChartProps;
+  runtime: Runtime | null;
+  props: VegaChartProps | null;
+  error: Error | null;
 }
 
 export interface RenderMetadata {
@@ -105,10 +106,20 @@ function populateVegaSpec(
   // Populate vega spec data
   let vegaChartProps: VegaChartProps | null = null;
   const chartType = shouldRenderChartAs(field.tag);
-  if (chartType === 'bar_chart') {
-    vegaChartProps = generateBarChartVegaSpec(field, metadata);
-  } else if (chartType === 'line_chart') {
-    vegaChartProps = generateLineChartVegaSpec(field, metadata);
+  const vegaInfo: FieldVegaInfo = {
+    error: null,
+    props: null,
+    runtime: null,
+  };
+
+  try {
+    if (chartType === 'bar_chart') {
+      vegaChartProps = generateBarChartVegaSpec(field, metadata);
+    } else if (chartType === 'line_chart') {
+      vegaChartProps = generateLineChartVegaSpec(field, metadata);
+    }
+  } catch (error) {
+    vegaInfo.error = error;
   }
 
   if (vegaChartProps) {
@@ -138,6 +149,8 @@ function populateVegaSpec(
       },
     };
     const runtime = parse(props.spec);
-    metadata.vega[field.key] = {runtime, props};
+    vegaInfo.props = props;
+    vegaInfo.runtime = runtime;
   }
+  metadata.vega[field.key] = vegaInfo;
 }

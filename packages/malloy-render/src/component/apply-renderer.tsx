@@ -17,6 +17,7 @@ import {renderTime} from './render-time';
 import {LegacyChart} from './legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '../util';
 import type {RendererProps} from './types';
+import {ErrorMessage} from './error-message/error-message';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
@@ -59,7 +60,10 @@ export function applyRenderer(props: RendererProps) {
       case 'chart': {
         if (dataColumn.isRepeatedRecord()) {
           renderValue = <Chart data={dataColumn} {...propsToPass} />;
-        }
+        } else
+          renderValue = (
+            <ErrorMessage message="Malloy Render: Charts require tabular data" />
+          );
         break;
       }
       case 'dashboard': {
