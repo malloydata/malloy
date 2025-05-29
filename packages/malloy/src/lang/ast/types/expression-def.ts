@@ -52,12 +52,6 @@ import type {
   EqualityMalloyOperator,
 } from './binary_operators';
 import {getExprNode, isComparison, isEquality} from './binary_operators';
-import type {
-  BooleanFilter,
-  NumberFilter,
-  StringFilter,
-  TemporalFilter,
-} from '@malloydata/malloy-filter';
 import {
   BooleanFilterExpression,
   NumberFilterExpression,
@@ -612,20 +606,15 @@ function unsupportError(
 }
 
 export function checkFilterExpression(
-  logTo: MalloyElement | undefined,
+  logTo: MalloyElement,
   ft: string,
   fexpr: Expr
-):
-  | {kind: 'date' | 'timestamp'; parsed: TemporalFilter | null}
-  | {kind: 'string'; parsed: StringFilter | null}
-  | {kind: 'boolean'; parsed: BooleanFilter | null}
-  | {kind: 'number'; parsed: NumberFilter | null}
-  | undefined {
+) {
   while (fexpr.node === '()') {
     fexpr = fexpr.e;
   }
   if (fexpr.node !== 'filterLiteral') {
-    logTo?.logError(
+    logTo.logError(
       'filter-expression-error',
       'Expected a filter expression literal here'
     );
@@ -634,28 +623,20 @@ export function checkFilterExpression(
   const fsrc = fexpr.filterSrc;
   let err: string | undefined;
   if (ft === 'date' || ft === 'timestamp') {
-    const result = TemporalFilterExpression.parse(fsrc);
-    err = result.log[0]?.message;
-    if (!err) return {kind: ft, parsed: result.parsed};
+    err = TemporalFilterExpression.parse(fsrc).log[0]?.message;
   } else if (ft === 'string') {
-    const result = StringFilterExpression.parse(fsrc);
-    err = result.log[0]?.message;
-    if (!err) return {kind: ft, parsed: result.parsed};
+    err = StringFilterExpression.parse(fsrc).log[0]?.message;
   } else if (ft === 'number') {
-    const result = NumberFilterExpression.parse(fsrc);
-    err = result.log[0]?.message;
-    if (!err) return {kind: ft, parsed: result.parsed};
+    err = NumberFilterExpression.parse(fsrc).log[0]?.message;
   } else if (ft === 'boolean') {
-    const result = BooleanFilterExpression.parse(fsrc);
-    err = result.log[0]?.message;
-    if (!err) return {kind: ft, parsed: result.parsed};
+    err = BooleanFilterExpression.parse(fsrc).log[0]?.message;
   } else {
-    logTo?.logError(
+    logTo.logError(
       'filter-expression-type',
       `Cannot apply filter expression to type ${ft}`
     );
   }
   if (err !== undefined) {
-    logTo?.logError('filter-expression-error', `Filter syntax error: ${err}`);
+    logTo.logError('filter-expression-error', `Filter syntax error: ${err}`);
   }
 }

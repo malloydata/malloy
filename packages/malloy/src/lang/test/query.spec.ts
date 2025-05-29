@@ -2009,7 +2009,7 @@ describe('query:', () => {
           `
         ).toLog(errorMessage('Group by of `astr` is required but not present'));
       });
-      test('single value filter equal works with boolean, string, number, timestamp, null', () => {
+      test('single value filter equal works with boolean, string, number, timestamp, date, null', () => {
         expect(
           markSource`
             ##! experimental.grouped_by
@@ -2017,8 +2017,7 @@ describe('query:', () => {
               dimension: abool2 is abool
               measure: aisum is ai.sum() {
                 grouped_by:
-                  astr, abool, abool2, ai, af, ats
-                  // ,ad
+                  astr, abool, abool2, ai, af, ats, ad
               }
             }
             run: aext -> {
@@ -2027,7 +2026,7 @@ describe('query:', () => {
                 abool = true,
                 abool2 = false,
                 ai = 2,
-                // ad = @2003-01-01,
+                ad = @2003-01-01,
                 ats = @2003-01-01 10:00:00,
                 af is null
               aggregate: aisum

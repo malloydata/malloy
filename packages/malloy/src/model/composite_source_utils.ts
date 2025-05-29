@@ -5,7 +5,19 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {checkFilterExpression, type MalloyElement} from '../lang/ast';
+import type {
+  BooleanFilter,
+  NumberFilter,
+  StringFilter,
+  TemporalFilter,
+} from '@malloydata/malloy-filter';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
+  TemporalFilterExpression,
+} from '@malloydata/malloy-filter';
+import type {MalloyElement} from '../lang/ast';
 import type {
   FieldUsage,
   FieldDef,
@@ -805,13 +817,12 @@ function getSingleValueFilterFields(filter: Expr): string[][] {
   const fieldPaths: string[][] = [];
   if (filter.node === 'filterMatch') {
     if (filter.kids.expr.node === 'field') {
-      const result = checkFilterExpression(
-        undefined,
+      const result = compileFilterExpression(
         filter.dataType,
         filter.kids.filterExpr
       );
 
-      if (!result || !result.parsed) return [];
+      if (!result) return [];
       if (
         (result.kind === 'boolean' &&
           ['null', 'false', 'true'].includes(result.parsed.operator) &&
@@ -1151,4 +1162,33 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
       'Could not resolve composite source'
     );
   }
+}
+
+export function compileFilterExpression(
+  ft: string,
+  fexpr: Expr
+):
+  | {kind: 'date' | 'timestamp'; parsed: TemporalFilter}
+  | {kind: 'string'; parsed: StringFilter}
+  | {kind: 'boolean'; parsed: BooleanFilter}
+  | {kind: 'number'; parsed: NumberFilter}
+  | undefined {
+  if (fexpr.node !== 'filterLiteral') {
+    return undefined;
+  }
+  const fsrc = fexpr.filterSrc;
+  if (ft === 'date' || ft === 'timestamp') {
+    const result = TemporalFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  } else if (ft === 'string') {
+    const result = StringFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  } else if (ft === 'number') {
+    const result = NumberFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  } else if (ft === 'boolean') {
+    const result = BooleanFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  }
+  return undefined;
 }
