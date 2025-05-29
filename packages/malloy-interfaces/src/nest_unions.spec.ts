@@ -313,7 +313,6 @@ describe('convert between default thrift and Malloy types', () => {
       _type: 3,
     };
     const actualTypescript = convertFromThrift(thrift, 'AtomicType');
-    console.log('Actual typescript', actualTypescript);
     expect(actualTypescript).toMatchObject(typescript);
   });
 });
