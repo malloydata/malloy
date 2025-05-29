@@ -2034,7 +2034,7 @@ describe('query:', () => {
           `
         ).toTranslate();
       });
-      test('single value filter ANDED equal works with boolean, string, number, timestamp, null', () => {
+      test('single value filter ANDED equal works with boolean, string, number, timestamp, date, null', () => {
         expect(
           markSource`
             ##! experimental.grouped_by
@@ -2042,8 +2042,7 @@ describe('query:', () => {
               dimension: abool2 is abool
               measure: aisum is ai.sum() {
                 grouped_by:
-                  astr, abool, abool2, ai, af, ats
-                  // ,ad
+                  astr, abool, abool2, ai, af, ats, ad
               }
             }
             run: aext -> {
@@ -2052,7 +2051,7 @@ describe('query:', () => {
                 and abool = true
                 and abool2 = false
                 and ai = 2
-                // and ad = @2003-01-01
+                and ad = @2003-01-01
                 and ats = @2003-01-01 10:00:00
                 and af is null
               aggregate: aisum
@@ -2060,7 +2059,7 @@ describe('query:', () => {
           `
         ).toTranslate();
       });
-      test('single value filter ANDED (parenthesized) equal works with boolean, string, number, timestamp, null', () => {
+      test('single value filter ANDED (parenthesized) equal works with boolean, string, number, timestamp, date, null', () => {
         expect(
           markSource`
             ##! experimental.grouped_by
@@ -2068,8 +2067,7 @@ describe('query:', () => {
               dimension: abool2 is abool
               measure: aisum is ai.sum() {
                 grouped_by:
-                  astr, abool, abool2, ai, af, ats
-                  // ,ad
+                  astr, abool, abool2, ai, af, ats, ad
               }
             }
             run: aext -> {
@@ -2078,7 +2076,7 @@ describe('query:', () => {
                 and abool = true)
                 and (abool2 = false
                 and ai = 2
-                // and ad = @2003-01-01
+                and ad = @2003-01-01
                 and (ats = @2003-01-01 10:00:00
                 and af is null))
               aggregate: aisum
@@ -2096,9 +2094,7 @@ describe('query:', () => {
               dimension: astr2 is astr
               measure: aisum is ai.sum() {
                 grouped_by:
-                  astr, abool, abool2, ai, af, abool3, astr2
-                  // ,ats
-                  // ,ad
+                  astr, abool, abool2, ai, af, abool3, astr2, ats, ad
               }
             }
             run: aext -> {
@@ -2107,8 +2103,8 @@ describe('query:', () => {
                 abool ~ f'true',
                 abool2 ~ f'=false',
                 ai ~ f'2',
-                // ad ~ f'2003-01-01',
-                // ats ~ f'2003-01-01 10:00:00',
+                ad ~ f'2003-01-01',
+                ats ~ f'2003-01-01 10:00:00',
                 af ~ f'null',
                 abool3 ~ f'null',
                 astr2 ~ f'null'
