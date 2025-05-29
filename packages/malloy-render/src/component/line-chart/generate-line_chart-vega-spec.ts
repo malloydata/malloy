@@ -285,7 +285,7 @@ export function generateLineChartVegaSpec(
     encode: {
       enter: {
         x: {
-          signal: xScaling('datum.x_pos'),
+          signal: xScaling('datum.x'),
         },
         y: {
           value: 0,
@@ -324,7 +324,7 @@ export function generateLineChartVegaSpec(
           enter: {
             fill: {value: 'transparent'},
             size: {value: 36},
-            x: {signal: xScaling('datum.x_pos')},
+            x: {signal: xScaling('datum.x')},
             y: {signal: 'height /2'},
           },
         },
