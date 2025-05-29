@@ -101,7 +101,7 @@ export function convertFromThrift(obj: unknown, type: string): unknown {
     const typeDefinition = getType(type);
     if (typeDefinition.type === 'union') {
       for (const kind in typeDefinition.options) {
-        if (obj[kind] !== undefined) {
+        if (obj[kind] !== undefined && obj[kind] !== null) {
           const result = convertFromThrift(
             obj[kind],
             typeDefinition.options[kind]
