@@ -32,7 +32,11 @@ import {createResultStore} from './result-store/result-store';
 import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
 import type {Config, Runtime} from 'vega';
 import {parse} from 'vega';
-import type {NestField, RepeatedRecordField, RootCell} from '../data_tree';
+import {
+  type NestField,
+  type RepeatedRecordField,
+  type RootCell,
+} from '../data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
@@ -40,8 +44,9 @@ export type GetResultMetadataOptions = {
 };
 
 export interface FieldVegaInfo {
-  runtime: Runtime;
-  props: VegaChartProps;
+  runtime: Runtime | null;
+  props: VegaChartProps | null;
+  error: Error | null;
 }
 
 export interface RenderMetadata {
@@ -49,6 +54,7 @@ export interface RenderMetadata {
   vega: Record<string, FieldVegaInfo>;
   root: RootCell;
   parentSize: {width: number; height: number};
+  renderAs: string;
 }
 
 export function getResultMetadata(
@@ -60,6 +66,7 @@ export function getResultMetadata(
     vega: {},
     root,
     parentSize: options.parentSize,
+    renderAs: root.field.renderAs,
   };
   populateAllVegaSpecs(root.field, metadata, options);
 
@@ -99,10 +106,20 @@ function populateVegaSpec(
   // Populate vega spec data
   let vegaChartProps: VegaChartProps | null = null;
   const chartType = shouldRenderChartAs(field.tag);
-  if (chartType === 'bar_chart') {
-    vegaChartProps = generateBarChartVegaSpec(field, metadata);
-  } else if (chartType === 'line_chart') {
-    vegaChartProps = generateLineChartVegaSpec(field, metadata);
+  const vegaInfo: FieldVegaInfo = {
+    error: null,
+    props: null,
+    runtime: null,
+  };
+
+  try {
+    if (chartType === 'bar_chart') {
+      vegaChartProps = generateBarChartVegaSpec(field, metadata);
+    } else if (chartType === 'line_chart') {
+      vegaChartProps = generateLineChartVegaSpec(field, metadata);
+    }
+  } catch (error) {
+    vegaInfo.error = error;
   }
 
   if (vegaChartProps) {
@@ -132,6 +149,8 @@ function populateVegaSpec(
       },
     };
     const runtime = parse(props.spec);
-    metadata.vega[field.key] = {runtime, props};
+    vegaInfo.props = props;
+    vegaInfo.runtime = runtime;
   }
+  metadata.vega[field.key] = vegaInfo;
 }

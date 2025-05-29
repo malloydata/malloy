@@ -26,7 +26,7 @@ export function getLineChartSettings(
   const chart = tag.tag('line_chart');
   if (!chart) {
     throw new Error(
-      'Tried to render a bar_chart, but no bar_chart tag was found'
+      'Malloy Line Chart: Tried to render a line chart, but no line_chart tag was found'
     );
   }
 
@@ -105,6 +105,24 @@ export function getLineChartSettings(
   const dimensions = explore.fields.filter(
     f => f.isBasic() && f.wasDimension()
   );
+
+  const measures = explore.fields.filter(f => f.wasCalculation());
+
+  if (dimensions.length > 2) {
+    throw new Error(
+      'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+    );
+  }
+  if (dimensions.length === 0) {
+    throw new Error(
+      'Malloy Line Chart: No dimensions found. A line chart must have at least 1 dimension for the x axis.'
+    );
+  }
+  if (measures.length === 0) {
+    throw new Error(
+      'Malloy Line Chart: No measures found. A line chart must have at least 1 measure for the y axis.'
+    );
+  }
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {

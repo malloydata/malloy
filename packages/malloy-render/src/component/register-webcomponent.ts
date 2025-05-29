@@ -25,6 +25,7 @@ export default function registerWebComponent({
           tableConfig: undefined,
           dashboardConfig: undefined,
           modalElement: undefined,
+          renderAs: undefined,
         },
         {customElements, BaseElement: HTMLElement}
       ),
@@ -51,9 +52,13 @@ export default function registerWebComponent({
   }
 }
 
+type MalloyRenderApi = {
+  renderAs?: string;
+};
+
 declare global {
   interface HTMLElementTagNameMap {
-    'malloy-render': HTMLElement & MalloyRenderProps;
+    'malloy-render': HTMLElement & MalloyRenderProps & MalloyRenderApi;
     'malloy-modal': HTMLElement & MalloyModalWCProps;
   }
 }

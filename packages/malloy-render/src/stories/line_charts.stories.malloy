@@ -121,17 +121,27 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   #(story)
   view: root_chart is topSellingBrands
 
-  #(story)
-  # size=fill
-  view: root_chart_fill is topSellingBrands
 
   #(story)
   # line_chart
   view: dimension_series is baseLineData + { group_by: department }
 
+
   #(story)
-  # line_chart size=fill
-  view: dimension_series_fill is baseLineData + { group_by: department }
+  view: misconfigurations is {
+    # line_chart
+    nest:
+      not_enough_dimensions is {
+        aggregate: total_sales
+      }
+      too_many_dimensions is {
+        group_by: a is 1, b is 2, c is 3
+        aggregate: total_sales
+      }
+      no_measures is {
+        group_by: a is 1
+      }
+  }
 
   #(story)
   view: single_nest is {

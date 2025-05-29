@@ -71,14 +71,17 @@ export function generateLineChartVegaSpec(
 
   if (!lineChartPlugin) {
     throw new Error(
-      'Trying to render a line chart when Line chart series plugin not found'
+      'Malloy Line Chart: Trying to render a line chart when Line chart series plugin not found'
     );
   }
 
   const tag = explore.tag;
   const chartTag = tag.tag('line_chart');
   if (!chartTag)
-    throw new Error('Line chart should only be rendered for line_chart tag');
+    throw new Error(
+      'Malloy Line Chart: Line chart should only be rendered for line_chart tag'
+    );
+
   const settings = getLineChartSettings(explore, tag);
   /**************************************
    *
@@ -89,8 +92,8 @@ export function generateLineChartVegaSpec(
   const yFieldPath = settings.yChannel.fields.at(0);
   const seriesFieldPath = settings.seriesChannel.fields.at(0);
 
-  if (!xFieldPath) throw new Error('Malloy Bar Chart: Missing x field');
-  if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
+  if (!xFieldPath) throw new Error('Malloy Line Chart: Missing x field');
+  if (!yFieldPath) throw new Error('Malloy Line Chart: Missing y field');
 
   const xField = explore.fieldAt(xFieldPath);
   const xIsDateorTime = xField.isTime();
@@ -282,7 +285,7 @@ export function generateLineChartVegaSpec(
     encode: {
       enter: {
         x: {
-          signal: xScaling('datum.x_pos'),
+          signal: xScaling('datum.x'),
         },
         y: {
           value: 0,
@@ -321,7 +324,7 @@ export function generateLineChartVegaSpec(
           enter: {
             fill: {value: 'transparent'},
             size: {value: 36},
-            x: {signal: xScaling('datum.x_pos')},
+            x: {signal: xScaling('datum.x')},
             y: {signal: 'height /2'},
           },
         },

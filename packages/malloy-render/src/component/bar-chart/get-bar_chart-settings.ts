@@ -106,6 +106,24 @@ export function getBarChartSettings(
     f => f.isBasic() && f.wasDimension()
   );
 
+  const measures = explore.fields.filter(f => f.wasCalculation());
+
+  if (dimensions.length > 2) {
+    throw new Error(
+      'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+    );
+  }
+  if (dimensions.length === 0) {
+    throw new Error(
+      'Malloy Bar Chart: No dimensions found. A bar chart must have at least 1 dimension for the x axis.'
+    );
+  }
+  if (measures.length === 0) {
+    throw new Error(
+      'Malloy Bar Chart: No measures found. A bar chart must have at least 1 measure for the y axis.'
+    );
+  }
+
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     // Pick date/time field first if it exists
