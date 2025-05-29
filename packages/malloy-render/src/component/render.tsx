@@ -12,6 +12,7 @@ import {
   createContext,
   createEffect,
   createMemo,
+  onMount,
   useContext,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
@@ -49,10 +50,25 @@ export type MalloyRenderProps = {
   dashboardConfig?: Partial<DashboardConfig>;
 };
 
+type MalloyRenderApiState = {
+  sizingStrategy: 'fill' | 'fixed';
+  renderAs: string;
+};
+
+export type MalloyRenderApi = {
+  onInitialState?: (state: MalloyRenderApiState) => void;
+  __experimental: MalloyRenderApiState;
+};
+
+export type MalloyCustomElement = HTMLElement &
+  ICustomElement &
+  MalloyRenderProps &
+  MalloyRenderApi;
+
 const ConfigContext = createContext<{
   tableConfig: Accessor<TableConfig>;
   dashboardConfig: Accessor<DashboardConfig>;
-  element: ICustomElement;
+  element: MalloyCustomElement;
   stylesheet: CSSStyleSheet;
   addCSSToShadowRoot: (css: string) => void;
   addCSSToDocument: (id: string, css: string) => void;
@@ -75,6 +91,8 @@ export function MalloyRender(
   props: MalloyRenderProps,
   {element}: ComponentOptions
 ) {
+  const malloyRenderElement = element as MalloyCustomElement;
+
   const result = createMemo(() => {
     if (props.malloyResult) {
       return props.malloyResult;
@@ -93,8 +111,8 @@ export function MalloyRender(
   // Create one stylesheet for web component to use for all styles
   // This is so we can pass the stylesheet to other components to share, like <malloy-modal>
   const stylesheet = new CSSStyleSheet();
-  if (element.renderRoot instanceof ShadowRoot)
-    element.renderRoot.adoptedStyleSheets.push(stylesheet);
+  if (malloyRenderElement.renderRoot instanceof ShadowRoot)
+    malloyRenderElement.renderRoot.adoptedStyleSheets.push(stylesheet);
 
   const addedStylesheets = new Set();
   function addCSSToShadowRoot(css: string) {
@@ -155,7 +173,7 @@ export function MalloyRender(
           onClick: props.onClick,
           onDrill: props.onDrill,
           vegaConfigOverride: props.vegaConfigOverride,
-          element,
+          element: malloyRenderElement,
           stylesheet,
           addCSSToShadowRoot,
           addCSSToDocument,
@@ -166,7 +184,7 @@ export function MalloyRender(
       >
         <MalloyRenderInner
           result={result()!}
-          element={element}
+          element={malloyRenderElement}
           scrollEl={props.scrollEl}
           vegaConfigOverride={props.vegaConfigOverride}
         />
@@ -178,11 +196,14 @@ export function MalloyRender(
 const CHART_SIZE_BUFFER = 4;
 export function MalloyRenderInner(props: {
   result: Malloy.Result;
-  element: ICustomElement;
+  element: MalloyCustomElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
 }) {
   const wrapper = props.element['parentElement'];
+  if (!wrapper) {
+    throw new Error('Malloy render: Parent element not found');
+  }
   const [parentSize, setParentSize] = createRAFSignal({
     width: wrapper.clientWidth - CHART_SIZE_BUFFER,
     height: wrapper.clientHeight - CHART_SIZE_BUFFER,
@@ -253,12 +274,12 @@ export function MalloyRenderInner(props: {
     });
   };
 
-  createEffect(() => {
-    if (props.element && metadata().renderAs) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore will refactor this as part of web component removal
-      props.element.renderAs = metadata().renderAs;
-    }
+  onMount(() => {
+    props.element.__experimental = {
+      sizingStrategy: metadata().sizingStrategy,
+      renderAs: metadata().renderAs,
+    };
+    props.element.onInitialState?.(props.element.__experimental);
   });
 
   return (

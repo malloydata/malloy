@@ -1,6 +1,6 @@
 import {compose, register} from 'component-register';
 import {withSolid} from 'solid-element';
-import type {MalloyRenderProps} from './render';
+import type {MalloyCustomElement} from './render';
 import {MalloyRender} from './render';
 import type {MalloyModalWCProps} from './malloy-modal/malloy-modal-wc';
 import {MalloyModalWC} from './malloy-modal/malloy-modal-wc';
@@ -26,6 +26,7 @@ export default function registerWebComponent({
           dashboardConfig: undefined,
           modalElement: undefined,
           renderAs: undefined,
+          __experimental: {},
         },
         {customElements, BaseElement: HTMLElement}
       ),
@@ -52,13 +53,9 @@ export default function registerWebComponent({
   }
 }
 
-type MalloyRenderApi = {
-  renderAs?: string;
-};
-
 declare global {
   interface HTMLElementTagNameMap {
-    'malloy-render': HTMLElement & MalloyRenderProps & MalloyRenderApi;
+    'malloy-render': MalloyCustomElement;
     'malloy-modal': HTMLElement & MalloyModalWCProps;
   }
 }

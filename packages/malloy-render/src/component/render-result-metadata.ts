@@ -37,6 +37,7 @@ import {
   type RepeatedRecordField,
   type RootCell,
 } from '../data_tree';
+import {defaultSettings} from './default-settings';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
@@ -55,18 +56,29 @@ export interface RenderMetadata {
   root: RootCell;
   parentSize: {width: number; height: number};
   renderAs: string;
+  sizingStrategy: 'fill' | 'fixed';
 }
 
 export function getResultMetadata(
   root: RootCell,
   options: GetResultMetadataOptions = {parentSize: {width: 0, height: 0}}
 ): RenderMetadata {
+  const rootTag = root.field.tag;
+  const rootSizingStrategy =
+    rootTag.has('size') && rootTag.text('size') !== 'fill'
+      ? 'fixed'
+      : defaultSettings.size;
+  const chartSizeTag = rootTag.tag('chart', 'size');
+  const chartSizingStrategy =
+    chartSizeTag && chartSizeTag.text('') !== 'fill' ? 'fixed' : null;
+
   const metadata: RenderMetadata = {
     store: createResultStore(),
     vega: {},
     root,
     parentSize: options.parentSize,
     renderAs: root.field.renderAs,
+    sizingStrategy: chartSizingStrategy ?? rootSizingStrategy,
   };
   populateAllVegaSpecs(root.field, metadata, options);
 
