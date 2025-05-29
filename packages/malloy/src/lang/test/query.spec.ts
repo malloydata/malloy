@@ -1986,6 +1986,172 @@ describe('query:', () => {
         `
       ).toLog(errorMessage('Group by of `astr` is required but not present'));
     });
+    describe('single value filters', () => {
+      test('single value filter equal basic success', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            }
+            run: aext -> { where: astr = 'foo'; aggregate: aisum }
+          `
+        ).toTranslate();
+      });
+      test('multi value filter equal basic failure', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            }
+            run: aext -> { where: astr = 'foo' | 'bar'; aggregate: aisum }
+          `
+        ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      });
+      test('single value filter equal works with boolean, string, number, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats
+                  // ,ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr = 'foo',
+                abool = true,
+                abool2 = false,
+                ai = 2,
+                // ad = @2003-01-01,
+                ats = @2003-01-01 10:00:00,
+                af is null
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter ANDED equal works with boolean, string, number, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats
+                  // ,ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr = 'foo'
+                and abool = true
+                and abool2 = false
+                and ai = 2
+                // and ad = @2003-01-01
+                and ats = @2003-01-01 10:00:00
+                and af is null
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter ANDED (parenthesized) equal works with boolean, string, number, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats
+                  // ,ad
+              }
+            }
+            run: aext -> {
+              where:
+                (astr = 'foo'
+                and abool = true)
+                and (abool2 = false
+                and ai = 2
+                // and ad = @2003-01-01
+                and (ats = @2003-01-01 10:00:00
+                and af is null))
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter expression works with boolean, string, number, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              dimension: abool3 is abool
+              dimension: astr2 is astr
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, abool3, astr2
+                  // ,ats
+                  // ,ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo',
+                abool ~ f'true',
+                abool2 ~ f'=false',
+                ai ~ f'2',
+                // ad ~ f'2003-01-01',
+                // ats ~ f'2003-01-01 10:00:00',
+                af ~ f'null',
+                abool3 ~ f'null',
+                astr2 ~ f'null'
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('no single value filter expression trickery', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, ai, ad, ats
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo, bar',
+                astr ~ f'-null',
+                astr ~ f'-foo',
+                abool ~ f'false', // false or null
+                abool ~ f'not null',
+                ai ~ f'not null',
+                ai ~ f'> 3',
+                ai ~ f'not 3',
+                ad ~ f'2003',
+                ats ~ f'2003-01-01 10:00', // not granular enough?
+              aggregate: aisum
+            }
+          `
+        ).toLog(
+          errorMessage('Group by of `astr` is required but not present'),
+          errorMessage('Group by of `abool` is required but not present'),
+          errorMessage('Group by of `ai` is required but not present'),
+          errorMessage('Group by of `ad` is required but not present'),
+          errorMessage('Group by of `ats` is required but not present')
+        );
+      });
+    });
     test('grouped_by double failure on same path', () => {
       expect(
         markSource`
