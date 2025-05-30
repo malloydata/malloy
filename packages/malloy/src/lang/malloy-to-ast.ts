@@ -716,7 +716,6 @@ export class MalloyToAST
   }
 
   visitDrillClauseList(pcx: parse.FilterClauseListContext): ast.Drill {
-    this.inExperiment('drill', pcx);
     return new ast.Drill(pcx.fieldExpr().map(f => this.getFilterElement(f)));
   }
 

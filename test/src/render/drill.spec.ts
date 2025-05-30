@@ -13,7 +13,7 @@ const duckdb = runtimeFor('duckdb');
 
 describe('drill query', () => {
   const model = `
-    ##! experimental { drill parameters }
+    ##! experimental { parameters }
     source: carriers is duckdb.table('test/data/duckdb/carriers.parquet') extend {
       primary_key: code
       measure: carrier_count is count()
