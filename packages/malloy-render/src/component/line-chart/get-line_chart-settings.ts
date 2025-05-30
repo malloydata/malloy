@@ -10,6 +10,7 @@ import type {Channel} from '../types';
 import type {NestField} from '../../data_tree';
 import {walkFields} from '../../util';
 import {defaultSettings} from '../default-settings';
+import {convertLegacyToVizTag} from '../tag-utils';
 
 export type LineChartSettings = {
   xChannel: Channel;
@@ -23,18 +24,20 @@ export function getLineChartSettings(
   explore: NestField,
   tagOverride?: Tag
 ): LineChartSettings {
-  const tag = tagOverride ?? explore.tag;
-  const chart = tag.tag('line_chart');
-  if (!chart) {
+  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
+
+  if (normalizedTag.text('viz') !== 'line') {
     throw new Error(
-      'Malloy Line Chart: Tried to render a line chart, but no line_chart tag was found'
+      'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
     );
   }
 
+  const vizTag = normalizedTag.tag('viz')!;
+
   // default zero_baselinse
   let zeroBaseline = defaultSettings.line_chart.zero_baseline;
-  if (chart.has('zero_baseline')) {
-    const value = chart.text('zero_baseline');
+  if (vizTag.has('zero_baseline')) {
+    const value = vizTag.text('zero_baseline');
     // If explicitly set to false, set to false
     if (value === 'false') {
       zeroBaseline = false;
@@ -51,7 +54,7 @@ export function getLineChartSettings(
   }
 
   // if tooltip, disable interactions
-  const interactive = !tag.has('tooltip');
+  const interactive = !normalizedTag.has('tooltip');
 
   const xChannel: Channel = {
     fields: [],
@@ -73,16 +76,16 @@ export function getLineChartSettings(
   }
 
   // Parse top level tags
-  if (chart.text('x')) {
-    xChannel.fields.push(getField(chart.text('x')!));
+  if (vizTag.text('x')) {
+    xChannel.fields.push(getField(vizTag.text('x')!));
   }
-  if (chart.text('y')) {
-    yChannel.fields.push(getField(chart.text('y')!));
-  } else if (chart.textArray('y')) {
-    yChannel.fields.push(...chart.textArray('y')!.map(getField));
+  if (vizTag.text('y')) {
+    yChannel.fields.push(getField(vizTag.text('y')!));
+  } else if (vizTag.textArray('y')) {
+    yChannel.fields.push(...vizTag.textArray('y')!.map(getField));
   }
-  if (chart.text('series')) {
-    seriesChannel.fields.push(getField(chart.text('series')!));
+  if (vizTag.text('series')) {
+    seriesChannel.fields.push(getField(vizTag.text('series')!));
   }
 
   // Parse embedded tags
@@ -170,7 +173,7 @@ export function getLineChartSettings(
     }
   }
 
-  // TODO: types. This logic may move into each chart vega spec creation
+  // TODO: types
   xChannel.type = 'nominal';
   yChannel.type = 'quantitative';
   seriesChannel.type = 'nominal';

@@ -38,6 +38,10 @@ import {
   type RootCell,
 } from '../data_tree';
 import {defaultSettings} from './default-settings';
+import {
+  convertLegacyToVizTag,
+  getChartTypeFromNormalizedTag,
+} from './tag-utils';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
@@ -100,14 +104,10 @@ function populateAllVegaSpecs(
   });
 }
 
-const CHART_TAG_LIST = ['bar_chart', 'line_chart'];
+export function shouldRenderChartAs(tag: Tag): string | undefined {
+  const normalizedTag = convertLegacyToVizTag(tag);
 
-export function shouldRenderChartAs(tag: Tag) {
-  const properties = tag.properties ?? {};
-  const tagNamesInOrder = Object.keys(properties).reverse();
-  return tagNamesInOrder.find(
-    name => CHART_TAG_LIST.includes(name) && !properties[name].deleted
-  );
+  return getChartTypeFromNormalizedTag(normalizedTag);
 }
 
 function populateVegaSpec(
@@ -125,9 +125,9 @@ function populateVegaSpec(
   };
 
   try {
-    if (chartType === 'bar_chart') {
+    if (chartType === 'bar') {
       vegaChartProps = generateBarChartVegaSpec(field, metadata);
-    } else if (chartType === 'line_chart') {
+    } else if (chartType === 'line') {
       vegaChartProps = generateLineChartVegaSpec(field, metadata);
     }
   } catch (error) {
