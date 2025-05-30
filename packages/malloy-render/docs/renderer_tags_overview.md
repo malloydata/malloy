@@ -95,7 +95,7 @@ Renders the data as a line chart. Inference for `x`, `y`, and `series` is simila
 
 **Properties:**
 
-- `.zero_baseline`: Controls if the y-axis must include zero. Default is `true`. Set to `false` to allow the y-axis to focus on the data range.
+- `.zero_baseline`: Controls if the y-axis must include zero. Default is `false`. Set to `true` to force the y-axis to include zero.
   - Syntax: `# line_chart.zero_baseline=false` or `# line_chart { zero_baseline=false }`
 - `.size`: Controls chart size presets (e.g., `spark`).
   - Syntax: `# line_chart { size=spark }` (Legacy: `# size=spark` on the view)

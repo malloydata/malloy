@@ -9,6 +9,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel} from '../types';
 import type {NestField} from '../../data_tree';
 import {walkFields} from '../../util';
+import {defaultSettings} from '../default-settings';
 
 export type LineChartSettings = {
   xChannel: Channel;
@@ -30,9 +31,24 @@ export function getLineChartSettings(
     );
   }
 
-  const zeroBaseline = chart.has('zero_baseline')
-    ? chart.text('zero_baseline') !== 'false'
-    : true;
+  // default zero_baselinse
+  let zeroBaseline = defaultSettings.line_chart.zero_baseline;
+  if (chart.has('zero_baseline')) {
+    const value = chart.text('zero_baseline');
+    // If explicitly set to false, set to false
+    if (value === 'false') {
+      zeroBaseline = false;
+    }
+    // If explicilty set to true or no value, set to true
+    else if (
+      value === 'true' ||
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      zeroBaseline = true;
+    }
+  }
 
   // if tooltip, disable interactions
   const interactive = !tag.has('tooltip');
