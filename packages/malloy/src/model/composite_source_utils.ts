@@ -5,6 +5,18 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
+import type {
+  BooleanFilter,
+  NumberFilter,
+  StringFilter,
+  TemporalFilter,
+} from '@malloydata/malloy-filter';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
+  TemporalFilterExpression,
+} from '@malloydata/malloy-filter';
 import type {MalloyElement} from '../lang/ast';
 import type {
   FieldUsage,
@@ -19,6 +31,7 @@ import type {
   Annotation,
 } from './malloy_types';
 import {
+  expressionIsScalar,
   isAtomic,
   isJoinable,
   isJoined,
@@ -666,6 +679,7 @@ interface NestLevels {
   requiredGroupBys: RequiredGroupBy[];
   nested: NestLevels[];
   ungroupings: AggregateUngrouping[];
+  singleValueFilters: string[][];
 }
 
 function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
@@ -690,14 +704,15 @@ function getFieldUsageForField(field: FieldDef): FieldUsage[] {
   return [];
 }
 
-function nestLevelsAt(nests: NestLevels, at?: DocumentLocation) {
+function nestLevelsAt(nests: NestLevels, at?: DocumentLocation): NestLevels {
   if (at === undefined) return nests;
   return {
     fieldsReferencedDirectly: fieldUsageAt(nests.fieldsReferencedDirectly, at),
     nested: nests.nested.map(n => nestLevelsAt(n, at)),
     fieldsReferenced: fieldUsageAt(nests.fieldsReferencedDirectly, at),
     ungroupings: ungroupingsAt(nests.ungroupings, at),
-    requiredGroupBys: requiredGroupBysAt(nests.requiredGroupBys, at),
+    requiredGroupBys: requiredGroupBysAt(nests.requiredGroupBys, at) ?? [],
+    singleValueFilters: nests.singleValueFilters,
   };
 }
 
@@ -757,6 +772,7 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
   const nested: NestLevels[] = [];
   const ungroupings: AggregateUngrouping[] = [];
   const requiredGroupBys: RequiredGroupBy[] = [];
+  const singleValueFilters: string[][] = [];
 
   if (
     segment.type === 'project' ||
@@ -780,6 +796,11 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         requiredGroupBys.push(...(field.requiresGroupBy ?? []));
       }
     }
+    for (const filter of segment.filterList ?? []) {
+      if (!expressionIsScalar(filter.expressionType)) continue;
+      const fields = getSingleValueFilterFields(filter.e);
+      singleValueFilters.push(...fields);
+    }
   }
   const levels = {
     fieldsReferencedDirectly,
@@ -787,8 +808,63 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
     fieldsReferenced,
     ungroupings,
     requiredGroupBys,
+    singleValueFilters,
   };
   return nestLevelsAt(levels, segment.referencedAt);
+}
+
+function getSingleValueFilterFields(filter: Expr): string[][] {
+  const fieldPaths: string[][] = [];
+  if (filter.node === 'filterMatch') {
+    if (filter.kids.expr.node === 'field') {
+      const result = compileFilterExpression(
+        filter.dataType,
+        filter.kids.filterExpr
+      );
+
+      if (!result) return [];
+      if (
+        (result.kind === 'boolean' &&
+          ['null', 'false', 'true'].includes(result.parsed.operator) &&
+          !result.parsed.not) ||
+        ((result.kind === 'number' || result.kind === 'string') &&
+          ((result.parsed.operator === 'null' && !result.parsed.not) ||
+            (result.parsed.operator === '=' &&
+              result.parsed.values.length === 1 &&
+              !result.parsed.not)))
+      ) {
+        fieldPaths.push(filter.kids.expr.path);
+      }
+    }
+  } else if (filter.node === 'and') {
+    fieldPaths.push(...getSingleValueFilterFields(filter.kids.left));
+    fieldPaths.push(...getSingleValueFilterFields(filter.kids.right));
+  } else if (filter.node === '()') {
+    fieldPaths.push(...getSingleValueFilterFields(filter.e));
+  } else {
+    const path = isSingleValueFilterNode(filter);
+    if (path) {
+      fieldPaths.push(path);
+    }
+  }
+  return fieldPaths;
+}
+
+function isSingleValueFilterNode(e: Expr): string[] | undefined {
+  if (e.node === '=') {
+    if (
+      e.kids.left.node === 'field' &&
+      (e.kids.right.node === 'true' ||
+        e.kids.right.node === 'false' ||
+        e.kids.right.node === 'timeLiteral' ||
+        e.kids.right.node === 'numberLiteral' ||
+        e.kids.right.node === 'stringLiteral')
+    ) {
+      return e.kids.left.path;
+    }
+  } else if (e.node === 'is-null' && e.e.node === 'field') {
+    return e.e.path;
+  }
 }
 
 interface ExpandedNestLevels {
@@ -796,6 +872,7 @@ interface ExpandedNestLevels {
   requiredGroupBys: RequiredGroupBy[];
   unsatisfiableGroupBys: RequiredGroupBy[];
   nested: ExpandedNestLevels[];
+  singleValueFilters: string[][];
 }
 
 function expandRefs(
@@ -875,6 +952,7 @@ function expandRefs(
         ungroupings: [],
         nested: [],
         requiredGroupBys: ungrouping.requiresGroupBy ?? [],
+        singleValueFilters: [],
       },
       fields
     );
@@ -898,6 +976,7 @@ function expandRefs(
       requiredGroupBys,
       unsatisfiableGroupBys,
       nested,
+      singleValueFilters: nests.singleValueFilters,
     },
     missingFields: missingFields.length > 0 ? missingFields : undefined,
   };
@@ -935,16 +1014,17 @@ export function checkRequiredGroupBys(
 function getUnsatisfiedRequiredGroupBys(
   level: ExpandedNestLevels
 ): RequiredGroupBy[] {
-  const fields = level.fieldsReferencedDirectly;
+  const fields = [
+    ...level.fieldsReferencedDirectly.map(f => f.path),
+    ...level.singleValueFilters,
+  ];
   const requiredGroupBys: RequiredGroupBy[] = [...level.requiredGroupBys];
   for (const nested of level.nested) {
     requiredGroupBys.push(...getUnsatisfiedRequiredGroupBys(nested));
   }
 
   return [
-    ...requiredGroupBys.filter(
-      rgb => !fields.some(f => pathEq(f.path, rgb.path))
-    ),
+    ...requiredGroupBys.filter(rgb => !fields.some(f => pathEq(f, rgb.path))),
     ...level.unsatisfiableGroupBys,
   ];
 }
@@ -1082,4 +1162,33 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
       'Could not resolve composite source'
     );
   }
+}
+
+export function compileFilterExpression(
+  ft: string,
+  fexpr: Expr
+):
+  | {kind: 'date' | 'timestamp'; parsed: TemporalFilter}
+  | {kind: 'string'; parsed: StringFilter}
+  | {kind: 'boolean'; parsed: BooleanFilter}
+  | {kind: 'number'; parsed: NumberFilter}
+  | undefined {
+  if (fexpr.node !== 'filterLiteral') {
+    return undefined;
+  }
+  const fsrc = fexpr.filterSrc;
+  if (ft === 'date' || ft === 'timestamp') {
+    const result = TemporalFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  } else if (ft === 'string') {
+    const result = StringFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  } else if (ft === 'number') {
+    const result = NumberFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  } else if (ft === 'boolean') {
+    const result = BooleanFilterExpression.parse(fsrc);
+    if (result.parsed) return {kind: ft, parsed: result.parsed};
+  }
+  return undefined;
 }

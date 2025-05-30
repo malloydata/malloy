@@ -191,7 +191,7 @@ export class LiteralTimestamp extends TimeLiteral {
 
   static parse(literalTs: string): LiteralTimestamp | undefined {
     // let subSecs: string | undefined;
-    let units: TimestampUnit | undefined = undefined;
+    let units: TimestampUnit | undefined = 'second';
     const tm = preParse(literalTs, true);
     literalTs = tm.text;
     if (literalTs[10] === 'T') {
@@ -202,6 +202,7 @@ export class LiteralTimestamp extends TimeLiteral {
     const hasSubsecs = literalTs.match(/^([^.,]+)[,.](\d+)$/);
     if (hasSubsecs) {
       literalTs = hasSubsecs[1];
+      units = undefined;
       // subSecs = hasSubsecs[2];
       // mtoy TODO subsecond units not ignored
     }
@@ -248,6 +249,18 @@ class GranularLiteral extends TimeLiteral {
 
     if (rangeEnd) {
       const testValue = left.getExpression(fs);
+
+      if (testValue.type === 'date' && this.units === 'day' && op === '=') {
+        return super.apply(fs, op, left);
+      }
+
+      if (
+        testValue.type === 'timestamp' &&
+        this.units === undefined &&
+        op === '='
+      ) {
+        return super.apply(fs, op, left);
+      }
 
       if (testValue.type === 'timestamp') {
         const newStart = getMorphicValue(rangeStart, 'timestamp');
