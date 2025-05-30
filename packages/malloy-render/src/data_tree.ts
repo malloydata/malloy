@@ -16,6 +16,7 @@ import {
 } from './util';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {isDateUnit, isTimestampUnit} from '@malloydata/malloy';
+import {convertLegacyToVizTag, VIZ_CHART_TYPES} from './component/tag-utils';
 
 export type DrillEntry =
   | {
@@ -311,7 +312,20 @@ export function shouldRenderAs(
   parent: Field | undefined,
   tagOverride?: Tag
 ) {
-  const tag = tagOverride ?? tagFor(field);
+  const tag = convertLegacyToVizTag(
+    tagOverride ?? renderTagFromAnnotations(field.annotations)
+  );
+
+  // Check viz property first (new approach)
+  const vizType = tag.text('viz');
+  if (vizType) {
+    if (vizType === 'table') return 'table';
+    if (vizType === 'dashboard') return 'dashboard';
+    if (VIZ_CHART_TYPES.includes(vizType)) return 'chart';
+    // Handle other viz types if needed in the future
+  }
+
+  // Fall back to legacy tag detection for non-chart tags
   const properties = tag.properties ?? {};
   const tagNamesInOrder = Object.keys(properties).reverse();
   for (const tagName of tagNamesInOrder) {
