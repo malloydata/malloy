@@ -15,6 +15,7 @@ export default defineConfig({
     commonjsOptions: {
       include: [/malloy/, /node_modules/],
     },
+    minify: false,
   },
   define: {
     'process.env': {},
