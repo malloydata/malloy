@@ -9,6 +9,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import {
   NULL_SYMBOL,
   tagFromAnnotations,
+  renderTagFromAnnotations,
   valueToMalloy,
   renderTimeString,
   notUndefined,
@@ -366,7 +367,7 @@ export abstract class FieldBase {
     public readonly parent: NestField | undefined,
     registry?: FieldRegistry
   ) {
-    this.tag = tagFor(this.field);
+    this.tag = renderTagFromAnnotations(this.field.annotations);
     this.metadataTag = tagFor(this.field, '#(malloy) ');
     this.path = parent
       ? parent.isArray()

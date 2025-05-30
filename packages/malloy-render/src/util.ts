@@ -23,6 +23,20 @@ export function tagFromAnnotations(
   return Tag.fromTagLines(tagLines).tag ?? new Tag();
 }
 
+export function renderTagFromAnnotations(
+  annotations: Malloy.Annotation[] | undefined
+) {
+  // Support both '# ' and '#r ' namespaces for render tags
+  const defaultTagLines =
+    annotations?.map(a => a.value)?.filter(l => l.startsWith('# ')) ?? [];
+  const renderTagLines =
+    annotations?.map(a => a.value)?.filter(l => l.startsWith('#r ')) ?? [];
+
+  // Merge both namespaces with #r taking precedence (later in array)
+  const allLines = [...defaultTagLines, ...renderTagLines];
+  return Tag.fromTagLines(allLines).tag ?? new Tag();
+}
+
 export function getTextWidthCanvas(
   text: string,
   font: string,
