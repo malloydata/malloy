@@ -1407,7 +1407,7 @@ describe('query:', () => {
     });
   });
   describe('drill:', () => {
-    test('need experimental flag', () => {
+    test('do not need experimental flag', () => {
       expect(`
         source: aext is a extend {
           view: by_ai is {
@@ -1418,15 +1418,10 @@ describe('query:', () => {
           drill: by_ai.ai = 2
           group_by: astr
         }
-      `).toLog(
-        errorMessage(
-          'Experimental flag `drill` is not set, feature not available'
-        )
-      );
+      `).toTranslate();
     });
     test('basic drill', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             group_by: ai
@@ -1445,7 +1440,6 @@ describe('query:', () => {
     });
     test('do not double-collect view filters for multiple dimensions in the same nest', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             where: is_cool
@@ -1469,7 +1463,6 @@ describe('query:', () => {
     });
     test('do not double-collect view filters for multiple dimensions in overlapping nests', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             where: is_cool
@@ -1513,7 +1506,6 @@ describe('query:', () => {
     });
     test('can include normal filters in drill statement', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             group_by: ai
@@ -1542,7 +1534,6 @@ describe('query:', () => {
     test('drill view is not defined', () => {
       expect(
         markSource`
-          ##! experimental.drill
           run: a -> {
             drill: ${'by_ai'}.ai = 2
             group_by: astr
@@ -1553,7 +1544,6 @@ describe('query:', () => {
     test('drill field is not defined', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: by_ai is {
               group_by: astr
@@ -1568,7 +1558,6 @@ describe('query:', () => {
     });
     test('drill nest found', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             nest: nested is {
@@ -1589,7 +1578,6 @@ describe('query:', () => {
     });
     test('can drill a nest and a field from another view', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             nest: nested is {
@@ -1617,7 +1605,6 @@ describe('query:', () => {
     test('does not think you need to drill on measures', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: view_one is {
               group_by: astr
@@ -1634,7 +1621,6 @@ describe('query:', () => {
     });
     test('does not collect havings', () => {
       const m = new TestTranslator(`
-          ##! experimental.drill
           source: aext is a extend {
             view: view_one is {
               group_by: astr
@@ -1656,7 +1642,6 @@ describe('query:', () => {
     test('drill missing some fields (sibling)', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: view_one is {
               nest: nest_one is {
@@ -1680,7 +1665,6 @@ describe('query:', () => {
     test('drill multi-stage view', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: view_one is {
               group_by: astr
@@ -1699,7 +1683,6 @@ describe('query:', () => {
     test('drill index view', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: view_one is {
               index: *
@@ -1716,7 +1699,7 @@ describe('query:', () => {
     test('drill missing some fields (private sibling)', () => {
       expect(
         markSource`
-          ##! experimental {drill access_modifiers}
+          ##! experimental {access_modifiers}
           source: aext is a include { public: *; private: abool } extend {
             view: view_one is {
               nest: nest_one is {
@@ -1740,7 +1723,6 @@ describe('query:', () => {
     test('drill missing some fields (parent)', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: view_one is {
               group_by: abool
@@ -1764,7 +1746,6 @@ describe('query:', () => {
     test('drill nest not found', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: by_ai is {
               group_by: astr
@@ -1780,7 +1761,6 @@ describe('query:', () => {
     test.skip('drill wrong type', () => {
       expect(
         markSource`
-          ##! experimental.drill
           source: aext is a extend {
             view: by_ai is {
               group_by: ai
@@ -1795,7 +1775,6 @@ describe('query:', () => {
     });
     test('drill picks up wheres', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           view: by_ai is {
             where: ai = 2
@@ -1820,7 +1799,6 @@ describe('query:', () => {
     });
     test('can filter on private field with drill', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           private dimension: private_ai is ai
           view: by_private_ai is {
@@ -1840,7 +1818,6 @@ describe('query:', () => {
     });
     test('can filter on private nest field with drill', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           private view: private_by_ai is {
             group_by: ai
@@ -1860,7 +1837,6 @@ describe('query:', () => {
     });
     test('can filter on join with drill', () => {
       const m = new TestTranslator(`
-        ##! experimental.drill
         source: aext is a extend {
           join_one: b on true
           view: by_b_ai is {
@@ -1880,7 +1856,7 @@ describe('query:', () => {
     });
     test('resolve composite slice correctly when using drill', () => {
       const m = new TestTranslator(`
-        ##! experimental { composite_sources drill }
+        ##! experimental { composite_sources }
         source: a_with_x is a extend { dimension: x is 1 }
         source: a_with_y is a extend { dimension: y is 1 }
         source: a_with_x_and_y is a_with_x extend { dimension: y is 1 }
@@ -1909,7 +1885,7 @@ describe('query:', () => {
     });
     test('can filter on param with drill', () => {
       const m = new TestTranslator(`
-        ##! experimental { parameters drill }
+        ##! experimental { parameters }
         source: aext(param is 1) is a extend {
           view: by_param is {
             group_by: param
@@ -1929,7 +1905,7 @@ describe('query:', () => {
     test.todo('cannot drill on joined view');
     test('can filter on expression with drill', () => {
       const m = new TestTranslator(`
-        ##! experimental { parameters drill }
+        ##! experimental { parameters }
         source: aext(param is 1) is a extend {
           dimension: private_field is 1
           view: by_param is {

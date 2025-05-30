@@ -777,7 +777,6 @@ LIMIT 101
               {
                 url: 'file://test.malloy',
                 contents: `
-                  ##! experimental.drill
                   source: flights is connection.table('flights') extend {
                     view: by_carrier is {
                       group_by: carrier
