@@ -30,9 +30,24 @@ export function getLineChartSettings(
     );
   }
 
-  const zeroBaseline = chart.has('zero_baseline')
-    ? chart.text('zero_baseline') !== 'false'
-    : true;
+  // default zero_baselinse
+  let zeroBaseline = false;
+  if (chart.has('zero_baseline')) {
+    const value = chart.text('zero_baseline');
+    // If explicitly set to false, set to false
+    if (value === 'false') {
+      zeroBaseline = false;
+    }
+    // If explicilty set to true or no value, set to true
+    else if (
+      value === 'true' ||
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      zeroBaseline = true;
+    }
+  }
 
   // if tooltip, disable interactions
   const interactive = !tag.has('tooltip');
