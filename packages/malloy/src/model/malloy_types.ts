@@ -153,7 +153,7 @@ export interface FilterCondition extends ExprE {
   fieldUsage?: FieldUsage[];
   drillView?: string;
   stableFilter?: Filter;
-  isSourceFilter: boolean;
+  isSourceFilter?: boolean;
 }
 
 export interface FilteredExpr extends ExprWithKids {
