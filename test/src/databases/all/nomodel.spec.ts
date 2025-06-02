@@ -919,6 +919,23 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).malloyResultMatches(runtime, {'fun.t1': 52});
   });
 
+  // Tests against an issue fixed in PR 2368 which caused invalid
+  // SQL output when a nested select occurred along with a filter.
+  test.when(runtime.supportsNesting)(
+    `Select with where in nested view - ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        nest: test is {
+          where: state = 'WA'
+          select: popular_name
+          limit: 1
+        }
+      }
+    `).malloyResultMatches(runtime, [{test: [{'popular_name': 'Sophia'}]}]);
+    }
+  );
+
   const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
 
   it(`sql as source - ${databaseName}`, async () => {
