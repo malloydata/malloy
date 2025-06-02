@@ -3489,10 +3489,14 @@ class QueryQuery extends QueryField {
         const turtleWhere = this.generateSQLFilters(fir, 'where');
         if (turtleWhere.present()) {
           const groupSets = fir.childGroups.join(',');
-          wheres.add(
-            `(group_set NOT IN (${groupSets})` +
-              ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
-          );
+          if (fir.childGroups.length > 0) {
+            wheres.add(
+              `(group_set NOT IN (${groupSets})` +
+                ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
+            );
+          } else {
+            wheres.add(`(${turtleWhere.sql()})`);
+          }
         }
         wheres.addChain(this.generateSQLWhereChildren(fir));
       }
