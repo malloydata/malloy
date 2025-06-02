@@ -3488,8 +3488,8 @@ class QueryQuery extends QueryField {
         const fir = field as FieldInstanceResult;
         const turtleWhere = this.generateSQLFilters(fir, 'where');
         if (turtleWhere.present()) {
-          const groupSets = fir.childGroups.join(',');
           if (fir.childGroups.length > 0) {
+            const groupSets = fir.childGroups.join(',');
             wheres.add(
               `(group_set NOT IN (${groupSets})` +
                 ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
