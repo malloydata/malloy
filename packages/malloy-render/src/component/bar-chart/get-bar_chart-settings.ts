@@ -9,6 +9,7 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel} from '../types';
 import type {RepeatedRecordField} from '../../data_tree';
 import {walkFields} from '../../util';
+import {convertLegacyToVizTag} from '../tag-utils';
 
 export type BarChartSettings = {
   xChannel: Channel;
@@ -23,17 +24,20 @@ export function getBarChartSettings(
   explore: RepeatedRecordField,
   tagOverride?: Tag
 ): BarChartSettings {
-  const tag = tagOverride ?? explore.tag;
-  const chart = tag.tag('bar_chart') ?? tag.tag('bar');
-  // if tooltip, disable interactions
-  const interactive = !tag.has('tooltip');
-  const isSpark =
-    chart?.text('size') === 'spark' || tag.text('size') === 'spark';
-  if (!chart) {
+  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
+
+  if (normalizedTag.text('viz') !== 'bar') {
     throw new Error(
-      'Tried to render a bar_chart, but no bar_chart tag was found'
+      'Tried to render a bar chart, but no viz=bar tag was found'
     );
   }
+
+  const vizTag = normalizedTag.tag('viz')!;
+
+  // if tooltip, disable interactions
+  const interactive = !normalizedTag.has('tooltip');
+  const isSpark =
+    vizTag.text('size') === 'spark' || normalizedTag.text('size') === 'spark';
 
   const xChannel: Channel = {
     fields: [],
@@ -54,19 +58,19 @@ export function getBarChartSettings(
     return explore.pathTo(explore.fieldAt([ref]));
   }
 
-  const isStack = chart.has('stack');
+  const isStack = vizTag.has('stack');
 
-  // Parse top level tags
-  if (chart.text('x')) {
-    xChannel.fields.push(getField(chart.text('x')!));
+  // Parse top level tags from viz properties
+  if (vizTag.text('x')) {
+    xChannel.fields.push(getField(vizTag.text('x')!));
   }
-  if (chart.text('y')) {
-    yChannel.fields.push(getField(chart.text('y')!));
-  } else if (chart.textArray('y')) {
-    yChannel.fields.push(...chart.textArray('y')!.map(getField));
+  if (vizTag.text('y')) {
+    yChannel.fields.push(getField(vizTag.text('y')!));
+  } else if (vizTag.textArray('y')) {
+    yChannel.fields.push(...vizTag.textArray('y')!.map(getField));
   }
-  if (chart.text('series')) {
-    seriesChannel.fields.push(getField(chart.text('series')!));
+  if (vizTag.text('series')) {
+    seriesChannel.fields.push(getField(vizTag.text('series')!));
   }
 
   // Parse embedded tags

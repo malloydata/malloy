@@ -36,6 +36,7 @@ import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {RenderMetadata} from '../render-result-metadata';
 import type {LineChartSeriesPluginInstance} from '../../plugins/line-chart-series-plugin';
+import {convertLegacyToVizTag} from '../tag-utils';
 
 type LineDataRecord = {
   x: string | number;
@@ -75,11 +76,11 @@ export function generateLineChartVegaSpec(
     );
   }
 
-  const tag = explore.tag;
-  const chartTag = tag.tag('line_chart');
+  const tag = convertLegacyToVizTag(explore.tag);
+  const chartTag = tag.tag('viz');
   if (!chartTag)
     throw new Error(
-      'Malloy Line Chart: Line chart should only be rendered for line_chart tag'
+      'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
     );
 
   const settings = getLineChartSettings(explore, tag);
@@ -162,7 +163,7 @@ export function generateLineChartVegaSpec(
     metadata,
     xField,
     yField,
-    chartType: 'line_chart',
+    chartType: 'line',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent') || isLimitingSeries,
   });
@@ -956,7 +957,7 @@ export function generateLineChartVegaSpec(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
-    chartType: 'line_chart',
+    chartType: 'line',
     chartTag,
     mapMalloyDataToChartData,
     getTooltipData(item, view) {

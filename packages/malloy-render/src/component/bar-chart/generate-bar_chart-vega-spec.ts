@@ -40,6 +40,7 @@ import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {RenderMetadata} from '../render-result-metadata';
+import {convertLegacyToVizTag} from '../tag-utils';
 
 type BarDataRecord = {
   x: string | number;
@@ -111,11 +112,11 @@ export function generateBarChartVegaSpec(
   explore: RepeatedRecordField,
   metadata: RenderMetadata
 ): VegaChartProps {
-  const tag = explore.tag;
-  const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
+  const tag = convertLegacyToVizTag(explore.tag);
+  const chartTag = tag.tag('viz');
   if (!chartTag)
     throw new Error(
-      'Bar chart should only be rendered for bar_chart or bar tag'
+      'Bar chart should only be rendered for bar_chart or viz=bar tag'
     );
   const settings = getBarChartSettings(explore);
   // TODO: check that there are <=2 dimension fields, throw error otherwise
@@ -200,7 +201,7 @@ export function generateBarChartVegaSpec(
     metadata,
     xField,
     yField,
-    chartType: 'bar_chart',
+    chartType: 'bar',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent'),
     // TODO implement this so can calculate data limits here
@@ -953,7 +954,7 @@ export function generateBarChartVegaSpec(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
-    chartType: 'bar_chart',
+    chartType: 'bar',
     chartTag,
     mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
