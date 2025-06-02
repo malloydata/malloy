@@ -92,34 +92,38 @@ export function getLineChartSettings(
   const embeddedX: string[] = [];
   const embeddedY: string[] = [];
   const embeddedSeries: string[] = [];
-  walkFields(explore, field => {
-    const tag = field.tag;
-    const pathTo = explore.pathTo(field);
-    if (tag.has('x')) {
-      embeddedX.push(pathTo);
-    }
-    if (tag.has('y')) {
-      embeddedY.push(pathTo);
-    }
-    if (tag.has('series')) {
-      embeddedSeries.push(pathTo);
-    }
-  });
 
-  // Add all x's found
-  embeddedX.forEach(path => {
-    xChannel.fields.push(path);
-  });
+  // Only parse embedded tags if disableEmbedded is not set
+  if (!vizTag.has('disableEmbedded')) {
+    walkFields(explore, field => {
+      const tag = field.tag;
+      const pathTo = explore.pathTo(field);
+      if (tag.has('x')) {
+        embeddedX.push(pathTo);
+      }
+      if (tag.has('y')) {
+        embeddedY.push(pathTo);
+      }
+      if (tag.has('series')) {
+        embeddedSeries.push(pathTo);
+      }
+    });
 
-  // Add all y's found
-  embeddedY.forEach(path => {
-    yChannel.fields.push(path);
-  });
+    // Add all x's found
+    embeddedX.forEach(path => {
+      xChannel.fields.push(path);
+    });
 
-  // Add all series found
-  embeddedSeries.forEach(path => {
-    seriesChannel.fields.push(path);
-  });
+    // Add all y's found
+    embeddedY.forEach(path => {
+      yChannel.fields.push(path);
+    });
+
+    // Add all series found
+    embeddedSeries.forEach(path => {
+      seriesChannel.fields.push(path);
+    });
+  }
 
   const dimensions = explore.fields.filter(
     f => f.isBasic() && f.wasDimension()
