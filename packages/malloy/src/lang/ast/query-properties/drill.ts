@@ -365,6 +365,7 @@ export class Drill extends Filter implements QueryPropertyInterface {
     const exprCond: FilterCondition = {
       node: 'filterCondition',
       code: filter.exprSrc,
+      isSourceFilter: false,
       e:
         collectedWheres === undefined
           ? fExpr.value

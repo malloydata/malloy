@@ -263,11 +263,8 @@ function getResultMetadataAnnotation(
       hasAny = true;
     }
   }
-  const drillFilters = resultMetadata.filterList?.filter(
-    f => f.expressionType === 'scalar'
-  );
-  if (drillFilters) {
-    addDrillFiltersTag(tag, drillFilters);
+  if (resultMetadata.filterList) {
+    addDrillFiltersTag(tag, resultMetadata.filterList);
     hasAny = true;
   }
   if (resultMetadata.fieldKind === 'dimension') {
@@ -292,6 +289,7 @@ function getResultMetadataAnnotation(
 function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
   for (let i = 0; i < drillFilters.length; i++) {
     const filter = drillFilters[i];
+    if (filter.expressionType !== 'scalar' || filter.isSourceFilter) continue;
     tag.set(['drill_filters', i, 'code'], filter.code);
     if (filter.drillView) {
       tag.set(['drill_filters', i, 'drill_view'], filter.drillView);
@@ -376,11 +374,8 @@ export function getResultStructMetadataAnnotation(
     tag.set(['limit'], resultMetadata.limit);
     hasAny = true;
   }
-  const drillFilters = resultMetadata.filterList?.filter(
-    f => f.expressionType === 'scalar'
-  );
-  if (drillFilters) {
-    addDrillFiltersTag(tag, drillFilters);
+  if (resultMetadata.filterList) {
+    addDrillFiltersTag(tag, resultMetadata.filterList);
     hasAny = true;
   }
   if (resultMetadata.drillable) {

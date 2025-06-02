@@ -179,7 +179,10 @@ export class RefinedSource extends Source {
             "Can't use aggregate computations in top level filters"
           );
         } else {
-          filterList.push(fc);
+          filterList.push({
+            ...fc,
+            isSourceFilter: true,
+          });
           moreFilters = true;
         }
       }

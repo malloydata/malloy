@@ -924,6 +924,87 @@ LIMIT 101
         const resultTag = tagFor(result.result);
         expect(resultTag?.has('drillable')).toBe(true);
       });
+      test('no source filters in output', () => {
+        const result = compileQuery({
+          model_url: 'file://test.malloy',
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {kind: 'source_reference', name: 'flights'},
+              view: {
+                kind: 'view_reference',
+                name: 'by_carrier',
+              },
+            },
+          },
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+                schema: {
+                  fields: [
+                    {
+                      kind: 'dimension',
+                      name: 'carrier',
+                      type: {kind: 'string_type'},
+                    },
+                  ],
+                },
+              },
+            ],
+            files: [
+              {
+                url: 'file://test.malloy',
+                contents: `
+                  ##! experimental.drill
+                  source: flights is connection.table('flights') extend {
+                    where: carrier = 'WN'
+                      and true
+                    view: by_carrier is {
+                      group_by: carrier
+                      aggregate: flight_count is count()
+                    }
+                  }
+                `,
+              },
+            ],
+            connections: [{name: 'connection', dialect: 'duckdb'}],
+          },
+        });
+        const expected: Malloy.CompileQueryResponse = {
+          result: {
+            'connection_name': 'connection',
+            'schema': {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+                {
+                  kind: 'dimension',
+                  name: 'flight_count',
+                  type: {kind: 'number_type'},
+                },
+              ],
+            },
+            'annotations': [
+              {
+                value:
+                  '#(malloy) drillable ordered_by = [{ flight_count = desc }]\n',
+              },
+              {
+                value: '#(malloy) source.name = flights\n',
+              },
+              {
+                value: '#(malloy) query_name = by_carrier\n',
+              },
+            ],
+          },
+        };
+        expect(result).toMatchObject(expected);
+      });
     });
   });
   test('compile and get source annotations', () => {
