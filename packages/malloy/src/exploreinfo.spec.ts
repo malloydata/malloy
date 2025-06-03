@@ -299,7 +299,7 @@ describe('getExploreInfo', () => {
     expect(result[0]).toEqual({
       type: 'sql',
       selectStatement: 'SELECT * FROM test_query',
-      sourceID: 'my_connection:query',
+      sourceID: 'my_connection:SELECT * FROM test_query',
     });
     expect(model.getExploreByName).toHaveBeenCalledWith('query_source_explore');
   });
