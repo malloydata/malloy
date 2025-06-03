@@ -827,6 +827,17 @@ function getSingleValueFilterFields(filter: Expr): string[][] {
         (result.kind === 'boolean' &&
           ['null', 'false', 'true'].includes(result.parsed.operator) &&
           !result.parsed.not) ||
+        (result.kind === 'date' &&
+          result.parsed.operator === 'in' &&
+          result.parsed.in.moment === 'literal' &&
+          result.parsed.in.units === 'day' &&
+          !result.parsed.not) ||
+        (result.kind === 'timestamp' &&
+          result.parsed.operator === 'in' &&
+          result.parsed.in.moment === 'literal' &&
+          result.parsed.in.units === undefined &&
+          !result.parsed.not) ||
+        // TODO: handle 'today', 'now', 'yesterday', etc.
         ((result.kind === 'number' || result.kind === 'string') &&
           ((result.parsed.operator === 'null' && !result.parsed.not) ||
             (result.parsed.operator === '=' &&

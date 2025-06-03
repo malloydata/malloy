@@ -2084,7 +2084,7 @@ describe('query:', () => {
           `
         ).toTranslate();
       });
-      test('single value filter expression works with boolean, string, number, null', () => {
+      test('single value filter expression works with boolean, string, number, date, timestamp, null', () => {
         expect(
           markSource`
             ##! experimental.grouped_by
@@ -2134,7 +2134,9 @@ describe('query:', () => {
                 ai ~ f'> 3',
                 ai ~ f'not 3',
                 ad ~ f'2003',
+                ad ~ f'not 2003-01-01',
                 ats ~ f'2003-01-01 10:00', // not granular enough?
+                ats ~ f'not 2003-01-01 10:00:00',
               aggregate: aisum
             }
           `

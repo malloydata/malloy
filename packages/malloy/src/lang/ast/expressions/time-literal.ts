@@ -191,7 +191,7 @@ export class LiteralTimestamp extends TimeLiteral {
 
   static parse(literalTs: string): LiteralTimestamp | undefined {
     // let subSecs: string | undefined;
-    let units: TimestampUnit | undefined = 'second';
+    let units: TimestampUnit | undefined = undefined;
     const tm = preParse(literalTs, true);
     literalTs = tm.text;
     if (literalTs[10] === 'T') {
@@ -250,15 +250,29 @@ class GranularLiteral extends TimeLiteral {
     if (rangeEnd) {
       const testValue = left.getExpression(fs);
 
-      if (testValue.type === 'date' && this.units === 'day' && op === '=') {
+      if (testValue.type === 'date' && op === '=' && this.units === 'day') {
+        // TODO remove the === 'day' check above and warn
+        // if (this.units !== 'day') {
+        //   this.logWarning(
+        //     'time-equality-not-granular',
+        //     `Equality comparisons of a date to a literal ${this.units} will compare the first day of the ${this.units}; use a literal day instead, or use \`?\` to check whether the date is within the ${this.units}.`
+        //   );
+        // }
         return super.apply(fs, op, left);
       }
 
       if (
         testValue.type === 'timestamp' &&
-        this.units === undefined &&
-        op === '='
+        op === '=' &&
+        this.units === undefined
       ) {
+        // TODO remove the === 'second' check above and warn
+        // if (this.units !== 'second') {
+        //   this.logWarning(
+        //     'time-equality-not-granular',
+        //     `Equality comparisons of a timestamp to a literal ${this.units} will compare the first instant of the ${this.units}; use a literal timestamp (to the second) instead, or use \`?\` to check whether the date is within the ${this.units}.`
+        //   );
+        // }
         return super.apply(fs, op, left);
       }
 
