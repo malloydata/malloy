@@ -815,12 +815,24 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
 
 function getSingleValueFilterFields(filter: Expr): string[][] {
   const fieldPaths: string[][] = [];
-  if (filter.node === 'filterMatch') {
-    if (filter.kids.expr.node === 'field') {
-      const result = compileFilterExpression(
-        filter.dataType,
-        filter.kids.filterExpr
-      );
+  if (filter.node === 'and') {
+    fieldPaths.push(...getSingleValueFilterFields(filter.kids.left));
+    fieldPaths.push(...getSingleValueFilterFields(filter.kids.right));
+  } else if (filter.node === '()') {
+    fieldPaths.push(...getSingleValueFilterFields(filter.e));
+  } else {
+    const path = isSingleValueFilterNode(filter);
+    if (path) {
+      fieldPaths.push(path);
+    }
+  }
+  return fieldPaths;
+}
+
+function isSingleValueFilterNode(e: Expr): string[] | undefined {
+  if (e.node === 'filterMatch') {
+    if (e.kids.expr.node === 'field') {
+      const result = compileFilterExpression(e.dataType, e.kids.filterExpr);
 
       if (!result) return [];
       if (
@@ -844,25 +856,10 @@ function getSingleValueFilterFields(filter: Expr): string[][] {
               result.parsed.values.length === 1 &&
               !result.parsed.not)))
       ) {
-        fieldPaths.push(filter.kids.expr.path);
+        return e.kids.expr.path;
       }
     }
-  } else if (filter.node === 'and') {
-    fieldPaths.push(...getSingleValueFilterFields(filter.kids.left));
-    fieldPaths.push(...getSingleValueFilterFields(filter.kids.right));
-  } else if (filter.node === '()') {
-    fieldPaths.push(...getSingleValueFilterFields(filter.e));
-  } else {
-    const path = isSingleValueFilterNode(filter);
-    if (path) {
-      fieldPaths.push(path);
-    }
-  }
-  return fieldPaths;
-}
-
-function isSingleValueFilterNode(e: Expr): string[] | undefined {
-  if (e.node === '=') {
+  } else if (e.node === '=') {
     if (
       e.kids.left.node === 'field' &&
       (e.kids.right.node === 'true' ||

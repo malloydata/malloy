@@ -2121,6 +2121,35 @@ describe('query:', () => {
           `
         ).toTranslate();
       });
+      test('single value filter expression ANDed together works with boolean, string, number, date, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              dimension: abool3 is abool
+              dimension: astr2 is astr
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, abool3, astr2, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo'
+                and abool ~ f'true'
+                and abool2 ~ f'=false'
+                and ai ~ f'2'
+                and ad ~ f'2003-01-01'
+                and ats ~ f'2003-01-01 10:00:00'
+                and af ~ f'null'
+                and abool3 ~ f'null'
+                and astr2 ~ f'null'
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
       test('no single value filter expression trickery', () => {
         expect(
           markSource`
