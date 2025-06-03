@@ -32,6 +32,7 @@ export interface RunSQLOptions {
   queryAnnotation?: Annotation;
   /* Should we replace materialization with its references. */
   replaceMaterializedReferences?: boolean;
+  clientMetadata?: {[key: string]: string};
 }
 
 export type QueryOptionsReader = RunSQLOptions | (() => RunSQLOptions);
