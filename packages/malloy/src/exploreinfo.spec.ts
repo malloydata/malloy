@@ -78,15 +78,19 @@ jest.mock('./malloy', () => {
                 type: 'table',
                 connection: 'my_connection',
                 tablePath: 'main_table',
-                fields: [],
-                joins: [
+                fields: [
                   {
                     type: 'table',
                     connection: 'my_connection',
                     tablePath: 'joined_table',
                     fields: [],
-                    on: 'main_table.id = joined_table.main_id',
-                    join: 'left',
+                    onExpression: {
+                      node: 'filterCondition',
+                      code: 'main_table.id = joined_table.main_id',
+                      expressionType: 'scalar',
+                      e: {node: 'true'},
+                    },
+                    join: 'one',
                     name: 'joined_data',
                     dialect: 'standardsql',
                   },
@@ -101,27 +105,35 @@ jest.mock('./malloy', () => {
                 type: 'table',
                 connection: 'my_connection',
                 tablePath: 'main_table',
-                fields: [],
-                joins: [
+                fields: [
                   {
                     type: 'table',
                     connection: 'my_connection',
                     tablePath: 'joined_table1',
-                    fields: [],
-                    joins: [
+                    fields: [
                       {
                         type: 'table',
                         connection: 'my_connection',
                         tablePath: 'nested_joined_table',
                         fields: [],
-                        on: 'joined_table1.id = nested_joined_table.joined_id',
-                        join: 'left',
+                        onExpression: {
+                          node: 'filterCondition',
+                          code: 'joined_table1.id = nested_joined_table.joined_id',
+                          expressionType: 'scalar',
+                          e: {node: 'true'},
+                        },
+                        join: 'one',
                         name: 'nested_join',
                         dialect: 'standardsql',
                       },
                     ],
-                    on: 'main_table.id = joined_table1.main_id',
-                    join: 'left',
+                    onExpression: {
+                      node: 'filterCondition',
+                      code: 'main_table.id = joined_table1.main_id',
+                      expressionType: 'scalar',
+                      e: {node: 'true'},
+                    },
+                    join: 'one',
                     name: 'joined_data1',
                     dialect: 'standardsql',
                   },
@@ -130,8 +142,13 @@ jest.mock('./malloy', () => {
                     connection: 'my_connection',
                     selectStr: 'SELECT * FROM another_table',
                     fields: [],
-                    on: 'main_table.id = another_table.main_id',
-                    join: 'left',
+                    onExpression: {
+                      node: 'filterCondition',
+                      code: 'main_table.id = another_table.main_id',
+                      expressionType: 'scalar',
+                      e: {node: 'true'},
+                    },
+                    join: 'one',
                     name: 'joined_data2',
                     dialect: 'standardsql',
                   },

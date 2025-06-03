@@ -54,7 +54,18 @@ export function getExploreInfo(
   exploreName: string
 ): SourceInfo[] {
   const explore = model.getExploreByName(exploreName);
-  return getSourceInfoFromStructDef(explore.structDef, model);
+
+  // Get all sources including potential duplicates
+  const allSources = getSourceInfoFromStructDef(explore.structDef, model);
+
+  // Deduplicate sources using sourceID as the key
+  const uniqueSources: Record<string, SourceInfo> = {};
+  for (const source of allSources) {
+    uniqueSources[source.sourceID] = source;
+  }
+
+  // Return the deduplicated sources as an array
+  return Object.values(uniqueSources);
 }
 
 /**
@@ -92,8 +103,20 @@ export function getSourceInfoFromStructDef(
           sources.push(createSourceInfo(field, model));
         }
 
-        // Recursively add sources from the join
-        sources.push(...getSourceInfoFromStructDef(field, model));
+        // Recursively process the join's fields to find nested joins
+        if (field.fields && field.fields.length > 0) {
+          // Process each field in the join separately
+          for (const nestedField of field.fields) {
+            if (isJoined(nestedField)) {
+              if (isInteresting(nestedField)) {
+                sources.push(createSourceInfo(nestedField, model));
+              }
+
+              // Get nested sources recursively
+              sources.push(...getSourceInfoFromStructDef(nestedField, model));
+            }
+          }
+        }
       }
     }
   }
