@@ -919,96 +919,6 @@ export class Model implements Taggable {
       .map(structDef => new Explore(structDef));
   }
 
-  private collectSourceComponents(structDef: StructDef): SourceComponentInfo[] {
-    const sources: SourceComponentInfo[] = [];
-
-    if (structDef.type === 'composite') {
-      for (const source of structDef.sources) {
-        sources.push(...this.collectSourceComponents(source));
-      }
-      return sources;
-    }
-    if (isSourceComponent(structDef)) {
-      if (structDef.type === 'table') {
-        // Generate sourceID based on connection and table name
-
-        sources.push({
-          type: 'table',
-          tableName: structDef.tablePath,
-          sourceID: `${structDef.connection}:${structDef.tablePath}`,
-        });
-      } else if (structDef.type === 'sql_select') {
-        sources.push({
-          type: 'sql',
-          selectStatement: structDef.selectStr,
-          sourceID: `${structDef.connection}:${structDef.selectStr}`,
-        });
-      } else if (structDef.type === 'query_source') {
-        // For QuerySourceDef, we need to extract the SQL from the query
-        // We need to create a PreparedQuery from the query, then get a PreparedResult
-        // to access the SQL
-        let sql: string;
-        try {
-          // Create a PreparedQuery from the query in the QuerySourceDef
-          const preparedQuery = new PreparedQuery(
-            structDef.query,
-            this._modelDef,
-            []
-          );
-
-          // Get the PreparedResult which contains the SQL
-          const preparedResult = preparedQuery.getPreparedResult();
-
-          // Extract the SQL
-          sql = preparedResult.sql;
-        } catch (error) {
-          // If we can't compile the query, use a placeholder
-          sql = `-- Could not compile SQL for query ${
-            structDef.query.name || 'unnamed query'
-          }: ${error instanceof Error ? error.message : String(error)}`;
-        }
-
-        // Generate sourceID based on connection and SQL
-        const sourceID = `${structDef.connection}:${sql}`;
-
-        sources.push({
-          type: 'sql',
-          selectStatement: sql,
-          sourceID: sourceID,
-        });
-      }
-    } else {
-      return [];
-    }
-
-    // Process all fields to find joins
-    for (const field of structDef.fields) {
-      if (isJoined(field)) {
-        sources.push(...this.collectSourceComponents(field));
-      }
-    }
-    return sources;
-  }
-
-  /**
-   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHAGE WITHOUT NOTICE
-   */
-  public getSourceComponents(sourceName: string): SourceComponentInfo[] {
-    const explore = this.getExploreByName(sourceName);
-    const uniqueSources: Record<string, SourceComponentInfo> = {};
-    if (isSourceDef(explore.structDef)) {
-      const allSources = this.collectSourceComponents(explore.structDef);
-
-      // Deduplicate sources using sourceID as the key
-      for (const source of allSources) {
-        uniqueSources[source.sourceID] = source;
-      }
-    }
-
-    // Return the deduplicated sources as an array
-    return Object.values(uniqueSources);
-  }
-
   /**
    * Get an array of `NamedQuery`s contained in the model.
    *
@@ -1953,6 +1863,95 @@ export class Explore extends Entity implements Taggable {
 
   public get location(): DocumentLocation | undefined {
     return this.structDef.location;
+  }
+
+  private collectSourceComponents(structDef: StructDef): SourceComponentInfo[] {
+    const sources: SourceComponentInfo[] = [];
+
+    if (structDef.type === 'composite') {
+      for (const source of structDef.sources) {
+        sources.push(...this.collectSourceComponents(source));
+      }
+      return sources;
+    }
+    if (isSourceComponent(structDef)) {
+      if (structDef.type === 'table') {
+        // Generate sourceID based on connection and table name
+
+        sources.push({
+          type: 'table',
+          tableName: structDef.tablePath,
+          sourceID: `${structDef.connection}:${structDef.tablePath}`,
+        });
+      } else if (structDef.type === 'sql_select') {
+        sources.push({
+          type: 'sql',
+          selectStatement: structDef.selectStr,
+          sourceID: `${structDef.connection}:${structDef.selectStr}`,
+        });
+      } else if (structDef.type === 'query_source') {
+        // For QuerySourceDef, we need to extract the SQL from the query
+        // We need to create a PreparedQuery from the query, then get a PreparedResult
+        // to access the SQL
+        let sql: string;
+        try {
+          // Create a PreparedQuery from the query in the QuerySourceDef
+          const preparedQuery = new PreparedQuery(
+            structDef.query,
+            this.modelDef,
+            []
+          );
+
+          // Get the PreparedResult which contains the SQL
+          const preparedResult = preparedQuery.getPreparedResult();
+
+          // Extract the SQL
+          sql = preparedResult.sql;
+        } catch (error) {
+          // If we can't compile the query, use a placeholder
+          sql = `-- Could not compile SQL for query ${
+            structDef.query.name || 'unnamed query'
+          }: ${error instanceof Error ? error.message : String(error)}`;
+        }
+
+        // Generate sourceID based on connection and SQL
+        const sourceID = `${structDef.connection}:${sql}`;
+
+        sources.push({
+          type: 'sql',
+          selectStatement: sql,
+          sourceID: sourceID,
+        });
+      }
+    } else {
+      return [];
+    }
+
+    // Process all fields to find joins
+    for (const field of structDef.fields) {
+      if (isJoined(field)) {
+        sources.push(...this.collectSourceComponents(field));
+      }
+    }
+    return sources;
+  }
+
+  /**
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHAGE WITHOUT NOTICE
+   */
+  public getSourceComponents(): SourceComponentInfo[] {
+    const uniqueSources: Record<string, SourceComponentInfo> = {};
+    if (isSourceDef(this.structDef)) {
+      const allSources = this.collectSourceComponents(this.structDef);
+
+      // Deduplicate sources using sourceID as the key
+      for (const source of allSources) {
+        uniqueSources[source.sourceID] = source;
+      }
+    }
+
+    // Return the deduplicated sources as an array
+    return Object.values(uniqueSources);
   }
 }
 

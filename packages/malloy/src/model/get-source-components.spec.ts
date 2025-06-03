@@ -30,7 +30,7 @@ function createModelWithExplore(exploreDef: SourceDef): Model {
   return new Model(modelDef, [], []);
 }
 
-describe('Model.getSourceComponents', () => {
+describe('Explore.getSourceComponents', () => {
   test('should return table source info for a simple table explore', () => {
     // Create a model with a simple table explore
     const tableExplore: TableSourceDef = {
@@ -43,7 +43,7 @@ describe('Model.getSourceComponents', () => {
     };
 
     const model = createModelWithExplore(tableExplore);
-    const result = model.getSourceComponents('simple_table');
+    const result = model.getExploreByName('simple_table').getSourceComponents();
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -65,7 +65,7 @@ describe('Model.getSourceComponents', () => {
     };
 
     const model = createModelWithExplore(sqlExplore);
-    const result = model.getSourceComponents('sql_explore');
+    const result = model.getExploreByName('sql_explore').getSourceComponents();
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -104,7 +104,9 @@ describe('Model.getSourceComponents', () => {
     };
 
     const model = createModelWithExplore(compositeExplore);
-    const result = model.getSourceComponents('composite_explore');
+    const result = model
+      .getExploreByName('composite_explore')
+      .getSourceComponents();
 
     expect(result).toHaveLength(2);
     // Check that the result contains all expected sources, regardless of order
@@ -152,7 +154,9 @@ describe('Model.getSourceComponents', () => {
     };
 
     const model = createModelWithExplore(exploreWithJoins);
-    const result = model.getSourceComponents('explore_with_joins');
+    const result = model
+      .getExploreByName('explore_with_joins')
+      .getSourceComponents();
 
     expect(result).toHaveLength(2);
     // Check that the result contains all expected sources, regardless of order
@@ -231,7 +235,7 @@ describe('Model.getSourceComponents', () => {
     };
 
     const model = createModelWithExplore(nestedJoinsExplore);
-    const result = model.getSourceComponents('nested_joins');
+    const result = model.getExploreByName('nested_joins').getSourceComponents();
 
     expect(result).toHaveLength(4);
     // Check that the result contains all expected sources, regardless of order
@@ -297,7 +301,9 @@ describe('Model.getSourceComponents', () => {
       dependencies: {},
     });
 
-    const result = model.getSourceComponents('query_source_explore');
+    const result = model
+      .getExploreByName('query_source_explore')
+      .getSourceComponents();
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -305,20 +311,5 @@ describe('Model.getSourceComponents', () => {
       selectStatement: 'SELECT * FROM test_query',
       sourceID: 'my_connection:SELECT * FROM test_query',
     });
-  });
-
-  test('should throw an error for unknown explore name', () => {
-    const model = createModelWithExplore({
-      type: 'table',
-      connection: 'my_connection',
-      tablePath: 'my_table',
-      fields: [],
-      dialect: 'standardsql',
-      name: 'simple_table',
-    });
-
-    expect(() => {
-      model.getSourceComponents('unknown_explore');
-    }).toThrow("'name' is not an explore");
   });
 });
