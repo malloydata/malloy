@@ -836,8 +836,9 @@ function isSingleValueFilterNode(e: Expr): string[] | undefined {
 
       if (!result) return [];
       if (
+        (result.parsed.operator === 'null' && !result.parsed.not) ||
         (result.kind === 'boolean' &&
-          ['null', 'false', 'true'].includes(result.parsed.operator) &&
+          ['false', 'true'].includes(result.parsed.operator) &&
           !result.parsed.not) ||
         (result.kind === 'date' &&
           result.parsed.operator === 'in' &&
@@ -851,10 +852,9 @@ function isSingleValueFilterNode(e: Expr): string[] | undefined {
           !result.parsed.not) ||
         // TODO: handle 'today', 'now', 'yesterday', etc.
         ((result.kind === 'number' || result.kind === 'string') &&
-          ((result.parsed.operator === 'null' && !result.parsed.not) ||
-            (result.parsed.operator === '=' &&
-              result.parsed.values.length === 1 &&
-              !result.parsed.not)))
+          result.parsed.operator === '=' &&
+          result.parsed.values.length === 1 &&
+          !result.parsed.not)
       ) {
         return e.kids.expr.path;
       }
