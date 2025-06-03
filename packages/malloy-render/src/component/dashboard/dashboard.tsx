@@ -9,8 +9,7 @@ import {For, Show} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import type {Virtualizer} from '@tanstack/solid-virtual';
 import {createVirtualizer} from '@tanstack/solid-virtual';
-import {useConfig} from '../render';
-import dashboardCss from './dashboard.css?raw';
+import './dashboard.css';
 import type {
   Field,
   RecordCell,
@@ -143,9 +142,6 @@ export function Dashboard(props: {
     });
   }
   const items = virtualizer?.getVirtualItems();
-
-  const config = useConfig();
-  config.addCSSToShadowRoot(dashboardCss);
 
   return (
     <div

@@ -12,7 +12,7 @@ import {
 import {getRangeSize} from '../util';
 import {getTableLayout} from './table-layout';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import tableCss from './table.css?raw';
+import './table.css';
 import {applyRenderer} from '../apply-renderer';
 import {createStore, produce} from 'solid-js/store';
 import type {Virtualizer} from '@tanstack/solid-virtual';
@@ -732,11 +732,6 @@ const MalloyTable: Component<{
       currentExplore: props.data.field.path,
     };
   });
-
-  if (tableCtx().root) {
-    const config = useConfig();
-    config.addCSSToShadowRoot(tableCss);
-  }
 
   const tableConfig = useConfig().tableConfig;
 
