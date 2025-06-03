@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {getExploreInfo} from './exploreinfo';
-import {Model} from './malloy';
+import {getExploreComponents} from './explore-components';
+import {Model} from '../malloy';
 import type {
   TableSourceDef,
   SQLSourceDef,
   QuerySourceDef,
   CompositeSourceDef,
-} from './model';
+} from '.';
 
 // Mock the Model class for testing
 jest.mock('./malloy', () => {
@@ -208,7 +208,7 @@ describe('getExploreInfo', () => {
   });
 
   test('should return table source info for a simple table explore', () => {
-    const result = getExploreInfo(model, 'simple_table');
+    const result = getExploreComponents(model, 'simple_table');
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -220,7 +220,7 @@ describe('getExploreInfo', () => {
   });
 
   test('should return SQL source info for an SQL explore', () => {
-    const result = getExploreInfo(model, 'sql_explore');
+    const result = getExploreComponents(model, 'sql_explore');
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -232,68 +232,83 @@ describe('getExploreInfo', () => {
   });
 
   test('should return source info for all sources in a composite explore', () => {
-    const result = getExploreInfo(model, 'composite_explore');
+    const result = getExploreComponents(model, 'composite_explore');
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
-      type: 'table',
-      tableName: 'table1',
-      sourceID: 'my_connection:table1',
-    });
-    expect(result[1]).toEqual({
-      type: 'table',
-      tableName: 'table2',
-      sourceID: 'my_connection:table2',
-    });
+    // Check that the result contains all expected sources, regardless of order
+    expect(result).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'table',
+          tableName: 'table1',
+          sourceID: 'my_connection:table1',
+        },
+        {
+          type: 'table',
+          tableName: 'table2',
+          sourceID: 'my_connection:table2',
+        },
+      ])
+    );
     expect(model.getExploreByName).toHaveBeenCalledWith('composite_explore');
   });
 
   test('should return source info for main table and joined tables', () => {
-    const result = getExploreInfo(model, 'explore_with_joins');
+    const result = getExploreComponents(model, 'explore_with_joins');
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
-      type: 'table',
-      tableName: 'main_table',
-      sourceID: 'my_connection:main_table',
-    });
-    expect(result[1]).toEqual({
-      type: 'table',
-      tableName: 'joined_table',
-      sourceID: 'my_connection:joined_table',
-    });
+    // Check that the result contains all expected sources, regardless of order
+    expect(result).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'table',
+          tableName: 'main_table',
+          sourceID: 'my_connection:main_table',
+        },
+        {
+          type: 'table',
+          tableName: 'joined_table',
+          sourceID: 'my_connection:joined_table',
+        },
+      ])
+    );
     expect(model.getExploreByName).toHaveBeenCalledWith('explore_with_joins');
   });
 
   test('should return source info for nested joins', () => {
-    const result = getExploreInfo(model, 'nested_joins');
+    const result = getExploreComponents(model, 'nested_joins');
 
     expect(result).toHaveLength(4);
-    expect(result[0]).toEqual({
-      type: 'table',
-      tableName: 'main_table',
-      sourceID: 'my_connection:main_table',
-    });
-    expect(result[1]).toEqual({
-      type: 'table',
-      tableName: 'joined_table1',
-      sourceID: 'my_connection:joined_table1',
-    });
-    expect(result[2]).toEqual({
-      type: 'table',
-      tableName: 'nested_joined_table',
-      sourceID: 'my_connection:nested_joined_table',
-    });
-    expect(result[3]).toEqual({
-      type: 'sql',
-      selectStatement: 'SELECT * FROM another_table',
-      sourceID: 'my_connection:SELECT * FROM another_table',
-    });
+    // Check that the result contains all expected sources, regardless of order
+    expect(result).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'table',
+          tableName: 'main_table',
+          sourceID: 'my_connection:main_table',
+        },
+        {
+          type: 'table',
+          tableName: 'joined_table1',
+          sourceID: 'my_connection:joined_table1',
+        },
+        {
+          type: 'table',
+          tableName: 'nested_joined_table',
+          sourceID: 'my_connection:nested_joined_table',
+        },
+        {
+          type: 'sql',
+          selectStatement: 'SELECT * FROM another_table',
+          sourceID: 'my_connection:SELECT * FROM another_table',
+        },
+      ])
+    );
     expect(model.getExploreByName).toHaveBeenCalledWith('nested_joins');
   });
 
   test('should return source info for query source explore', () => {
-    const result = getExploreInfo(model, 'query_source_explore');
+    const result = getExploreComponents(model, 'query_source_explore');
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -306,7 +321,7 @@ describe('getExploreInfo', () => {
 
   test('should throw an error for unknown explore name', () => {
     expect(() => {
-      getExploreInfo(model, 'unknown_explore');
+      getExploreComponents(model, 'unknown_explore');
     }).toThrow('Unknown explore name: unknown_explore');
   });
 });

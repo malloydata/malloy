@@ -5,26 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {isJoined} from './model';
+import {isJoined} from '.';
 import type {
   CompositeSourceDef,
   SQLSourceDef,
   TableSourceDef,
   StructDef,
   QuerySourceDef,
-} from './model';
+} from '.';
 
 /**
  * For the getExploreInfo, these are the types of sources which might have information
  */
-type InterestingSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
-import type {Model} from './malloy';
-import {PreparedQuery} from './malloy';
+type ComponentSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
+import type {Model} from '../malloy';
+import {PreparedQuery} from '../malloy';
 
 /**
  * Information about a source (table or SQL query) used in a model
  */
-export type SourceInfo =
+export type ExploreComponentInfo =
   | {type: 'table'; tableName: string; sourceID: string}
   | {type: 'sql'; selectStatement: string; sourceID: string};
 
@@ -32,9 +32,9 @@ export type SourceInfo =
  * Type guard to check if a structure definition is a queryable source
  * (table, SQL select, or query source)
  */
-export function isInteresting(
+export function isExploreComponent(
   source: StructDef
-): source is InterestingSourceDef {
+): source is ComponentSourceDef {
   return (
     source.type === 'table' ||
     source.type === 'sql_select' ||
@@ -49,17 +49,17 @@ export function isInteresting(
  * @param exploreName The name of the explore to get information for
  * @returns Array of information about all sources used in the explore
  */
-export function getExploreInfo(
+export function getExploreComponents(
   model: Model,
   exploreName: string
-): SourceInfo[] {
+): ExploreComponentInfo[] {
   const explore = model.getExploreByName(exploreName);
 
   // Get all sources including potential duplicates
-  const allSources = getSourceInfoFromStructDef(explore.structDef, model);
+  const allSources = getComponents(explore.structDef, model);
 
   // Deduplicate sources using sourceID as the key
-  const uniqueSources: Record<string, SourceInfo> = {};
+  const uniqueSources: Record<string, ExploreComponentInfo> = {};
   for (const source of allSources) {
     uniqueSources[source.sourceID] = source;
   }
@@ -75,22 +75,22 @@ export function getExploreInfo(
  * @param model Optional model reference needed for processing QuerySourceDef
  * @returns Array of information about all sources used in the structure
  */
-export function getSourceInfoFromStructDef(
+export function getComponents(
   structDef: StructDef,
   model?: Model
-): SourceInfo[] {
-  const sources: SourceInfo[] = [];
+): ExploreComponentInfo[] {
+  const sources: ExploreComponentInfo[] = [];
 
   // Add the main source if it's a queryable source definition
-  if (isInteresting(structDef)) {
-    sources.push(createSourceInfo(structDef, model));
+  if (isExploreComponent(structDef)) {
+    sources.push(createExploreComponentInfo(structDef, model));
   }
 
   // Handle composite sources
   if (structDef.type === 'composite') {
     const compositeDef = structDef as CompositeSourceDef;
     for (const source of compositeDef.sources) {
-      sources.push(...getSourceInfoFromStructDef(source, model));
+      sources.push(...getComponents(source, model));
     }
   }
 
@@ -99,8 +99,8 @@ export function getSourceInfoFromStructDef(
     for (const field of structDef.fields) {
       if (isJoined(field)) {
         // Add join source info if it's a queryable source
-        if (isInteresting(field)) {
-          sources.push(createSourceInfo(field, model));
+        if (isExploreComponent(field)) {
+          sources.push(createExploreComponentInfo(field, model));
         }
 
         // Recursively process the join's fields to find nested joins
@@ -108,12 +108,12 @@ export function getSourceInfoFromStructDef(
           // Process each field in the join separately
           for (const nestedField of field.fields) {
             if (isJoined(nestedField)) {
-              if (isInteresting(nestedField)) {
-                sources.push(createSourceInfo(nestedField, model));
+              if (isExploreComponent(nestedField)) {
+                sources.push(createExploreComponentInfo(nestedField, model));
               }
 
               // Get nested sources recursively
-              sources.push(...getSourceInfoFromStructDef(nestedField, model));
+              sources.push(...getComponents(nestedField, model));
             }
           }
         }
@@ -131,10 +131,10 @@ export function getSourceInfoFromStructDef(
  * @param model Optional model reference needed for processing QuerySourceDef
  * @returns A SourceInfo object
  */
-function createSourceInfo(
-  sourceDef: InterestingSourceDef,
+function createExploreComponentInfo(
+  sourceDef: ComponentSourceDef,
   model?: Model
-): SourceInfo {
+): ExploreComponentInfo {
   if (sourceDef.type === 'table') {
     // Generate sourceID based on connection and table name
     const sourceID = `${sourceDef.connection}:${sourceDef.tablePath}`;
@@ -184,7 +184,7 @@ function createSourceInfo(
     }
 
     // Generate sourceID based on connection and SQL
-    const sourceID = `${sourceDef.connection}:${sql}`;
+    const sourceID = `${sourceDef.connection}:query`;
 
     return {
       type: 'sql',
