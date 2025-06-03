@@ -1,8 +1,9 @@
 import type {JSXElement} from 'solid-js';
 import {createEffect, createSignal, onCleanup, Show} from 'solid-js';
-import tooltipCss from './tooltip.css?raw';
-import {useConfig} from '../render';
+
 import {MalloyModal} from '../malloy-modal/malloy-modal';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './tooltip.css?raw';
 
 export function Tooltip(props: {show: boolean; children: JSXElement}) {
   const [pos, setPos] = createSignal<[number, number]>([0, 0]);
@@ -19,9 +20,6 @@ export function Tooltip(props: {show: boolean; children: JSXElement}) {
   onCleanup(() => {
     document.removeEventListener('mousemove', handler);
   });
-
-  const config = useConfig();
-  config.addCSSToShadowRoot(tooltipCss);
 
   let tip;
 
@@ -53,6 +51,9 @@ export function Tooltip(props: {show: boolean; children: JSXElement}) {
       });
     }
   });
+
+  MalloyViz.addStylesheet(styles);
+
   return (
     <Show when={props.show}>
       <MalloyModal
