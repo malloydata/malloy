@@ -1153,7 +1153,7 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
             const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
             logTo.logError(
               'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing group by ${fieldRef} as required in ${source}${requiredFields}`,
+              `Could not resolve composite source: missing group by or single value filter of ${fieldRef} as required in ${source}${requiredFields}`,
               {at: issue.requiredGroupBy.at}
             );
           } else {

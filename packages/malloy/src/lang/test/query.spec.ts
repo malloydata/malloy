@@ -1984,7 +1984,11 @@ describe('query:', () => {
           }
           run: aext -> { aggregate: ${'aisum'} }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     describe('single value filters', () => {
       test('single value filter equal basic success', () => {
@@ -2007,7 +2011,11 @@ describe('query:', () => {
             }
             run: aext -> { where: astr = 'foo' | 'bar'; aggregate: aisum }
           `
-        ).toLog(errorMessage('Group by of `astr` is required but not present'));
+        ).toLog(
+          errorMessage(
+            'Group by or single value filter of `astr` is required but not present'
+          )
+        );
       });
       test('single value filter equal works with boolean, string, number, timestamp, date, null', () => {
         expect(
@@ -2141,11 +2149,21 @@ describe('query:', () => {
             }
           `
         ).toLog(
-          errorMessage('Group by of `astr` is required but not present'),
-          errorMessage('Group by of `abool` is required but not present'),
-          errorMessage('Group by of `ai` is required but not present'),
-          errorMessage('Group by of `ad` is required but not present'),
-          errorMessage('Group by of `ats` is required but not present')
+          errorMessage(
+            'Group by or single value filter of `astr` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `abool` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ai` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ad` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ats` is required but not present'
+          )
         );
       });
     });
@@ -2162,8 +2180,12 @@ describe('query:', () => {
           }
         `
       ).toLog(
-        errorMessage('Group by of `astr` is required but not present'),
-        errorMessage('Group by of `astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        ),
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
       );
     });
     // TODO would be nice to have an error here, before you use it
@@ -2177,7 +2199,11 @@ describe('query:', () => {
             view: x is { aggregate: ${'aisum'} } -> { select: * }
           }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('failure in multi-stage view used later', () => {
       expect(
@@ -2190,7 +2216,11 @@ describe('query:', () => {
           }
           run: aext -> ${'x'}
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('failure in multi-stage view used in nest', () => {
       expect(
@@ -2205,7 +2235,11 @@ describe('query:', () => {
             nest: ${'x'}
           }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped_by failure direct in query', () => {
       expect(
@@ -2213,7 +2247,11 @@ describe('query:', () => {
           ##! experimental.grouped_by
           run: a -> { aggregate: aisum is ${'ai.sum() { grouped_by: astr }'} }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('view with inherited grouped_by failure', () => {
       expect(
@@ -2228,7 +2266,11 @@ describe('query:', () => {
           }
           run: aext -> { nest: ${'requires_astr'} }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('view with inherited grouped_by success', () => {
       expect(
@@ -2255,7 +2297,11 @@ describe('query:', () => {
           }
           run: aext -> { where: true } + ${'aisum_plus_one'}
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('nest satisfies required group by', () => {
       expect(
@@ -2348,10 +2394,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing group by `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
         )
       );
     });
@@ -2376,7 +2422,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)\nFields required in source: `aisum` and `foo`'
+          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum` and `foo`'
         ),
         errorMessage(
           'Could not resolve composite source: missing field `foo` in composed source #2 (`a`)\nFields required in source: `aisum` and `foo`'
@@ -2460,8 +2506,12 @@ describe('query:', () => {
           run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
         `
       ).toLog(
-        errorMessage('Group by of `astr` is required but not present'),
-        errorMessage('Group by of `abool` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        ),
+        errorMessage(
+          'Group by or single value filter of `abool` is required but not present'
+        )
       );
     });
     test('grouped_by basic joined success', () => {
@@ -2492,7 +2542,9 @@ describe('query:', () => {
           run: bext -> { group_by: astr; aggregate: aext.aisum }
         `
       ).toLog(
-        errorMessage('Group by of `aext.astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
       );
     });
     test('grouped by failure when ungrouped (all, expression)', () => {
@@ -2501,7 +2553,11 @@ describe('query:', () => {
           ##! experimental.grouped_by
           run: a -> { group_by: astr; aggregate: x is all(ai.sum() { grouped_by: astr }) }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped by success when ungrouped (exclude okay, expression)', () => {
       expect(
@@ -2520,7 +2576,11 @@ describe('query:', () => {
           }
           run: aext -> { group_by: astr; aggregate: x is all(aisum) }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped by failure when ungrouped (exclude)', () => {
       expect(
@@ -2531,7 +2591,11 @@ describe('query:', () => {
           }
           run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped by success when ungrouped (exclude, different name)', () => {
       expect(
@@ -2557,7 +2621,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Ungrouped aggregate results in unsatisfiable required group by of `astr`'
+          'Ungrouped aggregate results in unsatisfiable required Group by or single value filter of `astr`'
         )
       );
     });
@@ -2574,9 +2638,11 @@ describe('query:', () => {
       ).toLog(
         // TODO Might not really need both these errors...
         // errorMessage(
-        //   'Ungrouped aggregate results in unsatisfiable required group by of `astr`'
+        //   'Ungrouped aggregate results in unsatisfiable required Group by or single value filter of `astr`'
         // ),
-        errorMessage('Group by of `astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
       );
     });
     test('ungroup fails composite slice', () => {
@@ -2615,10 +2681,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `astr` as required in composed source #1 (`slice_1`)\nFields required in source: `astr`, `abool`, and `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `astr` as required in composed source #1 (`slice_1`)\nFields required in source: `astr`, `abool`, and `aisum`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing group by `abool` as required in composed source #2 (`a`)\nFields required in source: `astr`, `abool`, and `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `abool` as required in composed source #2 (`a`)\nFields required in source: `astr`, `abool`, and `aisum`'
         )
       );
     });
@@ -2687,7 +2753,9 @@ describe('query:', () => {
           run: bext -> { group_by: aext.astr; aggregate: x is exclude(${'aext.aisum'}, astr) }
         `
       ).toLog(
-        errorMessage('Group by of `aext.astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
       );
     });
     test('ungroup in join reference', () => {
@@ -2704,7 +2772,9 @@ describe('query:', () => {
           run: bext -> { group_by: aext.astr; aggregate: ${'aext.x'} }
         `
       ).toLog(
-        errorMessage('Group by of `aext.astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
       );
     });
     test('ungroup shadowed by definition', () => {
@@ -2756,7 +2826,11 @@ describe('query:', () => {
             }
           }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
   });
 });
