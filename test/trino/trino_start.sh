@@ -5,22 +5,17 @@ set -e
 rm -rf .tmp
 mkdir .tmp
 
-
-if [ "x${BQ_CREDENTIALS_KEY}" = x ]; then
-  echo "######### BQ_CREDENTIALS_KEY is not set. Cannot start Trino"
-  exit 1
-fi
 # generate config file
-> ./.tmp/bigquery-trino.properties
-cat << EOF > ./.tmp/bigquery-trino.properties
-connector.name=bigquery
-bigquery.project-id=advance-lacing-417917
-bigquery.credentials-key=$BQ_CREDENTIALS_KEY
-bigquery.arrow-serialization.enabled=false
+> ./.tmp/mysql-trino.properties
+cat << EOF > ./.tmp/mysql-trino.properties
+connector.name=mysql
+connection-url=jdbc:mysql://mysql-malloy:3306
+connection-user=root
+connection-password=
 EOF
 
 # run docker
-docker run -p ${TRINO_PORT:-8080}:8080 -d -v ./.tmp/bigquery-trino.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
+docker run -p ${TRINO_PORT:-8080}:8080 -d -v ./.tmp/mysql-trino.properties:/etc/trino/catalog/mysql.properties --network test-network --name trino-malloy trinodb/trino
 
 # wait for server to start
 counter=0

@@ -28,15 +28,9 @@ jobs:
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   db-trino:
-    needs: check-permission
     uses: './.github/workflows/db-trino.yaml'
-    secrets:
-      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-presto:
-    needs: check-permission
     uses: './.github/workflows/db-presto.yaml'
-    secrets:
-      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-duckdb:
     uses: './.github/workflows/db-duckdb.yaml'
   db-bigquery:

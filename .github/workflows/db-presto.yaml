@@ -3,9 +3,6 @@ permissions: {}
 
 on:
   workflow_call:
-    secrets:
-      BQ_PRESTO_TRINO_KEY:
-        required: true
 
 jobs:
   # Label of the container job
@@ -25,13 +22,14 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
+          docker network create test-network
+          ./test/mysql/mysql_start.sh
           ./test/presto/presto_start.sh
           npx jest --reporters jest-silent-reporter --reporters summary --config jest.presto.config.ts
           ./test/presto/presto_stop.sh
         env:
           MALLOY_DATABASES: presto
-          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-          PRESTO_CATALOG: bigquery
+          PRESTO_CATALOG: mysql
           PRESTO_SCHEMA: malloytest
           PRESTO_HOST: http://localhost
           PRESTO_PORT: 8080

@@ -21,6 +21,7 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
+          docker network create test-network
           ./test/mysql/mysql_start.sh
           npx jest --reporters jest-silent-reporter --reporters summary --config jest.mysql.config.ts
           ./test/mysql/mysql_stop.sh

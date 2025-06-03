@@ -3,9 +3,6 @@ permissions: {}
 
 on:
   workflow_call:
-    secrets:
-      BQ_PRESTO_TRINO_KEY:
-        required: true
 
 jobs:
   # Label of the container job
@@ -25,13 +22,14 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
+          docker network create test-network
+          ./test/mysql/mysql_start.sh
           ./test/trino/trino_start.sh
           npx jest --reporters jest-silent-reporter --reporters summary --config jest.trino.config.ts
           ./test/trino/trino_stop.sh
         env:
           MALLOY_DATABASES: trino
-          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-          TRINO_CATALOG: bigquery
+          TRINO_CATALOG: mysql
           TRINO_SCHEMA: malloytest
           TRINO_SERVER: http://localhost:8080
           TRINO_USER: malloy-ci-bot@malloydata.org

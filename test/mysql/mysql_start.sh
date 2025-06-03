@@ -7,7 +7,7 @@ mkdir .tmp
 # run docker
 SCRIPTDIR=$(cd $(dirname $0); pwd)
 DATADIR=$(dirname $SCRIPTDIR)/data/mysql
-docker run -p 3306:3306 -d -v $DATADIR:/init_data --name mysql-malloy -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:8.4.2
+docker run -p 3306:3306 -d -v $DATADIR:/init_data  --network test-network --name mysql-malloy -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:8.4.2
 
 # wait for server to start
 counter=0
@@ -34,5 +34,6 @@ echo Loading Test Data
 docker exec mysql-malloy cp /init_data/malloytest.mysql.gz /tmp
 docker exec mysql-malloy gunzip /tmp/malloytest.mysql.gz
 docker exec mysql-malloy mysql -P3306 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.mysql;'
+docker exec mysql-malloy mysql -P3306 -h127.0.0.1 -uroot -e 'create table malloytest.alltypes (t_date DATE, t_datatime TIMESTAMP, t_timestamp TIMESTAMP) AS (SELECT "2020-03-02" as t_date, "2020-03-02 12:35:56" as t_datatime, "2020-03-02 12:35:56" as t_timestamp);'
 
 echo "MySQL running on port 3306"
