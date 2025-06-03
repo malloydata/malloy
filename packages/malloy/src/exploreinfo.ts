@@ -184,7 +184,7 @@ function createSourceInfo(
     }
 
     // Generate sourceID based on connection and SQL
-    const sourceID = `${sourceDef.connection}:query`;
+    const sourceID = `${sourceDef.connection}:${sql}`;
 
     return {
       type: 'sql',
