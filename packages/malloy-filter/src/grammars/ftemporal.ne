@@ -25,6 +25,8 @@ const kwList = moo.keywords(
       'FROM': 'from',
       'BEFORE': 'before',
       'AFTER': 'after',
+      'THROUGH': 'through',
+      'STARTING': 'starting',
       'FOR': 'for',
       'TODAY': 'today',
       'YESTERDAY': 'yesterday',
@@ -110,7 +112,9 @@ clause ->
   | parens {% (data) => data[0] %}
   | duration {% ([duration]) => ({operator: 'in_last', ...duration}) %}
   | %BEFORE moment {% ([_, moment]) => ({operator: 'before', before: moment }) %}
+  | %STARTING moment {% ([_, moment]) => ({operator: 'before', before: moment, not: true}) %}
   | %AFTER moment {% ([_, moment]) => ({operator: 'after', after: moment }) %}
+  | %THROUGH moment {% ([_, moment]) => ({operator: 'after', after: moment, not: true}) %}
   | moment %TO moment {% ([fromMoment, _, toMoment]) => ({operator: 'to', fromMoment, toMoment}) %}
   | moment %FOR duration {% ([moment, _, duration]) => ({...duration, operator: 'for', begin: moment}) %}
   | (%LAST|%NEXT) duration {% ([op, duration]) => ({operator: op[0].text, ...duration}) %}
