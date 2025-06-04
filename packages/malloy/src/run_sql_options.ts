@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Annotation} from './model/malloy_types';
+import type {Annotation, NamedObject} from './model/malloy_types';
+
+type ObjRefWithMetadata = NamedObject & {
+  kind: string;
+  annotations: Annotation[];
+};
 
 export interface RunSQLOptions {
   rowLimit?: number;
@@ -32,7 +37,9 @@ export interface RunSQLOptions {
   queryAnnotation?: Annotation;
   /* Should we replace materialization with its references. */
   replaceMaterializedReferences?: boolean;
-  clientMetadata?: {[key: string]: string};
+  clientMetadata?: {
+    objRefsWithMetadata: ObjRefWithMetadata[];
+  };
 }
 
 export type QueryOptionsReader = RunSQLOptions | (() => RunSQLOptions);
