@@ -305,8 +305,35 @@ describe('temporal filter expressions', () => {
         before: {moment: 'today'},
       });
     });
+    test('starting today', () => {
+      expect('starting today').isTemporalFilter({
+        operator: 'before',
+        before: {moment: 'today'},
+        not: true,
+      });
+    });
+    test('not before today', () => {
+      expect('not before today').isTemporalFilter(
+        {
+          operator: 'before',
+          before: {moment: 'today'},
+          not: true,
+        },
+        'starting today'
+      );
+    });
     test('not after tomorrow', () => {
-      expect('not after tomorrow').isTemporalFilter({
+      expect('not after tomorrow').isTemporalFilter(
+        {
+          operator: 'after',
+          not: true,
+          after: {moment: 'tomorrow'},
+        },
+        'through tomorrow'
+      );
+    });
+    test('through tomorrow', () => {
+      expect('through tomorrow').isTemporalFilter({
         operator: 'after',
         not: true,
         after: {moment: 'tomorrow'},
@@ -365,7 +392,7 @@ describe('temporal filter expressions', () => {
             {operator: 'after', after: {moment: 'yesterday'}},
           ],
         },
-        'not before tomorrow and after yesterday'
+        'starting tomorrow and after yesterday'
       );
     });
   });
