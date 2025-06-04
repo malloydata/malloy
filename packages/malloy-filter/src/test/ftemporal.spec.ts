@@ -392,7 +392,7 @@ describe('temporal filter expressions', () => {
             {operator: 'after', after: {moment: 'yesterday'}},
           ],
         },
-        'not before tomorrow and after yesterday'
+        'starting tomorrow and after yesterday'
       );
     });
   });
