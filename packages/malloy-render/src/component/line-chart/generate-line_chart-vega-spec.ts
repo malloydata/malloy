@@ -404,7 +404,7 @@ export function generateLineChartVegaSpec(
       update: {
         fillOpacity: [
           {
-            test: `hasNullTimeValues && datum.isNull`,
+            test: 'hasNullTimeValues && datum.isNull',
             value: 1,
           },
           {
