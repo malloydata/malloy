@@ -140,7 +140,6 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           : `
           import script from '${id}?raw';
           import {createLoader} from './util';
-          import {copyMalloyRenderHTML} from '../component/copy-to-html';
           import './themes.css';
           import {MalloyRenderer} from '../api/malloy-renderer';
 
@@ -153,7 +152,7 @@ export function viteMalloyStoriesPlugin(): PluginOption {
 
               const button = document.createElement('button');
               button.innerHTML = "Copy HTML";
-              button.addEventListener("click", () => copyMalloyRenderHTML(el));
+              button.addEventListener("click", () => viz.copyToHTML());
                parent.appendChild(button);
 
               const targetElement = document.createElement('div');

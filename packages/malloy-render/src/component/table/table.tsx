@@ -12,7 +12,6 @@ import {
 import {getRangeSize} from '../util';
 import {getTableLayout} from './table-layout';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import './table.css';
 import {applyRenderer} from '../apply-renderer';
 import {createStore, produce} from 'solid-js/store';
 import type {Virtualizer} from '@tanstack/solid-virtual';
@@ -25,6 +24,8 @@ import type {
   RecordOrRepeatedRecordCell,
 } from '../../data_tree';
 import {useResultContext} from '../result-context';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './table.css?raw';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -750,6 +751,8 @@ const MalloyTable: Component<{
           ? props.shouldFillWidth
           : tableConfig().shouldFillWidth,
     });
+
+  MalloyViz.addStylesheet(styles);
 
   return (
     <TableContext.Provider value={tableCtx()}>

@@ -13,7 +13,7 @@ import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import type {EventListenerHandler, Runtime, View} from 'vega';
 import type {VegaBrushOutput} from '../result-store/result-store';
-import './chart.css';
+
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
 import type {RepeatedRecordCell} from '../../data_tree';
@@ -21,6 +21,8 @@ import {useResultContext} from '../result-context';
 import {ErrorMessage} from '../error-message/error-message';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {resize} from '../util';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './chart.css?raw';
 let IS_STORYBOOK = false;
 try {
   const storybookConfig = (process.env as Record<string, string>)[
@@ -41,6 +43,7 @@ export type ChartProps = {
 };
 
 export function Chart(props: ChartProps) {
+  MalloyViz.addStylesheet(styles);
   const metadata = useResultContext();
   const data = props.data;
   const field = data.field;

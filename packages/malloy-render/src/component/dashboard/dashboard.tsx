@@ -9,12 +9,10 @@ import {For, Show} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import type {Virtualizer} from '@tanstack/solid-virtual';
 import {createVirtualizer} from '@tanstack/solid-virtual';
-import './dashboard.css';
-import type {
-  Field,
-  RecordCell,
-  RecordOrRepeatedRecordCell,
-} from '../../data_tree';
+import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './dashboard.css?raw';
+import {useConfig} from '../render';
 
 function DashboardItem(props: {
   field: Field;
@@ -90,6 +88,7 @@ export function Dashboard(props: {
   data: RecordOrRepeatedRecordCell;
   scrollEl?: HTMLElement;
 }) {
+  MalloyViz.addStylesheet(styles);
   const field = props.data.field;
   const tag = field.tag;
   const dashboardTag = tag.tag('dashboard');

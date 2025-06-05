@@ -18,11 +18,108 @@ export class MalloyViz {
   private disposeFn: (() => void) | null = null;
   private targetElement: HTMLElement | null = null;
   private result: Malloy.Result | null = null;
-
   private metadata: RenderFieldMetadata | null = null;
 
   constructor(private options: MalloyRendererOptions) {
     this.options = options;
+  }
+
+  static addStylesheet(styles: string) {
+    // Check if this exact stylesheet already exists in the document
+    const existingStylesheet = Array.from(
+      document.head.getElementsByTagName('style')
+    ).find(sheet => sheet.textContent === styles);
+
+    if (!existingStylesheet) {
+      const style = document.createElement('style');
+      style.setAttribute('data-malloy-viz', 'true');
+      style.textContent = styles;
+      document.head.appendChild(style);
+    }
+  }
+
+  async getHTML(): Promise<string> {
+    if (!this.targetElement) {
+      throw new Error('No target element to copy from');
+    }
+
+    const content = this.targetElement.innerHTML;
+    const styles = Array.from(document.head.getElementsByTagName('style'))
+      .filter(sheet => sheet.getAttribute('data-malloy-viz') === 'true')
+      .map(sheet => sheet.textContent)
+      .join('\n');
+
+    // Get the dimensions of the source element
+    const rect = this.targetElement.getBoundingClientRect();
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+
+    return `
+      <div style="width: ${width}px; height: ${height}px;">
+        <style>
+          ${styles}
+        </style>
+        <div class="malloy-viz">
+          ${content}
+        </div>
+      </div>
+    `;
+  }
+
+  async copyToHTML(): Promise<void> {
+    if (!this.result) {
+      throw new Error('No result to copy');
+    }
+
+    // Get dimensions from the original element
+    const originalRect = this.targetElement?.getBoundingClientRect();
+    if (!originalRect) {
+      throw new Error('No target element to measure');
+    }
+
+    // Create a temporary container off-screen
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    // Set explicit dimensions on the container
+    tempContainer.style.width = `${Math.round(originalRect.width)}px`;
+    tempContainer.style.height = `${Math.round(originalRect.height)}px`;
+    document.body.appendChild(tempContainer);
+
+    try {
+      // Create a new MalloyViz instance with disabled virtualization
+      const tempViz = new MalloyViz({
+        ...this.options,
+        tableConfig: {
+          ...this.options.tableConfig,
+          disableVirtualization: true,
+        },
+        dashboardConfig: {
+          ...this.options.dashboardConfig,
+          disableVirtualization: true,
+        },
+      });
+
+      // Set the same result
+      tempViz.setResult({malloyResult: this.result});
+
+      // Render to the temporary container
+      tempViz.render(tempContainer);
+
+      // Wait for rendering to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Get and copy the HTML
+      const html = await tempViz.getHTML();
+      await navigator.clipboard.writeText(html);
+
+      // Clean up
+      tempViz.remove();
+    } finally {
+      // Remove the temporary container
+      document.body.removeChild(tempContainer);
+    }
   }
 
   setResult({

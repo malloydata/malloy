@@ -2,8 +2,6 @@ import type {Meta} from '@storybook/html';
 import script from './themes.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
-
-import {copyMalloyRenderHTML} from '../component/copy-to-html';
 import {MalloyRenderer} from '../api/malloy-renderer';
 const meta: Meta = {
   title: 'Malloy Next/Themes',
@@ -33,7 +31,7 @@ const meta: Meta = {
     // copy to html test
     const button = document.createElement('button');
     button.innerHTML = 'Copy HTML';
-    // button.addEventListener('click', () => copyMalloyRenderHTML(targetElement));
+    button.addEventListener('click', () => viz.copyToHTML());
 
     parent.appendChild(button);
     parent.appendChild(targetElement);

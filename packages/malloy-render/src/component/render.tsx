@@ -16,7 +16,8 @@ import {
   ErrorBoundary,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
-import './render.css';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './render.css?raw';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used as a directive in JSX
 import {resize} from './util';
 import {applyRenderer} from './apply-renderer';
@@ -66,6 +67,7 @@ export const useConfig = () => {
 };
 
 export function MalloyRender(props: MalloyRenderProps) {
+  MalloyViz.addStylesheet(styles);
   const tableConfig: Accessor<TableConfig> = () =>
     Object.assign(
       {
