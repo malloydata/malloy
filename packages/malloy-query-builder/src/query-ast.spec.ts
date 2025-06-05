@@ -1774,6 +1774,87 @@ describe('query builder', () => {
       });
     });
 
+    test('repeatedly add a tag property to a query with a prefix', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.setTagProperty(['a'], undefined, '#r ');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          annotations: [{value: '#r a\n'}],
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: dedent`
+          #r a
+          run: flights -> { }
+        `,
+      });
+    });
+
+    test('repeatedly add a tag property to a query with a prefix', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.setTagProperty(['a'], undefined, '#r ');
+        q.setTagProperty(['b'], undefined, '#r ');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          annotations: [{value: '#r a b\n'}],
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: dedent`
+          #r a b
+          run: flights -> { }
+        `,
+      });
+    });
+
     test('remove then add a tag property to a query', () => {
       const from: Malloy.Query = {
         annotations: [{value: '# a\n'}],
