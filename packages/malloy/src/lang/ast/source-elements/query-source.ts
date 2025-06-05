@@ -42,7 +42,7 @@ export class QuerySource extends Source {
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): SourceDef {
-    const comp = this.query.queryComp(false);
+    const comp = this.query.queryComp(false, parameterSpace);
     const queryStruct: QuerySourceDef = {
       ...comp.outputStruct,
       name: `QuerySource-${uuidv4()}`,

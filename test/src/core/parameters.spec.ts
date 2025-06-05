@@ -242,7 +242,7 @@ describe('parameters', () => {
       'n.param_value_3': 10,
     });
   });
-  it.skip('can pass param into joined source from query', async () => {
+  it('can pass param into joined source from query', async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(
@@ -256,7 +256,7 @@ describe('parameters', () => {
       ) is duckdb.table('malloytest.state_facts') extend {
         where: state = state_filter
 
-        join_many: state_facts is (state_facts(state_filter) -> { select: * }) on 1 = 1
+        join_many: state_facts is state_facts(state_filter) -> { select: * } on 1 = 1
       }
 
       run: state_facts2(state_filter is "CA") -> {

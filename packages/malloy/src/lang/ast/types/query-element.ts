@@ -28,9 +28,13 @@ import {QueryReference} from '../query-elements/query-reference';
 import {QueryRaw} from '../query-elements/query-raw';
 import type {Query} from '../../../model/malloy_types';
 import type {QueryComp} from './query-comp';
+import type {ParameterSpace} from '../field-space/parameter-space';
 
 export interface QueryElement extends MalloyElement {
-  queryComp(isRefOk: boolean): QueryComp;
+  queryComp(
+    isRefOk: boolean,
+    parameterSpace: ParameterSpace | undefined
+  ): QueryComp;
   query(): Query;
 }
 

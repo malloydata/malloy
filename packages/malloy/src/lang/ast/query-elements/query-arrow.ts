@@ -31,6 +31,7 @@ import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
 import {checkRequiredGroupBys} from '../../../model/composite_source_utils';
+import type {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -47,7 +48,10 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  queryComp(
+    isRefOk: boolean,
+    parameterSpace: ParameterSpace | undefined
+  ): QueryComp {
     let inputStruct: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
@@ -55,8 +59,8 @@ export class QueryArrow extends QueryBase implements QueryElement {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
       const invoked = isRefOk
-        ? this.source.structRef(undefined)
-        : {structRef: this.source.getSourceDef(undefined)};
+        ? this.source.structRef(parameterSpace)
+        : {structRef: this.source.getSourceDef(parameterSpace)};
       queryBase = {
         type: 'query',
         ...invoked,
@@ -65,11 +69,11 @@ export class QueryArrow extends QueryBase implements QueryElement {
       };
       inputStruct = refIsStructDef(invoked.structRef)
         ? invoked.structRef
-        : this.source.getSourceDef(undefined);
+        : this.source.getSourceDef(parameterSpace);
       fieldSpace = new StaticSourceSpace(inputStruct, 'public');
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
-      const lhsQuery = this.source.queryComp(isRefOk);
+      const lhsQuery = this.source.queryComp(isRefOk, parameterSpace);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
