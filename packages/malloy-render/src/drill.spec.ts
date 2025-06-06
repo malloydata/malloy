@@ -4,7 +4,8 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-// @ts-ignore @typescript-eslint/ban-ts-comment
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import {runtimeFor} from '../../../test/src/runtimes';
 import {getDataTree} from './data_tree';
 import {API} from '@malloydata/malloy';
