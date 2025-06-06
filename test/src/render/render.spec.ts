@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Result, API, type ModelMaterializer} from '@malloydata/malloy';
+import {API, type ModelMaterializer, type Result} from '@malloydata/malloy';
 import {RuntimeList, runtimeFor} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
 import {JSDOM} from 'jsdom';
