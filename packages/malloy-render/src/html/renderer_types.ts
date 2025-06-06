@@ -31,6 +31,7 @@ export interface RendererOptions {
   titleCase?: boolean;
   queryTimezone?: string;
   nextRendererOptions?: Partial<MalloyRenderProps>;
+  useLegacy?: boolean;
 }
 
 export type DrillFunction = (

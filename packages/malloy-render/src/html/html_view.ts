@@ -47,8 +47,9 @@ export class HTMLView {
     options: RendererOptions
   ): Promise<HTMLElement> {
     const modelTag = tagFromAnnotations(malloyResult.model_annotations, '## ');
-    const isNextRenderer = !modelTag.has('renderer_legacy');
-    if (isNextRenderer) {
+    const useLegacyRenderer =
+      modelTag.has('renderer_legacy') || options.useLegacy === true;
+    if (!useLegacyRenderer) {
       const renderer = new MalloyRenderer();
       const nextRendererOptions = options.nextRendererOptions ?? {};
       const viz = renderer.createViz(nextRendererOptions);

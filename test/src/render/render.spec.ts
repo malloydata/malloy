@@ -52,6 +52,7 @@ async function runUnsupportedRenderTest(
       convertResultToMalloyResult(result),
       {
         dataStyles: {},
+        useLegacy: true,
       }
     );
     expect(html.innerHTML).toContain('<thead>');
@@ -91,6 +92,7 @@ describe('rendering results', () => {
       const document = new JSDOM().window.document;
       await new HTMLView(document).render(convertResultToMalloyResult(result), {
         dataStyles: {},
+        useLegacy: true,
       });
     }
   });
@@ -308,9 +310,9 @@ describe('rendering results', () => {
           convertResultToMalloyResult(result),
           {
             dataStyles: {},
+            useLegacy: true,
           }
         );
-
         expect(html).toMatchSnapshot();
       });
 
@@ -321,6 +323,7 @@ describe('rendering results', () => {
           convertResultToMalloyResult(result),
           {
             dataStyles: {},
+            useLegacy: true,
           }
         );
 
@@ -389,6 +392,7 @@ describe('rendering results', () => {
           convertResultToMalloyResult(result),
           {
             dataStyles: {},
+            useLegacy: true,
           }
         );
 
@@ -404,6 +408,7 @@ describe('rendering results', () => {
           convertResultToMalloyResult(result),
           {
             dataStyles: {},
+            useLegacy: true,
           }
         );
 
@@ -470,6 +475,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -525,6 +531,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -549,6 +556,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -576,6 +584,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -602,6 +611,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -630,6 +640,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -658,6 +669,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -691,6 +703,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -723,6 +736,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
@@ -790,6 +804,7 @@ describe('rendering results', () => {
         convertResultToMalloyResult(result),
         {
           dataStyles: {},
+          useLegacy: true,
         }
       );
 
