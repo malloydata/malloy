@@ -1,3 +1,6 @@
+/**
+ * @jest-environment ./test/environments/render-environment
+ */
 /*
  * Copyright 2023 Google LLC
  *
