@@ -21,11 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {ModelMaterializer} from '@malloydata/malloy';
+import {Result, API, type ModelMaterializer} from '@malloydata/malloy';
 import {RuntimeList, runtimeFor} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
 import {JSDOM} from 'jsdom';
 import {HTMLView} from '@malloydata/render';
+
+function convertResultToMalloyResult(result: Result) {
+  return API.util.wrapResult(result);
+}
 
 async function runUnsupportedRenderTest(
   connectionName: string,
@@ -44,9 +48,12 @@ async function runUnsupportedRenderTest(
     const result = await runtime.loadModel(src).loadQueryByName('q').run();
     // console.log("DATA", result.data.toObject());
     const document = new JSDOM().window.document;
-    const html = await new HTMLView(document).render(result, {
-      dataStyles: {},
-    });
+    const html = await new HTMLView(document).render(
+      convertResultToMalloyResult(result),
+      {
+        dataStyles: {},
+      }
+    );
     expect(html.innerHTML).toContain('<thead>');
     expect(html.innerHTML).toContain(rendered);
     // console.log(html.innerHTML);
@@ -82,7 +89,7 @@ describe('rendering results', () => {
       `;
       const result = await runtime.loadQuery(src).run();
       const document = new JSDOM().window.document;
-      await new HTMLView(document).render(result, {
+      await new HTMLView(document).render(convertResultToMalloyResult(result), {
         dataStyles: {},
       });
     }
@@ -297,9 +304,12 @@ describe('rendering results', () => {
       test('regular table', async () => {
         const result = await model.loadQueryByName('by_name').run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -307,9 +317,12 @@ describe('rendering results', () => {
       test('transposed table', async () => {
         const result = await model.loadQueryByName('by_name_transposed').run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -372,9 +385,12 @@ describe('rendering results', () => {
       test('rendered correctly table', async () => {
         const result = await modelMaterializer.loadQueryByName('by_name').run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -384,9 +400,12 @@ describe('rendering results', () => {
           .loadQueryByName('by_name_db')
           .run();
         const document = new JSDOM().window.document;
-        const html = await new HTMLView(document).render(result, {
-          dataStyles: {},
-        });
+        const html = await new HTMLView(document).render(
+          convertResultToMalloyResult(result),
+          {
+            dataStyles: {},
+          }
+        );
 
         expect(html).toMatchSnapshot();
       });
@@ -447,9 +466,12 @@ describe('rendering results', () => {
         .loadQueryByName('by_name')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -499,9 +521,12 @@ describe('rendering results', () => {
         .loadQueryByName('flatten')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -520,9 +545,12 @@ describe('rendering results', () => {
         .loadQueryByName('mex_query')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -544,9 +572,12 @@ describe('rendering results', () => {
         .loadQueryByName('data_trunc')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -567,9 +598,12 @@ describe('rendering results', () => {
         .loadQueryByName('mex_query')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -592,9 +626,12 @@ describe('rendering results', () => {
         .loadQueryByName('mexico_point_map')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -617,9 +654,12 @@ describe('rendering results', () => {
         .loadQueryByName('number_query')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -647,9 +687,12 @@ describe('rendering results', () => {
         .loadQueryByName('bytes_query')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -676,9 +719,12 @@ describe('rendering results', () => {
         .loadQueryByName('bytes_query')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
@@ -740,9 +786,12 @@ describe('rendering results', () => {
         .loadQueryByName('duration_query')
         .run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
-      });
+      const html = await new HTMLView(document).render(
+        convertResultToMalloyResult(result),
+        {
+          dataStyles: {},
+        }
+      );
 
       expect(html).toMatchSnapshot();
     });
