@@ -27,7 +27,7 @@ const meta: Meta = {
       },
     });
     const viz = renderer.createViz();
-    viz.setResult({malloyResult: context.loaded['result']});
+    viz.setResult(context.loaded['result']);
     viz.render(el);
     parent.appendChild(el);
     return parent;

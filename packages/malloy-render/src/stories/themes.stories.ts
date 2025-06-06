@@ -22,9 +22,7 @@ const meta: Meta = {
         console.log('Malloy render error', error);
       },
     });
-    viz.setResult({
-      malloyResult: context.loaded['result'],
-    });
+    viz.setResult(context.loaded['result']);
     console.log('initial state', viz.getMetadata());
     viz.render(targetElement);
 

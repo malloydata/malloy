@@ -6,12 +6,10 @@
  */
 
 import {render} from 'solid-js/web';
-import type {ModelDef, QueryResult} from '@malloydata/malloy';
 import type {MalloyRendererOptions} from '@/api/types';
 import {MalloyRender} from '@/component/render';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {Result, API} from '@malloydata/malloy';
 import {RenderFieldMetadata} from '@/render-field-metadata';
 
 export class MalloyViz {
@@ -102,7 +100,7 @@ export class MalloyViz {
       });
 
       // Set the same result
-      tempViz.setResult({malloyResult: this.result});
+      tempViz.setResult(this.result);
 
       // Render to the temporary container
       tempViz.render(tempContainer);
@@ -122,25 +120,8 @@ export class MalloyViz {
     }
   }
 
-  setResult({
-    malloyResult,
-    result,
-    queryResult,
-    modelDef,
-  }: {
-    malloyResult?: Malloy.Result;
-    result?: Result;
-    queryResult?: QueryResult;
-    modelDef?: ModelDef;
-  }): void {
-    let finalResult: Malloy.Result | null = null;
-
-    if (malloyResult) {
-      finalResult = malloyResult;
-    } else if (result) finalResult = API.util.wrapResult(result);
-    else if (queryResult && modelDef)
-      finalResult = API.util.wrapResult(new Result(queryResult!, modelDef!));
-    this.result = finalResult;
+  setResult(malloyResult: Malloy.Result): void {
+    this.result = malloyResult;
     if (this.result) this.metadata = new RenderFieldMetadata(this.result);
   }
 

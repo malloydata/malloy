@@ -22,13 +22,11 @@ const renderer = new MalloyRenderer({
   },
 });
 
-// Create a viz instance from a schema
-const viz = renderer.createViz({
-  modelDef: myModelDef,
-});
+// Create a viz instance
+const viz = renderer.createViz();
 
 // Pass in data
-viz.setResult(queryResult);
+viz.setResult(malloyResult);
 
 // Get metadata about the query renderers
 viz.getMetadata();
@@ -38,7 +36,7 @@ const targetElement = document.getElementById('malloy_chart');
 viz.render(targetElement);
 
 // Update results and re-render into the same DOM node
-viz.setResult(nextQueryResult);
+viz.setResult(nextMalloyResult);
 viz.render();
 
 // Remove from DOM element, dispose of component
@@ -54,7 +52,7 @@ The main renderer class that manages global configuration.
 ```typescript
 class MalloyRenderer {
   constructor(options?: MalloyRendererOptions);
-  createViz(schema: QuerySchema): MalloyViz;
+  createViz(additionalOptions?: Partial<MalloyRendererOptions>): MalloyViz;
   updateOptions(newOptions: Partial<MalloyRendererOptions>): void;
   getOptions(): MalloyRendererOptions;
 }
@@ -66,11 +64,15 @@ Represents an individual visualization instance.
 
 ```typescript
 class MalloyViz {
-  setResult(queryResult: QueryResult): void;
-  render(targetElement: HTMLElement): void;
+  constructor(options: MalloyRendererOptions);
+  setResult(malloyResult: Malloy.Result): void;
+  render(targetElement?: HTMLElement): void;
   remove(): void;
   updateOptions(newOptions: Partial<MalloyRendererOptions>): void;
-  getMetadata(): (metadata: RenderFieldMetadata | null);
+  getMetadata(): RenderFieldMetadata | null;
+  getHTML(): Promise<string>;
+  copyToHTML(): Promise<void>;
+  static addStylesheet(styles: string): void;
 }
 ```
 
@@ -80,6 +82,7 @@ class MalloyViz {
 interface MalloyRendererOptions {
   onClick?: (payload: MalloyClickEventPayload) => void;
   onDrill?: (drillData: DrillData) => void;
+  onError?: (error: Error) => void;
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
@@ -143,7 +146,7 @@ CSS selectors that used `:host` are now scoped to the container ".malloy-render"
 }
 
 /* After - automatically scoped */
-.malloy-render-container[data-theme='unique-id'] {
+.malloy-render {
   font-family: var(--malloy-render--font-family);
 }
 ```
@@ -156,6 +159,7 @@ The renderer will continue to expose CSS variables for customizing the theme, bu
 2. **CSS Handling**: No ShadowRoot boundaries around CSS
 3. **Import Changes**: New imports for the JavaScript API
 4. **DOM Structure**: Renders directly into provided element instead of shadow root
+5. **HTML Export**: New methods `getHTML()` and `copyToHTML()` for exporting visualizations
 
 ## Backward Compatibility
 
@@ -170,10 +174,11 @@ import {HTMLView, JSONView, getDataTree} from '@malloydata/render';
 
 ### Under the Hood
 
-- Still uses SolidJS components for rendering
+- Uses SolidJS components for rendering
 - Uses `solid-js/web` `render()` function to mount to DOM
-- CSS is injected into document head with scoped selectors
+- CSS is injected into document head with `data-malloy-viz` attribute
 - No web component infrastructure required
+- Supports HTML export functionality for copying visualizations
 
 ## Migration Steps
 
@@ -181,3 +186,4 @@ import {HTMLView, JSONView, getDataTree} from '@malloydata/render';
 2. **Update imports** to use new API classes
 3. **Update CSS handling** if you were using custom styles
 4. **Test thoroughly** - behavior should be identical but integration is different
+5. **Update HTML export** if you were using the old export methods
