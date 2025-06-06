@@ -185,11 +185,13 @@ export function MalloyRenderInner(props: {
       style={style()}
       use:resize={[parentSize, setParentSize]}
     >
-      <ResultContext.Provider value={metadata}>
-        {rendering().renderValue}
-      </ResultContext.Provider>
-      <Show when={metadata().store.store.showCopiedModal}>
-        <div class="malloy-copied-modal">Copied query to clipboard!</div>
+      <Show when={parentSize().width > 0 && parentSize().height > 0}>
+        <ResultContext.Provider value={metadata}>
+          {rendering().renderValue}
+        </ResultContext.Provider>
+        <Show when={metadata().store.store.showCopiedModal}>
+          <div class="malloy-copied-modal">Copied query to clipboard!</div>
+        </Show>
       </Show>
     </div>
   );
