@@ -32,13 +32,12 @@ import {createResultStore} from '@/component/result-store/result-store';
 import {generateLineChartVegaSpec} from '@/component/line-chart/generate-line_chart-vega-spec';
 import type {Config, Runtime} from 'vega';
 import {parse} from 'vega';
-import type {NestField, RepeatedRecordField} from '@/data_tree';
 import {defaultSettings} from '@/component/default-settings';
 import {
   convertLegacyToVizTag,
   getChartTypeFromNormalizedTag,
 } from './tag-utils';
-import type {RootField} from '@/data_tree';
+import type {RootField, NestField, RepeatedRecordField} from '@/data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
