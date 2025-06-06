@@ -2,6 +2,10 @@ import {JSDOM, VirtualConsole} from 'jsdom';
 const {window} = new JSDOM('', {
   virtualConsole: new VirtualConsole().sendTo(console, {omitJSDOMErrors: true}),
 });
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+// global.window = window;
+// global.navigator = window.navigator;
 global.document = window.document;
 global.HTMLElement = window.HTMLElement;
 global.customElements = window.customElements;
