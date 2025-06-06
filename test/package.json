@@ -36,7 +36,8 @@
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.1",
-    "@types/luxon": "^2.4.0"
+    "@types/luxon": "^2.4.0",
+    "jest-environment-node": "^30.0.0-beta.3"
   },
   "version": "0.0.289"
 }

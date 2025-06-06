@@ -1,3 +1,4 @@
+// eslint-disable-next-line node/no-unpublished-require
 const NodeEnvironment = require('jest-environment-node');
 const {JSDOM} = require('jsdom');
 
