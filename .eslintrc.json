@@ -46,7 +46,7 @@
   },
   "overrides": [
     {
-      "files": ["scripts/**"],
+      "files": ["scripts/**", "packages/malloy-render/src/stories/**"],
       "rules": {
         "no-console": "off"
       }

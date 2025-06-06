@@ -13,14 +13,16 @@ import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import type {EventListenerHandler, Runtime, View} from 'vega';
 import type {VegaBrushOutput} from '../result-store/result-store';
-import css from './chart.css?raw';
-import {useConfig} from '../render';
+
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
 import type {RepeatedRecordCell} from '../../data_tree';
 import {useResultContext} from '../result-context';
 import {ErrorMessage} from '../error-message/error-message';
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import {resize} from '../util';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './chart.css?raw';
 let IS_STORYBOOK = false;
 try {
   const storybookConfig = (process.env as Record<string, string>)[
@@ -41,9 +43,8 @@ export type ChartProps = {
 };
 
 export function Chart(props: ChartProps) {
-  const config = useConfig();
+  MalloyViz.addStylesheet(styles);
   const metadata = useResultContext();
-  config.addCSSToShadowRoot(css);
   const data = props.data;
   const field = data.field;
   const vegaInfo = metadata.vega[field.key];
@@ -77,9 +78,7 @@ export function ChartInner(props: {
   devMode?: boolean;
   onView?: (view: View) => void;
 }) {
-  const config = useConfig();
   const metadata = useResultContext();
-  config.addCSSToShadowRoot(css);
   const data = props.data;
   const field = data.field;
   let values: unknown[] = [];
@@ -227,13 +226,6 @@ export function ChartInner(props: {
     height: props.chartProps.plotHeight,
   });
 
-  const observer = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const {width, height} = entry.contentRect;
-      setChartSpace({width, height});
-    }
-  });
-
   return (
     <div
       class="malloy-chart"
@@ -266,7 +258,10 @@ export function ChartInner(props: {
           )}
         </div>
       </Show>
-      <div class="malloy-chart__container" ref={el => observer.observe(el)}>
+      <div
+        class="malloy-chart__container"
+        use:resize={[chartSpace, setChartSpace]}
+      >
         <VegaChart
           width={chartSpace().width}
           height={chartSpace().height}
