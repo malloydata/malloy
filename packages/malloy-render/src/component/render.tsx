@@ -34,7 +34,6 @@ import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
 import {LineChartSeriesPluginFactory} from '../plugins/line-chart-series-plugin';
 import {ErrorMessage} from './error-message/error-message';
-import type {ICustomElement} from 'component-register';
 
 export type MalloyRenderProps = {
   result?: Malloy.Result;
@@ -48,10 +47,6 @@ export type MalloyRenderProps = {
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
 };
-
-export type MalloyCustomElement = HTMLElement &
-  ICustomElement &
-  MalloyRenderProps;
 
 const ConfigContext = createContext<{
   tableConfig: Accessor<TableConfig>;

@@ -2,7 +2,6 @@ import type {Meta} from '@storybook/html';
 import script from './vega-config-override.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
-import '../component/render-webcomponent';
 import {MalloyRenderer} from '@/api/malloy-renderer';
 
 const meta: Meta = {
