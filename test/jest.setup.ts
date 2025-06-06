@@ -2,7 +2,7 @@ import {JSDOM, VirtualConsole} from 'jsdom';
 const {window} = new JSDOM('', {
   virtualConsole: new VirtualConsole().sendTo(console, {omitJSDOMErrors: true}),
 });
-// @ts-ignore
+// @ts-ignore @typescript-eslint/ban-ts-comment
 global.window = window;
 global.navigator = window.navigator;
 global.document = window.document;
