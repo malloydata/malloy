@@ -26,10 +26,6 @@ export {HTMLView, JSONView} from './html/html_view';
 export * from './html/data_styles';
 export type {MalloyRenderProps} from './component/render';
 export {getDataTree} from './data_tree';
-export {
-  copyMalloyRenderHTML,
-  getMalloyRenderHTML,
-} from '@/component/copy-to-html';
 
 // New JavaScript API exports
 export {MalloyRenderer} from '@/api/malloy-renderer';

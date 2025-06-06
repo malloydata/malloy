@@ -38,6 +38,7 @@ import {
   convertLegacyToVizTag,
   getChartTypeFromNormalizedTag,
 } from './tag-utils';
+import type {RootField} from '@/data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;

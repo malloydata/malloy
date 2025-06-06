@@ -1,9 +1,7 @@
 import {compose, register} from 'component-register';
 import {withSolid} from 'solid-element';
-import type {MalloyCustomElement} from './render';
-import {MalloyRender} from './render';
-import type {MalloyModalWCProps} from './malloy-modal/malloy-modal-wc';
-import {MalloyModalWC} from './malloy-modal/malloy-modal-wc';
+
+import {MalloyRender, type MalloyCustomElement} from './render';
 
 export default function registerWebComponent({
   customElements = window.customElements,
@@ -38,24 +36,10 @@ export default function registerWebComponent({
       "The custom element 'malloy-render' has already been defined. Make sure you are not loading multiple versions of the malloy-render package as they could conflict."
     );
   }
-
-  if (!customElements.get('malloy-modal')) {
-    compose(
-      register(
-        'malloy-modal',
-        {
-          stylesheet: undefined,
-        },
-        {customElements, BaseElement: HTMLElement}
-      ),
-      withSolid
-    )(MalloyModalWC);
-  }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     'malloy-render': MalloyCustomElement;
-    'malloy-modal': HTMLElement & MalloyModalWCProps;
   }
 }
