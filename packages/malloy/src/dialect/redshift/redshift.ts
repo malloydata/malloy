@@ -66,7 +66,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const redshiftToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'smallint': {type: 'number', numberType: 'integer'},
   'integer': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
@@ -205,18 +205,7 @@ export class RedshiftDialect extends PostgresBase {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    if (isArray) {
-      if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
-      } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
-      }
-    } else if (needDistinctKey) {
-      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_number', row_number() over())|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
-    } else {
-      // can already access data fine so just keep original table
-      return `, __stage1 as ${alias}`;
-    }
+    return `, ${source} as ${alias}`;
   }
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
@@ -253,19 +242,31 @@ export class RedshiftDialect extends PostgresBase {
       return `(${parentAlias}->>'__row_id')`;
     }
     if (parentType !== 'table') {
-      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
-      ret = `${parentAlias}.${childName}`;
+      let ret = `${parentAlias}.${childName}`;
+
+      // trying to unnest scalar array
+      if (parentType.startsWith('array') && childName === 'value') {
+        // no need for 'value' field, Redshift will auto unnest the array
+        // in the FROM clause
+        ret = parentAlias;
+      }
       switch (childType) {
         case 'string':
+          // these explicit casts are needed when trying to put
+          // result of super unnest into string function
+          ret = `${ret}::varchar`;
           break;
         case 'number':
           ret = `${ret}::double precision`;
+          break;
+        case 'boolean':
+          ret = `${ret}::boolean`;
           break;
         case 'struct':
         case 'array':
         case 'record':
         case 'array[record]':
-          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
+          ret = `${parentAlias}.${childName}`;
           break;
       }
       return ret;
@@ -480,7 +481,7 @@ export class RedshiftDialect extends PostgresBase {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (
-      postgresToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
+      redshiftToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
         type: 'sql native',
         rawType: sqlType,
       }
