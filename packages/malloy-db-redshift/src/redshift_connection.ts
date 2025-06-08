@@ -187,6 +187,8 @@ export class RedshiftConnection
     }
   }
 
+  PRIMITIVE_TYPES = ['decimal', 'boolean', 'timestamptz', 'varchar'];
+
   // Updates the inputted path into the path-to-dataType map.
   // Uses the inputted dataType if provided, else figures out the dataType.
   // Returns false if the path has ambiguous types, indicating that
@@ -215,13 +217,22 @@ export class RedshiftConnection
 
     // Path seen before. Check if the type is different.
     if (pathToType.has(path)) {
-      const existingType = pathToType.get(path);
+      const existingType = pathToType.get(path) ?? '';
       // Conflict if types differ, and the new type isn't just a null fallback
       if (existingType !== newType && !isNullFallback) {
-        // Mixed types detected - remove the path and mark as mixed.
-        pathToType.delete(path);
-        pathsWithAmbiguousTypes.add(path);
-        return false; // Became ambiguous, return false
+        // if both types are primitive types (number, boolean, string),
+        // then we default as varchar and add to the pathToType map
+        if (
+          this.PRIMITIVE_TYPES.includes(existingType) &&
+          this.PRIMITIVE_TYPES.includes(newType)
+        ) {
+          pathToType.set(path, 'varchar');
+        } else {
+          // else remove the path and mark as mixed.
+          pathToType.delete(path);
+          pathsWithAmbiguousTypes.add(path);
+          return false; // Became ambiguous, return false
+        }
       }
     } else if (!isNullFallback) {
       // Path not seen before. Set the type, unless it's a null fallback.
