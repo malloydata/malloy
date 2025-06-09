@@ -202,15 +202,12 @@ export class NamedSource extends Source {
           parameter.type === 'filter expression' &&
           parameter.filterType
         ) {
-          if (
-            value.node === 'parameter' &&
-            pVal.type === 'filter expression' &&
-            'filterType' in pVal
-          ) {
-            if (parameter.filterType !== pVal.filterType) {
+          if (value.node === 'parameter') {
+            const filterType = pVal['filterType'] ?? 'missing-filter-type';
+            if (parameter.filterType !== filterType) {
               argument.value.logError(
                 'filter-expression-type',
-                `Parameter types filter<${parameter.filterType}> and filter<${pVal.filterType}> do not match`
+                `Parameter types filter<${parameter.filterType}> and filter<${filterType}> do not match`
               );
             }
           } else {
