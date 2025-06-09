@@ -255,11 +255,20 @@ export function wrapResult(result: Result): Malloy.Result {
       .set(['query_name'], result.resultExplore.name)
       .toString(),
   });
+
+  const modelAnnotations = annotationToTaglines(
+    result._modelDef.annotation
+  ).map(l => ({
+    value: l,
+  }));
+
   return {
     schema,
     data: mapData(result.data.toObject(), schema),
     connection_name: result.connectionName,
     annotations: annotations.length > 0 ? annotations : undefined,
+    model_annotations:
+      modelAnnotations.length > 0 ? modelAnnotations : undefined,
     query_timezone: result.data.field.queryTimezone,
     sql: result.sql,
   };
