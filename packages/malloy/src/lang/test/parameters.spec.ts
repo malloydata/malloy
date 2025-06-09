@@ -737,4 +737,15 @@ describe('parameters', () => {
       source: a2(p2::filter<number> is f'2') is a1(p1 is p2)
     `).toTranslate();
   });
+  test('parameters check mismatch on forwarded filter expressions', () => {
+    expect(`
+      ##! experimental.parameters
+      source: a1(p1::filter<number> is f'1') is a extend { where: ai ~ p1 }
+      source: a2(p2::filter<string> is f'2') is a1(p1 is p2)
+    `).toLog(
+      errorMessage(
+        'Parameter types filter<number> and filter<string> do not match'
+      )
+    );
+  });
 });
