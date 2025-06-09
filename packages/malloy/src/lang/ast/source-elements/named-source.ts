@@ -202,7 +202,20 @@ export class NamedSource extends Source {
           parameter.type === 'filter expression' &&
           parameter.filterType
         ) {
-          checkFilterExpression(argument.value, parameter.filterType, value);
+          if (
+            value.node === 'parameter' &&
+            pVal.type === 'filter expression' &&
+            'filterType' in pVal
+          ) {
+            if (parameter.filterType !== pVal.filterType) {
+              argument.value.logError(
+                'filter-expression-type',
+                `Parameter types filter<${parameter.filterType}> and filter<${pVal.filterType}> do not match`
+              );
+            }
+          } else {
+            checkFilterExpression(argument.value, parameter.filterType, value);
+          }
         }
         if (pVal.type !== parameter.type && isCastType(parameter.type)) {
           value = castTo(parameter.type, pVal.value, pVal.type, true);

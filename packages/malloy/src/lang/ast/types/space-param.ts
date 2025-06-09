@@ -45,15 +45,7 @@ export class AbstractParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
-    const p = this.parameter();
-    const t = p.type;
-    const theType = t === 'filter expression' ? {type: t} : TDU.atomicDef(p);
-    return {
-      ...theType,
-      expressionType: 'scalar',
-      evalSpace: 'constant',
-      fieldUsage: [],
-    };
+    return TDU.parameterTypeDesc(this.parameter(), 'constant');
   }
 }
 
@@ -67,16 +59,8 @@ export class DefinedParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
-    const p = this.parameter();
-    const t = p.type;
-    const theType = t === 'filter expression' ? {type: t} : TDU.atomicDef(p);
-    return {
-      ...theType,
-      expressionType: 'scalar',
-      // TODO Not sure whether params are considered "input space". It seems like they
-      // could be input or constant, depending on usage (same as above).
-      evalSpace: 'input',
-      fieldUsage: [],
-    };
+    // TODO Not sure whether params are considered "input space". It seems like they
+    // could be input or constant, depending on usage (same as above).
+    return TDU.parameterTypeDesc(this.parameter(), 'input');
   }
 }
