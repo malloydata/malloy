@@ -6,7 +6,7 @@ Contributions to the Malloy project must be licensed under an [MIT-Style](https:
 
 ### Adding New Files
 
-Contributors who are adding new files to the repository have a couple of options. Our preferred option is for any any files to have this copyright header (with appropriate comment characters to match the
+Contributors who are adding new files to the repository have a couple of options. Our preferred option is for files to have this copyright header (with appropriate comment characters to match the
 language of the new file):
 
 ```
