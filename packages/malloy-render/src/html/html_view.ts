@@ -36,42 +36,32 @@ import {getDataTree} from '../data_tree';
 import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListRenderer} from './list';
 import {HTMLListDetailRenderer} from './list_detail';
-import {Result, API} from '@malloydata/malloy';
 import {tagFromAnnotations} from '../util';
+import {MalloyRenderer} from '@/api/malloy-renderer';
 
 export class HTMLView {
   constructor(private document: Document) {}
 
   async render(
-    result: Result | Malloy.Result,
+    malloyResult: Malloy.Result,
     options: RendererOptions
   ): Promise<HTMLElement> {
-    let malloyResult: Malloy.Result;
-    // TODO this check is bad, but I can't get VSCode to work linked without it...
-    if (result && (result instanceof Result || 'modelDef' in result)) {
-      malloyResult = API.util.wrapResult(result as Result);
-    } else {
-      malloyResult = result;
-    }
     const modelTag = tagFromAnnotations(malloyResult.model_annotations, '## ');
-    const isNextRenderer = !modelTag.has('renderer_legacy');
-    if (isNextRenderer) {
-      const hasNextRenderer =
-        !!this.document.defaultView?.customElements.get('malloy-render');
-      if (hasNextRenderer) {
-        const el = this.document.createElement('malloy-render');
-        el.malloyResult = malloyResult;
-        const nextRendererOptions = options.nextRendererOptions ?? {};
-        for (const [key, val] of Object.entries(nextRendererOptions)) {
-          el[key] = val;
-        }
-        return el;
-      } else {
-        // eslint-disable-next-line no-console
-        console.warn(
-          'Tried to use the new Malloy renderer, but the malloy-render component was not found. Falling back to the legacy renderer.'
-        );
-      }
+    const useLegacyRenderer =
+      modelTag.has('renderer_legacy') || options.useLegacy === true;
+    if (!useLegacyRenderer) {
+      const renderer = new MalloyRenderer();
+      const nextRendererOptions = options.nextRendererOptions ?? {};
+      const viz = renderer.createViz(nextRendererOptions);
+      viz.setResult(malloyResult);
+      const el = this.document.createElement('div');
+      viz.render(el);
+      return el;
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'Tried to use the new Malloy renderer, but the malloy-render component was not found. Falling back to the legacy renderer.'
+      );
     }
     const rootCell = getDataTree(malloyResult);
     const renderer = makeRenderer(

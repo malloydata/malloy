@@ -24,24 +24,20 @@
 
 import type {Tag} from '@malloydata/malloy-tag';
 import type {VegaChartProps, VegaConfigHandler} from './types';
-import {mergeVegaConfigs} from './vega/merge-vega-configs';
-import {baseVegaConfig} from './vega/base-vega-config';
-import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
-import type {ResultStore} from './result-store/result-store';
-import {createResultStore} from './result-store/result-store';
-import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
+import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
+import {baseVegaConfig} from '@/component/vega/base-vega-config';
+import {generateBarChartVegaSpec} from '@/component/bar-chart/generate-bar_chart-vega-spec';
+import type {ResultStore} from '@/component/result-store/result-store';
+import {createResultStore} from '@/component/result-store/result-store';
+import {generateLineChartVegaSpec} from '@/component/line-chart/generate-line_chart-vega-spec';
 import type {Config, Runtime} from 'vega';
 import {parse} from 'vega';
-import {
-  type NestField,
-  type RepeatedRecordField,
-  type RootCell,
-} from '../data_tree';
-import {defaultSettings} from './default-settings';
+import {defaultSettings} from '@/component/default-settings';
 import {
   convertLegacyToVizTag,
   getChartTypeFromNormalizedTag,
 } from './tag-utils';
+import type {RootField, NestField, RepeatedRecordField} from '@/data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
@@ -57,17 +53,18 @@ export interface FieldVegaInfo {
 export interface RenderMetadata {
   store: ResultStore;
   vega: Record<string, FieldVegaInfo>;
-  root: RootCell;
+  rootField: RootField;
   parentSize: {width: number; height: number};
   renderAs: string;
   sizingStrategy: 'fill' | 'fixed';
 }
 
 export function getResultMetadata(
-  root: RootCell,
+  rootField: RootField,
   options: GetResultMetadataOptions = {parentSize: {width: 0, height: 0}}
 ): RenderMetadata {
-  const rootTag = root.field.tag;
+  const rootTag = rootField.tag;
+
   const rootSizingStrategy =
     rootTag.has('size') && rootTag.text('size') !== 'fill'
       ? 'fixed'
@@ -79,12 +76,12 @@ export function getResultMetadata(
   const metadata: RenderMetadata = {
     store: createResultStore(),
     vega: {},
-    root,
+    rootField,
     parentSize: options.parentSize,
-    renderAs: root.field.renderAs,
+    renderAs: rootField.renderAs,
     sizingStrategy: chartSizingStrategy ?? rootSizingStrategy,
   };
-  populateAllVegaSpecs(root.field, metadata, options);
+  populateAllVegaSpecs(rootField, metadata, options);
 
   return metadata;
 }
