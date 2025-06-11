@@ -4479,7 +4479,7 @@ class QueryFieldStruct extends QueryField {
       sourceArguments,
       {struct: parent},
       prepareResultOptions,
-      undefined
+      parent
     );
   }
 
@@ -4585,20 +4585,20 @@ class QueryStruct {
           : exprMap(param.value, frag => {
               if (frag.node === 'parameter') {
                 const resolved1 = (
-                  this.lexicalParent && this.lexicalParent.parent
-                    ? this.lexicalParent.parent.arguments()
+                  this.lexicalParent
+                    ? this.lexicalParent.arguments()
                     : this.parent
                     ? this.parent.arguments()
                     : this.arguments()
                 )[frag.path[0]];
                 if (resolved1 === undefined || resolved1.value === null) {
-                  throw new Error('Invalid parameter value');
+                  return {node: 'null'}; // TODO
                 }
                 const resolved2 = this.parent
                   ? this.parent.resolveParentParameterReferences(resolved1)
                   : resolved1;
                 if (resolved2 === undefined || resolved2.value === null) {
-                  throw new Error('Invalid parameter value');
+                  return {node: 'null'}; // TODO
                 } else {
                   return resolved2.value;
                 }
@@ -4826,7 +4826,7 @@ class QueryStruct {
         .loadQuery(
           this.structDef.query,
           undefined,
-          this,
+          this.parent,
           this.prepareResultOptions
         )
         .structs.pop();
