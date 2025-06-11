@@ -38,6 +38,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
   const q = runtime.getQuoter();
 
+  // TODO (vitor): This raw sql breaks tsql
   const timeSQL = `SELECT DATE '2021-02-24' as ${q`t_date`}, TIMESTAMP '2021-02-24 03:05:06' as ${q`t_timestamp`} `;
   const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 

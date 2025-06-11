@@ -63,10 +63,11 @@ function unlike(disLiked: string[], x: string) {
  * XXXXFilterCompiler.compile() will move to XXXFilterExpression.compile()
  */
 
+// TODO (vitor): this is where the where clause gets built. I need to change 'true' to 1=1 and check what to do with false
 export const FilterCompilers = {
   compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
     if (c === null) {
-      return 'true';
+      return d.sqlBoolean(true);
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
@@ -125,6 +126,7 @@ export const FilterCompilers = {
           .join(` ${nc.operator.toUpperCase()} `);
     }
   },
+  // TODO (vitor): Check what to do here for non supported boolean
   booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
     switch (bc.operator) {
       case 'false':
@@ -251,6 +253,7 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
+          // TODO (vitor): Check what to do here for unsupported boolean
           return 'false';
         }
         let includeSQL = '';
