@@ -1,0 +1,240 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import {Channel, SeriesChannel, YChannel} from '@/component/types';
+import type {
+  JSONSchemaObject,
+  JSONSchemaArray,
+  JSONSchemaString,
+  JSONSchemaBoolean,
+  JSONSchemaOneOf,
+} from '@/component/json-schema-types';
+
+// TypeScript type definition
+export interface LineChartSettings {
+  xChannel: Channel;
+  yChannel: YChannel;
+  seriesChannel: SeriesChannel;
+  zeroBaseline: boolean;
+  interactive: boolean;
+  disableEmbedded: boolean;
+}
+
+// Default settings object
+export const defaultLineChartSettings: LineChartSettings = {
+  xChannel: {
+    fields: [],
+    type: 'nominal',
+    independent: 'auto',
+  },
+  yChannel: {
+    fields: [],
+    type: 'quantitative',
+    independent: false,
+  },
+  seriesChannel: {
+    fields: [],
+    type: 'nominal',
+    independent: 'auto',
+    limit: 'auto',
+  },
+  zeroBaseline: false,
+  interactive: true,
+  disableEmbedded: false,
+};
+
+// Specific typed interface for the line chart schema
+interface LineChartSettingsSchema extends JSONSchemaObject {
+  properties: {
+    xChannel: JSONSchemaObject & {
+      properties: {
+        fields: JSONSchemaArray & {
+          items: JSONSchemaString;
+        };
+        type: JSONSchemaString;
+        independent: JSONSchemaString;
+      };
+    };
+    yChannel: JSONSchemaObject & {
+      properties: {
+        fields: JSONSchemaArray & {
+          items: JSONSchemaString;
+        };
+        type: JSONSchemaString;
+        independent: JSONSchemaBoolean;
+      };
+    };
+    seriesChannel: JSONSchemaObject & {
+      properties: {
+        fields: JSONSchemaArray & {
+          items: JSONSchemaString;
+        };
+        type: JSONSchemaString;
+        independent: JSONSchemaString;
+        limit: JSONSchemaOneOf;
+      };
+    };
+    zeroBaseline: JSONSchemaBoolean;
+    interactive: JSONSchemaBoolean;
+    disableEmbedded: JSONSchemaBoolean;
+  };
+}
+
+// JSON Schema
+export const lineChartSettingsSchema: LineChartSettingsSchema = {
+  title: 'Line Chart Settings',
+  type: 'object',
+  properties: {
+    xChannel: {
+      title: 'X-Axis Channel',
+      type: 'object',
+      properties: {
+        fields: {
+          title: 'X-Axis Fields',
+          description: 'Array of field paths to use for the X-axis',
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          default: [],
+        },
+        type: {
+          title: 'X-Axis Scale Type',
+          description: 'Scale type for X-axis data encoding',
+          type: 'string',
+          enum: ['quantitative', 'nominal'],
+          default: 'nominal',
+        },
+        independent: {
+          title: 'X-Axis Independence',
+          description:
+            'Whether X-axis domains should be independent across chart rows. "auto" means shared when ≤20 distinct values',
+          type: 'string',
+          enum: ['auto', 'true', 'false'],
+          default: 'auto',
+        },
+      },
+      required: ['fields', 'type'],
+    },
+    yChannel: {
+      title: 'Y-Axis Channel',
+      type: 'object',
+      properties: {
+        fields: {
+          title: 'Y-Axis Fields',
+          description: 'Array of field paths to use for the Y-axis',
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          default: [],
+        },
+        type: {
+          title: 'Y-Axis Scale Type',
+          description: 'Scale type for Y-axis data encoding',
+          type: 'string',
+          enum: ['quantitative', 'nominal'],
+          default: 'quantitative',
+        },
+        independent: {
+          title: 'Y-Axis Independence',
+          description:
+            'Whether Y-axis domains should be independent across chart rows. Implementation will automatically enable when series limiting is active',
+          type: 'boolean',
+          default: false,
+        },
+      },
+      required: ['fields', 'type'],
+    },
+    seriesChannel: {
+      title: 'Series Channel',
+      type: 'object',
+      properties: {
+        fields: {
+          title: 'Series Fields',
+          description:
+            'Array of field paths to use for grouping data into series',
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          default: [],
+        },
+        type: {
+          title: 'Series Scale Type',
+          description: 'Scale type for series data encoding',
+          type: 'string',
+          enum: ['quantitative', 'nominal'],
+          default: 'nominal',
+        },
+        independent: {
+          title: 'Series Independence',
+          description:
+            'Whether series domains should be independent across chart rows. "auto" means shared when ≤20 distinct values',
+          type: 'string',
+          enum: ['auto', 'true', 'false'],
+          default: 'auto',
+        },
+        limit: {
+          title: 'Series Limit',
+          description:
+            'Maximum number of series to display in the chart. "auto" means chart determines optimal limit (default 12)',
+          oneOf: [
+            {
+              type: 'string',
+              enum: ['auto'],
+            },
+            {
+              type: 'number',
+              minimum: 1,
+            },
+          ],
+          default: 'auto',
+        },
+      },
+      required: ['fields', 'type'],
+    },
+    zeroBaseline: {
+      title: 'Zero Baseline',
+      description: 'Whether to include zero in the Y-axis scale',
+      type: 'boolean',
+      default: false,
+    },
+    interactive: {
+      title: 'Interactive',
+      description:
+        'Whether the chart should be interactive (tooltips, zoom, etc.)',
+      type: 'boolean',
+      default: true,
+    },
+    disableEmbedded: {
+      title: 'Disable Embedded Tags',
+      description:
+        'Whether to ignore field-level tags for x, y, and series channel assignment',
+      type: 'boolean',
+      default: false,
+    },
+  },
+  required: [
+    'xChannel',
+    'yChannel',
+    'seriesChannel',
+    'zeroBaseline',
+    'interactive',
+    'disableEmbedded',
+  ],
+  additionalProperties: false,
+};
+
+// Export functions for external consumption
+export function getLineChartSettingsSchemaJSON(): string {
+  return JSON.stringify(lineChartSettingsSchema, null, 2);
+}
+
+export function getDefaultLineChartSettingsJSON(): string {
+  return JSON.stringify(defaultLineChartSettings, null, 2);
+}

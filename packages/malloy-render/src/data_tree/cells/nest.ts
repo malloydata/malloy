@@ -5,8 +5,6 @@ import type {
   RepeatedRecordField,
   RootField,
 } from '../fields';
-import type {RenderPlugin} from '../plugins';
-import type {FieldRegistry} from '../types';
 import {Cell, type CellValue} from '.';
 import {CellBase} from './base';
 import type {NestCell} from '.';
@@ -32,19 +30,13 @@ export class ArrayCell extends CellBase {
 export class RepeatedRecordCell extends ArrayCell {
   public readonly rows: RecordCell[];
   public readonly fieldValueSets: Map<string, Set<CellValue>> = new Map();
-  private plugins: RenderPlugin[];
-  private registry?: FieldRegistry;
 
   constructor(
     public readonly cell: Malloy.CellWithArrayCell,
     public readonly field: RepeatedRecordField,
-    public readonly parent: NestCell | undefined,
-    plugins: RenderPlugin[] = [],
-    registry?: FieldRegistry
+    public readonly parent: NestCell | undefined
   ) {
     super(cell, field, parent);
-    this.plugins = plugins;
-    this.registry = registry;
     this.rows = this.values as RecordCell[];
 
     // First, create cells for all the rows
@@ -66,7 +58,7 @@ export class RepeatedRecordCell extends ArrayCell {
     // Run plugins for this field
     const fieldPlugins = this.field.getPlugins();
     for (const plugin of fieldPlugins) {
-      plugin.processData(this.field, this);
+      plugin.processData?.(this.field, this);
     }
   }
 
@@ -78,11 +70,9 @@ export class RepeatedRecordCell extends ArrayCell {
 export class RootCell extends RepeatedRecordCell {
   constructor(
     public readonly cell: Malloy.CellWithArrayCell,
-    public readonly field: RootField,
-    plugins: RenderPlugin[] = [],
-    registry?: FieldRegistry
+    public readonly field: RootField
   ) {
-    super(cell, field, undefined, plugins, registry);
+    super(cell, field, undefined);
   }
 }
 

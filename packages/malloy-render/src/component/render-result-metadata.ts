@@ -29,7 +29,6 @@ import {baseVegaConfig} from '@/component/vega/base-vega-config';
 import {generateBarChartVegaSpec} from '@/component/bar-chart/generate-bar_chart-vega-spec';
 import type {ResultStore} from '@/component/result-store/result-store';
 import {createResultStore} from '@/component/result-store/result-store';
-import {generateLineChartVegaSpec} from '@/component/line-chart/generate-line_chart-vega-spec';
 import type {Config, Runtime} from 'vega';
 import {parse} from 'vega';
 import {defaultSettings} from '@/component/default-settings';
@@ -127,8 +126,6 @@ function populateVegaSpec(
   try {
     if (chartType === 'bar') {
       vegaChartProps = generateBarChartVegaSpec(field, metadata);
-    } else if (chartType === 'line') {
-      vegaChartProps = generateLineChartVegaSpec(field, metadata);
     }
   } catch (error) {
     vegaInfo.error = error;

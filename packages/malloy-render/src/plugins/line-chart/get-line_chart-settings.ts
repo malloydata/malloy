@@ -6,19 +6,16 @@
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {Channel} from '../types';
-import type {NestField} from '../../data_tree';
-import {walkFields} from '../../util';
-import {defaultSettings} from '../default-settings';
-import {convertLegacyToVizTag} from '../tag-utils';
+import type {Channel, YChannel, SeriesChannel} from '@/component/types';
+import type {NestField} from '@/data_tree';
+import {walkFields} from '@/util';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {
+  defaultLineChartSettings,
+  type LineChartSettings,
+} from './line-chart-settings';
 
-export type LineChartSettings = {
-  xChannel: Channel;
-  yChannel: Channel;
-  seriesChannel: Channel;
-  zeroBaseline: boolean;
-  interactive: boolean;
-};
+export type {LineChartSettings};
 
 export function getLineChartSettings(
   explore: NestField,
@@ -35,7 +32,7 @@ export function getLineChartSettings(
   const vizTag = normalizedTag.tag('viz')!;
 
   // default zero_baselinse
-  let zeroBaseline = defaultSettings.line_chart.zero_baseline;
+  let zeroBaseline = defaultLineChartSettings.zeroBaseline;
   if (vizTag.has('zero_baseline')) {
     const value = vizTag.text('zero_baseline');
     // If explicitly set to false, set to false
@@ -53,22 +50,60 @@ export function getLineChartSettings(
     }
   }
 
-  // if tooltip, disable interactions
-  const interactive = !normalizedTag.has('tooltip');
+  // if tooltip, disable interactions, otherwise use default
+  const interactive = normalizedTag.has('tooltip')
+    ? false
+    : defaultLineChartSettings.interactive;
+
+  // X-axis independence
+  let xIndependent: boolean | 'auto' =
+    defaultLineChartSettings.xChannel.independent;
+  if (vizTag.has('x', 'independent')) {
+    const value = vizTag.text('x', 'independent');
+    xIndependent = value === 'false' ? false : true;
+  }
+
+  // Y-axis independence
+  let yIndependent: boolean = defaultLineChartSettings.yChannel.independent;
+  if (vizTag.has('y', 'independent')) {
+    const value = vizTag.text('y', 'independent');
+    yIndependent = value === 'false' ? false : true;
+  }
+
+  // Series independence
+  let seriesIndependent: boolean | 'auto' =
+    defaultLineChartSettings.seriesChannel.independent;
+  if (vizTag.has('series', 'independent')) {
+    const value = vizTag.text('series', 'independent');
+    seriesIndependent = value === 'false' ? false : true;
+  }
+
+  // Series limit
+  const seriesLimit: number | 'auto' =
+    vizTag.numeric('series', 'limit') ??
+    defaultLineChartSettings.seriesChannel.limit;
+
+  // Disable embedded field tags
+  const disableEmbedded =
+    vizTag.has('disableEmbedded') || defaultLineChartSettings.disableEmbedded;
 
   const xChannel: Channel = {
     fields: [],
-    type: null,
+    type: defaultLineChartSettings.xChannel.type,
+    independent: xIndependent,
   };
 
-  const yChannel: Channel = {
+  const yChannel: YChannel = {
     fields: [],
-    type: null,
+    type: defaultLineChartSettings.yChannel.type,
+    independent: yIndependent,
   };
 
-  const seriesChannel: Channel = {
+  const seriesChannel: SeriesChannel = {
     fields: [],
-    type: null,
+    type: defaultLineChartSettings.seriesChannel.type,
+    independent: seriesIndependent,
+    limit: seriesLimit,
   };
 
   function getField(ref: string) {
@@ -94,7 +129,7 @@ export function getLineChartSettings(
   const embeddedSeries: string[] = [];
 
   // Only parse embedded tags if disableEmbedded is not set
-  if (!vizTag.has('disableEmbedded')) {
+  if (!disableEmbedded) {
     walkFields(explore, field => {
       const tag = field.tag;
       const pathTo = explore.pathTo(field);
@@ -161,11 +196,6 @@ export function getLineChartSettings(
     }
   }
 
-  // TODO: types
-  xChannel.type = 'nominal';
-  yChannel.type = 'quantitative';
-  seriesChannel.type = 'nominal';
-
   if (dimensions.length > 2) {
     throw new Error(
       'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
@@ -188,5 +218,6 @@ export function getLineChartSettings(
     seriesChannel,
     zeroBaseline,
     interactive,
+    disableEmbedded,
   };
 }

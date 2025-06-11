@@ -6,47 +6,29 @@ import {
   ArrayField,
   type NestField,
   RepeatedRecordField,
-  type FieldRegistry as DataTreeFieldRegistry,
+  type RenderPluginInstance,
+  getFieldType,
 } from '@/data_tree';
+import type {RenderPluginFactory} from '@/api/plugin-types';
 import {shouldRenderChartAs} from '@/component/render-result-metadata';
 import {getBarChartSettings} from '@/component/bar-chart/get-bar_chart-settings';
+import type {
+  RenderFieldRegistryEntry,
+  RenderFieldRegistry,
+} from '@/registry/types';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
-type RenderFieldProps<T = unknown> = {
-  field: Field;
-  renderAs: string;
-  sizingStrategy: string;
-  properties: T;
-  errors: Error[];
-};
-
-type RenderFieldRegistryEntry = {
-  field: Field;
-  renderProperties: RenderFieldProps;
-  plugins: never[];
-};
-
-type RenderFieldRegistry = Map<string, RenderFieldRegistryEntry>;
-
-// Registry to track field instances across the schema tree
-// TODO deprecate this
-interface FieldRegistry extends DataTreeFieldRegistry {
-  rendererFields: Map<string, RenderFieldRegistryEntry>;
-}
-
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
-  private legacyRegistry: FieldRegistry;
   private rootField: RootField;
+  private pluginRegistry: RenderPluginFactory[];
 
-  constructor(result: Malloy.Result) {
-    // Create the field registry
-    this.legacyRegistry = {
-      rendererFields: new Map(),
-      fieldInstances: new Map(),
-      plugins: new Map(),
-    };
+  constructor(
+    result: Malloy.Result,
+    pluginRegistry: RenderPluginFactory[] = []
+  ) {
+    this.pluginRegistry = pluginRegistry;
     this.registry = new Map();
 
     // Create the root field with all its metadata
@@ -66,17 +48,41 @@ export class RenderFieldMetadata {
         modelTag: tagFromAnnotations(result.model_annotations, '## '),
         queryTimezone: result.query_timezone,
       },
-      this.legacyRegistry
+      this.registry
     );
 
     // Register all fields in the registry
     this.registerFields(this.rootField);
   }
 
+  // Instantiate plugins for a field that match
+  private instantiatePluginsForField(field: Field): RenderPluginInstance[] {
+    const plugins: RenderPluginInstance[] = [];
+
+    for (const factory of this.pluginRegistry) {
+      try {
+        if (factory.matches(field, field.tag, getFieldType(field))) {
+          const pluginInstance = factory.create(field);
+          plugins.push(pluginInstance);
+        }
+      } catch (error) {
+        console.warn(
+          `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
+          error
+        );
+      }
+    }
+
+    return plugins;
+  }
+
   // Recursively register fields in the registry
   private registerFields(field: Field): void {
     const fieldKey = field.key;
     if (!this.registry.has(fieldKey)) {
+      // Instantiate plugins for this field
+      const plugins = this.instantiatePluginsForField(field);
+
       const renderFieldEntry: RenderFieldRegistryEntry = {
         field,
         renderProperties: {
@@ -86,7 +92,7 @@ export class RenderFieldMetadata {
           properties: {},
           errors: [],
         },
-        plugins: [],
+        plugins,
       };
       // calculate chart metadata (eventually via plugins)
       const vizProperties = this.populateRenderFieldProperties(field);
@@ -94,12 +100,7 @@ export class RenderFieldMetadata {
       renderFieldEntry.renderProperties.errors = vizProperties.errors;
 
       this.registry.set(fieldKey, renderFieldEntry);
-      this.legacyRegistry.rendererFields.set(fieldKey, renderFieldEntry);
     }
-    if (!this.legacyRegistry.fieldInstances.has(fieldKey)) {
-      this.legacyRegistry.fieldInstances.set(fieldKey, []);
-    }
-    this.legacyRegistry.fieldInstances.get(fieldKey)!.push(field);
     // Recurse for nested fields
     if (field.isNest()) {
       for (const childField of field.fields) {
@@ -134,11 +135,6 @@ export class RenderFieldMetadata {
     return {properties, errors};
   }
 
-  // Get a field by its path
-  getField(path: string[]): Field | undefined {
-    return this.rootField.fieldAtPath(path);
-  }
-
   // Get all fields in the schema
   getAllFields(): Field[] {
     return Array.from(this.registry.values()).map(entry => entry.field);
@@ -149,31 +145,9 @@ export class RenderFieldMetadata {
     return this.rootField;
   }
 
-  // Get all fields of a specific type
-  getFieldsByType<T extends Field, F extends Malloy.DimensionInfo>(
-    type: new (
-      field: F,
-      parent: NestField | undefined,
-      registry?: FieldRegistry
-    ) => T
-  ): T[] {
-    return this.getAllFields().filter(
-      (field): field is T => field instanceof type
-    );
-  }
-
-  // Get all record fields
-  getRecordFields(): RecordField[] {
-    return this.getFieldsByType(RecordField);
-  }
-
-  // Get all array fields
-  getArrayFields(): ArrayField[] {
-    return this.getFieldsByType(ArrayField);
-  }
-
-  // Get all repeated record fields
-  getRepeatedRecordFields(): RepeatedRecordField[] {
-    return this.getFieldsByType(RepeatedRecordField);
+  // Get plugins for a specific field
+  getPluginsForField(fieldKey: string): RenderPluginInstance[] {
+    const entry = this.registry.get(fieldKey);
+    return entry ? entry.plugins : [];
   }
 }

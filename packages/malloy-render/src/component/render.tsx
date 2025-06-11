@@ -20,7 +20,7 @@ import {MalloyViz} from '@/api/malloy-viz';
 import styles from './render.css?raw';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used as a directive in JSX
 import {resize} from './util';
-import {applyRenderer} from './apply-renderer';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import type {
   DashboardConfig,
   DrillData,
@@ -31,9 +31,9 @@ import type {
 export type {DrillData} from './types';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getDataTree} from '../data_tree';
-import {ResultContext} from './result-context';
-import {LineChartSeriesPluginFactory} from '../plugins/line-chart-series-plugin';
+import {ResultContext, PluginMetadataContext} from './result-context';
 import {ErrorMessage} from './error-message/error-message';
+import {RenderFieldMetadata} from '../render-field-metadata';
 
 export type MalloyRenderProps = {
   result?: Malloy.Result;
@@ -46,6 +46,7 @@ export type MalloyRenderProps = {
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
+  renderFieldMetadata?: RenderFieldMetadata;
 };
 
 const ConfigContext = createContext<{
@@ -110,6 +111,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             element={props.element}
             scrollEl={props.scrollEl}
             vegaConfigOverride={props.vegaConfigOverride}
+            renderFieldMetadata={props.renderFieldMetadata}
           />
         </ConfigContext.Provider>
       </Show>
@@ -123,6 +125,7 @@ export function MalloyRenderInner(props: {
   element: HTMLElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
+  renderFieldMetadata?: RenderFieldMetadata;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -132,19 +135,41 @@ export function MalloyRenderInner(props: {
   // This is where chart rendering happens for now
   // If size in fill mode, easiest thing would be to just recalculate entire thing
   // This is expensive but we can optimize later to make size responsive
-  const rootCell = createMemo(() =>
-    getDataTree(props.result, [LineChartSeriesPluginFactory])
-  );
+  const rootCell = createMemo(() => {
+    if (props.renderFieldMetadata) {
+      return getDataTree(props.result, props.renderFieldMetadata);
+    } else {
+      // Fallback: create minimal RenderFieldMetadata without plugins
+      // This handles cases where render is called directly without MalloyViz
+      const fallbackMetadata = new RenderFieldMetadata(props.result, []);
+      return getDataTree(props.result, fallbackMetadata);
+    }
+  });
 
-  const metadata = createMemo(() =>
-    getResultMetadata(rootCell().field, {
+  const metadata = createMemo(() => {
+    // TODO Do we even need this anymore...
+    const resultMetadata = getResultMetadata(rootCell().field, {
       getVegaConfigOverride: props.vegaConfigOverride,
       parentSize: {
         width: parentSize().width - CHART_SIZE_BUFFER,
         height: parentSize().height - CHART_SIZE_BUFFER,
       },
-    })
-  );
+    });
+    props.renderFieldMetadata?.getAllFields().forEach(field => {
+      const plugins =
+        props.renderFieldMetadata?.getPluginsForField(field.key) ?? [];
+      plugins.forEach(plugin => {
+        plugin.beforeRender?.(resultMetadata, {
+          getVegaConfigOverride: props.vegaConfigOverride,
+          parentSize: {
+            width: parentSize().width - CHART_SIZE_BUFFER,
+            height: parentSize().height - CHART_SIZE_BUFFER,
+          },
+        });
+      });
+    });
+    return resultMetadata;
+  });
 
   // hack to block resize events when we're in fixed mode.
   // TODO as part of plugin system, move sizing strategy into data_tree metadata creation
@@ -182,6 +207,7 @@ export function MalloyRenderInner(props: {
     return applyRenderer({
       dataColumn: data,
       tag: data.field.tag,
+      metadata: props.renderFieldMetadata,
       customProps: {
         table: {
           scrollEl: props.scrollEl,
@@ -212,9 +238,11 @@ export function MalloyRenderInner(props: {
       use:resize={[parentSize, _setParentSize]}
     >
       <Show when={showRendering()}>
-        <ResultContext.Provider value={metadata}>
-          {rendering().renderValue}
-        </ResultContext.Provider>
+        <PluginMetadataContext.Provider value={props.renderFieldMetadata}>
+          <ResultContext.Provider value={metadata}>
+            {rendering().renderValue}
+          </ResultContext.Provider>
+        </PluginMetadataContext.Provider>
         <Show when={metadata().store.store.showCopiedModal}>
           <div class="malloy-copied-modal">Copied query to clipboard!</div>
         </Show>

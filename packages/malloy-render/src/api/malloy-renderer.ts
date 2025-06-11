@@ -6,18 +6,22 @@
  */
 
 import type {MalloyRendererOptions} from './types';
+import type {RenderPluginFactory} from './plugin-types';
 import {MalloyViz} from './malloy-viz';
 
 export class MalloyRenderer {
   private globalOptions: MalloyRendererOptions;
+  private pluginRegistry: RenderPluginFactory[];
 
   constructor(options: MalloyRendererOptions = {}) {
     this.globalOptions = options;
+    this.pluginRegistry = [...(options.plugins || [])];
   }
 
   // TODO Figure out whether we should differentiate between global and viz options
   createViz(additionalOptions: Partial<MalloyRendererOptions> = {}): MalloyViz {
-    return new MalloyViz({...this.globalOptions, ...additionalOptions});
+    const mergedOptions = {...this.globalOptions, ...additionalOptions};
+    return new MalloyViz(mergedOptions, this.pluginRegistry);
   }
 
   // Method to update global options
@@ -28,5 +32,10 @@ export class MalloyRenderer {
   // Method to get current global options
   getOptions(): MalloyRendererOptions {
     return {...this.globalOptions};
+  }
+
+  // Get registered plugins
+  getRegisteredPlugins(): RenderPluginFactory[] {
+    return [...this.pluginRegistry];
   }
 }

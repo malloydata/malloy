@@ -16,11 +16,13 @@ import type {
   RecordCell,
   RepeatedRecordCell,
 } from '../data_tree';
+import type {RenderFieldMetadata} from '../render-field-metadata';
 
 export type RendererProps = {
   dataColumn: Cell;
   tag: Tag;
   customProps?: Record<string, Record<string, unknown>>;
+  metadata?: RenderFieldMetadata;
 };
 
 export type VegaSignalRef = {signal: string};
@@ -89,6 +91,17 @@ type ScaleType = 'quantitative' | 'nominal';
 export type Channel = {
   fields: string[];
   type: ScaleType | null;
+  independent: boolean | 'auto';
+};
+
+export type YChannel = {
+  fields: string[];
+  type: ScaleType | null;
+  independent: boolean;
+};
+
+export type SeriesChannel = Channel & {
+  limit: number | 'auto';
 };
 
 export type TableConfig = {

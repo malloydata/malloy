@@ -3,11 +3,11 @@ import {FieldBase} from './base';
 import {Field} from '.';
 import type {
   ArrayFieldInfo,
-  FieldRegistry,
   RecordFieldInfo,
   RepeatedRecordFieldInfo,
   SortableField,
 } from '../types';
+import type {RenderFieldRegistry} from '../../registry/types';
 import type {NestField} from '.';
 
 export class ArrayField extends FieldBase {
@@ -17,7 +17,7 @@ export class ArrayField extends FieldBase {
   constructor(
     public readonly field: ArrayFieldInfo,
     parent: NestField | undefined,
-    registry?: FieldRegistry
+    registry?: RenderFieldRegistry
   ) {
     super(field, parent, registry);
     this.eachField = Field.from(
@@ -43,7 +43,7 @@ export class RepeatedRecordField extends ArrayField {
   constructor(
     public readonly field: RepeatedRecordFieldInfo,
     parent: NestField | undefined,
-    registry?: FieldRegistry
+    registry?: RenderFieldRegistry
   ) {
     super(field, parent, registry);
     const eachField = this.eachField;
@@ -105,7 +105,7 @@ export class RootField extends RepeatedRecordField {
       modelTag: Tag;
       queryTimezone: string | undefined;
     },
-    registry?: FieldRegistry
+    registry?: RenderFieldRegistry
   ) {
     super(field, undefined, registry);
     this.modelTag = metadata.modelTag;
@@ -120,7 +120,7 @@ export class RecordField extends FieldBase {
   constructor(
     public readonly field: RecordFieldInfo,
     parent: NestField | undefined,
-    registry?: FieldRegistry
+    registry?: RenderFieldRegistry
   ) {
     super(field, parent, registry);
     this.fields = field.type.fields.map(f => Field.from(f, this, registry));

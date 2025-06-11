@@ -12,10 +12,6 @@ export type DrillEntry =
 
 export type DrillValue = {field: Field; value: Cell} | {where: string};
 
-export interface FieldRegistry {
-  fieldInstances: Map<string, Field[]>;
-  plugins: Map<string, RenderPluginInstance[]>;
-}
 
 export type SortableField = {field: Field; dir: 'asc' | 'desc' | undefined};
 

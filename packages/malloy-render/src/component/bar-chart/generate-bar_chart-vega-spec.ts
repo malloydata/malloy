@@ -14,11 +14,11 @@ import type {
   VegaPadding,
   VegaSignalRef,
 } from '../types';
-import type {ChartLayoutSettings} from '../chart-layout-settings';
+import type {ChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {
   getChartLayoutSettings,
   getXAxisSettings,
-} from '../chart-layout-settings';
+} from '@/component/chart/chart-layout-settings';
 import type {
   Data,
   EncodeEntry,

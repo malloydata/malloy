@@ -7,19 +7,34 @@
 
 import {render} from 'solid-js/web';
 import type {MalloyRendererOptions} from '@/api/types';
+import type {RenderPluginFactory} from '@/api/plugin-types';
 import {MalloyRender} from '@/component/render';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {RenderFieldMetadata} from '@/render-field-metadata';
+import {DummyPluginFactory} from '@/plugins/dummy-plugin';
+import {DummyDOMPluginFactory} from '@/plugins/dummy-dom-plugin';
+import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
 
 export class MalloyViz {
   private disposeFn: (() => void) | null = null;
   private targetElement: HTMLElement | null = null;
   private result: Malloy.Result | null = null;
   private metadata: RenderFieldMetadata | null = null;
+  private pluginRegistry: RenderPluginFactory[];
 
-  constructor(private options: MalloyRendererOptions) {
+  constructor(
+    private options: MalloyRendererOptions,
+    pluginRegistry: RenderPluginFactory[] = []
+  ) {
     this.options = options;
+    // Include default plugins + any additional plugins passed in
+    this.pluginRegistry = [
+      LineChartPluginFactory,
+      DummyPluginFactory,
+      DummyDOMPluginFactory,
+      ...pluginRegistry,
+    ];
   }
 
   static addStylesheet(styles: string) {
@@ -124,7 +139,9 @@ export class MalloyViz {
 
   setResult(malloyResult: Malloy.Result): void {
     this.result = malloyResult;
-    if (this.result) this.metadata = new RenderFieldMetadata(this.result);
+    if (this.result) {
+      this.metadata = new RenderFieldMetadata(this.result, this.pluginRegistry);
+    }
   }
 
   render(targetElement?: HTMLElement): void {
@@ -149,6 +166,7 @@ export class MalloyViz {
       dashboardConfig: this.options.dashboardConfig,
       modalElement: this.options.modalElement,
       scrollEl: this.options.scrollEl,
+      renderFieldMetadata: this.metadata ?? undefined,
     };
 
     // Render the SolidJS component to the target element
