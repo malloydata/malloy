@@ -37,40 +37,16 @@ export class MalloyViz {
   }
 
   async getHTML(): Promise<string> {
-    if (!this.targetElement) {
-      throw new Error('No target element to copy from');
-    }
-
-    const content = this.targetElement.innerHTML;
-    const styles = Array.from(document.head.getElementsByTagName('style'))
-      .filter(sheet => sheet.getAttribute('data-malloy-viz') === 'true')
-      .map(sheet => sheet.textContent)
-      .join('\n');
-
-    // Get the dimensions of the source element
-    const rect = this.targetElement.getBoundingClientRect();
-    const width = Math.round(rect.width);
-    const height = Math.round(rect.height);
-
-    return `
-      <div style="width: ${width}px; height: ${height}px;">
-        <style>
-          ${styles}
-        </style>
-        <div class="malloy-viz">
-          ${content}
-        </div>
-      </div>
-    `;
-  }
-
-  async copyToHTML(): Promise<void> {
     if (!this.result) {
       throw new Error('No result to copy');
     }
 
+    if (!this.targetElement) {
+      throw new Error('No element to copy from');
+    }
+
     // Get dimensions from the original element
-    const originalRect = this.targetElement?.getBoundingClientRect();
+    const originalRect = this.targetElement.getBoundingClientRect();
     if (!originalRect) {
       throw new Error('No target element to measure');
     }
@@ -108,16 +84,42 @@ export class MalloyViz {
       // Wait for rendering to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Get and copy the HTML
-      const html = await tempViz.getHTML();
-      await navigator.clipboard.writeText(html);
+      const content = tempContainer.innerHTML;
+      const styles = Array.from(document.head.getElementsByTagName('style'))
+        .filter(sheet => sheet.getAttribute('data-malloy-viz') === 'true')
+        .map(sheet => sheet.textContent)
+        .join('\n');
 
+      // Get the dimensions of the source element
+      const rect = this.targetElement.getBoundingClientRect();
+      const width = Math.round(rect.width);
+      const height = Math.round(rect.height);
+
+      const html = `
+      <div style="width: ${width}px; height: ${height}px;">
+        <style>
+          ${styles}
+        </style>
+        <div class="malloy-viz">
+          ${content}
+        </div>
+      </div>
+    `;
       // Clean up
       tempViz.remove();
+      return html;
+    } catch (err) {
+      console.error(err);
+      return 'Malloy Renderer could not be exported to HTML';
     } finally {
       // Remove the temporary container
       document.body.removeChild(tempContainer);
     }
+  }
+
+  async copyToHTML(): Promise<void> {
+    const html = await this.getHTML();
+    await navigator.clipboard.writeText(html);
   }
 
   setResult(malloyResult: Malloy.Result): void {
