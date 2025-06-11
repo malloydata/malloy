@@ -6,7 +6,7 @@
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {Accessor} from 'solid-js';
+import type {Accessor, Setter} from 'solid-js';
 import {
   Show,
   createContext,
@@ -145,6 +145,20 @@ export function MalloyRenderInner(props: {
       },
     })
   );
+
+  // hack to block resize events when we're in fixed mode.
+  // TODO as part of plugin system, move sizing strategy into data_tree metadata creation
+  const _setParentSize: Setter<{width: number; height: number}> = value => {
+    if (metadata().sizingStrategy === 'fixed') return;
+
+    const newSize = typeof value === 'function' ? value(parentSize()) : value;
+
+    setParentSize({
+      width: newSize.width - CHART_SIZE_BUFFER,
+      height: newSize.height - CHART_SIZE_BUFFER,
+    });
+  };
+
   const tags = () => {
     const modelTag = rootCell().field.modelTag;
     const resultTag = rootCell().field.tag;
@@ -179,13 +193,25 @@ export function MalloyRenderInner(props: {
     });
   };
 
+  const showRendering = () => {
+    if (metadata().sizingStrategy === 'fixed') return true;
+    if (
+      metadata().sizingStrategy === 'fill' &&
+      parentSize().width > 0 &&
+      parentSize().height > 0
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <div
       class="malloy-render"
       style={style()}
-      use:resize={[parentSize, setParentSize]}
+      use:resize={[parentSize, _setParentSize]}
     >
-      <Show when={parentSize().width > 0 && parentSize().height > 0}>
+      <Show when={showRendering()}>
         <ResultContext.Provider value={metadata}>
           {rendering().renderValue}
         </ResultContext.Provider>
