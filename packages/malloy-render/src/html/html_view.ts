@@ -38,8 +38,12 @@ import {HTMLListRenderer} from './list';
 import {HTMLListDetailRenderer} from './list_detail';
 import {tagFromAnnotations} from '../util';
 import {MalloyRenderer} from '@/api/malloy-renderer';
+import type {MalloyViz} from '@/api/malloy-viz';
 
 export class HTMLView {
+  private lastRenderedElement: HTMLElement | null = null;
+  private lastViz: MalloyViz | null = null;
+
   constructor(private document: Document) {}
 
   async render(
@@ -56,6 +60,8 @@ export class HTMLView {
       viz.setResult(malloyResult);
       const el = this.document.createElement('div');
       viz.render(el);
+      this.lastRenderedElement = el;
+      this.lastViz = viz;
       return el;
     } else {
       // eslint-disable-next-line no-console
@@ -81,17 +87,40 @@ export class HTMLView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(rootCell);
+      const el = await renderer.render(rootCell);
+      this.lastRenderedElement = el;
+      this.lastViz = null;
+      return el;
     } catch (error) {
       if (error instanceof Error) {
-        return createErrorElement(this.document, error);
+        const errorEl = createErrorElement(this.document, error);
+        this.lastRenderedElement = errorEl;
+        this.lastViz = null;
+        return errorEl;
       } else {
-        return createErrorElement(
+        const errorEl = createErrorElement(
           this.document,
           'Internal error - Exception not an Error object.'
         );
+        this.lastRenderedElement = errorEl;
+        this.lastViz = null;
+        return errorEl;
       }
     }
+  }
+
+  async getHTML(): Promise<string> {
+    if (!this.lastRenderedElement) {
+      throw new Error('No element has been rendered yet');
+    }
+
+    // If we have a MalloyViz instance, use its getHTML method
+    if (this.lastViz) {
+      return this.lastViz.getHTML();
+    }
+
+    // Otherwise use the legacy renderer's innerHTML
+    return this.lastRenderedElement.innerHTML;
   }
 }
 
