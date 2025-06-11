@@ -30,6 +30,7 @@ export type {MalloyRenderProps} from './component/render';
 export {MalloyRenderer} from '@/api/malloy-renderer';
 export type {MalloyViz} from '@/api/malloy-viz';
 export type {MalloyRendererOptions, RenderFieldMetadata} from '@/api/types';
+export type * from '@/api/json-schema-types';
 export type {
   DrillData,
   MalloyClickEventPayload,
@@ -37,3 +38,4 @@ export type {
   DashboardConfig,
   VegaConfigHandler,
 } from '@/component/types';
+export * from '@/plugins';

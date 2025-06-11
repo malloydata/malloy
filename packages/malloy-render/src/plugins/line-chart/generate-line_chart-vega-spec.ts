@@ -11,10 +11,9 @@ import type {
   MalloyVegaDataRecord,
   VegaChartProps,
   VegaPadding,
-} from '../types';
-import {getLineChartSettings} from './get-line_chart-settings';
-import {getChartLayoutSettings} from '../chart-layout-settings';
-import {createMeasureAxis} from '../vega/measure-axis';
+} from '@/component/types';
+import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
+import {createMeasureAxis} from '@/component/vega/measure-axis';
 import type {
   Axis,
   Data,
@@ -28,15 +27,15 @@ import type {
   Spec,
   SymbolMark,
 } from 'vega';
-import {renderNumericField} from '../render-numeric-field';
-import {getMarkName} from '../vega/vega-utils';
-import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
-import type {CellValue, NestField, RecordCell} from '../../data_tree';
-import {Field} from '../../data_tree';
-import {NULL_SYMBOL, renderTimeString} from '../../util';
-import type {RenderMetadata} from '../render-result-metadata';
-import type {LineChartSeriesPluginInstance} from '../../plugins/line-chart-series-plugin';
-import {convertLegacyToVizTag} from '../tag-utils';
+import {renderNumericField} from '@/component/render-numeric-field';
+import {getMarkName} from '@/component/vega/vega-utils';
+import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
+import type {CellValue, RecordCell} from '@/data_tree';
+import {Field} from '@/data_tree';
+import {NULL_SYMBOL, renderTimeString} from '@/util';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
+import type {RenderMetadata} from '@/component/render-result-metadata';
+import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
 
 type LineDataRecord = {
   x: string | number;
@@ -60,22 +59,27 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
   return inverted;
 }
 
-export function generateLineChartVegaSpec(
-  explore: NestField,
-  metadata: RenderMetadata
+export interface LineChartSettings {
+  xChannel: {
+    fields: string[];
+  };
+  yChannel: {
+    fields: string[];
+  };
+  seriesChannel: {
+    fields: string[];
+  };
+  zeroBaseline: boolean;
+  interactive: boolean;
+}
+
+export function generateLineChartVegaSpecV2(
+  metadata: RenderMetadata,
+  plugin: LineChartPluginInstance
 ): VegaChartProps {
-  const lineChartPlugin = explore
-    .getPlugins()
-    .find(p => p.name === 'line_chart_series') as
-    | LineChartSeriesPluginInstance
-    | undefined;
-
-  if (!lineChartPlugin) {
-    throw new Error(
-      'Malloy Line Chart: Trying to render a line chart when Line chart series plugin not found'
-    );
-  }
-
+  const pluginMetadata = plugin.getMetadata();
+  const settings = pluginMetadata.settings;
+  const {getTopNSeries, field: explore} = plugin;
   const tag = convertLegacyToVizTag(explore.tag);
   const chartTag = tag.tag('viz');
   if (!chartTag)
@@ -83,7 +87,6 @@ export function generateLineChartVegaSpec(
       'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
     );
 
-  const settings = getLineChartSettings(explore, tag);
   /**************************************
    *
    * Chart data fields
@@ -160,7 +163,7 @@ export function generateLineChartVegaSpec(
   );
 
   const chartSettings = getChartLayoutSettings(explore, chartTag, {
-    metadata,
+    metadata, // No legacy metadata in V2
     xField,
     yField,
     chartType: 'line',
@@ -185,9 +188,7 @@ export function generateLineChartVegaSpec(
     forceSharedSeries ||
     (autoSharedSeries && !forceIndependentSeries);
 
-  const seriesSet = seriesField
-    ? new Set(lineChartPlugin.getTopNSeries(maxSeries))
-    : null;
+  const seriesSet = seriesField ? new Set(getTopNSeries?.(maxSeries)) : null;
 
   // TODO: spec needs to be responsive to data changes, eventually. so we don't have to rerender chart from scratch when data changes
 

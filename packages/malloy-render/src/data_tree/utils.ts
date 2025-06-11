@@ -1,5 +1,5 @@
 import type {Tag} from '@malloydata/malloy-tag';
-import {tagFromAnnotations, renderTagFromAnnotations} from '../util';
+import {tagFromAnnotations} from '../util';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {isDateUnit, isTimestampUnit} from '@malloydata/malloy';
 import type {
@@ -29,6 +29,7 @@ import {
   TimestampField,
 } from './fields';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
+import type {FieldBase} from './fields/base';
 
 export function isArrayFieldInfo(
   field: Malloy.DimensionInfo
@@ -107,14 +108,17 @@ const RENDER_TAG_LIST = [
   'segment_map',
 ];
 
-export function shouldRenderAs(
-  field: Malloy.DimensionInfo,
-  parent: Field | undefined,
-  tagOverride?: Tag
-) {
-  const tag = convertLegacyToVizTag(
-    tagOverride ?? renderTagFromAnnotations(field.annotations)
-  );
+export function shouldRenderAs({
+  field,
+  tagOverride,
+}: {
+  field: FieldBase;
+  tagOverride?: Tag;
+}): string {
+  const pluginRender = field.getPlugins().at(0)?.name;
+  if (pluginRender) return pluginRender;
+
+  const tag = convertLegacyToVizTag(tagOverride ?? field.tag);
 
   // Check viz property first (new approach)
   const vizType = tag.text('viz');
@@ -128,6 +132,7 @@ export function shouldRenderAs(
   // Fall back to legacy tag detection for non-chart tags
   const properties = tag.properties ?? {};
   const tagNamesInOrder = Object.keys(properties).reverse();
+
   for (const tagName of tagNamesInOrder) {
     if (RENDER_TAG_LIST.includes(tagName) && !properties[tagName].deleted) {
       if (['list', 'list_detail'].includes(tagName)) return 'list';
@@ -136,15 +141,16 @@ export function shouldRenderAs(
     }
   }
 
-  if (field.type.kind === 'record_type' && parent?.renderAs === 'chart') {
+  // TODO: not sure what to do here, how do we null out renderAs below charts? or do we just not?
+  const parent = field.parent;
+  if (field instanceof RecordField && parent && parent.renderAs() === 'chart') {
     return 'none';
   }
 
-  const isNest =
-    field.type.kind === 'array_type' || field.type.kind === 'record_type';
+  const isNest = field instanceof ArrayField || field instanceof RecordField;
 
-  if (!isNest) return 'cell';
-  return 'table';
+  const result = !isNest ? 'cell' : 'table';
+  return result;
 }
 
 export function tagFor(field: Malloy.DimensionInfo, prefix = '# ') {

@@ -23,52 +23,38 @@ import {
   StringField,
   TimestampField,
 } from '.';
-import type {FieldRegistry} from '../types';
-import type {RenderPluginInstance} from '../plugins';
+import type {RenderPluginInstance} from '@/api/plugin-types';
 
 export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
   protected readonly metadataTag: Tag;
-  public readonly renderAs: string;
   public readonly valueSet = new Set<string | number | boolean>();
-  private _pluginData: Map<string, unknown> = new Map();
-  protected registry?: FieldRegistry;
-
-  registerPluginData<T>(pluginType: string, data: T) {
-    this._pluginData.set(pluginType, data);
-  }
-
-  getPluginData<T>(pluginType: string): T | undefined {
-    return this._pluginData.get(pluginType) as T;
-  }
-
-  // Get all field instances that match this field's key from the registry
-  getAllFieldInstances(): Field[] {
-    if (!this.registry) return [this.asField()];
-    return this.registry.fieldInstances.get(this.key) || [this.asField()];
-  }
+  protected plugins: RenderPluginInstance[] = [];
+  protected _renderAs = '';
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
-    if (!this.registry) return [];
-    return this.registry.plugins.get(this.key) || [];
+    return this.plugins;
+  }
+
+  setPlugins(plugins: RenderPluginInstance[]) {
+    this.plugins = plugins;
+    // TODO: legacy until everything is migrated to plugins
+    this._renderAs = shouldRenderAs({field: this});
+  }
+
+  renderAs(): string {
+    return this._renderAs;
   }
 
   constructor(
     public readonly field: Malloy.DimensionInfo,
-    public readonly parent: NestField | undefined,
-    registry?: FieldRegistry
+    public readonly parent: Field | undefined
   ) {
     this.tag = renderTagFromAnnotations(this.field.annotations);
     this.metadataTag = tagFor(this.field, '#(malloy) ');
-    this.path = parent
-      ? parent.isArray()
-        ? [...parent.path]
-        : [...parent.path, field.name]
-      : [];
-    this.renderAs = shouldRenderAs(field, parent);
-    this.registry = registry;
+    this.path = parent ? [...parent.path, field.name] : [];
   }
 
   isRoot(): boolean {
@@ -326,19 +312,25 @@ export abstract class FieldBase {
   }
 
   isNest(): this is NestField {
-    return this.isArray() || this.isRecord() || this.isRepeatedRecord();
+    return this.isRecord() || this.isRepeatedRecord();
   }
 
   getLocationInParent() {
-    return this.parent?.fields.findIndex(f => f === this) ?? -1;
+    if (this.parent && 'fields' in this.parent) {
+      return this.parent.fields.findIndex(f => f === this) ?? -1;
+    }
+    return -1;
   }
 
   isLastChild() {
     const parent = this.parent;
-    return (
-      parent === undefined ||
-      this.getLocationInParent() === parent.fields.length
-    );
+    if (parent === undefined) {
+      return true;
+    }
+    if ('fields' in parent) {
+      return this.getLocationInParent() === parent.fields.length;
+    }
+    return true;
   }
 
   isFirstChild() {

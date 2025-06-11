@@ -1,5 +1,5 @@
 import {For} from 'solid-js';
-import {applyRenderer} from './apply-renderer';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import type {RendererProps} from './types';
 
 export function renderList(props: RendererProps) {

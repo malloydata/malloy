@@ -51,4 +51,30 @@ module.exports = {
   testTimeout: 100000,
   verbose: true,
   testEnvironment: 'node',
+  projects: [
+    {
+      displayName: 'malloy-render',
+      rootDir: '<rootDir>/packages/malloy-render',
+      preset: 'ts-jest',
+      testMatch: ['<rootDir>/src/**/*.spec.(ts|js)?(x)'],
+      globals: {
+        'ts-jest': {
+          tsconfig: '<rootDir>/tsconfig.json',
+        },
+      },
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+      },
+      transform: {
+        '^.+\\.(ts|tsx)$': 'ts-jest',
+        '^.+\\.(js|jsx)$': [
+          'babel-jest',
+          {
+            'presets': ['@babel/preset-env'],
+            'plugins': [['@babel/transform-runtime']],
+          },
+        ],
+      },
+    },
+  ],
 };

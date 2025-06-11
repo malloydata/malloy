@@ -1,5 +1,5 @@
 import {mergeConfig} from 'vite';
-import baseViteConfig from './vite.config.base';
+import baseViteConfig from './vite.config.base.mts';
 
 export default mergeConfig(baseViteConfig, {
   build: {

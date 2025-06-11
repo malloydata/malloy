@@ -20,7 +20,7 @@ import {MalloyViz} from '@/api/malloy-viz';
 import styles from './render.css?raw';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used as a directive in JSX
 import {resize} from './util';
-import {applyRenderer} from './apply-renderer';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import type {
   DashboardConfig,
   DrillData,
@@ -32,8 +32,8 @@ export type {DrillData} from './types';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
-import {LineChartSeriesPluginFactory} from '../plugins/line-chart-series-plugin';
 import {ErrorMessage} from './error-message/error-message';
+import type {RenderFieldMetadata} from '../render-field-metadata';
 
 export type MalloyRenderProps = {
   result?: Malloy.Result;
@@ -46,6 +46,7 @@ export type MalloyRenderProps = {
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
+  renderFieldMetadata: RenderFieldMetadata;
 };
 
 const ConfigContext = createContext<{
@@ -90,8 +91,8 @@ export function MalloyRender(props: MalloyRenderProps) {
   return (
     <ErrorBoundary
       fallback={errorProps => {
-        props?.onError?.(errorProps.error);
-        return <ErrorMessage message={errorProps.error.message} />;
+        const message = () => errorProps.error?.message ?? errorProps;
+        return <ErrorMessage message={message()} />;
       }}
     >
       <Show when={props.result}>
@@ -110,6 +111,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             element={props.element}
             scrollEl={props.scrollEl}
             vegaConfigOverride={props.vegaConfigOverride}
+            renderFieldMetadata={props.renderFieldMetadata}
           />
         </ConfigContext.Provider>
       </Show>
@@ -123,6 +125,7 @@ export function MalloyRenderInner(props: {
   element: HTMLElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
+  renderFieldMetadata: RenderFieldMetadata;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -132,19 +135,36 @@ export function MalloyRenderInner(props: {
   // This is where chart rendering happens for now
   // If size in fill mode, easiest thing would be to just recalculate entire thing
   // This is expensive but we can optimize later to make size responsive
-  const rootCell = createMemo(() =>
-    getDataTree(props.result, [LineChartSeriesPluginFactory])
-  );
+  const rootCell = createMemo(() => {
+    return getDataTree(props.result, props.renderFieldMetadata);
+  });
 
-  const metadata = createMemo(() =>
-    getResultMetadata(rootCell().field, {
+  const metadata = createMemo(() => {
+    // TODO Do we even need this anymore...
+    const resultMetadata = getResultMetadata(rootCell().field, {
+      renderFieldMetadata: props.renderFieldMetadata,
       getVegaConfigOverride: props.vegaConfigOverride,
       parentSize: {
         width: parentSize().width - CHART_SIZE_BUFFER,
         height: parentSize().height - CHART_SIZE_BUFFER,
       },
-    })
-  );
+    });
+    props.renderFieldMetadata?.getAllFields().forEach(field => {
+      const plugins =
+        props.renderFieldMetadata?.getPluginsForField(field.key) ?? [];
+      plugins.forEach(plugin => {
+        plugin.beforeRender?.(resultMetadata, {
+          renderFieldMetadata: props.renderFieldMetadata,
+          getVegaConfigOverride: props.vegaConfigOverride,
+          parentSize: {
+            width: parentSize().width - CHART_SIZE_BUFFER,
+            height: parentSize().height - CHART_SIZE_BUFFER,
+          },
+        });
+      });
+    });
+    return resultMetadata;
+  });
 
   // hack to block resize events when we're in fixed mode.
   // TODO as part of plugin system, move sizing strategy into data_tree metadata creation
@@ -176,9 +196,10 @@ export function MalloyRenderInner(props: {
 
   const rendering = () => {
     const data = rootCell();
-    // TODO hack: forcing re-render based on metadata. Fix this; result context should return a reactive store probably
-    //  that store is where we can store the size info, probably
+
+    // Hack to force re-render on resize, since stored in metadata. Would be better to make direct dependency to size
     metadata();
+
     return applyRenderer({
       dataColumn: data,
       tag: data.field.tag,
