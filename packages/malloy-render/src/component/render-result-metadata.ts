@@ -69,7 +69,7 @@ export function getResultMetadata(
     rootTag.has('size') && rootTag.text('size') !== 'fill'
       ? 'fixed'
       : defaultSettings.size;
-  const chartSizeTag = rootTag.tag('chart', 'size');
+  const chartSizeTag = rootTag.tag('viz', 'size');
   const chartSizingStrategy =
     chartSizeTag && chartSizeTag.text('') !== 'fill' ? 'fixed' : null;
 
@@ -79,7 +79,10 @@ export function getResultMetadata(
     rootField,
     parentSize: options.parentSize,
     renderAs: rootField.renderAs,
-    sizingStrategy: chartSizingStrategy ?? rootSizingStrategy,
+    sizingStrategy:
+      rootField.renderAs === 'table'
+        ? 'fixed'
+        : chartSizingStrategy ?? rootSizingStrategy,
   };
   populateAllVegaSpecs(rootField, metadata, options);
 
