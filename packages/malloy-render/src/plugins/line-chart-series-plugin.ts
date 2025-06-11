@@ -30,14 +30,16 @@ export const LineChartSeriesPluginFactory: RenderPlugin<LineChartPluginInstance>
     name: 'line_chart_series',
     matches: (fieldTag: Tag, fieldType: FieldType): boolean => {
       return (
-        fieldTag.has('line_chart') && fieldType === FieldType.RepeatedRecord
+        (fieldTag.has('line_chart') || fieldTag.text('viz') === 'line') &&
+        fieldType === FieldType.RepeatedRecord
       );
     },
     plugin: field => {
       const name = 'line_chart_series';
       const matches = (fieldTag: Tag, fieldType: FieldType): boolean => {
         return (
-          fieldTag.has('line_chart') && fieldType === FieldType.RepeatedRecord
+          (fieldTag.has('line_chart') || fieldTag.text('viz') === 'line') &&
+          fieldType === FieldType.RepeatedRecord
         );
       };
       try {

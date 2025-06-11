@@ -123,7 +123,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
 
   #(story)
-  # line_chart
+  # viz=line
   view: dimension_series is baseLineData + { group_by: department }
 
 
