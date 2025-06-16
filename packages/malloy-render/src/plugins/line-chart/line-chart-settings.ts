@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Channel, SeriesChannel, YChannel} from '@/component/types';
+import type {Channel, SeriesChannel, YChannel} from '@/component/types';
 import type {
   JSONSchemaObject,
   JSONSchemaArray,
   JSONSchemaString,
   JSONSchemaBoolean,
   JSONSchemaOneOf,
-} from '@/component/json-schema-types';
+} from '@/api/json-schema-types';
 
 // TypeScript type definition
 export interface LineChartSettings {

@@ -20,7 +20,9 @@ export const useResultContext = () => {
   return ctx();
 };
 
-export const PluginMetadataContext = createContext<RenderFieldMetadata | undefined>();
+export const PluginMetadataContext = createContext<
+  RenderFieldMetadata | undefined
+>();
 export const usePluginMetadata = (): RenderFieldMetadata | undefined => {
   return useContext(PluginMetadataContext);
 };

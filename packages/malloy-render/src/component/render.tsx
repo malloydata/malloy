@@ -33,7 +33,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getDataTree} from '../data_tree';
 import {ResultContext, PluginMetadataContext} from './result-context';
 import {ErrorMessage} from './error-message/error-message';
-import {RenderFieldMetadata} from '../render-field-metadata';
+import type {RenderFieldMetadata} from '../render-field-metadata';
 
 export type MalloyRenderProps = {
   result?: Malloy.Result;
@@ -46,7 +46,7 @@ export type MalloyRenderProps = {
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
-  renderFieldMetadata?: RenderFieldMetadata;
+  renderFieldMetadata: RenderFieldMetadata;
 };
 
 const ConfigContext = createContext<{
@@ -125,7 +125,7 @@ export function MalloyRenderInner(props: {
   element: HTMLElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
-  renderFieldMetadata?: RenderFieldMetadata;
+  renderFieldMetadata: RenderFieldMetadata;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -136,19 +136,13 @@ export function MalloyRenderInner(props: {
   // If size in fill mode, easiest thing would be to just recalculate entire thing
   // This is expensive but we can optimize later to make size responsive
   const rootCell = createMemo(() => {
-    if (props.renderFieldMetadata) {
-      return getDataTree(props.result, props.renderFieldMetadata);
-    } else {
-      // Fallback: create minimal RenderFieldMetadata without plugins
-      // This handles cases where render is called directly without MalloyViz
-      const fallbackMetadata = new RenderFieldMetadata(props.result, []);
-      return getDataTree(props.result, fallbackMetadata);
-    }
+    return getDataTree(props.result, props.renderFieldMetadata);
   });
 
   const metadata = createMemo(() => {
     // TODO Do we even need this anymore...
     const resultMetadata = getResultMetadata(rootCell().field, {
+      renderFieldMetadata: props.renderFieldMetadata,
       getVegaConfigOverride: props.vegaConfigOverride,
       parentSize: {
         width: parentSize().width - CHART_SIZE_BUFFER,
@@ -160,6 +154,7 @@ export function MalloyRenderInner(props: {
         props.renderFieldMetadata?.getPluginsForField(field.key) ?? [];
       plugins.forEach(plugin => {
         plugin.beforeRender?.(resultMetadata, {
+          renderFieldMetadata: props.renderFieldMetadata,
           getVegaConfigOverride: props.vegaConfigOverride,
           parentSize: {
             width: parentSize().width - CHART_SIZE_BUFFER,

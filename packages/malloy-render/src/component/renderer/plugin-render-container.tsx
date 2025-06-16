@@ -12,7 +12,6 @@ import type {
   DOMRenderPluginInstance,
   SolidJSRenderPluginInstance,
 } from '@/api/plugin-types';
-import {ErrorMessage} from '@/component/error-message/error-message';
 
 export interface PluginRenderContainerProps {
   plugin: RenderPluginInstance;
@@ -39,9 +38,9 @@ export function PluginRenderContainer(props: PluginRenderContainerProps) {
           }
         });
       } catch (error) {
-        console.error(`Plugin ${props.plugin.name} DOM render failed:`, error);
-        // For DOM mode, we have to use innerHTML since we can't render SolidJS components into the effect
-        container.innerHTML = `<div style="color: red; padding: 8px; border: 1px solid red; background-color: #ffeaea;">Plugin "${props.plugin.name}" failed to render</div>`;
+        throw new Error(
+          `Plugin ${props.plugin.name} DOM render failed: ${error}`
+        );
       }
     }
   });
@@ -62,21 +61,8 @@ export function PluginRenderContainer(props: PluginRenderContainerProps) {
         </div>
       );
     } catch (error) {
-      console.error(
-        `Plugin ${props.plugin.name} SolidJS render failed:`,
-        error
-      );
-      return (
-        <div
-          class={props.class}
-          style={props.style}
-          data-plugin={props.plugin.name}
-          data-render-mode="solidjs"
-        >
-          <ErrorMessage
-            message={`Plugin "${props.plugin.name}" failed to render`}
-          />
-        </div>
+      throw new Error(
+        `Plugin ${props.plugin.name} SolidJS render failed: ${error}`
       );
     }
   } else {

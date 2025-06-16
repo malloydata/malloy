@@ -30,12 +30,12 @@ import type {
 import {renderNumericField} from '@/component/render-numeric-field';
 import {getMarkName} from '@/component/vega/vega-utils';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
-import type {CellValue, NestField, RecordCell} from '../../data_tree';
-import {Field} from '../../data_tree';
-import {NULL_SYMBOL, renderTimeString} from '../../util';
+import type {CellValue, RecordCell} from '@/data_tree';
+import {Field} from '@/data_tree';
+import {NULL_SYMBOL, renderTimeString} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
-import {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
+import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
 
 type LineDataRecord = {
   x: string | number;

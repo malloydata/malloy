@@ -37,8 +37,10 @@ import {
   getChartTypeFromNormalizedTag,
 } from './tag-utils';
 import type {RootField, NestField, RepeatedRecordField} from '@/data_tree';
+import type {RenderFieldMetadata} from '@/render-field-metadata';
 
 export type GetResultMetadataOptions = {
+  renderFieldMetadata: RenderFieldMetadata;
   getVegaConfigOverride?: VegaConfigHandler;
   parentSize: {width: number; height: number};
 };
@@ -60,7 +62,7 @@ export interface RenderMetadata {
 
 export function getResultMetadata(
   rootField: RootField,
-  options: GetResultMetadataOptions = {parentSize: {width: 0, height: 0}}
+  options: GetResultMetadataOptions
 ): RenderMetadata {
   const rootTag = rootField.tag;
 
@@ -72,14 +74,18 @@ export function getResultMetadata(
   const chartSizingStrategy =
     chartSizeTag && chartSizeTag.text('') !== 'fill' ? 'fixed' : null;
 
+  const renderAs =
+    options.renderFieldMetadata.getFieldEntry(rootField.key)?.renderProperties
+      .renderAs ?? 'table';
+
   const metadata: RenderMetadata = {
     store: createResultStore(),
     vega: {},
     rootField,
     parentSize: options.parentSize,
-    renderAs: rootField.renderAs,
+    renderAs,
     sizingStrategy:
-      rootField.renderAs === 'table'
+      renderAs === 'table'
         ? 'fixed'
         : chartSizingStrategy ?? rootSizingStrategy,
   };

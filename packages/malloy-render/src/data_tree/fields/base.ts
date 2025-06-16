@@ -1,4 +1,4 @@
-import {tagFor, extractLiteralFromTag, shouldRenderAs} from '../utils';
+import {tagFor, extractLiteralFromTag} from '../utils';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
 import {renderTagFromAnnotations, NULL_SYMBOL, notUndefined} from '../../util';
@@ -30,9 +30,9 @@ export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
   protected readonly metadataTag: Tag;
-  public readonly renderAs: string;
+  public renderAs: string;
   public readonly valueSet = new Set<string | number | boolean>();
-  protected registry?: RenderFieldRegistry;
+  protected registry: RenderFieldRegistry;
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
@@ -43,7 +43,7 @@ export abstract class FieldBase {
   constructor(
     public readonly field: Malloy.DimensionInfo,
     public readonly parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     this.tag = renderTagFromAnnotations(this.field.annotations);
     this.metadataTag = tagFor(this.field, '#(malloy) ');
@@ -52,7 +52,11 @@ export abstract class FieldBase {
         ? [...parent.path]
         : [...parent.path, field.name]
       : [];
-    this.renderAs = shouldRenderAs(field, parent);
+
+    // TODO: legacy to keep renderer working until all viz are migrated to plugins
+    // eventually remove this from Field class. Currently it is being populating in render-field-metadata
+    this.renderAs = '';
+
     this.registry = registry;
   }
 

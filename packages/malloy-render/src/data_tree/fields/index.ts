@@ -62,7 +62,7 @@ export const Field = {
   from(
     field: Malloy.DimensionInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ): Field {
     if (isRepeatedRecordFieldInfo(field)) {
       return new RepeatedRecordField(field, parent, registry);

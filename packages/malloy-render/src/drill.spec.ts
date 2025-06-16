@@ -121,7 +121,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('top_carriers')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
     const row = table.rows[0];
@@ -133,7 +133,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('over_time')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: over_time.dep_month = 8 } + { select: * }';
     const row = table.rows[0];
@@ -145,7 +145,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('by_origin')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: by_origin.`Origin Code` = "ATL" } + { select: * }';
     const row = table.rows[0];
@@ -157,7 +157,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('no_filter')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = 'run: flights -> { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
@@ -168,7 +168,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('cool_carriers')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: cool_carriers.`Origin Code` = "ABQ" } + { select: * }';
     const row = table.rows[0];
@@ -180,7 +180,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('literal_with_nested_view_unstable')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
     carriers.nickname ~ '%A%',
@@ -211,7 +211,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('literal_with_nested_view_stable')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
     \`Origin Code\` ~ f\`SFO, ORD\`,
@@ -240,7 +240,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('already_has_some_drills')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
     \`Origin Code\` ~ f\`SFO, ORD\`,
@@ -258,7 +258,7 @@ describe('drill query', () => {
       .loadModel(model)
       .loadQueryByName('negative_value')
       .run();
-    const table = getDataTree(API.util.wrapResult(result), null as any);
+    const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: negative_value.negative_one = -1 } + { select: * }';
     const row = table.rows[0];
@@ -299,7 +299,7 @@ describe('drill query', () => {
         .loadModel(model)
         .loadQueryByName('source_has_parameters')
         .run();
-      const table = getDataTree(API.util.wrapResult(result), null as any);
+      const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery = `run: flights_with_parameters(
   number_param is 1,
   string_param is "foo",
@@ -317,7 +317,7 @@ describe('drill query', () => {
         .loadModel(model)
         .loadQueryByName('source_has_timezone_param')
         .run();
-      const table = getDataTree(API.util.wrapResult(result), null as any);
+      const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery =
         'run: flights_with_timestamp_param(timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
       const row = table.rows[0];
@@ -329,7 +329,7 @@ describe('drill query', () => {
         .loadModel(model)
         .loadQueryByName('only_default_params')
         .run();
-      const table = getDataTree(API.util.wrapResult(result), null as any);
+      const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery =
         'run: flights_with_parameters -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
       const row = table.rows[0];

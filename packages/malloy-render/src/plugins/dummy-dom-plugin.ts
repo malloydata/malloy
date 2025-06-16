@@ -41,12 +41,13 @@ export const DummyDOMPluginFactory: RenderPluginFactory<DummyDOMPluginInstance> 
     create: (field: Field): DummyDOMPluginInstance => {
       return {
         name: 'dummy_dom',
+        field,
         renderMode: 'dom',
         sizingStrategy: 'fixed',
 
         renderToDOM: (container: HTMLElement, props: RenderProps): void => {
           const cellValue = props.dataColumn.value;
-          const displayValue = cellValue != null ? String(cellValue) : 'null';
+          const displayValue = cellValue !== null ? String(cellValue) : 'null';
 
           // Clear container
           container.innerHTML = '';

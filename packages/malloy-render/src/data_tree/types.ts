@@ -1,6 +1,5 @@
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {Field} from './fields';
-import type {RenderPluginInstance} from './plugins';
 import type {Cell} from './cells';
 
 export type DrillEntry =
@@ -11,7 +10,6 @@ export type DrillEntry =
   | {where: string};
 
 export type DrillValue = {field: Field; value: Cell} | {where: string};
-
 
 export type SortableField = {field: Field; dir: 'asc' | 'desc' | undefined};
 

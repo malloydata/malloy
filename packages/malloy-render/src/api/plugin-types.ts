@@ -16,11 +16,12 @@ import type {
 export interface RenderProps {
   dataColumn: Cell;
   field: Field;
-  customProps?: Record<string, any>;
+  customProps?: Record<string, unknown>;
 }
 
-interface BaseRenderPluginInstance<TMetadata = any> {
+interface BaseRenderPluginInstance<TMetadata = unknown> {
   readonly name: string;
+  readonly field: Field;
   readonly sizingStrategy: 'fixed' | 'fill';
 
   getMetadata(): TMetadata;
@@ -31,21 +32,20 @@ interface BaseRenderPluginInstance<TMetadata = any> {
   ): void;
 }
 
-export interface SolidJSRenderPluginInstance<TMetadata = any>
+export interface SolidJSRenderPluginInstance<TMetadata = unknown>
   extends BaseRenderPluginInstance<TMetadata> {
   readonly renderMode: 'solidjs';
-  readonly field: Field;
   renderComponent(props: RenderProps): JSXElement;
 }
 
-export interface DOMRenderPluginInstance<TMetadata = any>
+export interface DOMRenderPluginInstance<TMetadata = unknown>
   extends BaseRenderPluginInstance<TMetadata> {
   readonly renderMode: 'dom';
   renderToDOM(container: HTMLElement, props: RenderProps): void;
   cleanup?(container: HTMLElement): void;
 }
 
-export type RenderPluginInstance<TMetadata = any> =
+export type RenderPluginInstance<TMetadata = unknown> =
   | SolidJSRenderPluginInstance<TMetadata>
   | DOMRenderPluginInstance<TMetadata>;
 
@@ -55,5 +55,5 @@ export interface RenderPluginFactory<
   readonly name: string;
 
   matches(field: Field, fieldTag: Tag, fieldType: FieldType): boolean;
-  create(field: Field, options?: any): TInstance;
+  create(field: Field): TInstance;
 }

@@ -19,7 +19,7 @@ export class NumberField extends FieldBase {
   constructor(
     public readonly field: NumberFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }
@@ -65,7 +65,7 @@ export class DateField extends FieldBase {
   constructor(
     public readonly field: DateFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }
@@ -124,7 +124,7 @@ export class TimestampField extends FieldBase {
   constructor(
     public readonly field: TimestampFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }
@@ -175,7 +175,7 @@ export class StringField extends FieldBase {
   constructor(
     public readonly field: StringFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }
@@ -213,7 +213,7 @@ export class SQLNativeField extends FieldBase {
   constructor(
     public readonly field: SQLNativeFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }
@@ -223,7 +223,7 @@ export class JSONField extends FieldBase {
   constructor(
     public readonly field: JSONFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }
@@ -234,7 +234,7 @@ export class BooleanField extends FieldBase {
   constructor(
     public readonly field: BooleanFieldInfo,
     parent: NestField | undefined,
-    registry?: RenderFieldRegistry
+    registry: RenderFieldRegistry
   ) {
     super(field, parent, registry);
   }

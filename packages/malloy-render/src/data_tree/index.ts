@@ -1,12 +1,15 @@
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {RootCell} from './cells';
-import type {RenderFieldMetadata} from '../render-field-metadata';
+import {RenderFieldMetadata} from '../render-field-metadata';
 
 export function getDataTree(
   result: Malloy.Result,
-  renderFieldMetadata: RenderFieldMetadata
+  renderFieldMetadata?: RenderFieldMetadata
 ) {
   // Use the pre-calculated RootField from RenderFieldMetadata
+  if (!renderFieldMetadata) {
+    renderFieldMetadata = new RenderFieldMetadata(result);
+  }
   const rootField = renderFieldMetadata.getRootField();
 
   const cell: Malloy.DataWithArrayCell =

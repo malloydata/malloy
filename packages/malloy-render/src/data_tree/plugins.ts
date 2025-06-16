@@ -2,8 +2,5 @@
 export type {
   RenderPluginInstance,
   RenderPluginFactory,
-  PluginRenderResult,
-  SolidJSRenderResult,
-  DOMRenderResult,
-  RenderProps
+  RenderProps,
 } from '@/api/plugin-types';

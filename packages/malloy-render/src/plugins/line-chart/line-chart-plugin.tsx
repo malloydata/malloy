@@ -10,7 +10,7 @@ import type {
   SolidJSRenderPluginInstance,
   RenderProps,
 } from '@/api/plugin-types';
-import {type Field, FieldType, NestField} from '@/data_tree';
+import {type Field, FieldType, type NestField} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
 import {ChartV2} from '@/component/chart/chart-v2';
@@ -20,7 +20,7 @@ import {
 } from '@/plugins/line-chart/get-line_chart-settings';
 import {generateLineChartVegaSpecV2} from '@/plugins/line-chart/generate-line_chart-vega-spec';
 import {type VegaChartProps} from '@/component/types';
-import {Config, parse, type Runtime} from 'vega';
+import {type Config, parse, type Runtime} from 'vega';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {baseVegaConfig} from '@/component/vega/base-vega-config';
 import {NULL_SYMBOL} from '@/util';
@@ -73,7 +73,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       }
 
       let settings: LineChartSettings;
-      let seriesStats = new Map<string, SeriesStats>();
+      const seriesStats = new Map<string, SeriesStats>();
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
 
@@ -155,36 +155,31 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          try {
-            vegaProps = generateLineChartVegaSpecV2(metadata, pluginInstance);
+          vegaProps = generateLineChartVegaSpecV2(metadata, pluginInstance);
 
-            // TODO: should this be passed as plugin options? createLineChartPlugin(options)?
-            // but how would you supply these options to the default plugins?
-            const vegaConfigOverride =
-              options.getVegaConfigOverride?.('line_chart') ?? {};
+          // TODO: should this be passed as plugin options? createLineChartPlugin(options)?
+          // but how would you supply these options to the default plugins?
+          const vegaConfigOverride =
+            options.getVegaConfigOverride?.('line_chart') ?? {};
 
-            const vegaConfig: Config = mergeVegaConfigs(
-              baseVegaConfig(),
-              options.getVegaConfigOverride?.('line_chart') ?? {}
+          const vegaConfig: Config = mergeVegaConfigs(
+            baseVegaConfig(),
+            options.getVegaConfigOverride?.('line_chart') ?? {}
+          );
+
+          const maybeAxisYLabelFont =
+            vegaConfigOverride['axisY']?.['labelFont'];
+          const maybeAxisLabelFont = vegaConfigOverride['axis']?.['labelFont'];
+          if (maybeAxisYLabelFont || maybeAxisLabelFont) {
+            const refLineFontSignal = vegaConfig.signals?.find(
+              signal => signal.name === 'referenceLineFont'
             );
-
-            const maybeAxisYLabelFont =
-              vegaConfigOverride['axisY']?.['labelFont'];
-            const maybeAxisLabelFont =
-              vegaConfigOverride['axis']?.['labelFont'];
-            if (maybeAxisYLabelFont || maybeAxisLabelFont) {
-              const refLineFontSignal = vegaConfig.signals?.find(
-                signal => signal.name === 'referenceLineFont'
-              );
-              if (refLineFontSignal)
-                refLineFontSignal.value =
-                  maybeAxisYLabelFont ?? maybeAxisLabelFont;
-            }
-
-            runtime = parse(vegaProps.spec, vegaConfig);
-          } catch (error) {
-            console.error('Error in LineChartPlugin beforeRender', error);
+            if (refLineFontSignal)
+              refLineFontSignal.value =
+                maybeAxisYLabelFont ?? maybeAxisLabelFont;
           }
+
+          runtime = parse(vegaProps.spec, vegaConfig);
         },
 
         getMetadata: (): LineChartPluginMetadata => ({

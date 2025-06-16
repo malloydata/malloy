@@ -8,6 +8,7 @@
 import type {MalloyRendererOptions} from './types';
 import type {RenderPluginFactory} from './plugin-types';
 import {MalloyViz} from './malloy-viz';
+import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
 
 export class MalloyRenderer {
   private globalOptions: MalloyRendererOptions;
@@ -15,7 +16,7 @@ export class MalloyRenderer {
 
   constructor(options: MalloyRendererOptions = {}) {
     this.globalOptions = options;
-    this.pluginRegistry = [...(options.plugins || [])];
+    this.pluginRegistry = [LineChartPluginFactory, ...(options.plugins || [])];
   }
 
   // TODO Figure out whether we should differentiate between global and viz options

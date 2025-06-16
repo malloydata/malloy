@@ -142,6 +142,8 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           import {createLoader} from './util';
           import './themes.css';
           import {MalloyRenderer} from '../api/malloy-renderer';
+          import {DummyPluginFactory} from '@/plugins/dummy-plugin';
+          import {DummyDOMPluginFactory} from '@/plugins/dummy-dom-plugin';
 
           const meta = {
             title: "Malloy Next/${modelStoriesMeta.componentName}",
@@ -161,16 +163,21 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               targetElement.style.width = '100%';
               parent.appendChild(targetElement);
 
-              const renderer = new MalloyRenderer();
+              const renderer = new MalloyRenderer({
+                plugins: [
+                  DummyPluginFactory,
+                  DummyDOMPluginFactory,
+                ],
+              });
               const viz = renderer.createViz({
-                // modelDef: context.loaded['result'].modelDef
-              }, {
-                onError: (error) => {
-                  console.log("Malloy render error", error);
-                }
+                onError: error => {
+                  console.log('Malloy render error', error);
+                },
               });
               viz.setResult(context.loaded['result']);
-              console.log('initial state', viz.getMetadata());
+              const metadata = viz.getMetadata();
+              console.log('initial state', metadata);
+              console.log('render properties', metadata.getFieldEntry(metadata.rootField.key).renderProperties);
               viz.render(targetElement);
 
               return parent;

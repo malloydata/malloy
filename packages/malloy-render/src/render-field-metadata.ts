@@ -2,16 +2,11 @@ import {tagFromAnnotations} from '@/util';
 import {
   type Field,
   RootField,
-  RecordField,
-  ArrayField,
-  type NestField,
-  RepeatedRecordField,
   type RenderPluginInstance,
   getFieldType,
+  shouldRenderAs,
 } from '@/data_tree';
 import type {RenderPluginFactory} from '@/api/plugin-types';
-import {shouldRenderChartAs} from '@/component/render-result-metadata';
-import {getBarChartSettings} from '@/component/bar-chart/get-bar_chart-settings';
 import type {
   RenderFieldRegistryEntry,
   RenderFieldRegistry,
@@ -66,6 +61,7 @@ export class RenderFieldMetadata {
           plugins.push(pluginInstance);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.warn(
           `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
           error
@@ -87,15 +83,20 @@ export class RenderFieldMetadata {
         field,
         renderProperties: {
           field,
-          renderAs: field.renderAs,
+          renderAs: shouldRenderAs({
+            field,
+            parent: undefined,
+            plugins,
+          }),
           sizingStrategy: 'fit',
           properties: {},
           errors: [],
         },
         plugins,
       };
-      // calculate chart metadata (eventually via plugins)
-      const vizProperties = this.populateRenderFieldProperties(field);
+      // TODO: legacy to keep renderer working until all viz are migrated to plugins
+      field.renderAs = renderFieldEntry.renderProperties.renderAs;
+      const vizProperties = this.populateRenderFieldProperties(field, plugins);
       renderFieldEntry.renderProperties.properties = vizProperties.properties;
       renderFieldEntry.renderProperties.errors = vizProperties.errors;
 
@@ -110,29 +111,38 @@ export class RenderFieldMetadata {
   }
 
   // TODO: replace with plugin logic, type it
-  private populateRenderFieldProperties(field: Field): {
+  private populateRenderFieldProperties(
+    field: Field,
+    plugins: RenderPluginInstance[]
+  ): {
     properties: Record<string, unknown>;
     errors: Error[];
   } {
     const properties: Record<string, unknown> = {};
     const errors: Error[] = [];
 
-    if (field.renderAs === 'chart' && !(field instanceof RepeatedRecordField)) {
-      // TODO: push this error down to the individual chart code
-      errors.push(new Error('Charts require tabular data'));
+    for (const plugin of plugins) {
+      properties[plugin.name] = plugin.getMetadata();
     }
-    const chartType = shouldRenderChartAs(field.tag);
 
-    // TODO throw error if field type doesn't match chart type
-    if (chartType === 'bar' && field instanceof RepeatedRecordField) {
-      try {
-        const settings = getBarChartSettings(field);
-        properties['settings'] = settings;
-      } catch (error) {
-        errors.push(error);
-      }
-    }
     return {properties, errors};
+
+    // if (field.renderAs === 'chart' && !(field instanceof RepeatedRecordField)) {
+    //   // TODO: push this error down to the individual chart code
+    //   errors.push(new Error('Charts require tabular data'));
+    // }
+    // const chartType = shouldRenderChartAs(field.tag);
+
+    // // TODO throw error if field type doesn't match chart type
+    // if (chartType === 'bar' && field instanceof RepeatedRecordField) {
+    //   try {
+    //     const settings = getBarChartSettings(field);
+    //     properties['settings'] = settings;
+    //   } catch (error) {
+    //     errors.push(error);
+    //   }
+    // }
+    // return {properties, errors};
   }
 
   // Get all fields in the schema
@@ -149,5 +159,9 @@ export class RenderFieldMetadata {
   getPluginsForField(fieldKey: string): RenderPluginInstance[] {
     const entry = this.registry.get(fieldKey);
     return entry ? entry.plugins : [];
+  }
+
+  getFieldEntry(fieldKey: string): RenderFieldRegistryEntry | undefined {
+    return this.registry.get(fieldKey);
   }
 }

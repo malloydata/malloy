@@ -41,22 +41,23 @@ export const DummyPluginFactory: RenderPluginFactory<DummyPluginInstance> = {
   create: (field: Field): DummyPluginInstance => {
     return {
       name: 'dummy',
+      field,
       renderMode: 'solidjs',
       sizingStrategy: 'fixed',
 
       renderComponent: (props: RenderProps): JSXElement => {
         const cellValue = props.dataColumn.value;
-        const displayValue = cellValue != null ? String(cellValue) : 'null';
+        const displayValue = cellValue !== null ? String(cellValue) : 'null';
 
         return (
           <div
             style={{
-              padding: '8px',
-              border: '2px dashed #007acc',
+              'padding': '8px',
+              'border': '2px dashed #007acc',
               'background-color': '#f0f8ff',
               'border-radius': '4px',
               'font-family': 'monospace',
-              color: '#007acc',
+              'color': '#007acc',
             }}
           >
             Hello World: {displayValue}

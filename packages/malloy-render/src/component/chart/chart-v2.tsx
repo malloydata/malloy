@@ -15,7 +15,7 @@ import type {EventListenerHandler, Runtime, View} from 'vega';
 import type {VegaBrushOutput} from '../result-store/result-store';
 
 import {DebugIcon} from './debug_icon';
-import ChartDevTool from './chart-dev-tool';
+// import ChartDevTool from './chart-dev-tool';
 import type {RepeatedRecordCell} from '../../data_tree';
 import {useResultContext} from '../result-context';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -38,10 +38,10 @@ export type ChartV2Props = {
   data: RepeatedRecordCell;
   values: unknown[];
   runtime: Runtime;
-  vegaSpec: any;
+  vegaSpec: unknown;
   plotWidth: number;
   plotHeight: number;
-  getTooltipData?: (item: any, view: View) => ChartTooltipEntry | null;
+  getTooltipData?: (item: unknown, view: View) => ChartTooltipEntry | null;
   // Debugging properties
   devMode?: boolean;
   onView?: (view: View) => void;
