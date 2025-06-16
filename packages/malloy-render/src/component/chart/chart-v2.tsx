@@ -11,7 +11,7 @@ import type {ChartTooltipEntry} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
-import type {EventListenerHandler, Runtime, View} from 'vega';
+import type {EventListenerHandler, Item, Runtime, View} from 'vega';
 import type {VegaBrushOutput} from '../result-store/result-store';
 
 import {DebugIcon} from './debug_icon';
@@ -41,7 +41,7 @@ export type ChartV2Props = {
   vegaSpec: unknown;
   plotWidth: number;
   plotHeight: number;
-  getTooltipData?: (item: unknown, view: View) => ChartTooltipEntry | null;
+  getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
   // Debugging properties
   devMode?: boolean;
   onView?: (view: View) => void;

@@ -48,7 +48,7 @@ export const defaultLineChartSettings: LineChartSettings = {
 };
 
 // Specific typed interface for the line chart schema
-interface LineChartSettingsSchema extends JSONSchemaObject {
+export interface ILineChartSettingsSchema extends JSONSchemaObject {
   properties: {
     xChannel: JSONSchemaObject & {
       properties: {
@@ -85,7 +85,7 @@ interface LineChartSettingsSchema extends JSONSchemaObject {
 }
 
 // JSON Schema
-export const lineChartSettingsSchema: LineChartSettingsSchema = {
+export const lineChartSettingsSchema: ILineChartSettingsSchema = {
   title: 'Line Chart Settings',
   type: 'object',
   properties: {
@@ -229,12 +229,3 @@ export const lineChartSettingsSchema: LineChartSettingsSchema = {
   ],
   additionalProperties: false,
 };
-
-// Export functions for external consumption
-export function getLineChartSettingsSchemaJSON(): string {
-  return JSON.stringify(lineChartSettingsSchema, null, 2);
-}
-
-export function getDefaultLineChartSettingsJSON(): string {
-  return JSON.stringify(defaultLineChartSettings, null, 2);
-}
