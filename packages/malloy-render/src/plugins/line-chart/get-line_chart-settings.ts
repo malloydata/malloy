@@ -8,18 +8,86 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel, YChannel, SeriesChannel} from '@/component/types';
 import type {NestField} from '@/data_tree';
-import {walkFields} from '@/util';
+import {walkFields, deepMerge} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
   defaultLineChartSettings,
   type LineChartSettings,
+  type LineChartPluginOptions,
 } from './line-chart-settings';
 
-export type {LineChartSettings};
+export type {LineChartSettings, LineChartPluginOptions};
+
+function parseModelDefaults(modelTag?: Tag): Partial<LineChartSettings> {
+  const modelDefaults: Partial<LineChartSettings> = {};
+
+  if (!modelTag) {
+    return modelDefaults;
+  }
+
+  // Parse viz.line_chart.defaults.* tags from the model tag
+  // These come from ##r viz.line_chart.defaults.y.independent=true style annotations
+
+  // Check for viz.line_chart.defaults.y.independent
+  if (modelTag.has('viz', 'line_chart', 'defaults', 'y', 'independent')) {
+    const value = modelTag.text(
+      'viz',
+      'line_chart',
+      'defaults',
+      'y',
+      'independent'
+    );
+    if (!modelDefaults.yChannel) modelDefaults.yChannel = {} as YChannel;
+    modelDefaults.yChannel.independent = value === 'false' ? false : true;
+  }
+
+  // Check for viz.line_chart.defaults.zeroBaseline
+  if (modelTag.has('viz', 'line_chart', 'defaults', 'zeroBaseline')) {
+    const value = modelTag.text(
+      'viz',
+      'line_chart',
+      'defaults',
+      'zeroBaseline'
+    );
+    modelDefaults.zeroBaseline = value === 'false' ? false : true;
+  }
+
+  // Check for viz.line_chart.defaults.x.independent
+  if (modelTag.has('viz', 'line_chart', 'defaults', 'x', 'independent')) {
+    const value = modelTag.text(
+      'viz',
+      'line_chart',
+      'defaults',
+      'x',
+      'independent'
+    );
+    if (!modelDefaults.xChannel) modelDefaults.xChannel = {} as Channel;
+    modelDefaults.xChannel.independent = value === 'false' ? false : true;
+  }
+
+  // Check for viz.line_chart.defaults.seriesChannel.limit
+  if (modelTag.has('viz', 'line_chart', 'defaults', 'seriesChannel', 'limit')) {
+    const value = modelTag.numeric(
+      'viz',
+      'line_chart',
+      'defaults',
+      'seriesChannel',
+      'limit'
+    );
+    if (value !== null) {
+      if (!modelDefaults.seriesChannel)
+        modelDefaults.seriesChannel = {} as SeriesChannel;
+      modelDefaults.seriesChannel.limit = value as number | 'auto';
+    }
+  }
+  return modelDefaults;
+}
 
 export function getLineChartSettings(
   explore: NestField,
-  tagOverride?: Tag
+  tagOverride?: Tag,
+  jsDefaults?: Partial<LineChartSettings>,
+  modelTag?: Tag
 ): LineChartSettings {
   const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
 
@@ -31,8 +99,20 @@ export function getLineChartSettings(
 
   const vizTag = normalizedTag.tag('viz')!;
 
+  // Parse model defaults from viz.line_chart.defaults.* tags
+  const modelDefaults = parseModelDefaults(modelTag);
+
+  // Merge defaults: hardcoded < JS defaults < model defaults
+  let mergedDefaults = {...defaultLineChartSettings};
+  if (jsDefaults) {
+    mergedDefaults = deepMerge(mergedDefaults, jsDefaults);
+  }
+  if (Object.keys(modelDefaults).length > 0) {
+    mergedDefaults = deepMerge(mergedDefaults, modelDefaults);
+  }
+
   // default zero_baselinse
-  let zeroBaseline = defaultLineChartSettings.zeroBaseline;
+  let zeroBaseline = mergedDefaults.zeroBaseline;
   if (vizTag.has('zero_baseline')) {
     const value = vizTag.text('zero_baseline');
     // If explicitly set to false, set to false
@@ -53,18 +133,17 @@ export function getLineChartSettings(
   // if tooltip, disable interactions, otherwise use default
   const interactive = normalizedTag.has('tooltip')
     ? false
-    : defaultLineChartSettings.interactive;
+    : mergedDefaults.interactive;
 
   // X-axis independence
-  let xIndependent: boolean | 'auto' =
-    defaultLineChartSettings.xChannel.independent;
+  let xIndependent: boolean | 'auto' = mergedDefaults.xChannel.independent;
   if (vizTag.has('x', 'independent')) {
     const value = vizTag.text('x', 'independent');
     xIndependent = value === 'false' ? false : true;
   }
 
   // Y-axis independence
-  let yIndependent: boolean = defaultLineChartSettings.yChannel.independent;
+  let yIndependent: boolean = mergedDefaults.yChannel.independent;
   if (vizTag.has('y', 'independent')) {
     const value = vizTag.text('y', 'independent');
     yIndependent = value === 'false' ? false : true;
@@ -72,7 +151,7 @@ export function getLineChartSettings(
 
   // Series independence
   let seriesIndependent: boolean | 'auto' =
-    defaultLineChartSettings.seriesChannel.independent;
+    mergedDefaults.seriesChannel.independent;
   if (vizTag.has('series', 'independent')) {
     const value = vizTag.text('series', 'independent');
     seriesIndependent = value === 'false' ? false : true;
@@ -80,28 +159,27 @@ export function getLineChartSettings(
 
   // Series limit
   const seriesLimit: number | 'auto' =
-    vizTag.numeric('series', 'limit') ??
-    defaultLineChartSettings.seriesChannel.limit;
+    vizTag.numeric('series', 'limit') ?? mergedDefaults.seriesChannel.limit;
 
   // Disable embedded field tags
   const disableEmbedded =
-    vizTag.has('disable_embedded') || defaultLineChartSettings.disableEmbedded;
+    vizTag.has('disableEmbedded') || mergedDefaults.disableEmbedded;
 
   const xChannel: Channel = {
     fields: [],
-    type: defaultLineChartSettings.xChannel.type,
+    type: mergedDefaults.xChannel.type,
     independent: xIndependent,
   };
 
   const yChannel: YChannel = {
     fields: [],
-    type: defaultLineChartSettings.yChannel.type,
+    type: mergedDefaults.yChannel.type,
     independent: yIndependent,
   };
 
   const seriesChannel: SeriesChannel = {
     fields: [],
-    type: defaultLineChartSettings.seriesChannel.type,
+    type: mergedDefaults.seriesChannel.type,
     independent: seriesIndependent,
     limit: seriesLimit,
   };

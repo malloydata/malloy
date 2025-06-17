@@ -26,4 +26,5 @@ export interface MalloyRendererOptions {
   scrollEl?: HTMLElement;
   onError?: (error: Error) => void;
   plugins?: RenderPluginFactory[];
+  pluginOptions?: Record<string, unknown>;
 }

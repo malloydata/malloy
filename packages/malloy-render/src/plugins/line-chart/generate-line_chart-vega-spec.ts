@@ -172,6 +172,7 @@ export function generateLineChartVegaSpecV2(
     yField,
     chartType: 'line',
     getYMinMax: () => [yDomainMin, yDomainMax],
+    // TODO: whats the use case for auto setting this with limited series? why does limiting series mean it should be independent? do we need an "auto" setting? like SeriesIndependence setting has?
     independentY: settings.yChannel.independent || isLimitingSeries,
   });
 

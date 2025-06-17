@@ -15,12 +15,15 @@ export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
   private pluginRegistry: RenderPluginFactory[];
+  private pluginOptions: Record<string, unknown>;
 
   constructor(
     result: Malloy.Result,
-    pluginRegistry: RenderPluginFactory[] = []
+    pluginRegistry: RenderPluginFactory[] = [],
+    pluginOptions: Record<string, unknown> = {}
   ) {
     this.pluginRegistry = pluginRegistry;
+    this.pluginOptions = pluginOptions;
     this.registry = new Map();
 
     // Create the root field with all its metadata
@@ -53,7 +56,9 @@ export class RenderFieldMetadata {
     for (const factory of this.pluginRegistry) {
       try {
         if (factory.matches(field, field.tag, getFieldType(field))) {
-          const pluginInstance = factory.create(field);
+          const pluginOptions = this.pluginOptions[factory.name];
+          const modelTag = this.rootField.modelTag;
+          const pluginInstance = factory.create(field, pluginOptions, modelTag);
           plugins.push(pluginInstance);
         }
       } catch (error) {
