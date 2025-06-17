@@ -59,6 +59,51 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
   return inverted;
 }
 
+// Helper to get appropriate time format for year-over-year mode
+function getYoYTimeFormat(timeframe?: string): string {
+  if (!timeframe) return '%b %d'; // Default to month/day
+
+  if (timeframe.includes('month')) {
+    return '%b'; // Just month name (Jan, Feb, etc.)
+  } else if (timeframe.includes('quarter')) {
+    return 'Q%q'; // Quarter (Q1, Q2, etc.)
+  } else if (timeframe.includes('week')) {
+    return '%b %d'; // Week shown as month/day
+  } else {
+    return '%b %d'; // Daily data shown as month/day
+  }
+}
+
+// Helper to format tooltip titles for year-over-year mode
+function getYoYTooltipTitle(date: Date, timeframe?: string): string {
+  if (!timeframe) {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  }
+
+  if (timeframe.includes('month')) {
+    return date.toLocaleDateString('en-US', {month: 'long', timeZone: 'UTC'});
+  } else if (timeframe.includes('quarter')) {
+    const quarter = Math.floor(date.getMonth() / 3) + 1;
+    return `Q${quarter}`;
+  } else if (timeframe.includes('week')) {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  } else {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  }
+}
+
 export interface LineChartSettings {
   xChannel: {
     fields: string[];
@@ -128,7 +173,7 @@ export function generateLineChartVegaSpecV2(
   // Map ref ids to y fields
   const yRefsMapInverted = invertObject(yRefsMap);
 
-  const isDimensionalSeries = Boolean(seriesField);
+  const isDimensionalSeries = Boolean(seriesField) || settings.mode === 'yoy';
   const isMeasureSeries = Boolean(settings.yChannel.fields.length > 1);
   const hasSeries = isDimensionalSeries || isMeasureSeries;
 
@@ -705,16 +750,21 @@ export function generateLineChartVegaSpecV2(
     scales: [
       {
         name: 'xscale',
-        type: xIsDateorTime ? 'time' : 'point',
-        domain: shouldShareXDomain
-          ? xIsDateorTime
-            ? [Number(xField.minValue), Number(xField.maxValue)]
-            : xIsBoolean
-            ? [true, false]
-            : [...xField.valueSet]
-          : {data: 'values', field: 'x'},
+        type: xIsDateorTime || settings.mode === 'yoy' ? 'utc' : 'point',
+        domain:
+          settings.mode === 'yoy'
+            ? // For YoY mode, calculate domain from actual data
+              {data: 'values', field: 'x'}
+            : shouldShareXDomain
+            ? xIsDateorTime
+              ? [Number(xField.minValue), Number(xField.maxValue)]
+              : xIsBoolean
+              ? [true, false]
+              : [...xField.valueSet]
+            : {data: 'values', field: 'x'},
         range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,
+        nice: settings.mode !== 'yoy' && xIsDateorTime,
       },
       {
         name: 'null_x_scale',
@@ -735,7 +785,7 @@ export function generateLineChartVegaSpecV2(
         range: 'category',
         domain:
           isDimensionalSeries && shouldShareSeriesDomain && seriesSet
-            ? [...seriesSet!]
+            ? [...seriesSet]
             : {
                 data: 'values',
                 field: 'series',
@@ -751,17 +801,28 @@ export function generateLineChartVegaSpecV2(
         labelSeparation: 4,
         ...chartSettings.xAxis,
         encode: {
-          ...(xIsDateorTime
+          ...(xIsDateorTime || settings.mode === 'yoy'
             ? {
                 labels: {
                   enter: {
                     text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                      signal:
+                        settings.mode === 'yoy'
+                          ? // For YoY mode, format as month/day or appropriate granularity without year
+                            `utcFormat(datum.value, '${getYoYTimeFormat(
+                              xField.isTime() ? xField.timeframe : undefined
+                            )}')`
+                          : `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
                     },
                   },
                   update: {
                     text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                      signal:
+                        settings.mode === 'yoy'
+                          ? `utcFormat(datum.value, '${getYoYTimeFormat(
+                              xField.isTime() ? xField.timeframe : undefined
+                            )}')`
+                          : `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
                     },
                   },
                 },
@@ -791,12 +852,18 @@ export function generateLineChartVegaSpecV2(
     // Get legend dimensions
     if (isDimensionalSeries) {
       // This is for global; how to do across nests for local?
-      maxCharCt = [...seriesSet!].reduce<number>(
-        // TODO better handle the null symbol here
-        (a, b) => Math.max(a, b?.toString().length ?? 1),
-        0
-      );
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      if (seriesSet) {
+        maxCharCt = [...seriesSet].reduce<number>(
+          // TODO better handle the null symbol here
+          (a, b) => Math.max(a, b?.toString().length ?? 1),
+          0
+        );
+        maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      } else if (settings.mode === 'yoy') {
+        // For YoY mode, estimate max character count for years
+        maxCharCt = 4; // Assuming year format like "2023"
+        maxCharCt = Math.max(maxCharCt, 'Year'.length); // Legend title
+      }
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
         (max, f) => Math.max(max, f.length),
@@ -822,13 +889,14 @@ export function generateLineChartVegaSpecV2(
     (spec.padding as VegaPadding).right = legendSize;
     spec.legends!.push({
       fill: 'color',
-      // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
+      // No title for measure list legends, "Year" for YoY mode
+      title:
+        settings.mode === 'yoy' ? 'Year' : seriesField ? seriesField.name : '',
       orient: 'right',
       ...legendSettings,
       values:
-        isDimensionalSeries && shouldShareSeriesDomain
-          ? [...seriesSet!]
+        isDimensionalSeries && shouldShareSeriesDomain && seriesSet
+          ? [...seriesSet]
           : undefined,
       encode: {
         entries: {
@@ -891,6 +959,46 @@ export function generateLineChartVegaSpecV2(
       return cell.isTime() ? cell.value.valueOf() : cell.value;
     };
 
+    const getYoYTransformedData = (row: RecordCell) => {
+      const cell = row.column(xField.name);
+      if (!cell.isTime() || !cell.value) return null;
+
+      const date = new Date(cell.value.valueOf());
+      const year = date.getFullYear();
+
+      // Create a normalized date for the same day/month but in a common year (2000)
+      // This allows for proper time scaling on the x-axis
+      let normalizedDate: Date;
+
+      // Handle different granularities
+      const timeframe = xField.isTime() ? xField.timeframe : undefined;
+      if (timeframe?.includes('month')) {
+        // For month-based data, use the first of the month
+        normalizedDate = new Date(Date.UTC(2000, date.getUTCMonth(), 1));
+      } else if (timeframe?.includes('quarter')) {
+        // For quarter-based data, use the first month of the quarter
+        const quarter = Math.floor(date.getUTCMonth() / 3);
+        normalizedDate = new Date(Date.UTC(2000, quarter * 3, 1));
+      } else if (timeframe?.includes('week')) {
+        // For week-based data, calculate week of year
+        const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        const diff = date.getTime() - start.getTime();
+        const weekOfYear = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+        normalizedDate = new Date(Date.UTC(2000, 0, 1 + weekOfYear * 7));
+      } else {
+        // For daily data, use month and day
+        normalizedDate = new Date(
+          Date.UTC(2000, date.getUTCMonth(), date.getUTCDate())
+        );
+      }
+
+      return {
+        originalDate: date,
+        year: year.toString(),
+        normalizedX: normalizedDate.valueOf(),
+      };
+    };
+
     // TODO: How to limit data across nested charts? Which are unaware of their data usage?
     //    this will only limit data per nested chart
     const mappedData: {
@@ -901,6 +1009,8 @@ export function generateLineChartVegaSpecV2(
       series: CellValue;
     }[] = [];
     const localSeriesSet = new Set<string | number | boolean>();
+    let yoyMinDate: number | undefined;
+    let yoyMaxDate: number | undefined;
     function skipSeries(seriesVal: string | number | boolean) {
       if (seriesSet && (explore.isRoot() || shouldShareSeriesDomain)) {
         return !seriesSet.has(seriesVal);
@@ -914,6 +1024,43 @@ export function generateLineChartVegaSpecV2(
 
     // need to limit to max data points AFTER the series is filtered
     data.rows.forEach(row => {
+      // Handle year-over-year mode
+      if (settings.mode === 'yoy') {
+        const yoyData = getYoYTransformedData(row);
+        if (!yoyData) return; // Skip rows with invalid dates
+
+        const isMissingY = row.column(yField.name).value === null;
+        if (isMissingY) return; // Skip rows with missing y values
+
+        // For YoY mode, manage year series separately
+        if (
+          localSeriesSet.size >= maxSeries &&
+          !localSeriesSet.has(yoyData.year)
+        ) {
+          return; // Skip if we've reached max series and this year isn't already included
+        }
+        localSeriesSet.add(yoyData.year);
+
+        // Track min/max dates for YoY mode
+        const normalizedX = yoyData.normalizedX as number;
+        if (yoyMinDate === undefined || normalizedX < yoyMinDate) {
+          yoyMinDate = normalizedX;
+        }
+        if (yoyMaxDate === undefined || normalizedX > yoyMaxDate) {
+          yoyMaxDate = normalizedX;
+        }
+
+        mappedData.push({
+          __values: row.allCellValues(),
+          __row: row,
+          x: yoyData.normalizedX,
+          y: row.column(yField.name).value,
+          series: yoyData.year, // Year becomes the series
+        });
+        return;
+      }
+
+      // Normal mode processing
       let seriesVal = seriesField
         ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
@@ -1000,14 +1147,29 @@ export function generateLineChartVegaSpecV2(
 
         records = markName === 'x_hit_target' ? item.datum.datum.v : [];
 
-        const title = xIsDateorTime
-          ? x === NULL_SYMBOL
-            ? NULL_SYMBOL
-            : renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
-          : x;
+        const title =
+          xIsDateorTime || settings.mode === 'yoy'
+            ? x === NULL_SYMBOL
+              ? NULL_SYMBOL
+              : settings.mode === 'yoy'
+              ? // For YoY mode, format the normalized date appropriately
+                getYoYTooltipTitle(
+                  new Date(x),
+                  xField.isTime() ? xField.timeframe : undefined
+                )
+              : renderTimeString(
+                  new Date(x),
+                  xField.isDate(),
+                  xField.isTime() ? xField.timeframe : undefined
+                )
+            : x;
 
         const sortedRecords = [...records]
-          .sort((a, b) => b.y - a.y)
+          .sort((a, b) =>
+            settings.mode === 'yoy'
+              ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
+              : b.y - a.y
+          ) // Sort by value in descending order for normal mode
           .slice(0, tooltipItemCountLimit);
 
         tooltipData = {
@@ -1034,21 +1196,31 @@ export function generateLineChartVegaSpecV2(
             records.push(lineDataRecord);
           }
         }
-        const title = xIsDateorTime
-          ? itemData.x === NULL_SYMBOL
-            ? NULL_SYMBOL
-            : renderTimeString(
-                new Date(itemData.x),
-                xField.isDate(),
-                xField.timeframe
-              )
-          : itemData.x;
+        const title =
+          xIsDateorTime || settings.mode === 'yoy'
+            ? itemData.x === NULL_SYMBOL
+              ? NULL_SYMBOL
+              : settings.mode === 'yoy'
+              ? getYoYTooltipTitle(
+                  new Date(itemData.x),
+                  xField.isTime() ? xField.timeframe : undefined
+                )
+              : renderTimeString(
+                  new Date(itemData.x),
+                  xField.isDate(),
+                  xField.isTime() ? xField.timeframe : undefined
+                )
+            : itemData.x;
 
         // If the highlighted item is not included in the first ~20,
         // then it will probably be cut off.
 
         const sortedRecords = [...records]
-          .sort((a, b) => b.y - a.y)
+          .sort((a, b) =>
+            settings.mode === 'yoy'
+              ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
+              : b.y - a.y
+          ) // Sort by value in descending order for normal mode
           .filter(
             (item, index) =>
               index <= tooltipItemCountLimit ||
