@@ -91,8 +91,11 @@ export function MalloyRender(props: MalloyRenderProps) {
   return (
     <ErrorBoundary
       fallback={errorProps => {
+        console.log('ERROR', errorProps.error, errorProps);
         props?.onError?.(errorProps.error);
-        return <ErrorMessage message={errorProps.error.message} />;
+        return (
+          <ErrorMessage message={errorProps.error?.message ?? errorProps} />
+        );
       }}
     >
       <Show when={props.result}>
