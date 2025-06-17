@@ -14,20 +14,18 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/module/index.d.ts",
       "default": "./dist/module/index.umd.js"
     }
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build": "npm run build-types && npm run build-source",
     "clean": "tsc --build --clean",
     "prepublishOnly": "npm run build",
     "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
     "storybook-windows": "del /s /q .\\node_modules\\.cache && storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
-    "build-types": "tsc --build --declaration --emitDeclarationOnly",
+    "build": "vite build --outDir 'dist/module' --config vite.config.mts",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
@@ -60,6 +58,8 @@
     "esbuild": "0.19.11",
     "storybook": "^8.5.8",
     "vite": "^5.1.5",
-    "vite-plugin-solid": "^2.10.1"
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-solid": "^2.10.1",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }
