@@ -7,26 +7,41 @@
 
 import {render} from 'solid-js/web';
 import type {MalloyRendererOptions} from '@/api/types';
-import type {RenderPluginFactory} from '@/api/plugin-types';
+import type {
+  RenderPluginFactory,
+  RenderPluginInstance,
+} from '@/api/plugin-types';
 import {MalloyRender} from '@/component/render';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {RenderFieldMetadata} from '@/render-field-metadata';
 
-export class MalloyViz {
+// Helper type to extract the union of all possible plugin instances from a tuple of factories
+type AllPluginsFromFactories<
+  TFactories extends readonly RenderPluginFactory<any>[],
+> = ReturnType<TFactories[number]['create']>;
+
+// Helper type to create the Name-to-Plugin map from a union of plugin instances
+type PluginNameMapFromPlugins<TPluginsUnion extends RenderPluginInstance<any>> =
+  {
+    [P in TPluginsUnion as P['name']]: P;
+  };
+
+export class MalloyViz<TFactories extends RenderPluginFactory<any>[]> {
   private disposeFn: (() => void) | null = null;
   private targetElement: HTMLElement | null = null;
   private result: Malloy.Result | null = null;
   private metadata: RenderFieldMetadata | null = null;
-  private pluginRegistry: RenderPluginFactory[];
+  private pluginRegistry: TFactories;
 
   constructor(
     private options: MalloyRendererOptions,
-    pluginRegistry: RenderPluginFactory[] = []
+    pluginRegistry: TFactories
   ) {
     this.options = options;
     // Include default plugins + any additional plugins passed in
-    this.pluginRegistry = [...pluginRegistry];
+    this.pluginRegistry = pluginRegistry;
+    // this.pluginRegistry = [...pluginRegistry];
   }
 
   static addStylesheet(styles: string) {
@@ -70,17 +85,20 @@ export class MalloyViz {
 
     try {
       // Create a new MalloyViz instance with disabled virtualization
-      const tempViz = new MalloyViz({
-        ...this.options,
-        tableConfig: {
-          ...this.options.tableConfig,
-          disableVirtualization: true,
+      const tempViz = new MalloyViz(
+        {
+          ...this.options,
+          tableConfig: {
+            ...this.options.tableConfig,
+            disableVirtualization: true,
+          },
+          dashboardConfig: {
+            ...this.options.dashboardConfig,
+            disableVirtualization: true,
+          },
         },
-        dashboardConfig: {
-          ...this.options.dashboardConfig,
-          disableVirtualization: true,
-        },
-      });
+        this.pluginRegistry
+      );
 
       // Set the same result
       tempViz.setResult(this.result);
@@ -190,4 +208,34 @@ export class MalloyViz {
     //   pluginMetadata:
     // };
   }
+
+  getPluginInstance<
+    TName extends keyof PluginNameMapFromPlugins<
+      AllPluginsFromFactories<TFactories>
+    >,
+  >(
+    fieldKey: string,
+    name: TName
+  ): PluginNameMapFromPlugins<AllPluginsFromFactories<TFactories>>[TName] {
+    const plugin = this.metadata
+      ?.getPluginsForField(fieldKey)
+      .find(plugin => plugin.name === name);
+    if (!plugin) {
+      throw new Error(`Plugin "${name as string}" not found.`);
+    }
+    return plugin as PluginNameMapFromPlugins<
+      AllPluginsFromFactories<TFactories>
+    >[TName];
+  }
+
+  // getPluginInstance(
+  //   fieldKey: string,
+  //   pluginName: string
+  // ): RenderPluginInstance | undefined {
+  //   return this.metadata
+  //     ?.getPluginsForField(fieldKey)
+  //     .find(plugin => plugin.name === pluginName);
+  // }
+
+  // The getPlugin method with advanced inference
 }

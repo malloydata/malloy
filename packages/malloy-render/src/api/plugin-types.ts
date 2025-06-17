@@ -19,8 +19,9 @@ export interface RenderProps {
   customProps?: Record<string, unknown>;
 }
 
-interface BaseRenderPluginInstance<TMetadata = unknown> {
-  readonly name: string;
+// Make `TName` a generic parameter that extends string, allowing it to be a literal.
+interface BaseRenderPluginInstance<TName extends string, TMetadata = unknown> {
+  readonly name: TName; // <-- Changed to TName
   readonly field: Field;
   readonly sizingStrategy: 'fixed' | 'fill';
 
@@ -32,27 +33,42 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
   ): void;
 }
 
-export interface SolidJSRenderPluginInstance<TMetadata = unknown>
-  extends BaseRenderPluginInstance<TMetadata> {
+// Pass TName through to BaseRenderPluginInstance
+export interface SolidJSRenderPluginInstance<
+  TName extends string = string, // Default to string if not specified
+  TMetadata = unknown,
+> extends BaseRenderPluginInstance<TName, TMetadata> {
   readonly renderMode: 'solidjs';
   renderComponent(props: RenderProps): JSXElement;
 }
 
-export interface DOMRenderPluginInstance<TMetadata = unknown>
-  extends BaseRenderPluginInstance<TMetadata> {
+// Pass TName through to BaseRenderPluginInstance
+export interface DOMRenderPluginInstance<
+  TName extends string = string, // Default to string if not specified
+  TMetadata = unknown,
+> extends BaseRenderPluginInstance<TName, TMetadata> {
   readonly renderMode: 'dom';
   renderToDOM(container: HTMLElement, props: RenderProps): void;
   cleanup?(container: HTMLElement): void;
 }
 
-export type RenderPluginInstance<TMetadata = unknown> =
-  | SolidJSRenderPluginInstance<TMetadata>
-  | DOMRenderPluginInstance<TMetadata>;
+// Union type now also takes TName and TMetadata
+export type RenderPluginInstance<
+  TName extends string = string, // Default to string if not specified
+  TMetadata = unknown,
+> =
+  | SolidJSRenderPluginInstance<TName, TMetadata>
+  | DOMRenderPluginInstance<TName, TMetadata>;
 
+// The Factory's TInstance must now also include the TName generic
 export interface RenderPluginFactory<
-  TInstance extends RenderPluginInstance = RenderPluginInstance,
+  TInstance extends RenderPluginInstance<any> = RenderPluginInstance<
+    string,
+    any
+  >,
 > {
-  readonly name: string;
+  // The name property of the factory should match the name of the instance it creates
+  readonly name: TInstance['name']; // <-- Ensures the factory name is the literal name of the instance
 
   matches(field: Field, fieldTag: Tag, fieldType: FieldType): boolean;
   create(field: Field): TInstance;

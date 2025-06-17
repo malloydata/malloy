@@ -10,7 +10,7 @@ import type {
   RenderPluginFactory,
   SolidJSRenderPluginInstance,
   RenderProps,
-} from '@/api/plugin-types';
+} from '@/api/plugin-types'; // Assuming plugin-types.ts is updated
 import {type Field, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
 
@@ -19,9 +19,17 @@ interface DummyPluginMetadata {
   fieldName: string;
 }
 
-type DummyPluginInstance = SolidJSRenderPluginInstance<DummyPluginMetadata>;
+// Key Change 1: Specify the literal name and metadata type
+interface DummyPluginInstance
+  extends SolidJSRenderPluginInstance<'dummy', DummyPluginMetadata> {
+  // Key Change 2: Declare custom methods here
+  customDummyMethod(): number;
+  // Also explicitly declare getMetadata if BaseRenderPluginInstance is strict
+  getMetadata(): DummyPluginMetadata;
+}
 
 export const DummyPluginFactory: RenderPluginFactory<DummyPluginInstance> = {
+  // The name property of the factory should implicitly be 'dummy' due to the TInstance['name'] constraint
   name: 'dummy',
 
   matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
@@ -40,7 +48,7 @@ export const DummyPluginFactory: RenderPluginFactory<DummyPluginInstance> = {
 
   create: (field: Field): DummyPluginInstance => {
     return {
-      name: 'dummy',
+      name: 'dummy' as const, // Key Change 3: Ensure 'dummy' is a literal
       field,
       renderMode: 'solidjs',
       sizingStrategy: 'fixed',
@@ -69,6 +77,11 @@ export const DummyPluginFactory: RenderPluginFactory<DummyPluginInstance> = {
         type: 'dummy',
         fieldName: field.name,
       }),
+
+      customDummyMethod: () => 42,
     };
   },
 };
+
+// Export the type if it needs to be used elsewhere (e.g., for specific imports)
+export type {DummyPluginInstance};

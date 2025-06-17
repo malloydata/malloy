@@ -42,15 +42,19 @@ interface SeriesStats {
 }
 
 interface LineChartPluginInstance
-  extends SolidJSRenderPluginInstance<LineChartPluginMetadata> {
+  extends SolidJSRenderPluginInstance<'line_chart', LineChartPluginMetadata> {
   field: NestField;
   seriesStats: Map<string, SeriesStats>;
   getTopNSeries: (maxSeries: number) => (string | number | boolean)[];
+  customMethod: () => string;
+  // You might also need to ensure that the methods from BaseRenderPluginInstance are present,
+  // particularly `getMetadata()`
+  getMetadata(): LineChartPluginMetadata; // Explicitly add this if not implicitly handled
 }
 
 export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance> =
   {
-    name: 'line_chart',
+    name: 'line_chart' as const,
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       // Match repeated record fields with line chart tags
@@ -84,7 +88,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       }
 
       const pluginInstance: LineChartPluginInstance = {
-        name: 'line_chart',
+        name: 'line_chart' as const,
         field,
         renderMode: 'solidjs',
         sizingStrategy: 'fill',
@@ -194,6 +198,8 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
             .slice(0, maxSeries)
             .map(entry => entry[0]);
         },
+
+        customMethod: () => 'foo',
       };
 
       return pluginInstance;

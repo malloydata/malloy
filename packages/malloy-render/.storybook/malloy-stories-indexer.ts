@@ -178,6 +178,8 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               const metadata = viz.getMetadata();
               console.log('initial state', metadata);
               console.log('render properties', metadata.getFieldEntry(metadata.rootField.key).renderProperties);
+              const lineChartPlugin = viz.getPluginInstance('[]', 'line_chart');
+              console.log('line chart plugin', lineChartPlugin);
               viz.render(targetElement);
 
               return parent;

@@ -3,6 +3,11 @@ import script from './themes.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
 import {MalloyRenderer} from '../api/malloy-renderer';
+import {DummyPluginFactory} from '@/plugins/dummy-plugin';
+
+let renderAs = '';
+
+renderAs = 'line_chart';
 const meta: Meta = {
   title: 'Malloy Next/Themes',
   render: ({classes}, context) => {
@@ -16,7 +21,9 @@ const meta: Meta = {
     targetElement.style.width = '100%';
     parent.appendChild(targetElement);
 
-    const renderer = new MalloyRenderer();
+    const renderer = new MalloyRenderer({
+      plugins: [DummyPluginFactory],
+    });
     const viz = renderer.createViz({
       onError: error => {
         console.log('Malloy render error', error);
@@ -24,7 +31,18 @@ const meta: Meta = {
     });
     viz.setResult(context.loaded['result']);
     console.log('initial state', viz.getMetadata());
+
+    // Infers plugin type from line plugin factory, customMethod is typed to return string;
+    const rootFieldKey = '[]';
+    const lineChartPlugin = viz.getPluginInstance(rootFieldKey, 'line_chart');
+    lineChartPlugin.customMethod();
+
+    // Infers plugin type from provided dummy plugin factory, customDummyMethod is typed to return number;
+    const dummyPlugin = viz.getPluginInstance(rootFieldKey, 'dummy');
+    dummyPlugin.customDummyMethod();
     viz.render(targetElement);
+
+    dummyPlugin.customDummyMethod();
 
     // copy to html test
     const button = document.createElement('button');
@@ -61,5 +79,12 @@ export const ViewThemeOverrideCSS = {
     source: 'products',
     view: 'records_override',
     classes: 'night',
+  },
+};
+
+export const ViewThemeOverrideLineChart = {
+  args: {
+    source: 'products',
+    view: 'test_line_plugin',
   },
 };

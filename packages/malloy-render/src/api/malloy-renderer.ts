@@ -6,21 +6,47 @@
  */
 
 import type {MalloyRendererOptions} from './types';
-import type {RenderPluginFactory} from './plugin-types';
+import type {RenderPluginFactory, RenderPluginInstance} from './plugin-types';
 import {MalloyViz} from './malloy-viz';
 import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
 
-export class MalloyRenderer {
-  private globalOptions: MalloyRendererOptions;
-  private pluginRegistry: RenderPluginFactory[];
+// Helper type to extract the union of all possible plugin instances from a tuple of factories
+type AllPluginsFromFactories<
+  TFactories extends readonly RenderPluginFactory<any>[],
+> = ReturnType<TFactories[number]['create']>; // Assuming `create` is the method that returns the instance
 
-  constructor(options: MalloyRendererOptions = {}) {
-    this.globalOptions = options;
-    this.pluginRegistry = [LineChartPluginFactory, ...(options.plugins || [])];
+// Helper type to create the Name-to-Plugin map from a union of plugin instances
+type PluginNameMapFromPlugins<TPluginsUnion extends RenderPluginInstance<any>> =
+  {
+    [P in TPluginsUnion as P['name']]: P;
+  };
+
+export class MalloyRenderer<
+  TAdditionalPlugins extends readonly RenderPluginFactory<any>[] = [],
+> {
+  private globalOptions: MalloyRendererOptions;
+  private pluginRegistry: [
+    typeof LineChartPluginFactory,
+    ...TAdditionalPlugins,
+  ];
+
+  constructor(
+    options?: MalloyRendererOptions & {plugins?: TAdditionalPlugins}
+  ) {
+    this.globalOptions = options || {};
+    const additionalPlugins: TAdditionalPlugins = (options?.plugins ??
+      []) as TAdditionalPlugins;
+    // THE FIX IS HERE: Stronger type assertion
+    this.pluginRegistry = [LineChartPluginFactory, ...additionalPlugins] as [
+      typeof LineChartPluginFactory,
+      ...TAdditionalPlugins,
+    ];
   }
 
   // TODO Figure out whether we should differentiate between global and viz options
-  createViz(additionalOptions: Partial<MalloyRendererOptions> = {}): MalloyViz {
+  createViz(
+    additionalOptions: Partial<MalloyRendererOptions> = {}
+  ): MalloyViz<typeof this.pluginRegistry> {
     const mergedOptions = {...this.globalOptions, ...additionalOptions};
     return new MalloyViz(mergedOptions, this.pluginRegistry);
   }
@@ -36,7 +62,7 @@ export class MalloyRenderer {
   }
 
   // Get registered plugins
-  getRegisteredPlugins(): RenderPluginFactory[] {
-    return [...this.pluginRegistry];
+  getRegisteredPlugins(): typeof this.pluginRegistry {
+    return [...this.pluginRegistry] as typeof this.pluginRegistry;
   }
 }

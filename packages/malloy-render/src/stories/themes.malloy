@@ -11,4 +11,11 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     select: *
     limit: 1000
   }
+
+  # line_chart
+  view: test_line_plugin is {
+    group_by: category
+    aggregate: c is count()
+    limit: 10
+  }
 }
