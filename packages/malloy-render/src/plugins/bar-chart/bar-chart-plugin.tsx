@@ -15,10 +15,10 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
 import {ChartV2} from '@/component/chart/chart-v2';
 import {
-  getLineChartSettings,
-  type LineChartSettings,
-} from '@/plugins/line-chart/get-line_chart-settings';
-import {generateLineChartVegaSpecV2} from '@/plugins/line-chart/generate-line_chart-vega-spec';
+  getBarChartSettings,
+  type BarChartSettings,
+} from '@/plugins/bar-chart/get-bar_chart-settings';
+import {generateBarChartVegaSpecV2} from '@/plugins/bar-chart/generate-bar_chart-vega-spec';
 import {type VegaChartProps} from '@/component/types';
 import {type Config, parse, type Runtime} from 'vega';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
@@ -29,10 +29,10 @@ import type {
   RenderMetadata,
 } from '@/component/render-result-metadata';
 
-interface LineChartPluginMetadata {
-  type: 'line_chart';
+interface BarChartPluginMetadata {
+  type: 'bar_chart';
   field: NestField;
-  settings: LineChartSettings;
+  settings: BarChartSettings;
 }
 
 interface SeriesStats {
@@ -41,50 +41,50 @@ interface SeriesStats {
   avg: number;
 }
 
-interface LineChartPluginInstance
-  extends SolidJSRenderPluginInstance<LineChartPluginMetadata> {
+interface BarChartPluginInstance
+  extends SolidJSRenderPluginInstance<BarChartPluginMetadata> {
   field: NestField;
   seriesStats: Map<string, SeriesStats>;
   getTopNSeries: (maxSeries: number) => (string | number | boolean)[];
 }
 
-export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance> =
+export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> =
   {
-    name: 'line_chart',
+    name: 'bar_chart',
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-      // Match repeated record fields with line chart tags
-      const hasLineChartTag =
-        fieldTag.has('line_chart') || fieldTag.text('viz') === 'line';
+      // Match repeated record fields with bar chart tags
+      const hasBarChartTag =
+        fieldTag.has('bar_chart') || fieldTag.text('viz') === 'bar';
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
-      if (hasLineChartTag && !isRepeatedRecord) {
+      if (hasBarChartTag && !isRepeatedRecord) {
         throw new Error(
-          'Malloy Line Chart: field is a line chart, but is not a repeated record'
+          'Malloy Bar Chart: field is a bar chart, but is not a repeated record'
         );
       }
 
-      return hasLineChartTag && isRepeatedRecord;
+      return hasBarChartTag && isRepeatedRecord;
     },
 
-    create: (field: Field): LineChartPluginInstance => {
+    create: (field: Field): BarChartPluginInstance => {
       if (!field.isNest()) {
-        throw new Error('Line chart: must be a nest field');
+        throw new Error('Bar chart: must be a nest field');
       }
 
-      let settings: LineChartSettings;
+      let settings: BarChartSettings;
       const seriesStats = new Map<string, SeriesStats>();
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
 
       try {
-        settings = getLineChartSettings(field);
+        settings = getBarChartSettings(field);
       } catch (error) {
-        throw new Error(`Line chart settings error: ${error.message}`);
+        throw new Error(`Bar chart settings error: ${error.message}`);
       }
 
-      const pluginInstance: LineChartPluginInstance = {
-        name: 'line_chart',
+      const pluginInstance: BarChartPluginInstance = {
+        name: 'bar_chart',
         field,
         renderMode: 'solidjs',
         sizingStrategy: 'fill',
@@ -92,11 +92,11 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
         renderComponent: (props: RenderProps): JSXElement => {
           if (!runtime || !vegaProps) {
-            throw new Error('Malloy Line Chart: missing Vega runtime');
+            throw new Error('Malloy Bar Chart: missing Vega runtime');
           }
           if (!props.dataColumn.isRepeatedRecord()) {
             throw new Error(
-              'Malloy Line Chart: data column is not a repeated record'
+              'Malloy Bar Chart: data column is not a repeated record'
             );
           }
 
@@ -159,16 +159,14 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaProps = generateLineChartVegaSpecV2(metadata, pluginInstance);
+          vegaProps = generateBarChartVegaSpecV2(metadata, pluginInstance);
 
-          // TODO: should this be passed as plugin options? createLineChartPlugin(options)?
-          // but how would you supply these options to the default plugins?
           const vegaConfigOverride =
-            options.getVegaConfigOverride?.('line_chart') ?? {};
+            options.getVegaConfigOverride?.('bar_chart') ?? {};
 
           const vegaConfig: Config = mergeVegaConfigs(
             baseVegaConfig(),
-            options.getVegaConfigOverride?.('line_chart') ?? {}
+            options.getVegaConfigOverride?.('bar_chart') ?? {}
           );
 
           const maybeAxisYLabelFont =
@@ -186,8 +184,8 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           runtime = parse(vegaProps.spec, vegaConfig);
         },
 
-        getMetadata: (): LineChartPluginMetadata => ({
-          type: 'line_chart',
+        getMetadata: (): BarChartPluginMetadata => ({
+          type: 'bar_chart',
           field,
           settings,
         }),
@@ -204,4 +202,4 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
     },
   };
 
-export type {LineChartPluginInstance};
+export type {BarChartPluginInstance};

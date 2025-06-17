@@ -41,7 +41,12 @@ export type ChartV2Props = {
   vegaSpec: unknown;
   plotWidth: number;
   plotHeight: number;
+  totalWidth: number;
+  totalHeight: number;
+  chartTag?: {text?: (key: string) => string | undefined}; // For title/subtitle support
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
+  isDataLimited?: boolean;
+  dataLimitMessage?: string;
   // Debugging properties
   devMode?: boolean;
   onView?: (view: View) => void;
@@ -175,6 +180,12 @@ export function ChartV2Inner(props: ChartV2Props) {
 
   const showTooltip = createMemo(() => Boolean(tooltipData()));
 
+  const chartTitle = props.chartTag?.text?.('title');
+  const chartSubtitle = props.chartTag?.text?.('subtitle');
+  const isDataLimited = props.isDataLimited || false;
+  const dataLimitMessage = props.dataLimitMessage || 'Showing limited results';
+  const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;
+
   const [chartSpace, setChartSpace] = createSignal({
     width: props.plotWidth,
     height: props.plotHeight,
@@ -184,8 +195,8 @@ export function ChartV2Inner(props: ChartV2Props) {
     <div
       class="malloy-chart"
       style={{
-        width: props.plotWidth + 'px',
-        height: props.plotHeight + 'px',
+        width: (props.totalWidth || props.plotWidth) + 'px',
+        height: (props.totalHeight || props.plotHeight) + 'px',
       }}
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
@@ -197,6 +208,21 @@ export function ChartV2Inner(props: ChartV2Props) {
         );
       }}
     >
+      <Show when={hasTitleBar}>
+        <div class="malloy-chart__titles-bar">
+          {chartTitle && <div class="malloy-chart__title">{chartTitle}</div>}
+          {chartSubtitle && (
+            <div class="malloy-chart__subtitle">
+              <div>{chartSubtitle}</div>
+            </div>
+          )}
+          {isDataLimited && (
+            <div class="malloy-chart__subtitle">
+              <div>{dataLimitMessage}</div>
+            </div>
+          )}
+        </div>
+      </Show>
       <div
         class="malloy-chart__container"
         use:resize={[chartSpace, setChartSpace]}
