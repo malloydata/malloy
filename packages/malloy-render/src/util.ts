@@ -14,6 +14,28 @@ import {Field} from './data_tree';
 
 export const NULL_SYMBOL = '∅';
 
+export function deepMerge<T extends Record<string, any>>(target: T, ...sources: Partial<T>[]): T {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (isObject(source[key])) {
+        if (!target[key]) target[key] = {} as any;
+        deepMerge(target[key], source[key] as any);
+      } else {
+        target[key] = source[key] as any;
+      }
+    }
+  }
+
+  return deepMerge(target, ...sources);
+}
+
+function isObject(item: unknown): item is Record<string, unknown> {
+  return item !== null && typeof item === 'object' && !Array.isArray(item);
+}
+
 export function tagFromAnnotations(
   annotations: Malloy.Annotation[] | undefined,
   prefix = '# '

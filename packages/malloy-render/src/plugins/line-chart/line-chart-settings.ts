@@ -24,6 +24,11 @@ export interface LineChartSettings extends Record<string, unknown> {
   disableEmbedded: boolean;
 }
 
+// Plugin options interface for JavaScript API
+export interface LineChartPluginOptions {
+  defaults?: Partial<LineChartSettings>;
+}
+
 // Default settings object
 export const defaultLineChartSettings: LineChartSettings = {
   xChannel: {

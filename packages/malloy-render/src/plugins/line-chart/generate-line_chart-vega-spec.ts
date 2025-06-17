@@ -168,7 +168,8 @@ export function generateLineChartVegaSpecV2(
     yField,
     chartType: 'line',
     getYMinMax: () => [yDomainMin, yDomainMax],
-    independentY: chartTag.has('y', 'independent') || isLimitingSeries,
+    // TODO: whats the use case for auto setting this with limited series? why does limiting series mean it should be independent? do we need an "auto" setting? like SeriesIndependence setting has?
+    independentY: settings.yChannel.independent || isLimitingSeries,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
