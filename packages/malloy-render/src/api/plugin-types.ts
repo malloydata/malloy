@@ -12,6 +12,7 @@ import type {
   RenderMetadata,
   GetResultMetadataOptions,
 } from '@/component/render-result-metadata';
+import type {JSONSchemaObject} from './json-schema-types';
 
 export interface RenderProps {
   dataColumn: Cell;
@@ -30,6 +31,9 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
     metadata: RenderMetadata,
     options: GetResultMetadataOptions
   ): void;
+  getSchema?(): JSONSchemaObject;
+  getSettings?(): Record<string, unknown>;
+  settingsToTag?(settings: JSONSchemaObject): Tag;
 }
 
 export interface SolidJSRenderPluginInstance<TMetadata = unknown>

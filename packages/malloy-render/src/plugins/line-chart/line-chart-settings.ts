@@ -15,7 +15,7 @@ import type {
 } from '@/api/json-schema-types';
 
 // TypeScript type definition
-export interface LineChartSettings {
+export interface LineChartSettings extends Record<string, unknown> {
   xChannel: Channel;
   yChannel: YChannel;
   seriesChannel: SeriesChannel;

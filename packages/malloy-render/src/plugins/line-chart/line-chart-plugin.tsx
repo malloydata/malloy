@@ -28,6 +28,7 @@ import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
+import {lineChartSettingsSchema} from './line-chart-settings';
 
 interface LineChartPluginMetadata {
   type: 'line_chart';
@@ -187,6 +188,9 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           field,
           settings,
         }),
+
+        getSchema: () => lineChartSettingsSchema,
+        getSettings: () => settings,
 
         getTopNSeries: (maxSeries: number) => {
           return Array.from(seriesStats.entries())
