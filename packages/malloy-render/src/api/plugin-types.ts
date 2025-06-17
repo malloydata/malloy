@@ -55,5 +55,5 @@ export interface RenderPluginFactory<
   readonly name: string;
 
   matches(field: Field, fieldTag: Tag, fieldType: FieldType): boolean;
-  create(field: Field): TInstance;
+  create(field: Field, pluginOptions?: unknown, modelTag?: Tag): TInstance;
 }

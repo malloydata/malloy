@@ -38,7 +38,7 @@ export const DummyDOMPluginFactory: RenderPluginFactory<DummyDOMPluginInstance> 
       return isAtomicField && fieldTag.has('dummy_dom');
     },
 
-    create: (field: Field): DummyDOMPluginInstance => {
+    create: (field: Field, pluginOptions?: unknown, modelTag?: Tag): DummyDOMPluginInstance => {
       return {
         name: 'dummy_dom',
         field,
