@@ -48,6 +48,7 @@ export interface JSONSchemaBoolean extends JSONSchemaPropertyBase {
   type: 'boolean';
 }
 
-export interface JSONSchemaOneOf extends Omit<JSONSchemaPropertyBase, 'type'> {
+export interface JSONSchemaOneOf extends JSONSchemaPropertyBase {
+  type: 'oneOf';
   oneOf: JSONSchemaProperty[];
 }

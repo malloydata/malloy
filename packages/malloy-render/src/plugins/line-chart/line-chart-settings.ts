@@ -183,6 +183,7 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
           title: 'Series Limit',
           description:
             'Maximum number of series to display in the chart. "auto" means chart determines optimal limit (default 12)',
+          type: 'oneOf',
           oneOf: [
             {
               type: 'string',
