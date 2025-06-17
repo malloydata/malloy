@@ -23,6 +23,7 @@ export interface LineChartSettings extends Record<string, unknown> {
   zeroBaseline: boolean;
   interactive: boolean;
   disableEmbedded: boolean;
+  mode?: 'yoy' | 'normal';
 }
 
 // Plugin options interface for JavaScript API
@@ -51,6 +52,7 @@ export const defaultLineChartSettings: LineChartSettings = {
   zeroBaseline: false,
   interactive: true,
   disableEmbedded: false,
+  mode: 'normal',
 };
 
 // Specific typed interface for the line chart schema
@@ -87,6 +89,7 @@ export interface ILineChartSettingsSchema extends JSONSchemaObject {
     zeroBaseline: JSONSchemaBoolean;
     interactive: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
+    mode: JSONSchemaString;
   };
 }
 
@@ -228,6 +231,14 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
       type: 'boolean',
       default: false,
     },
+    mode: {
+      title: 'Chart Mode',
+      description:
+        'Chart rendering mode. "yoy" enables year-over-year mode for temporal data with granularity less than year',
+      type: 'string',
+      enum: ['normal', 'yoy'],
+      default: 'normal',
+    },
   },
   required: [
     'xChannel',
@@ -236,6 +247,7 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
     'zeroBaseline',
     'interactive',
     'disableEmbedded',
+    'mode',
   ],
   additionalProperties: false,
 };

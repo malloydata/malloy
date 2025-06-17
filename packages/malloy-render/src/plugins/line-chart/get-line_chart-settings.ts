@@ -165,6 +165,10 @@ export function getLineChartSettings(
   const disableEmbedded =
     vizTag.has('disableEmbedded') || mergedDefaults.disableEmbedded;
 
+  // Chart mode
+  const mode: 'yoy' | 'normal' =
+    (vizTag.text('mode') as 'yoy' | 'normal') ?? defaultLineChartSettings.mode;
+
   const xChannel: Channel = {
     fields: [],
     type: mergedDefaults.xChannel.type,
@@ -290,6 +294,47 @@ export function getLineChartSettings(
     );
   }
 
+  // Validate year-over-year mode requirements
+  if (mode === 'yoy') {
+    // Must have exactly one x field
+    if (xChannel.fields.length !== 1) {
+      throw new Error(
+        'Malloy Line Chart: Year-over-year mode requires exactly one x-axis field.'
+      );
+    }
+    
+    // Must have exactly one y field
+    if (yChannel.fields.length !== 1) {
+      throw new Error(
+        'Malloy Line Chart: Year-over-year mode requires exactly one y-axis field.'
+      );
+    }
+    
+    // Must not have an explicit series field
+    if (seriesChannel.fields.length > 0) {
+      throw new Error(
+        'Malloy Line Chart: Year-over-year mode cannot be used with an explicit series field.'
+      );
+    }
+    
+    // X field must be temporal
+    const xField = explore.fieldAt(xChannel.fields[0]);
+    if (!xField.isTime()) {
+      throw new Error(
+        'Malloy Line Chart: Year-over-year mode requires the x-axis field to be temporal (date/time).'
+      );
+    }
+    
+    // Check if temporal field has appropriate granularity (less than year)
+    // This is a heuristic - we check if the timeframe includes more granular components
+    const timeframe = xField.isTime() ? xField.timeframe : undefined;
+    if (timeframe && (timeframe === 'year' || timeframe.includes('year') && !timeframe.includes('quarter') && !timeframe.includes('month') && !timeframe.includes('week') && !timeframe.includes('day'))) {
+      throw new Error(
+        'Malloy Line Chart: Year-over-year mode requires temporal data with granularity finer than year (e.g., dates, months, quarters, weeks).'
+      );
+    }
+  }
+
   return {
     xChannel,
     yChannel,
@@ -297,5 +342,6 @@ export function getLineChartSettings(
     zeroBaseline,
     interactive,
     disableEmbedded,
+    mode,
   };
 }
