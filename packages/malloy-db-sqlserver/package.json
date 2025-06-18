@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.282",
+    "@malloydata/malloy": "0.0.294",
     "mssql": "^11.0.1"
   },
   "devDependencies": {
