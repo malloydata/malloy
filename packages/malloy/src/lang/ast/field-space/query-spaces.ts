@@ -68,6 +68,12 @@ export abstract class QueryOperationSpace
     string,
     {path: string[]; entry: SpaceEntry; at: model.DocumentLocation}
   > = {};
+  drillDimensions: {
+    nestPath: string[];
+    firstDrill: MalloyElement;
+    dimensionPath: string[];
+    satisfied: boolean;
+  }[] = [];
   compositeFieldUsers: (
     | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
     | {
@@ -372,6 +378,18 @@ export abstract class QuerySpace extends QueryOperationSpace {
       );
     }
     this._fieldUsage = fieldUsage;
+
+    for (const drillDimension of this.drillDimensions) {
+      if (!drillDimension.satisfied) {
+        drillDimension.firstDrill.logError(
+          'illegal-drill',
+          `Must provide a value for all dimensions in a view when drilling: missing \`${drillDimension.dimensionPath.join(
+            '.'
+          )}\``
+        );
+      }
+    }
+
     return fields;
   }
 

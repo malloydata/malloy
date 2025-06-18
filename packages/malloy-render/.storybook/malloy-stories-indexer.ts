@@ -140,9 +140,8 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           : `
           import script from '${id}?raw';
           import {createLoader} from './util';
-          import {copyMalloyRenderHTML} from '../component/copy-to-html';
           import './themes.css';
-          import '../component/render-webcomponent';
+          import {MalloyRenderer} from '../api/malloy-renderer';
 
           const meta = {
             title: "Malloy Next/${modelStoriesMeta.componentName}",
@@ -150,19 +149,30 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               const parent = document.createElement('div');
               parent.style.height = 'calc(100vh - 40px)';
               parent.style.position = 'relative';
-              const el = document.createElement('malloy-render');
-              if (classes) el.classList.add(classes);
-              el.malloyResult = context.loaded['result'];
-              el.tableConfig = {
-                enableDrill: true
-              };
 
               const button = document.createElement('button');
               button.innerHTML = "Copy HTML";
-              button.addEventListener("click", () => copyMalloyRenderHTML(el));
+              button.addEventListener("click", () => viz.copyToHTML());
+               parent.appendChild(button);
 
-              parent.appendChild(button);
-              parent.appendChild(el);
+              const targetElement = document.createElement('div');
+              if(classes) targetElement.classList.add(classes);
+              targetElement.style.height = '100%';
+              targetElement.style.width = '100%';
+              parent.appendChild(targetElement);
+
+              const renderer = new MalloyRenderer();
+              const viz = renderer.createViz({
+                // modelDef: context.loaded['result'].modelDef
+              }, {
+                onError: (error) => {
+                  console.log("Malloy render error", error);
+                }
+              });
+              viz.setResult(context.loaded['result']);
+              console.log('initial state', viz.getMetadata());
+              viz.render(targetElement);
+
               return parent;
             },
             loaders: [createLoader(script)],

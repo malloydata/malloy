@@ -1406,6 +1406,526 @@ describe('query:', () => {
       ).toTranslate();
     });
   });
+  describe('drill:', () => {
+    test('do not need experimental flag', () => {
+      expect(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `).toTranslate();
+    });
+    test('basic drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill: by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in the same nest', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai, abool
+          }
+          dimension: is_cool is false
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.abool = true
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f[1]).toBeExpr('{filterCondition {abool = true}}');
+    });
+    test('do not double-collect view filters for multiple dimensions in overlapping nests', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: is_cool
+            group_by: ai
+            nest: nested is {
+              where: is_awesome
+              group_by: abool
+            }
+          }
+          dimension: is_cool is false
+          dimension: is_awesome is true
+        }
+        run: aext -> {
+          drill:
+            by_ai.ai = 2,
+            by_ai.nested.abool = true
+          group_by: astr
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.abool = true,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q1 = m.modelDef.queryList[0];
+      const f1 = q1.pipeline[0].filterList!;
+      expect(f1.length).toBe(2);
+      expect(f1[0]).toBeExpr('{filterCondition {is_cool and {ai = 2}}}');
+      expect(f1[1]).toBeExpr(
+        '{filterCondition {is_awesome and {abool = true}}}'
+      );
+      const q2 = m.modelDef.queryList[1];
+      const f2 = q2.pipeline[0].filterList!;
+      expect(f2.length).toBe(2);
+      expect(f2[0]).toBeExpr(
+        '{filterCondition {{is_cool and is_awesome} and {abool = true}}}'
+      );
+      expect(f2[1]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can include normal filters in drill statement', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            group_by: ai
+          }
+          dimension: is_cool is false
+          dimension: is_special is false
+        }
+        run: aext -> {
+          drill:
+            astr = 'foo',
+            af > 100,
+            is_cool and is_special,
+            by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(4);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {af > 100}}');
+      expect(f[2]).toBeExpr('{filterCondition {is_cool and is_special}}');
+      expect(f[3]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('drill view is not defined', () => {
+      expect(
+        markSource`
+          run: a -> {
+            drill: ${'by_ai'}.ai = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such view `by_ai`'));
+    });
+    test('drill field is not defined', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.${'ai'} = 2
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('No such field `ai` found in `by_ai`'));
+    });
+    test('drill nest found', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+    test('can drill a nest and a field from another view', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            nest: nested is {
+              group_by: astr
+            }
+          }
+          view: other_view is {
+            group_by: ai
+          }
+        }
+        run: aext -> {
+          drill:
+            by_ai.nested.astr = 'foo',
+            other_view.ai = 1
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(2);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+      expect(f[1]).toBeExpr('{filterCondition {ai = 1}}');
+    });
+    test('does not think you need to drill on measures', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toTranslate();
+    });
+    test('does not collect havings', () => {
+      const m = new TestTranslator(`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+              aggregate: c is count()
+              having: c > 100
+            }
+          }
+          run: aext -> {
+            drill: view_one.astr = "foo",
+            group_by: ai
+          }
+        `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {astr = {"foo"}}}');
+    });
+    test('drill missing some fields (sibling)', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill multi-stage view', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: astr
+            } -> { select: * }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one'}.astr = "foo",
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage('`drill:` may not be used with multi-segment views')
+      );
+    });
+    test('drill index view', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              index: *
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one'}.fieldName = "astr",
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('Index segments are not compatible with `drill:`'));
+    });
+    test('drill missing some fields (private sibling)', () => {
+      expect(
+        markSource`
+          ##! experimental {access_modifiers}
+          source: aext is a include { public: *; private: abool } extend {
+            view: view_one is {
+              nest: nest_one is {
+                group_by: astr
+                group_by: abool
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.nest_one.abool`'
+        )
+      );
+    });
+    test('drill missing some fields (parent)', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: view_one is {
+              group_by: abool
+              nest: nest_one is {
+                group_by: astr
+              }
+            }
+          }
+          run: aext -> {
+            drill:
+              ${'view_one.nest_one.astr = "foo"'},
+            group_by: ai
+          }
+        `
+      ).toLog(
+        errorMessage(
+          'Must provide a value for all dimensions in a view when drilling: missing `view_one.abool`'
+        )
+      );
+    });
+    test('drill nest not found', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: astr
+            }
+          }
+          run: aext -> {
+            drill: by_ai.nested.astr = 'foo'
+            group_by: ai
+          }
+        `
+      ).toLog(errorMessage('No such nest `nested` found in `by_ai`'));
+    });
+    test.skip('drill wrong type', () => {
+      expect(
+        markSource`
+          source: aext is a extend {
+            view: by_ai is {
+              group_by: ai
+            }
+          }
+          run: aext -> {
+            drill: by_ai.ai = 'foo'
+            group_by: astr
+          }
+        `
+      ).toLog(errorMessage('Mismathcing type??'));
+    });
+    test('drill picks up wheres', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          view: by_ai is {
+            where: ai = 2
+            nest: nested is {
+              where: abool = true
+              group_by: astr
+            }
+          }
+        }
+        run: aext -> {
+          drill: by_ai.nested.astr = 'foo'
+          group_by: ai
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{ai = 2} and {abool = true}} and {astr = {"foo"}}}}'
+      );
+    });
+    test('can filter on private field with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          private dimension: private_ai is ai
+          view: by_private_ai is {
+            group_by: private_ai
+          }
+        }
+        run: aext -> {
+          drill: by_private_ai.private_ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {private_ai = 2}}');
+    });
+    test('can filter on private nest field with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          private view: private_by_ai is {
+            group_by: ai
+          }
+          view: nest_private_by_ai is { nest: private_by_ai }
+        }
+        run: aext -> {
+          drill: nest_private_by_ai.private_by_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {ai = 2}}');
+    });
+    test('can filter on join with drill', () => {
+      const m = new TestTranslator(`
+        source: aext is a extend {
+          join_one: b on true
+          view: by_b_ai is {
+            group_by: b.ai
+          }
+        }
+        run: aext -> {
+          drill: by_b_ai.ai = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {b.ai = 2}}');
+    });
+    test('resolve composite slice correctly when using drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { composite_sources }
+        source: a_with_x is a extend { dimension: x is 1 }
+        source: a_with_y is a extend { dimension: y is 1 }
+        source: a_with_x_and_y is a_with_x extend { dimension: y is 1 }
+        source: aext is compose(
+          a,
+          a_with_x,
+          a_with_y,
+          a_with_x_and_y
+        ) extend {
+          view: by_y is {
+            where: x = 1
+            group_by: y
+          }
+        }
+        run: aext -> {
+          drill: by_y.y = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{x = 1} and {y = 2}}}');
+      expect(q.compositeResolvedSourceDef?.as).toBe('a_with_x_and_y');
+    });
+    test('can filter on param with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { parameters }
+        source: aext(param is 1) is a extend {
+          view: by_param is {
+            group_by: param
+          }
+        }
+        run: aext -> {
+          drill: by_param.param = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr('{filterCondition {{parameter param} = 2}}');
+    });
+    test.todo('cannot drill on joined view');
+    test('can filter on expression with drill', () => {
+      const m = new TestTranslator(`
+        ##! experimental { parameters }
+        source: aext(param is 1) is a extend {
+          dimension: private_field is 1
+          view: by_param is {
+            group_by: x is param + private_field
+          }
+        }
+        run: aext -> {
+          drill: by_param.x = 2
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const q = m.modelDef.queryList[0];
+      const f = q.pipeline[0].filterList!;
+      expect(f.length).toBe(1);
+      expect(f[0]).toBeExpr(
+        '{filterCondition {{{parameter param} + private_field} = 2}}'
+      );
+    });
+  });
   describe('grouped_by', () => {
     test('grouped_by requires compiler flag', () => {
       expect(
@@ -1440,7 +1960,217 @@ describe('query:', () => {
           }
           run: aext -> { aggregate: ${'aisum'} }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
+    });
+    describe('single value filters', () => {
+      test('single value filter equal basic success', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            }
+            run: aext -> { where: astr = 'foo'; aggregate: aisum }
+          `
+        ).toTranslate();
+      });
+      test('multi value filter equal basic failure', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() { grouped_by: astr }
+            }
+            run: aext -> { where: astr = 'foo' | 'bar'; aggregate: aisum }
+          `
+        ).toLog(
+          errorMessage(
+            'Group by or single value filter of `astr` is required but not present'
+          )
+        );
+      });
+      test('single value filter equal works with boolean, string, number, timestamp, date, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr = 'foo',
+                abool = true,
+                abool2 = false,
+                ai = 2,
+                ad = @2003-01-01,
+                ats = @2003-01-01 10:00:00,
+                af is null
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter ANDED equal works with boolean, string, number, timestamp, date, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr = 'foo'
+                and abool = true
+                and abool2 = false
+                and ai = 2
+                and ad = @2003-01-01
+                and ats = @2003-01-01 10:00:00
+                and af is null
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter ANDED (parenthesized) equal works with boolean, string, number, timestamp, date, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                (astr = 'foo'
+                and abool = true)
+                and (abool2 = false
+                and ai = 2
+                and ad = @2003-01-01
+                and (ats = @2003-01-01 10:00:00
+                and af is null))
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter expression works with boolean, string, number, date, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              dimension: abool3 is abool
+              dimension: astr2 is astr
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, abool3, astr2, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo',
+                abool ~ f'true',
+                abool2 ~ f'=false',
+                ai ~ f'2',
+                ad ~ f'2003-01-01',
+                ats ~ f'2003-01-01 10:00:00',
+                af ~ f'null',
+                abool3 ~ f'null',
+                astr2 ~ f'null'
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('single value filter expression ANDed together works with boolean, string, number, date, timestamp, null', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              dimension: abool2 is abool
+              dimension: abool3 is abool
+              dimension: astr2 is astr
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, abool2, ai, af, abool3, astr2, ats, ad
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo'
+                and abool ~ f'true'
+                and abool2 ~ f'=false'
+                and ai ~ f'2'
+                and ad ~ f'2003-01-01'
+                and ats ~ f'2003-01-01 10:00:00'
+                and af ~ f'null'
+                and abool3 ~ f'null'
+                and astr2 ~ f'null'
+              aggregate: aisum
+            }
+          `
+        ).toTranslate();
+      });
+      test('no single value filter expression trickery', () => {
+        expect(
+          markSource`
+            ##! experimental.grouped_by
+            source: aext is a extend {
+              measure: aisum is ai.sum() {
+                grouped_by:
+                  astr, abool, ai, ad, ats
+              }
+            }
+            run: aext -> {
+              where:
+                astr ~ f'foo, bar',
+                astr ~ f'-null',
+                astr ~ f'-foo',
+                abool ~ f'false', // false or null
+                abool ~ f'not null',
+                ai ~ f'not null',
+                ai ~ f'> 3',
+                ai ~ f'not 3',
+                ad ~ f'2003',
+                ad ~ f'not 2003-01-01',
+                ats ~ f'2003-01-01 10:00', // not granular enough?
+                ats ~ f'not 2003-01-01 10:00:00',
+              aggregate: aisum
+            }
+          `
+        ).toLog(
+          errorMessage(
+            'Group by or single value filter of `astr` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `abool` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ai` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ad` is required but not present'
+          ),
+          errorMessage(
+            'Group by or single value filter of `ats` is required but not present'
+          )
+        );
+      });
     });
     test('grouped_by double failure on same path', () => {
       expect(
@@ -1455,8 +2185,12 @@ describe('query:', () => {
           }
         `
       ).toLog(
-        errorMessage('Group by of `astr` is required but not present'),
-        errorMessage('Group by of `astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        ),
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
       );
     });
     // TODO would be nice to have an error here, before you use it
@@ -1470,7 +2204,11 @@ describe('query:', () => {
             view: x is { aggregate: ${'aisum'} } -> { select: * }
           }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('failure in multi-stage view used later', () => {
       expect(
@@ -1483,7 +2221,11 @@ describe('query:', () => {
           }
           run: aext -> ${'x'}
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('failure in multi-stage view used in nest', () => {
       expect(
@@ -1498,7 +2240,11 @@ describe('query:', () => {
             nest: ${'x'}
           }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped_by failure direct in query', () => {
       expect(
@@ -1506,7 +2252,11 @@ describe('query:', () => {
           ##! experimental.grouped_by
           run: a -> { aggregate: aisum is ${'ai.sum() { grouped_by: astr }'} }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('view with inherited grouped_by failure', () => {
       expect(
@@ -1521,7 +2271,11 @@ describe('query:', () => {
           }
           run: aext -> { nest: ${'requires_astr'} }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('view with inherited grouped_by success', () => {
       expect(
@@ -1548,7 +2302,11 @@ describe('query:', () => {
           }
           run: aext -> { where: true } + ${'aisum_plus_one'}
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('nest satisfies required group by', () => {
       expect(
@@ -1641,10 +2399,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing group by `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
         )
       );
     });
@@ -1669,7 +2427,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `x` as required in composed source #1 (`a`)\nFields required in source: `aisum` and `foo`'
+          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum` and `foo`'
         ),
         errorMessage(
           'Could not resolve composite source: missing field `foo` in composed source #2 (`a`)\nFields required in source: `aisum` and `foo`'
@@ -1753,8 +2511,12 @@ describe('query:', () => {
           run: aext -> { aggregate: aisum is ${'aisum1'} + ${'aisum2'} }
         `
       ).toLog(
-        errorMessage('Group by of `astr` is required but not present'),
-        errorMessage('Group by of `abool` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        ),
+        errorMessage(
+          'Group by or single value filter of `abool` is required but not present'
+        )
       );
     });
     test('grouped_by basic joined success', () => {
@@ -1785,7 +2547,9 @@ describe('query:', () => {
           run: bext -> { group_by: astr; aggregate: aext.aisum }
         `
       ).toLog(
-        errorMessage('Group by of `aext.astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
       );
     });
     test('grouped by failure when ungrouped (all, expression)', () => {
@@ -1794,7 +2558,11 @@ describe('query:', () => {
           ##! experimental.grouped_by
           run: a -> { group_by: astr; aggregate: x is all(ai.sum() { grouped_by: astr }) }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped by success when ungrouped (exclude okay, expression)', () => {
       expect(
@@ -1813,7 +2581,11 @@ describe('query:', () => {
           }
           run: aext -> { group_by: astr; aggregate: x is all(aisum) }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped by failure when ungrouped (exclude)', () => {
       expect(
@@ -1824,7 +2596,11 @@ describe('query:', () => {
           }
           run: aext -> { group_by: astr; aggregate: x is exclude(aisum, astr) }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
     test('grouped by success when ungrouped (exclude, different name)', () => {
       expect(
@@ -1850,7 +2626,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Ungrouped aggregate results in unsatisfiable required group by of `astr`'
+          'Ungrouped aggregate results in unsatisfiable required Group by or single value filter of `astr`'
         )
       );
     });
@@ -1867,9 +2643,11 @@ describe('query:', () => {
       ).toLog(
         // TODO Might not really need both these errors...
         // errorMessage(
-        //   'Ungrouped aggregate results in unsatisfiable required group by of `astr`'
+        //   'Ungrouped aggregate results in unsatisfiable required Group by or single value filter of `astr`'
         // ),
-        errorMessage('Group by of `astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
       );
     });
     test('ungroup fails composite slice', () => {
@@ -1908,10 +2686,10 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by `astr` as required in composed source #1 (`slice_1`)\nFields required in source: `astr`, `abool`, and `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `astr` as required in composed source #1 (`slice_1`)\nFields required in source: `astr`, `abool`, and `aisum`'
         ),
         errorMessage(
-          'Could not resolve composite source: missing group by `abool` as required in composed source #2 (`a`)\nFields required in source: `astr`, `abool`, and `aisum`'
+          'Could not resolve composite source: missing group by or single value filter of `abool` as required in composed source #2 (`a`)\nFields required in source: `astr`, `abool`, and `aisum`'
         )
       );
     });
@@ -1980,7 +2758,9 @@ describe('query:', () => {
           run: bext -> { group_by: aext.astr; aggregate: x is exclude(${'aext.aisum'}, astr) }
         `
       ).toLog(
-        errorMessage('Group by of `aext.astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
       );
     });
     test('ungroup in join reference', () => {
@@ -1997,7 +2777,9 @@ describe('query:', () => {
           run: bext -> { group_by: aext.astr; aggregate: ${'aext.x'} }
         `
       ).toLog(
-        errorMessage('Group by of `aext.astr` is required but not present')
+        errorMessage(
+          'Group by or single value filter of `aext.astr` is required but not present'
+        )
       );
     });
     test('ungroup shadowed by definition', () => {
@@ -2049,7 +2831,11 @@ describe('query:', () => {
             }
           }
         `
-      ).toLog(errorMessage('Group by of `astr` is required but not present'));
+      ).toLog(
+        errorMessage(
+          'Group by or single value filter of `astr` is required but not present'
+        )
+      );
     });
   });
 });

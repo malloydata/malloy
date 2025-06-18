@@ -22,7 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {createSignal} from 'solid-js';
+import {type Accessor, createSignal, onMount, type Setter} from 'solid-js';
 
 export function getTextWidthCanvas(
   text: string,
@@ -56,14 +56,47 @@ export function getRangeSize(range: [number, number]) {
   return range[1] - range[0] + 1;
 }
 
-export function createRAFSignal<T>(initialValue: T) {
-  const [signal, setSignal] = createSignal<T>(initialValue);
+function rafCallback<T extends (...args: unknown[]) => void>(fn: T) {
   let rafId: number | null = null;
-  const setRAFSignal = (value: Exclude<T, Function> | ((prev: T) => T)) => {
+  return function (this: unknown, ...args: Parameters<T>) {
     if (rafId) cancelAnimationFrame(rafId);
+
     rafId = requestAnimationFrame(() => {
-      setSignal(value);
+      fn.apply(this, args);
     });
   };
+}
+
+export function createRAFSignal<T>(initialValue: T) {
+  const [signal, setSignal] = createSignal<T>(initialValue);
+  const setRAFSignal = rafCallback(setSignal);
   return [signal, setRAFSignal] as const;
+}
+
+export type ResizeDirectiveValue = [
+  Accessor<{width: number; height: number}>,
+  Setter<{width: number; height: number}>,
+];
+
+export function resize(
+  el: HTMLElement,
+  value: Accessor<ResizeDirectiveValue>
+): void {
+  onMount(() => {
+    const [parentSize, setParentSize] = value();
+    const setParentSizeRAF = rafCallback(setParentSize);
+
+    const o = new ResizeObserver(entries => {
+      const {width, height} = entries[0].contentRect;
+      if (width !== parentSize().width || height !== parentSize().height) {
+        setParentSizeRAF({
+          width,
+          height,
+        });
+      }
+    });
+
+    o.observe(el);
+    return () => o.disconnect();
+  });
 }

@@ -26,6 +26,7 @@ import type {
   EvalSpace,
   ExpressionType,
   ExpressionValueType,
+  Parameter,
   TypeDesc,
 } from '../../model';
 import {expressionIsScalar, isRepeatedRecord, TD} from '../../model';
@@ -171,4 +172,21 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
     }
   }
   return {type: 'error'};
+}
+
+export function parameterTypeDesc(
+  p: Parameter,
+  evalSpace: EvalSpace
+): TypeDesc {
+  const t = p.type;
+  const theType =
+    t === 'filter expression'
+      ? {type: t, filterType: p.filterType}
+      : atomicDef(p);
+  return {
+    ...theType,
+    expressionType: 'scalar',
+    evalSpace,
+    fieldUsage: [],
+  };
 }

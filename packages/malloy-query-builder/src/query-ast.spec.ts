@@ -613,6 +613,126 @@ describe('query builder', () => {
       }`,
     });
   });
+  test('add some drills', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const segment = q.getOrAddDefaultSegment();
+      segment.addDrill({
+        filter: {
+          kind: 'filter_string',
+          field_reference: {
+            name: 'carrier',
+          },
+          filter: 'WN, AA',
+        },
+      });
+      segment.addDrill({
+        filter: {
+          kind: 'literal_equality',
+          field_reference: {
+            name: 'nickname',
+            path: ['top_carriers'],
+          },
+          value: {
+            kind: 'string_literal',
+            string_value: 'Southwest',
+          },
+        },
+      });
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'drill',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: 'WN, AA',
+                },
+              },
+              {
+                kind: 'drill',
+                filter: {
+                  kind: 'literal_equality',
+                  field_reference: {
+                    name: 'nickname',
+                    path: ['top_carriers'],
+                  },
+                  value: {
+                    kind: 'string_literal',
+                    string_value: 'Southwest',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: dedent`
+        run: flights -> {
+          drill:
+            carrier ~ f\`WN, AA\`,
+            top_carriers.nickname = "Southwest"
+        }
+      `,
+    });
+  });
+  test('can get drill field info', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    const q = new ASTQuery({model: flights_model, query: from});
+    const segment = q.getOrAddDefaultSegment();
+    const drill = segment.addDrill({
+      filter: {
+        kind: 'literal_equality',
+        field_reference: {
+          name: 'nickname',
+          path: ['top_carriers'],
+        },
+        value: {
+          kind: 'string_literal',
+          string_value: 'Southwest',
+        },
+      },
+    });
+    expect(drill.filter.fieldReference.getFieldInfo()).toMatchObject({
+      kind: 'dimension',
+      type: {kind: 'string_type'},
+    });
+  });
   test('add a having', () => {
     const from: Malloy.Query = {
       definition: {

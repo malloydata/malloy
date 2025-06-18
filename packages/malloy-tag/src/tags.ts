@@ -296,7 +296,10 @@ export class Tag implements TagInterface {
   }
 
   private static escapeString(str: string) {
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return str
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n');
   }
 
   private static escapeProp(str: string) {

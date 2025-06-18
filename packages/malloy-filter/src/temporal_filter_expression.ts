@@ -48,9 +48,9 @@ export const TemporalFilterExpression = {
       case 'next':
         return notStr(tc, `${tc.operator} ${durStr(tc)}`);
       case 'before':
-        return notStr(tc, `before ${momentToStr(tc.before)}`);
+        return `${tc.not ? 'starting' : 'before'} ${momentToStr(tc.before)}`;
       case 'after':
-        return notStr(tc, `after ${momentToStr(tc.after)}`);
+        return `${tc.not ? 'through' : 'after'} ${momentToStr(tc.after)}`;
       case 'to':
         return notStr(
           tc,

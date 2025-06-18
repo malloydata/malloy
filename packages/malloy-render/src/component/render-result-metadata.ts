@@ -24,15 +24,20 @@
 
 import type {Tag} from '@malloydata/malloy-tag';
 import type {VegaChartProps, VegaConfigHandler} from './types';
-import {mergeVegaConfigs} from './vega/merge-vega-configs';
-import {baseVegaConfig} from './vega/base-vega-config';
-import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
-import type {ResultStore} from './result-store/result-store';
-import {createResultStore} from './result-store/result-store';
-import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
+import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
+import {baseVegaConfig} from '@/component/vega/base-vega-config';
+import {generateBarChartVegaSpec} from '@/component/bar-chart/generate-bar_chart-vega-spec';
+import type {ResultStore} from '@/component/result-store/result-store';
+import {createResultStore} from '@/component/result-store/result-store';
+import {generateLineChartVegaSpec} from '@/component/line-chart/generate-line_chart-vega-spec';
 import type {Config, Runtime} from 'vega';
 import {parse} from 'vega';
-import type {NestField, RepeatedRecordField, RootCell} from '../data_tree';
+import {defaultSettings} from '@/component/default-settings';
+import {
+  convertLegacyToVizTag,
+  getChartTypeFromNormalizedTag,
+} from './tag-utils';
+import type {RootField, NestField, RepeatedRecordField} from '@/data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
@@ -40,28 +45,46 @@ export type GetResultMetadataOptions = {
 };
 
 export interface FieldVegaInfo {
-  runtime: Runtime;
-  props: VegaChartProps;
+  runtime: Runtime | null;
+  props: VegaChartProps | null;
+  error: Error | null;
 }
 
 export interface RenderMetadata {
   store: ResultStore;
   vega: Record<string, FieldVegaInfo>;
-  root: RootCell;
+  rootField: RootField;
   parentSize: {width: number; height: number};
+  renderAs: string;
+  sizingStrategy: 'fill' | 'fixed';
 }
 
 export function getResultMetadata(
-  root: RootCell,
+  rootField: RootField,
   options: GetResultMetadataOptions = {parentSize: {width: 0, height: 0}}
 ): RenderMetadata {
+  const rootTag = rootField.tag;
+
+  const rootSizingStrategy =
+    rootTag.has('size') && rootTag.text('size') !== 'fill'
+      ? 'fixed'
+      : defaultSettings.size;
+  const chartSizeTag = rootTag.tag('viz', 'size');
+  const chartSizingStrategy =
+    chartSizeTag && chartSizeTag.text('') !== 'fill' ? 'fixed' : null;
+
   const metadata: RenderMetadata = {
     store: createResultStore(),
     vega: {},
-    root,
+    rootField,
     parentSize: options.parentSize,
+    renderAs: rootField.renderAs,
+    sizingStrategy:
+      rootField.renderAs === 'table'
+        ? 'fixed'
+        : chartSizingStrategy ?? rootSizingStrategy,
   };
-  populateAllVegaSpecs(root.field, metadata, options);
+  populateAllVegaSpecs(rootField, metadata, options);
 
   return metadata;
 }
@@ -81,14 +104,10 @@ function populateAllVegaSpecs(
   });
 }
 
-const CHART_TAG_LIST = ['bar_chart', 'line_chart'];
+export function shouldRenderChartAs(tag: Tag): string | undefined {
+  const normalizedTag = convertLegacyToVizTag(tag);
 
-export function shouldRenderChartAs(tag: Tag) {
-  const properties = tag.properties ?? {};
-  const tagNamesInOrder = Object.keys(properties).reverse();
-  return tagNamesInOrder.find(
-    name => CHART_TAG_LIST.includes(name) && !properties[name].deleted
-  );
+  return getChartTypeFromNormalizedTag(normalizedTag);
 }
 
 function populateVegaSpec(
@@ -99,10 +118,20 @@ function populateVegaSpec(
   // Populate vega spec data
   let vegaChartProps: VegaChartProps | null = null;
   const chartType = shouldRenderChartAs(field.tag);
-  if (chartType === 'bar_chart') {
-    vegaChartProps = generateBarChartVegaSpec(field, metadata);
-  } else if (chartType === 'line_chart') {
-    vegaChartProps = generateLineChartVegaSpec(field, metadata);
+  const vegaInfo: FieldVegaInfo = {
+    error: null,
+    props: null,
+    runtime: null,
+  };
+
+  try {
+    if (chartType === 'bar') {
+      vegaChartProps = generateBarChartVegaSpec(field, metadata);
+    } else if (chartType === 'line') {
+      vegaChartProps = generateLineChartVegaSpec(field, metadata);
+    }
+  } catch (error) {
+    vegaInfo.error = error;
   }
 
   if (vegaChartProps) {
@@ -132,6 +161,8 @@ function populateVegaSpec(
       },
     };
     const runtime = parse(props.spec);
-    metadata.vega[field.key] = {runtime, props};
+    vegaInfo.props = props;
+    vegaInfo.runtime = runtime;
   }
+  metadata.vega[field.key] = vegaInfo;
 }

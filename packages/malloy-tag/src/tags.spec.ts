@@ -380,6 +380,13 @@ describe('Tag access', () => {
       expect(ext.toString()).toBe('#(malloy) value = "\\\\"\n');
       idempotent(ext);
     });
+    test('value has a newline', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['value'], '\n');
+      expect(ext.toString()).toBe('#(malloy) value = "\\n"\n');
+      expect(base.text('value')).toBe('\n');
+      idempotent(ext);
+    });
     test('value has a double quote', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '"');

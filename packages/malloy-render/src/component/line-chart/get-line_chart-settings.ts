@@ -9,6 +9,8 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel} from '../types';
 import type {NestField} from '../../data_tree';
 import {walkFields} from '../../util';
+import {defaultSettings} from '../default-settings';
+import {convertLegacyToVizTag} from '../tag-utils';
 
 export type LineChartSettings = {
   xChannel: Channel;
@@ -22,20 +24,37 @@ export function getLineChartSettings(
   explore: NestField,
   tagOverride?: Tag
 ): LineChartSettings {
-  const tag = tagOverride ?? explore.tag;
-  const chart = tag.tag('line_chart');
-  if (!chart) {
+  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
+
+  if (normalizedTag.text('viz') !== 'line') {
     throw new Error(
-      'Tried to render a bar_chart, but no bar_chart tag was found'
+      'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
     );
   }
 
-  const zeroBaseline = chart.has('zero_baseline')
-    ? chart.text('zero_baseline') !== 'false'
-    : true;
+  const vizTag = normalizedTag.tag('viz')!;
+
+  // default zero_baselinse
+  let zeroBaseline = defaultSettings.line_chart.zero_baseline;
+  if (vizTag.has('zero_baseline')) {
+    const value = vizTag.text('zero_baseline');
+    // If explicitly set to false, set to false
+    if (value === 'false') {
+      zeroBaseline = false;
+    }
+    // If explicilty set to true or no value, set to true
+    else if (
+      value === 'true' ||
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      zeroBaseline = true;
+    }
+  }
 
   // if tooltip, disable interactions
-  const interactive = !tag.has('tooltip');
+  const interactive = !normalizedTag.has('tooltip');
 
   const xChannel: Channel = {
     fields: [],
@@ -57,54 +76,60 @@ export function getLineChartSettings(
   }
 
   // Parse top level tags
-  if (chart.text('x')) {
-    xChannel.fields.push(getField(chart.text('x')!));
+  if (vizTag.text('x')) {
+    xChannel.fields.push(getField(vizTag.text('x')!));
   }
-  if (chart.text('y')) {
-    yChannel.fields.push(getField(chart.text('y')!));
-  } else if (chart.textArray('y')) {
-    yChannel.fields.push(...chart.textArray('y')!.map(getField));
+  if (vizTag.text('y')) {
+    yChannel.fields.push(getField(vizTag.text('y')!));
+  } else if (vizTag.textArray('y')) {
+    yChannel.fields.push(...vizTag.textArray('y')!.map(getField));
   }
-  if (chart.text('series')) {
-    seriesChannel.fields.push(getField(chart.text('series')!));
+  if (vizTag.text('series')) {
+    seriesChannel.fields.push(getField(vizTag.text('series')!));
   }
 
   // Parse embedded tags
   const embeddedX: string[] = [];
   const embeddedY: string[] = [];
   const embeddedSeries: string[] = [];
-  walkFields(explore, field => {
-    const tag = field.tag;
-    const pathTo = explore.pathTo(field);
-    if (tag.has('x')) {
-      embeddedX.push(pathTo);
-    }
-    if (tag.has('y')) {
-      embeddedY.push(pathTo);
-    }
-    if (tag.has('series')) {
-      embeddedSeries.push(pathTo);
-    }
-  });
 
-  // Add all x's found
-  embeddedX.forEach(path => {
-    xChannel.fields.push(path);
-  });
+  // Only parse embedded tags if disableEmbedded is not set
+  if (!vizTag.has('disableEmbedded')) {
+    walkFields(explore, field => {
+      const tag = field.tag;
+      const pathTo = explore.pathTo(field);
+      if (tag.has('x')) {
+        embeddedX.push(pathTo);
+      }
+      if (tag.has('y')) {
+        embeddedY.push(pathTo);
+      }
+      if (tag.has('series')) {
+        embeddedSeries.push(pathTo);
+      }
+    });
 
-  // Add all y's found
-  embeddedY.forEach(path => {
-    yChannel.fields.push(path);
-  });
+    // Add all x's found
+    embeddedX.forEach(path => {
+      xChannel.fields.push(path);
+    });
 
-  // Add all series found
-  embeddedSeries.forEach(path => {
-    seriesChannel.fields.push(path);
-  });
+    // Add all y's found
+    embeddedY.forEach(path => {
+      yChannel.fields.push(path);
+    });
+
+    // Add all series found
+    embeddedSeries.forEach(path => {
+      seriesChannel.fields.push(path);
+    });
+  }
 
   const dimensions = explore.fields.filter(
     f => f.isBasic() && f.wasDimension()
   );
+
+  const measures = explore.fields.filter(f => f.wasCalculation());
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
@@ -136,10 +161,26 @@ export function getLineChartSettings(
     }
   }
 
-  // TODO: types. This logic may move into each chart vega spec creation
+  // TODO: types
   xChannel.type = 'nominal';
   yChannel.type = 'quantitative';
   seriesChannel.type = 'nominal';
+
+  if (dimensions.length > 2) {
+    throw new Error(
+      'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+    );
+  }
+  if (dimensions.length === 0) {
+    throw new Error(
+      'Malloy Line Chart: No dimensions found. A line chart must have at least 1 dimension for the x axis.'
+    );
+  }
+  if (measures.length === 0) {
+    throw new Error(
+      'Malloy Line Chart: No measures found. A line chart must have at least 1 measure for the y axis.'
+    );
+  }
 
   return {
     xChannel,

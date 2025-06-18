@@ -6,17 +6,20 @@
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {Accessor} from 'solid-js';
+import type {Accessor, Setter} from 'solid-js';
 import {
   Show,
   createContext,
-  createEffect,
   createMemo,
+  createSignal,
   useContext,
+  ErrorBoundary,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
-import './render.css';
-import type {ComponentOptions, ICustomElement} from 'component-register';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './render.css?raw';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used as a directive in JSX
+import {resize} from './util';
 import {applyRenderer} from './apply-renderer';
 import type {
   DashboardConfig,
@@ -26,24 +29,20 @@ import type {
   VegaConfigHandler,
 } from './types';
 export type {DrillData} from './types';
-import css from './render.css?raw';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import type {ModelDef, QueryResult} from '@malloydata/malloy';
-import {Result, API} from '@malloydata/malloy';
 import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
-import {createRAFSignal} from './util';
 import {LineChartSeriesPluginFactory} from '../plugins/line-chart-series-plugin';
+import {ErrorMessage} from './error-message/error-message';
 
 export type MalloyRenderProps = {
-  malloyResult?: Malloy.Result;
-  result?: Result;
-  queryResult?: QueryResult;
-  modelDef?: ModelDef;
+  result?: Malloy.Result;
+  element: HTMLElement;
   scrollEl?: HTMLElement;
   modalElement?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
   onDrill?: (drillData: DrillData) => void;
+  onError?: (error: Error) => void;
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
@@ -52,10 +51,6 @@ export type MalloyRenderProps = {
 const ConfigContext = createContext<{
   tableConfig: Accessor<TableConfig>;
   dashboardConfig: Accessor<DashboardConfig>;
-  element: ICustomElement;
-  stylesheet: CSSStyleSheet;
-  addCSSToShadowRoot: (css: string) => void;
-  addCSSToDocument: (id: string, css: string) => void;
   onClick?: (payload: MalloyClickEventPayload) => void;
   onDrill?: (drillData: DrillData) => void;
   vegaConfigOverride?: VegaConfigHandler;
@@ -71,64 +66,8 @@ export const useConfig = () => {
   return config;
 };
 
-export function MalloyRender(
-  props: MalloyRenderProps,
-  {element}: ComponentOptions
-) {
-  const result = createMemo(() => {
-    if (props.malloyResult) {
-      return props.malloyResult;
-    }
-    const result =
-      props.result ??
-      (props.queryResult && props.modelDef
-        ? new Result(props.queryResult, props.modelDef)
-        : null);
-    if (result) {
-      return API.util.wrapResult(result);
-    }
-    return null;
-  });
-
-  // Create one stylesheet for web component to use for all styles
-  // This is so we can pass the stylesheet to other components to share, like <malloy-modal>
-  const stylesheet = new CSSStyleSheet();
-  if (element.renderRoot instanceof ShadowRoot)
-    element.renderRoot.adoptedStyleSheets.push(stylesheet);
-
-  const addedStylesheets = new Set();
-  function addCSSToShadowRoot(css: string) {
-    const root = element.renderRoot;
-    if (!(root instanceof ShadowRoot)) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "Couldn't add CSS to render element, it is not rendering in a ShadowRoot"
-      );
-      return;
-    }
-    if (!addedStylesheets.has(css)) {
-      const newStyleSheetTexts: string[] = [];
-      for (let i = 0; i < stylesheet.cssRules.length; i++) {
-        const cssText = stylesheet.cssRules.item(i)?.cssText;
-        if (cssText) newStyleSheetTexts.push(cssText);
-      }
-      newStyleSheetTexts.push(css);
-      stylesheet.replaceSync(newStyleSheetTexts.join('\n'));
-      addedStylesheets.add(css);
-    }
-  }
-
-  function addCSSToDocument(id: string, css: string) {
-    if (!document.getElementById(id)) {
-      const style = document.createElement('style');
-      style.id = id;
-      style.textContent = css;
-      document.head.appendChild(style);
-    }
-  }
-
-  addCSSToShadowRoot(css);
-
+export function MalloyRender(props: MalloyRenderProps) {
+  MalloyViz.addStylesheet(styles);
   const tableConfig: Accessor<TableConfig> = () =>
     Object.assign(
       {
@@ -149,55 +88,46 @@ export function MalloyRender(
     );
 
   return (
-    <Show when={result()}>
-      <ConfigContext.Provider
-        value={{
-          onClick: props.onClick,
-          onDrill: props.onDrill,
-          vegaConfigOverride: props.vegaConfigOverride,
-          element,
-          stylesheet,
-          addCSSToShadowRoot,
-          addCSSToDocument,
-          tableConfig,
-          dashboardConfig,
-          modalElement: props.modalElement,
-        }}
-      >
-        <MalloyRenderInner
-          result={result()!}
-          element={element}
-          scrollEl={props.scrollEl}
-          vegaConfigOverride={props.vegaConfigOverride}
-        />
-      </ConfigContext.Provider>
-    </Show>
+    <ErrorBoundary
+      fallback={errorProps => {
+        props?.onError?.(errorProps.error);
+        return <ErrorMessage message={errorProps.error.message} />;
+      }}
+    >
+      <Show when={props.result}>
+        <ConfigContext.Provider
+          value={{
+            onClick: props.onClick,
+            onDrill: props.onDrill,
+            vegaConfigOverride: props.vegaConfigOverride,
+            tableConfig,
+            dashboardConfig,
+            modalElement: props.modalElement,
+          }}
+        >
+          <MalloyRenderInner
+            result={props.result!}
+            element={props.element}
+            scrollEl={props.scrollEl}
+            vegaConfigOverride={props.vegaConfigOverride}
+          />
+        </ConfigContext.Provider>
+      </Show>
+    </ErrorBoundary>
   );
 }
 // Prevent charts from growing unbounded as they autofill
 const CHART_SIZE_BUFFER = 4;
 export function MalloyRenderInner(props: {
   result: Malloy.Result;
-  element: ICustomElement;
+  element: HTMLElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
 }) {
-  const wrapper = props.element['parentElement'];
-  const [parentSize, setParentSize] = createRAFSignal({
-    width: wrapper.clientWidth - CHART_SIZE_BUFFER,
-    height: wrapper.clientHeight - CHART_SIZE_BUFFER,
+  const [parentSize, setParentSize] = createSignal({
+    width: 0,
+    height: 0,
   });
-  const o = new ResizeObserver(entries => {
-    const {width, height} = entries[0].contentRect;
-    if (width !== parentSize().width || height !== parentSize().height) {
-      setParentSize({
-        width: width - CHART_SIZE_BUFFER,
-        height: height - CHART_SIZE_BUFFER,
-      });
-    }
-  });
-
-  o.observe(wrapper);
 
   // This is where chart rendering happens for now
   // If size in fill mode, easiest thing would be to just recalculate entire thing
@@ -207,11 +137,28 @@ export function MalloyRenderInner(props: {
   );
 
   const metadata = createMemo(() =>
-    getResultMetadata(rootCell(), {
+    getResultMetadata(rootCell().field, {
       getVegaConfigOverride: props.vegaConfigOverride,
-      parentSize: parentSize(),
+      parentSize: {
+        width: parentSize().width - CHART_SIZE_BUFFER,
+        height: parentSize().height - CHART_SIZE_BUFFER,
+      },
     })
   );
+
+  // hack to block resize events when we're in fixed mode.
+  // TODO as part of plugin system, move sizing strategy into data_tree metadata creation
+  const _setParentSize: Setter<{width: number; height: number}> = value => {
+    if (metadata().sizingStrategy === 'fixed') return;
+
+    const newSize = typeof value === 'function' ? value(parentSize()) : value;
+
+    setParentSize({
+      width: newSize.width - CHART_SIZE_BUFFER,
+      height: newSize.height - CHART_SIZE_BUFFER,
+    });
+  };
+
   const tags = () => {
     const modelTag = rootCell().field.modelTag;
     const resultTag = rootCell().field.tag;
@@ -225,14 +172,7 @@ export function MalloyRenderInner(props: {
     };
   };
 
-  const config = useConfig();
-
-  createEffect(() => {
-    if (props.element) {
-      const style = generateThemeStyle(tags().modelTheme, tags().localTheme);
-      config.addCSSToShadowRoot(style);
-    }
-  });
+  const style = () => generateThemeStyle(tags().modelTheme, tags().localTheme);
 
   const rendering = () => {
     const data = rootCell();
@@ -253,15 +193,33 @@ export function MalloyRenderInner(props: {
     });
   };
 
+  const showRendering = () => {
+    if (metadata().sizingStrategy === 'fixed') return true;
+    if (
+      metadata().sizingStrategy === 'fill' &&
+      parentSize().width > 0 &&
+      parentSize().height > 0
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   return (
-    <>
-      <ResultContext.Provider value={metadata}>
-        {rendering().renderValue}
-      </ResultContext.Provider>
-      <Show when={metadata().store.store.showCopiedModal}>
-        <div class="malloy-copied-modal">Copied query to clipboard!</div>
+    <div
+      class="malloy-render"
+      style={style()}
+      use:resize={[parentSize, _setParentSize]}
+    >
+      <Show when={showRendering()}>
+        <ResultContext.Provider value={metadata}>
+          {rendering().renderValue}
+        </ResultContext.Provider>
+        <Show when={metadata().store.store.showCopiedModal}>
+          <div class="malloy-copied-modal">Copied query to clipboard!</div>
+        </Show>
       </Show>
-    </>
+    </div>
   );
 }
 
@@ -332,7 +290,6 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
 
   const css = `
-  :host {
     --malloy-render--table-row-height: ${tableRowHeight};
     --malloy-render--table-body-color: ${tableBodyColor};
     --malloy-render--table-font-size: ${tableFontSize};
@@ -345,7 +302,7 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     --malloy-render--table-gutter-size: ${tableGutterSize};
     --malloy-render--table-pinned-background: ${tablePinnedBackground};
     --malloy-render--table-pinned-border: ${tablePinnedBorder};
-  }
+
 `;
   return css;
 }

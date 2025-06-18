@@ -13,10 +13,11 @@ import type {View} from 'vega';
 import {parse} from 'vega';
 import {createStore} from 'solid-js/store';
 import {addSignalListenerIfExists} from '../vega/vega-utils';
-import {useResultContext} from '../result-context';
+import type {VegaChartProps} from '../types';
 
 type ChartDevToolProps = {
   onClose: () => void;
+  chartProps: VegaChartProps;
 } & ChartProps;
 
 function stripMalloyRecord(record: Record<string, unknown>) {
@@ -36,10 +37,8 @@ function stripMalloyRecord(record: Record<string, unknown>) {
 }
 
 export default function ChartDevTool(props: ChartDevToolProps) {
-  const metadata = useResultContext();
-  const chartProps = metadata.vega[props.data.field.key].props;
   const [specString, setSpecString] = createSignal(
-    JSON.stringify(chartProps.spec, null, 2)
+    JSON.stringify(props.chartProps.spec, null, 2)
   );
 
   const runtime = createMemo(() => {

@@ -16,6 +16,7 @@ import {getLineChartSettings} from './get-line_chart-settings';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {createMeasureAxis} from '../vega/measure-axis';
 import type {
+  Axis,
   Data,
   GroupMark,
   Item,
@@ -35,6 +36,7 @@ import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 import type {RenderMetadata} from '../render-result-metadata';
 import type {LineChartSeriesPluginInstance} from '../../plugins/line-chart-series-plugin';
+import {convertLegacyToVizTag} from '../tag-utils';
 
 type LineDataRecord = {
   x: string | number;
@@ -70,14 +72,17 @@ export function generateLineChartVegaSpec(
 
   if (!lineChartPlugin) {
     throw new Error(
-      'Trying to render a line chart when Line chart series plugin not found'
+      'Malloy Line Chart: Trying to render a line chart when Line chart series plugin not found'
     );
   }
 
-  const tag = explore.tag;
-  const chartTag = tag.tag('line_chart');
+  const tag = convertLegacyToVizTag(explore.tag);
+  const chartTag = tag.tag('viz');
   if (!chartTag)
-    throw new Error('Line chart should only be rendered for line_chart tag');
+    throw new Error(
+      'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
+    );
+
   const settings = getLineChartSettings(explore, tag);
   /**************************************
    *
@@ -88,12 +93,20 @@ export function generateLineChartVegaSpec(
   const yFieldPath = settings.yChannel.fields.at(0);
   const seriesFieldPath = settings.seriesChannel.fields.at(0);
 
-  if (!xFieldPath) throw new Error('Malloy Bar Chart: Missing x field');
-  if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
+  if (!xFieldPath) throw new Error('Malloy Line Chart: Missing x field');
+  if (!yFieldPath) throw new Error('Malloy Line Chart: Missing y field');
 
   const xField = explore.fieldAt(xFieldPath);
   const xIsDateorTime = xField.isTime();
   const xIsBoolean = xField.isBoolean();
+  const hasNullXValues = xField.valueSet.has(NULL_SYMBOL);
+  const hasNullTimeValues = xIsDateorTime && hasNullXValues;
+  const xScaling = (dataAccessor: string) => {
+    return hasNullTimeValues
+      ? `datum.isNull ? scale('null_x_scale', ${dataAccessor}) : scale('xscale', ${dataAccessor})`
+      : `scale('xscale', ${dataAccessor})`;
+  };
+
   const yField = explore.fieldAt(yFieldPath);
   const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
 
@@ -150,7 +163,7 @@ export function generateLineChartVegaSpec(
     metadata,
     xField,
     yField,
-    chartType: 'line_chart',
+    chartType: 'line',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent') || isLimitingSeries,
   });
@@ -175,6 +188,8 @@ export function generateLineChartVegaSpec(
   const seriesSet = seriesField
     ? new Set(lineChartPlugin.getTopNSeries(maxSeries))
     : null;
+
+  // TODO: spec needs to be responsive to data changes, eventually. so we don't have to rerender chart from scratch when data changes
 
   /**************************************
    *
@@ -203,7 +218,8 @@ export function generateLineChartVegaSpec(
     name: 'series_group',
     from: {
       facet: {
-        data: 'values',
+        // TODO how to make this reactive within spec
+        data: hasNullTimeValues ? 'non_null_x_values' : 'values',
         name: 'series_facet',
         groupby: ['series'],
         aggregate: {
@@ -235,21 +251,24 @@ export function generateLineChartVegaSpec(
       update: {
         strokeOpacity: [
           {
-            test: 'brushSeriesIn && brushSeriesIn != datum.series',
+            test: 'isValid(brushSeriesIn) && brushSeriesIn != datum.series',
             value: LINE_FADE_OPACITY,
           },
           {value: 1},
         ],
         stroke: [
           {
-            test: 'brushSeriesIn && brushSeriesIn != datum.series',
+            test: 'isValid(brushSeriesIn) && brushSeriesIn != datum.series',
             value: '#ccc',
           },
           {scale: 'color', field: 'series'},
         ],
-        // TODO figure out why this isn't working. We need highlighted line to appear above other lines
+        // TODO bug in vega
         zindex: [
-          {test: 'brushSeriesIn && brushSeriesIn === datum.series', value: 10},
+          {
+            test: 'isValid(brushSeriesIn) && brushSeriesIn === datum.series',
+            value: 10,
+          },
           {value: 1},
         ],
       },
@@ -267,8 +286,7 @@ export function generateLineChartVegaSpec(
     encode: {
       enter: {
         x: {
-          scale: 'xscale',
-          field: 'x',
+          signal: xScaling('datum.x'),
         },
         y: {
           value: 0,
@@ -282,7 +300,7 @@ export function generateLineChartVegaSpec(
         },
         strokeOpacity: [
           {
-            test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
+            test: 'isValid(brushXIn) ? indexof(brushXIn,datum.x) > -1 : false',
             value: 0.2,
           },
           {value: 0},
@@ -307,7 +325,7 @@ export function generateLineChartVegaSpec(
           enter: {
             fill: {value: 'transparent'},
             size: {value: 36},
-            x: {scale: 'xscale', field: 'x'},
+            x: {signal: xScaling('datum.x')},
             y: {signal: 'height /2'},
           },
         },
@@ -342,7 +360,7 @@ export function generateLineChartVegaSpec(
     },
     encode: {
       enter: {
-        x: {scale: 'xscale', field: 'x'},
+        x: {signal: xScaling('datum.x')},
         y: {scale: 'yscale', field: 'y'},
         fill: {value: 'transparent'},
         size: {value: 256},
@@ -350,22 +368,47 @@ export function generateLineChartVegaSpec(
     },
   };
 
+  const seriesPointGroupMark: GroupMark = {
+    name: 'series_point_group',
+    from: {
+      facet: {
+        data: 'values',
+        name: 'series_point_facet',
+        groupby: ['series'],
+        aggregate: {
+          fields: [''],
+          ops: ['count'],
+          as: ['count'],
+        },
+      },
+    },
+    type: 'group',
+    interactive: false,
+    marks: [],
+  };
+
   const pointMarks: SymbolMark = {
     name: 'points',
     type: 'symbol',
     from: {
-      data: 'series_facet',
+      data: 'series_point_facet',
     },
     encode: {
       enter: {
-        x: {scale: 'xscale', field: 'x'},
+        x: {
+          signal: xScaling('datum.x'),
+        },
         y: {scale: 'yscale', field: 'y'},
         fill: {scale: 'color', field: 'series'},
       },
       update: {
         fillOpacity: [
           {
-            test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
+            test: 'hasNullTimeValues && datum.isNull',
+            value: 1,
+          },
+          {
+            test: 'isValid(brushXIn) ? indexof(brushXIn,datum.x) > -1 : false',
             value: 1,
           },
           // If only one point in a line, show the point
@@ -376,17 +419,72 @@ export function generateLineChartVegaSpec(
   };
 
   seriesGroupMark.marks!.push(lineMark);
-  seriesGroupMark.marks!.push(pointMarks);
+  seriesPointGroupMark.marks!.push(pointMarks);
 
   marks.push(seriesGroupMark);
+  marks.push(seriesPointGroupMark);
 
   if (settings.interactive) {
     if (yAxis) marks.push(...yAxis.interactiveMarks);
   }
   marks.push(highlightRuleMark, xHitTargets, refLineTargets);
+  // TODO make reactive to data changes instead of hardcoding into spec
+  if (hasNullTimeValues) {
+    marks.push({
+      name: 'null_axis_divider',
+      type: 'rule',
+      encode: {
+        enter: {
+          x: {signal: 'nullPlotStart'},
+          y: {signal: 'height'},
+          y2: {value: 0},
+          // TODO pull from vega config?
+          stroke: {value: '#bbb'},
+          strokeWidth: {value: 0.5},
+          strokeDash: {value: [8, 4]},
+        },
+      },
+    });
+  }
 
   // Source data and transforms
-  const valuesData: Data = {name: 'values', values: [], transform: []};
+  const valuesData: Data = {
+    name: 'values',
+    values: [],
+    transform: [
+      {
+        type: 'formula',
+        expr: `datum.x === null || datum.x === "${NULL_SYMBOL}"`,
+        as: 'isNull',
+      },
+    ],
+  };
+
+  const nonNullXValues: Data = {
+    name: 'non_null_x_values',
+    source: 'values',
+    transform: [
+      {
+        type: 'filter',
+        expr: `datum.x != null && datum.x != "${NULL_SYMBOL}"`,
+      },
+    ],
+  };
+
+  const xValuesAggregated: Data = {
+    name: 'x_data',
+    source: 'values',
+    transform: [
+      {
+        type: 'aggregate',
+        groupby: ['x'],
+        fields: ['x'],
+        ops: ['values'],
+        as: ['v'],
+      },
+    ],
+  };
+
   // For measure series, unpivot the measures into the series column
   if (isMeasureSeries) {
     // Pull the series values from the source record, then remap the names to remove __values
@@ -416,6 +514,17 @@ export function generateLineChartVegaSpec(
   const signals: Signal[] = [
     {
       name: 'malloyExplore',
+    },
+    // TODO make this reactive to data, so can reuse same spec & view with different data
+    {name: 'hasNullTimeValues', value: hasNullTimeValues},
+    {
+      name: 'mainPlotWidth',
+      update:
+        'hasNullTimeValues ? clamp(0.95*width, width-48, width-32) : width',
+    },
+    {
+      name: 'nullPlotStart',
+      update: 'hasNullTimeValues ? mainPlotWidth + 16 : 0',
     },
     {
       name: 'xFieldRefId',
@@ -491,21 +600,22 @@ export function generateLineChartVegaSpec(
         on: xRef
           ? [
               {
-                events: '@x_hit_target:mouseover', // points too?
+                events: '@x_hit_target:mouseover',
                 update:
                   "{ fieldRefId: xFieldRefId, value: [datum.datum.x], sourceId: brushXSourceId, type: 'dimension'}",
               },
+
               {
-                events: '@ref_line_targets:mouseover', // points too?
+                events: '@ref_line_targets:mouseover',
                 update:
                   "{ fieldRefId: xFieldRefId, value: [datum.x], sourceId: brushXSourceId, type: 'dimension'}",
               },
               {
-                events: '@x_hit_target:mouseout', // points too? @bars:mouseout
+                events: '@x_hit_target:mouseout',
                 update: 'null',
               },
               {
-                events: '@ref_line_targets:mouseout', // points too? @bars:mouseout
+                events: '@ref_line_targets:mouseout',
                 update: 'null',
               },
             ]
@@ -584,22 +694,7 @@ export function generateLineChartVegaSpec(
       contains: 'padding',
     },
     padding: chartSettings.padding,
-    data: [
-      valuesData,
-      {
-        name: 'x_data',
-        source: 'values',
-        transform: [
-          {
-            type: 'aggregate',
-            groupby: ['x'],
-            fields: ['x'],
-            ops: ['values'],
-            as: ['v'],
-          },
-        ],
-      },
-    ],
+    data: [valuesData, nonNullXValues, xValuesAggregated],
     scales: [
       {
         name: 'xscale',
@@ -611,8 +706,14 @@ export function generateLineChartVegaSpec(
             ? [true, false]
             : [...xField.valueSet]
           : {data: 'values', field: 'x'},
-        range: 'width',
+        range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,
+      },
+      {
+        name: 'null_x_scale',
+        type: 'point',
+        domain: [NULL_SYMBOL],
+        range: [{signal: 'nullPlotStart'}, {signal: 'width'}],
       },
       {
         name: 'yscale',
@@ -661,6 +762,14 @@ export function generateLineChartVegaSpec(
             : {}),
         },
       },
+      ...(hasNullTimeValues
+        ? [
+            {
+              orient: 'bottom',
+              scale: 'null_x_scale',
+            } as Axis,
+          ]
+        : []),
       ...(yAxis ? [yAxis.axis] : []),
     ],
     legends: [],
@@ -693,7 +802,7 @@ export function generateLineChartVegaSpec(
     legendSize = Math.min(
       LEGEND_MAX,
       chartSettings.totalWidth * LEGEND_PERC,
-      maxCharCt * 8 + 20
+      maxCharCt * 8 + 32
     );
 
     const legendSettings: Legend = {
@@ -729,7 +838,7 @@ export function generateLineChartVegaSpec(
                 value: 1,
               },
               {
-                test: 'brushSeriesIn && brushSeriesIn != datum.value',
+                test: 'isValid(brushSeriesIn) && brushSeriesIn != datum.value',
                 value: 0.35,
               },
               ...(isMeasureSeries
@@ -758,7 +867,7 @@ export function generateLineChartVegaSpec(
                 value: 1,
               },
               {
-                test: 'brushSeriesIn && brushSeriesIn != datum.value',
+                test: 'isValid(brushSeriesIn) && brushSeriesIn != datum.value',
                 value: 0.35,
               },
               {value: 1},
@@ -805,10 +914,9 @@ export function generateLineChartVegaSpec(
       if (skipSeries(seriesVal)) {
         return;
       }
-      // Filter out missing date/time/metric values
-      const isMissingX = xIsDateorTime && getXValue(row) === null;
+      // Filter out missing metric values
       const isMissingY = row.column(yField.name).value === null;
-      if (isMissingX || isMissingY) {
+      if (isMissingY) {
         return;
       }
       // Map data fields to chart properties.  Handle undefined values properly.
@@ -849,7 +957,7 @@ export function generateLineChartVegaSpec(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
-    chartType: 'line_chart',
+    chartType: 'line',
     chartTag,
     mapMalloyDataToChartData,
     getTooltipData(item, view) {
@@ -876,12 +984,19 @@ export function generateLineChartVegaSpec(
 
       // Tooltip records for the highlighted points
       if (['x_hit_target', 'ref_line_targets'].includes(markName)) {
-        const x =
-          markName === 'x_hit_target' ? item.datum.datum.x : item.datum.x;
+        let x = '';
+        if (markName === 'x_hit_target') {
+          x = item.datum.datum.x;
+        } else {
+          x = item.datum.x;
+        }
+
         records = markName === 'x_hit_target' ? item.datum.datum.v : [];
 
         const title = xIsDateorTime
-          ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
+          ? x === NULL_SYMBOL
+            ? NULL_SYMBOL
+            : renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
         const sortedRecords = [...records]
@@ -913,11 +1028,13 @@ export function generateLineChartVegaSpec(
           }
         }
         const title = xIsDateorTime
-          ? renderTimeString(
-              new Date(itemData.x),
-              xField.isDate(),
-              xField.timeframe
-            )
+          ? itemData.x === NULL_SYMBOL
+            ? NULL_SYMBOL
+            : renderTimeString(
+                new Date(itemData.x),
+                xField.isDate(),
+                xField.timeframe
+              )
           : itemData.x;
 
         // If the highlighted item is not included in the first ~20,

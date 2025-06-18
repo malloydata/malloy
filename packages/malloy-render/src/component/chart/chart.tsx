@@ -7,19 +7,22 @@
 
 import type {ViewInterface} from '../vega/vega-chart';
 import {VegaChart} from '../vega/vega-chart';
-import type {ChartTooltipEntry} from '../types';
+import type {ChartTooltipEntry, VegaChartProps} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import type {EventListenerHandler, Runtime, View} from 'vega';
 import type {VegaBrushOutput} from '../result-store/result-store';
-import css from './chart.css?raw';
-import {useConfig} from '../render';
+
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
 import type {RepeatedRecordCell} from '../../data_tree';
 import {useResultContext} from '../result-context';
-
+import {ErrorMessage} from '../error-message/error-message';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import {resize} from '../util';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './chart.css?raw';
 let IS_STORYBOOK = false;
 try {
   const storybookConfig = (process.env as Record<string, string>)[
@@ -40,26 +43,52 @@ export type ChartProps = {
 };
 
 export function Chart(props: ChartProps) {
-  const config = useConfig();
+  MalloyViz.addStylesheet(styles);
   const metadata = useResultContext();
-  config.addCSSToShadowRoot(css);
   const data = props.data;
   const field = data.field;
   const vegaInfo = metadata.vega[field.key];
-  const {runtime, props: chartProps} = vegaInfo;
-  if (!runtime)
-    throw new Error('Charts must have a runtime defined in their metadata');
+  const runtimeToUse = () => props.runtime || vegaInfo.runtime;
+  const errorMessage = () => {
+    if (vegaInfo.error) return vegaInfo.error.message;
+    if (!vegaInfo.props || !runtimeToUse())
+      return 'Chart could not be rendered';
+    return null;
+  };
+  return (
+    <Show
+      when={!errorMessage()}
+      children={
+        <ChartInner
+          {...props}
+          runtime={runtimeToUse()!}
+          chartProps={vegaInfo.props!}
+        />
+      }
+      fallback={<ErrorMessage message={errorMessage()!} />}
+    />
+  );
+}
+
+export function ChartInner(props: {
+  data: RepeatedRecordCell;
+  runtime: Runtime;
+  chartProps: VegaChartProps;
+  // Debugging properties
+  devMode?: boolean;
+  onView?: (view: View) => void;
+}) {
+  const metadata = useResultContext();
+  const data = props.data;
+  const field = data.field;
   let values: unknown[] = [];
   let isDataLimited = false;
   let dataLimitMessage = 'Showing limited results';
-  // New vega charts use mapMalloyDataToChartData handlers
-  if (chartProps.mapMalloyDataToChartData) {
-    const mappedData = chartProps.mapMalloyDataToChartData(data);
-    values = mappedData.data;
-    isDataLimited = mappedData.isDataLimited;
-    if (mappedData.dataLimitMessage)
-      dataLimitMessage = mappedData.dataLimitMessage;
-  }
+  const mappedData = props.chartProps.mapMalloyDataToChartData(data);
+  values = mappedData.data;
+  isDataLimited = mappedData.isDataLimited;
+  if (mappedData.dataLimitMessage)
+    dataLimitMessage = mappedData.dataLimitMessage;
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null
@@ -88,8 +117,8 @@ export function Chart(props: ChartProps) {
   };
   // Debounce while moving within chart
   const mouseOverHandler: EventListenerHandler = (event, item) => {
-    if (view() && item && chartProps.getTooltipData) {
-      const data = chartProps.getTooltipData(item, view()!);
+    if (view() && item && props.chartProps.getTooltipData) {
+      const data = props.chartProps.getTooltipData(item, view()!);
       setTooltipDataDebounce(data);
     } else setTooltipDataDebounce(null);
   };
@@ -188,28 +217,21 @@ export function Chart(props: ChartProps) {
 
   const showTooltip = createMemo(() => Boolean(tooltipData()));
 
-  const chartTitle = chartProps.chartTag.text('title');
-  const chartSubtitle = chartProps.chartTag.text('subtitle');
+  const chartTitle = props.chartProps.chartTag.text('title');
+  const chartSubtitle = props.chartProps.chartTag.text('subtitle');
   const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;
 
   const [chartSpace, setChartSpace] = createSignal({
-    width: chartProps.plotWidth,
-    height: chartProps.plotHeight,
-  });
-
-  const observer = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const {width, height} = entry.contentRect;
-      setChartSpace({width, height});
-    }
+    width: props.chartProps.plotWidth,
+    height: props.chartProps.plotHeight,
   });
 
   return (
     <div
       class="malloy-chart"
       style={{
-        width: chartProps.totalWidth + 'px',
-        height: chartProps.totalHeight + 'px',
+        width: props.chartProps.totalWidth + 'px',
+        height: props.chartProps.totalHeight + 'px',
       }}
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
@@ -236,14 +258,17 @@ export function Chart(props: ChartProps) {
           )}
         </div>
       </Show>
-      <div class="malloy-chart__container" ref={el => observer.observe(el)}>
+      <div
+        class="malloy-chart__container"
+        use:resize={[chartSpace, setChartSpace]}
+      >
         <VegaChart
           width={chartSpace().width}
           height={chartSpace().height}
           onMouseOver={mouseOverHandler}
           onViewInterface={setViewInterface}
           explore={field}
-          runtime={runtime}
+          runtime={props.runtime}
         />
       </div>
       <Tooltip show={showTooltip()}>

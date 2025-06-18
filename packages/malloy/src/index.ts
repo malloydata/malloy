@@ -88,7 +88,9 @@ export type {
   ModelDef,
   Query,
   QueryResult,
+  QueryResultDef,
   QueryRunStats,
+  QueryScalar,
   NamedQuery,
   NamedModelObject,
   ExpressionType,
@@ -140,6 +142,8 @@ export {
   expressionIsUngroupedAggregate,
   indent,
   composeSQLExpr,
+  isTimestampUnit,
+  isDateUnit,
 } from './model';
 export {
   malloyToQuery,
@@ -199,6 +203,7 @@ export type {
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
+  SourceComponentInfo,
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
