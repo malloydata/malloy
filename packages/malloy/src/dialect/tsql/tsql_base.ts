@@ -33,16 +33,14 @@ import {TSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {TSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // SQL Server funky default for json key 'JSON_F52E2B61-18A1-11d1-B105-00805F49916B'
-// Weeks appear to start on sunday according to time-lietral.ts and snowflake_executor.ts . This is also the sqlserver convention
+// Weeks appear to start on sunday according to time-literal.ts and snowflake_executor.ts . This is also the sqlserver convention
 // However, since that is configurable through @@DATEFIRST , we are avoiding using DATEPART for weeks which uses @@DATEFIRST
 // DATEADD's first parameter is a datepart value so we will be referencing those dateparts, just not the function.
 // DATETRUNC is also based on @@DATEFIRST so we will avoid that for weeks too.
 
-// TODO (vitor): Organize this, this is duplicated
-// TODO (vitor): THESE REGEXP ARE SO SUS
+// TODO (vitor): Figure out how to validate order by properly
 const NON_NATURAL_NUMBER_EXPR =
   /[-+]?(?:\d*\.\d+|\d+\.\d*|\d+(?:\.\d+)?[eE][-+]?\d+)/;
-// const SQL_STR_LITERAL_EXPR = /^'(?:[^']|'')*'$/;
 const INVALID_ORDER_BY_EXPR = NON_NATURAL_NUMBER_EXPR;
 
 const tsqlDatePartMap: Record<string, string> = {

@@ -5,7 +5,6 @@
 
 import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
-// TODO (vitor): I don't know why NULLs are greatest and least but I've seen this in postgres and duckdb. Gotta figure it out.
 function greatestOrLeastSQL(name: string) {
   return (
     'CASE WHEN (SELECT COUNT(*) FROM ( VALUES ${[...values].map((v) => "(" + v + ")" ).join(", ")} ) AS t(v) WHERE v IS NULL) > 0 THEN NULL ELSE ' +
