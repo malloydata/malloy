@@ -21,11 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {SourceComponentInfo} from './malloy';
 import type {Annotation, NamedObject} from './model/malloy_types';
 
-type ObjRefWithMetadata = NamedObject & {
-  kind: string;
-  annotations: Annotation[];
+type SourceRefWithMetadata = NamedObject & {
+  annotation?: Annotation;
+  sourceComponentInfos?: SourceComponentInfo[];
 };
 
 export interface RunSQLOptions {
@@ -38,7 +39,7 @@ export interface RunSQLOptions {
   /* Should we replace materialization with its references. */
   replaceMaterializedReferences?: boolean;
   clientMetadata?: {
-    objRefsWithMetadata: ObjRefWithMetadata[];
+    sourceRefWithMetadata?: SourceRefWithMetadata;
   };
 }
 
