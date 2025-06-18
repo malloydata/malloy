@@ -1,3 +1,6 @@
+# Copyright Contributors to the Malloy project
+# SPDX-License-Identifier: MIT
+
 # Including sqlcmd and bcp
 FROM mcr.microsoft.com/mssql/server:2022-latest
 

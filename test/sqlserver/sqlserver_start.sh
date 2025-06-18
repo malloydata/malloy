@@ -1,4 +1,8 @@
 #! /bin/bash
+
+# Copyright Contributors to the Malloy project
+# SPDX-License-Identifier: MIT
+
 set -e
 
 rm -rf .tmp

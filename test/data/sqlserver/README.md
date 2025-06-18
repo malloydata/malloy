@@ -1,3 +1,8 @@
+<!--
+ Copyright Contributors to the Malloy project
+ SPDX-License-Identifier: MIT
+-->
+
 # WARNING: Be careful not to add any odd characters to those seed files. bcp will trip you if you do!
 
 tar -xzvf ./malloytest-sqlserver.tar.gz
