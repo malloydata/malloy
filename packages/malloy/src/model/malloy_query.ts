@@ -3333,8 +3333,8 @@ class QueryQuery extends QueryField {
     if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
-    s += '\n';
 
+    s += '\n';
     const fields: string[] = [];
 
     for (const [name, field] of this.rootResult.allFields) {
@@ -3809,8 +3809,8 @@ class QueryQuery extends QueryField {
     if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
-    s += '\n';
 
+    s += '\n';
     const fieldsSQL: string[] = [];
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
@@ -4321,9 +4321,9 @@ class QueryQueryIndexStage extends QueryQuery {
     if (limit && this.parent.dialect.limitClause === 'top') {
       s += ` TOP ${limit}`;
     }
+
     s += '\n';
     s += ' group_set,\n';
-
     let fieldNameExpr = '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
       fieldNameExpr += `    WHEN ${i} THEN '${fields[i].name}'\n`;
