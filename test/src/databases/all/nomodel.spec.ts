@@ -55,7 +55,7 @@ function getSplitFunction(db: string) {
     'presto': (column: string, splitChar: string) =>
       `split(${column}, '${splitChar}')`,
     // TODO (vitor): Not sure about this
-    'tsql': (column: string, splitChar: string) =>
+    'sqlserver': (column: string, splitChar: string) =>
       `split(${column}, '${splitChar}')`,
   }[db];
 }

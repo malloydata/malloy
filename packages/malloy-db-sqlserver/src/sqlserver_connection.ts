@@ -21,7 +21,7 @@ import type {
   StructDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {TSQLDialect, sqlKey} from '@malloydata/malloy';
+import {TSQLSQLServer, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {connect, ConnectionPool} from 'mssql';
@@ -88,7 +88,7 @@ export class SQLServerConnection
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: SQLServerConnectionConfigurationReader = {};
 
-  private readonly dialect = new TSQLDialect();
+  private readonly dialect = new TSQLSQLServer();
 
   constructor(
     options: SQLServerConnectionOptions,
@@ -137,7 +137,7 @@ export class SQLServerConnection
   }
 
   get dialectName(): string {
-    return 'tsql';
+    return 'tsql-sqlserver';
   }
 
   public isPool(): this is PooledConnection {
@@ -313,7 +313,7 @@ export class SQLServerConnection
     const structDef: StructDef = {
       type: 'table',
       name: tableKey,
-      dialect: 'tsql',
+      dialect: 'tsql-sqlserver',
       tablePath,
       connection: this.name,
       fields: [],

@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: MIT
  */
 
-export * from './tsql';
+export * from './tsql_sqlserver';

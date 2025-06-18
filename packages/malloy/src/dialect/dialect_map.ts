@@ -24,11 +24,11 @@
 import {DuckDBDialect} from './duckdb';
 import type {Dialect} from './dialect';
 import {PostgresDialect} from './postgres';
-import {TSQLDialect} from './tsql';
 import {SnowflakeDialect} from './snowflake';
 import {StandardSQLDialect} from './standardsql';
 import {PrestoDialect, TrinoDialect} from './trino';
 import {MySQLDialect} from './mysql';
+import {TSQLSQLServer} from './tsql';
 
 const dialectMap = new Map<string, Dialect>();
 
@@ -49,7 +49,7 @@ export function getDialects(): Dialect[] {
 }
 
 registerDialect(new PostgresDialect());
-registerDialect(new TSQLDialect());
+registerDialect(new TSQLSQLServer());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
 registerDialect(new SnowflakeDialect());
