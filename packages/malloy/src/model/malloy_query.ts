@@ -3776,7 +3776,7 @@ class QueryQuery extends QueryField {
         return f.dimensionIndexes
           .map(this.rootResult.getFieldByNumber)
           .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enoug
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
       } else {
         throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
@@ -3880,7 +3880,7 @@ class QueryQuery extends QueryField {
         return dimensionIndexes
           .map(this.rootResult.getFieldByNumber)
           .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enoug
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
       } else {
         throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
