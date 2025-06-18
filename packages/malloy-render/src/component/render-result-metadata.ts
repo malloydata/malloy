@@ -58,6 +58,7 @@ export interface RenderMetadata {
   parentSize: {width: number; height: number};
   renderAs: string;
   sizingStrategy: 'fill' | 'fixed';
+  renderFieldMetadata: RenderFieldMetadata;
 }
 
 export function getResultMetadata(
@@ -74,9 +75,7 @@ export function getResultMetadata(
   const chartSizingStrategy =
     chartSizeTag && chartSizeTag.text('') !== 'fill' ? 'fixed' : null;
 
-  const renderAs =
-    options.renderFieldMetadata.getFieldEntry(rootField.key)?.renderProperties
-      .renderAs ?? 'table';
+  const renderAs = rootField.renderAs();
 
   const metadata: RenderMetadata = {
     store: createResultStore(),
@@ -88,6 +87,7 @@ export function getResultMetadata(
       renderAs === 'table'
         ? 'fixed'
         : chartSizingStrategy ?? rootSizingStrategy,
+    renderFieldMetadata: options.renderFieldMetadata,
   };
   populateAllVegaSpecs(rootField, metadata, options);
 

@@ -7,7 +7,6 @@ import type {
   RepeatedRecordFieldInfo,
   SortableField,
 } from '../types';
-import type {RenderFieldRegistry} from '../../registry/types';
 import type {NestField} from '.';
 
 export class ArrayField extends FieldBase {
@@ -16,17 +15,15 @@ export class ArrayField extends FieldBase {
   public readonly eachField: Field;
   constructor(
     public readonly field: ArrayFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
     this.eachField = Field.from(
       {
         name: 'each',
         type: this.field.type.element_type,
       },
-      this,
-      registry
+      this
     );
     this.fields = [this.eachField];
   }
@@ -42,10 +39,9 @@ export class RepeatedRecordField extends ArrayField {
 
   constructor(
     public readonly field: RepeatedRecordFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
     const eachField = this.eachField;
     if (!eachField.isRecord())
       throw new Error('Expected eachField of repeatedRecord to be a record');
@@ -104,10 +100,9 @@ export class RootField extends RepeatedRecordField {
     metadata: {
       modelTag: Tag;
       queryTimezone: string | undefined;
-    },
-    registry: RenderFieldRegistry
+    }
   ) {
-    super(field, undefined, registry);
+    super(field, undefined);
     this.modelTag = metadata.modelTag;
     this.queryTimezone = metadata.queryTimezone;
   }
@@ -119,11 +114,10 @@ export class RecordField extends FieldBase {
   public readonly maxUniqueFieldValueCounts: Map<string, number> = new Map();
   constructor(
     public readonly field: RecordFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
-    this.fields = field.type.fields.map(f => Field.from(f, this, registry));
+    super(field, parent);
+    this.fields = field.type.fields.map(f => Field.from(f, this));
     this.fieldsByName = Object.fromEntries(this.fields.map(f => [f.name, f]));
   }
 

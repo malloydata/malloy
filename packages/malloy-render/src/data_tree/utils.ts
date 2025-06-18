@@ -29,7 +29,7 @@ import {
   TimestampField,
 } from './fields';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
-import type {RenderPluginInstance} from '@/api/plugin-types';
+import type {FieldBase} from './fields/base';
 
 export function isArrayFieldInfo(
   field: Malloy.DimensionInfo
@@ -110,21 +110,13 @@ const RENDER_TAG_LIST = [
 
 export function shouldRenderAs({
   field,
-  parent,
-  plugins,
   tagOverride,
 }: {
-  field: Field;
-  parent: Field | undefined;
-  plugins?: RenderPluginInstance[];
+  field: FieldBase;
   tagOverride?: Tag;
-}) {
-  // first plugin wins
-  const plugin = plugins?.at(0);
-  if (plugin) {
-    const renderAs = plugin.name;
-    if (renderAs) return renderAs;
-  }
+}): string {
+  const pluginRender = field.getPlugins().at(0)?.name;
+  if (pluginRender) return pluginRender;
 
   const tag = convertLegacyToVizTag(tagOverride ?? field.tag);
 
@@ -140,6 +132,7 @@ export function shouldRenderAs({
   // Fall back to legacy tag detection for non-chart tags
   const properties = tag.properties ?? {};
   const tagNamesInOrder = Object.keys(properties).reverse();
+
   for (const tagName of tagNamesInOrder) {
     if (RENDER_TAG_LIST.includes(tagName) && !properties[tagName].deleted) {
       if (['list', 'list_detail'].includes(tagName)) return 'list';
@@ -148,14 +141,16 @@ export function shouldRenderAs({
     }
   }
 
-  if (field instanceof RecordField && parent?.renderAs === 'chart') {
+  // TODO: not sure what to do here, how do we null out renderAs below charts? or do we just not?
+  const parent = field.parent;
+  if (field instanceof RecordField && parent && parent.renderAs() === 'chart') {
     return 'none';
   }
 
   const isNest = field instanceof ArrayField || field instanceof RecordField;
 
-  if (!isNest) return 'cell';
-  return 'table';
+  const result = !isNest ? 'cell' : 'table';
+  return result;
 }
 
 export function tagFor(field: Malloy.DimensionInfo, prefix = '# ') {

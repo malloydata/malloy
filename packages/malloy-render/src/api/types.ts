@@ -11,7 +11,7 @@ import type {
   MalloyClickEventPayload,
   TableConfig,
   VegaConfigHandler,
-} from '../component/types';
+} from '@/component/types';
 import type {RenderPluginFactory} from './plugin-types';
 
 export type {RenderFieldMetadata} from '@/render-field-metadata';

@@ -11,6 +11,7 @@ import type {
 import type {RenderFieldRegistry} from '../../registry/types';
 import {FieldBase} from './base';
 import {renderTimeString} from '../../util';
+import type {RenderPluginInstance} from '@/api/plugin-types';
 
 export class NumberField extends FieldBase {
   public min: number | undefined = undefined;
@@ -18,10 +19,9 @@ export class NumberField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: NumberFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 
   registerValue(value: number) {
@@ -64,10 +64,9 @@ export class DateField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: DateFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 
   get timeframe() {
@@ -123,10 +122,9 @@ export class TimestampField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: TimestampFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 
   get timeframe() {
@@ -174,10 +172,9 @@ export class StringField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: StringFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 
   registerValue(value: string) {
@@ -212,20 +209,18 @@ export class StringField extends FieldBase {
 export class SQLNativeField extends FieldBase {
   constructor(
     public readonly field: SQLNativeFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 }
 
 export class JSONField extends FieldBase {
   constructor(
     public readonly field: JSONFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 }
 
@@ -233,10 +228,9 @@ export class BooleanField extends FieldBase {
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: BooleanFieldInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    parent: NestField | undefined
   ) {
-    super(field, parent, registry);
+    super(field, parent);
   }
 
   get maxString(): string | undefined {

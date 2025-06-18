@@ -81,6 +81,7 @@ export function ChartV2Inner(props: ChartV2Props) {
     } else setTooltipData(null);
   };
 
+  // TODO: move brushing logic to its own module
   // Enable charts to debounce interactions; this helps with rapid mouse movement through charts
   const timeouts = new Map();
   const debouncedApplyBrush = (brush: VegaBrushOutput) => {

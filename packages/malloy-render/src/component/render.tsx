@@ -31,7 +31,7 @@ import type {
 export type {DrillData} from './types';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getDataTree} from '../data_tree';
-import {ResultContext, PluginMetadataContext} from './result-context';
+import {ResultContext} from './result-context';
 import {ErrorMessage} from './error-message/error-message';
 import type {RenderFieldMetadata} from '../render-field-metadata';
 
@@ -91,8 +91,8 @@ export function MalloyRender(props: MalloyRenderProps) {
   return (
     <ErrorBoundary
       fallback={errorProps => {
-        props?.onError?.(errorProps.error);
-        return <ErrorMessage message={errorProps.error.message} />;
+        const message = () => errorProps.error?.message ?? errorProps;
+        return <ErrorMessage message={message()} />;
       }}
     >
       <Show when={props.result}>
@@ -196,13 +196,12 @@ export function MalloyRenderInner(props: {
 
   const rendering = () => {
     const data = rootCell();
-    // TODO hack: forcing re-render based on metadata. Fix this; result context should return a reactive store probably
-    //  that store is where we can store the size info, probably
-    metadata();
+
     return applyRenderer({
       dataColumn: data,
       tag: data.field.tag,
-      metadata: props.renderFieldMetadata,
+      // TODO hack: this indirectly forces re-render on resize, since stored in metadata. would be better to make direct dependency to size
+      metadata: metadata().renderFieldMetadata,
       customProps: {
         table: {
           scrollEl: props.scrollEl,
@@ -233,11 +232,9 @@ export function MalloyRenderInner(props: {
       use:resize={[parentSize, _setParentSize]}
     >
       <Show when={showRendering()}>
-        <PluginMetadataContext.Provider value={props.renderFieldMetadata}>
-          <ResultContext.Provider value={metadata}>
-            {rendering().renderValue}
-          </ResultContext.Provider>
-        </PluginMetadataContext.Provider>
+        <ResultContext.Provider value={metadata}>
+          {rendering().renderValue}
+        </ResultContext.Provider>
         <Show when={metadata().store.store.showCopiedModal}>
           <div class="malloy-copied-modal">Copied query to clipboard!</div>
         </Show>

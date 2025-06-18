@@ -4,7 +4,6 @@ import {
   RootField,
   type RenderPluginInstance,
   getFieldType,
-  shouldRenderAs,
 } from '@/data_tree';
 import type {RenderPluginFactory} from '@/api/plugin-types';
 import type {
@@ -42,8 +41,7 @@ export class RenderFieldMetadata {
       {
         modelTag: tagFromAnnotations(result.model_annotations, '## '),
         queryTimezone: result.query_timezone,
-      },
-      this.registry
+      }
     );
 
     // Register all fields in the registry
@@ -69,6 +67,8 @@ export class RenderFieldMetadata {
       }
     }
 
+    field.setPlugins(plugins);
+
     return plugins;
   }
 
@@ -83,11 +83,8 @@ export class RenderFieldMetadata {
         field,
         renderProperties: {
           field,
-          renderAs: shouldRenderAs({
-            field,
-            parent: undefined,
-            plugins,
-          }),
+          // TODO placeholder until we migrate everything to plugins
+          renderAs: field.renderAs(),
           sizingStrategy: 'fit',
           properties: {},
           errors: [],
@@ -95,7 +92,6 @@ export class RenderFieldMetadata {
         plugins,
       };
       // TODO: legacy to keep renderer working until all viz are migrated to plugins
-      field.renderAs = renderFieldEntry.renderProperties.renderAs;
       const vizProperties = this.populateRenderFieldProperties(field, plugins);
       renderFieldEntry.renderProperties.properties = vizProperties.properties;
       renderFieldEntry.renderProperties.errors = vizProperties.errors;

@@ -28,7 +28,6 @@ export class MalloyViz {
     pluginRegistry: RenderPluginFactory[] = []
   ) {
     this.options = options;
-    // Include default plugins + any additional plugins passed in
     this.pluginRegistry = [...pluginRegistry];
   }
 
@@ -181,7 +180,6 @@ export class MalloyViz {
     this.targetElement = null;
   }
 
-  // Utility method to update options after creation
   updateOptions(newOptions: Partial<MalloyRendererOptions>): void {
     this.options = {...this.options, ...newOptions};
   }

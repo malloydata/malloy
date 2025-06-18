@@ -19,40 +19,32 @@ import {NULL_SYMBOL} from '@/util';
 import type {RendererProps} from '@/component/types';
 import {ErrorMessage} from '@/component/error-message/error-message';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
-import {usePluginMetadata} from '@/component/result-context';
 
 export function applyRenderer(props: RendererProps) {
-  const {dataColumn, customProps = {}, metadata} = props;
+  const {dataColumn, customProps = {}} = props;
   const field = props.dataColumn.field;
 
-  // Get metadata from props or context
-  const contextMetadata = usePluginMetadata();
-  const pluginMetadata = metadata || contextMetadata;
+  const renderAs = field.renderAs();
 
   // Check for plugins first
-  if (pluginMetadata) {
-    const plugins = pluginMetadata.getPluginsForField(field.key);
-    if (plugins.length > 0) {
-      // Use the first matching plugin
-      const plugin = plugins[0];
-      return {
-        renderAs: plugin.name,
-        renderValue: (
-          <PluginRenderContainer
-            plugin={plugin}
-            renderProps={{
-              dataColumn,
-              field,
-              customProps,
-            }}
-          />
-        ),
-      };
-    }
+  const plugin = field.getPlugins().at(0);
+  if (plugin) {
+    return {
+      renderAs,
+      renderValue: (
+        <PluginRenderContainer
+          plugin={plugin}
+          renderProps={{
+            dataColumn,
+            field,
+            customProps,
+          }}
+        />
+      ),
+    };
   }
 
   // Fallback to existing renderer logic
-  const renderAs = field.renderAs;
   let renderValue: JSXElement = '';
   const propsToPass = customProps[renderAs] || {};
   if (dataColumn.isNull()) {

@@ -1,4 +1,4 @@
-import {tagFor, extractLiteralFromTag} from '../utils';
+import {tagFor, extractLiteralFromTag, shouldRenderAs} from '../utils';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
 import {renderTagFromAnnotations, NULL_SYMBOL, notUndefined} from '../../util';
@@ -24,26 +24,37 @@ import {
   TimestampField,
 } from '.';
 import type {RenderPluginInstance} from '../plugins';
-import type {RenderFieldRegistry} from '../../registry/types';
 
 export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
   protected readonly metadataTag: Tag;
-  public renderAs: string;
   public readonly valueSet = new Set<string | number | boolean>();
-  protected registry: RenderFieldRegistry;
+  protected plugins: RenderPluginInstance[] = [];
+  protected _renderAs: string | undefined;
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
-    if (!this.registry) return [];
-    return this.registry.get(this.key)?.plugins || [];
+    return this.plugins;
+  }
+
+  setPlugins(plugins: RenderPluginInstance[]) {
+    this.plugins = plugins;
+    // TODO: legacy until everything is migrated to plugins
+    this._renderAs = shouldRenderAs({field: this});
+  }
+
+  renderAs(): string {
+    // TODO: this happens for the intermediate RecordType fields. Need to think harder about how/why
+    if (this._renderAs === undefined) {
+      this._renderAs = shouldRenderAs({field: this});
+    }
+    return this._renderAs;
   }
 
   constructor(
     public readonly field: Malloy.DimensionInfo,
-    public readonly parent: NestField | undefined,
-    registry: RenderFieldRegistry
+    public readonly parent: NestField | undefined
   ) {
     this.tag = renderTagFromAnnotations(this.field.annotations);
     this.metadataTag = tagFor(this.field, '#(malloy) ');
@@ -52,12 +63,6 @@ export abstract class FieldBase {
         ? [...parent.path]
         : [...parent.path, field.name]
       : [];
-
-    // TODO: legacy to keep renderer working until all viz are migrated to plugins
-    // eventually remove this from Field class. Currently it is being populating in render-field-metadata
-    this.renderAs = '';
-
-    this.registry = registry;
   }
 
   isRoot(): boolean {

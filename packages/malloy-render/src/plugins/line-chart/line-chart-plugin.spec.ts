@@ -262,7 +262,7 @@ describe('LineChartPlugin settingsToTag', () => {
 
     // Should create proper array syntax without quotes around the array
     expect(tagString).toContain('y = [revenue, cost, "profit margin"]');
-    
+
     // Verify the array can be parsed back
     const parsedTag = Tag.fromTagLine(tagString).tag;
     const yArray = parsedTag.array('viz', 'y');
@@ -295,7 +295,7 @@ describe('LineChartPlugin settingsToTag', () => {
     expect(tagString).toContain('y = "Sales $"');
     expect(tagString).not.toContain('["brand"]');
     expect(tagString).not.toContain('["Sales $"]');
-    
+
     // Verify the values can be parsed back correctly
     const parsedTag = Tag.fromTagLine(tagString).tag;
     expect(parsedTag.text('viz', 'x')).toBe('brand');
@@ -307,11 +307,7 @@ describe('LineChartPlugin settingsToTag', () => {
       ...defaultLineChartSettings,
       yChannel: {
         ...defaultLineChartSettings.yChannel,
-        fields: [
-          '["Revenue"]',
-          '["Cost"]', 
-          '["Profit Margin"]'
-        ], // Multiple field paths
+        fields: ['["Revenue"]', '["Cost"]', '["Profit Margin"]'], // Multiple field paths
       },
     };
 
@@ -320,7 +316,7 @@ describe('LineChartPlugin settingsToTag', () => {
 
     // Should create proper array syntax with extracted field names
     expect(tagString).toContain('y = [Revenue, Cost, "Profit Margin"]');
-    
+
     // Verify the array can be parsed back
     const parsedTag = Tag.fromTagLine(tagString).tag;
     const yArray = parsedTag.array('viz', 'y');

@@ -16,13 +16,11 @@ import type {
   RecordCell,
   RepeatedRecordCell,
 } from '../data_tree';
-import type {RenderFieldMetadata} from '../render-field-metadata';
 
 export type RendererProps = {
   dataColumn: Cell;
   tag: Tag;
   customProps?: Record<string, Record<string, unknown>>;
-  metadata?: RenderFieldMetadata;
 };
 
 export type VegaSignalRef = {signal: string};

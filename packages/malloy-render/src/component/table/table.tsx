@@ -23,9 +23,9 @@ import type {
   RecordCell,
   RecordOrRepeatedRecordCell,
 } from '../../data_tree';
-import {useResultContext} from '../result-context';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './table.css?raw';
+import {useResultContext} from '../result-context';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -121,10 +121,10 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
 
   const tableGutterLeft =
     (fieldLayout.depth > 0 && isFirst) ||
-    fieldLayout.field.renderAs === 'table';
+    fieldLayout.field.renderAs() === 'table';
   const tableGutterRight =
     (fieldLayout.depth > 0 && isLast) ||
-    (fieldLayout.depth === 0 && fieldLayout.field.renderAs === 'table');
+    (fieldLayout.depth === 0 && fieldLayout.field.renderAs() === 'table');
 
   const customLabel = props.field.tag.text('label');
   const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
@@ -227,13 +227,12 @@ const TableField = (props: {
   };
 
   const config = useConfig();
-  const metadata = useResultContext();
   const isDrillingEnabled = config.tableConfig().enableDrill;
-  const handleClick = async evt => {
+  const handleClick = async (evt: MouseEvent) => {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
-        metadata,
+        metadata: useResultContext(),
         data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });
@@ -307,7 +306,7 @@ const MalloyTableRoot = (_props: {
       .filter(([key, value]) => {
         const field = root.fieldAt(key);
         const parent = field.parent;
-        const parentFieldRenderer = parent?.renderAs ?? null;
+        const parentFieldRenderer = parent?.renderAs();
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
         return isPartOfTable;

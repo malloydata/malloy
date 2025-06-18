@@ -95,7 +95,8 @@ export function lineChartSettingsToTag(settings: LineChartSettings): Tag {
 
   // Add series limit if different from default
   if (
-    settings.seriesChannel?.limit !== defaultLineChartSettings.seriesChannel.limit
+    settings.seriesChannel?.limit !==
+    defaultLineChartSettings.seriesChannel.limit
   ) {
     tag = tag.set(
       ['viz', 'series', 'limit'],

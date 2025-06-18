@@ -21,7 +21,7 @@ import {
   TimestampField,
 } from './atomic';
 import {ArrayField, RecordField, RepeatedRecordField} from './nest';
-import type {RenderFieldRegistry} from '../../registry/types';
+import type {RenderPluginInstance} from '@/api/plugin-types';
 
 export {ArrayField, RecordField, RepeatedRecordField, RootField} from './nest';
 export {
@@ -59,31 +59,27 @@ export type BasicAtomicField =
 export type TimeField = DateField | TimestampField;
 
 export const Field = {
-  from(
-    field: Malloy.DimensionInfo,
-    parent: NestField | undefined,
-    registry: RenderFieldRegistry
-  ): Field {
+  from(field: Malloy.DimensionInfo, parent: NestField | undefined): Field {
     if (isRepeatedRecordFieldInfo(field)) {
-      return new RepeatedRecordField(field, parent, registry);
+      return new RepeatedRecordField(field, parent);
     } else if (isArrayFieldInfo(field)) {
-      return new ArrayField(field, parent, registry);
+      return new ArrayField(field, parent);
     } else if (isRecordFieldInfo(field)) {
-      return new RecordField(field, parent, registry);
+      return new RecordField(field, parent);
     } else if (isBooleanFieldInfo(field)) {
-      return new BooleanField(field, parent, registry);
+      return new BooleanField(field, parent);
     } else if (isJSONFieldInfo(field)) {
-      return new JSONField(field, parent, registry);
+      return new JSONField(field, parent);
     } else if (isDateFieldInfo(field)) {
-      return new DateField(field, parent, registry);
+      return new DateField(field, parent);
     } else if (isTimestampFieldInfo(field)) {
-      return new TimestampField(field, parent, registry);
+      return new TimestampField(field, parent);
     } else if (isStringFieldInfo(field)) {
-      return new StringField(field, parent, registry);
+      return new StringField(field, parent);
     } else if (isNumberFieldInfo(field)) {
-      return new NumberField(field, parent, registry);
+      return new NumberField(field, parent);
     } else if (isSQLNativeFieldInfo(field)) {
-      return new SQLNativeField(field, parent, registry);
+      return new SQLNativeField(field, parent);
     } else {
       throw new Error(`Unknown field type ${field.type.kind}`);
     }
