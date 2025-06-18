@@ -85,7 +85,7 @@ export function getLineChartSettings(
 
   // Disable embedded field tags
   const disableEmbedded =
-    vizTag.has('disableEmbedded') || defaultLineChartSettings.disableEmbedded;
+    vizTag.has('disable_embedded') || defaultLineChartSettings.disableEmbedded;
 
   const xChannel: Channel = {
     fields: [],

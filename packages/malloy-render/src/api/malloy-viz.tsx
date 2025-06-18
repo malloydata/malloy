@@ -7,7 +7,10 @@
 
 import {render} from 'solid-js/web';
 import type {MalloyRendererOptions} from '@/api/types';
-import type {RenderPluginFactory} from '@/api/plugin-types';
+import type {
+  RenderPluginFactory,
+  RenderPluginInstance,
+} from '@/api/plugin-types';
 import {MalloyRender} from '@/component/render';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -185,9 +188,14 @@ export class MalloyViz {
 
   getMetadata(): RenderFieldMetadata | null {
     return this.metadata;
-    // return {
-    //   rendererMetadata: this.metadata,
-    //   pluginMetadata:
-    // };
+  }
+
+  getActivePlugin(fieldKey: string): RenderPluginInstance | null {
+    if (!this.metadata) {
+      return null;
+    }
+
+    const plugins = this.metadata.getPluginsForField(fieldKey);
+    return plugins?.at(0) ?? null;
   }
 }

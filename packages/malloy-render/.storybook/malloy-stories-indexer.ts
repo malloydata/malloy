@@ -176,8 +176,14 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               });
               viz.setResult(context.loaded['result']);
               const metadata = viz.getMetadata();
+              console.group('MalloyViz metadata');
               console.log('initial state', metadata);
               console.log('render properties', metadata.getFieldEntry(metadata.rootField.key).renderProperties);
+              const plugin = viz.getActivePlugin(metadata.rootField.key);
+              console.log('plugin', plugin, plugin?.getSettings());
+              const tag = plugin?.settingsToTag(plugin?.getSettings());
+              console.log('tag', tag, tag?.toString());
+              console.groupEnd();
               viz.render(targetElement);
 
               return parent;

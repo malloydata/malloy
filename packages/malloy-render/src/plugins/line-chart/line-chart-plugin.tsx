@@ -9,9 +9,11 @@ import type {
   RenderPluginFactory,
   SolidJSRenderPluginInstance,
   RenderProps,
+  CoreVizPluginMethods,
+  CoreVizPluginInstance,
 } from '@/api/plugin-types';
 import {type Field, FieldType, type NestField} from '@/data_tree';
-import type {Tag} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
 import {ChartV2} from '@/component/chart/chart-v2';
 import {
@@ -28,7 +30,11 @@ import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
-import {lineChartSettingsSchema} from './line-chart-settings';
+import {
+  defaultLineChartSettings,
+  lineChartSettingsSchema,
+} from './line-chart-settings';
+import {lineChartSettingsToTag} from './settings-to-tag';
 
 interface LineChartPluginMetadata {
   type: 'line_chart';
@@ -43,7 +49,7 @@ interface SeriesStats {
 }
 
 interface LineChartPluginInstance
-  extends SolidJSRenderPluginInstance<LineChartPluginMetadata> {
+  extends CoreVizPluginInstance<LineChartPluginMetadata> {
   field: NestField;
   seriesStats: Map<string, SeriesStats>;
   getTopNSeries: (maxSeries: number) => (string | number | boolean)[];
@@ -191,6 +197,10 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
         getSchema: () => lineChartSettingsSchema,
         getSettings: () => settings,
+        getDefaultSettings: () => defaultLineChartSettings,
+        settingsToTag: (settings: Record<string, unknown>) => {
+          return lineChartSettingsToTag(settings as LineChartSettings);
+        },
 
         getTopNSeries: (maxSeries: number) => {
           return Array.from(seriesStats.entries())

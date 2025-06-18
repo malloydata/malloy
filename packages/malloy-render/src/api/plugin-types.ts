@@ -31,9 +31,6 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
     metadata: RenderMetadata,
     options: GetResultMetadataOptions
   ): void;
-  getSchema?(): JSONSchemaObject;
-  getSettings?(): Record<string, unknown>;
-  settingsToTag?(settings: JSONSchemaObject): Tag;
 }
 
 export interface SolidJSRenderPluginInstance<TMetadata = unknown>
@@ -53,6 +50,16 @@ export type RenderPluginInstance<TMetadata = unknown> =
   | SolidJSRenderPluginInstance<TMetadata>
   | DOMRenderPluginInstance<TMetadata>;
 
+export interface CoreVizPluginMethods {
+  getSchema(): JSONSchemaObject;
+  getSettings(): Record<string, unknown>;
+  getDefaultSettings(): Record<string, unknown>;
+  settingsToTag(settings: Record<string, unknown>): Tag;
+}
+
+export type CoreVizPluginInstance<TMetadata = unknown> =
+  SolidJSRenderPluginInstance<TMetadata> & CoreVizPluginMethods;
+
 export interface RenderPluginFactory<
   TInstance extends RenderPluginInstance = RenderPluginInstance,
 > {
@@ -60,4 +67,19 @@ export interface RenderPluginFactory<
 
   matches(field: Field, fieldTag: Tag, fieldType: FieldType): boolean;
   create(field: Field): TInstance;
+}
+
+export function isCoreVizPluginInstance(
+  plugin: RenderPluginInstance
+): plugin is CoreVizPluginInstance {
+  return (
+    'getSchema' in plugin &&
+    'getSettings' in plugin &&
+    'getDefaultSettings' in plugin &&
+    'settingsToTag' in plugin &&
+    typeof plugin.getSchema === 'function' &&
+    typeof plugin.getSettings === 'function' &&
+    typeof plugin.getDefaultSettings === 'function' &&
+    typeof plugin.settingsToTag === 'function'
+  );
 }

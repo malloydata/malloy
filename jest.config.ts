@@ -34,6 +34,15 @@ const transformIgnoreModules = [
 
 module.exports = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  // moduleNameMapper: {
+  //   // For your sub-package that uses "@/":
+  //   // This regex captures everything after "@/", and the replacement maps it to
+  //   // the correct source directory within the sub-package relative to the root.
+  //   '^@/(.*)$': '<rootDir>/packages/malloy-render/src/$1',
+
+  //   // If you have other sub-packages with different aliases, add them here:
+  //   // '^@another-package/(.*)$': '<rootDir>/packages/another-package/src/$1',
+  // },
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
@@ -51,4 +60,34 @@ module.exports = {
   testTimeout: 100000,
   verbose: true,
   testEnvironment: 'node',
+  projects: [
+    {
+      displayName: 'malloy-render',
+      // testMatch: ['<rootDir>/packages/malloy-render/**/*.spec.ts'],
+      rootDir: '<rootDir>/packages/malloy-render', // The root for this specific project
+      preset: 'ts-jest', // Use ts-jest for TypeScript files
+      testMatch: ['<rootDir>/src/**/*.spec.(ts|js)?(x)'], // Only test files within this package's src
+      globals: {
+        'ts-jest': {
+          // Tell ts-jest to use the tsconfig specific to malloy-render
+          tsconfig: '<rootDir>/tsconfig.json', // Relative to this project's rootDir
+        },
+      },
+      // moduleNameMapper for this project's specific aliases
+      moduleNameMapper: {
+        // Here, '@/ refers to the src folder relative to this project's rootDir
+        '^@/(.*)$': '<rootDir>/src/$1',
+      },
+      transform: {
+        '^.+\\.(ts|tsx)$': 'ts-jest', // Only need to specify 'ts-jest' here as tsconfig is in globals
+        '^.+\\.(js|jsx)$': [
+          'babel-jest',
+          {
+            'presets': ['@babel/preset-env'],
+            'plugins': [['@babel/transform-runtime']],
+          },
+        ],
+      },
+    },
+  ],
 };
