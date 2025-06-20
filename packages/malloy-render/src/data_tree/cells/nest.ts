@@ -52,7 +52,7 @@ export class RepeatedRecordCell extends CellBase {
         throw new Error('Expected record cell in RepeatedRecordCell');
       }
       // Create RecordCell using the fields from the RepeatedRecordField
-      const recordCell = this.createRecordCell(recordValue, i);
+      const recordCell = this.createRecordCell(recordValue);
       this.rows.push(recordCell);
     }
 
