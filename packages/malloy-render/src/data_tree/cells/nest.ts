@@ -93,13 +93,13 @@ export class RepeatedRecordCell extends CellBase {
       name: 'record',
       type: this.field.field.type.element_type,
     };
-    
+
     // Create the RecordField instance
     const recordField = Field.from(recordFieldInfo, this.field) as RecordField;
-    
+
     // Create the RecordCell with the proper field
     const recordCell = new RecordCell(recordValue, recordField, this);
-    
+
     return recordCell;
   }
 }
