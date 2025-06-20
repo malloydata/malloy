@@ -88,28 +88,18 @@ export class RepeatedRecordCell extends CellBase {
   }
 
   private createRecordCell(recordValue: Malloy.CellWithRecordCell): RecordCell {
-    // Create RecordCell by manually assembling cells with the RepeatedRecordField's fields
-    const cells: Record<string, Cell> = {};
-
-    for (let i = 0; i < this.field.fields.length; i++) {
-      const childField = this.field.fields[i];
-      const childCell = Cell.from(
-        recordValue.record_value[i],
-        childField,
-        this
-      );
-      cells[childField.name] = childCell;
-    }
-
-    // Create a synthetic RecordCell that works with the RepeatedRecordField structure
-    const recordCell = new RecordCell(
-      recordValue,
-      this.field as unknown as RecordField,
-      this
-    );
-    // Override the cells after construction
-    (recordCell as RecordCell).cells = cells;
-
+    // Create a proper RecordField for this row
+    const recordFieldInfo = {
+      name: 'record',
+      type: this.field.field.type.element_type,
+    };
+    
+    // Create the RecordField instance
+    const recordField = Field.from(recordFieldInfo, this.field) as RecordField;
+    
+    // Create the RecordCell with the proper field
+    const recordCell = new RecordCell(recordValue, recordField, this);
+    
     return recordCell;
   }
 }
