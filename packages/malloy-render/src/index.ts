@@ -29,6 +29,11 @@ export type {MalloyRenderProps} from './component/render';
 // New JavaScript API exports
 export {MalloyRenderer} from '@/api/malloy-renderer';
 export type {MalloyViz} from '@/api/malloy-viz';
+export type {
+  CoreVizPluginInstance,
+  RenderPluginInstance,
+} from '@/api/plugin-types';
+export {isCoreVizPluginInstance} from '@/api/plugin-types';
 export type {MalloyRendererOptions, RenderFieldMetadata} from '@/api/types';
 export type * from '@/api/json-schema-types';
 export type {
