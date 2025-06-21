@@ -24,10 +24,10 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import type {AlignValue, TextBaselineValue} from 'vega';
 import {scale, locale} from 'vega';
-import {getTextWidthDOM} from './util';
-import {renderNumericField} from './render-numeric-field';
-import type {Field, NestField} from '../data_tree';
-import type {RenderMetadata} from './render-result-metadata';
+import {getTextWidthDOM} from '@/component/util';
+import {renderNumericField} from '@/component/render-numeric-field';
+import type {Field, NestField} from '@/data_tree';
+import type {RenderMetadata} from '@/component/render-result-metadata';
 
 type XAxisSettings = {
   labelAngle: number;

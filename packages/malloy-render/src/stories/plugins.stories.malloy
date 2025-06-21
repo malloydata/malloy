@@ -1,0 +1,74 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+  -- Dummy Plugin Test (SolidJS)
+  #(story)
+  view: dummy_plugin_test is {
+    group_by:
+      # dummy
+      category
+      brand
+    aggregate:
+      # dummy
+      ct is count()
+      ct2 is count()
+    limit: 10
+  }
+
+  -- DOM Plugin Test
+  #(story)
+  view: dummy_dom_plugin_test is {
+    group_by:
+      # dummy_dom
+      category
+      brand
+    aggregate:
+      # dummy_dom
+      ct is count()
+      product_count is count()
+    limit: 8
+  }
+
+  -- Mixed Plugins Test
+  #(story)
+  view: mixed_plugins_test is {
+    group_by:
+      # dummy
+      category
+      # dummy_dom
+      brand
+    aggregate:
+      ct is count()
+      # dummy
+      total_products is count()
+    limit: 6
+  }
+
+  -- Line Chart Plugin Test
+  #(story)
+  # line_chart
+  view: line_chart_plugin_test is {
+    group_by:
+      category
+    aggregate:
+      total_sales is count()
+    limit: 15
+  }
+
+  -- Line Chart with Series Test
+  #(story)
+  # line_chart
+  view: line_chart_series_test is {
+    group_by:
+      category
+      brand
+    aggregate:
+      product_count is count()
+    limit: 20
+  }
+};

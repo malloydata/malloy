@@ -6,7 +6,7 @@
  */
 
 import {For, Show} from 'solid-js';
-import {applyRenderer} from '../apply-renderer';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import type {Virtualizer} from '@tanstack/solid-virtual';
 import {createVirtualizer} from '@tanstack/solid-virtual';
 import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';

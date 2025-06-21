@@ -89,6 +89,17 @@ type ScaleType = 'quantitative' | 'nominal';
 export type Channel = {
   fields: string[];
   type: ScaleType | null;
+  independent: boolean | 'auto';
+};
+
+export type YChannel = {
+  fields: string[];
+  type: ScaleType | null;
+  independent: boolean;
+};
+
+export type SeriesChannel = Channel & {
+  limit: number | 'auto';
 };
 
 export type TableConfig = {

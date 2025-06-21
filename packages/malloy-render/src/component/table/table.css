@@ -37,6 +37,28 @@
   );
 }
 
+.malloy-table.root.external-scroll {
+  overflow: visible;
+  max-height: none;
+}
+
+.malloy-table.root::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: #f1f1f1; /* This creates a visible track */
+}
+
+.malloy-table.root::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 0;
+}
+
+.malloy-table.root::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 6px;
+  border: 1px solid #f1f1f1; /* Creates separation from track */
+}
+
 .malloy-table.root.full-width {
   width: 100%;
 }
