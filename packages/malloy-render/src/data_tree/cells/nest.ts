@@ -88,16 +88,26 @@ export class RepeatedRecordCell extends CellBase {
   }
 
   private createRecordCell(recordValue: Malloy.CellWithRecordCell): RecordCell {
-    // Create a proper RecordField for this row
-    const recordFieldInfo = {
+    // The RepeatedRecordField already has the correct fields parsed from its element_type
+    // We need to create a RecordField that shares the same field structure
+    // but is properly typed as a RecordField for drilling to work
+
+    // Create a RecordFieldInfo that matches the structure expected by RecordField
+    const recordFieldInfo: Malloy.DimensionInfo = {
       name: 'record',
       type: this.field.field.type.element_type,
     };
 
-    // Create the RecordField instance
+    // Create the RecordField instance from the field info
     const recordField = Field.from(recordFieldInfo, this.field) as RecordField;
 
-    // Create the RecordCell with the proper field
+    // Now we need to ensure the RecordField has the same fields as the RepeatedRecordField
+    // to maintain consistency for rendering
+    // Override the fields to use the parent's already-parsed fields
+    recordField.fields = this.field.fields;
+    recordField.fieldsByName = this.field.fieldsByName;
+
+    // Create the RecordCell with the properly structured RecordField
     const recordCell = new RecordCell(recordValue, recordField, this);
 
     return recordCell;
