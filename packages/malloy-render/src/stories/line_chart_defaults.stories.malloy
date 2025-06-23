@@ -1,0 +1,36 @@
+## viz.line_chart.defaults.y.independent=true
+## viz.line_chart.defaults.zeroBaseline=true
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure: total_sales is retail_price.sum()
+  measure: avg_margin is avg(retail_price - cost)
+  measure:
+    `Sales $` is retail_price.sum()*500
+    `Cost $` is retail_price.sum()*300
+  dimension: product is name
+  dimension: dcId is distribution_center_id::number
+
+  #(story)
+  view: default_independent_axes is {
+    group_by: category
+    # line_chart
+    nest: default is {
+      group_by: brand
+      aggregate: `Sales $`
+      limit: 10
+    }
+    # line_chart { y.independent=true }
+    nest: `hard_coded on` is {
+      group_by: brand
+      aggregate: `Sales $`
+      limit: 10
+    }
+    # line_chart { y.independent=false }
+    nest: `hard_coded off` is {
+      group_by: brand
+      aggregate: `Sales $`
+      limit: 10
+    }
+  }
+
+}

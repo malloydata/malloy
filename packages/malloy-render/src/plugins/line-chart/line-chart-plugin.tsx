@@ -17,6 +17,7 @@ import {ChartV2} from '@/component/chart/chart-v2';
 import {
   getLineChartSettings,
   type LineChartSettings,
+  type LineChartPluginOptions,
 } from '@/plugins/line-chart/get-line_chart-settings';
 import {generateLineChartVegaSpecV2} from '@/plugins/line-chart/generate-line_chart-vega-spec';
 import {type VegaChartProps} from '@/component/types';
@@ -72,18 +73,30 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       return hasLineChartTag && isRepeatedRecord;
     },
 
-    create: (field: Field): LineChartPluginInstance => {
+    create: (
+      field: Field,
+      pluginOptions?: unknown,
+      modelTag?: Tag
+    ): LineChartPluginInstance => {
       if (!field.isNest()) {
         throw new Error('Line chart: must be a nest field');
       }
 
+      const lineChartOptions = pluginOptions as
+        | LineChartPluginOptions
+        | undefined;
       let settings: LineChartSettings;
       const seriesStats = new Map<string, SeriesStats>();
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
 
       try {
-        settings = getLineChartSettings(field);
+        settings = getLineChartSettings(
+          field,
+          undefined,
+          lineChartOptions?.defaults,
+          modelTag
+        );
       } catch (error) {
         throw new Error(`Line chart settings error: ${error.message}`);
       }

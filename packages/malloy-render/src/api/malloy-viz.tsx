@@ -133,7 +133,11 @@ export class MalloyViz {
   setResult(malloyResult: Malloy.Result): void {
     this.result = malloyResult;
     if (this.result) {
-      this.metadata = new RenderFieldMetadata(this.result, this.pluginRegistry);
+      this.metadata = new RenderFieldMetadata(
+        this.result,
+        this.pluginRegistry,
+        this.options.pluginOptions ?? {}
+      );
     }
   }
 
