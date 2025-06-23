@@ -1880,12 +1880,14 @@ export class Explore extends Entity implements Taggable {
           type: 'table',
           tableName: structDef.tablePath,
           componentID: `${structDef.connection}:${structDef.tablePath}`,
+          sourceID: `${structDef.connection}:${structDef.tablePath}`,
         });
       } else if (structDef.type === 'sql_select') {
         sources.push({
           type: 'sql',
           selectStatement: structDef.selectStr,
           componentID: `${structDef.connection}:${structDef.selectStr}`,
+          sourceID: `${structDef.connection}:${structDef.selectStr}`,
         });
       } else if (structDef.type === 'query_source') {
         // For QuerySourceDef, we need to extract the SQL from the query
@@ -1919,6 +1921,7 @@ export class Explore extends Entity implements Taggable {
           type: 'sql',
           selectStatement: sql,
           componentID: componentID,
+          sourceID: componentID,
         });
       }
     } else {
@@ -1944,7 +1947,11 @@ export class Explore extends Entity implements Taggable {
 
       // Deduplicate sources using componentID as the key
       for (const source of allSources) {
-        uniqueSources[source.componentID] = source;
+        if (source.componentID) {
+          uniqueSources[source.componentID] = source;
+        } else if (source.sourceID) {
+          uniqueSources[source.sourceID] = source;
+        }
       }
     }
 
