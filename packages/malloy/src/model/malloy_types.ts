@@ -1276,6 +1276,10 @@ export function isBaseTable(def: StructDef): def is SourceDef {
 
 export type StructDef = SourceDef | RecordDef | ArrayDef;
 
+export type SourceComponentInfo =
+  | {type: 'table'; tableName: string; componentID: string}
+  | {type: 'sql'; selectStatement: string; componentID: string};
+
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
 // for "non-atomic" and even the AI couldn't think of the right word.

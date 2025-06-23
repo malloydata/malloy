@@ -65,6 +65,7 @@ import type {
   Argument,
   QuerySourceDef,
   TableSourceDef,
+  SourceComponentInfo,
 } from './model';
 import {
   fieldIsIntrinsic,
@@ -122,9 +123,6 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
-export type SourceComponentInfo =
-  | {type: 'table'; tableName: string; sourceID: string}
-  | {type: 'sql'; selectStatement: string; sourceID: string};
 type ComponentSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
 function isSourceComponent(source: StructDef): source is ComponentSourceDef {
   return (
@@ -1876,18 +1874,18 @@ export class Explore extends Entity implements Taggable {
     }
     if (isSourceComponent(structDef)) {
       if (structDef.type === 'table') {
-        // Generate sourceID based on connection and table name
+        // Generate componentID based on connection and table name
 
         sources.push({
           type: 'table',
           tableName: structDef.tablePath,
-          sourceID: `${structDef.connection}:${structDef.tablePath}`,
+          componentID: `${structDef.connection}:${structDef.tablePath}`,
         });
       } else if (structDef.type === 'sql_select') {
         sources.push({
           type: 'sql',
           selectStatement: structDef.selectStr,
-          sourceID: `${structDef.connection}:${structDef.selectStr}`,
+          componentID: `${structDef.connection}:${structDef.selectStr}`,
         });
       } else if (structDef.type === 'query_source') {
         // For QuerySourceDef, we need to extract the SQL from the query
@@ -1914,13 +1912,13 @@ export class Explore extends Entity implements Taggable {
           }: ${error instanceof Error ? error.message : String(error)}`;
         }
 
-        // Generate sourceID based on connection and SQL
-        const sourceID = `${structDef.connection}:${sql}`;
+        // Generate componentID based on connection and SQL
+        const componentID = `${structDef.connection}:${sql}`;
 
         sources.push({
           type: 'sql',
           selectStatement: sql,
-          sourceID: sourceID,
+          componentID: componentID,
         });
       }
     } else {
@@ -1937,16 +1935,16 @@ export class Explore extends Entity implements Taggable {
   }
 
   /**
-   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHAGE WITHOUT NOTICE
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
    */
   public getSourceComponents(): SourceComponentInfo[] {
     const uniqueSources: Record<string, SourceComponentInfo> = {};
     if (isSourceDef(this.structDef)) {
       const allSources = this.collectSourceComponents(this.structDef);
 
-      // Deduplicate sources using sourceID as the key
+      // Deduplicate sources using componentID as the key
       for (const source of allSources) {
-        uniqueSources[source.sourceID] = source;
+        uniqueSources[source.componentID] = source;
       }
     }
 
