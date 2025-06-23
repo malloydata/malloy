@@ -102,6 +102,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
           type: 'array',
           items: {
             type: 'string',
+            subtype: 'field',
           },
           default: [],
         },
@@ -133,6 +134,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
           type: 'array',
           items: {
             type: 'string',
+            subtype: 'field',
           },
           default: [],
         },
@@ -164,6 +166,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
           type: 'array',
           items: {
             type: 'string',
+            subtype: 'field',
           },
           default: [],
         },
