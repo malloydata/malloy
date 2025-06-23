@@ -2,51 +2,31 @@ import {tagFromAnnotations} from '@/util';
 import {
   type Field,
   RootField,
-  RecordField,
-  ArrayField,
-  type NestField,
-  RepeatedRecordField,
-  type FieldRegistry as DataTreeFieldRegistry,
+  type RenderPluginInstance,
+  getFieldType,
+  shouldRenderAs,
 } from '@/data_tree';
-import {shouldRenderChartAs} from '@/component/render-result-metadata';
-import {getBarChartSettings} from '@/component/bar-chart/get-bar_chart-settings';
+import type {RenderPluginFactory} from '@/api/plugin-types';
+import type {
+  RenderFieldRegistryEntry,
+  RenderFieldRegistry,
+} from '@/registry/types';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
-type RenderFieldProps<T = unknown> = {
-  field: Field;
-  renderAs: string;
-  sizingStrategy: string;
-  properties: T;
-  errors: Error[];
-};
-
-type RenderFieldRegistryEntry = {
-  field: Field;
-  renderProperties: RenderFieldProps;
-  plugins: never[];
-};
-
-type RenderFieldRegistry = Map<string, RenderFieldRegistryEntry>;
-
-// Registry to track field instances across the schema tree
-// TODO deprecate this
-interface FieldRegistry extends DataTreeFieldRegistry {
-  rendererFields: Map<string, RenderFieldRegistryEntry>;
-}
-
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
-  private legacyRegistry: FieldRegistry;
   private rootField: RootField;
+  private pluginRegistry: RenderPluginFactory[];
+  private pluginOptions: Record<string, unknown>;
 
-  constructor(result: Malloy.Result) {
-    // Create the field registry
-    this.legacyRegistry = {
-      rendererFields: new Map(),
-      fieldInstances: new Map(),
-      plugins: new Map(),
-    };
+  constructor(
+    result: Malloy.Result,
+    pluginRegistry: RenderPluginFactory[] = [],
+    pluginOptions: Record<string, unknown> = {}
+  ) {
+    this.pluginRegistry = pluginRegistry;
+    this.pluginOptions = pluginOptions;
     this.registry = new Map();
 
     // Create the root field with all its metadata
@@ -66,40 +46,67 @@ export class RenderFieldMetadata {
         modelTag: tagFromAnnotations(result.model_annotations, '## '),
         queryTimezone: result.query_timezone,
       },
-      this.legacyRegistry
+      this.registry
     );
 
     // Register all fields in the registry
     this.registerFields(this.rootField);
   }
 
+  // Instantiate plugins for a field that match
+  private instantiatePluginsForField(field: Field): RenderPluginInstance[] {
+    const plugins: RenderPluginInstance[] = [];
+
+    for (const factory of this.pluginRegistry) {
+      try {
+        if (factory.matches(field, field.tag, getFieldType(field))) {
+          const pluginOptions = this.pluginOptions[factory.name];
+          const modelTag = this.rootField.modelTag;
+          const pluginInstance = factory.create(field, pluginOptions, modelTag);
+          plugins.push(pluginInstance);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
+          error
+        );
+      }
+    }
+
+    return plugins;
+  }
+
   // Recursively register fields in the registry
   private registerFields(field: Field): void {
     const fieldKey = field.key;
     if (!this.registry.has(fieldKey)) {
+      // Instantiate plugins for this field
+      const plugins = this.instantiatePluginsForField(field);
+
       const renderFieldEntry: RenderFieldRegistryEntry = {
         field,
         renderProperties: {
           field,
-          renderAs: field.renderAs,
+          renderAs: shouldRenderAs({
+            field,
+            parent: undefined,
+            plugins,
+          }),
           sizingStrategy: 'fit',
           properties: {},
           errors: [],
         },
-        plugins: [],
+        plugins,
       };
-      // calculate chart metadata (eventually via plugins)
-      const vizProperties = this.populateRenderFieldProperties(field);
+      // TODO: legacy to keep renderer working until all viz are migrated to plugins
+      field.renderAs = renderFieldEntry.renderProperties.renderAs;
+      const vizProperties = this.populateRenderFieldProperties(field, plugins);
       renderFieldEntry.renderProperties.properties = vizProperties.properties;
       renderFieldEntry.renderProperties.errors = vizProperties.errors;
 
       this.registry.set(fieldKey, renderFieldEntry);
-      this.legacyRegistry.rendererFields.set(fieldKey, renderFieldEntry);
     }
-    if (!this.legacyRegistry.fieldInstances.has(fieldKey)) {
-      this.legacyRegistry.fieldInstances.set(fieldKey, []);
-    }
-    this.legacyRegistry.fieldInstances.get(fieldKey)!.push(field);
     // Recurse for nested fields
     if (field.isNest()) {
       for (const childField of field.fields) {
@@ -109,34 +116,38 @@ export class RenderFieldMetadata {
   }
 
   // TODO: replace with plugin logic, type it
-  private populateRenderFieldProperties(field: Field): {
+  private populateRenderFieldProperties(
+    field: Field,
+    plugins: RenderPluginInstance[]
+  ): {
     properties: Record<string, unknown>;
     errors: Error[];
   } {
     const properties: Record<string, unknown> = {};
     const errors: Error[] = [];
 
-    if (field.renderAs === 'chart' && !(field instanceof RepeatedRecordField)) {
-      // TODO: push this error down to the individual chart code
-      errors.push(new Error('Charts require tabular data'));
+    for (const plugin of plugins) {
+      properties[plugin.name] = plugin.getMetadata();
     }
-    const chartType = shouldRenderChartAs(field.tag);
 
-    // TODO throw error if field type doesn't match chart type
-    if (chartType === 'bar' && field instanceof RepeatedRecordField) {
-      try {
-        const settings = getBarChartSettings(field);
-        properties['settings'] = settings;
-      } catch (error) {
-        errors.push(error);
-      }
-    }
     return {properties, errors};
-  }
 
-  // Get a field by its path
-  getField(path: string[]): Field | undefined {
-    return this.rootField.fieldAtPath(path);
+    // if (field.renderAs === 'chart' && !(field instanceof RepeatedRecordField)) {
+    //   // TODO: push this error down to the individual chart code
+    //   errors.push(new Error('Charts require tabular data'));
+    // }
+    // const chartType = shouldRenderChartAs(field.tag);
+
+    // // TODO throw error if field type doesn't match chart type
+    // if (chartType === 'bar' && field instanceof RepeatedRecordField) {
+    //   try {
+    //     const settings = getBarChartSettings(field);
+    //     properties['settings'] = settings;
+    //   } catch (error) {
+    //     errors.push(error);
+    //   }
+    // }
+    // return {properties, errors};
   }
 
   // Get all fields in the schema
@@ -149,31 +160,13 @@ export class RenderFieldMetadata {
     return this.rootField;
   }
 
-  // Get all fields of a specific type
-  getFieldsByType<T extends Field, F extends Malloy.DimensionInfo>(
-    type: new (
-      field: F,
-      parent: NestField | undefined,
-      registry?: FieldRegistry
-    ) => T
-  ): T[] {
-    return this.getAllFields().filter(
-      (field): field is T => field instanceof type
-    );
+  // Get plugins for a specific field
+  getPluginsForField(fieldKey: string): RenderPluginInstance[] {
+    const entry = this.registry.get(fieldKey);
+    return entry ? entry.plugins : [];
   }
 
-  // Get all record fields
-  getRecordFields(): RecordField[] {
-    return this.getFieldsByType(RecordField);
-  }
-
-  // Get all array fields
-  getArrayFields(): ArrayField[] {
-    return this.getFieldsByType(ArrayField);
-  }
-
-  // Get all repeated record fields
-  getRepeatedRecordFields(): RepeatedRecordField[] {
-    return this.getFieldsByType(RepeatedRecordField);
+  getFieldEntry(fieldKey: string): RenderFieldRegistryEntry | undefined {
+    return this.registry.get(fieldKey);
   }
 }

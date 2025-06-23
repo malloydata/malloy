@@ -6,22 +6,52 @@
  */
 
 import type {JSXElement} from 'solid-js';
-import {renderNumericField} from './render-numeric-field';
-import {renderLink} from './render-link';
-import {Chart} from './chart/chart';
-import MalloyTable from './table/table';
-import {renderList} from './render-list';
-import {renderImage} from './render-image';
-import {Dashboard} from './dashboard/dashboard';
-import {renderTime} from './render-time';
-import {LegacyChart} from './legacy-charts/legacy_chart';
-import {NULL_SYMBOL} from '../util';
-import type {RendererProps} from './types';
-import {ErrorMessage} from './error-message/error-message';
+import {renderNumericField} from '@/component/render-numeric-field';
+import {renderLink} from '@/component/render-link';
+import {Chart} from '@/component/chart/chart';
+import MalloyTable from '@/component/table/table';
+import {renderList} from '@/component/render-list';
+import {renderImage} from '@/component/render-image';
+import {Dashboard} from '@/component/dashboard/dashboard';
+import {renderTime} from '@/component/render-time';
+import {LegacyChart} from '@/component/legacy-charts/legacy_chart';
+import {NULL_SYMBOL} from '@/util';
+import type {RendererProps} from '@/component/types';
+import {ErrorMessage} from '@/component/error-message/error-message';
+import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
+import {usePluginMetadata} from '@/component/result-context';
 
 export function applyRenderer(props: RendererProps) {
-  const {dataColumn, customProps = {}} = props;
+  const {dataColumn, customProps = {}, metadata} = props;
   const field = props.dataColumn.field;
+
+  // Get metadata from props or context
+  const contextMetadata = usePluginMetadata();
+  const pluginMetadata = metadata || contextMetadata;
+
+  // Check for plugins first
+  if (pluginMetadata) {
+    const plugins = pluginMetadata.getPluginsForField(field.key);
+    if (plugins.length > 0) {
+      // Use the first matching plugin
+      const plugin = plugins[0];
+      return {
+        renderAs: plugin.name,
+        renderValue: (
+          <PluginRenderContainer
+            plugin={plugin}
+            renderProps={{
+              dataColumn,
+              field,
+              customProps,
+            }}
+          />
+        ),
+      };
+    }
+  }
+
+  // Fallback to existing renderer logic
   const renderAs = field.renderAs;
   let renderValue: JSXElement = '';
   const propsToPass = customProps[renderAs] || {};

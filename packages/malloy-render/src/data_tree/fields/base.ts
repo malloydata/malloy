@@ -1,4 +1,4 @@
-import {tagFor, extractLiteralFromTag, shouldRenderAs} from '../utils';
+import {tagFor, extractLiteralFromTag} from '../utils';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
 import {renderTagFromAnnotations, NULL_SYMBOL, notUndefined} from '../../util';
@@ -23,42 +23,27 @@ import {
   StringField,
   TimestampField,
 } from '.';
-import type {FieldRegistry} from '../types';
 import type {RenderPluginInstance} from '../plugins';
+import type {RenderFieldRegistry} from '../../registry/types';
 
 export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
   protected readonly metadataTag: Tag;
-  public readonly renderAs: string;
+  public renderAs: string;
   public readonly valueSet = new Set<string | number | boolean>();
-  private _pluginData: Map<string, unknown> = new Map();
-  protected registry?: FieldRegistry;
-
-  registerPluginData<T>(pluginType: string, data: T) {
-    this._pluginData.set(pluginType, data);
-  }
-
-  getPluginData<T>(pluginType: string): T | undefined {
-    return this._pluginData.get(pluginType) as T;
-  }
-
-  // Get all field instances that match this field's key from the registry
-  getAllFieldInstances(): Field[] {
-    if (!this.registry) return [this.asField()];
-    return this.registry.fieldInstances.get(this.key) || [this.asField()];
-  }
+  protected registry: RenderFieldRegistry;
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
     if (!this.registry) return [];
-    return this.registry.plugins.get(this.key) || [];
+    return this.registry.get(this.key)?.plugins || [];
   }
 
   constructor(
     public readonly field: Malloy.DimensionInfo,
     public readonly parent: NestField | undefined,
-    registry?: FieldRegistry
+    registry: RenderFieldRegistry
   ) {
     this.tag = renderTagFromAnnotations(this.field.annotations);
     this.metadataTag = tagFor(this.field, '#(malloy) ');
@@ -67,7 +52,11 @@ export abstract class FieldBase {
         ? [...parent.path]
         : [...parent.path, field.name]
       : [];
-    this.renderAs = shouldRenderAs(field, parent);
+
+    // TODO: legacy to keep renderer working until all viz are migrated to plugins
+    // eventually remove this from Field class. Currently it is being populating in render-field-metadata
+    this.renderAs = '';
+
     this.registry = registry;
   }
 

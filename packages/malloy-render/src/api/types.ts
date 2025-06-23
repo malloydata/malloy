@@ -12,6 +12,7 @@ import type {
   TableConfig,
   VegaConfigHandler,
 } from '../component/types';
+import type {RenderPluginFactory} from './plugin-types';
 
 export type {RenderFieldMetadata} from '@/render-field-metadata';
 
@@ -24,4 +25,6 @@ export interface MalloyRendererOptions {
   modalElement?: HTMLElement;
   scrollEl?: HTMLElement;
   onError?: (error: Error) => void;
+  plugins?: RenderPluginFactory[];
+  pluginOptions?: Record<string, unknown>;
 }

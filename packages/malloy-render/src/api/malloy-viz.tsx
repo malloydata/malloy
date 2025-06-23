@@ -7,6 +7,7 @@
 
 import {render} from 'solid-js/web';
 import type {MalloyRendererOptions} from '@/api/types';
+import type {RenderPluginFactory} from '@/api/plugin-types';
 import {MalloyRender} from '@/component/render';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -17,9 +18,15 @@ export class MalloyViz {
   private targetElement: HTMLElement | null = null;
   private result: Malloy.Result | null = null;
   private metadata: RenderFieldMetadata | null = null;
+  private pluginRegistry: RenderPluginFactory[];
 
-  constructor(private options: MalloyRendererOptions) {
+  constructor(
+    private options: MalloyRendererOptions,
+    pluginRegistry: RenderPluginFactory[] = []
+  ) {
     this.options = options;
+    // Include default plugins + any additional plugins passed in
+    this.pluginRegistry = [...pluginRegistry];
   }
 
   static addStylesheet(styles: string) {
@@ -109,7 +116,6 @@ export class MalloyViz {
       tempViz.remove();
       return html;
     } catch (err) {
-      console.error(err);
       return 'Malloy Renderer could not be exported to HTML';
     } finally {
       // Remove the temporary container
@@ -124,10 +130,19 @@ export class MalloyViz {
 
   setResult(malloyResult: Malloy.Result): void {
     this.result = malloyResult;
-    if (this.result) this.metadata = new RenderFieldMetadata(this.result);
+    if (this.result) {
+      this.metadata = new RenderFieldMetadata(
+        this.result, 
+        this.pluginRegistry, 
+        this.options.pluginOptions ?? {}
+      );
+    }
   }
 
   render(targetElement?: HTMLElement): void {
+    if (!this.result || !this.metadata) {
+      throw new Error('Malloy Viz: No result to render');
+    }
     // Remove previous render if it exists
     if (this.disposeFn) {
       this.disposeFn();
@@ -139,7 +154,7 @@ export class MalloyViz {
 
     // Prepare the props for DOMRender
     const props: MalloyRenderProps = {
-      result: this.result ?? undefined,
+      result: this.result,
       element: this.targetElement,
       onClick: this.options.onClick,
       onDrill: this.options.onDrill,
@@ -149,6 +164,7 @@ export class MalloyViz {
       dashboardConfig: this.options.dashboardConfig,
       modalElement: this.options.modalElement,
       scrollEl: this.options.scrollEl,
+      renderFieldMetadata: this.metadata,
     };
 
     // Render the SolidJS component to the target element
@@ -173,5 +189,9 @@ export class MalloyViz {
 
   getMetadata(): RenderFieldMetadata | null {
     return this.metadata;
+    // return {
+    //   rendererMetadata: this.metadata,
+    //   pluginMetadata:
+    // };
   }
 }

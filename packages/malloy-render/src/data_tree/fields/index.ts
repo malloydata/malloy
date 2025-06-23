@@ -21,7 +21,7 @@ import {
   TimestampField,
 } from './atomic';
 import {ArrayField, RecordField, RepeatedRecordField} from './nest';
-import type {FieldRegistry} from '../types';
+import type {RenderFieldRegistry} from '../../registry/types';
 
 export {ArrayField, RecordField, RepeatedRecordField, RootField} from './nest';
 export {
@@ -62,7 +62,7 @@ export const Field = {
   from(
     field: Malloy.DimensionInfo,
     parent: NestField | undefined,
-    registry?: FieldRegistry
+    registry: RenderFieldRegistry
   ): Field {
     if (isRepeatedRecordFieldInfo(field)) {
       return new RepeatedRecordField(field, parent, registry);

@@ -1,5 +1,5 @@
 import type {Tag} from '@malloydata/malloy-tag';
-import {tagFromAnnotations, renderTagFromAnnotations} from '../util';
+import {tagFromAnnotations} from '../util';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {isDateUnit, isTimestampUnit} from '@malloydata/malloy';
 import type {
@@ -29,6 +29,7 @@ import {
   TimestampField,
 } from './fields';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
+import type {RenderPluginInstance} from '@/api/plugin-types';
 
 export function isArrayFieldInfo(
   field: Malloy.DimensionInfo
@@ -107,14 +108,25 @@ const RENDER_TAG_LIST = [
   'segment_map',
 ];
 
-export function shouldRenderAs(
-  field: Malloy.DimensionInfo,
-  parent: Field | undefined,
-  tagOverride?: Tag
-) {
-  const tag = convertLegacyToVizTag(
-    tagOverride ?? renderTagFromAnnotations(field.annotations)
-  );
+export function shouldRenderAs({
+  field,
+  parent,
+  plugins,
+  tagOverride,
+}: {
+  field: Field;
+  parent: Field | undefined;
+  plugins?: RenderPluginInstance[];
+  tagOverride?: Tag;
+}) {
+  // first plugin wins
+  const plugin = plugins?.at(0);
+  if (plugin) {
+    const renderAs = plugin.name;
+    if (renderAs) return renderAs;
+  }
+
+  const tag = convertLegacyToVizTag(tagOverride ?? field.tag);
 
   // Check viz property first (new approach)
   const vizType = tag.text('viz');
@@ -136,12 +148,11 @@ export function shouldRenderAs(
     }
   }
 
-  if (field.type.kind === 'record_type' && parent?.renderAs === 'chart') {
+  if (field instanceof RecordField && parent?.renderAs === 'chart') {
     return 'none';
   }
 
-  const isNest =
-    field.type.kind === 'array_type' || field.type.kind === 'record_type';
+  const isNest = field instanceof ArrayField || field instanceof RecordField;
 
   if (!isNest) return 'cell';
   return 'table';

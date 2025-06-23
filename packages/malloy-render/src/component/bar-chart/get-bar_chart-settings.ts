@@ -42,16 +42,19 @@ export function getBarChartSettings(
   const xChannel: Channel = {
     fields: [],
     type: null,
+    independent: 'auto',
   };
 
   const yChannel: Channel = {
     fields: [],
     type: null,
+    independent: 'auto',
   };
 
   const seriesChannel: Channel = {
     fields: [],
     type: null,
+    independent: 'auto',
   };
 
   function getField(ref: string) {

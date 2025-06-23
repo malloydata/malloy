@@ -8,6 +8,7 @@
 import {createContext, useContext} from 'solid-js';
 import type {Accessor} from 'solid-js';
 import type {RenderMetadata} from './render-result-metadata';
+import type {RenderFieldMetadata} from '../render-field-metadata';
 
 export const ResultContext = createContext<Accessor<RenderMetadata>>();
 export const useResultContext = () => {
@@ -17,4 +18,11 @@ export const useResultContext = () => {
       'useResultContext must be used within a ResultContext.Provider'
     );
   return ctx();
+};
+
+export const PluginMetadataContext = createContext<
+  RenderFieldMetadata | undefined
+>();
+export const usePluginMetadata = (): RenderFieldMetadata | undefined => {
+  return useContext(PluginMetadataContext);
 };

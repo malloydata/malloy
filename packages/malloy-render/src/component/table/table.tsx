@@ -12,7 +12,7 @@ import {
 import {getRangeSize} from '../util';
 import {getTableLayout} from './table-layout';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import {applyRenderer} from '../apply-renderer';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import {createStore, produce} from 'solid-js/store';
 import type {Virtualizer} from '@tanstack/solid-virtual';
 import {createVirtualizer} from '@tanstack/solid-virtual';

@@ -37,3 +37,4 @@ export type {
   DashboardConfig,
   VegaConfigHandler,
 } from '@/component/types';
+export * from '@/plugins';
