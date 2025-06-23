@@ -109,8 +109,8 @@ export class RootField extends RepeatedRecordField {
 }
 
 export class RecordField extends FieldBase {
-  public readonly fields: Field[];
-  public readonly fieldsByName: Record<string, Field>;
+  public fields: Field[];
+  public fieldsByName: Record<string, Field>;
   public readonly maxUniqueFieldValueCounts: Map<string, number> = new Map();
   constructor(
     public readonly field: RecordFieldInfo,
