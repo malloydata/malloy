@@ -12,6 +12,7 @@ import type {
   JSONSchemaString,
   JSONSchemaBoolean,
   JSONSchemaOneOf,
+  JSONSchemaFieldString,
 } from '@/api/json-schema-types';
 
 // TypeScript type definition
@@ -58,7 +59,7 @@ export interface ILineChartSettingsSchema extends JSONSchemaObject {
     xChannel: JSONSchemaObject & {
       properties: {
         fields: JSONSchemaArray & {
-          items: JSONSchemaString;
+          items: JSONSchemaFieldString;
         };
         type: JSONSchemaString;
         independent: JSONSchemaString;
@@ -67,7 +68,7 @@ export interface ILineChartSettingsSchema extends JSONSchemaObject {
     yChannel: JSONSchemaObject & {
       properties: {
         fields: JSONSchemaArray & {
-          items: JSONSchemaString;
+          items: JSONSchemaFieldString;
         };
         type: JSONSchemaString;
         independent: JSONSchemaBoolean;
@@ -76,7 +77,7 @@ export interface ILineChartSettingsSchema extends JSONSchemaObject {
     seriesChannel: JSONSchemaObject & {
       properties: {
         fields: JSONSchemaArray & {
-          items: JSONSchemaString;
+          items: JSONSchemaFieldString;
         };
         type: JSONSchemaString;
         independent: JSONSchemaString;
@@ -104,6 +105,7 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
           type: 'array',
           items: {
             type: 'string',
+            subtype: 'field',
           },
           default: [],
         },
@@ -135,6 +137,7 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
           type: 'array',
           items: {
             type: 'string',
+            subtype: 'field',
           },
           default: [],
         },
@@ -166,6 +169,7 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
           type: 'array',
           items: {
             type: 'string',
+            subtype: 'field',
           },
           default: [],
         },

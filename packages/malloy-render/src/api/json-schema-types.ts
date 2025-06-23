@@ -17,6 +17,7 @@ export type JSONSchemaProperty =
   | JSONSchemaObject
   | JSONSchemaArray
   | JSONSchemaString
+  | JSONSchemaFieldString
   | JSONSchemaNumber
   | JSONSchemaBoolean
   | JSONSchemaOneOf;
@@ -36,6 +37,10 @@ export interface JSONSchemaArray extends JSONSchemaPropertyBase {
 export interface JSONSchemaString extends JSONSchemaPropertyBase {
   type: 'string';
   enum?: readonly string[];
+}
+
+export interface JSONSchemaFieldString extends JSONSchemaString {
+  subtype: 'field';
 }
 
 export interface JSONSchemaNumber extends JSONSchemaPropertyBase {
