@@ -157,7 +157,11 @@ export function generateLineChartVegaSpecV2(
   const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
   const yDomainMax = settings.zeroBaseline ? Math.max(0, yMax) : yMax;
 
-  const maxSeries = chartTag.numeric('series', 'limit') ?? DEFAULT_MAX_SERIES;
+  const seriesSettingsLimit = settings.seriesChannel.limit;
+  const maxSeries =
+    typeof seriesSettingsLimit === 'number'
+      ? seriesSettingsLimit
+      : DEFAULT_MAX_SERIES;
   const isLimitingSeries = Boolean(
     seriesField && seriesField.valueSet.size > maxSeries
   );
@@ -168,21 +172,22 @@ export function generateLineChartVegaSpecV2(
     yField,
     chartType: 'line',
     getYMinMax: () => [yDomainMin, yDomainMax],
-    independentY: chartTag.has('y', 'independent') || isLimitingSeries,
+    independentY: settings.yChannel.independent || isLimitingSeries,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
   const autoSharedX = xField.valueSet.size <= 20;
-  const forceSharedX = chartTag.text('x', 'independent') === 'false';
-  const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
+  const forceSharedX = settings.xChannel.independent === false;
+  const forceIndependentX =
+    settings.xChannel.independent === true && !forceSharedX;
   const shouldShareXDomain =
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
   const autoSharedSeries = seriesField && seriesField.valueSet.size <= 20;
-  const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
+  const forceSharedSeries = settings.seriesChannel.independent === false;
   const forceIndependentSeries =
-    chartTag.has('series', 'independent') && !forceSharedSeries;
+    settings.seriesChannel.independent === true && !forceSharedSeries;
   const shouldShareSeriesDomain =
     explore.isRoot() ||
     forceSharedSeries ||
