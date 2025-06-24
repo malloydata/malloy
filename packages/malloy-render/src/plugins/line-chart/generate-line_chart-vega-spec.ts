@@ -32,7 +32,11 @@ import {getMarkName} from '@/component/vega/vega-utils';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
-import {NULL_SYMBOL, renderTimeString} from '@/util';
+import {
+  NULL_SYMBOL,
+  renderTimeString,
+  type RenderTimeStringOptions,
+} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
@@ -59,49 +63,15 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
   return inverted;
 }
 
-// Helper to get appropriate time format for year-over-year mode
-function getYoYTimeFormat(timeframe?: string): string {
-  if (!timeframe) return '%b %d'; // Default to month/day
-
-  if (timeframe.includes('month')) {
-    return '%b'; // Just month name (Jan, Feb, etc.)
-  } else if (timeframe.includes('quarter')) {
-    return 'Q%q'; // Quarter (Q1, Q2, etc.)
-  } else if (timeframe.includes('week')) {
-    return '%b %d'; // Week shown as month/day
-  } else {
-    return '%b %d'; // Daily data shown as month/day
-  }
-}
-
-// Helper to format tooltip titles for year-over-year mode
-function getYoYTooltipTitle(date: Date, timeframe?: string): string {
-  if (!timeframe) {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
-    });
-  }
-
-  if (timeframe.includes('month')) {
-    return date.toLocaleDateString('en-US', {month: 'long', timeZone: 'UTC'});
-  } else if (timeframe.includes('quarter')) {
-    const quarter = Math.floor(date.getMonth() / 3) + 1;
-    return `Q${quarter}`;
-  } else if (timeframe.includes('week')) {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
-    });
-  } else {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
-    });
-  }
+// Helper to get extraction format for renderTimeString based on timeframe
+function getExtractionFormat(
+  timeframe?: string
+): RenderTimeStringOptions['extractFormat'] {
+  if (!timeframe) return 'month-day';
+  if (timeframe.includes('month')) return 'month';
+  if (timeframe.includes('quarter')) return 'quarter';
+  if (timeframe.includes('week')) return 'week';
+  return 'month-day';
 }
 
 export interface LineChartSettings {
@@ -161,6 +131,11 @@ export function generateLineChartVegaSpecV2(
   const xRef = xField.referenceId;
   const yRef = yField.referenceId;
   const seriesRef = seriesField?.referenceId;
+
+  const extractFormat =
+    settings.mode === 'yoy'
+      ? getExtractionFormat(xField.isTime() ? xField.timeframe : undefined)
+      : undefined;
 
   // Map y fields to ref ids
   const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
@@ -750,7 +725,7 @@ export function generateLineChartVegaSpecV2(
     scales: [
       {
         name: 'xscale',
-        type: xIsDateorTime || settings.mode === 'yoy' ? 'utc' : 'point',
+        type: xIsDateorTime ? 'utc' : 'point',
         domain:
           settings.mode === 'yoy'
             ? // For YoY mode, calculate domain from actual data
@@ -764,7 +739,6 @@ export function generateLineChartVegaSpecV2(
             : {data: 'values', field: 'x'},
         range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,
-        nice: settings.mode !== 'yoy' && xIsDateorTime,
       },
       {
         name: 'null_x_scale',
@@ -801,28 +775,17 @@ export function generateLineChartVegaSpecV2(
         labelSeparation: 4,
         ...chartSettings.xAxis,
         encode: {
-          ...(xIsDateorTime || settings.mode === 'yoy'
+          ...(xIsDateorTime
             ? {
                 labels: {
                   enter: {
                     text: {
-                      signal:
-                        settings.mode === 'yoy'
-                          ? // For YoY mode, format as month/day or appropriate granularity without year
-                            `utcFormat(datum.value, '${getYoYTimeFormat(
-                              xField.isTime() ? xField.timeframe : undefined
-                            )}')`
-                          : `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`,
                     },
                   },
                   update: {
                     text: {
-                      signal:
-                        settings.mode === 'yoy'
-                          ? `utcFormat(datum.value, '${getYoYTimeFormat(
-                              xField.isTime() ? xField.timeframe : undefined
-                            )}')`
-                          : `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`,
                     },
                   },
                 },
@@ -1151,25 +1114,20 @@ export function generateLineChartVegaSpecV2(
           xIsDateorTime || settings.mode === 'yoy'
             ? x === NULL_SYMBOL
               ? NULL_SYMBOL
-              : settings.mode === 'yoy'
-              ? // For YoY mode, format the normalized date appropriately
-                getYoYTooltipTitle(
-                  new Date(x),
-                  xField.isTime() ? xField.timeframe : undefined
-                )
-              : renderTimeString(
-                  new Date(x),
-                  xField.isDate(),
-                  xField.isTime() ? xField.timeframe : undefined
-                )
+              : renderTimeString(new Date(x), {
+                  isDate: xField.isDate(),
+                  timeframe: xField.isTime() ? xField.timeframe : undefined,
+                  extractFormat,
+                })
             : x;
 
         const sortedRecords = [...records]
-          .sort((a, b) =>
-            settings.mode === 'yoy'
-              ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
-              : b.y - a.y
-          ) // Sort by value in descending order for normal mode
+          .sort(
+            (a, b) =>
+              settings.mode === 'yoy'
+                ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
+                : b.y - a.y // Sort by value in descending order for normal mode
+          )
           .slice(0, tooltipItemCountLimit);
 
         tooltipData = {
@@ -1196,31 +1154,26 @@ export function generateLineChartVegaSpecV2(
             records.push(lineDataRecord);
           }
         }
-        const title =
-          xIsDateorTime || settings.mode === 'yoy'
-            ? itemData.x === NULL_SYMBOL
-              ? NULL_SYMBOL
-              : settings.mode === 'yoy'
-              ? getYoYTooltipTitle(
-                  new Date(itemData.x),
-                  xField.isTime() ? xField.timeframe : undefined
-                )
-              : renderTimeString(
-                  new Date(itemData.x),
-                  xField.isDate(),
-                  xField.isTime() ? xField.timeframe : undefined
-                )
-            : itemData.x;
+        const title = xIsDateorTime
+          ? itemData.x === NULL_SYMBOL
+            ? NULL_SYMBOL
+            : renderTimeString(new Date(itemData.x), {
+                isDate: xField.isDate(),
+                timeframe: xField.isTime() ? xField.timeframe : undefined,
+                extractFormat,
+              })
+          : itemData.x;
 
         // If the highlighted item is not included in the first ~20,
         // then it will probably be cut off.
 
         const sortedRecords = [...records]
-          .sort((a, b) =>
-            settings.mode === 'yoy'
-              ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
-              : b.y - a.y
-          ) // Sort by value in descending order for normal mode
+          .sort(
+            (a, b) =>
+              xIsDateorTime
+                ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
+                : b.y - a.y // Sort by value in descending order for normal mode
+          )
           .filter(
             (item, index) =>
               index <= tooltipItemCountLimit ||

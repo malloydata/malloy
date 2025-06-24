@@ -80,11 +80,10 @@ export class DateField extends FieldBase {
     if (this.min === undefined || value < this.min) {
       this.min = value;
     }
-    const stringValue = renderTimeString(
-      value,
-      true,
-      this.timeframe
-    ).toString();
+    const stringValue = renderTimeString(value, {
+      isDate: true,
+      timeframe: this.timeframe,
+    }).toString();
     if (
       this._maxString === undefined ||
       stringValue.length > this._maxString.length
@@ -138,11 +137,10 @@ export class TimestampField extends FieldBase {
     if (this.min === undefined || value < this.min) {
       this.min = value;
     }
-    const stringValue = renderTimeString(
-      value,
-      false,
-      this.timeframe
-    ).toString();
+    const stringValue = renderTimeString(value, {
+      isDate: false,
+      timeframe: this.timeframe,
+    }).toString();
     if (
       this._maxString === undefined ||
       stringValue.length > this._maxString.length
