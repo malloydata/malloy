@@ -22,10 +22,9 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/mysql/mysql_start.sh
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.mysql.config.ts
+          npm run ci-mysql
           ./test/mysql/mysql_stop.sh
         env:
-          MALLOY_DATABASES: mysql
           MYSQL_HOST: '127.0.0.1'
           MYSQL_PORT: 3306
           MYSQL_USER: root
