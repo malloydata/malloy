@@ -21,8 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {SourceComponentInfo} from './malloy';
-import type {Annotation, NamedObject} from './model/malloy_types';
+import type {
+  Annotation,
+  NamedObject,
+  SourceComponentInfo,
+} from './model/malloy_types';
 
 type SourceRefWithMetadata = NamedObject & {
   annotation?: Annotation;
