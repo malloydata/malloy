@@ -253,6 +253,7 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
+          // TODO (vitor): Not sure if i should return a value or an expression here.
           return String(d.resultBoolean(false));
         }
         let includeSQL = '';
