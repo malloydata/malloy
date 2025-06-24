@@ -26,10 +26,9 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/presto/presto_start.sh
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.presto.config.ts
+          npm run ci-presto
           ./test/presto/presto_stop.sh
         env:
-          MALLOY_DATABASES: presto
           BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
           PRESTO_CATALOG: bigquery
           PRESTO_SCHEMA: malloytest

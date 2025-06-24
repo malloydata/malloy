@@ -36,9 +36,8 @@ jobs:
           npm run build
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.postgres.config.ts
+          npm run ci-postgres
         env:
-          MALLOY_DATABASES: postgres
           PGHOST: localhost
           PGPORT: 5432
           PGUSER: root
