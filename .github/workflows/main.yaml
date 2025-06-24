@@ -50,7 +50,7 @@ jobs:
           npm run build-duckdb-db
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.core.config.ts --runInBand
+          npm run ci-core
         env:
           CI: true
           PGHOST: localhost
