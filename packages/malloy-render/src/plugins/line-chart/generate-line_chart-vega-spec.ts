@@ -126,7 +126,12 @@ export function generateLineChartVegaSpecV2(
   };
 
   const yField = explore.fieldAt(yFieldPath);
-  const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+
+  // Use synthetic series field for YoY mode
+  if (settings.mode === 'yoy' && plugin.syntheticSeriesField) {
+    seriesField = plugin.syntheticSeriesField;
+  }
 
   const xRef = xField.referenceId;
   const yRef = yField.referenceId;
@@ -148,7 +153,7 @@ export function generateLineChartVegaSpecV2(
   // Map ref ids to y fields
   const yRefsMapInverted = invertObject(yRefsMap);
 
-  const isDimensionalSeries = Boolean(seriesField) || settings.mode === 'yoy';
+  const isDimensionalSeries = Boolean(seriesField);
   const isMeasureSeries = Boolean(settings.yChannel.fields.length > 1);
   const hasSeries = isDimensionalSeries || isMeasureSeries;
 
@@ -822,10 +827,6 @@ export function generateLineChartVegaSpecV2(
           0
         );
         maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
-      } else if (settings.mode === 'yoy') {
-        // For YoY mode, estimate max character count for years
-        maxCharCt = 4; // Assuming year format like "2023"
-        maxCharCt = Math.max(maxCharCt, 'Year'.length); // Legend title
       }
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
@@ -852,9 +853,8 @@ export function generateLineChartVegaSpecV2(
     (spec.padding as VegaPadding).right = legendSize;
     spec.legends!.push({
       fill: 'color',
-      // No title for measure list legends, "Year" for YoY mode
-      title:
-        settings.mode === 'yoy' ? 'Year' : seriesField ? seriesField.name : '',
+      // No title for measure list legends
+      title: seriesField ? seriesField.name : '',
       orient: 'right',
       ...legendSettings,
       values:
@@ -1110,21 +1110,20 @@ export function generateLineChartVegaSpecV2(
 
         records = markName === 'x_hit_target' ? item.datum.datum.v : [];
 
-        const title =
-          xIsDateorTime || settings.mode === 'yoy'
-            ? x === NULL_SYMBOL
-              ? NULL_SYMBOL
-              : renderTimeString(new Date(x), {
-                  isDate: xField.isDate(),
-                  timeframe: xField.isTime() ? xField.timeframe : undefined,
-                  extractFormat,
-                })
-            : x;
+        const title = xIsDateorTime
+          ? x === NULL_SYMBOL
+            ? NULL_SYMBOL
+            : renderTimeString(new Date(x), {
+                isDate: xField.isDate(),
+                timeframe: xField.isTime() ? xField.timeframe : undefined,
+                extractFormat,
+              })
+          : x;
 
         const sortedRecords = [...records]
           .sort(
             (a, b) =>
-              settings.mode === 'yoy'
+              xIsDateorTime
                 ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
                 : b.y - a.y // Sort by value in descending order for normal mode
           )
