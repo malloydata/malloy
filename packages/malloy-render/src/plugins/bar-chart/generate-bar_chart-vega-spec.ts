@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {getBarChartSettings} from './get-bar_chart-settings';
 import type {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
@@ -13,7 +12,7 @@ import type {
   VegaChartProps,
   VegaPadding,
   VegaSignalRef,
-} from '../types';
+} from '@/component/types';
 import type {ChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {
   getChartLayoutSettings,
@@ -31,16 +30,17 @@ import type {
   Spec,
   View,
 } from 'vega';
-import {renderNumericField} from '../render-numeric-field';
-import {createMeasureAxis} from '../vega/measure-axis';
-import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
-import {getMarkName} from '../vega/vega-utils';
-import type {CellValue, RecordCell, RepeatedRecordField} from '../../data_tree';
-import {Field} from '../../data_tree';
-import {NULL_SYMBOL, renderTimeString} from '../../util';
+import {renderNumericField} from '@/component/render-numeric-field';
+import {createMeasureAxis} from '@/component/vega/measure-axis';
+import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
+import {getMarkName} from '@/component/vega/vega-utils';
+import type {CellValue, RecordCell} from '@/data_tree';
+import {Field} from '@/data_tree';
+import {NULL_SYMBOL, renderTimeString} from '@/util';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
+import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {Tag} from '@malloydata/malloy-tag';
-import type {RenderMetadata} from '../render-result-metadata';
-import {convertLegacyToVizTag} from '../tag-utils';
+import type {BarChartPluginInstance} from './bar-chart-plugin';
 
 type BarDataRecord = {
   x: string | number;
@@ -50,6 +50,7 @@ type BarDataRecord = {
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
+const DEFAULT_MAX_SERIES = 20;
 
 // Helper to invert mapping for object where values are unique
 function invertObject(obj: Record<string, string>): Record<string, string> {
@@ -108,18 +109,20 @@ function getLimitedData({
   };
 }
 
-export function generateBarChartVegaSpec(
-  explore: RepeatedRecordField,
-  metadata: RenderMetadata
+export function generateBarChartVegaSpecV2(
+  metadata: RenderMetadata,
+  plugin: BarChartPluginInstance
 ): VegaChartProps {
+  const pluginMetadata = plugin.getMetadata();
+  const settings = pluginMetadata.settings;
+  const {getTopNSeries, field: explore} = plugin;
   const tag = convertLegacyToVizTag(explore.tag);
   const chartTag = tag.tag('viz');
   if (!chartTag)
     throw new Error(
-      'Bar chart should only be rendered for bar_chart or viz=bar tag'
+      'Malloy Bar Chart: Tried to render a bar chart, but no viz=bar tag was found'
     );
-  const settings = getBarChartSettings(explore);
-  // TODO: check that there are <=2 dimension fields, throw error otherwise
+
   /**************************************
    *
    * Chart data fields
@@ -174,7 +177,6 @@ export function generateBarChartVegaSpec(
   const isStacking = hasSeries && settings.isStack;
 
   // Calculate min/max across all y columns
-  // TODO: how to calculate shared stack min/maxes?
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
@@ -189,25 +191,18 @@ export function generateBarChartVegaSpec(
   const yDomainMin = Math.min(0, yMin);
   const yDomainMax = Math.max(0, yMax);
 
-  // TODO Chart settings and data limits interdependence...
-  // Could we have chartSettings be calculated from data limits so we don't have to recalculate xAxisSettings later?
-  // for xAxisSettings and data limits, just need the y sizing? to then know the plot area?
-  // so getChartLayoutSettings could...
-  //   - get y axis sizing
-  //   - determine x axis available space
-  //   - get max string (this is where data limits code comes in to play? is it just a callback fn for getMaxString() to be passed in?)
-  //   - calculate xAxisSettings correctly
+  const maxSeries = chartTag.numeric('series', 'limit') ?? DEFAULT_MAX_SERIES;
+  const isLimitingSeries = Boolean(
+    seriesField && seriesField.valueSet.size > maxSeries
+  );
+
   const chartSettings = getChartLayoutSettings(explore, chartTag, {
     metadata,
     xField,
     yField,
     chartType: 'bar',
     getYMinMax: () => [yDomainMin, yDomainMax],
-    independentY: chartTag.has('y', 'independent'),
-    // TODO implement this so can calculate data limits here
-    // but then how do we get the data limits stuff back? we don't know the plotWidth until this fn runs
-    // do we separate out getYLayout vs getXLayout? there is weird interplay between the two
-    // getMaxString: ({isSpark, plotWidth}) => "foo"
+    independentY: chartTag.has('y', 'independent') || isLimitingSeries,
   });
 
   // Data limits
@@ -228,7 +223,6 @@ export function generateBarChartVegaSpec(
   }
 
   // Recalculate xAxisSettings based on data limits
-  // TODO: do max string calcs for different data types (numbers / dates will be formatted)
   const xAxisSettings = getXAxisSettings({
     maxString,
     chartHeight: chartSettings.plotHeight,
@@ -253,6 +247,8 @@ export function generateBarChartVegaSpec(
     chartTag.has('series', 'independent') && !forceSharedSeries;
   const shouldShareSeriesDomain =
     forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
+
+  const seriesSet = seriesField ? new Set(getTopNSeries?.(maxSeries)) : null;
 
   /**************************************
    *
@@ -538,9 +534,6 @@ export function generateBarChartVegaSpec(
   if (settings.interactive) {
     if (yAxis) marks.push(...yAxis.interactiveMarks);
 
-    // TODO add xAxisRangeBrush
-    // marks.push(xAxisOverlay, xAxisRangeBrush);
-
     const interactiveSignals = yAxis ? yAxis.interactiveSignals : [];
     signals.push(
       ...[
@@ -557,11 +550,6 @@ export function generateBarChartVegaSpec(
                   events: '@x_highlight:mouseout, @bars:mouseout',
                   update: 'null',
                 },
-                // TODO: x range brushing
-                // {
-                //   events: {signal: 'xRangeBrushValues'},
-                //   update: `xRangeBrushValues ? { fieldRefId: xFieldRefId, sourceId: brushXSourceId, value: xRangeBrushValues, type: 'dimension' } : null`,
-                // },
               ]
             : [],
         },
@@ -631,24 +619,11 @@ export function generateBarChartVegaSpec(
           name: 'brushOut',
           update:
             "[{ sourceId: brushXSourceId, data: brushX }, { sourceId: brushSeriesSourceId, data: brushSeries, debounce: { time: 100, strategy: 'on-empty' } },{ sourceId: brushMeasureSourceId, data: brushMeasure, debounce: { time: 100, strategy: 'on-empty' } } ]",
-          // TODO: For now, not including brushMeasureRange ({ sourceId: '${brushMeasureRangeSourceId}', data: brushMeasureRange }) as there are issues to work through
         },
         ...interactiveSignals,
         {
           name: 'yIsBrushing',
           value: false,
-          // TODO: for now, disabling brushing ranges as there are issues to work through
-          // on: [
-          //   {
-          //     'events':
-          //       '[@y_axis_overlay:mousedown, window:mouseup] > window:mousemove!',
-          //     'update': 'true',
-          //   },
-          //   {
-          //     'events': 'window:mouseup',
-          //     'update': 'false',
-          //   },
-          // ],
         },
       ]
     );
@@ -699,12 +674,13 @@ export function generateBarChartVegaSpec(
         name: 'color',
         type: 'ordinal',
         range: 'category',
-        domain: shouldShareSeriesDomain
-          ? [...dataLimits.seriesValuesToPlot]
-          : {
-              data: 'values',
-              field: 'series',
-            },
+        domain:
+          isDimensionalSeries && shouldShareSeriesDomain && seriesSet
+            ? [...seriesSet!]
+            : {
+                data: 'values',
+                field: 'series',
+              },
       },
       {
         name: 'xOffset',
@@ -771,7 +747,15 @@ export function generateBarChartVegaSpec(
   let maxCharCt = 0;
   if (hasSeries) {
     // Get legend dimensions
-    if (isDimensionalSeries) {
+    if (isDimensionalSeries && seriesSet) {
+      // This is for global; how to do across nests for local?
+      maxCharCt = [...seriesSet!].reduce<number>(
+        // TODO better handle the null symbol here
+        (a, b) => Math.max(a, b?.toString().length ?? 1),
+        0
+      );
+      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+    } else if (isDimensionalSeries) {
       // Legend size is by legend title or the longest legend value
       maxCharCt = seriesField!.maxString?.length ?? 0;
       maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
@@ -804,6 +788,10 @@ export function generateBarChartVegaSpec(
       title: seriesField ? seriesField.name : '',
       orient: 'right',
       ...legendSettings,
+      values:
+        isDimensionalSeries && shouldShareSeriesDomain && seriesSet
+          ? [...seriesSet!]
+          : undefined,
       encode: {
         entries: {
           name: 'legend_entries',
@@ -872,7 +860,6 @@ export function generateBarChartVegaSpec(
           xValue ?? NULL_SYMBOL
         );
         // Filter out missing date/time values
-        // TODO: figure out how we can show null values in continuous axes
         const isXMissingDateTime = xIsDateorTime && xValue === null;
         return isXOutOfLimit || isXMissingDateTime;
       }
@@ -942,6 +929,10 @@ export function generateBarChartVegaSpec(
     return {
       data: mappedData,
       isDataLimited: data.rows.length > mappedData.length,
+      dataLimitMessage:
+        seriesField && seriesField.valueSet.size > maxSeries
+          ? `Showing ${maxSeries.toLocaleString()} of ${seriesField.valueSet.size.toLocaleString()} series`
+          : '',
     };
   };
 

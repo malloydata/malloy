@@ -5,8 +5,7 @@ import type {
   RepeatedRecordField,
   RootField,
 } from '../fields';
-import type {RenderPlugin} from '../plugins';
-import type {FieldRegistry} from '../types';
+import {Field} from '../fields';
 import {Cell, type CellValue} from '.';
 import {CellBase} from './base';
 import type {NestCell} from '.';
@@ -19,8 +18,14 @@ export class ArrayCell extends CellBase {
     public readonly parent: NestCell | undefined
   ) {
     super(cell, field, parent);
+    // For non-record arrays, create cells based on element type
+    const elementFieldInfo = {
+      name: 'element',
+      type: this.field.field.type.element_type,
+    };
+    const elementField = Field.from(elementFieldInfo, this.field);
     for (const value of this.cell.array_value) {
-      this.values.push(Cell.from(value, field.eachField, this));
+      this.values.push(Cell.from(value, elementField, this));
     }
   }
 
@@ -29,23 +34,27 @@ export class ArrayCell extends CellBase {
   }
 }
 
-export class RepeatedRecordCell extends ArrayCell {
-  public readonly rows: RecordCell[];
+export class RepeatedRecordCell extends CellBase {
+  public readonly rows: RecordCell[] = [];
   public readonly fieldValueSets: Map<string, Set<CellValue>> = new Map();
-  private plugins: RenderPlugin[];
-  private registry?: FieldRegistry;
 
   constructor(
     public readonly cell: Malloy.CellWithArrayCell,
     public readonly field: RepeatedRecordField,
-    public readonly parent: NestCell | undefined,
-    plugins: RenderPlugin[] = [],
-    registry?: FieldRegistry
+    public readonly parent: NestCell | undefined
   ) {
     super(cell, field, parent);
-    this.plugins = plugins;
-    this.registry = registry;
-    this.rows = this.values as RecordCell[];
+
+    // Create RecordCells directly from the array values
+    for (let i = 0; i < this.cell.array_value.length; i++) {
+      const recordValue = this.cell.array_value[i];
+      if (!('record_value' in recordValue)) {
+        throw new Error('Expected record cell in RepeatedRecordCell');
+      }
+      // Create RecordCell using the fields from the RepeatedRecordField
+      const recordCell = this.createRecordCell(recordValue);
+      this.rows.push(recordCell);
+    }
 
     // First, create cells for all the rows
     for (const row of this.rows) {
@@ -66,28 +75,56 @@ export class RepeatedRecordCell extends ArrayCell {
     // Run plugins for this field
     const fieldPlugins = this.field.getPlugins();
     for (const plugin of fieldPlugins) {
-      plugin.processData(this.field, this);
+      plugin.processData?.(this.field, this);
     }
   }
 
   get value() {
     return this.rows;
   }
+
+  get values() {
+    return this.rows;
+  }
+
+  private createRecordCell(recordValue: Malloy.CellWithRecordCell): RecordCell {
+    // The RepeatedRecordField already has the correct fields parsed from its element_type
+    // We need to create a RecordField that shares the same field structure
+    // but is properly typed as a RecordField for drilling to work
+
+    // Create a RecordFieldInfo that matches the structure expected by RecordField
+    const recordFieldInfo: Malloy.DimensionInfo = {
+      name: 'record',
+      type: this.field.field.type.element_type,
+    };
+
+    // Create the RecordField instance from the field info
+    const recordField = Field.from(recordFieldInfo, this.field) as RecordField;
+
+    // Now we need to ensure the RecordField has the same fields as the RepeatedRecordField
+    // to maintain consistency for rendering
+    // Override the fields to use the parent's already-parsed fields
+    recordField.fields = this.field.fields;
+    recordField.fieldsByName = this.field.fieldsByName;
+
+    // Create the RecordCell with the properly structured RecordField
+    const recordCell = new RecordCell(recordValue, recordField, this);
+
+    return recordCell;
+  }
 }
 
 export class RootCell extends RepeatedRecordCell {
   constructor(
     public readonly cell: Malloy.CellWithArrayCell,
-    public readonly field: RootField,
-    plugins: RenderPlugin[] = [],
-    registry?: FieldRegistry
+    public readonly field: RootField
   ) {
-    super(cell, field, undefined, plugins, registry);
+    super(cell, field, undefined);
   }
 }
 
 export class RecordCell extends CellBase {
-  public readonly cells: Record<string, Cell> = {};
+  public cells: Record<string, Cell> = {};
   constructor(
     public readonly cell: Malloy.CellWithRecordCell,
     public readonly field: RecordField,

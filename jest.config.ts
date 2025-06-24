@@ -21,18 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {Config} from 'jest';
+
 process.env.TZ = 'America/Los_Angeles';
 
-const transformIgnoreModules = [
-  'lit-html',
-  'lit-element',
-  'lit',
-  '@lit',
-  '@lit-labs',
-  '@motherduck/wasm-client',
-].join('|');
+const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
-module.exports = {
+const config: Config = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
@@ -52,3 +47,5 @@ module.exports = {
   verbose: true,
   testEnvironment: 'node',
 };
+
+module.exports = config;

@@ -1,10 +1,19 @@
 import type {PluginOption} from 'vite';
 import {defineConfig} from 'vite';
 import solidPlugin from 'vite-plugin-solid';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import dts from 'vite-plugin-dts';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [viteStripMalloyDevToolsPlugin(), solidPlugin()],
+  plugins: [
+    viteStripMalloyDevToolsPlugin(),
+    solidPlugin(),
+    tsconfigPaths(),
+    dts({
+      insertTypesEntry: true,
+    }),
+  ],
   optimizeDeps: {
     include: ['@malloydata/malloy'],
   },

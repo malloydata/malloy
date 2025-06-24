@@ -25,5 +25,9 @@
     "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": true,
     "types": ["node", "jest", "jest-expect-message"],
+    // TODO: Remove this when we have a better project solution
+    "paths": {
+      "@/*": ["./packages/malloy-render/src/*"]
+    }
   }
 }

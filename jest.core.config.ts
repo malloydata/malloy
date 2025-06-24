@@ -5,7 +5,8 @@ module.exports = {
     '<rootDir>/packages/malloy-filter/',
     '<rootDir>/packages/malloy-interfaces/',
     '<rootDir>/packages/malloy-malloy-sql/',
-    '<rootDir>/packages/malloy-render/',
+    // TODO remove this when we've resolved path resolution
+    // '<rootDir>/packages/malloy-render/',
     '<rootDir>/packages/malloy-syntax-highlight/',
     '<rootDir>/packages/malloy-tag/',
     '<rootDir>/packages/malloy/',

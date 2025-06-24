@@ -6,23 +6,45 @@
  */
 
 import type {JSXElement} from 'solid-js';
-import {renderNumericField} from './render-numeric-field';
-import {renderLink} from './render-link';
-import {Chart} from './chart/chart';
-import MalloyTable from './table/table';
-import {renderList} from './render-list';
-import {renderImage} from './render-image';
-import {Dashboard} from './dashboard/dashboard';
-import {renderTime} from './render-time';
-import {LegacyChart} from './legacy-charts/legacy_chart';
-import {NULL_SYMBOL} from '../util';
-import type {RendererProps} from './types';
-import {ErrorMessage} from './error-message/error-message';
+import {renderNumericField} from '@/component/render-numeric-field';
+import {renderLink} from '@/component/render-link';
+import {Chart} from '@/component/chart/chart';
+import MalloyTable from '@/component/table/table';
+import {renderList} from '@/component/render-list';
+import {renderImage} from '@/component/render-image';
+import {Dashboard} from '@/component/dashboard/dashboard';
+import {renderTime} from '@/component/render-time';
+import {LegacyChart} from '@/component/legacy-charts/legacy_chart';
+import {NULL_SYMBOL} from '@/util';
+import type {RendererProps} from '@/component/types';
+import {ErrorMessage} from '@/component/error-message/error-message';
+import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
   const field = props.dataColumn.field;
-  const renderAs = field.renderAs;
+
+  const renderAs = field.renderAs();
+
+  // Check for plugins first
+  const plugin = field.getPlugins().at(0);
+  if (plugin) {
+    return {
+      renderAs,
+      renderValue: (
+        <PluginRenderContainer
+          plugin={plugin}
+          renderProps={{
+            dataColumn,
+            field,
+            customProps,
+          }}
+        />
+      ),
+    };
+  }
+
+  // Fallback to existing renderer logic
   let renderValue: JSXElement = '';
   const propsToPass = customProps[renderAs] || {};
   if (dataColumn.isNull()) {

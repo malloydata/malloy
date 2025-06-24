@@ -14,6 +14,36 @@ import {Field} from './data_tree';
 
 export const NULL_SYMBOL = '∅';
 
+type UnionToIntersection<U> = (
+  U extends unknown ? (k: U) => void : never
+) extends (k: infer I) => void
+  ? I
+  : never;
+
+export function deepMerge<T extends Record<string, unknown>[]>(
+  ...sources: [...T]
+): UnionToIntersection<T[number]> {
+  const acc: Record<string, unknown> = {};
+  for (const source of sources) {
+    if (isObject(source)) {
+      for (const key in source) {
+        const value = source[key];
+        if (isObject(value)) {
+          const nextValue = !isObject(acc[key]) ? {} : acc[key];
+          acc[key] = deepMerge(nextValue, value);
+        } else {
+          acc[key] = source[key];
+        }
+      }
+    }
+  }
+  return acc as UnionToIntersection<T[number]>;
+}
+
+function isObject(item: unknown): item is Record<string, unknown> {
+  return item !== null && typeof item === 'object' && !Array.isArray(item);
+}
+
 export function tagFromAnnotations(
   annotations: Malloy.Annotation[] | undefined,
   prefix = '# '

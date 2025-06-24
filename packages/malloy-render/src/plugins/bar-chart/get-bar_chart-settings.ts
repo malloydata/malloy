@@ -2,80 +2,103 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {Channel} from '../types';
-import type {NestField} from '../../data_tree';
-import {walkFields} from '../../util';
-import {defaultSettings} from '../default-settings';
-import {convertLegacyToVizTag} from '../tag-utils';
+import type {Channel, SeriesChannel, YChannel} from '@/component/types';
+import type {NestField} from '@/data_tree';
+import {walkFields} from '@/util';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
+import {
+  defaultBarChartSettings,
+  type BarChartSettings,
+} from './bar-chart-settings';
 
-export type LineChartSettings = {
-  xChannel: Channel;
-  yChannel: Channel;
-  seriesChannel: Channel;
-  zeroBaseline: boolean;
-  interactive: boolean;
-};
+export type {BarChartSettings};
 
-export function getLineChartSettings(
+export function getBarChartSettings(
   explore: NestField,
   tagOverride?: Tag
-): LineChartSettings {
+): BarChartSettings {
   const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
 
-  if (normalizedTag.text('viz') !== 'line') {
+  if (normalizedTag.text('viz') !== 'bar') {
     throw new Error(
-      'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
+      'Malloy Bar Chart: Tried to render a bar chart, but no viz=bar tag was found'
     );
   }
 
   const vizTag = normalizedTag.tag('viz')!;
 
-  // default zero_baselinse
-  let zeroBaseline = defaultSettings.line_chart.zero_baseline;
-  if (vizTag.has('zero_baseline')) {
-    const value = vizTag.text('zero_baseline');
-    // If explicitly set to false, set to false
-    if (value === 'false') {
-      zeroBaseline = false;
-    }
-    // If explicilty set to true or no value, set to true
-    else if (
-      value === 'true' ||
-      value === null ||
-      value === undefined ||
-      value === ''
-    ) {
-      zeroBaseline = true;
-    }
+  // if tooltip, disable interactions, otherwise use default
+  const interactive = normalizedTag.has('tooltip')
+    ? false
+    : defaultBarChartSettings.interactive;
+
+  // Check for spark size to determine hideReferences
+  const isSpark =
+    vizTag.text('size') === 'spark' || normalizedTag.text('size') === 'spark';
+  const hideReferences = isSpark;
+
+  // X-axis independence
+  let xIndependent: boolean | 'auto' =
+    defaultBarChartSettings.xChannel.independent;
+  if (vizTag.has('x', 'independent')) {
+    const value = vizTag.text('x', 'independent');
+    xIndependent = value === 'false' ? false : true;
   }
 
-  // if tooltip, disable interactions
-  const interactive = !normalizedTag.has('tooltip');
+  // Y-axis independence
+  let yIndependent: boolean = defaultBarChartSettings.yChannel.independent;
+  if (vizTag.has('y', 'independent')) {
+    const value = vizTag.text('y', 'independent');
+    yIndependent = value === 'false' ? false : true;
+  }
+
+  // Series independence
+  let seriesIndependent: boolean | 'auto' =
+    defaultBarChartSettings.seriesChannel.independent;
+  if (vizTag.has('series', 'independent')) {
+    const value = vizTag.text('series', 'independent');
+    seriesIndependent = value === 'false' ? false : true;
+  }
+
+  // Series limit
+  const seriesLimit: number | 'auto' =
+    vizTag.numeric('series', 'limit') ??
+    defaultBarChartSettings.seriesChannel.limit;
+
+  // Disable embedded field tags
+  const disableEmbedded =
+    vizTag.has('disable_embedded') || defaultBarChartSettings.disableEmbedded;
 
   const xChannel: Channel = {
     fields: [],
-    type: null,
+    type: defaultBarChartSettings.xChannel.type,
+    independent: xIndependent,
   };
 
-  const yChannel: Channel = {
+  const yChannel: YChannel = {
     fields: [],
-    type: null,
+    type: defaultBarChartSettings.yChannel.type,
+    independent: yIndependent,
   };
 
-  const seriesChannel: Channel = {
+  const seriesChannel: SeriesChannel = {
     fields: [],
-    type: null,
+    type: defaultBarChartSettings.seriesChannel.type,
+    independent: seriesIndependent,
+    limit: seriesLimit,
   };
 
   function getField(ref: string) {
     return explore.pathTo(explore.fieldAt([ref]));
   }
 
-  // Parse top level tags
+  const isStack = vizTag.has('stack');
+
+  // Parse top level tags from viz properties
   if (vizTag.text('x')) {
     xChannel.fields.push(getField(vizTag.text('x')!));
   }
@@ -94,7 +117,7 @@ export function getLineChartSettings(
   const embeddedSeries: string[] = [];
 
   // Only parse embedded tags if disableEmbedded is not set
-  if (!vizTag.has('disableEmbedded')) {
+  if (!disableEmbedded) {
     walkFields(explore, field => {
       const tag = field.tag;
       const pathTo = explore.pathTo(field);
@@ -161,24 +184,19 @@ export function getLineChartSettings(
     }
   }
 
-  // TODO: types
-  xChannel.type = 'nominal';
-  yChannel.type = 'quantitative';
-  seriesChannel.type = 'nominal';
-
   if (dimensions.length > 2) {
     throw new Error(
-      'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+      'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
     );
   }
   if (dimensions.length === 0) {
     throw new Error(
-      'Malloy Line Chart: No dimensions found. A line chart must have at least 1 dimension for the x axis.'
+      'Malloy Bar Chart: No dimensions found. A bar chart must have at least 1 dimension for the x axis.'
     );
   }
   if (measures.length === 0) {
     throw new Error(
-      'Malloy Line Chart: No measures found. A line chart must have at least 1 measure for the y axis.'
+      'Malloy Bar Chart: No measures found. A bar chart must have at least 1 measure for the y axis.'
     );
   }
 
@@ -186,7 +204,9 @@ export function getLineChartSettings(
     xChannel,
     yChannel,
     seriesChannel,
-    zeroBaseline,
+    isStack,
     interactive,
+    hideReferences,
+    disableEmbedded,
   };
 }
