@@ -21,11 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {Config} from 'jest';
+
 process.env.TZ = 'America/Los_Angeles';
 
 const transformIgnoreModules = ['@motherduck/wasm-client'].join('|');
 
-module.exports = {
+const config: Config = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
@@ -44,50 +46,6 @@ module.exports = {
   testTimeout: 100000,
   verbose: true,
   testEnvironment: 'node',
-  projects: [
-    {
-      displayName: 'malloy-render',
-      rootDir: '<rootDir>/packages/malloy-render',
-      preset: 'ts-jest',
-      testMatch: ['<rootDir>/src/**/*.spec.(ts|js)?(x)'],
-      moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1',
-      },
-      transform: {
-        '^.+\\.(ts|tsx)$': [
-          'ts-jest',
-          {
-            tsconfig: '<rootDir>/tsconfig.json',
-          },
-        ],
-        '^.+\\.(js|jsx)$': [
-          'babel-jest',
-          {
-            'presets': ['@babel/preset-env'],
-            'plugins': [['@babel/transform-runtime']],
-          },
-        ],
-      },
-    },
-    {
-      displayName: 'malloy-general',
-      setupFilesAfterEnv: [
-        '<rootDir>/test/jest.setup.ts',
-        'jest-expect-message',
-      ],
-      testMatch: ['<rootDir>**/*.spec.(ts|js)?(x)'],
-      testPathIgnorePatterns: [
-        '<rootDir>/packages/malloy-render/',
-        '/node_modules/',
-        '/dist/',
-        '/out/',
-      ],
-      transform: {
-        '^.+\\.(ts|tsx)$': [
-          'ts-jest',
-          {tsconfig: '<rootDir>/test/tsconfig.json'},
-        ],
-      },
-    },
-  ],
 };
+
+module.exports = config;
