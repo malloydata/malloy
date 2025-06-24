@@ -253,8 +253,7 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
-          // TODO (vitor): Check what to do here for unsupported boolean
-          return 'false';
+          return String(d.resultBoolean(false));
         }
         let includeSQL = '';
         if (includes.length > 0 || includeNull || includeEmpty) {
