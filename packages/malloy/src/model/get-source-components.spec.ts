@@ -50,6 +50,7 @@ describe('Explore.getSourceComponents', () => {
       type: 'table',
       tableName: 'my_table',
       sourceID: 'my_connection:my_table',
+      componentID: 'my_connection:my_table',
     });
   });
 
@@ -72,6 +73,7 @@ describe('Explore.getSourceComponents', () => {
       type: 'sql',
       selectStatement: 'SELECT * FROM my_table',
       sourceID: 'my_connection:SELECT * FROM my_table',
+      componentID: 'my_connection:SELECT * FROM my_table',
     });
   });
 
@@ -116,11 +118,13 @@ describe('Explore.getSourceComponents', () => {
           type: 'table',
           tableName: 'table1',
           sourceID: 'my_connection:table1',
+          componentID: 'my_connection:table1',
         },
         {
           type: 'table',
           tableName: 'table2',
           sourceID: 'my_connection:table2',
+          componentID: 'my_connection:table2',
         },
       ])
     );
@@ -166,11 +170,13 @@ describe('Explore.getSourceComponents', () => {
           type: 'table',
           tableName: 'main_table',
           sourceID: 'my_connection:main_table',
+          componentID: 'my_connection:main_table',
         },
         {
           type: 'table',
           tableName: 'joined_table',
           sourceID: 'my_connection:joined_table',
+          componentID: 'my_connection:joined_table',
         },
       ])
     );
@@ -245,21 +251,25 @@ describe('Explore.getSourceComponents', () => {
           type: 'table',
           tableName: 'main_table',
           sourceID: 'my_connection:main_table',
+          componentID: 'my_connection:main_table',
         },
         {
           type: 'table',
           tableName: 'joined_table1',
           sourceID: 'my_connection:joined_table1',
+          componentID: 'my_connection:joined_table1',
         },
         {
           type: 'table',
           tableName: 'nested_joined_table',
           sourceID: 'my_connection:nested_joined_table',
+          componentID: 'my_connection:nested_joined_table',
         },
         {
           type: 'sql',
           selectStatement: 'SELECT * FROM another_table',
           sourceID: 'my_connection:SELECT * FROM another_table',
+          componentID: 'my_connection:SELECT * FROM another_table',
         },
       ])
     );
@@ -310,6 +320,7 @@ describe('Explore.getSourceComponents', () => {
       type: 'sql',
       selectStatement: 'SELECT * FROM test_query',
       sourceID: 'my_connection:SELECT * FROM test_query',
+      componentID: 'my_connection:SELECT * FROM test_query',
     });
   });
 });
