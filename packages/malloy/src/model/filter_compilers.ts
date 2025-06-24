@@ -125,17 +125,18 @@ export const FilterCompilers = {
           .join(` ${nc.operator.toUpperCase()} `);
     }
   },
-  // TODO (vitor): Check what to do here for non supported boolean
-  booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
+  booleanCompile(bc: BooleanFilter, x: string, d: Dialect): string {
+    const sqlEqualToFalse = `${x} = ${d.resultBoolean(false)}`;
+    const sqlTrue = d.sqlBoolean(true);
     switch (bc.operator) {
       case 'false':
-        return `${x} = false`;
+        return sqlEqualToFalse;
       case 'false_or_null':
-        return `${x} IS NULL OR ${x} = false`;
+        return `${x} IS NULL OR ${sqlEqualToFalse}`;
       case 'null':
         return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
       case 'true':
-        return x;
+        return sqlTrue;
     }
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
