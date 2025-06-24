@@ -4,11 +4,7 @@
     "noEmit": true,
     "composite": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "solid-js",
-    // TODO: Remove this when we have a better project solution
-    "paths": {
-      "@/*": ["../packages/malloy-render/src/*"]
-    }
+    "jsxImportSource": "solid-js"
   },
   "include": ["src", "bin", "./jest.setup.ts", "./types/jest.d.ts"],
   "references": [
