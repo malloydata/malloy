@@ -458,16 +458,6 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       aggregate: `Sales $` is sum(`Sales $`)
       order_by: m
     }
-
-    #(story)
-  view: date_axis_yoy_table is {
-      group_by:
-        `date` is @2001-01-02 + ((id - 1) / 90) year + ((id - 1) % 90) day
-      aggregate:
-        `Sales $` is retail_price.avg()*500
-      limit: 270
-      order_by: `date`
-    }
 }
 
 source: missing_data is duckdb.table("static/data/missing_data.csv") extend {
