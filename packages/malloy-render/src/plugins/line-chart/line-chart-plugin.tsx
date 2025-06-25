@@ -61,8 +61,10 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       // Match repeated record fields with line chart tags
-      const hasLineChartTag =
-        fieldTag.has('line_chart') || fieldTag.text('viz') === 'line';
+      const hasLineChartTag = fieldTag.has('viz')
+        ? fieldTag.text('viz') === 'line'
+        : fieldTag.has('line_chart');
+
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasLineChartTag && !isRepeatedRecord) {
