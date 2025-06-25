@@ -46,6 +46,14 @@ registerMalloyRender({
 });
 ```
 
+## Plugin System
+
+The Malloy Renderer supports a plugin system for creating custom visualizations. See the plugin documentation:
+
+- [Plugin System Overview](./docs/plugin-system.md) - Comprehensive guide to the plugin architecture
+- [Plugin Quick Start](./docs/plugin-quick-start.md) - Get started quickly with minimal examples  
+- [Plugin API Reference](./docs/plugin-api-reference.md) - Complete API documentation
+
 # Developing
 
 See the [Developing README](./DEVELOPING.md)
