@@ -20,14 +20,9 @@ jobs:
         with:
           node-version: 20.x
 
+      # TODO (vitor): use the docker image.
       - name: npm install, build, and test
-        run: |
-          npm ci --loglevel error
-          npm run build
-          tar -xzvf test/data/sqlserver/malloytest-sqlserver.tar.gz
-          ./test/mysql/sqlserver_start.sh
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.sqlserver.config.ts
-          ./test/sqlserver/sqlserver_stop.sh
+        run: echo Ill work on this later && exit 1
         env:
           MALLOY_DATABASES: mysql
           SQLSERVER_USER: SA
