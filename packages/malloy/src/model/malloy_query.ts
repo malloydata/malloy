@@ -419,7 +419,10 @@ class GenerateState {
 
 abstract class QueryNode {
   readonly referenceId: string;
-  constructor(referenceId?: string) {
+  constructor(
+    referenceId?: string,
+    readonly referencePath?: string[]
+  ) {
     this.referenceId = referenceId ?? uuidv4();
   }
   abstract getIdentifier(): string;
@@ -432,8 +435,13 @@ class QueryField extends QueryNode {
   fieldDef: FieldDef;
   parent: QueryStruct;
 
-  constructor(fieldDef: FieldDef, parent: QueryStruct, referenceId?: string) {
-    super(referenceId);
+  constructor(
+    fieldDef: FieldDef,
+    parent: QueryStruct,
+    referenceId?: string,
+    referencePath?: string[]
+  ) {
+    super(referenceId, referencePath);
     this.fieldDef = fieldDef;
     this.parent = parent;
     this.fieldDef = fieldDef;
@@ -1582,8 +1590,13 @@ type QueryBasicField = QueryAtomicField<BasicAtomicDef>;
 abstract class QueryAtomicField<T extends AtomicFieldDef> extends QueryField {
   fieldDef: T;
 
-  constructor(fieldDef: T, parent: QueryStruct, refId?: string) {
-    super(fieldDef, parent, refId);
+  constructor(
+    fieldDef: T,
+    parent: QueryStruct,
+    refId?: string,
+    referencePath?: string[]
+  ) {
+    super(fieldDef, parent, refId, referencePath);
     this.fieldDef = fieldDef; // wish I didn't have to do this
   }
 
@@ -2836,11 +2849,13 @@ class QueryQuery extends QueryField {
           : undefined;
         const sourceClasses = [sourceField];
         const referenceId = fi.f.referenceId;
+        const referencePath = fi.f.referencePath;
         const base = {
           sourceField,
           sourceExpression,
           sourceClasses,
           referenceId,
+          referencePath,
         };
         if (isBasicCalculation(fi.f)) {
           filterList = fi.f.getFilterList();
@@ -4853,7 +4868,11 @@ class QueryStruct {
   }
 
   /** makes a new queryable field object from a fieldDef */
-  makeQueryField(field: FieldDef, referenceId?: string): QueryField {
+  makeQueryField(
+    field: FieldDef,
+    referenceId?: string,
+    referencePath?: string[]
+  ): QueryField {
     switch (field.type) {
       case 'array':
       case 'record':
@@ -4868,19 +4887,24 @@ class QueryStruct {
           this.prepareResultOptions
         );
       case 'string':
-        return new QueryFieldString(field, this, referenceId);
+        return new QueryFieldString(field, this, referenceId, referencePath);
       case 'date':
-        return new QueryFieldDate(field, this, referenceId);
+        return new QueryFieldDate(field, this, referenceId, referencePath);
       case 'timestamp':
-        return new QueryFieldTimestamp(field, this, referenceId);
+        return new QueryFieldTimestamp(field, this, referenceId, referencePath);
       case 'number':
-        return new QueryFieldNumber(field, this, referenceId);
+        return new QueryFieldNumber(field, this, referenceId, referencePath);
       case 'boolean':
-        return new QueryFieldBoolean(field, this, referenceId);
+        return new QueryFieldBoolean(field, this, referenceId, referencePath);
       case 'json':
-        return new QueryFieldJSON(field, this, referenceId);
+        return new QueryFieldJSON(field, this, referenceId, referencePath);
       case 'sql native':
-        return new QueryFieldUnsupported(field, this, referenceId);
+        return new QueryFieldUnsupported(
+          field,
+          this,
+          referenceId,
+          referencePath
+        );
       case 'turtle':
         return QueryQuery.makeQuery(field, this, undefined, false);
       default:
@@ -5003,7 +5027,7 @@ class QueryStruct {
         );
       } else {
         const newDef = {...field.fieldDef, annotation, drillView};
-        return field.parent.makeQueryField(newDef, field.referenceId);
+        return field.parent.makeQueryField(newDef, field.referenceId, f.path);
       }
     }
     return field;
