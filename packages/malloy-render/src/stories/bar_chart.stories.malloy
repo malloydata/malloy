@@ -572,9 +572,36 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       limit: 10
     }
   }
+
+  #(story)
+
+  view: numeric_dimensions_as_y is {
+
+    # viz=bar
+    nest:
+      tagged is {
+        group_by: brand
+        aggregate: total_sales
+        limit: 10
+      } -> {
+        group_by:
+          brand
+          # y
+          total_sales
+      }
+      misconfigured is {
+        group_by:
+          brand
+          # y
+          department
+      }
+      not_tagged is {
+        group_by: brand, department
+        limit: 10
+      }
+  }
 }
 
-run: products -> { group_by: distribution_center_id}
 
 source: random_data is duckdb.sql("""
   from (SELECT i  FROM range(0, 1000) t(i))
