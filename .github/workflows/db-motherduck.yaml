@@ -23,8 +23,7 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.duckdb-other.config.ts
+          npm run ci-motherduck
         env:
           CI: true
-          MALLOY_DATABASES: motherduck
           MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN_10 }}

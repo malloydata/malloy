@@ -27,7 +27,6 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.bigquery.config.ts
+          npm run ci-bigquery
         env:
           CI: true
-          MALLOY_DATABASES: bigquery

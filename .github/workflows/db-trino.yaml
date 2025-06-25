@@ -26,10 +26,9 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/trino/trino_start.sh
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.trino.config.ts
+          npm run ci-trino
           ./test/trino/trino_stop.sh
         env:
-          MALLOY_DATABASES: trino
           BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
           TRINO_CATALOG: bigquery
           TRINO_SCHEMA: malloytest

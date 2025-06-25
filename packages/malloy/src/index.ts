@@ -120,6 +120,7 @@ export type {
   RecordLiteralNode,
   StringLiteralNode,
   ArrayLiteralNode,
+  SourceComponentInfo,
 } from './model';
 export {
   isSourceDef,
@@ -203,7 +204,6 @@ export type {
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
-  SourceComponentInfo,
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
