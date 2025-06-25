@@ -52,6 +52,7 @@ interface LineChartPluginInstance
   field: NestField;
   seriesStats: Map<string, SeriesStats>;
   getTopNSeries: (maxSeries: number) => (string | number | boolean)[];
+  syntheticSeriesField?: Field;
 }
 
 export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance> =
@@ -141,34 +142,89 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
         },
 
         processData: (field, cell): void => {
-          // Calculate series statistics for series limiting
-          const yFieldPath = settings.yChannel.fields[0];
-          const seriesFieldPath = settings.seriesChannel.fields[0];
-
-          if (!yFieldPath || !seriesFieldPath) return;
-
-          const yField = field.fieldAt(yFieldPath);
-          const seriesField = field.fieldAt(seriesFieldPath);
-          if (!yField || !seriesField) return;
-
           // Process all rows to calculate series stats
           if (!('rows' in cell)) return; // Only process RepeatedRecordCell
 
-          for (const row of cell.rows) {
-            const seriesValue =
-              row.column(seriesField.name).value ?? NULL_SYMBOL;
-            const yValue = row.column(yField.name).value;
+          const yFieldPath = settings.yChannel.fields[0];
+          if (!yFieldPath) return;
+          const yField = field.fieldAt(yFieldPath);
+          if (!yField) return;
 
-            if (typeof yValue === 'number') {
-              const stats = seriesStats.get(seriesValue) ?? {
-                sum: 0,
-                count: 0,
-                avg: 0,
-              };
-              stats.sum += yValue;
-              stats.count += 1;
-              stats.avg = stats.sum / stats.count;
-              seriesStats.set(seriesValue, stats);
+          // Handle YoY mode - create synthetic series field for years
+          if (settings.mode === 'yoy') {
+            const xFieldPath = settings.xChannel.fields[0];
+            if (!xFieldPath) return;
+            const xField = field.fieldAt(xFieldPath);
+            if (!xField || !(xField.isDate() || xField.isTime())) return;
+
+            const yearValues = new Set<string>();
+
+            // Extract years from the data
+            for (const row of cell.rows) {
+              const xCell = row.column(xField.name);
+              const year = new Date(xCell.value.valueOf())
+                .getFullYear()
+                .toString();
+              yearValues.add(year);
+            }
+
+            // Create synthetic series field
+            pluginInstance.syntheticSeriesField = {
+              name: 'Year',
+              valueSet: yearValues,
+              referenceId: '__synthetic_year__',
+              // Add minimal Field interface properties that might be used
+              isTime: () => false,
+              isDate: () => false,
+              isBasic: () => true,
+              isNumber: () => false,
+              isString: () => true,
+              isBoolean: () => false,
+            } as unknown as Field;
+
+            // Calculate series stats for YoY mode
+            for (const row of cell.rows) {
+              const year = new Date(row.column(xField.name).value.valueOf())
+                .getFullYear()
+                .toString();
+              const yValue = row.column(yField.name).value;
+
+              if (typeof yValue === 'number') {
+                const stats = seriesStats.get(year) ?? {
+                  sum: 0,
+                  count: 0,
+                  avg: 0,
+                };
+                stats.sum += yValue;
+                stats.count += 1;
+                stats.avg = stats.sum / stats.count;
+                seriesStats.set(year, stats);
+              }
+            }
+          } else {
+            // Normal mode - use actual series field
+            const seriesFieldPath = settings.seriesChannel.fields[0];
+            if (!seriesFieldPath) return;
+
+            const seriesField = field.fieldAt(seriesFieldPath);
+            if (!seriesField) return;
+
+            for (const row of cell.rows) {
+              const seriesValue =
+                row.column(seriesField.name).value ?? NULL_SYMBOL;
+              const yValue = row.column(yField.name).value;
+
+              if (typeof yValue === 'number') {
+                const stats = seriesStats.get(seriesValue) ?? {
+                  sum: 0,
+                  count: 0,
+                  avg: 0,
+                };
+                stats.sum += yValue;
+                stats.count += 1;
+                stats.avg = stats.sum / stats.count;
+                seriesStats.set(seriesValue, stats);
+              }
             }
           }
         },

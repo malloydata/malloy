@@ -19,9 +19,8 @@ export function renderTime({dataColumn}: RendererProps) {
     );
 
   const value = dataColumn.value;
-  return renderTimeString(
-    value,
-    dataColumn.field.isDate(),
-    dataColumn.field.timeframe
-  );
+  return renderTimeString(value, {
+    isDate: dataColumn.field.isDate(),
+    timeframe: dataColumn.field.timeframe,
+  });
 }
