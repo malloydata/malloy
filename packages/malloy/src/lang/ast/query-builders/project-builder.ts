@@ -45,6 +45,7 @@ export class ProjectBuilder
 {
   resultFS: ProjectFieldSpace;
   inputFS: QueryInputSpace;
+  isNestIn: QueryOperationSpace | undefined;
   readonly type = 'project';
 
   constructor(
@@ -56,10 +57,16 @@ export class ProjectBuilder
     super();
     this.resultFS = new ProjectFieldSpace(baseFS, refineThis, isNestIn, astEl);
     this.inputFS = this.resultFS.inputSpace();
+    this.isNestIn = isNestIn;
   }
 
   execute(qp: QueryProperty): void {
-    if (qp.elementType === 'having' || qp instanceof GroupBy) {
+    if (this.resultFS.nestParent) {
+      qp.logError(
+        'illegal-select-in-nested-view',
+        'Cannot use a select statement in a nested view. Reformulate the query to use `group_by:` instead.'
+      );
+    } else if (qp.elementType === 'having' || qp instanceof GroupBy) {
       qp.logError(
         'illegal-operation-in-select-segment',
         'Illegal statement in a select query operation'

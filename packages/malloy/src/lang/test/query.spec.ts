@@ -242,6 +242,20 @@ describe('query:', () => {
         }`;
       expect(nestExclude).toTranslate();
     });
+    test('cannot use a select statement in a nested view', () => {
+      expect(`
+        run: a -> {
+          group_by: astr,
+          nest: select_star is {
+            where: ai = 1
+            select: *
+          }
+        }`).toLogAtLeast(
+        errorMessage(
+          'Cannot use a select statement in a nested view. Reformulate the query to use `group_by:` instead.'
+        )
+      );
+    });
   });
   describe('query operation typechecking', () => {
     describe('field declarations', () => {

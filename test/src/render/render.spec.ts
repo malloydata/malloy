@@ -264,11 +264,11 @@ describe('rendering results', () => {
           nest: height_by_age
             # line_chart
           is {
-            select: monthy, height
+            group_by: monthy, height
           }
 
           nest: weight_by_age_bar_chart is {
-            select: monthy, wt
+            group_by: monthy, wt
           }
 
           aggregate:
@@ -336,7 +336,7 @@ describe('rendering results', () => {
               order_by: nm
               nest: height_by_age
               is {
-                select:
+                group_by:
                   # hidden
                   monthy,
                   height
@@ -345,12 +345,12 @@ describe('rendering results', () => {
               # hidden
               nest: height_by_age_hidden
               is {
-                select: monthy, height
+                group_by: monthy, height
               }
 
               # list
               nest: monthy is {
-                select: price
+                group_by: price
               }
 
               aggregate:
