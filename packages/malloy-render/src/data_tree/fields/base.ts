@@ -74,7 +74,11 @@ export abstract class FieldBase {
     if (this.parent) {
       const view = this.metadataTag.text('drill_view');
       const parentPath = this.parent.drillPath;
-      if (view === undefined) return parentPath;
+      if (view === undefined) {
+        const referencePath = this.metadataTag.textArray('drill_path');
+        if (referencePath) return referencePath;
+        return parentPath;
+      }
       return [...parentPath, view];
     }
     return [];
