@@ -267,10 +267,6 @@ function getResultMetadataAnnotation(
     addDrillFiltersTag(tag, resultMetadata.filterList);
     hasAny = true;
   }
-  if (resultMetadata.referencePath) {
-    tag.set(['drill_path'], resultMetadata.referencePath);
-    hasAny = true;
-  }
   if (resultMetadata.fieldKind === 'dimension') {
     const dot = '.';
     // If field is joined-in from another table i.e. of type `tableName.columnName`,

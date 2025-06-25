@@ -558,7 +558,6 @@ export interface ResultMetadataDef {
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
   referenceId?: string;
-  referencePath?: string[];
   drillable?: boolean;
 }
 
