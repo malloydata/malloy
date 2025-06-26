@@ -20,6 +20,35 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     limit: 10
   }
 
+  #(story)
+  view: series_concatenated is {
+    # viz=bar size=lg
+    nest: series_concat is {
+      group_by:
+        # x
+        brand,
+        # series
+        department
+        # series
+        dcId
+      aggregate: `Sales $` is retail_price.avg()*500
+      limit: 10
+    }
+    # viz=bar size=lg
+    nest: no_explicit_series is {
+      group_by:
+        # x
+        brand,
+        # series
+        department
+        dcId
+      aggregate: `Sales $` is retail_price.avg()*500
+      limit: 10
+    }
+  }
+
+
+
   # dashboard
   view: interactions is {
     nest:
