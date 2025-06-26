@@ -32,7 +32,11 @@ import {getMarkName} from '@/component/vega/vega-utils';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
-import {NULL_SYMBOL, renderTimeString} from '@/util';
+import {
+  NULL_SYMBOL,
+  renderTimeString,
+  type RenderTimeStringOptions,
+} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
@@ -57,6 +61,17 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
     }
   }
   return inverted;
+}
+
+// Helper to get extraction format for renderTimeString based on timeframe
+function getExtractionFormat(
+  timeframe?: string
+): RenderTimeStringOptions['extractFormat'] {
+  if (!timeframe) return 'month-day';
+  if (timeframe.includes('month')) return 'month';
+  if (timeframe.includes('quarter')) return 'quarter';
+  if (timeframe.includes('week')) return 'week';
+  return 'month-day';
 }
 
 export interface LineChartSettings {
@@ -111,11 +126,21 @@ export function generateLineChartVegaSpecV2(
   };
 
   const yField = explore.fieldAt(yFieldPath);
-  const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+
+  // Use synthetic series field for YoY mode
+  if (settings.mode === 'yoy' && plugin.syntheticSeriesField) {
+    seriesField = plugin.syntheticSeriesField;
+  }
 
   const xRef = xField.referenceId;
   const yRef = yField.referenceId;
   const seriesRef = seriesField?.referenceId;
+
+  const extractFormat =
+    settings.mode === 'yoy'
+      ? getExtractionFormat(xField.isTime() ? xField.timeframe : undefined)
+      : undefined;
 
   // Map y fields to ref ids
   const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
@@ -705,14 +730,18 @@ export function generateLineChartVegaSpecV2(
     scales: [
       {
         name: 'xscale',
-        type: xIsDateorTime ? 'time' : 'point',
-        domain: shouldShareXDomain
-          ? xIsDateorTime
-            ? [Number(xField.minValue), Number(xField.maxValue)]
-            : xIsBoolean
-            ? [true, false]
-            : [...xField.valueSet]
-          : {data: 'values', field: 'x'},
+        type: xIsDateorTime ? 'utc' : 'point',
+        domain:
+          settings.mode === 'yoy'
+            ? // For YoY mode, calculate domain from actual data
+              {data: 'values', field: 'x'}
+            : shouldShareXDomain
+            ? xIsDateorTime
+              ? [Number(xField.minValue), Number(xField.maxValue)]
+              : xIsBoolean
+              ? [true, false]
+              : [...xField.valueSet]
+            : {data: 'values', field: 'x'},
         range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,
       },
@@ -735,7 +764,7 @@ export function generateLineChartVegaSpecV2(
         range: 'category',
         domain:
           isDimensionalSeries && shouldShareSeriesDomain && seriesSet
-            ? [...seriesSet!]
+            ? [...seriesSet]
             : {
                 data: 'values',
                 field: 'series',
@@ -756,12 +785,12 @@ export function generateLineChartVegaSpecV2(
                 labels: {
                   enter: {
                     text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`,
                     },
                   },
                   update: {
                     text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`,
                     },
                   },
                 },
@@ -791,12 +820,14 @@ export function generateLineChartVegaSpecV2(
     // Get legend dimensions
     if (isDimensionalSeries) {
       // This is for global; how to do across nests for local?
-      maxCharCt = [...seriesSet!].reduce<number>(
-        // TODO better handle the null symbol here
-        (a, b) => Math.max(a, b?.toString().length ?? 1),
-        0
-      );
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      if (seriesSet) {
+        maxCharCt = [...seriesSet].reduce<number>(
+          // TODO better handle the null symbol here
+          (a, b) => Math.max(a, b?.toString().length ?? 1),
+          0
+        );
+        maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      }
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
         (max, f) => Math.max(max, f.length),
@@ -827,8 +858,8 @@ export function generateLineChartVegaSpecV2(
       orient: 'right',
       ...legendSettings,
       values:
-        isDimensionalSeries && shouldShareSeriesDomain
-          ? [...seriesSet!]
+        isDimensionalSeries && shouldShareSeriesDomain && seriesSet
+          ? [...seriesSet]
           : undefined,
       encode: {
         entries: {
@@ -891,6 +922,46 @@ export function generateLineChartVegaSpecV2(
       return cell.isTime() ? cell.value.valueOf() : cell.value;
     };
 
+    const getYoYTransformedData = (row: RecordCell) => {
+      const cell = row.column(xField.name);
+      if (!cell.isTime() || !cell.value) return null;
+
+      const date = new Date(cell.value.valueOf());
+      const year = date.getFullYear();
+
+      // Create a normalized date for the same day/month but in a common year (2000)
+      // This allows for proper time scaling on the x-axis
+      let normalizedDate: Date;
+
+      // Handle different granularities
+      const timeframe = xField.isTime() ? xField.timeframe : undefined;
+      if (timeframe?.includes('month')) {
+        // For month-based data, use the first of the month
+        normalizedDate = new Date(Date.UTC(2000, date.getUTCMonth(), 1));
+      } else if (timeframe?.includes('quarter')) {
+        // For quarter-based data, use the first month of the quarter
+        const quarter = Math.floor(date.getUTCMonth() / 3);
+        normalizedDate = new Date(Date.UTC(2000, quarter * 3, 1));
+      } else if (timeframe?.includes('week')) {
+        // For week-based data, calculate week of year
+        const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        const diff = date.getTime() - start.getTime();
+        const weekOfYear = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+        normalizedDate = new Date(Date.UTC(2000, 0, 1 + weekOfYear * 7));
+      } else {
+        // For daily data, use month and day
+        normalizedDate = new Date(
+          Date.UTC(2000, date.getUTCMonth(), date.getUTCDate())
+        );
+      }
+
+      return {
+        originalDate: date,
+        year: year.toString(),
+        normalizedX: normalizedDate.valueOf(),
+      };
+    };
+
     // TODO: How to limit data across nested charts? Which are unaware of their data usage?
     //    this will only limit data per nested chart
     const mappedData: {
@@ -901,6 +972,8 @@ export function generateLineChartVegaSpecV2(
       series: CellValue;
     }[] = [];
     const localSeriesSet = new Set<string | number | boolean>();
+    let yoyMinDate: number | undefined;
+    let yoyMaxDate: number | undefined;
     function skipSeries(seriesVal: string | number | boolean) {
       if (seriesSet && (explore.isRoot() || shouldShareSeriesDomain)) {
         return !seriesSet.has(seriesVal);
@@ -914,6 +987,43 @@ export function generateLineChartVegaSpecV2(
 
     // need to limit to max data points AFTER the series is filtered
     data.rows.forEach(row => {
+      // Handle year-over-year mode
+      if (settings.mode === 'yoy') {
+        const yoyData = getYoYTransformedData(row);
+        if (!yoyData) return; // Skip rows with invalid dates
+
+        const isMissingY = row.column(yField.name).value === null;
+        if (isMissingY) return; // Skip rows with missing y values
+
+        // For YoY mode, manage year series separately
+        if (
+          localSeriesSet.size >= maxSeries &&
+          !localSeriesSet.has(yoyData.year)
+        ) {
+          return; // Skip if we've reached max series and this year isn't already included
+        }
+        localSeriesSet.add(yoyData.year);
+
+        // Track min/max dates for YoY mode
+        const normalizedX = yoyData.normalizedX as number;
+        if (yoyMinDate === undefined || normalizedX < yoyMinDate) {
+          yoyMinDate = normalizedX;
+        }
+        if (yoyMaxDate === undefined || normalizedX > yoyMaxDate) {
+          yoyMaxDate = normalizedX;
+        }
+
+        mappedData.push({
+          __values: row.allCellValues(),
+          __row: row,
+          x: yoyData.normalizedX,
+          y: row.column(yField.name).value,
+          series: yoyData.year, // Year becomes the series
+        });
+        return;
+      }
+
+      // Normal mode processing
       let seriesVal = seriesField
         ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
@@ -1003,11 +1113,20 @@ export function generateLineChartVegaSpecV2(
         const title = xIsDateorTime
           ? x === NULL_SYMBOL
             ? NULL_SYMBOL
-            : renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
+            : renderTimeString(new Date(x), {
+                isDate: xField.isDate(),
+                timeframe: xField.isTime() ? xField.timeframe : undefined,
+                extractFormat,
+              })
           : x;
 
         const sortedRecords = [...records]
-          .sort((a, b) => b.y - a.y)
+          .sort(
+            (a, b) =>
+              xIsDateorTime
+                ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
+                : b.y - a.y // Sort by value in descending order for normal mode
+          )
           .slice(0, tooltipItemCountLimit);
 
         tooltipData = {
@@ -1037,18 +1156,23 @@ export function generateLineChartVegaSpecV2(
         const title = xIsDateorTime
           ? itemData.x === NULL_SYMBOL
             ? NULL_SYMBOL
-            : renderTimeString(
-                new Date(itemData.x),
-                xField.isDate(),
-                xField.timeframe
-              )
+            : renderTimeString(new Date(itemData.x), {
+                isDate: xField.isDate(),
+                timeframe: xField.isTime() ? xField.timeframe : undefined,
+                extractFormat,
+              })
           : itemData.x;
 
         // If the highlighted item is not included in the first ~20,
         // then it will probably be cut off.
 
         const sortedRecords = [...records]
-          .sort((a, b) => b.y - a.y)
+          .sort(
+            (a, b) =>
+              xIsDateorTime
+                ? a.series.localeCompare(b.series) // Sort by year in ascending order for YoY mode
+                : b.y - a.y // Sort by value in descending order for normal mode
+          )
           .filter(
             (item, index) =>
               index <= tooltipItemCountLimit ||

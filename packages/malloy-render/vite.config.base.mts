@@ -30,6 +30,7 @@ export default defineConfig({
     commonjsOptions: {
       include: [/malloy/, /node_modules/],
     },
+    sourcemap: process.env.NODE_ENV === 'development',
   },
   define: {
     'process.env': {},

@@ -192,11 +192,47 @@ function padZeros(num: number, length = 2) {
   return `${'0'.repeat(length - 1)}${num}`.slice(-length);
 }
 
+export interface RenderTimeStringOptions {
+  isDate?: boolean;
+  timeframe?: string;
+  extractFormat?: 'month-day' | 'quarter' | 'month' | 'week' | 'day';
+}
+
 export function renderTimeString(
   value: Date,
-  isDate: boolean,
-  timeframe?: string
+  options: RenderTimeStringOptions = {}
 ) {
+  // Handle extraction formats for YoY mode
+  if (options.extractFormat) {
+    switch (options.extractFormat) {
+      case 'month-day':
+        return value.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        });
+      case 'month':
+        return value.toLocaleDateString('en-US', {
+          month: 'long',
+          timeZone: 'UTC',
+        });
+      case 'quarter':
+        return `Q${Math.floor(value.getUTCMonth() / 3) + 1}`;
+      case 'week':
+        return value.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        });
+      case 'day':
+        return value.toLocaleDateString('en-US', {
+          day: 'numeric',
+          timeZone: 'UTC',
+        });
+    }
+  }
+
+  // Original logic
   const fullYear = value.getUTCFullYear();
   const fullMonth = padZeros(value.getUTCMonth() + 1);
   const fullDate = padZeros(value.getUTCDate());
@@ -205,7 +241,7 @@ export function renderTimeString(
   const seconds = padZeros(value.getUTCSeconds());
   const time = `${hours}:${minutes}:${seconds}`;
   const dateDisplay = `${fullYear}-${fullMonth}-${fullDate}`;
-  switch (timeframe) {
+  switch (options.timeframe) {
     case 'minute': {
       return `${dateDisplay} ${hours}:${minutes}`;
     }
@@ -228,7 +264,7 @@ export function renderTimeString(
       return value.getUTCFullYear().toString();
     }
     default: {
-      if (isDate) return dateDisplay;
+      if (options.isDate) return dateDisplay;
       return `${dateDisplay} ${time}`;
     }
   }
@@ -249,7 +285,11 @@ export function valueToMalloy(value: Cell) {
     return value.value.toString();
   } else if (value.isTime()) {
     return (
-      '@' + renderTimeString(value.value, value.isDate(), value.field.timeframe)
+      '@' +
+      renderTimeString(value.value, {
+        isDate: value.isDate(),
+        timeframe: value.field.timeframe,
+      })
     );
   } else {
     return 'invalid_drill_literal()';

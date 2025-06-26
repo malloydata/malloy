@@ -8,7 +8,7 @@
 import {expressionFunction} from 'vega';
 import {renderNumericField} from '../render-numeric-field';
 import type {BrushData} from '../result-store/result-store';
-import {renderTimeString} from '../../util';
+import {renderTimeString, type RenderTimeStringOptions} from '../../util';
 import type {NestField} from '../../data_tree';
 
 if (!expressionFunction('renderMalloyNumber')) {
@@ -29,15 +29,25 @@ if (!expressionFunction('renderMalloyNumber')) {
 if (!expressionFunction('renderMalloyTime')) {
   expressionFunction(
     'renderMalloyTime',
-    (explore: NestField, fieldPath: string, value: number) => {
+    (
+      explore: NestField,
+      fieldPath: string,
+      value: number,
+      extractFormat?: string
+    ) => {
       if (explore) {
         const field = explore.fieldAt(fieldPath);
-        if (field.isTime())
-          return renderTimeString(
-            new Date(value),
-            field.isDate(),
-            field.timeframe
-          );
+        if (field.isTime()) {
+          const options: RenderTimeStringOptions = {
+            isDate: field.isDate(),
+            timeframe: field.timeframe,
+          };
+          if (extractFormat) {
+            options.extractFormat =
+              extractFormat as RenderTimeStringOptions['extractFormat'];
+          }
+          return renderTimeString(new Date(value), options);
+        }
       }
       return String(value);
     }

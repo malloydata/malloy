@@ -58,8 +58,9 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       // Match repeated record fields with bar chart tags
-      const hasBarChartTag =
-        fieldTag.has('bar_chart') || fieldTag.text('viz') === 'bar';
+      const hasBarChartTag = fieldTag.has('viz')
+        ? fieldTag.text('viz') === 'bar'
+        : fieldTag.has('bar_chart');
       const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
       if (hasBarChartTag && !isRepeatedRecord) {

@@ -103,9 +103,30 @@ export function getBarChartSettings(
     xChannel.fields.push(getField(vizTag.text('x')!));
   }
   if (vizTag.text('y')) {
-    yChannel.fields.push(getField(vizTag.text('y')!));
+    const yFieldRef = vizTag.text('y')!;
+    const yFieldPath = getField(yFieldRef);
+    const yField = explore.fieldAt(yFieldPath);
+
+    // Validate Y field
+    if (!yField.isNumber() && !yField.wasCalculation()) {
+      throw new Error(
+        `Malloy Bar Chart: Field "${yField.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
+      );
+    }
+    yChannel.fields.push(yFieldPath);
   } else if (vizTag.textArray('y')) {
-    yChannel.fields.push(...vizTag.textArray('y')!.map(getField));
+    const yFieldRefs = vizTag.textArray('y')!;
+    yFieldRefs.forEach(ref => {
+      const fieldPath = getField(ref);
+      const field = explore.fieldAt(fieldPath);
+
+      if (!field.isNumber() && !field.wasCalculation()) {
+        throw new Error(
+          `Malloy Bar Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
+        );
+      }
+      yChannel.fields.push(fieldPath);
+    });
   }
   if (vizTag.text('series')) {
     seriesChannel.fields.push(getField(vizTag.text('series')!));
@@ -125,6 +146,12 @@ export function getBarChartSettings(
         embeddedX.push(pathTo);
       }
       if (tag.has('y')) {
+        // Validate y field
+        if (!field.isNumber() && !field.wasCalculation()) {
+          throw new Error(
+            `Malloy Bar Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
+          );
+        }
         embeddedY.push(pathTo);
       }
       if (tag.has('series')) {
@@ -152,8 +179,6 @@ export function getBarChartSettings(
     f => f.isBasic() && f.wasDimension()
   );
 
-  const measures = explore.fields.filter(f => f.wasCalculation());
-
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     // Pick date/time field first if it exists
@@ -177,7 +202,7 @@ export function getBarChartSettings(
   if (seriesChannel.fields.length === 0 && dimensions.length > 1) {
     const dimension = dimensions.find(d => {
       const path = explore.pathTo(d);
-      return !xChannel.fields.includes(path);
+      return !xChannel.fields.includes(path) && !yChannel.fields.includes(path);
     });
     if (dimension) {
       seriesChannel.fields.push(explore.pathTo(dimension));
@@ -194,9 +219,11 @@ export function getBarChartSettings(
       'Malloy Bar Chart: No dimensions found. A bar chart must have at least 1 dimension for the x axis.'
     );
   }
-  if (measures.length === 0) {
+
+  // Check if we have at least one Y field (either measure or explicitly tagged numeric dimension)
+  if (yChannel.fields.length === 0) {
     throw new Error(
-      'Malloy Bar Chart: No measures found. A bar chart must have at least 1 measure for the y axis.'
+      'Malloy Bar Chart: No measures found and no y channel specified. A bar chart must have at least 1 measure or explicitly tagged numeric dimension for the y axis.'
     );
   }
 

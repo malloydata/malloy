@@ -985,7 +985,10 @@ export function generateBarChartVegaSpec(
         records = item.datum.v;
 
         const title = xIsDateorTime
-          ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
+          ? renderTimeString(new Date(x), {
+              isDate: xField.isDate(),
+              timeframe: xField.timeframe,
+            })
           : x;
 
         tooltipData = {
@@ -1007,11 +1010,10 @@ export function generateBarChartVegaSpec(
         highlightedSeries = itemData.series;
         records = item.mark.group.datum.v;
         const title = xIsDateorTime
-          ? renderTimeString(
-              new Date(itemData.x),
-              xField.isDate(),
-              xField.timeframe
-            )
+          ? renderTimeString(new Date(itemData.x), {
+              isDate: xField.isDate(),
+              timeframe: xField.timeframe,
+            })
           : itemData.x;
 
         tooltipData = {
