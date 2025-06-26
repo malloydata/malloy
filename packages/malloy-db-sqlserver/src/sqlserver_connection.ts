@@ -156,48 +156,6 @@ export class SQLServerConnection
     return false;
   }
 
-  // TODO (vitor): This takes about 20 seconds. Kinda odd but we can figure it out.
-  // Right now it needs to run before running the tests.
-  protected async maybeCreateNumbersTable(
-    client: ConnectionPool,
-    schema: string | undefined = 'dbo'
-  ) {
-    const query = `
-    IF OBJECT_ID('[${schema}].malloynumbers', 'U') IS NULL
-    BEGIN
-        PRINT 'Creating [${schema}].malloynumbers...';
-
-        CREATE TABLE [${schema}].malloynumbers (
-            n INT NOT NULL PRIMARY KEY
-        );
-
-        PRINT 'Populating [${schema}].malloynumbers with 10 million rows...';
-
-        ;WITH
-        E1 AS (SELECT 1 AS n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) AS x(n)), -- 10
-        E2 AS (SELECT 1 AS n FROM E1 AS a CROSS JOIN E1 AS b),                             -- 100
-        E3 AS (SELECT 1 AS n FROM E2 AS a CROSS JOIN E2 AS b),                             -- 10,000
-        E4 AS (SELECT 1 AS n FROM E3 AS a CROSS JOIN E2 AS b),                             -- 1,000,000
-        E5 AS (SELECT 1 AS n FROM E4 AS a CROSS JOIN E1 AS b),                             -- 10,000,000
-        Tally AS (
-            SELECT TOP (10000000)
-                  ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS n
-            FROM E5
-        )
-        INSERT INTO [${schema}].malloynumbers (n)
-        SELECT n FROM Tally
-        OPTION (MAXRECURSION 0);
-
-        PRINT '[${schema}].malloynumbers created and populated.';
-    END
-    ELSE
-    BEGIN
-        PRINT '[${schema}].malloynumbers already exists. Skipping creation.';
-    END;
-    `;
-    await client.query(query);
-  }
-
   protected async getClient(): Promise<ConnectionPool> {
     const {
       username: user,

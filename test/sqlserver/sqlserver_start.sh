@@ -64,4 +64,38 @@ echo Schema created
 docker exec -e USERNAME=$USERNAME -e PASSWORD=$PASSWORD -e DATABASE_NAME=$DATABASE_NAME -e SERVER_NAME=$SERVER_NAME $CONTAINER_NAME /tmp/seed/seed.sh
 echo Seed completed
 
+# Lib consumers will have to run this somehow. Idk where to put it.
+echo Creating malloynumbers table
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -Q "
+IF OBJECT_ID('[dbo].malloynumbers', 'U') IS NULL
+    BEGIN
+        PRINT 'Creating [dbo].malloynumbers...';
+        CREATE TABLE [dbo].malloynumbers (
+            n INT NOT NULL PRIMARY KEY
+        );
+        PRINT 'Populating [dbo].malloynumbers with 10 million rows...';
+        ;WITH
+        E1 AS (SELECT 1 AS n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) AS x(n)), -- 10
+        E2 AS (SELECT 1 AS n FROM E1 AS a CROSS JOIN E1 AS b),                             -- 100
+        E3 AS (SELECT 1 AS n FROM E2 AS a CROSS JOIN E2 AS b),                             -- 10,000
+        E4 AS (SELECT 1 AS n FROM E3 AS a CROSS JOIN E2 AS b),                             -- 1,000,000
+        E5 AS (SELECT 1 AS n FROM E4 AS a CROSS JOIN E1 AS b),                             -- 10,000,000
+        Tally AS (
+            SELECT TOP (10000000)
+                  ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS n
+            FROM E5
+        )
+        INSERT INTO [dbo].malloynumbers (n)
+        SELECT n FROM Tally
+        OPTION (MAXRECURSION 0);
+        PRINT '[dbo].malloynumbers created and populated.';
+    END
+    ELSE
+    BEGIN
+        PRINT '[dbo].malloynumbers already exists. Skipping creation.';
+    END;
+"
+
+echo malloynumbers table creation completed
+
 echo "SQL Server running on port 1433"
