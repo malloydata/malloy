@@ -30,7 +30,7 @@ DATADIR=$(dirname $SCRIPTDIR)/data/sqlserver
 echo "DATADIR is $DATADIR"
 
 docker run \
-  -p 1433:1433 -v $DATADIR:/init_data --name $CONTAINER_NAME --hostname $CONTAINER_NAME -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$PASSWORD" -d vitorelourenco/sqlserver:v0.0.1
+  -p 1433:1433 -v $DATADIR:/init_data --name $CONTAINER_NAME --hostname $CONTAINER_NAME -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$PASSWORD" -d vitorelourenco/sqlserver:v0
 
 # wait for server to start
 counter=0
