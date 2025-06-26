@@ -17,6 +17,16 @@ SQLSERVER_ENCRYPT=true
 SQLSERVER_TRUST_SERVER_CERTIFICATE=true
 ```
 
+## Install packages
+```sh
+npm i --no-save
+```
+
+## Build malloy
+```sh
+npm run build
+```
+
 ## Start/Populate the sqlserver instance on docker
 ```sh
 <root>/test/sqlserver/sqlserver_start.sh
