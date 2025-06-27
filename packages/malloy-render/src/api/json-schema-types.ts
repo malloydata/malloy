@@ -41,6 +41,7 @@ export interface JSONSchemaString extends JSONSchemaPropertyBase {
 
 export interface JSONSchemaFieldString extends JSONSchemaString {
   subtype: 'field';
+  fieldTypes?: readonly string[];
 }
 
 export interface JSONSchemaNumber extends JSONSchemaPropertyBase {

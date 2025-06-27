@@ -135,6 +135,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
           items: {
             type: 'string',
             subtype: 'field',
+            fieldTypes: ['number_type'],
           },
           default: [],
         },
