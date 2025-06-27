@@ -151,8 +151,6 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-const NUMBER_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
-
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
@@ -3324,6 +3322,31 @@ class QueryQuery extends QueryField {
     return s;
   }
 
+  generateSQLGroupBy(dimensionIndexes: number[]) {
+    const groupByClause = this.parent.dialect.groupByClause;
+    const n: (string | number)[] = [];
+    if (groupByClause === 'ordinal') {
+      n.concat(dimensionIndexes);
+    } else if (groupByClause === 'expression') {
+      const queryFields = dimensionIndexes
+        .map(this.rootResult.getFieldByNumber)
+        .map(fi => fi.fif.f);
+      for (const f of queryFields) {
+        if (
+          hasExpression(f.fieldDef) &&
+          f.fieldDef.e &&
+          f.fieldDef.e.sql &&
+          Array.from(exprWalk(f.fieldDef.e)).some(f => f.node === 'field')
+        ) {
+          n.push(f.fieldDef.e.sql);
+        }
+      }
+    } else {
+      throw new Error(`groupByClause ${groupByClause} not implemented`);
+    }
+    return n.length ? `GROUP BY ${n.join(', ')}\n` : '';
+  }
+
   generateSimpleSQL(stageWriter: StageWriter): string {
     let s = 'SELECT ';
     const limit =
@@ -3352,38 +3375,17 @@ class QueryQuery extends QueryField {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // group by
-    const n: string[] = [];
+    let groupBy = '';
     if (this.firstSegment.type === 'reduce') {
+      const indexes: number[] = [];
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          const groupByClause = this.parent.dialect.groupByClause;
-          switch (groupByClause) {
-            case 'ordinal': {
-              n.push(fi.fieldUsage.resultIndex.toString());
-              break;
-            }
-            case 'expression': {
-              if (
-                hasExpression(fi.f.fieldDef) &&
-                fi.f.fieldDef.e &&
-                fi.f.fieldDef.e.sql &&
-                Array.from(exprWalk(fi.f.fieldDef.e)).some(
-                  f => f.node === 'field'
-                )
-              ) {
-                n.push(fi.f.fieldDef.e.sql);
-              }
-              break;
-            }
-            default: {
-              throw new Error(`groupByClause ${groupByClause} not implemented`);
-            }
-          }
+          indexes.push(fi.fieldUsage.resultIndex);
         }
       }
+      groupBy = this.generateSQLGroupBy(indexes);
     }
-    const groupBy = n.length > 0 ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += groupBy;
 
@@ -3652,28 +3654,7 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const groupByClause = this.parent.dialect.groupByClause;
-    const n: (string | number)[] = [];
-    if (groupByClause === 'ordinal') {
-      n.concat(f.dimensionIndexes);
-    } else if (groupByClause === 'expression') {
-      const queryFields = f.dimensionIndexes
-        .map(this.rootResult.getFieldByNumber)
-        .map(fi => fi.fif.f);
-      for (const f of queryFields) {
-        if (
-          hasExpression(f.fieldDef) &&
-          f.fieldDef.e &&
-          f.fieldDef.e.sql &&
-          Array.from(exprWalk(f.fieldDef.e)).some(f => f.node === 'field')
-        ) {
-          n.push(f.fieldDef.e.sql);
-        }
-      }
-    } else {
-      throw new Error(`groupByClause ${groupByClause} not implemented`);
-    }
-    const groupBy = n.length > 0 ? `GROUP BY ${n.join(', ')}\n` : '';
+    const groupBy = this.generateSQLGroupBy(f.dimensionIndexes);
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
@@ -3787,21 +3768,7 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const n = (() => {
-      const groupByClause = this.parent.dialect.groupByClause;
-      if (groupByClause === 'ordinal') {
-        return f.dimensionIndexes;
-      } else if (groupByClause === 'expression') {
-        return f.dimensionIndexes
-          .map(this.rootResult.getFieldByNumber)
-          .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
-      } else {
-        throw new Error(`groupByClause ${groupByClause} not implemented`);
-      }
-    })();
-    const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
-
+    const groupBy = this.generateSQLGroupBy(f.dimensionIndexes);
     s += groupBy;
 
     this.resultStage = stageWriter.addStage(s);
@@ -3891,21 +3858,7 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const n = (() => {
-      const groupByClause = this.parent.dialect.groupByClause;
-      if (groupByClause === 'ordinal') {
-        return dimensionIndexes;
-      } else if (groupByClause === 'expression') {
-        return dimensionIndexes
-          .map(this.rootResult.getFieldByNumber)
-          .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
-      } else {
-        throw new Error(`groupByClause ${groupByClause} not implemented`);
-      }
-    })();
-    const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
-
+    const groupBy = this.generateSQLGroupBy(dimensionIndexes)
     s += groupBy;
 
     s += this.generateSQLOrderBy(
@@ -4413,20 +4366,22 @@ class QueryQueryIndexStage extends QueryQuery {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // group by
-    const n: string[] = [];
-    if (this.parent.dialect.groupByClause === 'expression') {
-      n.push(
-        'group_set',
-        fieldNameExpr,
-        fieldPathExpr,
-        fieldTypeExpr,
-        fieldValueExpr
-      );
-    } else {
-      n.push('1', '2', '3', '4', '5');
-    }
-    // For index search, we use the column names directly regardless of dialect
-    s += `GROUP BY ${n.join(', ')}\n`;
+    // const n: string[] = [];
+    // if (this.parent.dialect.groupByClause === 'expression') {
+    //   n.push(
+    //     'group_set',
+    //     fieldNameExpr,
+    //     fieldPathExpr,
+    //     fieldTypeExpr,
+    //     fieldValueExpr
+    //   );
+    // } else {
+    //   n.push('1', '2', '3', '4', '5');
+    // }
+    // // For index search, we use the column names directly regardless of dialect
+    // s += `GROUP BY ${n.join(', ')}\n`;
+    const groupBy = this.generateSQLGroupBy([1, 2, 3, 4, 5]);
+    s += groupBy;
 
     // limit
     if (limit && this.parent.dialect.limitClause === 'limit') {
