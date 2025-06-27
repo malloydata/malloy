@@ -3358,19 +3358,31 @@ class QueryQuery extends QueryField {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
           const groupByClause = this.parent.dialect.groupByClause;
-          if (groupByClause === 'ordinal') {
-            n.push(fi.fieldUsage.resultIndex.toString());
-          } else if (groupByClause === 'expression') {
-            const fieldExpr = fi.f.generateExpression(this.rootResult);
-            // TODO (vitor): Fix this. Avoiding numbers is not enough to avoid constant expressions
-            if (fieldExpr && !NUMBER_EXPR.test(fieldExpr)) {
-              n.push(fieldExpr);
+          switch (groupByClause) {
+            case 'ordinal': {
+              n.push(fi.fieldUsage.resultIndex.toString());
+              break;
             }
-          } else {
-            throw new Error(`groupByClause ${groupByClause} not implemented`);
+            case 'expression': {
+              if (
+                hasExpression(fi.f.fieldDef) &&
+                fi.f.fieldDef.e &&
+                fi.f.fieldDef.e.sql &&
+                Array.from(exprWalk(fi.f.fieldDef.e)).some(
+                  f => f.node === 'field'
+                )
+              ) {
+                n.push(fi.f.fieldDef.e.sql);
+              }
+              break;
+            }
+            default: {
+              throw new Error(`groupByClause ${groupByClause} not implemented`);
+            }
           }
         }
       }
+
       if (n.length > 0) {
         s += `GROUP BY ${n.join(',')}\n`;
       }
@@ -3640,19 +3652,34 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    const n = (() => {
-      const groupByClause = this.parent.dialect.groupByClause;
-      if (groupByClause === 'ordinal') {
-        return f.dimensionIndexes;
-      } else if (groupByClause === 'expression') {
-        return f.dimensionIndexes
-          .map(this.rootResult.getFieldByNumber)
-          .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
-      } else {
-        throw new Error(`groupByClause ${groupByClause} not implemented`);
+    // group by
+    const n: (string | number)[] = [];
+    const groupByClause = this.parent.dialect.groupByClause;
+    if (groupByClause === 'ordinal') {
+      n.concat(f.dimensionIndexes);
+    } else if (groupByClause === 'expression') {
+      const dimensionalFields = f.dimensionIndexes
+        .map(this.rootResult.getFieldByNumber)
+        .map(f => f.fif);
+      for (const field of dimensionalFields) {
+        const fi = field as FieldInstanceField;
+        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
+          if (
+            hasExpression(fi.f.fieldDef) &&
+            fi.f.fieldDef.e &&
+            fi.f.fieldDef.e.sql &&
+            Array.from(exprWalk(fi.f.fieldDef.e)).some(f => f.node === 'field')
+          ) {
+            n.push(fi.f.fieldDef.e.sql);
+          }
+        }
       }
-    })();
+    } else {
+      throw new Error(`groupByClause ${groupByClause} not implemented`);
+    }
+    if (n.length > 0) {
+      s += `GROUP BY ${n.join(',')}\n`;
+    }
 
     const groupBy = `GROUP BY ${n.join(', ')}\n`;
 
