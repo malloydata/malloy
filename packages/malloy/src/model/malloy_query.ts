@@ -151,6 +151,8 @@ import {
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
+const NUMBER_EXPR = /^[+-]?(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?$/;
+
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
 }
@@ -3350,7 +3352,7 @@ class QueryQuery extends QueryField {
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
     // group by
-    const n: (string | number)[] = [];
+    const n: string[] = [];
     if (this.firstSegment.type === 'reduce') {
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
@@ -3381,9 +3383,10 @@ class QueryQuery extends QueryField {
         }
       }
     }
-    const groupBy = n.length ? `GROUP BY ${n.join(',')}\n` : '';
+    const groupBy = n.length > 0 ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += groupBy;
+
     s += this.generateSQLFilters(this.rootResult, 'having').sql('having');
 
     // order by
@@ -3648,39 +3651,21 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    // group by
-    const n: (string | number)[] = [];
-    if (this.firstSegment.type === 'reduce') {
-      for (const field of this.rootResult.fields()) {
-        const fi = field as FieldInstanceField;
-        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          const groupByClause = this.parent.dialect.groupByClause;
-          switch (groupByClause) {
-            case 'ordinal': {
-              n.push(fi.fieldUsage.resultIndex.toString());
-              break;
-            }
-            case 'expression': {
-              if (
-                hasExpression(fi.f.fieldDef) &&
-                fi.f.fieldDef.e &&
-                fi.f.fieldDef.e.sql &&
-                Array.from(exprWalk(fi.f.fieldDef.e)).some(
-                  f => f.node === 'field'
-                )
-              ) {
-                n.push(fi.f.fieldDef.e.sql);
-              }
-              break;
-            }
-            default: {
-              throw new Error(`groupByClause ${groupByClause} not implemented`);
-            }
-          }
-        }
+    const n = (() => {
+      const groupByClause = this.parent.dialect.groupByClause;
+      if (groupByClause === 'ordinal') {
+        return f.dimensionIndexes;
+      } else if (groupByClause === 'expression') {
+        return f.dimensionIndexes
+          .map(this.rootResult.getFieldByNumber)
+          .map(fbn => fbn.fif.getSQL())
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
+      } else {
+        throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
-    }
-    const groupBy = n.length ? `GROUP BY ${n.join(',')}\n` : '';
+    })();
+
+    const groupBy = `GROUP BY ${n.join(', ')}\n`;
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
@@ -3794,30 +3779,19 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const n: (string | number)[] = [];
-    const groupByClause = this.parent.dialect.groupByClause;
-    if (groupByClause === 'ordinal') {
-      n.concat(f.dimensionIndexes);
-    } else if (groupByClause === 'expression') {
-      const dimensionalFields = f.dimensionIndexes
-        .map(this.rootResult.getFieldByNumber)
-        .map(f => f.fif);
-      for (const field of dimensionalFields) {
-        const fi = field as FieldInstanceField;
-        if (
-          fi.fieldUsage.type === 'result' &&
-          isScalarField(fi.f) &&
-          hasExpression(fi.f.fieldDef) &&
-          fi.f.fieldDef.e &&
-          fi.f.fieldDef.e.sql &&
-          Array.from(exprWalk(fi.f.fieldDef.e)).some(f => f.node === 'field')
-        ) {
-          n.push(fi.f.fieldDef.e.sql);
-        }
+    const n = (() => {
+      const groupByClause = this.parent.dialect.groupByClause;
+      if (groupByClause === 'ordinal') {
+        return f.dimensionIndexes;
+      } else if (groupByClause === 'expression') {
+        return f.dimensionIndexes
+          .map(this.rootResult.getFieldByNumber)
+          .map(fbn => fbn.fif.getSQL())
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
+      } else {
+        throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
-    } else {
-      throw new Error(`groupByClause ${groupByClause} not implemented`);
-    }
+    })();
     const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += groupBy;
@@ -3909,30 +3883,19 @@ class QueryQuery extends QueryField {
     }
 
     // group by
-    const n: (string | number)[] = [];
-    const groupByClause = this.parent.dialect.groupByClause;
-    if (groupByClause === 'ordinal') {
-      n.concat(dimensionIndexes);
-    } else if (groupByClause === 'expression') {
-      const dimensionalFields = dimensionIndexes
-        .map(this.rootResult.getFieldByNumber)
-        .map(f => f.fif);
-      for (const field of dimensionalFields) {
-        const fi = field as FieldInstanceField;
-        if (
-          fi.fieldUsage.type === 'result' &&
-          isScalarField(fi.f) &&
-          hasExpression(fi.f.fieldDef) &&
-          fi.f.fieldDef.e &&
-          fi.f.fieldDef.e.sql &&
-          Array.from(exprWalk(fi.f.fieldDef.e)).some(f => f.node === 'field')
-        ) {
-          n.push(fi.f.fieldDef.e.sql);
-        }
+    const n = (() => {
+      const groupByClause = this.parent.dialect.groupByClause;
+      if (groupByClause === 'ordinal') {
+        return dimensionIndexes;
+      } else if (groupByClause === 'expression') {
+        return dimensionIndexes
+          .map(this.rootResult.getFieldByNumber)
+          .map(fbn => fbn.fif.getSQL())
+          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
+      } else {
+        throw new Error(`groupByClause ${groupByClause} not implemented`);
       }
-    } else {
-      throw new Error(`groupByClause ${groupByClause} not implemented`);
-    }
+    })();
     const groupBy = n.length ? `GROUP BY ${n.join(', ')}\n` : '';
 
     s += groupBy;
