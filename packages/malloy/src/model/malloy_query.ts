@@ -3663,15 +3663,15 @@ class QueryQuery extends QueryField {
         .map(f => f.fif);
       for (const field of dimensionalFields) {
         const fi = field as FieldInstanceField;
-        if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-          if (
-            hasExpression(fi.f.fieldDef) &&
-            fi.f.fieldDef.e &&
-            fi.f.fieldDef.e.sql &&
-            Array.from(exprWalk(fi.f.fieldDef.e)).some(f => f.node === 'field')
-          ) {
-            n.push(fi.f.fieldDef.e.sql);
-          }
+        if (
+          fi.fieldUsage.type === 'result' &&
+          isScalarField(fi.f) &&
+          hasExpression(fi.f.fieldDef) &&
+          fi.f.fieldDef.e &&
+          fi.f.fieldDef.e.sql &&
+          Array.from(exprWalk(fi.f.fieldDef.e)).some(f => f.node === 'field')
+        ) {
+          n.push(fi.f.fieldDef.e.sql);
         }
       }
     } else {
