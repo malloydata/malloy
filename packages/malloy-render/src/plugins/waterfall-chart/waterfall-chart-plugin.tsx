@@ -121,7 +121,7 @@ export const WaterfallChartPluginFactory: RenderPluginFactory<WaterfallChartPlug
       getSettings: () => settings,
       getDefaultSettings: () => defaultWaterfallChartSettings,
       settingsToTag: (settings: Record<string, unknown>) => {
-        return waterfallChartSettingsToTag(settings as WaterfallChartSettings);
+        return waterfallChartSettingsToTag(settings as unknown as WaterfallChartSettings);
       },
     };
 
@@ -129,4 +129,3 @@ export const WaterfallChartPluginFactory: RenderPluginFactory<WaterfallChartPlug
   },
 };
 
-export type {WaterfallChartPluginInstance};

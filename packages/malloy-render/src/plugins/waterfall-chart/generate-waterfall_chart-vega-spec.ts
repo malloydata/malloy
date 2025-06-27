@@ -26,8 +26,13 @@ export function generateWaterfallChartVegaSpec(
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: metadata.parentSize.width,
     height: metadata.parentSize.height,
-    padding: 5,
+    padding: 64,
     data: [{name: 'values'}],
+    autosize: {
+      type: 'none',
+      resize: true,
+      contains: 'padding',
+    },
     scales: [
       {
         name: 'x',
@@ -58,7 +63,7 @@ export function generateWaterfallChartVegaSpec(
             width: {scale: 'x', band: 1, offset: -1},
             y: {scale: 'y', signal: 'max(datum.start, datum.end)'},
             y2: {scale: 'y', signal: 'min(datum.start, datum.end)'},
-            fill: {value: '#1877F2'},
+            fill: {signal: 'datum.value >= 0 ? "#1877F2" : "#DC3545"'},
           },
         },
       },
@@ -66,28 +71,42 @@ export function generateWaterfallChartVegaSpec(
   };
 
   const mapMalloyDataToChartData: MalloyDataToChartDataHandler = data => {
-    const records: {x: string; value: number; start: number; end: number}[] = [];
-
-    const startPath = Field.pathFromString(settings.startField);
-    const endPath = Field.pathFromString(settings.endField);
-    const xPath = Field.pathFromString(settings.xField);
-    const yPath = Field.pathFromString(settings.yField);
-    const nestPath = xPath.slice(0, -1);
+    const records: {x: string; value: number; start: number; end: number}[] =
+      [];
 
     for (const row of data.rows as RecordCell[]) {
-      const startVal = row.cellAt(startPath).value as number;
-      const endVal = row.cellAt(endPath).value as number;
+      const startVal = row.cellAt(settings.startField).value as number;
+      const endVal = row.cellAt(settings.endField).value as number;
       let current = startVal;
+      let sumOfIntermediates = 0;
+
       records.push({x: 'start', value: startVal, start: 0, end: startVal});
-      const nested = row.cellAt(nestPath) as RepeatedRecordCell;
+      const nestPath = JSON.parse(settings.xField).slice(0, 1);
+      const xPath = JSON.parse(settings.xField).slice(-1);
+      const yPath = JSON.parse(settings.yField).slice(-1);
+      const nested = row.cellAt([nestPath]) as RepeatedRecordCell;
       for (const nRow of nested.rows) {
-        const xVal = nRow.cellAt(xPath.slice(-1)).value;
-        const yVal = nRow.cellAt(yPath.slice(-1)).value as number;
+        const xVal = nRow.cellAt(xPath).value;
+        const yVal = nRow.cellAt(yPath).value as number;
         const start = current;
         const end = current + yVal;
         records.push({x: String(xVal), value: yVal, start, end});
         current = end;
+        sumOfIntermediates += yVal;
       }
+
+      // Check if sum of intermediate values equals difference between start and end
+      const expectedDiff = endVal - startVal;
+      const actualDiff = sumOfIntermediates;
+      if (Math.abs(expectedDiff - actualDiff) > 0.0001) {
+        // Using small epsilon for floating point comparison
+        const othersValue = expectedDiff - actualDiff;
+        const start = current;
+        const end = current + othersValue;
+        records.push({x: 'Others*', value: othersValue, start, end});
+        current = end;
+      }
+
       records.push({x: 'end', value: endVal, start: 0, end: endVal});
     }
 

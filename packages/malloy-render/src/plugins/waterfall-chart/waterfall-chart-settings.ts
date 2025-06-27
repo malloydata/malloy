@@ -1,6 +1,6 @@
 import type {JSONSchemaObject} from '@/api/json-schema-types';
 
-export interface WaterfallChartSettings {
+export interface WaterfallChartSettings extends Record<string, unknown> {
   startField: string;
   endField: string;
   xField: string;
@@ -27,9 +27,9 @@ export const waterfallChartSettingsSchema: IWaterfallChartSettingsSchema = {
   title: 'Waterfall Chart Settings',
   type: 'object',
   properties: {
-    startField: {type: 'string', subtype: 'field'},
-    endField: {type: 'string', subtype: 'field'},
-    xField: {type: 'string', subtype: 'field'},
-    yField: {type: 'string', subtype: 'field'},
+    startField: {type: 'string'},
+    endField: {type: 'string'},
+    xField: {type: 'string'},
+    yField: {type: 'string'},
   },
 };

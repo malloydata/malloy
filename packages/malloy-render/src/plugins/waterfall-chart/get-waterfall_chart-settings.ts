@@ -1,32 +1,13 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import type {NestField} from '@/data_tree';
-import {Field} from '@/data_tree';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {type WaterfallChartSettings} from './waterfall-chart-settings';
-
-function getFieldPath(explore: NestField, ref: string): string {
-  let path: string[];
-  try {
-    path = Field.pathFromString(ref);
-  } catch {
-    path = [ref];
-  }
-  const field = explore.fieldAt(path);
-  return explore.pathTo(field);
-}
 
 export function getWaterfallChartSettings(
   explore: NestField,
   tagOverride?: Tag
 ): WaterfallChartSettings {
-  const normalizedTag = convertLegacyToVizTag(tagOverride ?? explore.tag);
-  if (normalizedTag.text('viz') !== 'waterfall') {
-    throw new Error(
-      'Malloy Waterfall Chart: Tried to render a waterfall chart, but no viz=waterfall tag was found'
-    );
-  }
-
-  const vizTag = normalizedTag.tag('viz')!;
+  const tag = tagOverride ?? explore.tag;
+  const vizTag = tag.tag('viz')!;
 
   const startRef = vizTag.text('start');
   const endRef = vizTag.text('end');
@@ -40,10 +21,10 @@ export function getWaterfallChartSettings(
   }
 
   return {
-    startField: getFieldPath(explore, startRef),
-    endField: getFieldPath(explore, endRef),
-    xField: getFieldPath(explore, xRef),
-    yField: getFieldPath(explore, yRef),
+    startField: JSON.stringify(startRef.split('.')),
+    endField: JSON.stringify(endRef.split('.')),
+    xField: JSON.stringify(xRef.split('.')),
+    yField: JSON.stringify(yRef.split('.')),
   };
 }
 
