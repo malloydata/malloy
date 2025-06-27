@@ -3651,21 +3651,29 @@ class QueryQuery extends QueryField {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
 
-    const n = (() => {
-      const groupByClause = this.parent.dialect.groupByClause;
-      if (groupByClause === 'ordinal') {
-        return f.dimensionIndexes;
-      } else if (groupByClause === 'expression') {
-        return f.dimensionIndexes
-          .map(this.rootResult.getFieldByNumber)
-          .map(fbn => fbn.fif.getSQL())
-          .filter((v): v is string => !!v && !NUMBER_EXPR.test(v)); // TODO (vitor): !NUMBER_EXPR is not enough
-      } else {
-        throw new Error(`groupByClause ${groupByClause} not implemented`);
+    // group by
+    const groupByClause = this.parent.dialect.groupByClause;
+    const n: (string | number)[] = [];
+    if (groupByClause === 'ordinal') {
+      n.concat(f.dimensionIndexes);
+    } else if (groupByClause === 'expression') {
+      const queryFields = f.dimensionIndexes
+        .map(this.rootResult.getFieldByNumber)
+        .map(fi => fi.fif.f);
+      for (const f of queryFields) {
+        if (
+          hasExpression(f.fieldDef) &&
+          f.fieldDef.e &&
+          f.fieldDef.e.sql &&
+          Array.from(exprWalk(f.fieldDef.e)).some(f => f.node === 'field')
+        ) {
+          n.push(f.fieldDef.e.sql);
+        }
       }
-    })();
-
-    const groupBy = `GROUP BY ${n.join(', ')}\n`;
+    } else {
+      throw new Error(`groupByClause ${groupByClause} not implemented`);
+    }
+    const groupBy = n.length > 0 ? `GROUP BY ${n.join(', ')}\n` : '';
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
 
