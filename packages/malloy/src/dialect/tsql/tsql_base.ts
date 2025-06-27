@@ -114,11 +114,9 @@ export abstract class TSQLBase extends Dialect {
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
   experimental = true;
-  booleanAsNumbers = true;
-  supportsLimit = false;
 
-  // tsql doesn't support nulls last, so we are using orderByClause expression for now to make things easier
-  // wether or not it actually makes it easier idk, but I can make nulls last with CASE expressions.
+  // t-sql doesn't support nulls last, so we are using orderByClause expression for now to make things easier
+  // since I can make nulls last with CASE expressions.
   orderByClause = 'expression' as const;
   groupByClause = 'expression' as const;
   limitClause = 'top' as const;
