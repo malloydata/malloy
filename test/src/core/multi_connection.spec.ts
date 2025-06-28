@@ -63,6 +63,7 @@ describe('Multi-connection', () => {
 
   afterAll(async () => {
     await postgresConnection.close();
+    await ddbConnection.close();
   });
 
   const expressionModelText = `
