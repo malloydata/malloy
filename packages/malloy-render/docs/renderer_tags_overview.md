@@ -42,8 +42,8 @@ Renders the data as a bar chart. If `x`, `y`, and `series` fields aren't explici
     - Syntax: `# bar_chart { y.independent }`
 - `.series`: Specifies the field used for grouping/coloring bars.
   - Syntax: `# bar_chart { series=dimension_name }`
-  - `.series.limit`: Limits the number of series shown (default inferred, max 20).
-    - Syntax: `# bar_chart { series.limit=5 }`
+  - `.series.limit`: Limits the number of series shown (default `auto`, which uses 20 for bar charts). When limiting is active, series are ranked by their total sum of Y-values and the top N series are shown.
+    - Syntax: `# bar_chart { series.limit=5 }` or `# bar_chart { series.limit=auto }`
   - `.series.independent`: Controls whether the series legend/colors are shared across nested charts. See "Automatic Axis/Legend Sharing" below.
     - Syntax: `# bar_chart { series.independent }` or `# bar_chart { series.independent=false }`
 - `.title`: Sets the main title for the chart.
@@ -95,8 +95,8 @@ Renders the data as a line chart. Inference for `x`, `y`, and `series` is simila
 
 **Properties:**
 
-- `.zero_baseline`: Controls if the y-axis must include zero. Default is `false`. Set to `true` to force the y-axis to include zero.
-  - Syntax: `# line_chart.zero_baseline=false` or `# line_chart { zero_baseline=false }`
+- `.zero_baseline`: Controls if the y-axis must include zero. Default is `false` for line charts (unlike bar charts which always include zero). Set to `true` to force the y-axis to start at zero.
+  - Syntax: `# line_chart.zero_baseline=true` or `# line_chart { zero_baseline=true }`
 - `.size`: Controls chart size presets (e.g., `spark`).
   - Syntax: `# line_chart { size=spark }` (Legacy: `# size=spark` on the view)
 - `.interpolate`: Sets the line interpolation mode.
@@ -104,7 +104,7 @@ Renders the data as a line chart. Inference for `x`, `y`, and `series` is simila
   - Syntax: `# line_chart { interpolate=step }`
 - `.x`, `.y`, `.series`, `.title`, `.subtitle`: Similar to `# bar_chart` properties.
   - `.y.independent`: Controls y-axis independence across nested charts. Also automatically set if `series.limit` is applied.
-  - `.series.limit`: Limits the number of lines (series) shown (default 12). Setting this often implies `y.independent=true`.
+  - `.series.limit`: Limits the number of lines (series) shown (default `auto`, which uses 12 for line charts). When limiting is active, series are ranked by their total sum of Y-values and the top N series are shown. Setting this automatically enables `y.independent=true`.
   - `.series.independent`: Controls legend/color sharing across nested charts. See "Automatic Axis/Legend Sharing" below.
 
 **Automatic Axis/Legend Sharing (Line Chart):**
@@ -152,6 +152,68 @@ Renders the data as a scatter plot. Configuration relies mainly on field order (
 view: cost_vs_price is {
   group_by: retail_price, cost, brand // x, y, color/shape inferred
 }
+```
+
+---
+
+## Data Limiting and Performance
+
+Both bar charts and line charts implement automatic data limiting to ensure good performance and readability. Understanding these limits helps you configure charts effectively.
+
+### Series Limiting
+
+**Default Limits:**
+- **Line Charts:** 12 series (when `series.limit=auto`)
+- **Bar Charts:** 20 series (when `series.limit=auto`)
+
+**How Series Are Selected:**
+When the number of unique series values exceeds the limit, the renderer:
+1. Calculates the total sum of Y-values for each series
+2. Ranks series by their total sum (highest to lowest)
+3. Shows only the top N series based on the limit
+4. Displays a message like "Showing 12 of 45 series"
+
+**Automatic Y-Axis Independence:**
+When series limiting is active, the renderer automatically sets `y.independent=true` to prevent misleading comparisons between charts that may be showing different subsets of series.
+
+### Data Point Limiting
+
+**Line Charts:**
+- Maximum of 5,000 data points per chart
+- When exceeded, shows message indicating data is limited
+- Affects the total number of plotted points after series filtering
+
+**Bar Charts:**
+- X-axis limiting based on available visual space
+- Automatically calculates how many bars can fit given the chart width and bar grouping
+- Can be overridden with `x.limit=N`
+
+### Visual Cues for Limited Data
+
+When data is limited, charts display informational messages:
+- **Series limiting:** "Showing 12 of 45 series"
+- **Data point limiting:** Indicates when data has been truncated
+
+### Nested Chart Behavior
+
+**Shared vs Independent Domains:**
+- **Root/Global charts:** Use the globally calculated top N series
+- **Nested charts:** May calculate their own local limits unless sharing is forced
+- **Automatic sharing:** Domains are shared when ≤20 distinct values, otherwise independent
+
+**Override Examples:**
+```malloy
+// Force showing all series (no limit)
+# line_chart { series.limit=1000 }
+
+// Use only top 5 series
+# bar_chart { series.limit=5 }
+
+// Force Y-axis sharing even with series limiting
+# line_chart { series.limit=8 y.independent=false }
+
+// Override bar chart X-axis limiting
+# bar_chart { x.limit=15 }
 ```
 
 ---
