@@ -129,20 +129,31 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
         processData: (field, cell): void => {
           // Calculate series statistics for series limiting
           const yFieldPath = settings.yChannel.fields[0];
-          const seriesFieldPath = settings.seriesChannel.fields[0];
+          const seriesFieldPaths = settings.seriesChannel.fields;
 
-          if (!yFieldPath || !seriesFieldPath) return;
+          if (!yFieldPath || seriesFieldPaths.length === 0) return;
 
           const yField = field.fieldAt(yFieldPath);
-          const seriesField = field.fieldAt(seriesFieldPath);
-          if (!yField || !seriesField) return;
+          const seriesFields = seriesFieldPaths.map(path =>
+            field.fieldAt(path)
+          );
+          if (!yField || seriesFields.some(f => !f)) return;
 
           // Process all rows to calculate series stats
           if (!('rows' in cell)) return; // Only process RepeatedRecordCell
 
           for (const row of cell.rows) {
+            // Handle multiple series fields by concatenating them
             const seriesValue =
-              row.column(seriesField.name).value ?? NULL_SYMBOL;
+              seriesFields.length > 1
+                ? seriesFields
+                    .map(
+                      seriesField =>
+                        row.column(seriesField.name).value ?? NULL_SYMBOL
+                    )
+                    .join(' - ')
+                : row.column(seriesFields[0].name).value ?? NULL_SYMBOL;
+
             const yValue = row.column(yField.name).value;
 
             if (typeof yValue === 'number') {

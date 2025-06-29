@@ -209,9 +209,38 @@ export function getBarChartSettings(
     }
   }
 
-  if (dimensions.length > 2) {
+  // Validate dimensions with series concatenation logic
+  const xDimensions = xChannel.fields.filter(fieldPath => {
+    const field = explore.fieldAt(fieldPath);
+    return field.isBasic() && field.wasDimension();
+  }).length;
+
+  const seriesDimensions = seriesChannel.fields.filter(fieldPath => {
+    const field = explore.fieldAt(fieldPath);
+    return field.isBasic() && field.wasDimension();
+  }).length;
+
+  const totalDimensions = dimensions.length;
+  const hasMultipleSeriesFields = seriesDimensions > 1;
+
+  // Validation logic:
+  // - If 3+ dimensions exist, multiple series fields must be explicitly tagged
+  // - Otherwise, follow the standard 2-dimension limit
+  if (totalDimensions > 2) {
+    if (!hasMultipleSeriesFields) {
+      throw new Error(
+        'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series. To use 3+ dimensions, explicitly tag multiple fields as series (they will be concatenated).'
+      );
+    }
+  }
+
+  // For multiple series fields, they get concatenated into one effective series dimension
+  const effectiveSeriesDimensions = seriesDimensions > 0 ? 1 : 0;
+  const totalEffectiveDimensions = xDimensions + effectiveSeriesDimensions;
+
+  if (totalEffectiveDimensions > 2) {
     throw new Error(
-      'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+      'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series. Multiple series fields are automatically concatenated.'
     );
   }
   if (dimensions.length === 0) {

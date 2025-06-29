@@ -66,6 +66,8 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 function getLimitedData({
   xField,
   seriesField,
+  seriesFields,
+  isMultipleSeries,
   maxSeries = 20,
   maxSizePerBar,
   isGrouping,
@@ -74,19 +76,36 @@ function getLimitedData({
 }: {
   xField: Field;
   seriesField?: Field | null;
+  seriesFields?: Field[];
+  isMultipleSeries?: boolean;
   maxSeries?: number;
   maxSizePerBar?: number;
   isGrouping: boolean;
   chartSettings: ChartLayoutSettings;
   chartTag: Tag;
 }) {
+  // For multiple series fields, we can't pre-calculate series values easily since they depend on data combinations
+  // We'll use a more conservative approach and let the data mapping handle the filtering
+  let effectiveSeriesLimit = seriesField?.valueSet.size ?? 1;
+
+  if (isMultipleSeries && seriesFields) {
+    // For concatenated series, we estimate the potential combinations
+    // This is conservative but ensures we don't run into memory issues
+    const combinationCount = seriesFields.reduce(
+      (acc, field) => acc * (field.valueSet.size || 1),
+      1
+    );
+    effectiveSeriesLimit = Math.min(combinationCount, maxSeries);
+  }
+
   // Limit series values shown
   const seriesLimit =
     chartTag.numeric('series', 'limit') ??
-    Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
-  const seriesValuesToPlot = seriesField
-    ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
-    : [];
+    Math.min(maxSeries, effectiveSeriesLimit);
+  const seriesValuesToPlot =
+    seriesField && !isMultipleSeries
+      ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
+      : [];
 
   const refinedMaxSizePerBar =
     maxSizePerBar ?? (seriesField && isGrouping) ? 8 : 8;
@@ -141,6 +160,17 @@ export function generateBarChartVegaSpecV2(
   const yField = explore.fieldAt(yFieldPath);
   const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
 
+  // Support for concatenated series when multiple series fields are present
+  const isMultipleSeries = settings.seriesChannel.fields.length > 1;
+  const seriesFields = isMultipleSeries
+    ? settings.seriesChannel.fields.map(fieldPath => explore.fieldAt(fieldPath))
+    : seriesField
+    ? [seriesField]
+    : [];
+  const concatenatedSeriesName = seriesFields
+    .map(field => field.name)
+    .join(' - ');
+
   const xRef = xField.referenceId;
   const yRef = yField.referenceId;
   const seriesRef = seriesField && seriesField.referenceId;
@@ -156,7 +186,7 @@ export function generateBarChartVegaSpecV2(
   // Map ref ids to y fields
   const yRefsMapInverted = invertObject(yRefsMap);
 
-  const isDimensionalSeries = Boolean(seriesField);
+  const isDimensionalSeries = Boolean(seriesField || isMultipleSeries);
   const isMeasureSeries = Boolean(settings.yChannel.fields.length > 1);
   const hasSeries = isDimensionalSeries || isMeasureSeries;
 
@@ -209,6 +239,8 @@ export function generateBarChartVegaSpecV2(
   const dataLimits = getLimitedData({
     xField,
     seriesField,
+    seriesFields,
+    isMultipleSeries,
     isGrouping,
     chartSettings,
     chartTag,
@@ -240,15 +272,19 @@ export function generateBarChartVegaSpecV2(
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedSeries =
-    seriesField && dataLimits.seriesValuesToPlot.length <= 20;
+  const autoSharedSeries = isMultipleSeries
+    ? true // For multiple series, assume sharing unless explicitly disabled
+    : seriesField && dataLimits.seriesValuesToPlot.length <= 20;
   const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
   const forceIndependentSeries =
     chartTag.has('series', 'independent') && !forceSharedSeries;
   const shouldShareSeriesDomain =
     forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
 
-  const seriesSet = seriesField ? new Set(getTopNSeries?.(maxSeries)) : null;
+  const seriesSet =
+    seriesField || isMultipleSeries
+      ? new Set(getTopNSeries?.(maxSeries))
+      : null;
 
   /**************************************
    *
@@ -686,8 +722,11 @@ export function generateBarChartVegaSpecV2(
         name: 'xOffset',
         type: 'band',
         domain:
-          isDimensionalSeries && seriesField && shouldShareSeriesDomain
-            ? [...seriesField!.valueSet]
+          isDimensionalSeries &&
+          shouldShareSeriesDomain &&
+          seriesSet &&
+          !isMultipleSeries
+            ? [...seriesSet!]
             : {data: 'values', field: 'series'},
         range: {
           signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
@@ -754,11 +793,21 @@ export function generateBarChartVegaSpecV2(
         (a, b) => Math.max(a, b?.toString().length ?? 1),
         0
       );
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      maxCharCt = Math.max(
+        maxCharCt,
+        isMultipleSeries
+          ? concatenatedSeriesName.length
+          : seriesField!.name.length
+      );
     } else if (isDimensionalSeries) {
       // Legend size is by legend title or the longest legend value
       maxCharCt = seriesField!.maxString?.length ?? 0;
-      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+      maxCharCt = Math.max(
+        maxCharCt,
+        isMultipleSeries
+          ? concatenatedSeriesName.length
+          : seriesField!.name.length
+      );
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
         (max, f) => Math.max(max, f.length),
@@ -785,7 +834,11 @@ export function generateBarChartVegaSpecV2(
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
+      title: seriesField
+        ? isMultipleSeries
+          ? concatenatedSeriesName
+          : seriesField.name
+        : '',
       orient: 'right',
       ...legendSettings,
       values:
@@ -873,6 +926,20 @@ export function generateBarChartVegaSpecV2(
     const skipSeries = seriesValue => {
       if (isMeasureSeries) return false;
       if (shouldShareSeriesDomain) {
+        // For multiple series fields, we can't pre-calculate seriesValuesToPlot,
+        // so we skip the pre-filtering and let the local limit handle it
+        if (isMultipleSeries) {
+          // Still apply local series limit for multiple series
+          if (
+            localSeriesSet.size >= dataLimits.seriesLimit &&
+            !localSeriesSet.has(seriesValue)
+          ) {
+            return true;
+          }
+          localSeriesSet.add(seriesValue);
+          return false;
+        }
+
         return !!(
           seriesField &&
           isDimensionalSeries &&
@@ -891,11 +958,17 @@ export function generateBarChartVegaSpecV2(
     };
     const localSeriesSet = new Set();
     const skipRecord = (row: RecordCell) => {
+      const seriesValue = isMultipleSeries
+        ? seriesFields
+            .map(field => row.column(field.name).value ?? NULL_SYMBOL)
+            .join(' - ')
+        : seriesField
+        ? row.column(seriesField.name).value ?? NULL_SYMBOL
+        : null;
+
       return (
         skipX(getXValue(row)) ||
-        (seriesField
-          ? skipSeries(row.column(seriesField.name).value ?? NULL_SYMBOL)
-          : false)
+        (seriesField || isMultipleSeries ? skipSeries(seriesValue) : false)
       );
     };
 
@@ -910,7 +983,11 @@ export function generateBarChartVegaSpecV2(
     for (let i = 0; i < data.rows.length; i++) {
       const row = data.rows[i];
       const xValue = getXValue(row);
-      const seriesVal = seriesField
+      const seriesVal = isMultipleSeries
+        ? seriesFields
+            .map(field => row.column(field.name).value ?? NULL_SYMBOL)
+            .join(' - ')
+        : seriesField
         ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
 
