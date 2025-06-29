@@ -1,0 +1,35 @@
+# Copyright Contributors to the Malloy project
+# SPDX-License-Identifier: MIT
+
+name: 'DB:SQLServer'
+permissions: {}
+
+on: workflow_call
+
+jobs:
+  # Label of the container job
+  test-sqlserver:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      # TODO (vitor): use the docker image.
+      - name: npm install, build, and test
+        run: echo Ill work on this later && exit 1
+        env:
+          MALLOY_DATABASES: mysql
+          SQLSERVER_USER: SA
+          SQLSERVER_HOST: localhost
+          SQLSERVER_PORT: 1433
+          SQLSERVER_PASSWORD: saTEST_0pword
+          SQLSERVER_DATABASE: malloytestdb
+          SQLSERVER_SCHEMA: malloytest
+          SQLSERVER_ENCRYPT: true
+          SQLSERVER_TRUST_SERVER_CERTIFICATE: true

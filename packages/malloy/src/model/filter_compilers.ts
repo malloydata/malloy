@@ -66,7 +66,7 @@ function unlike(disLiked: string[], x: string) {
 export const FilterCompilers = {
   compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
     if (c === null) {
-      return 'true';
+      return d.sqlBoolean(true);
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
@@ -125,16 +125,18 @@ export const FilterCompilers = {
           .join(` ${nc.operator.toUpperCase()} `);
     }
   },
-  booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
+  booleanCompile(bc: BooleanFilter, x: string, d: Dialect): string {
+    const sqlEqualToFalse = `${x} = ${d.resultBoolean(false)}`;
+    const sqlTrue = d.sqlBoolean(true);
     switch (bc.operator) {
       case 'false':
-        return `${x} = false`;
+        return sqlEqualToFalse;
       case 'false_or_null':
-        return `${x} IS NULL OR ${x} = false`;
+        return `${x} IS NULL OR ${sqlEqualToFalse}`;
       case 'null':
         return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
       case 'true':
-        return x;
+        return sqlTrue;
     }
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
@@ -251,7 +253,8 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
-          return 'false';
+          // TODO (vitor): Not sure if i should return a value or an expression here.
+          return String(d.resultBoolean(false));
         }
         let includeSQL = '';
         if (includes.length > 0 || includeNull || includeEmpty) {
