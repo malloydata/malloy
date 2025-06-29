@@ -44,6 +44,7 @@ export class RepeatedRecordField extends ArrayField {
   }
 
   fieldAtPath(path: string[]): Field {
+    console.log('fieldAtPath', path);
     if (path.length === 0) {
       return this.asField();
     } else {

@@ -16,3 +16,8 @@ export {
   BarChartPluginFactory,
   type BarChartPluginInstance,
 } from './bar-chart/bar-chart-plugin';
+
+export {
+  WaterfallChartPluginFactory,
+  type WaterfallChartPluginInstance,
+} from './waterfall-chart/waterfall-chart-plugin';
