@@ -1,6 +1,6 @@
 // Polyfill for structuredClone in jsdom environment
 if (typeof structuredClone === 'undefined') {
-  global.structuredClone = (obj: any) => {
+  global.structuredClone = (obj: unknown) => {
     return JSON.parse(JSON.stringify(obj));
   };
 }
