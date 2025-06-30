@@ -24,19 +24,15 @@
 
 import type {Tag} from '@malloydata/malloy-tag';
 import type {VegaChartProps, VegaConfigHandler} from './types';
-import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
-import {baseVegaConfig} from '@/component/vega/base-vega-config';
-import {generateBarChartVegaSpec} from '@/component/bar-chart/generate-bar_chart-vega-spec';
 import type {ResultStore} from '@/component/result-store/result-store';
 import {createResultStore} from '@/component/result-store/result-store';
-import type {Config, Runtime} from 'vega';
-import {parse} from 'vega';
+import type {Runtime} from 'vega';
 import {defaultSettings} from '@/component/default-settings';
 import {
   convertLegacyToVizTag,
   getChartTypeFromNormalizedTag,
 } from './tag-utils';
-import type {RootField, NestField, RepeatedRecordField} from '@/data_tree';
+import type {RootField} from '@/data_tree';
 import type {RenderFieldMetadata} from '@/render-field-metadata';
 
 export type GetResultMetadataOptions = {
@@ -89,83 +85,12 @@ export function getResultMetadata(
         : chartSizingStrategy ?? rootSizingStrategy,
     renderFieldMetadata: options.renderFieldMetadata,
   };
-  populateAllVegaSpecs(rootField, metadata, options);
 
   return metadata;
-}
-
-function populateAllVegaSpecs(
-  root: NestField,
-  metadata: RenderMetadata,
-  options: GetResultMetadataOptions
-): void {
-  if (root.isRepeatedRecord()) {
-    populateVegaSpec(root, metadata, options);
-  }
-  root.fields.forEach(f => {
-    if (f.isNest()) {
-      populateAllVegaSpecs(f, metadata, options);
-    }
-  });
 }
 
 export function shouldRenderChartAs(tag: Tag): string | undefined {
   const normalizedTag = convertLegacyToVizTag(tag);
 
   return getChartTypeFromNormalizedTag(normalizedTag);
-}
-
-function populateVegaSpec(
-  field: RepeatedRecordField,
-  metadata: RenderMetadata,
-  options: GetResultMetadataOptions
-) {
-  // Populate vega spec data
-  let vegaChartProps: VegaChartProps | null = null;
-  const chartType = shouldRenderChartAs(field.tag);
-  const vegaInfo: FieldVegaInfo = {
-    error: null,
-    props: null,
-    runtime: null,
-  };
-
-  try {
-    if (chartType === 'bar') {
-      vegaChartProps = generateBarChartVegaSpec(field, metadata);
-    }
-  } catch (error) {
-    vegaInfo.error = error;
-  }
-
-  if (vegaChartProps) {
-    const vegaConfigOverride =
-      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {};
-
-    const vegaConfig: Config = mergeVegaConfigs(
-      baseVegaConfig(),
-      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {}
-    );
-
-    const maybeAxisYLabelFont = vegaConfigOverride['axisY']?.['labelFont'];
-    const maybeAxisLabelFont = vegaConfigOverride['axis']?.['labelFont'];
-    if (maybeAxisYLabelFont || maybeAxisLabelFont) {
-      const refLineFontSignal = vegaConfig.signals?.find(
-        signal => signal.name === 'referenceLineFont'
-      );
-      if (refLineFontSignal)
-        refLineFontSignal.value = maybeAxisYLabelFont ?? maybeAxisLabelFont;
-    }
-
-    const props = {
-      ...vegaChartProps,
-      spec: {
-        ...vegaChartProps.spec,
-        config: vegaConfig,
-      },
-    };
-    const runtime = parse(props.spec);
-    vegaInfo.props = props;
-    vegaInfo.runtime = runtime;
-  }
-  metadata.vega[field.key] = vegaInfo;
 }

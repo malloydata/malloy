@@ -8,7 +8,6 @@
 import type {JSXElement} from 'solid-js';
 import {renderNumericField} from '@/component/render-numeric-field';
 import {renderLink} from '@/component/render-link';
-import {Chart} from '@/component/chart/chart';
 import MalloyTable from '@/component/table/table';
 import {renderList} from '@/component/render-list';
 import {renderImage} from '@/component/render-image';
@@ -17,7 +16,6 @@ import {renderTime} from '@/component/render-time';
 import {LegacyChart} from '@/component/legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '@/util';
 import type {RendererProps} from '@/component/types';
-import {ErrorMessage} from '@/component/error-message/error-message';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
 
 export function applyRenderer(props: RendererProps) {
@@ -77,15 +75,6 @@ export function applyRenderer(props: RendererProps) {
       }
       case 'image': {
         renderValue = renderImage(props);
-        break;
-      }
-      case 'chart': {
-        if (dataColumn.isRepeatedRecord()) {
-          renderValue = <Chart data={dataColumn} {...propsToPass} />;
-        } else
-          renderValue = (
-            <ErrorMessage message="Malloy Render: Charts require tabular data" />
-          );
         break;
       }
       case 'dashboard': {

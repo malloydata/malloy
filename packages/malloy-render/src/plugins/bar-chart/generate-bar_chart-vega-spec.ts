@@ -80,13 +80,23 @@ function getLimitedData({
   chartSettings: ChartLayoutSettings;
   chartTag: Tag;
 }) {
+  // For multiple series fields, we can't pre-calculate series values easily since they depend on data combinations
+  // We'll use a more conservative approach and let the data mapping handle the filtering
+  const effectiveSeriesLimit = seriesField?.valueSet.size ?? 1;
+
+  // if (seriesField && isGrouping) {
+  //   const combinationCount = seriesField.valueSet.size || 1;
+  //   effectiveSeriesLimit = Math.min(combinationCount, maxSeries);
+  // }
+
   // Limit series values shown
   const seriesLimit =
     chartTag.numeric('series', 'limit') ??
-    Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
-  const seriesValuesToPlot = seriesField
-    ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
-    : [];
+    Math.min(maxSeries, effectiveSeriesLimit);
+  const seriesValuesToPlot =
+    seriesField && !isGrouping
+      ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
+      : [];
 
   const refinedMaxSizePerBar =
     maxSizePerBar ?? (seriesField && isGrouping) ? 8 : 8;
@@ -139,7 +149,12 @@ export function generateBarChartVegaSpecV2(
   const xField = explore.fieldAt(xFieldPath);
   const xIsDateorTime = xField.isTime();
   const yField = explore.fieldAt(yFieldPath);
-  const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
+
+  // Use synthetic field if available (for multiple series)
+  if (plugin.syntheticSeriesField) {
+    seriesField = plugin.syntheticSeriesField;
+  }
 
   const xRef = xField.referenceId;
   const yRef = yField.referenceId;
@@ -209,6 +224,8 @@ export function generateBarChartVegaSpecV2(
   const dataLimits = getLimitedData({
     xField,
     seriesField,
+    maxSeries: 20,
+    maxSizePerBar: 8,
     isGrouping,
     chartSettings,
     chartTag,
@@ -556,7 +573,7 @@ export function generateBarChartVegaSpecV2(
         {
           name: 'brushSeries',
           on:
-            isDimensionalSeries && seriesRef
+            isDimensionalSeries && seriesRef && !plugin.syntheticSeriesField
               ? [
                   {
                     events: '@bars:mouseover',
@@ -686,8 +703,8 @@ export function generateBarChartVegaSpecV2(
         name: 'xOffset',
         type: 'band',
         domain:
-          isDimensionalSeries && seriesField && shouldShareSeriesDomain
-            ? [...seriesField!.valueSet]
+          isDimensionalSeries && shouldShareSeriesDomain && seriesSet
+            ? [...seriesSet!]
             : {data: 'values', field: 'series'},
         range: {
           signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
@@ -873,11 +890,29 @@ export function generateBarChartVegaSpecV2(
     const skipSeries = seriesValue => {
       if (isMeasureSeries) return false;
       if (shouldShareSeriesDomain) {
-        return !!(
+        // For synthetic fields (multiple series), we can't pre-calculate seriesValuesToPlot,
+        // so we skip the pre-filtering and let the local limit handle it
+        // if (plugin.syntheticSeriesField) {
+        //   // For synthetic fields, rely on local series limiting
+        //   if (
+        //     localSeriesSet.size >= dataLimits.seriesLimit &&
+        //     !localSeriesSet.has(seriesValue)
+        //   ) {
+        //     return true;
+        //   }
+        //   localSeriesSet.add(seriesValue);
+        //   return false;
+        // }
+
+        // For regular fields, use the pre-calculated seriesValuesToPlot
+        if (
           seriesField &&
           isDimensionalSeries &&
+          dataLimits.seriesValuesToPlot.length > 0 &&
           !dataLimits.seriesValuesToPlot.includes(seriesValue)
-        );
+        ) {
+          return true;
+        }
       }
 
       if (
@@ -891,11 +926,20 @@ export function generateBarChartVegaSpecV2(
     };
     const localSeriesSet = new Set();
     const skipRecord = (row: RecordCell) => {
+      const seriesValue = plugin.hasMultipleSeriesFields
+        ? settings.seriesChannel.fields
+            .map(fieldPath => {
+              const field = explore.fieldAt(fieldPath);
+              return row.column(field.name).value ?? NULL_SYMBOL;
+            })
+            .join(' - ')
+        : seriesField
+        ? row.column(seriesField.name).value ?? NULL_SYMBOL
+        : null;
+
       return (
         skipX(getXValue(row)) ||
-        (seriesField
-          ? skipSeries(row.column(seriesField.name).value ?? NULL_SYMBOL)
-          : false)
+        (isDimensionalSeries ? skipSeries(seriesValue) : false)
       );
     };
 
@@ -910,7 +954,14 @@ export function generateBarChartVegaSpecV2(
     for (let i = 0; i < data.rows.length; i++) {
       const row = data.rows[i];
       const xValue = getXValue(row);
-      const seriesVal = seriesField
+      const seriesVal = plugin.hasMultipleSeriesFields
+        ? settings.seriesChannel.fields
+            .map(fieldPath => {
+              const field = explore.fieldAt(fieldPath);
+              return row.column(field.name).value ?? NULL_SYMBOL;
+            })
+            .join(' - ')
+        : seriesField
         ? row.column(seriesField.name).value ?? NULL_SYMBOL
         : yField.name;
 

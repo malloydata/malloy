@@ -38,6 +38,8 @@ export interface BarChartPluginInstance
   extends CoreVizPluginInstance<BarChartPluginMetadata> {
   getTopNSeries?: (maxSeries: number) => (string | number | boolean)[];
   field: NestField;
+  syntheticSeriesField?: Field;
+  hasMultipleSeriesFields?: boolean;
 }
 
 interface BarChartPluginMetadata {
@@ -77,22 +79,19 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
         throw new Error('Bar chart: must be a nest field');
       }
 
-      let settings: BarChartSettings;
       const seriesStats = new Map<string, SeriesStats>();
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
 
-      try {
-        settings = getBarChartSettings(field);
-      } catch (error) {
-        throw new Error(`Bar chart settings error: ${error.message}`);
-      }
+      const settings = getBarChartSettings(field);
+      const hasMultipleSeriesFields = settings.seriesChannel.fields.length > 1;
 
       const pluginInstance: BarChartPluginInstance = {
         name: 'bar_chart',
         field,
         renderMode: 'solidjs',
         sizingStrategy: 'fill',
+        hasMultipleSeriesFields,
 
         renderComponent: (props: RenderProps): JSXElement => {
           if (!runtime || !vegaProps) {
@@ -129,20 +128,35 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
         processData: (field, cell): void => {
           // Calculate series statistics for series limiting
           const yFieldPath = settings.yChannel.fields[0];
-          const seriesFieldPath = settings.seriesChannel.fields[0];
+          const seriesFieldPaths = settings.seriesChannel.fields;
 
-          if (!yFieldPath || !seriesFieldPath) return;
+          if (!yFieldPath || seriesFieldPaths.length === 0) return;
 
           const yField = field.fieldAt(yFieldPath);
-          const seriesField = field.fieldAt(seriesFieldPath);
-          if (!yField || !seriesField) return;
+          const seriesFields = seriesFieldPaths.map(path =>
+            field.fieldAt(path)
+          );
+          if (!yField || seriesFields.some(f => !f)) return;
 
-          // Process all rows to calculate series stats
+          // Process all rows to calculate series stats (unified logic)
           if (!('rows' in cell)) return; // Only process RepeatedRecordCell
 
+          const concatenatedValues = new Set<string>();
           for (const row of cell.rows) {
-            const seriesValue =
-              row.column(seriesField.name).value ?? NULL_SYMBOL;
+            // CONDITIONAL: Only the series value extraction differs
+            const seriesValue = hasMultipleSeriesFields
+              ? seriesFields
+                  .map(
+                    seriesField =>
+                      row.column(seriesField.name).value ?? NULL_SYMBOL
+                  )
+                  .join(' - ')
+              : row.column(seriesFields[0].name).value ?? NULL_SYMBOL;
+
+            if (hasMultipleSeriesFields) {
+              concatenatedValues.add(seriesValue);
+            }
+
             const yValue = row.column(yField.name).value;
 
             if (typeof yValue === 'number') {
@@ -156,6 +170,22 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
               stats.avg = stats.sum / stats.count;
               seriesStats.set(seriesValue, stats);
             }
+          }
+
+          if (hasMultipleSeriesFields) {
+            // Create synthetic field
+            pluginInstance.syntheticSeriesField = {
+              name: seriesFields.map(f => f.name).join(' - '),
+              valueSet: concatenatedValues,
+              referenceId: '__synthetic_concatenated_series__',
+              // Minimal Field interface implementation
+              isTime: () => false,
+              isDate: () => false,
+              isBasic: () => true,
+              isNumber: () => false,
+              isString: () => true,
+              isBoolean: () => false,
+            } as unknown as Field;
           }
         },
 

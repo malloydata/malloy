@@ -10,6 +10,7 @@ import type {
 } from '@/registry/types';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {ErrorPlugin} from './plugins/error/error-plugin';
 
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
@@ -67,6 +68,8 @@ export class RenderFieldMetadata {
           `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
           error
         );
+        const errorPlugin = ErrorPlugin.create(error.message);
+        plugins.push(errorPlugin);
       }
     }
 

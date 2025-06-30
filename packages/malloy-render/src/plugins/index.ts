@@ -16,3 +16,5 @@ export {
   BarChartPluginFactory,
   type BarChartPluginInstance,
 } from './bar-chart/bar-chart-plugin';
+
+export {ErrorPlugin} from './error/error-plugin';

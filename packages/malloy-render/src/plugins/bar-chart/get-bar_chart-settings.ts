@@ -7,7 +7,7 @@
 
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel, SeriesChannel, YChannel} from '@/component/types';
-import type {NestField} from '@/data_tree';
+import type {Field, NestField} from '@/data_tree';
 import {walkFields} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
@@ -181,14 +181,20 @@ export function getBarChartSettings(
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
+    let fieldToUse: Field | undefined;
     // Pick date/time field first if it exists
     const dateTimeField = explore.fields.find(
       f => f.wasDimension() && f.isTime()
     );
-    if (dateTimeField) xChannel.fields.push(explore.pathTo(dateTimeField));
+    if (dateTimeField) fieldToUse = dateTimeField;
     // Pick first dimension field for x
     else if (dimensions.length > 0) {
-      xChannel.fields.push(explore.pathTo(dimensions[0]));
+      fieldToUse = dimensions[0];
+    }
+    const fieldToUseTags = fieldToUse?.tag;
+    const isSeries = fieldToUseTags?.has('series');
+    if (fieldToUse && !isSeries) {
+      xChannel.fields.push(explore.pathTo(fieldToUse));
     }
   }
   if (yChannel.fields.length === 0) {
@@ -209,14 +215,28 @@ export function getBarChartSettings(
     }
   }
 
-  if (dimensions.length > 2) {
+  // Validate dimensions with series concatenation logic
+  const xDimensionsCount = xChannel.fields.length;
+  const seriesDimensionsCount = seriesChannel.fields.length;
+  const totalDimensions = dimensions.length;
+
+  // Validation logic:
+  // - If 3+ dimensions exist, multiple series fields must be explicitly tagged
+  // - Otherwise, follow the standard 2-dimension limit
+  if (totalDimensions > xDimensionsCount + seriesDimensionsCount) {
     throw new Error(
-      'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+      'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series. To use 3+ dimensions, explicitly tag multiple fields as series.'
     );
   }
-  if (dimensions.length === 0) {
+
+  if (xDimensionsCount > 1) {
     throw new Error(
-      'Malloy Bar Chart: No dimensions found. A bar chart must have at least 1 dimension for the x axis.'
+      'Malloy Bar Chart: A bar chart can have at most 1 dimension for the x axis.'
+    );
+  }
+  if (xDimensionsCount === 0) {
+    throw new Error(
+      'Malloy Bar Chart: A bar chart requires a dimension for the x axis.'
     );
   }
 
