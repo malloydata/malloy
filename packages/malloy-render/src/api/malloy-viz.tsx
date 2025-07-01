@@ -15,6 +15,7 @@ import {MalloyRender} from '@/component/render';
 import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {RenderFieldMetadata} from '@/render-field-metadata';
+import {ErrorPlugin} from '@/plugins/error/error-plugin';
 
 export class MalloyViz {
   private disposeFn: (() => void) | null = null;
@@ -136,7 +137,11 @@ export class MalloyViz {
       this.metadata = new RenderFieldMetadata(
         this.result,
         this.pluginRegistry,
-        this.options.pluginOptions ?? {}
+        this.options.pluginOptions ?? {},
+        (error, _factory, _field, plugins) => {
+          const errorPlugin = ErrorPlugin.create(error.message);
+          plugins.push(errorPlugin);
+        }
       );
     }
   }

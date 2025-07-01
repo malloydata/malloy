@@ -10,21 +10,30 @@ import type {
 } from '@/registry/types';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {ErrorPlugin} from './plugins/error/error-plugin';
+
+export type OnPluginCreateError = (
+  error: Error,
+  factory: RenderPluginFactory,
+  field: Field,
+  plugins: RenderPluginInstance[]
+) => void;
 
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
   private pluginRegistry: RenderPluginFactory[];
   private pluginOptions: Record<string, unknown>;
+  private onPluginCreateError?: OnPluginCreateError;
 
   constructor(
     result: Malloy.Result,
     pluginRegistry: RenderPluginFactory[] = [],
-    pluginOptions: Record<string, unknown> = {}
+    pluginOptions: Record<string, unknown> = {},
+    onPluginCreateError?: OnPluginCreateError
   ) {
     this.pluginRegistry = pluginRegistry;
     this.pluginOptions = pluginOptions;
+    this.onPluginCreateError = onPluginCreateError;
     this.registry = new Map();
 
     // Create the root field with all its metadata
@@ -68,8 +77,9 @@ export class RenderFieldMetadata {
           `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
           error
         );
-        const errorPlugin = ErrorPlugin.create(error.message);
-        plugins.push(errorPlugin);
+        if (this.onPluginCreateError) {
+          this.onPluginCreateError(error as Error, factory, field, plugins);
+        }
       }
     }
 

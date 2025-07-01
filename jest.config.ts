@@ -78,13 +78,10 @@ const config: Config = {
       displayName: 'malloy-render',
       rootDir: '<rootDir>/packages/malloy-render',
       testMatch: ['<rootDir>/src/**/*.spec.(ts|js)?(x)'],
-      setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts'],
-      testEnvironment: 'jsdom',
+      setupFilesAfterEnv: [],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
-        '\\.css\\?raw$': '<rootDir>/test/mocks/cssMock.js',
       },
-      transformIgnorePatterns: ['node_modules/(?!(solid-js|uuid)/)'],
       transform: {
         '^.+\\.(ts|tsx)$': [
           'ts-jest',
