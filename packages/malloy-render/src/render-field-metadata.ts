@@ -21,19 +21,13 @@ export type OnPluginCreateError = (
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
-  private pluginRegistry: RenderPluginFactory[];
-  private pluginOptions: Record<string, unknown>;
-  private onPluginCreateError?: OnPluginCreateError;
 
   constructor(
     result: Malloy.Result,
-    pluginRegistry: RenderPluginFactory[] = [],
-    pluginOptions: Record<string, unknown> = {},
-    onPluginCreateError?: OnPluginCreateError
+    private pluginRegistry: RenderPluginFactory[] = [],
+    private pluginOptions: Record<string, unknown> = {},
+    private onPluginCreateError?: OnPluginCreateError
   ) {
-    this.pluginRegistry = pluginRegistry;
-    this.pluginOptions = pluginOptions;
-    this.onPluginCreateError = onPluginCreateError;
     this.registry = new Map();
 
     // Create the root field with all its metadata
