@@ -44,6 +44,11 @@ import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
 import {
+  PooledSQLServerConnection,
+  SQLServerExecutor,
+} from '@malloydata/db-sqlserver/src/sqlserver_connection';
+
+import {
   MySQLConnection,
   MySQLExecutor,
 } from '@malloydata/db-mysql/src/mysql_connection';
@@ -149,6 +154,24 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
+export class SQLServerTestConnection extends PooledSQLServerConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      const res = await super.runSQL(sqlCommand, options);
+      return res;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
 export class TestCacheManager extends CacheManager {
   constructor(readonly _modelCache: ModelCache) {
     super(_modelCache);
@@ -233,6 +256,13 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           dbName,
           {},
           TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
+        );
+        break;
+      case 'sqlserver':
+        connection = new SQLServerTestConnection(
+          dbName,
+          {},
+          SQLServerExecutor.getConnectionOptionsFromEnv()
         );
         break;
       default:
