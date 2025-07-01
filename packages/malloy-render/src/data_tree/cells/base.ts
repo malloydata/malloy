@@ -163,6 +163,7 @@ export abstract class CellBase {
   }
 
   cellAtPath(path: string[]): Cell {
+    console.log({path, cell: this});
     if (path.length === 0) {
       return this.asCell();
     }
