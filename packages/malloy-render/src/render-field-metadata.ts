@@ -11,19 +11,23 @@ import type {
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
+export type OnPluginCreateError = (
+  error: Error,
+  factory: RenderPluginFactory,
+  field: Field,
+  plugins: RenderPluginInstance[]
+) => void;
+
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
-  private pluginRegistry: RenderPluginFactory[];
-  private pluginOptions: Record<string, unknown>;
 
   constructor(
     result: Malloy.Result,
-    pluginRegistry: RenderPluginFactory[] = [],
-    pluginOptions: Record<string, unknown> = {}
+    private pluginRegistry: RenderPluginFactory[] = [],
+    private pluginOptions: Record<string, unknown> = {},
+    private onPluginCreateError?: OnPluginCreateError
   ) {
-    this.pluginRegistry = pluginRegistry;
-    this.pluginOptions = pluginOptions;
     this.registry = new Map();
 
     // Create the root field with all its metadata
@@ -67,6 +71,9 @@ export class RenderFieldMetadata {
           `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
           error
         );
+        if (this.onPluginCreateError) {
+          this.onPluginCreateError(error as Error, factory, field, plugins);
+        }
       }
     }
 
