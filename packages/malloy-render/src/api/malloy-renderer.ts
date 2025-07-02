@@ -10,6 +10,7 @@ import type {RenderPluginFactory} from './plugin-types';
 import {MalloyViz} from './malloy-viz';
 import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
 import {BarChartPluginFactory} from '@/plugins/bar-chart/bar-chart-plugin';
+import {SummarizePluginFactory} from '@/plugins/summarize/summarize-plugin';
 
 export class MalloyRenderer {
   private globalOptions: MalloyRendererOptions;
@@ -20,6 +21,7 @@ export class MalloyRenderer {
     this.pluginRegistry = [
       LineChartPluginFactory,
       BarChartPluginFactory,
+      SummarizePluginFactory,
       ...(options.plugins || []),
     ];
   }

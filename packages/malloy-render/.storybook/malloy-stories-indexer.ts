@@ -180,8 +180,8 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               console.log('initial state', metadata);
               console.log('render properties', metadata.getFieldEntry(metadata.rootField.key).renderProperties);
               const plugin = viz.getActivePlugin(metadata.rootField.key);
-              console.log('plugin', plugin, plugin?.getSettings());
-              const tag = plugin?.settingsToTag(plugin?.getSettings());
+              console.log('plugin', plugin, plugin?.getSettings?.());
+              const tag = plugin?.settingsToTag?.(plugin?.getSettings?.());
               console.log('tag', tag, tag?.toString());
               console.groupEnd();
               viz.render(targetElement);
