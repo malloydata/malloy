@@ -26,6 +26,7 @@
     "@malloydata/db-postgres": "0.0.295",
     "@malloydata/db-snowflake": "0.0.295",
     "@malloydata/db-trino": "0.0.295",
+    "@malloydata/db-sqlserver": "0.0.295",
     "@malloydata/malloy": "0.0.295",
     "@malloydata/malloy-tag": "0.0.295",
     "@malloydata/render": "0.0.295",

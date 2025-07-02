@@ -66,7 +66,7 @@ function unlike(disLiked: string[], x: string) {
 export const FilterCompilers = {
   compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
     if (c === null) {
-      return 'true';
+      return d.sqlBoolean(true);
     }
     if (t === 'string' && isStringFilter(c)) {
       return FilterCompilers.stringCompile(c, x, d);
@@ -251,7 +251,8 @@ export const FilterCompilers = {
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {
-          return 'false';
+          // TODO (vitor): Not sure if i should return a value or an expression here.
+          return String(d.resultBoolean(false));
         }
         let includeSQL = '';
         if (includes.length > 0 || includeNull || includeEmpty) {
