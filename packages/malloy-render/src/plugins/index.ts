@@ -18,3 +18,8 @@ export {
 } from './bar-chart/bar-chart-plugin';
 
 export {ErrorPlugin} from './error/error-plugin';
+
+export {
+  SummarizePluginFactory,
+  type SummarizePluginInstance,
+} from './summarize/summarize-plugin';
