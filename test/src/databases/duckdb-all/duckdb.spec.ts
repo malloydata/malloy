@@ -157,13 +157,13 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     const query = `
       source: sales_data is duckdb.sql("""
         SELECT 
-          'Q1' as quarter, 'Jan' as month, 1000 as revenue
+          'Q1' as sales_quarter, 'Jan' as sales_month, 1000 as revenue
         UNION ALL SELECT 'Q1', 'Feb', 1500
         UNION ALL SELECT 'Q1', 'Mar', 1200
         UNION ALL SELECT 'Q2', 'Apr', 1800
         UNION ALL SELECT 'Q2', 'May', 2000
       """) extend {
-        hierarchical_dimension: time_hierarchy is quarter, month
+        hierarchical_dimension: time_hierarchy is sales_quarter, sales_month
         measure: total_revenue is revenue.sum()
         
         view: revenue_by_time is {
@@ -180,7 +180,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     
     expect(data).toHaveLength(2); // Q1 and Q2
     
-    const q1 = data.find((r: any) => r['quarter'] === 'Q1');
+    const q1 = data.find((r: any) => r['sales_quarter'] === 'Q1');
     expect(q1).toBeDefined();
     expect(q1!['total_revenue']).toBe(3700);
     expect(q1!['data']).toBeDefined();
