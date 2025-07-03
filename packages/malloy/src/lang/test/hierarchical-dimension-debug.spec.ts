@@ -82,8 +82,8 @@ describe('hierarchical dimensions debug', () => {
       console.log('Query:', query);
     }
     
-    // This should fail for now
-    expect(m).not.toTranslate();
+    // This should now succeed with the hierarchical dimension expansion
+    expect(m).toTranslate();
   });
 
   test('debug: check field space entries', () => {

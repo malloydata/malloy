@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {TypeDesc, QueryFieldDef} from '../../../model/malloy_types';
+import type {TypeDesc, QueryFieldDef, FieldDef} from '../../../model/malloy_types';
 import {SpaceField} from '../types/space-field';
 import type {HierarchicalDimension} from '../source-properties/hierarchical-dimension';
 import type {FieldSpace} from '../types/field-space';
@@ -50,5 +50,26 @@ export class HierarchicalDimensionField extends SpaceField {
     // This returns undefined to prevent it from being added as a single field
     // The expansion should happen at a higher level
     return undefined;
+  }
+
+  fieldDef(): FieldDef | undefined {
+    // Return a field definition for the hierarchical dimension
+    // This allows it to be properly registered in the source
+    // We use the annotation field to store metadata about the hierarchical dimension
+    return {
+      type: 'string',
+      name: this.definition.name,
+      location: this.definition.location,
+      annotation: {
+        notes: [{
+          text: `hierarchical_dimension:${this.definition.fields.map(f => f.outputName).join(',')}`,
+          at: this.definition.location!
+        }]
+      },
+      e: {
+        node: 'stringLiteral',
+        literal: `hierarchical_dimension:${this.definition.fields.map(f => f.outputName).join(',')}`,
+      },
+    };
   }
 }

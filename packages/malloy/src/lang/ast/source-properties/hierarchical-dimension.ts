@@ -55,6 +55,17 @@ export class HierarchicalDimension
   }
 
   makeEntry(fs: DynamicSpace): void {
+    // Validate that all referenced fields exist
+    for (const fieldRef of this.fields) {
+      const lookupResult = fs.lookup(fieldRef.list);
+      if (!lookupResult.found) {
+        fieldRef.logError(
+          'field-not-found',
+          `'${fieldRef.refString}' is not defined`
+        );
+      }
+    }
+    
     const hierarchicalField = new HierarchicalDimensionField(this);
     fs.newEntry(this.name, this, hierarchicalField);
   }

@@ -24,7 +24,7 @@
 import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {describeIfDatabaseAvailable} from '../../util';
+import {describeIfDatabaseAvailable, runQuery} from '../../util';
 
 // TODO identify which tests need to run on wasm and move them into their own file
 const runtimes = ['duckdb', 'duckdb_wasm'];
@@ -99,6 +99,44 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   }
     `;
     await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
+  });
+
+  it.only('test', async () => {
+    console.log('HI');
+
+    let query = '';
+    let res;
+
+    query = `
+      run: duckdb.sql("select 1") -> {
+        select:
+          n1 is 1.234
+          n2 is 1234.0 / 1000
+  }
+    `;
+
+    res = await runQuery(runtime, query);
+    console.log(res.data.toObject());
+
+    query = `
+    run: duckdb.sql("SELECT 1 as one, 2 as two, 3 as three") -> { group_by:  one, two }
+
+        `;
+
+    query = `
+    source: test_source is duckdb.sql("SELECT 1 as one, 2 as two, 3 as three") extend {
+      dimension: foo is one, bar is two
+      hierarchical_dimension: hi is foo, bar
+
+      view: test_view is {
+        group_by: hi
+      }
+    }
+
+    run: test_source -> test_view;
+    `;
+    res = await runQuery(runtime, query);
+    console.log(res.data.toObject());
   });
 
   it('dayname', async () => {
