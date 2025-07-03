@@ -59,7 +59,7 @@ export function opOutputStruct(
       if (isSourceDef(pipeOutputStruct)) {
         return pipeOutputStruct;
       }
-      // Inconcievable, a pipe deosnt output a record or an array
+      // Inconcievable, a pipe doesn't output a record or an array
       logTo.logError(
         'failed-to-compute-output-schema',
         'INTERNAL ERROR model/Segment.nextStructDef: RETURNED A NON SOURCE\n' +
