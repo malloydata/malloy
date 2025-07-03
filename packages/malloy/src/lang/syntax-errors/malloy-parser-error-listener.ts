@@ -220,6 +220,11 @@ export const malloyCustomErrorCases: ErrorCase[] = [
     ruleContextOptions: ['vExpr'],
     precedingTokenOptions: [[MalloyParser.IDENTIFIER]],
   },
+  {
+    errorMessage:
+      "The 'project:' keyword is no longer supported. Use 'select:' instead.",
+    offendingSymbol: MalloyParser.PROJECT,
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
