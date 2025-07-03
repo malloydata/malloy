@@ -186,6 +186,40 @@ export const malloyCustomErrorCases: ErrorCase[] = [
       with: ['run:', 'query:', 'source:'],
     },
   },
+  {
+    errorMessage:
+      '`count(distinct expression)` deprecated, use `count(expression)` instead.',
+    offendingSymbol: MalloyParser.DISTINCT,
+    ruleContextOptions: ['fieldExpr'],
+    precedingTokenOptions: [[MalloyParser.COUNT], [MalloyParser.OPAREN]],
+  },
+  {
+    errorMessage:
+      "Unexpected type '${offendingSymbol}' in dimension definition. Expected an expression or field reference.",
+    offendingSymbolTextOptions: [
+      'string',
+      'number',
+      'int',
+      'integer',
+      'bool',
+      'boolean',
+      'date',
+      'time',
+      'timestamp',
+      'array',
+    ],
+    ruleContextOptions: ['fieldExpr'],
+    precedingTokenOptions: [[MalloyParser.IDENTIFIER], [MalloyParser.IS]],
+  },
+  // Identify a case where a user is using an open parenthesis following an
+  // identifier that does not represent a valid function.
+  {
+    errorMessage:
+      "Unknown function 'percent_of_total'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions",
+    offendingSymbol: MalloyParser.OPAREN,
+    ruleContextOptions: ['vExpr'],
+    precedingTokenOptions: [[MalloyParser.IDENTIFIER]],
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {

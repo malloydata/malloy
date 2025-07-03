@@ -67,6 +67,24 @@ describe('custom error messages', () => {
           primary_key: id
       `).toLogAtLeast(errorMessage("missing '{' at 'primary_key:'"));
     });
+
+    test('use of the distinct keyword in a count', () => {
+      expect(
+        `source: x is a extend { measure: ai_count is count(distinct ai) }`
+      ).toLogAtLeast(
+        errorMessage(
+          '`count(distinct expression)` deprecated, use `count(expression)` instead.'
+        )
+      );
+    });
+
+    test('mistakenly specifying a type instead of a value', () => {
+      expect(`source: x is a extend { dimension: s is string }`).toLogAtLeast(
+        errorMessage(
+          "Unexpected type 'string' in dimension definition. Expected an expression or field reference."
+        )
+      );
+    });
   });
 
   describe('exploreProperties', () => {
@@ -172,6 +190,19 @@ describe('custom error messages', () => {
         )
       );
     });
+
+    test('incorrect use of undefined function in unnamed aggregate', () => {
+      expect(`
+        source: x is a extend {
+          view: t is {
+            aggregate: percent_of_total(time)
+          }
+      }`).toLogAtLeast(
+        errorMessage(
+          "Unknown function 'percent_of_total'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions"
+        )
+      );
+    });
   });
 
   describe('queryStatement', () => {
@@ -250,6 +281,28 @@ describe('custom error messages', () => {
       expect(`
           run: x -> {
         `).toLogAtLeast(errorMessage("Missing '}' at '<EOF>'"));
+    });
+
+    test('select in grouping query', () => {
+      expect(`
+          run: a -> {
+            group_by: astr
+            select: ai
+          }
+        `).toLogAtLeast(
+        errorMessage("Use of select is not allowed in a grouping query")
+      );
+    });
+
+    test('group_by in selecting query', () => {
+      expect(`
+          run: a -> {
+            select: ai
+            group_by: astr
+          }
+        `).toLogAtLeast(
+        errorMessage("Use of grouping is not allowed in a select query")
+      );
     });
   });
 });
