@@ -126,7 +126,8 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     query = `
     source: test_source is duckdb.sql("SELECT 1 as one, 2 as two, 3 as three") extend {
       dimension: foo is one, bar is two
-      hierarchical_dimension: hi is foo, bar
+      hierarchical_dimension: hi is one, two
+      // hierarchical_dimension: hi is foo, bar
 
       view: test_view is {
         group_by: hi
