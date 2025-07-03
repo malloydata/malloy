@@ -28,6 +28,9 @@ import {
   LegalRefinementStage,
   QueryClass,
 } from '../types/query-property-interface';
+import type {QueryBuilder} from '../types/query-builder';
+import {FieldReference} from '../query-items/field-references';
+import {HierarchicalDimensionField} from '../field-space/hierarchical-dimension-field';
 
 export class GroupBy
   extends DefinitionList<QueryItem>
@@ -36,4 +39,29 @@ export class GroupBy
   elementType = 'groupBy';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+
+  queryExecute(executeFor: QueryBuilder): void {
+    // Normal processing - add all fields
+    executeFor.resultFS.pushFields(...this.list);
+    
+    // After adding fields, check if any field is a hierarchical dimension
+    for (let i = 0; i < this.list.length; i++) {
+      const item = this.list[i];
+      if (item instanceof FieldReference) {
+        // Check if this field reference points to a hierarchical dimension
+        const entry = executeFor.inputFS.lookup(item.list);
+        if (entry.found && entry.found instanceof HierarchicalDimensionField) {
+          // Mark this query for hierarchical expansion
+          if ('hierarchicalExpansion' in executeFor) {
+            (executeFor as any).hierarchicalExpansion = {
+              field: item,
+              fieldIndex: i,
+              dimension: entry.found.definition
+            };
+          }
+          break;
+        }
+      }
+    }
+  }
 }

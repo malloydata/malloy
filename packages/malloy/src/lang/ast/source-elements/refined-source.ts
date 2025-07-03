@@ -42,6 +42,7 @@ import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import type {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
+import {HierarchicalDimensions} from '../source-properties/hierarchical-dimension';
 import {JoinStatement} from '../source-properties/join';
 import type {IncludeItem} from '../source-query-elements/include-item';
 import {
@@ -109,7 +110,8 @@ export class RefinedSource extends Source {
         el instanceof DeclareFields ||
         el instanceof JoinStatement ||
         el instanceof Views ||
-        el instanceof Renames
+        el instanceof Renames ||
+        el instanceof HierarchicalDimensions
       ) {
         fields.push(...el.list);
         if (el.accessModifier) {

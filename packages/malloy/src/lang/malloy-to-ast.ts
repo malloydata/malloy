@@ -1835,6 +1835,38 @@ export class MalloyToAST
     return new ast.ObjectAnnotation(allNotes);
   }
 
+  visitDefExploreHierarchicalDimension_stub(
+    pcx: parse.DefExploreHierarchicalDimension_stubContext
+  ): ast.HierarchicalDimensions {
+    const defStub = pcx.defHierarchicalDimension_stub();
+    const accessLabel = this.getAccessLabel(defStub.accessLabel());
+    const defs = defStub
+      .hierarchicalDimensionDefList()
+      .hierarchicalDimensionDef()
+      .map(cx => this.visitHierarchicalDimensionDef(cx));
+    const stmt = new ast.HierarchicalDimensions(defs, accessLabel);
+    stmt.extendNote({blockNotes: this.getNotes(defStub.tags())});
+    return this.astAt(stmt, pcx);
+  }
+
+  visitHierarchicalDimensionDef(
+    pcx: parse.HierarchicalDimensionDefContext
+  ): ast.HierarchicalDimension {
+    const name = getId(pcx.fieldNameDef());
+    const fieldNames = pcx.fieldNameList().fieldName().map(fcx => 
+      this.astAt(
+        new ast.ExpressionFieldReference([this.getFieldName(fcx)]), 
+        fcx
+      )
+    );
+    const hierarchicalDim = new ast.HierarchicalDimension(name, fieldNames, undefined);
+    const notes = this.getNotes(pcx.tags()).concat(
+      this.getIsNotes(pcx.isDefine())
+    );
+    hierarchicalDim.extendNote({notes});
+    return this.astAt(hierarchicalDim, pcx);
+  }
+
   getSQArgument(pcx: parse.SourceArgumentContext): ast.Argument {
     const id = pcx.argumentId();
     const ref = id

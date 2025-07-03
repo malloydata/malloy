@@ -105,6 +105,7 @@ export * from './query-properties/aggregate';
 export * from './query-properties/calculate';
 export * from './query-properties/declare-fields';
 export * from './source-properties/dimensions';
+export * from './source-properties/hierarchical-dimension';
 export * from './query-properties/extend';
 export * from './query-properties/filters';
 export * from './query-properties/drill';
