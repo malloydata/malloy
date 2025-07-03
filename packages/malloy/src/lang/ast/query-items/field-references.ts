@@ -30,6 +30,7 @@ import type {
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
+import {HierarchicalDimensionField} from '../field-space/hierarchical-dimension-field';
 
 import type {FieldName, FieldSpace} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
@@ -75,6 +76,32 @@ export abstract class FieldReference
     } else {
       // In a QuerySpace, this needs to be able to find the thing to which it refers
       const fromFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
+      
+      // Check if this references a hierarchical dimension
+      const lookupResult = fromFS.lookup(this.list);
+      if (lookupResult.found && lookupResult.found instanceof HierarchicalDimensionField) {
+        // This is a hierarchical dimension - expand it into multiple field references
+        const hdimField = lookupResult.found as HierarchicalDimensionField;
+        const hdimDef = hdimField.definition;
+        if (hdimDef && hdimDef.fields) {
+          // Add each field from the hierarchical dimension
+          for (const field of hdimDef.fields) {
+            // Create a new FieldReference for each field using the field's internal FieldName list
+            const newFieldRef = new (this.constructor as FieldReferenceConstructor)(field.list);
+            newFieldRef.location = this.location;
+            
+            // Add the field to the output space
+            const fieldName = field.refString;
+            if (!fs.entry(fieldName)) {
+              fs.newEntry(fieldName, newFieldRef, new ReferenceField(newFieldRef, fromFS));
+            }
+          }
+          // Don't add the hierarchical dimension itself as a field
+          return;
+        }
+      }
+      
+      // Normal field reference
       fs.newEntry(refName, this, new ReferenceField(this, fromFS));
     }
   }

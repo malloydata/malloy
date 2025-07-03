@@ -164,6 +164,7 @@ exploreProperties
 exploreStatement
   : defDimensions                            # defExploreDimension_stub
   | defMeasures                              # defExploreMeasure_stub
+  | defHierarchicalDimension_stub            # defExploreHierarchicalDimension_stub
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
@@ -193,6 +194,18 @@ defMeasures
 
 defDimensions
   : tags accessLabel? DIMENSION defList
+  ;
+
+defHierarchicalDimension_stub
+  : tags accessLabel? HIERARCHICAL_DIMENSION hierarchicalDimensionDefList
+  ;
+
+hierarchicalDimensionDefList
+  : hierarchicalDimensionDef (COMMA? hierarchicalDimensionDef)* COMMA?
+  ;
+
+hierarchicalDimensionDef
+  : tags fieldNameDef isDefine fieldNameList
   ;
 
 renameList
