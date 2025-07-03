@@ -101,43 +101,91 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
   });
 
-  it.only('test', async () => {
-    console.log('HI');
-
-    let query = '';
-    let res;
-
-    query = `
-      run: duckdb.sql("select 1") -> {
-        select:
-          n1 is 1.234
-          n2 is 1234.0 / 1000
-  }
-    `;
-
-    res = await runQuery(runtime, query);
-    console.log(res.data.toObject());
-
-    query = `
-    run: duckdb.sql("SELECT 1 as one, 2 as two, 3 as three") -> { group_by:  one, two }
-
-        `;
-
-    query = `
-    source: test_source is duckdb.sql("SELECT 1 as one, 2 as two, 3 as three") extend {
-      dimension: foo is one, bar is two
-      hierarchical_dimension: hi is one, two
-      // hierarchical_dimension: hi is foo, bar
-
-      view: test_view is {
-        group_by: hi
+  it('supports hierarchical dimensions', async () => {
+    // Test basic hierarchical dimension with two levels
+    const query = `
+      source: test_source is duckdb.sql("""
+        SELECT 
+          'North America' as region, 'USA' as country, 'New York' as city, 100 as sales
+        UNION ALL SELECT 'North America', 'USA', 'Los Angeles', 150
+        UNION ALL SELECT 'North America', 'Canada', 'Toronto', 80
+        UNION ALL SELECT 'Europe', 'UK', 'London', 200
+        UNION ALL SELECT 'Europe', 'Germany', 'Berlin', 120
+      """) extend {
+        hierarchical_dimension: location_hierarchy is region, country, city
+        measure: total_sales is sales.sum()
+        measure: sale_count is count()
       }
-    }
 
-    run: test_source -> test_view;
+      run: test_source -> {
+        group_by: location_hierarchy
+        aggregate: 
+          total_sales
+          sale_count
+      }
     `;
-    res = await runQuery(runtime, query);
-    console.log(res.data.toObject());
+    
+    const result = await runQuery(runtime, query);
+    const data = result.data.toObject();
+    
+    // Verify structure
+    expect(data).toHaveLength(2); // Two regions
+    
+    const northAmerica = data.find((r: any) => r['region'] === 'North America');
+    expect(northAmerica).toBeDefined();
+    expect(northAmerica!['total_sales']).toBe(330);
+    expect(northAmerica!['sale_count']).toBe(3);
+    expect(northAmerica!['data']).toBeDefined();
+    expect(Array.isArray(northAmerica!['data'])).toBe(true);
+    expect(northAmerica!['data']).toHaveLength(2); // USA and Canada
+    
+    const usa = (northAmerica!['data'] as any[]).find((c: any) => c['country'] === 'USA');
+    expect(usa).toBeDefined();
+    expect(usa['total_sales']).toBe(250);
+    expect(usa['sale_count']).toBe(2);
+    expect(usa['city_data']).toBeDefined();
+    expect(Array.isArray(usa['city_data'])).toBe(true);
+    expect(usa['city_data']).toHaveLength(2); // New York and Los Angeles
+    
+    const newYork = (usa['city_data'] as any[]).find((c: any) => c['city'] === 'New York');
+    expect(newYork).toBeDefined();
+    expect(newYork['total_sales']).toBe(100);
+    expect(newYork['sale_count']).toBe(1);
+  });
+
+  it('hierarchical dimension in view', async () => {
+    const query = `
+      source: sales_data is duckdb.sql("""
+        SELECT 
+          'Q1' as quarter, 'Jan' as month, 1000 as revenue
+        UNION ALL SELECT 'Q1', 'Feb', 1500
+        UNION ALL SELECT 'Q1', 'Mar', 1200
+        UNION ALL SELECT 'Q2', 'Apr', 1800
+        UNION ALL SELECT 'Q2', 'May', 2000
+      """) extend {
+        hierarchical_dimension: time_hierarchy is quarter, month
+        measure: total_revenue is revenue.sum()
+        
+        view: revenue_by_time is {
+          group_by: time_hierarchy
+          aggregate: total_revenue
+        }
+      }
+
+      run: sales_data -> revenue_by_time
+    `;
+    
+    const result = await runQuery(runtime, query);
+    const data = result.data.toObject();
+    
+    expect(data).toHaveLength(2); // Q1 and Q2
+    
+    const q1 = data.find((r: any) => r['quarter'] === 'Q1');
+    expect(q1).toBeDefined();
+    expect(q1!['total_revenue']).toBe(3700);
+    expect(q1!['data']).toBeDefined();
+    expect(Array.isArray(q1!['data'])).toBe(true);
+    expect(q1!['data']).toHaveLength(3); // Jan, Feb, Mar
   });
 
   it('dayname', async () => {

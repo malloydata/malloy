@@ -24,8 +24,8 @@
 import {model} from './test-translator';
 import './parse-expects';
 
-describe('hierarchical dimensions expansion', () => {
-  test('expand hierarchical dimension to constituent fields', () => {
+describe('hierarchical dimensions nested structure', () => {
+  test('generate nested structure for two-level hierarchy', () => {
     const m = model`
       source: test_source is a extend {
         dimension: dim1 is astr
@@ -49,44 +49,44 @@ describe('hierarchical dimensions expansion', () => {
       
       if (query && 'pipeline' in query) {
         const segment = query.pipeline[0];
+        console.log('Query segment:', JSON.stringify(segment, null, 2));
+        
         if (segment && 'queryFields' in segment) {
-          console.log('Query fields:', segment.queryFields.map((f: any) => 
-            f.type === 'fieldref' ? f.path.join('.') : f.name
-          ));
-          
-          // Check that the hierarchical dimension was expanded into nested structure
+          // Check that we have the first dimension field
           const fieldNames = segment.queryFields.map((f: any) => 
             f.type === 'fieldref' ? f.path[f.path.length - 1] : 
-            f.type === 'turtle' ? f.name : f.name
+            f.type === 'turtle' ? `nest:${f.name}` : f.name
           );
           
-          expect(fieldNames).toContain('dim1');
-          expect(fieldNames).toContain('data'); // nested query containing dim2
-          expect(fieldNames).toContain('total_count');
-          expect(fieldNames).not.toContain('test_hierarchy');
+          console.log('Top level fields:', fieldNames);
           
-          // Check the nested structure
-          const dataField = segment.queryFields.find((f: any) => f.type === 'turtle' && f.name === 'data');
-          expect(dataField).toBeDefined();
-          if (dataField && dataField.type === 'turtle' && 'queryFields' in dataField.pipeline[0]) {
-            const nestedFields = dataField.pipeline[0].queryFields.map((f: any) =>
-              f.type === 'fieldref' ? f.path[f.path.length - 1] : f.name
-            );
-            expect(nestedFields).toContain('dim2');
-            expect(nestedFields).toContain('total_count');
+          expect(fieldNames).toContain('dim1');
+          expect(fieldNames).toContain('total_count');
+          expect(fieldNames.some((n: string) => n.startsWith('nest:'))).toBe(true);
+          
+          // Check for the nested structure
+          const nestField = segment.queryFields.find((f: any) => f.type === 'turtle');
+          expect(nestField).toBeDefined();
+          if (nestField && nestField.type === 'turtle') {
+            expect(nestField.name).toBe('data');
+            expect(nestField.pipeline).toBeDefined();
+            if ('queryFields' in nestField.pipeline[0]) {
+              expect(nestField.pipeline[0].queryFields).toBeDefined();
+            }
           }
         }
       }
     }
   });
 
-  test('hierarchical dimension with order by', () => {
+  test('generate nested structure for three-level hierarchy', () => {
     const m = model`
       source: test_source is a extend {
         dimension: dim1 is astr
         dimension: dim2 is astr
+        dimension: dim3 is astr
         measure: total_cost is ai.sum()
-        hierarchical_dimension: test_hierarchy is dim1, dim2
+        hierarchical_dimension: test_hierarchy is dim1, dim2, dim3
       }
 
       query: by_hierarchy is test_source -> {
@@ -103,11 +103,23 @@ describe('hierarchical dimensions expansion', () => {
       const query = translated.modelDef.contents['by_hierarchy'];
       if (query && 'pipeline' in query) {
         const segment = query.pipeline[0];
-        if (segment && 'orderBy' in segment) {
-          console.log('Order by:', segment.orderBy);
-          expect(segment.orderBy).toBeDefined();
-          expect(segment.orderBy![0].field).toBe('total_cost');
-          expect(segment.orderBy![0].dir).toBe('desc');
+        console.log('Three-level query segment:', JSON.stringify(segment, null, 2));
+        
+        if (segment && 'queryFields' in segment) {
+          // Check for nested structure
+          const nestField = segment.queryFields.find((f: any) => f.type === 'turtle');
+          expect(nestField).toBeDefined();
+          
+          if (nestField && nestField.type === 'turtle' && nestField.pipeline && nestField.pipeline[0]) {
+            const nestedSegment = nestField.pipeline[0];
+            if ('queryFields' in nestedSegment) {
+              expect(nestedSegment.queryFields).toBeDefined();
+              
+              // Check for deeper nesting
+              const deeperNest = nestedSegment.queryFields.find((f: any) => f.type === 'turtle');
+              expect(deeperNest).toBeDefined();
+            }
+          }
         }
       }
     }

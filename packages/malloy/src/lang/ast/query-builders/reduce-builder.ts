@@ -40,6 +40,7 @@ import {
   isReduceSegment,
   isTemporalType,
 } from '../../../model/malloy_types';
+import * as model from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
 import type {SourceFieldSpace} from '../types/field-space';
@@ -146,6 +147,10 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
   inputFS: QueryInputSpace;
   resultFS: ReduceFieldSpace;
   readonly type = 'grouping';
+  hierarchicalDimension?: {
+    fields: string[];
+    originalAggregates: QueryFieldDef[];
+  };
 
   constructor(
     baseFS: SourceFieldSpace,
@@ -156,6 +161,8 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
     super();
     this.resultFS = new ReduceFieldSpace(baseFS, refineThis, isNestIn, astEl);
     this.inputFS = this.resultFS.inputSpace();
+    // Initialize hierarchicalDimension as undefined
+    this.hierarchicalDimension = undefined;
   }
 
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {
@@ -173,6 +180,34 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
     }
     const reduceSegment = this.resultFS.getQuerySegment(from);
     this.refineFrom(from, reduceSegment);
+    
+    // Check if we need to generate nested queries for hierarchical dimensions
+    if (this.hierarchicalDimension && this.hierarchicalDimension.fields.length > 1) {
+      // Store the aggregates and order by for duplication in nested levels
+      const aggregates: QueryFieldDef[] = [];
+      const groupByFields: QueryFieldDef[] = [];
+      
+      for (const field of reduceSegment.queryFields) {
+        if (field.type === 'fieldref') {
+          // Check if it's actually an aggregate by looking at the field it references
+          const fieldName = field.path[field.path.length - 1];
+          const lookupPath = field.path.map(el => new FieldName(el));
+          const refField = this.inputFS.lookup(lookupPath).found;
+          if (refField && refField.typeDesc().expressionType === 'aggregate') {
+            aggregates.push(field);
+          } else {
+            groupByFields.push(field);
+          }
+        } else {
+          // This is likely an aggregate
+          aggregates.push(field);
+        }
+      }
+      
+      this.hierarchicalDimension.originalAggregates = aggregates;
+      
+      // We'll generate the nested structure after the default ordering is set
+    }
 
     if (reduceSegment.orderBy) {
       // In the modern world, we will ONLY allow names and not numbers in order by lists
@@ -230,6 +265,89 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
         reduceSegment.orderBy = [{field: usableDefaultOrderField, dir: 'asc'}];
       }
     }
+    
+    // Generate nested queries for hierarchical dimensions
+    if (this.hierarchicalDimension && this.hierarchicalDimension.fields.length > 1) {
+      // Remove the expanded fields except the first one
+      const firstField = this.hierarchicalDimension.fields[0];
+      const remainingFields = this.hierarchicalDimension.fields.slice(1);
+      
+      // Keep only the first field and aggregates in the top level
+      const newQueryFields: QueryFieldDef[] = [];
+      for (const field of reduceSegment.queryFields) {
+        if (field.type === 'fieldref') {
+          const fieldName = field.path[field.path.length - 1];
+          if (fieldName === firstField || !this.hierarchicalDimension.fields.includes(fieldName)) {
+            newQueryFields.push(field);
+          }
+        } else {
+          // Keep all non-fieldrefs (aggregates, etc)
+          newQueryFields.push(field);
+        }
+      }
+      
+      // Create nested structure recursively
+      const createNestedStructure = (fields: string[], level: number): model.TurtleDef | undefined => {
+        if (fields.length === 0) return undefined;
+        
+        const currentField = fields[0];
+        const remainingFieldsForNest = fields.slice(1);
+        
+        const queryFields: model.QueryFieldDef[] = [
+          {type: 'fieldref', path: [currentField]} as model.RefToField,
+          ...this.hierarchicalDimension!.originalAggregates
+        ];
+        
+        // Build fieldUsage for the nested query
+        const fieldUsage: model.FieldUsage[] = [
+          {path: [currentField]},
+          ...this.hierarchicalDimension!.originalAggregates.map(agg => {
+            if (agg.type === 'fieldref') {
+              return {path: agg.path};
+            }
+            return {path: [agg.name]};
+          })
+        ];
+        
+        // If there are more fields, create a nested structure
+        if (remainingFieldsForNest.length > 0) {
+          const nestedTurtle = createNestedStructure(remainingFieldsForNest, level + 1);
+          if (nestedTurtle) {
+            queryFields.push(nestedTurtle);
+            // Add field usage from nested turtle
+            if (nestedTurtle.fieldUsage) {
+              fieldUsage.push(...nestedTurtle.fieldUsage);
+            }
+          }
+        }
+        
+        const nestPipeline: model.PipeSegment[] = [{
+          type: 'reduce',
+          queryFields,
+          filterList: [],
+          fieldUsage: fieldUsage.filter((fu, index, self) => 
+            index === self.findIndex(f => JSON.stringify(f.path) === JSON.stringify(fu.path))
+          ),
+        }];
+        
+        return {
+          type: 'turtle',
+          name: level === 0 ? 'data' : `${currentField}_data`,
+          pipeline: nestPipeline,
+          annotation: {},
+          fieldUsage: fieldUsage.filter((fu, index, self) => 
+            index === self.findIndex(f => JSON.stringify(f.path) === JSON.stringify(fu.path))
+          ),
+        };
+      };
+      
+      // Create the nested structure
+      const nestedTurtle = createNestedStructure(remainingFields, 0);
+      if (nestedTurtle) {
+        reduceSegment.queryFields = [...newQueryFields, nestedTurtle];
+      }
+    }
+    
     return reduceSegment;
   }
 }

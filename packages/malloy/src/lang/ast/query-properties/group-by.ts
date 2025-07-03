@@ -45,6 +45,7 @@ export class GroupBy
   queryExecute(executeFor: QueryBuilder): void {
     // Process each item, expanding hierarchical dimensions
     const expandedItems: QueryItem[] = [];
+    let hierarchicalInfo: {fields: string[], item: FieldReference} | undefined;
     
     for (const item of this.list) {
       if (item instanceof FieldReference) {
@@ -69,6 +70,9 @@ export class GroupBy
         }
         
         if (isHierarchical && hierarchicalFields.length > 0) {
+          // Store hierarchical info for nested query generation
+          hierarchicalInfo = {fields: hierarchicalFields, item};
+          
           // Expand the hierarchical dimension to its constituent fields
           for (const fieldName of hierarchicalFields) {
             expandedItems.push(new ExpressionFieldReference([new FieldName(fieldName)]));
@@ -76,6 +80,10 @@ export class GroupBy
         } else if (entry.found instanceof HierarchicalDimensionField) {
           // This case handles when we have the actual HierarchicalDimensionField instance
           const hierarchicalDim = entry.found.definition;
+          hierarchicalInfo = {
+            fields: hierarchicalDim.fields.map(f => f.outputName),
+            item
+          };
           expandedItems.push(...hierarchicalDim.fields);
         } else {
           // Regular field
@@ -89,5 +97,13 @@ export class GroupBy
     
     // Add all expanded fields
     executeFor.resultFS.pushFields(...expandedItems);
+    
+    // If this is a reduce query with hierarchical dimensions, store info for nesting
+    if (hierarchicalInfo && executeFor.type === 'grouping') {
+      const reduceBuilder = executeFor as any;
+      reduceBuilder.hierarchicalDimension = {
+        fields: hierarchicalInfo.fields
+      };
+    }
   }
 }
