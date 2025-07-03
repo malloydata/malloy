@@ -33,7 +33,7 @@ describe('hierarchical dimensions debug', () => {
         hierarchical_dimension: test_hierarchy is dim1, dim2
       }
     `;
-    const translated = m.translate();
+    const translated = m.translator.translate();
     console.log('Translation result:', translated);
     if (translated.modelDef) {
       const source = translated.modelDef.contents['test_source'];
@@ -58,5 +58,51 @@ describe('hierarchical dimensions debug', () => {
       }
     `;
     expect(m).toTranslate();
+  });
+
+  test('debug: use hierarchical dimension in group_by', () => {
+    const m = model`
+      source: test_source is a extend {
+        dimension: dim1 is astr
+        dimension: dim2 is astr
+        hierarchical_dimension: test_hierarchy is dim1, dim2
+      }
+
+      query: test_query is test_source -> {
+        group_by: test_hierarchy
+      }
+    `;
+    
+    const translated = m.translator.translate();
+    console.log('Translation problems:', translated.problems);
+    
+    // Check if the query was created
+    if (translated.modelDef) {
+      const query = translated.modelDef.contents['test_query'];
+      console.log('Query:', query);
+    }
+    
+    // This should fail for now
+    expect(m).not.toTranslate();
+  });
+
+  test('debug: check field space entries', () => {
+    const m = model`
+      source: test_source is a extend {
+        dimension: dim1 is astr
+        dimension: dim2 is astr
+        hierarchical_dimension: test_hierarchy is dim1, dim2
+      }
+    `;
+    
+    const translator = m.translator;
+    const ast = translator.ast();
+    console.log('AST:', ast);
+    
+    // Try to inspect the translator's state
+    const translated = translator.translate();
+    console.log('Translated successfully:', translated.problems ? !translated.problems.length : false);
+    
+    expect(translator).toBeDefined();
   });
 });
