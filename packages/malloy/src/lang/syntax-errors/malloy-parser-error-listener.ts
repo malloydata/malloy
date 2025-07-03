@@ -225,6 +225,18 @@ export const malloyCustomErrorCases: ErrorCase[] = [
       "The 'project:' keyword is no longer supported. Use 'select:' instead.",
     offendingSymbol: MalloyParser.PROJECT,
   },
+  {
+    errorMessage:
+      "Unsupported keyword 'as'. Use 'is' to name something (ex: `dimension: name is expression`)",
+    offendingSymbolTextOptions: ['as'],
+    ruleContextOptions: ['isDefine'],
+  },
+  {
+    // Broader catch-all case for the 'as' keyword, including an alternative example.
+    errorMessage:
+      "Unsupported keyword 'as'. Use 'is' to name something (ex: `select: new_name is column_name`)",
+    offendingSymbolTextOptions: ['as'],
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {

@@ -70,7 +70,7 @@ describe('custom error messages', () => {
 
     test('use of the distinct keyword in a count', () => {
       expect(
-        `source: x is a extend { measure: ai_count is count(distinct ai) }`
+        'source: x is a extend { measure: ai_count is count(distinct ai) }'
       ).toLogAtLeast(
         errorMessage(
           '`count(distinct expression)` deprecated, use `count(expression)` instead.'
@@ -79,7 +79,7 @@ describe('custom error messages', () => {
     });
 
     test('mistakenly specifying a type instead of a value', () => {
-      expect(`source: x is a extend { dimension: s is string }`).toLogAtLeast(
+      expect('source: x is a extend { dimension: s is string }').toLogAtLeast(
         errorMessage(
           "Unexpected type 'string' in dimension definition. Expected an expression or field reference."
         )
@@ -146,6 +146,16 @@ describe('custom error messages', () => {
         }
         `).toLogAtLeast(
         errorMessage("extraneous input '{' expecting {BQ_STRING, IDENTIFIER}")
+      );
+    });
+
+    test('use of as in dimension', () => {
+      expect(`source: x is a extend {
+        dimension: ai as dimension_name
+      }`).toLogAtLeast(
+        errorMessage(
+          "Unsupported keyword 'as'. Use 'is' to name something (ex: `dimension: name is expression`)"
+        )
       );
     });
   });
@@ -290,7 +300,7 @@ describe('custom error messages', () => {
             select: ai
           }
         `).toLogAtLeast(
-        errorMessage("Use of select is not allowed in a grouping query")
+        errorMessage('Use of select is not allowed in a grouping query')
       );
     });
 
@@ -301,7 +311,7 @@ describe('custom error messages', () => {
             group_by: astr
           }
         `).toLogAtLeast(
-        errorMessage("Use of grouping is not allowed in a select query")
+        errorMessage('Use of grouping is not allowed in a select query')
       );
     });
 
@@ -311,8 +321,22 @@ describe('custom error messages', () => {
             project: *
           }
         `).toLogAtLeast(
-        errorMessage("The 'project:' keyword is no longer supported. Use 'select:' instead.")
+        errorMessage(
+          "The 'project:' keyword is no longer supported. Use 'select:' instead."
+        )
       );
-    })
+    });
+
+    test('unexpected us of "as" in select query', () => {
+      expect(`
+          run: a -> {
+            select: ai as name
+          }
+        `).toLogAtLeast(
+        errorMessage(
+          "Unsupported keyword 'as'. Use 'is' to name something (ex: `select: new_name is column_name`)"
+        )
+      );
+    });
   });
 });
