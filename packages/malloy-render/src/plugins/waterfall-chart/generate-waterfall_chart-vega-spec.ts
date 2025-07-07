@@ -8,6 +8,101 @@ import {Field, RepeatedRecordCell} from '@/data_tree';
 import type {RecordCell} from '@/data_tree';
 import type {Spec} from 'vega';
 import type {WaterfallChartPluginInstance} from './waterfall-chart-plugin';
+import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
+import type {NestField} from '@/data_tree';
+
+// Helper function to extract synthetic data for chart layout calculation
+function getSyntheticDataForLayout(
+  explore: NestField,
+  settings: any,
+  data?: {rows: RecordCell[]}
+): {
+  xField: Field;
+  yField: Field;
+  getYMinMax: () => [number, number];
+} {
+  // For x-axis, we need to consider all x labels including 'start', 'end', 'Others*', and actual category values
+  const nestPath = JSON.parse(settings.xField).slice(0, 1);
+  const xPath = JSON.parse(settings.xField).slice(-1);
+  const yPath = JSON.parse(settings.yField).slice(-1);
+
+  // Get the nested field to access x values
+  const nestedField = explore.fieldAt([nestPath]);
+  const xField = nestedField.isRepeatedRecord() ? nestedField.fields[0] : explore.fields[0];
+  const yField = nestedField.isRepeatedRecord() ? nestedField.fields[1] : explore.fields[1];
+
+  // Collect all possible x-axis labels
+  const xLabels = new Set<string>(['start', 'end', 'Others*']);
+
+  // Add actual x values from field metadata if available
+  if (xField.valueSet && xField.valueSet.size > 0) {
+    for (const val of xField.valueSet) {
+      xLabels.add(String(val));
+    }
+  }
+
+  // Find the longest x label
+  let maxXString = '';
+  for (const label of xLabels) {
+    if (label.length > maxXString.length) {
+      maxXString = label;
+    }
+  }
+
+  // Create lazy calculation for y-axis min/max
+  const getYMinMax = (): [number, number] => {
+    // Use field metadata if available
+    if (yField.minNumber !== undefined && yField.maxNumber !== undefined) {
+      // Add some padding for the waterfall visualization
+      const range = yField.maxNumber - yField.minNumber;
+      return [
+        Math.min(0, yField.minNumber - range * 0.1),
+        yField.maxNumber + range * 0.1
+      ];
+    }
+
+    // Fallback to data calculation if provided
+    let min = 0;
+    let max = 0;
+
+    if (data && data.rows) {
+      for (const row of data.rows as RecordCell[]) {
+        const startVal = row.cellAt(settings.startField).value as number;
+        const endVal = row.cellAt(settings.endField).value as number;
+
+        min = Math.min(min, startVal, endVal);
+        max = Math.max(max, startVal, endVal);
+
+        // Calculate intermediate values
+        let current = startVal;
+        const nested = row.cellAt([nestPath]) as RepeatedRecordCell;
+        if (nested && nested.rows) {
+          for (const nRow of nested.rows) {
+            const yVal = nRow.cellAt(yPath).value as number;
+            current += yVal;
+            min = Math.min(min, current);
+            max = Math.max(max, current);
+          }
+        }
+      }
+    }
+
+    return [min, max];
+  };
+
+  // Create a synthetic x field with the max string value
+  const syntheticXField = {
+    ...xField,
+    maxString: maxXString,
+    valueSet: xLabels,
+  } as Field;
+
+  return {
+    xField: syntheticXField,
+    yField,
+    getYMinMax,
+  };
+}
 
 export function generateWaterfallChartVegaSpec(
   metadata: RenderMetadata,
@@ -22,11 +117,23 @@ export function generateWaterfallChartVegaSpec(
       'Malloy Waterfall Chart: Tried to render a waterfall chart, but no viz=waterfall tag was found'
     );
 
+  // Pre-process data to get synthetic values for chart layout calculation
+  const syntheticData = getSyntheticDataForLayout(explore, settings);
+
+  // Get chart layout settings with synthetic data
+  const chartSettings = getChartLayoutSettings(explore, chartTag, {
+    metadata,
+    xField: syntheticData.xField,
+    yField: syntheticData.yField,
+    chartType: 'waterfall',
+    getYMinMax: syntheticData.getYMinMax,
+  });
+
   const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
-    width: metadata.parentSize.width,
-    height: metadata.parentSize.height,
-    padding: 64,
+    width: chartSettings.plotWidth,
+    height: chartSettings.plotHeight,
+    padding: chartSettings.padding,
     data: [{name: 'values'}],
     autosize: {
       type: 'none',
@@ -44,15 +151,36 @@ export function generateWaterfallChartVegaSpec(
       {
         name: 'y',
         type: 'linear',
-        domain: {data: 'values', fields: ['start', 'end']},
+        domain: chartSettings.yScale.domain || {data: 'values', fields: ['start', 'end']},
         nice: true,
         range: 'height',
       },
     ],
     axes: [
-      {scale: 'x', orient: 'bottom'},
-      {scale: 'y', orient: 'left'},
-    ],
+      {
+        scale: 'x',
+        orient: 'bottom' as const,
+        labelAngle: chartSettings.xAxis.labelAngle,
+        labelAlign: chartSettings.xAxis.labelAlign,
+        labelBaseline: chartSettings.xAxis.labelBaseline,
+        labelLimit: chartSettings.xAxis.labelLimit,
+        title: syntheticData.xField.name || 'Category',
+        titlePadding: 10,
+      },
+      {
+        scale: 'y',
+        orient: 'left' as const,
+        tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
+        labelLimit: chartSettings.yAxis.width + 10,
+        title: syntheticData.yField.name || 'Value',
+      },
+    ].filter(axis => {
+      // Hide axes for spark charts
+      if (chartSettings.isSpark) {
+        return false;
+      }
+      return true;
+    }),
     marks: [
       {
         type: 'rect',
@@ -115,10 +243,10 @@ export function generateWaterfallChartVegaSpec(
 
   return {
     spec,
-    plotWidth: metadata.parentSize.width,
-    plotHeight: metadata.parentSize.height,
-    totalWidth: metadata.parentSize.width,
-    totalHeight: metadata.parentSize.height,
+    plotWidth: chartSettings.plotWidth,
+    plotHeight: chartSettings.plotHeight,
+    totalWidth: chartSettings.totalWidth,
+    totalHeight: chartSettings.totalHeight,
     chartType: 'waterfall',
     chartTag,
     mapMalloyDataToChartData,
