@@ -1,4 +1,9 @@
-import {tagFor, extractLiteralFromTag, shouldRenderAs} from '../utils';
+import {
+  tagFor,
+  extractLiteralFromTag,
+  shouldRenderAs,
+  extractExpressionFromTag,
+} from '../utils';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
 import {renderTagFromAnnotations, NULL_SYMBOL, notUndefined} from '../../util';
@@ -70,14 +75,10 @@ export abstract class FieldBase {
     throw new Error('Root field was not an instance of RootField');
   }
 
-  get drillPath(): string[] {
-    if (this.parent) {
-      const view = this.metadataTag.text('drill_view');
-      const parentPath = this.parent.drillPath;
-      if (view === undefined) return parentPath;
-      return [...parentPath, view];
-    }
-    return [];
+  get drillStableExpression(): Malloy.Expression | undefined {
+    const expressionTag = this.metadataTag.tag('drill_expression');
+    if (expressionTag === undefined) return undefined;
+    return extractExpressionFromTag(expressionTag);
   }
 
   get sourceName() {
@@ -160,27 +161,26 @@ export abstract class FieldBase {
 
   getStableDrillFilter(filter: Tag): Malloy.Filter | undefined {
     const kind = filter.text('kind');
-    const field = filter.textArray('field_reference');
-    if (kind === undefined || field === undefined) return undefined;
-    const fieldReference: Malloy.Reference = {
-      name: field[field.length - 1],
-      path: field.slice(0, -1),
-    };
+    const expressionTag = filter.tag('expression');
+    if (expressionTag === undefined) return undefined;
+    const expression = extractExpressionFromTag(expressionTag);
+    if (kind === undefined || expression === undefined) return undefined;
     if (kind === 'filter_expression') {
       const filterExpression = filter.text('filter_expression');
       if (filterExpression === undefined) return undefined;
       return {
         kind: 'filter_string',
-        field_reference: fieldReference,
+        expression,
         filter: filterExpression,
       };
     } else if (kind === 'literal_equality') {
       const value = filter.tag('value');
+      if (value === undefined) return undefined;
       const literal = extractLiteralFromTag(value);
       if (literal !== undefined) {
         return {
           kind: 'literal_equality',
-          field_reference: fieldReference,
+          expression,
           value: literal,
         };
       }

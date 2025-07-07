@@ -543,13 +543,13 @@ function filterToFragments(filter: Malloy.Filter): Fragment[] {
   switch (filter.kind) {
     case 'filter_string':
       return [
-        ...referenceToFragments(filter.field_reference),
+        ...expressionToFragments(filter.expression),
         ' ~ ',
         quoteFilter(filter.filter),
       ];
     case 'literal_equality':
       return [
-        ...referenceToFragments(filter.field_reference),
+        ...expressionToFragments(filter.expression),
         ' = ',
         ...literalToFragments(filter.value),
       ];

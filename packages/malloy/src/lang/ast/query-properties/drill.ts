@@ -377,7 +377,8 @@ export class Drill extends Filter implements QueryPropertyInterface {
       fieldUsage: mergeFieldUsage(fExpr.fieldUsage, collectedWhereFieldUsage),
       stableFilter: {
         kind: 'literal_equality',
-        field_reference: {
+        expression: {
+          kind: 'field_reference',
           name: fieldName.refString,
           path: reference.list.slice(0, -1).map(f => f.name),
         },

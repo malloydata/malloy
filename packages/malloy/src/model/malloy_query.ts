@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {v4 as uuidv4} from 'uuid';
 import type {
   QueryInfo,
@@ -1728,7 +1730,8 @@ class FieldInstanceField implements FieldInstance {
   constructor(
     public f: QueryField,
     public fieldUsage: FieldUsage,
-    public parent: FieldInstanceResult
+    public parent: FieldInstanceResult,
+    public readonly drillExpression: Malloy.Expression | undefined
   ) {}
 
   root(): FieldInstanceResultRoot {
@@ -1787,6 +1790,18 @@ class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
+  get drillViewPath(): string[] | undefined {
+    const thisSegment = this.turtleDef.drillView;
+    if (thisSegment === undefined) return [];
+    if (this.parent !== undefined) {
+      const parentPath = this.parent.drillViewPath;
+      if (parentPath !== undefined) {
+        return [...parentPath, thisSegment];
+      }
+    }
+    return [thisSegment];
+  }
+
   /**
    * Information about the query containing this result set. Invented
    * to pass on timezone information, but maybe more things will
@@ -1806,7 +1821,12 @@ class FieldInstanceResult implements FieldInstance {
     return {};
   }
 
-  addField(as: string, field: QueryField, usage: FieldUsage) {
+  addField(
+    as: string,
+    field: QueryField,
+    usage: FieldUsage,
+    drillExpression: Malloy.Expression | undefined
+  ) {
     const fi = this.allFields.get(as);
     if (fi) {
       if (fi.type === 'query') {
@@ -1826,7 +1846,7 @@ class FieldInstanceResult implements FieldInstance {
         }
       }
     }
-    this.add(as, new FieldInstanceField(field, usage, this));
+    this.add(as, new FieldInstanceField(field, usage, this, drillExpression));
   }
 
   parentGroupSet(): number {
@@ -2690,10 +2710,39 @@ class QueryQuery extends QueryField {
       : [];
   }
 
+  private getDrillExpression(
+    f: QueryFieldDef,
+    resultStruct: FieldInstanceResult
+  ): Malloy.Expression | undefined {
+    if (f.type === 'turtle') return undefined;
+    if (f.drillView) {
+      const drillViewPath = resultStruct.drillViewPath;
+      if (drillViewPath) {
+        return {
+          kind: 'field_reference',
+          name:
+            f.type === 'fieldref' ? f.path[f.path.length - 1] : f.as ?? f.name,
+          path: [...resultStruct.drillViewPath, f.drillView],
+        };
+      }
+    }
+    if (f.type === 'fieldref' && f.drillExpression) {
+      return f.drillExpression;
+    }
+    if (f.type === 'fieldref') {
+      return drillExpressionFromReferencePath(f.path);
+    }
+    if (isAtomic(f)) {
+      return f.stableExpression;
+    }
+    return undefined;
+  }
+
   expandFields(resultStruct: FieldInstanceResult) {
     let resultIndex = 1;
     for (const f of this.getSegmentFields(resultStruct)) {
       const {as, field} = this.expandField(f);
+      const drillExpression = this.getDrillExpression(f, resultStruct);
 
       if (field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
@@ -2708,10 +2757,15 @@ class QueryQuery extends QueryField {
         this.expandFields(fir);
         resultStruct.add(as, fir);
       } else if (field instanceof QueryAtomicField) {
-        resultStruct.addField(as, field, {
-          resultIndex,
-          type: 'result',
-        });
+        resultStruct.addField(
+          as,
+          field,
+          {
+            resultIndex,
+            type: 'result',
+          },
+          drillExpression
+        );
         this.addDependancies(resultStruct, field);
 
         if (isBasicAggregate(field)) {
@@ -2725,10 +2779,15 @@ class QueryQuery extends QueryField {
         if (field.isAtomic()) {
           this.addDependancies(resultStruct, field);
         }
-        resultStruct.addField(as, field, {
-          resultIndex,
-          type: 'result',
-        });
+        resultStruct.addField(
+          as,
+          field,
+          {
+            resultIndex,
+            type: 'result',
+          },
+          drillExpression
+        );
       }
       // else if (
       //   this.firstSegment.type === "project" &&
@@ -2836,11 +2895,13 @@ class QueryQuery extends QueryField {
           : undefined;
         const sourceClasses = [sourceField];
         const referenceId = fi.f.referenceId;
+        const drillExpression = fi.drillExpression;
         const base = {
           sourceField,
           sourceExpression,
           sourceClasses,
           referenceId,
+          drillExpression,
         };
         if (isBasicCalculation(fi.f)) {
           filterList = fi.f.getFilterList();
@@ -4156,12 +4217,18 @@ class QueryQueryIndexStage extends QueryQuery {
 
     for (const f of (this.firstSegment as IndexSegment).indexFields) {
       const {as, field} = this.expandField(f);
-      this.indexPaths[as] = f.path;
+      const referencePath = f.path;
+      this.indexPaths[as] = referencePath;
 
-      resultStruct.addField(as, field as QueryField, {
-        resultIndex,
-        type: 'result',
-      });
+      resultStruct.addField(
+        as,
+        field as QueryField,
+        {
+          resultIndex,
+          type: 'result',
+        },
+        drillExpressionFromReferencePath(referencePath)
+      );
       if (field instanceof QueryAtomicField) {
         this.addDependancies(resultStruct, field);
       }
@@ -4170,10 +4237,15 @@ class QueryQueryIndexStage extends QueryQuery {
     const measure = (this.firstSegment as IndexSegment).weightMeasure;
     if (measure !== undefined) {
       const f = this.parent.getFieldByName([measure]) as QueryField;
-      resultStruct.addField(measure, f, {
-        resultIndex,
-        type: 'result',
-      });
+      resultStruct.addField(
+        measure,
+        f,
+        {
+          resultIndex,
+          type: 'result',
+        },
+        undefined
+      );
       this.addDependancies(resultStruct, f);
     }
     this.expandFilters(resultStruct);
@@ -4743,6 +4815,17 @@ class QueryStruct {
       );
     } else {
       return '';
+    }
+  }
+
+  getFullOutputPath(): string[] {
+    if (this.parent) {
+      return [
+        ...this.parent.getFullOutputPath(),
+        getIdentifier(this.structDef),
+      ];
+    } else {
+      return [];
     }
   }
 
@@ -5380,4 +5463,15 @@ export class QueryModel {
     });
     return result.rows as unknown as SearchIndexResult[];
   }
+}
+
+function drillExpressionFromReferencePath(
+  path: string[] | undefined
+): Malloy.Expression | undefined {
+  if (path === undefined) return undefined;
+  return {
+    kind: 'field_reference',
+    name: path[path.length - 1],
+    path: path.slice(0, -1),
+  };
 }

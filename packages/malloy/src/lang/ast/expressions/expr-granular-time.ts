@@ -33,6 +33,7 @@ import type {FieldSpace} from '../types/field-space';
 import type {GranularResult} from '../types/granular-result';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 /**
  * GranularTime is a moment in time which ALSO has a "granularity"
@@ -55,6 +56,19 @@ export class ExprGranularTime extends ExpressionDef {
 
   granular(): boolean {
     return true;
+  }
+
+  stableExpression(): Malloy.Expression | undefined {
+    const lhs = this.expr.stableExpression();
+    if (lhs?.kind !== 'field_reference') return undefined;
+    return {
+      kind: 'time_truncation',
+      field_reference: {
+        name: lhs.name,
+        path: lhs.path,
+      },
+      truncation: this.units,
+    };
   }
 
   getExpression(fs: FieldSpace): ExprValue {

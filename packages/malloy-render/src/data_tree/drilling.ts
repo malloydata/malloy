@@ -73,12 +73,13 @@ export function getStableDrillClauses(
         if (value === undefined) {
           continue;
         }
+        const drillExpression = dimension.drillStableExpression;
+        if (drillExpression === undefined) {
+          return undefined;
+        }
         const filter: Malloy.FilterWithLiteralEquality = {
           kind: 'literal_equality',
-          field_reference: {
-            name: dimension.name,
-            path: dimension.drillPath,
-          },
+          expression: drillExpression,
           value,
         };
         newClauses.push({filter});
@@ -110,15 +111,21 @@ export function getDrillValues(cell: Cell): DrillValue[] {
         if (value === undefined) {
           continue;
         }
-        const filter: Malloy.FilterWithLiteralEquality = {
-          kind: 'literal_equality',
-          field_reference: {
-            name: dimension.name,
-            path: dimension.drillPath,
-          },
-          value,
-        };
-        newClauses.push({where: Malloy.filterToMalloy(filter)});
+        const drillExpression = dimension.drillStableExpression;
+
+        if (drillExpression !== undefined) {
+          const filter: Malloy.FilterWithLiteralEquality = {
+            kind: 'literal_equality',
+            expression: drillExpression,
+            value,
+          };
+          newClauses.push({where: Malloy.filterToMalloy(filter)});
+        } else {
+          const expression = dimension.drillExpression();
+          newClauses.push({
+            where: `${expression} = ${valueToMalloy(dimensionCell)}`,
+          });
+        }
       }
       result.unshift(...newClauses);
     }

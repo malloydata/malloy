@@ -57,6 +57,14 @@ describe('drill query', () => {
       view: negative_value is {
         group_by: negative_one is -1
       }
+
+      view: deeply_nested is {
+        nest: level_one is {
+          nest: level_two is {
+            group_by: field is 1
+          }
+        }
+      }
     }
     source: flights_with_parameters(
       number_param is 1,
@@ -70,6 +78,38 @@ describe('drill query', () => {
       timestamp_param is @2004-01-01 10:00
     ) is flights
     query: top_carriers is flights -> top_carriers
+    query: top_carriers_raw is flights -> {
+      group_by: carriers.nickname
+      aggregate:
+        flight_count
+      limit: 1
+    }
+    query: by_date_raw is flights -> {
+      group_by: dep_month is dep_time.month,
+      aggregate: flight_count
+    }
+    query: by_date_raw_renamed is flights -> {
+      group_by: dep_time.month,
+      aggregate: flight_count
+    }
+    query: top_carriers_no_join is flights -> {
+      group_by: carrier
+      aggregate:
+        flight_count
+      limit: 1
+    }
+    query: top_carriers_raw_renamed is flights -> {
+      group_by: nick is carriers.nickname
+      aggregate:
+        flight_count
+      limit: 1
+    }
+    query: top_carriers_raw_renamed_2 is flights -> {
+      group_by: c is carrier
+      aggregate:
+        flight_count
+      limit: 1
+    }
     query: over_time is flights -> over_time
     query: by_origin is flights -> by_origin
     query: no_filter is flights -> no_filter
@@ -110,13 +150,86 @@ describe('drill query', () => {
       timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]
     ) -> top_carriers
     query: only_default_params is flights_with_parameters -> top_carriers
+    query: deeply_nested is flights -> deeply_nested
   `;
 
   beforeEach(() => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  test('can handle joined-in table fields', async () => {
+  test('can handle joined-in table fields in literal query', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('top_carriers_raw')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: carriers.nickname = "Southwest" } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can time truncation field renamed', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('by_date_raw_renamed')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: dep_time.month = @2005-12 } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can time truncation field not renamed', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('by_date_raw')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: dep_time.month = @2005-12 } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can handle normal field in literal query', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('top_carriers_no_join')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: carrier = "WN" } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can handle renamed joined-in table fields in literal query', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('top_carriers_raw_renamed')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: carriers.nickname = "Southwest" } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can handle renamed table fields in literal query', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('top_carriers_raw_renamed_2')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: carrier = "WN" } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can handle joined-in table fields in view', async () => {
     const result = await duckdb
       .loadModel(model)
       .loadQueryByName('top_carriers')
@@ -125,7 +238,7 @@ describe('drill query', () => {
     const expDrillQuery =
       'run: flights -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle expression fields', async () => {
@@ -137,7 +250,7 @@ describe('drill query', () => {
     const expDrillQuery =
       'run: flights -> { drill: over_time.dep_month = 8 } + { select: * }';
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle renamed and multi-word field names', async () => {
@@ -149,7 +262,7 @@ describe('drill query', () => {
     const expDrillQuery =
       'run: flights -> { drill: by_origin.`Origin Code` = "ATL" } + { select: * }';
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle queries with no filter', async () => {
@@ -160,7 +273,7 @@ describe('drill query', () => {
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = 'run: flights -> { select: * }';
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle view filters', async () => {
@@ -172,7 +285,7 @@ describe('drill query', () => {
     const expDrillQuery =
       'run: flights -> { drill: cool_carriers.`Origin Code` = "ABQ" } + { select: * }';
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle filters that are not in a view (not stable compatible)', async () => {
@@ -206,6 +319,25 @@ describe('drill query', () => {
     }
   });
 
+  test('can handle deeply nested', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('deeply_nested')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: deeply_nested.level_one.level_two.field = 1 } + { select: * }';
+    const row1 = table.rows[0];
+    const levelOne = row1.column('level_one');
+    expect(levelOne.isRecord()).toBe(true);
+    if (!levelOne.isRecord()) return;
+    const levelTwo = levelOne.column('level_two');
+    expect(levelTwo.isRepeatedRecord()).toBe(true);
+    if (!levelTwo.isRepeatedRecord()) return;
+    const row = levelTwo.rows[0];
+    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
   test('can handle filters that are not in a view (stable compatible)', async () => {
     const result = await duckdb
       .loadModel(model)
@@ -219,7 +351,7 @@ describe('drill query', () => {
     carrier = "AA"
 } + { select: * }`;
     const row1 = table.rows[0];
-    expect(row1.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row1.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
     const nest = row1.column('cool_carriers');
     expect(nest.isRepeatedRecord()).toBe(true);
     if (nest.isRepeatedRecord()) {
@@ -231,7 +363,7 @@ describe('drill query', () => {
     cool_carriers.\`Origin Code\` = "ORD"
 } + { select: * }`;
       const row = nest.rows[0];
-      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+      expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
     }
   });
 
@@ -250,7 +382,7 @@ describe('drill query', () => {
     over_time.dep_month = 5
 } + { select: * }`;
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('negative number can be used in stable query filter', async () => {
@@ -262,7 +394,7 @@ describe('drill query', () => {
     const expDrillQuery =
       'run: flights -> { drill: negative_value.negative_one = -1 } + { select: * }';
     const row = table.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
     expect(row.getStableDrillQuery()).toMatchObject({
       definition: {
         kind: 'arrow',
@@ -275,7 +407,8 @@ describe('drill query', () => {
           operations: [
             {
               filter: {
-                field_reference: {
+                expression: {
+                  kind: 'field_reference',
                   name: 'negative_one',
                   path: ['negative_value'],
                 },
@@ -309,7 +442,7 @@ describe('drill query', () => {
   filter_expression_param is f\`> 3\`
 ) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }`;
       const row = table.rows[0];
-      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+      expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
     });
 
     test('can handle timezone in source parameter', async () => {
@@ -321,7 +454,7 @@ describe('drill query', () => {
       const expDrillQuery =
         'run: flights_with_timestamp_param(timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
       const row = table.rows[0];
-      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+      expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
     });
 
     test('default_params_are_not_included', async () => {
@@ -333,7 +466,7 @@ describe('drill query', () => {
       const expDrillQuery =
         'run: flights_with_parameters -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
       const row = table.rows[0];
-      expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+      expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
     });
   });
 });

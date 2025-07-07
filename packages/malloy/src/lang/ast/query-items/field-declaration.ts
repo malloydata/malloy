@@ -165,6 +165,7 @@ export abstract class AtomicFieldDeclaration
       } else {
         ret.e = exprValue.value;
       }
+      ret.stableExpression = this.expr.stableExpression();
       ret.fieldUsage = exprValue.fieldUsage;
       ret.ungroupings = exprValue.ungroupings;
       ret.requiresGroupBy = exprValue.requiresGroupBy;

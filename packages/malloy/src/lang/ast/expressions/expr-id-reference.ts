@@ -27,6 +27,7 @@ import type {ExprValue} from '../types/expr-value';
 import type {FieldReference} from '../query-items/field-references';
 import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
@@ -37,6 +38,14 @@ export class ExprIdReference extends ExpressionDef {
 
   get refString(): string {
     return this.fieldReference.refString;
+  }
+
+  stableExpression(): Malloy.Expression | undefined {
+    return {
+      kind: 'field_reference',
+      name: this.fieldReference.nameString,
+      path: this.fieldReference.path.slice(0, -1),
+    };
   }
 
   getExpression(fs: FieldSpace): ExprValue {

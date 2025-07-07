@@ -742,7 +742,8 @@ export class MalloyToQuery
             return {
               filter: {
                 kind: 'filter_string',
-                field_reference: {
+                expression: {
+                  kind: 'field_reference',
                   name,
                   path,
                 },
@@ -767,7 +768,8 @@ export class MalloyToQuery
           return {
             filter: {
               kind: 'literal_equality',
-              field_reference: {
+              expression: {
+                kind: 'field_reference',
                 name,
                 path,
               },

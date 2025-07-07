@@ -22,7 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Filter} from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 // clang-format off
 
@@ -152,7 +152,7 @@ export interface FilterCondition extends ExprE {
   expressionType: ExpressionType;
   fieldUsage?: FieldUsage[];
   drillView?: string;
-  stableFilter?: Filter;
+  stableFilter?: Malloy.Filter;
   isSourceFilter?: boolean;
 }
 
@@ -426,6 +426,7 @@ export interface Expression {
   fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
+  stableExpression?: Malloy.Expression;
 }
 
 type ConstantExpr = Expr;
@@ -558,6 +559,7 @@ export interface ResultMetadataDef {
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
   referenceId?: string;
+  drillExpression?: Malloy.Expression | undefined;
   drillable?: boolean;
 }
 
@@ -729,6 +731,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
   drillView?: string;
+  drillExpression?: Malloy.Expression | undefined;
 }
 
 // this field definition represents something in the database.
@@ -1527,7 +1530,9 @@ export interface RefToField {
   path: string[];
   annotation?: Annotation;
   at?: DocumentLocation;
+  // TODO remove
   drillView?: string;
+  drillExpression?: Malloy.Expression | undefined;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
