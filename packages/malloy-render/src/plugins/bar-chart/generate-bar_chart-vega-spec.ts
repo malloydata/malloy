@@ -30,13 +30,16 @@ import type {
   Spec,
   View,
 } from 'vega';
-import {renderNumericField} from '@/component/render-numeric-field';
+import {
+  renderNumericField,
+  renderDateTimeField,
+} from '@/component/render-numeric-field';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import {getMarkName} from '@/component/vega/vega-utils';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
-import {NULL_SYMBOL, renderTimeString} from '@/util';
+import {NULL_SYMBOL} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {Tag} from '@malloydata/malloy-tag';
@@ -999,7 +1002,7 @@ export function generateBarChartVegaSpecV2(
         records = item.datum.v;
 
         const title = xIsDateorTime
-          ? renderTimeString(new Date(x), {
+          ? renderDateTimeField(xField, new Date(x), {
               isDate: xField.isDate(),
               timeframe: xField.timeframe,
             })
@@ -1024,7 +1027,7 @@ export function generateBarChartVegaSpecV2(
         highlightedSeries = itemData.series;
         records = item.mark.group.datum.v;
         const title = xIsDateorTime
-          ? renderTimeString(new Date(itemData.x), {
+          ? renderDateTimeField(xField, new Date(itemData.x), {
               isDate: xField.isDate(),
               timeframe: xField.timeframe,
             })
