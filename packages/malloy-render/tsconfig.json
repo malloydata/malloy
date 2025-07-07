@@ -7,7 +7,12 @@
     "noImplicitReturns": true,
     "jsx": "react-jsx",
     "jsxImportSource": "solid-js",
-    "lib": ["dom", "es2021"]
+    "lib": ["dom", "es2021"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "resolveJsonModule": true
   },
   "include": ["./src", "./src/**/*.d.ts", "node_modules/us-atlas"],
   "references": [

@@ -202,6 +202,7 @@ export class LiteralTimestamp extends TimeLiteral {
     const hasSubsecs = literalTs.match(/^([^.,]+)[,.](\d+)$/);
     if (hasSubsecs) {
       literalTs = hasSubsecs[1];
+      units = undefined;
       // subSecs = hasSubsecs[2];
       // mtoy TODO subsecond units not ignored
     }
@@ -248,6 +249,32 @@ class GranularLiteral extends TimeLiteral {
 
     if (rangeEnd) {
       const testValue = left.getExpression(fs);
+
+      if (testValue.type === 'date' && op === '=' && this.units === 'day') {
+        // TODO remove the === 'day' check above and warn
+        // if (this.units !== 'day') {
+        //   this.logWarning(
+        //     'time-equality-not-granular',
+        //     `Equality comparisons of a date to a literal ${this.units} will compare the first day of the ${this.units}; use a literal day instead, or use \`?\` to check whether the date is within the ${this.units}.`
+        //   );
+        // }
+        return super.apply(fs, op, left);
+      }
+
+      if (
+        testValue.type === 'timestamp' &&
+        op === '=' &&
+        this.units === undefined
+      ) {
+        // TODO remove the === 'second' check above and warn
+        // if (this.units !== 'second') {
+        //   this.logWarning(
+        //     'time-equality-not-granular',
+        //     `Equality comparisons of a timestamp to a literal ${this.units} will compare the first instant of the ${this.units}; use a literal timestamp (to the second) instead, or use \`?\` to check whether the date is within the ${this.units}.`
+        //   );
+        // }
+        return super.apply(fs, op, left);
+      }
 
       if (testValue.type === 'timestamp') {
         const newStart = getMorphicValue(rangeStart, 'timestamp');

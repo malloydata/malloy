@@ -104,6 +104,8 @@ async function runAndRender(
 
 export function renderMalloyLegacy(options: RenderOptions) {
   const div = document.createElement('div');
+  div.style.height = '100%';
+  div.style.width = '100%';
   runAndRender(options, {
     dataStyles: {},
     isDrillingEnabled: true,

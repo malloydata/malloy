@@ -2,7 +2,7 @@ import type {Meta} from '@storybook/html';
 import script from './vega-config-override.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
-import '../component/render-webcomponent';
+import {MalloyRenderer} from '@/api/malloy-renderer';
 
 const meta: Meta = {
   title: 'Malloy Next/Vega Config Override',
@@ -10,19 +10,25 @@ const meta: Meta = {
     const parent = document.createElement('div');
     parent.style.height = 'calc(100vh - 40px)';
     parent.style.position = 'relative';
-    const el = document.createElement('malloy-render');
+    const el = document.createElement('div');
+    el.style.height = '100%';
+    el.style.width = '100%';
     if (classes) el.classList.add(classes);
-    el.malloyResult = context.loaded['result'];
-    el.vegaConfigOverride = () => {
-      return {
-        'range': {
-          'category': ['#9467bd'],
-        },
-        'axis': {
-          'titleFontSize': 16,
-        },
-      };
-    };
+    const renderer = new MalloyRenderer({
+      vegaConfigOverride: () => {
+        return {
+          'range': {
+            'category': ['#9467bd'],
+          },
+          'axis': {
+            'titleFontSize': 16,
+          },
+        };
+      },
+    });
+    const viz = renderer.createViz();
+    viz.setResult(context.loaded['result']);
+    viz.render(el);
     parent.appendChild(el);
     return parent;
   },

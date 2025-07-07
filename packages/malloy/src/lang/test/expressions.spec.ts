@@ -221,6 +221,25 @@ describe('expressions', () => {
         '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
       );
     });
+    test('date = date compiles to =', () => {
+      expect('ad = @2020-01-01').compilesTo('{ad = @2020-01-01}');
+    });
+    test('timestamp = date compiles to range', () => {
+      expect('ats = @2020-01-01').compilesTo(
+        '{{ats >= @2020-01-01 00:00:00} and {ats < @2020-01-02 00:00:00}}'
+      );
+    });
+    test('timestamp = timestamp compiles to =', () => {
+      expect('ats = @2020-01-01 10:00:00').compilesTo(
+        '{ats = @2020-01-01 10:00:00}'
+      );
+    });
+    // TODO timestamp literals to the second have no granularity, and therefore no "next" to compute range
+    test.skip('timestamp ? timestamp compiles to range', () => {
+      expect('ats ? @2020-01-01 10:00:00').compilesTo(
+        '{{ats >= @2020-01-01 10:00:00} and {ats < {+second @2020-01-01 10:00:00 1}}}'
+      );
+    });
     test('apply followed by another condition', () => {
       expect('ai ? (10 | 20) and ai is not null').toLog(
         errorMessage("no viable alternative at input 'ai'")

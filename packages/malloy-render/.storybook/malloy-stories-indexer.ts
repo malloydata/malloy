@@ -140,9 +140,10 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           : `
           import script from '${id}?raw';
           import {createLoader} from './util';
-          import {copyMalloyRenderHTML} from '../component/copy-to-html';
           import './themes.css';
-          import '../component/render-webcomponent';
+          import {MalloyRenderer} from '../api/malloy-renderer';
+          import {DummyPluginFactory} from '@/plugins/dummy-plugin';
+          import {DummyDOMPluginFactory} from '@/plugins/dummy-dom-plugin';
 
           const meta = {
             title: "Malloy Next/${modelStoriesMeta.componentName}",
@@ -150,24 +151,41 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               const parent = document.createElement('div');
               parent.style.height = 'calc(100vh - 40px)';
               parent.style.position = 'relative';
-              const el = document.createElement('malloy-render');
-              if (classes) el.classList.add(classes);
-              el.malloyResult = context.loaded['result'];
-              el.tableConfig = {
-                enableDrill: true
-              };
-
-
-              el.onInitialState = (state) => {
-                console.log("Malloy render initial state", state);
-              };
 
               const button = document.createElement('button');
               button.innerHTML = "Copy HTML";
-              button.addEventListener("click", () => copyMalloyRenderHTML(el));
+              button.addEventListener("click", () => viz.copyToHTML());
+               parent.appendChild(button);
 
-              parent.appendChild(button);
-              parent.appendChild(el);
+              const targetElement = document.createElement('div');
+              if(classes) targetElement.classList.add(classes);
+              targetElement.style.height = '100%';
+              targetElement.style.width = '100%';
+              parent.appendChild(targetElement);
+
+              const renderer = new MalloyRenderer({
+                plugins: [
+                  DummyPluginFactory,
+                  DummyDOMPluginFactory,
+                ],
+              });
+              const viz = renderer.createViz({
+                onError: error => {
+                  console.log('Malloy render error', error);
+                },
+              });
+              viz.setResult(context.loaded['result']);
+              const metadata = viz.getMetadata();
+              console.group('MalloyViz metadata');
+              console.log('initial state', metadata);
+              console.log('render properties', metadata.getFieldEntry(metadata.rootField.key).renderProperties);
+              const plugin = viz.getActivePlugin(metadata.rootField.key);
+              console.log('plugin', plugin, plugin?.getSettings());
+              const tag = plugin?.settingsToTag(plugin?.getSettings());
+              console.log('tag', tag, tag?.toString());
+              console.groupEnd();
+              viz.render(targetElement);
+
               return parent;
             },
             loaders: [createLoader(script)],

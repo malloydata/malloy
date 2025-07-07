@@ -119,6 +119,7 @@ export type {
   RecordLiteralNode,
   StringLiteralNode,
   ArrayLiteralNode,
+  SourceComponentInfo,
 } from './model';
 export {
   isSourceDef,

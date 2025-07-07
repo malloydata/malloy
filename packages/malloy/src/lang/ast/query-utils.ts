@@ -72,17 +72,3 @@ export function unsatisfiedRequiredGroupBys(
   }
   return result;
 }
-
-export function validateRequiredGroupBys(
-  segment: PipeSegment,
-  logTo: MalloyElement,
-  requiredGroupBys: string[][]
-) {
-  const missing = unsatisfiedRequiredGroupBys(segment, requiredGroupBys);
-  for (const requiredGroupBy of missing) {
-    logTo.logError(
-      'missing-required-group-by',
-      `Group by of \`${requiredGroupBy.join('.')}\` is required but not present`
-    );
-  }
-}

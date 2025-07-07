@@ -97,7 +97,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
       for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
         this.logError(
           'missing-required-group-by',
-          `Group by of \`${unsatisfiedGroupBy.path.join(
+          `Group by or single value filter of \`${unsatisfiedGroupBy.path.join(
             '.'
           )}\` is required but not present`,
           {

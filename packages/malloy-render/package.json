@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.287",
+  "version": "0.0.295",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -14,41 +14,27 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/module/index.d.ts",
       "default": "./dist/module/index.umd.js"
-    },
-    "./webcomponent": {
-      "types": "./dist/component/render-webcomponent.d.ts",
-      "default": "./dist/webcomponent/malloy-render.umd.js"
-    },
-    "./webcomponent/register": {
-      "types": "./dist/component/register-webcomponent.d.ts",
-      "default": "./dist/register/register.umd.js"
     }
   },
   "scripts": {
-    "bundle_renderer": "node src/bundle/esbuild_bundler.js",
     "test": "jest --config=../../jest.config.js",
-    "build": "npm run build-types && npm run build-source && npm run build-webcomponent",
     "clean": "tsc --build --clean",
     "prepublishOnly": "npm run build",
     "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
     "storybook-windows": "del /s /q .\\node_modules\\.cache && storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
-    "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",
-    "build-types": "tsc --build --declaration --emitDeclarationOnly",
+    "build": "vite build --outDir 'dist/module' --config vite.config.mts",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.287",
-    "@malloydata/malloy-interfaces": "0.0.287",
-    "@malloydata/malloy-tag": "0.0.287",
+    "@malloydata/malloy": "0.0.295",
+    "@malloydata/malloy-interfaces": "0.0.295",
+    "@malloydata/malloy-tag": "0.0.295",
     "@tanstack/solid-virtual": "^3.10.4",
-    "component-register": "^0.8.6",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
-    "solid-element": "^1.8.0",
     "solid-js": "^1.8.15",
     "ssf": "^0.11.2",
     "us-atlas": "^3.0.0",
@@ -56,7 +42,7 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@malloydata/db-duckdb": "0.0.287",
+    "@malloydata/db-duckdb": "0.0.295",
     "@storybook/addon-essentials": "^8.5.8",
     "@storybook/addon-interactions": "^8.5.8",
     "@storybook/addon-links": "^8.5.8",
@@ -72,6 +58,8 @@
     "esbuild": "0.19.11",
     "storybook": "^8.5.8",
     "vite": "^5.1.5",
-    "vite-plugin-solid": "^2.10.1"
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-solid": "^2.10.1",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }

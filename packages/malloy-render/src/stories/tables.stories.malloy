@@ -228,6 +228,20 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     }
     limit: 10
   }
+
+  #(story)
+  view: record_dimension is {
+    group_by: record is { brand, department }
+    aggregate: sales
+    limit: 10
+  }
+
+  #(story)
+  view: record_array_dimension is {
+    group_by: record is [{ brand, department }]
+    aggregate: sales
+    limit: 10
+  }
 }
 
 source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {

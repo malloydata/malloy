@@ -24,11 +24,13 @@ describe('renderTagFromAnnotations namespace support', () => {
     const annotations: Malloy.Annotation[] = [
       {value: '#r bar_chart'},
       {value: '#r size=md'},
+      {value: '#foo baz=42'},
     ];
 
     const tag = renderTagFromAnnotations(annotations);
     expect(tag.has('bar_chart')).toBe(true);
     expect(tag.text('size')).toBe('md');
+    expect(tag.text('baz')).toBeUndefined();
   });
 
   test('should prefer render namespace over default when both exist', () => {

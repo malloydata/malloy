@@ -8,12 +8,12 @@ import {
   Switch,
   Match,
   onMount,
+  onCleanup,
 } from 'solid-js';
 import {getRangeSize} from '../util';
 import {getTableLayout} from './table-layout';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import tableCss from './table.css?raw';
-import {applyRenderer} from '../apply-renderer';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import {createStore, produce} from 'solid-js/store';
 import type {Virtualizer} from '@tanstack/solid-virtual';
 import {createVirtualizer} from '@tanstack/solid-virtual';
@@ -24,6 +24,8 @@ import type {
   RecordCell,
   RecordOrRepeatedRecordCell,
 } from '../../data_tree';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './table.css?raw';
 import {useResultContext} from '../result-context';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
@@ -120,10 +122,10 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
 
   const tableGutterLeft =
     (fieldLayout.depth > 0 && isFirst) ||
-    fieldLayout.field.renderAs === 'table';
+    fieldLayout.field.renderAs() === 'table';
   const tableGutterRight =
     (fieldLayout.depth > 0 && isLast) ||
-    (fieldLayout.depth === 0 && fieldLayout.field.renderAs === 'table');
+    (fieldLayout.depth === 0 && fieldLayout.field.renderAs() === 'table');
 
   const customLabel = props.field.tag.text('label');
   const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
@@ -226,13 +228,12 @@ const TableField = (props: {
   };
 
   const config = useConfig();
-  const metadata = useResultContext();
   const isDrillingEnabled = config.tableConfig().enableDrill;
-  const handleClick = async evt => {
+  const handleClick = async (evt: MouseEvent) => {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
-        metadata,
+        metadata: useResultContext(),
         data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });
@@ -306,7 +307,7 @@ const MalloyTableRoot = (_props: {
       .filter(([key, value]) => {
         const field = root.fieldAt(key);
         const parent = field.parent;
-        const parentFieldRenderer = parent?.renderAs ?? null;
+        const parentFieldRenderer = parent?.renderAs();
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
         return isPartOfTable;
@@ -396,32 +397,12 @@ const MalloyTableRoot = (_props: {
   };
 
   /*
-    Detect pinned by checking if the body has scrolled content offscreen,
-    but the pinned content is still fully visible.
+    Detect pinned by checking if the table has been scrolled
   */
-  let bodyDetector: HTMLDivElement | undefined;
-  let pinnedDetector: HTMLDivElement | undefined;
-  const [bodyOffscreen, setBodyOffscreen] = createSignal(false);
-  const [pinnedOffscreen, setPinnedOffscreen] = createSignal(false);
-  const pinned = () => bodyOffscreen() && !pinnedOffscreen();
-  onMount(() => {
-    if (bodyDetector && pinnedDetector) {
-      const observer = new IntersectionObserver(
-        ([e]) => {
-          setBodyOffscreen(e.intersectionRatio < 1);
-        },
-        {threshold: [1]}
-      );
-      observer.observe(bodyDetector);
-
-      const observer2 = new IntersectionObserver(
-        ([e]) => {
-          setPinnedOffscreen(e.intersectionRatio < 1);
-        },
-        {threshold: [1]}
-      );
-      observer2.observe(pinnedDetector);
-    }
+  const [scrollTop, setScrollTop] = createSignal(0);
+  const pinned = createMemo(() => {
+    const isPinned = scrollTop() > 0;
+    return isPinned;
   });
 
   const headerMeasureEls: HTMLDivElement[] = [];
@@ -474,15 +455,33 @@ const MalloyTableRoot = (_props: {
 
   let pinnedHeaderRow!: HTMLDivElement;
 
-  // Track scrolling state with 2s grace period
+  // Track scrolling state with grace period
   // Used to only clear column width states on resize events that aren't due to data virtualization on scroll
   let isScrolling = false;
-  const handleScroll = () => {
+  let scrollTimeout: ReturnType<typeof setTimeout> | undefined;
+  const handleScroll = (evt: Event) => {
+    const target = evt.target as HTMLElement;
+    const newScrollTop = target.scrollTop;
+
+    setScrollTop(newScrollTop);
     isScrolling = true;
-    setTimeout(() => {
+
+    if (scrollTimeout !== undefined) {
+      clearTimeout(scrollTimeout);
+    }
+
+    scrollTimeout = setTimeout(() => {
       isScrolling = false;
-    }, 2000);
+      scrollTimeout = undefined;
+    }, 500);
   };
+
+  // Cleanup scroll timeout on unmount
+  onCleanup(() => {
+    if (scrollTimeout !== undefined) {
+      clearTimeout(scrollTimeout);
+    }
+  });
 
   function updateColumnWidths() {
     const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
@@ -493,8 +492,9 @@ const MalloyTableRoot = (_props: {
       const key = node.getAttribute('data-pinned-header')!;
       const value = node.clientWidth;
       const currWidth = tableCtx.store.columnWidths[key];
-      if (typeof currWidth === 'undefined' || value > currWidth)
+      if (typeof currWidth === 'undefined' || value > currWidth) {
         updates.push([key, value]);
+      }
     });
     if (updates.length > 0) {
       tableCtx.setStore(
@@ -510,11 +510,9 @@ const MalloyTableRoot = (_props: {
   onMount(() => {
     if (pinnedHeaderRow) {
       const resizeObserver = new ResizeObserver(() => {
-        // select all nodes with data-pinned-header attribute
-        if (isScrolling) {
-          // Measure while scrolling
-          updateColumnWidths();
-        }
+        // Always update column widths when headers resize
+        // The updateColumnWidths function already ensures we only expand, never shrink
+        updateColumnWidths();
       });
       resizeObserver.observe(pinnedHeaderRow);
       // Initial measurement
@@ -528,21 +526,45 @@ const MalloyTableRoot = (_props: {
   onMount(() => {
     if (tableCtx.root) {
       let priorWidth: number | null = null;
+      let lastClearTime = 0;
       const resizeObserver = new ResizeObserver(entries => {
         const [entry] = entries;
+        const newWidth = entry.contentRect.width;
+        const now = Date.now();
+        const timeSinceLastClear = now - lastClearTime;
+
         // Not scrolling and skip the initial measurement, it's handled by header row observer
-        if (!isScrolling && priorWidth !== null) {
-          if (priorWidth !== entry.contentRect.width) {
+        // Also add debounce to prevent clearing too frequently
+        if (!isScrolling && priorWidth !== null && timeSinceLastClear > 1000) {
+          if (priorWidth !== newWidth) {
             tableCtx.setStore(s => ({
               ...s,
               columnWidths: {},
             }));
+            lastClearTime = now;
           }
         }
-        priorWidth = entry.contentRect.width;
+        priorWidth = newWidth;
       });
       resizeObserver.observe(scrollEl);
     }
+  });
+
+  // Set up scroll event listener on the actual scroll element
+  onMount(() => {
+    // Wait for next tick to ensure scrollEl is set
+    requestAnimationFrame(() => {
+      if (scrollEl && props.scrollEl) {
+        // If scrollEl is provided externally, we need to listen to it
+        scrollEl.addEventListener('scroll', handleScroll);
+        // Also check initial scroll position
+        handleScroll({target: scrollEl} as unknown as Event);
+
+        onCleanup(() => {
+          scrollEl.removeEventListener('scroll', handleScroll);
+        });
+      }
+    });
   });
 
   const getPinnedHeaderRowStyle = () => ({
@@ -573,24 +595,15 @@ const MalloyTableRoot = (_props: {
         'root': tableCtx.root,
         'full-width': shouldFillWidth,
         'pinned': pinned(),
+        'external-scroll': !!props.scrollEl,
       }}
       part={tableCtx.root ? 'table-container' : ''}
       style={getContainerStyle()}
-      onScroll={handleScroll}
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      onScroll={props.scrollEl ? undefined : handleScroll}
       on:mouseover={handleTableMouseOver}
     >
       {/* pinned header */}
       <Show when={tableCtx.root}>
-        <div
-          ref={bodyDetector}
-          style="position: sticky; left: 0px; height: 0px; visibility: hidden;"
-        ></div>
-        <div
-          ref={pinnedDetector}
-          style="position: sticky; top: 0px; left: 0px; height: 0px; visibility: hidden;"
-        ></div>
         <div
           class="pinned-header-row"
           ref={pinnedHeaderRow}
@@ -733,11 +746,6 @@ const MalloyTable: Component<{
     };
   });
 
-  if (tableCtx().root) {
-    const config = useConfig();
-    config.addCSSToShadowRoot(tableCss);
-  }
-
   const tableConfig = useConfig().tableConfig;
 
   const tableProps = () =>
@@ -755,6 +763,8 @@ const MalloyTable: Component<{
           ? props.shouldFillWidth
           : tableConfig().shouldFillWidth,
     });
+
+  MalloyViz.addStylesheet(styles);
 
   return (
     <TableContext.Provider value={tableCtx()}>

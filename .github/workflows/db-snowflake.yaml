@@ -24,8 +24,7 @@ jobs:
           npm ci --loglevel error
           npm run build
           ./scripts/gen-snowflake-auth.sh
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.snowflake.config.ts
+          npm run ci-snowflake
         env:
           CI: true
-          MALLOY_DATABASES: snowflake
           SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}

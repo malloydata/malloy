@@ -91,6 +91,7 @@ export class FilterElement extends MalloyElement {
         e: {node: 'false'},
         expressionType: 'scalar',
         fieldUsage: exprVal.fieldUsage,
+        isSourceFilter: false,
       };
     }
     const stableFilter = this.getStableFilter();
@@ -101,6 +102,7 @@ export class FilterElement extends MalloyElement {
       expressionType: exprVal.expressionType,
       fieldUsage: exprVal.fieldUsage,
       stableFilter,
+      isSourceFilter: false,
     };
     return exprCond;
   }
