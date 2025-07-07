@@ -41,6 +41,11 @@ import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {BarChartPluginInstance} from './bar-chart-plugin';
+import {
+  shouldUseOrdinalScale,
+  getFieldInterval,
+  generateDateRange,
+} from '@/component/vega/date-interval-utils';
 
 type BarDataRecord = {
   x: string | number;
@@ -640,6 +645,21 @@ export function generateBarChartVegaSpecV2(
     });
   }
 
+  // Determine if we should generate a complete interval domain for dates
+  const useOrdinalDateScale = xIsDateorTime && shouldUseOrdinalScale(xField);
+  const dateInterval = useOrdinalDateScale ? getFieldInterval(xField) : null;
+
+  // Generate ordinal domain for date intervals if needed
+  let ordinalDateDomain: (string | number)[] | undefined;
+  if (useOrdinalDateScale && dateInterval && shouldShareXDomain) {
+    // Generate all interval values between min and max
+    const minValue = xField.minValue;
+    const maxValue = xField.maxValue;
+    if (minValue !== undefined && maxValue !== undefined) {
+      ordinalDateDomain = generateDateRange(minValue, maxValue, dateInterval);
+    }
+  }
+
   /**************************************
    *
    * Chart spec
@@ -661,7 +681,7 @@ export function generateBarChartVegaSpecV2(
         name: 'xscale',
         type: 'band',
         domain: shouldShareXDomain
-          ? [...dataLimits.barValuesToPlot]
+          ? ordinalDateDomain ?? [...dataLimits.barValuesToPlot]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,

@@ -40,6 +40,11 @@ import {
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
+import {
+  shouldUseOrdinalScale,
+  getFieldInterval,
+  generateDateRange,
+} from '@/component/vega/date-interval-utils';
 
 type LineDataRecord = {
   x: string | number;
@@ -498,7 +503,7 @@ export function generateLineChartVegaSpecV2(
     transform: [
       {
         type: 'filter',
-        expr: `datum.x != null && datum.x != "${NULL_SYMBOL}"`,
+        expr: '!datum.isNull',
       },
     ],
   };
@@ -510,8 +515,30 @@ export function generateLineChartVegaSpecV2(
       {
         type: 'aggregate',
         groupby: ['x'],
+        fields: hasNullXValues ? ['isNull'] : [],
+        ops: hasNullXValues ? ['min'] : [],
+        as: hasNullXValues ? ['isNull'] : [],
+      },
+      ...(hasNullTimeValues
+        ? [
+            {
+              type: 'collect',
+              sort: {field: 'isNull', order: 'ascending'},
+            },
+          ]
+        : []),
+      {
+        type: 'collect',
+        sort: xIsDateorTime
+          ? {field: 'x', order: 'ascending'}
+          : ({} as {field: string; order: 'ascending' | 'descending'}),
+      },
+      {
+        type: 'lookup',
+        from: 'values',
+        key: 'x',
+        values: ['x'],
         fields: ['x'],
-        ops: ['values'],
         as: ['v'],
       },
     ],
@@ -711,6 +738,21 @@ export function generateLineChartVegaSpecV2(
     );
   }
 
+  // Determine if we should use ordinal scale for dates
+  const useOrdinalDateScale = xIsDateorTime && shouldUseOrdinalScale(xField);
+  const dateInterval = useOrdinalDateScale ? getFieldInterval(xField) : null;
+
+  // Generate ordinal domain for date intervals if needed
+  let ordinalDateDomain: number[] | undefined;
+  if (useOrdinalDateScale && dateInterval && shouldShareXDomain) {
+    // Generate all interval values between min and max
+    const minValue = xField.minValue;
+    const maxValue = xField.maxValue;
+    if (minValue !== undefined && maxValue !== undefined) {
+      ordinalDateDomain = generateDateRange(minValue, maxValue, dateInterval);
+    }
+  }
+
   /**************************************
    *
    * Chart spec
@@ -730,13 +772,15 @@ export function generateLineChartVegaSpecV2(
     scales: [
       {
         name: 'xscale',
-        type: xIsDateorTime ? 'utc' : 'point',
+        type: useOrdinalDateScale ? 'point' : xIsDateorTime ? 'utc' : 'point',
         domain:
           settings.mode === 'yoy'
             ? // For YoY mode, calculate domain from actual data
               {data: 'values', field: 'x'}
             : shouldShareXDomain
-            ? xIsDateorTime
+            ? useOrdinalDateScale && ordinalDateDomain
+              ? ordinalDateDomain
+              : xIsDateorTime
               ? [Number(xField.minValue), Number(xField.maxValue)]
               : xIsBoolean
               ? [true, false]
