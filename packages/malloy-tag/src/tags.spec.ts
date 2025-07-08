@@ -61,6 +61,7 @@ expect.extend({
 });
 
 type TagTestTuple = [string, TagDict];
+
 describe('tagParse to Tag', () => {
   const tagTests: TagTestTuple[] = [
     ['just_name', {just_name: {}}],
@@ -80,6 +81,7 @@ describe('tagParse to Tag', () => {
     ],
     ['name.prop', {name: {properties: {prop: {}}}}],
     ['name.prop=value', {name: {properties: {prop: {eq: 'value'}}}}],
+    ['name.prop.sub', {name: {properties: {prop: {properties: {sub: {}}}}}}],
     [
       'name.prop.sub=value',
       {name: {properties: {prop: {properties: {sub: {eq: 'value'}}}}}},
@@ -115,14 +117,6 @@ describe('tagParse to Tag', () => {
     ['x.y=xx x=1 {...}', {x: {eq: '1', properties: {y: {eq: 'xx'}}}}],
     ['a {b c} a=1', {a: {eq: '1'}}],
     ['a=1 a=...{b}', {a: {eq: '1', properties: {b: {}}}}],
-    [
-      'a=red { shade=dark } color=$(a) shade=$(a.shade)',
-      {
-        a: {eq: 'red', properties: {shade: {eq: 'dark'}}},
-        color: {eq: 'red', properties: {shade: {eq: 'dark'}}},
-        shade: {eq: 'dark'},
-      },
-    ],
     ['x=.01', {x: {eq: '.01'}}],
     ['x=-7', {x: {eq: '-7'}}],
     ['x=7', {x: {eq: '7'}}],
@@ -152,12 +146,13 @@ describe('tagParse to Tag', () => {
       },
     ],
     ['can remove.properties -...', {}],
+    ['empty_array=[]', {empty_array: {eq: []}}],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
   });
-  test.skip('unskip to debug just one of the expressions', () => {
-    const x: TagTestTuple = ['word -...', {}];
+  test('unskip to debug just one of the expressions', () => {
+    const x: TagTestTuple = ['empty_array=[]', {empty_array: {eq: []}}];
     expect(x[0]).tagsAre(x[1]);
   });
 });
@@ -293,6 +288,7 @@ describe('Tag access', () => {
     const allTags = parsed.tag;
     const plotTag = allTags.tag('plot');
     const xTag = plotTag!.tag('x');
+    expect(xTag).toBeDefined();
     const x = xTag!.numeric();
     expect(parsed.tag.numeric('plot', 'x')).toEqual(2);
     expect(plotTag!.numeric('x')).toEqual(2);

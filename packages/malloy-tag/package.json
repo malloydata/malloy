@@ -14,19 +14,21 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "node scripts/build_parser.js",
+    "build-parser": "mkdir -p src/lib && nearleyc src/MalloyTag.ne --out src/lib/MalloyTagNew.ts",
     "clean": "tsc --build --clean && rimraf @flowtyped",
     "build": "npm run build-parser && tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "moo": "^0.5.2",
+    "nearley": "^2.20.1"
   },
   "devDependencies": {
-    "antlr4ts-cli": "^0.5.0-alpha.4",
+    "@types/moo": "^0.5.10",
+    "@types/nearley": "^2.11.5",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2"
   }

@@ -21,29 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
-import {MalloyTagLexer} from './lib/Malloy/MalloyTagLexer';
-import type {
-  ArrayElementContext,
-  ArrayValueContext,
-  PropNameContext,
-  PropertiesContext,
-  ReferenceContext,
-  StringContext,
-  TagDefContext,
-  TagEmptyContext,
-  TagEqContext,
-  TagLineContext,
-  TagReplacePropertiesContext,
-  TagSpecContext,
-  TagUpdatePropertiesContext,
-} from './lib/Malloy/MalloyTagParser';
-import {MalloyTagParser} from './lib/Malloy/MalloyTagParser';
-import type {MalloyTagVisitor} from './lib/Malloy/MalloyTagVisitor';
-import type {ANTLRErrorListener, ParserRuleContext, Token} from 'antlr4ts';
-import {CharStreams, CommonTokenStream} from 'antlr4ts';
-import {parseString} from './util';
-
 export interface TagError {
   message: string;
   line: number;
@@ -51,12 +28,14 @@ export interface TagError {
   code: string;
 }
 
-// The distinction between the interface and the Tag class exists solely to
-// make it possible to write tests and specify expected results This
-// is why only TagDict interface is exported.
+export interface TagParse {
+  tag: Tag;
+  log: TagError[];
+}
+
 export type TagDict = Record<string, TagInterface>;
 
-type TagValue = string | TagInterface[];
+export type TagValue = string | TagInterface[];
 
 export interface TagInterface {
   eq?: TagValue;
@@ -65,32 +44,34 @@ export interface TagInterface {
   prefix?: string;
 }
 
-export interface TagParse {
-  tag: Tag;
-  log: TagError[];
-}
+type PathSegment = string | number;
+type Path = PathSegment[];
 
-export type PathSegment = string | number;
-export type Path = PathSegment[];
-
-export type TagSetValue = string | number | string[] | number[] | null;
+type TagSetValue = string | number | string[] | number[] | null;
 
 /**
  * Class for interacting with the parsed output of an annotation
- * containing the Malloy tag language. Used by the parser to
- * generate parsed data, and as an API to that data.
+ * containing the Malloy tag language. You can turn text into tags with
+ * ```
+ * Tag.fromTagLine(...)  => creates a tag from a line of source
+ * Tag.fromTagLines(...) => creates a tag from an array of source lines
+ * ```
+ *
+ * and these are the methods for getting information from parsed tags
+ *
  * ```
  * tag.text(p?)         => string value of tag.p or undefined
  * tag.array(p?)        => Tag[] value of tag.p or undefined
  * tag.numeric(p?)      => numeric value of tag.p or undefined
  * tag.textArray(p ?)   => string[] value of elements in tag.p or undefined
- * tag.numericArray(p?) => string[] value of elements in tag.p or undefined
+ * tag.numericArray(p?) => number[] value of elements in tag.p or undefined
  * tag.tag(p?)           => Tag value of tag.p
  * tag.has(p?)           => boolean "tag contains tag.p"
  * tag.bare(p?)          => tag.p exists and has no properties
- * tag.dict             => Record<string,Tag> of tag properties
+ * tag.dict              => Record<string,Tag> of tag properties
  * ```
  */
+
 export class Tag implements TagInterface {
   eq?: TagValue;
   properties?: TagDict;
@@ -145,44 +126,6 @@ export class Tag implements TagInterface {
     }
     str += `\n${spaces}}`;
     return str;
-  }
-
-  /**
-   * Parse a line of Malloy tag language into a Tag which can be queried
-   * @param source -- The source line to be parsed. If the string starts with #, then it skips
-   *   all characters up to the first space.
-   * @param lineNumber -- A line number to be associated with the parse errors.
-   * @param extending A tag which this line will be extending
-   * @param importing Outer "scopes" for $() references
-   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
-   */
-  static fromTagLine(
-    source: string,
-    lineNumber = 0,
-    extending?: Tag,
-    ...importing: Tag[]
-  ): TagParse {
-    return parseTagLine(source, extending, importing, lineNumber);
-  }
-
-  /**
-   * Parse multiple lines of Malloy tag language, merging them into a single Tag
-   * @param lines -- The source line to be parsed. If the string starts with #, then it skips
-   *   all characters up to the first space.
-   * @param extending A tag which this line will be extending
-   * @param importing Outer "scopes" for $() references
-   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
-   */
-  static fromTagLines(lines: string[], extending?: Tag, ...importing: Tag[]) {
-    const allErrs: TagError[] = [];
-    let current: Tag | undefined = extending;
-    for (let i = 0; i < lines.length; i++) {
-      const text = lines[i];
-      const noteParse = parseTagLine(text, current, importing, i);
-      current = noteParse.tag;
-      allErrs.push(...noteParse.log);
-    }
-    return {tag: current, log: allErrs};
   }
 
   constructor(from: TagInterface = {}) {
@@ -316,9 +259,10 @@ export class Tag implements TagInterface {
   toString(): string {
     let annotation = this.prefix ?? '# ';
     function addChildren(tag: TagInterface) {
-      const props = Object.keys(tag.properties ?? {});
+      const tagP = tag.properties || {};
+      const props = Object.keys(tagP);
       for (let i = 0; i < props.length; i++) {
-        addChild(props[i], tag.properties![props[i]]);
+        addChild(props[i], tagP[props[i]]);
         if (i < props.length - 1) {
           annotation += ' ';
         }
@@ -391,6 +335,31 @@ export class Tag implements TagInterface {
       }
     }
     return currentTag.deleted ? undefined : currentTag;
+  }
+
+  /**
+   * Walk the path. Called from the tag parser.
+   *
+   * Returns the existing end of the path or new node, with the side effect of creating
+   * missing nodes on the way to the end of the path.
+   *
+   * Similar to "find" except find can fail to find and walkTo doesn't have the
+   * weird ability to use numbers to index the eq value.
+   *
+   */
+  walkTo(path: string[]): Tag {
+    let got_to = Tag.tagFrom(this); // got_to = this, no idea why Typescript hates that
+    for (const segment of path) {
+      const theProps = got_to.getProperties();
+      const nextStep = theProps[segment] || {};
+      if (!(nextStep instanceof Tag)) {
+        got_to = new Tag(nextStep);
+        theProps[segment] = got_to;
+      } else {
+        got_to = nextStep;
+      }
+    }
+    return got_to;
   }
 
   has(...path: Path): boolean {
@@ -477,301 +446,221 @@ export class Tag implements TagInterface {
           currentTag = properties[segment];
         } else {
           if (!hard) return origCopy;
-          properties[segment] = {};
+          properties[segment] = new Tag({});
           currentTag = properties[segment];
         }
       }
     }
     const segment = path[path.length - 1];
     if (typeof segment === 'string') {
-      if (currentTag.properties && segment in currentTag.properties) {
-        delete currentTag.properties[segment];
-      } else if (hard) {
+      if (hard) {
         currentTag.properties ??= {};
-        currentTag.properties[segment] = {deleted: true};
+        currentTag.properties[segment] = new Tag({deleted: true});
+      } else if (currentTag.properties && segment in currentTag.properties) {
+        delete currentTag.properties[segment];
       }
     } else {
       if (Array.isArray(currentTag.eq)) {
         currentTag.eq.splice(segment, 1);
       }
     }
-    return origCopy;
-  }
-}
-
-class TagErrorListener implements ANTLRErrorListener<Token> {
-  log: TagError[] = [];
-  constructor(readonly line: number) {}
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ): void {
-    const logMsg: TagError = {
-      code: 'tag-parse-syntax-error',
-      message: msg,
-      line: this.line,
-      offset: charPositionInLine,
-    };
-    this.log.push(logMsg);
+    return this;
   }
 
-  semanticError(cx: ParserRuleContext, code: string, msg: string): void {
-    const logMsg: TagError = {
-      code,
-      message: msg,
-      line: this.line,
-      offset: cx.start.charPositionInLine,
-    };
-    this.log.push(logMsg);
+  /**
+   * Parse a line of Malloy tag language into a Tag which can be queried
+   * @param source -- The source line to be parsed. If the string starts with #, then it skips
+   *   all characters up to the first space.
+   * @param lineNumber -- A line number to be associated with the parse errors.
+   * @param extending A tag which this line will be extending
+   * @param importing Outer "scopes" for $() references
+   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
+   */
+  static fromTagLine(
+    source: string,
+    lineNumber = 0,
+    extending?: Tag,
+    ...importing: Tag[]
+  ): TagParse {
+    return parseTagLine(source, extending, importing, lineNumber);
   }
-}
 
-function getBuildOn(ctx: ParserRuleContext): Tag {
-  const buildOn = ctx['buildOn'];
-  if (buildOn instanceof Tag) {
-    return buildOn;
-  }
-  return new Tag();
-}
-
-/**
- * When chasing a path reference, the two interesting gestures are to
- * find the path-ed tag so it can be extended, or to find the path tag
- * so it can be deleted. This returns the parent and the final tag
- * so that the caller can delete the tag with delete parent.tagName
- * or assign to it with parent[tagName] = new_value
- */
-function buildAccessPath(buildOn: Tag, path: string[]): [string, TagDict] {
-  let parentPropertyObject = buildOn.getProperties();
-  for (const p of path.slice(0, path.length - 1)) {
-    let next: Tag;
-    if (parentPropertyObject[p] === undefined) {
-      next = new Tag({});
-      parentPropertyObject[p] = next;
-    } else {
-      // The access that we are performing requires that `.properties` be the
-      // same JS object (not equal, but identical), and `Tag.tagFrom` only copies
-      // the exact object in if it is actually present.
-      parentPropertyObject[p].properties ??= {};
-      next = Tag.tagFrom(parentPropertyObject[p]);
+  /**
+   * Parse multiple lines of Malloy tag language, merging them into a single Tag
+   * @param lines -- The source line to be parsed. If the string starts with #, then it skips
+   *   all characters up to the first space.
+   * @param extending A tag which this line will be extending
+   * @param importing Outer "scopes" for $() references
+   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
+   */
+  static fromTagLines(lines: string[], extending?: Tag, ...importing: Tag[]) {
+    const allErrs: TagError[] = [];
+    let current: Tag | undefined = extending;
+    for (let i = 0; i < lines.length; i++) {
+      const text = lines[i];
+      const noteParse = parseTagLine(text, current, importing, i);
+      current = noteParse.tag;
+      allErrs.push(...noteParse.log);
     }
-    parentPropertyObject = next.getProperties();
+    return {tag: current, log: allErrs};
   }
-  return [path[path.length - 1], parentPropertyObject];
 }
 
-function getString(ctx: StringContext) {
-  if (ctx.SQ_STRING() || ctx.DQ_STRING()) {
-    return parseString(ctx.text, ctx.text[0]);
-  }
-  return ctx.text;
-}
+import * as nearley from 'nearley';
+import grammar_spec from './lib/MalloyTagNew';
+import * as ast from './new-tag-ast';
+
+let tag_grammar: nearley.Grammar | undefined = undefined;
 
 function parseTagLine(
   source: string,
   extending: Tag | undefined,
-  outerScope: Tag[],
-  onLine: number
+  _outerScope: Tag[], // mtoy TODO use this
+  _onLine: number // mtoy TODO use this
 ): TagParse {
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
     if (skipTo > 0) {
-      source = source.slice(skipTo);
+      source = source.slice(skipTo + 1);
     } else {
       source = '';
     }
   }
-  const inputStream = CharStreams.fromString(source);
-  const lexer = new MalloyTagLexer(inputStream);
-  const tokenStream = new CommonTokenStream(lexer);
-  const pLog = new TagErrorListener(onLine);
-  const taglineParser = new MalloyTagParser(tokenStream);
-  taglineParser.removeErrorListeners();
-  taglineParser.addErrorListener(pLog);
-  const tagTree = taglineParser.tagLine();
-  const treeWalker = new TagLineParser(outerScope, pLog);
-  const tag = treeWalker.tagLineToTag(tagTree, extending);
-  return {tag, log: pLog.log};
+  tag_grammar ||= nearley.Grammar.fromCompiled(grammar_spec);
+  const tag_parser = new nearley.Parser(tag_grammar);
+  try {
+    tag_parser.feed(source);
+    const parsed = tag_parser.finish();
+    // eslint-disable-next-line no-console
+    if (parsed.length > 1) {
+      return {
+        tag: new Tag({}),
+        log: [
+          {
+            message: 'GRAMMAR FAULT: ambiguous parse',
+            line: 0,
+            offset: 0,
+            code: source,
+          },
+        ],
+      };
+    }
+    const firstTree = parsed[0];
+    if (ast.isAnyAstNode(firstTree)) {
+      const into = extending?.clone() || new Tag();
+      tagAstToTag(firstTree, into);
+      return {
+        tag: into,
+        log: [],
+      };
+    }
+    throw new Error(
+      `IMPOSSIBLE: Tag Source: '${source}' parsed without errors but did not produce a known AST node`
+    );
+  } catch (e) {
+    return {
+      tag: new Tag({}),
+      log: [
+        {
+          message: `Tag Parser Error:\n${e.message}`,
+          line: 0,
+          offset: 0,
+          code: source,
+        },
+      ],
+    };
+  }
 }
 
-class TagLineParser
-  extends AbstractParseTreeVisitor<Tag>
-  implements MalloyTagVisitor<Tag>
-{
-  scopes: Tag[] = [];
-  msgLog: TagErrorListener;
-  constructor(outerScopes: Tag[] = [], msgLog: TagErrorListener) {
-    super();
-    this.msgLog = msgLog;
-    this.scopes.unshift(...outerScopes);
-  }
-
-  defaultResult() {
-    return new Tag();
-  }
-
-  visitString(ctx: StringContext): Tag {
-    return new Tag({eq: getString(ctx)});
-  }
-
-  protected getPropName(ctx: PropNameContext): string[] {
-    return ctx
-      .identifier()
-      .map(cx =>
-        cx.BARE_STRING() ? cx.text : parseString(cx.text, cx.text[0])
-      );
-  }
-
-  getTags(tags: TagSpecContext[], tagLine: Tag): Tag {
-    for (const tagSpec of tags) {
-      // Stash the current state of this tag in the context and then visit it
-      // visit functions should alter the tagLine
-      tagSpec['buildOn'] = tagLine;
-      this.visit(tagSpec);
-    }
-    return tagLine;
-  }
-
-  tagLineToTag(ctx: TagLineContext, extending: Tag | undefined): Tag {
-    extending = extending?.clone() || new Tag({});
-    this.scopes.unshift(extending);
-    this.getTags(ctx.tagSpec(), extending);
-    return extending;
-  }
-
-  visitTagLine(_ctx: TagLineContext): Tag {
-    throw new Error('INTERNAL: ERROR: Call tagLineToTag, not vistTagLine');
-    return this.defaultResult();
-  }
-
-  visitProperties(ctx: PropertiesContext): Tag {
-    return this.getTags(ctx.tagSpec(), getBuildOn(ctx));
-  }
-
-  visitArrayValue(ctx: ArrayValueContext): Tag {
-    return new Tag({eq: this.getArray(ctx)});
-  }
-
-  getArray(ctx: ArrayValueContext): Tag[] {
-    return ctx.arrayElement().map(v => this.visit(v));
-  }
-
-  visitArrayElement(ctx: ArrayElementContext): Tag {
-    const propCx = ctx.properties();
-    const properties = propCx ? this.visitProperties(propCx) : undefined;
-    const strCx = ctx.string();
-    let value: TagValue | undefined = strCx ? getString(strCx) : undefined;
-
-    const arrayCx = ctx.arrayValue();
-    if (arrayCx) {
-      value = this.getArray(arrayCx);
-    }
-
-    if (properties) {
-      if (value !== undefined) {
-        properties.eq = value;
-      }
-      return properties;
-    }
-
-    const refCx = ctx.reference();
-    if (refCx) {
-      return this.visitReference(refCx);
-    }
-    return new Tag({eq: value});
-  }
-
-  visitReference(ctx: ReferenceContext): Tag {
-    const path = this.getPropName(ctx.propName());
-    for (const scope of this.scopes) {
-      // first scope which has the first component gets to resolve the whole path
-      if (scope.has(path[0])) {
-        const refTo = scope.tag(...path);
-        if (refTo) {
-          return refTo.clone();
+export function tagAstToTag(n: ast.AnyAstNode, into: Tag) {
+  switch (n.type) {
+    case 'TagSpec_MinusProp':
+      {
+        if (n.isNegated) {
+          into.unset(...n.propName.value);
+        } else {
+          into.walkTo(n.propName.value);
         }
-        break;
       }
+      break;
+    case 'TagLine': {
+      for (const spec of n.tags) {
+        tagAstToTag(spec, into);
+      }
+      break;
     }
-    this.msgLog.semanticError(
-      ctx,
-      'tag-property-not-found',
-      `Reference to undefined property ${path.join('.')}`
-    );
-    return this.defaultResult();
-  }
-
-  visitTagEq(ctx: TagEqContext): Tag {
-    const buildOn = getBuildOn(ctx);
-    const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = buildAccessPath(buildOn, name);
-    const eq = this.visit(ctx.eqValue());
-    const propCx = ctx.properties();
-    if (propCx) {
-      // a.b.c { -y } means i want to do -y on
-      if (propCx.DOTTY() === undefined) {
-        const properties = this.visitProperties(propCx).dict;
-        // Add new properties old value
-        writeInto[writeKey] = {...eq, properties};
+    case 'TagSpec_EqValue': {
+      const dest = into.walkTo(n.propName.value);
+      const eq = n.value;
+      if (eq.type === 'StringLiteral' || eq.type === 'NumberLiteral') {
+        dest.eq = eq.value;
+      } else if (eq.type === 'ArrayValue') {
+        dest.eq = arrayValue(eq);
+      }
+      if (n.properties) {
+        applyProps(dest, !n.properties.isDotty, n.properties);
       } else {
-        // preserve old properties, add new value
-        writeInto[writeKey] = {...writeInto[writeKey], ...eq};
+        dest.properties = undefined;
       }
-    } else {
-      writeInto[writeKey] = eq;
+      break;
     }
-    return buildOn;
-  }
-
-  visitTagReplaceProperties(ctx: TagReplacePropertiesContext): Tag {
-    const buildOn = getBuildOn(ctx);
-    const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = buildAccessPath(buildOn, name);
-    const propCx = ctx.properties();
-    const props = this.visitProperties(propCx);
-    if (ctx.DOTTY() === undefined) {
-      // No dots, thropw away the value
-      writeInto[writeKey] = {properties: props.dict};
-    } else {
-      /// DOTS, just update the properties
-      writeInto[writeKey].properties = props.dict;
+    case 'TagSpec_MinusDotty': {
+      into.properties = {};
+      break;
     }
-    return buildOn;
-  }
-
-  visitTagUpdateProperties(ctx: TagUpdatePropertiesContext): Tag {
-    const buildOn = getBuildOn(ctx);
-    const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = buildAccessPath(buildOn, name);
-    const propCx = ctx.properties();
-    propCx['buildOn'] = Tag.tagFrom(writeInto[writeKey]);
-    const props = this.visitProperties(propCx);
-    const thisObj = writeInto[writeKey] || new Tag({});
-    const properties = {...thisObj.properties, ...props.dict};
-    writeInto[writeKey] = {...thisObj, properties};
-    return buildOn;
-  }
-
-  visitTagDef(ctx: TagDefContext): Tag {
-    const buildOn = getBuildOn(ctx);
-    const path = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = buildAccessPath(buildOn, path);
-    if (ctx.MINUS()) {
-      writeInto[writeKey] = {deleted: true};
-    } else {
-      writeInto[writeKey] = new Tag({});
+    case 'TagSpec_PropOnly': {
+      applyProps(into.walkTo(n.propName.value), false, n.properties);
+      break;
     }
-    return buildOn;
+    case 'TagSpec_EqDotty': {
+      const dest = into.walkTo(n.propName.value);
+      if (!n.isDotty) {
+        delete dest.eq;
+      }
+      applyProps(
+        into.walkTo(n.propName.value),
+        !n.properties.isDotty,
+        n.properties
+      );
+      break;
+    }
+    default:
+      throw new Error(`No handler for node ${n.type}`);
   }
+}
 
-  visitTagEmpty(ctx: TagEmptyContext): Tag {
-    const tagList = ctx['buildOn'] as Tag;
-    tagList.properties = {};
-    return tagList;
+function applyProps(t: Tag, replace: boolean, p: ast.Properties | undefined) {
+  if (p) {
+    if (replace) {
+      t.properties = undefined;
+    }
+    for (const prop of p.tags) {
+      tagAstToTag(prop, t);
+    }
   }
+}
+
+function arrayValue(a: ast.ArrayValue): Tag[] {
+  return a.elements.map(av => {
+    switch (av.value.type) {
+      case 'StringLiteral': {
+        const v = new Tag({eq: av.value.value});
+        if (av.properties) {
+          applyProps(v, true, av.properties);
+        }
+        return v;
+      }
+      case 'NumberLiteral':
+        return new Tag({eq: av.value.value});
+      case 'Properties': {
+        const el = new Tag({});
+        applyProps(el, true, av.value);
+        return el;
+      }
+      case 'ArrayValue': {
+        const nestedArray = arrayValue(av.value);
+        return new Tag({eq: nestedArray});
+      }
+    }
+  });
 }
