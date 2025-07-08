@@ -2726,9 +2726,6 @@ class QueryQuery extends QueryField {
         };
       }
     }
-    if (f.type === 'fieldref' && f.drillExpression) {
-      return f.drillExpression;
-    }
     if (f.type === 'fieldref') {
       return drillExpressionFromReferencePath(f.path);
     }

@@ -1531,7 +1531,6 @@ export interface RefToField {
   annotation?: Annotation;
   at?: DocumentLocation;
   drillView?: string;
-  drillExpression?: Malloy.Expression | undefined;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
