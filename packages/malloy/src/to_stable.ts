@@ -293,10 +293,10 @@ function addDrillFiltersTag(tag: Tag, drillFilters: FilterCondition[]) {
     const filter = drillFilters[i];
     if (filter.expressionType !== 'scalar' || filter.isSourceFilter) continue;
     tag.set(['drill_filters', i, 'code'], filter.code);
-    if (filter.drillView) {
-      tag.set(['drill_filters', i, 'drill_view'], filter.drillView);
+    if (filter.filterView) {
+      tag.set(['drill_filters', i, 'filter_view'], filter.filterView);
     }
-    if (filter.drillView === undefined && filter.stableFilter !== undefined) {
+    if (filter.filterView === undefined && filter.stableFilter !== undefined) {
       writeExpressionToTag(
         tag,
         ['drill_filters', i, 'expression'],

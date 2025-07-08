@@ -149,7 +149,7 @@ export abstract class FieldBase {
   get drillFilters(): string[] {
     return (this.metadataTag.array('drill_filters') ?? [])
       .map(filterTag => {
-        if (filterTag.text('drill_view')) return undefined;
+        if (filterTag.text('filter_view')) return undefined;
         const stableFilter = this.getStableDrillFilter(filterTag);
         if (stableFilter === undefined) {
           return filterTag.text('code');
@@ -192,7 +192,7 @@ export abstract class FieldBase {
     const result: Malloy.Filter[] = [];
     const filterTags = this.metadataTag.array('drill_filters');
     for (const filterTag of filterTags ?? []) {
-      if (filterTag.text('drill_view')) continue;
+      if (filterTag.text('filter_view')) continue;
       const stableFilter = this.getStableDrillFilter(filterTag);
       if (stableFilter === undefined) return undefined;
       result.push(stableFilter);

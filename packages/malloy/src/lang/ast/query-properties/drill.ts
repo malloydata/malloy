@@ -451,7 +451,7 @@ export function attachDrillPaths(
       ...pipeline[0],
       filterList: pipeline[0].filterList?.map(f => ({
         ...f,
-        drillView: nestName,
+        filterView: nestName,
       })),
       queryFields: pipeline[0].queryFields.map(f => {
         if (f.type === 'turtle') {
