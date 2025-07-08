@@ -165,6 +165,9 @@ describe('drill query', () => {
     ) -> top_carriers
     query: only_default_params is flights_with_parameters -> top_carriers
     query: deeply_nested is flights -> deeply_nested
+    query: nested is flights -> {
+      nest: tc is top_carriers
+    }
   `;
 
   beforeEach(() => {
@@ -370,6 +373,22 @@ describe('drill query', () => {
     expect(levelTwo.isRepeatedRecord()).toBe(true);
     if (!levelTwo.isRepeatedRecord()) return;
     const row = levelTwo.rows[0];
+    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('can handle nested reference', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('nested')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> { drill: tc.nickname = "Southwest" } + { select: * }';
+    const row1 = table.rows[0];
+    const levelOne = row1.column('tc');
+    expect(levelOne.isRepeatedRecord()).toBe(true);
+    if (!levelOne.isRepeatedRecord()) return;
+    const row = levelOne.rows[0];
     expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 

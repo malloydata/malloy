@@ -426,6 +426,7 @@ export interface Expression {
   fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
+  // Maybe call this drillExpression?
   stableExpression?: Malloy.Expression;
 }
 
