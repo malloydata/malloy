@@ -388,6 +388,7 @@ export function createElementList(data: unknown[]): ArrayElement[] {
 }
 
 export function createArrayValue(data: unknown[]): ArrayValue {
+  // [AR_BEG, elements, AR_END ]
   const elements = data[1] || [];
 
   if (!Array.isArray(elements) || !elements.every(isArrayElement)) {

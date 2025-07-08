@@ -70,8 +70,9 @@ identifier ->
 # A property name can be a single identifier or a dot-separated path
 propName -> identifier (%DOT identifier):* {% ast.createPropName %}
 
-number -> %FLOAT  {% ast.createNumberLiteral %}
-  | %NUMBERE      {% ast.createNumberLiteral %}
+number ->
+    %FLOAT     {% ast.createNumberLiteral %}
+  | %NUMBERE   {% ast.createNumberLiteral %}
 
 # The value on the right side of an equals sign
 eqValue ->

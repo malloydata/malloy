@@ -47,7 +47,7 @@ export interface TagInterface {
 type PathSegment = string | number;
 type Path = PathSegment[];
 
-type TagSetValue = string | number | string[] | number[] | null;
+export type TagSetValue = string | number | string[] | number[] | null;
 
 /**
  * Class for interacting with the parsed output of an annotation

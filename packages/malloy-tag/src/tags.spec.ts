@@ -151,7 +151,7 @@ describe('tagParse to Tag', () => {
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
   });
-  test('unskip to debug just one of the expressions', () => {
+  test.skip('unskip and copy x value to debug just one of the expressions', () => {
     const x: TagTestTuple = ['empty_array=[]', {empty_array: {eq: []}}];
     expect(x[0]).tagsAre(x[1]);
   });
