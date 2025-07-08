@@ -12,211 +12,95 @@ import {API} from '@malloydata/malloy';
 
 const duckdb = runtimeFor('duckdb');
 
+// Base model with common sources that all tests will use
+const baseModel = `
+  ##! experimental { parameters }
+  source: carriers is duckdb.table('test/data/duckdb/carriers.parquet') extend {
+    primary_key: code
+    measure: carrier_count is count()
+  }
+  source: flights_base is duckdb.table('test/data/duckdb/flights/part.*.parquet') extend {
+    primary_key: id2
+    // rename some fields as from their physical names
+    rename: \`Origin Code\` is origin
+    measure: flight_count is count()
+    join_one: carriers with carrier
+  }
+`;
+
 describe('drill query', () => {
-  const model = `
-    ##! experimental { parameters }
-    source: carriers is duckdb.table('test/data/duckdb/carriers.parquet') extend {
-      primary_key: code
-      measure: carrier_count is count()
-    }
-    source: flights is duckdb.table('test/data/duckdb/flights/part.*.parquet') extend {
-      primary_key: id2
-      // rename some fields as from their physical names
-      rename: \`Origin Code\` is origin
-      measure: flight_count is count()
-      join_one: carriers with carrier
-
-      view: top_carriers is {
-        group_by: carriers.nickname
-        aggregate:
-          flight_count
-        limit: 1
-      }
-
-      view: over_time is {
-        group_by: dep_month is month(dep_time)
-        aggregate: flight_count
-        limit: 1
-      }
-
-      view: by_origin is {
-        group_by: \`Origin Code\`
-        aggregate: flight_count
-        limit: 1
-      }
-
-      view: no_filter is {
-        aggregate: flight_count
-      }
-
-      view: cool_carriers is {
-        where: carrier = 'AA' or carrier = 'WN'
-        group_by: \`Origin Code\`
-      }
-
-      view: negative_value is {
-        group_by: negative_one is -1
-      }
-
-      view: deeply_nested is {
-        nest: level_one is {
-          nest: level_two is {
-            group_by: field is 1
-          }
-        }
-      }
-    }
-    source: flights_with_parameters(
-      number_param is 1,
-      string_param is 'foo',
-      boolean_param is true,
-      date_param is @2000,
-      timestamp_param is @2004-01-01 10:00,
-      filter_expression_param::filter<number> is f'> 3'
-    ) is flights
-    source: flights_with_timestamp_param(
-      timestamp_param is @2004-01-01 10:00
-    ) is flights
-    query: top_carriers is flights -> top_carriers
-    query: top_carriers_raw is flights -> {
-      group_by: carriers.nickname
-      aggregate:
-        flight_count
-      limit: 1
-    }
-    query: by_date_raw is flights -> {
-      group_by: dep_month is dep_time.month,
-      aggregate: flight_count
-    }
-    query: by_date_raw_renamed is flights -> {
-      group_by: dep_time.month
-      aggregate: flight_count
-    }
-    query: by_date_all_truncations is flights -> {
-      group_by:
-        dep_year is dep_time.year,
-        dep_quarter is dep_time.quarter,
-        dep_month is dep_time.month,
-        dep_week is dep_time.week,
-        dep_day is dep_time.day,
-        dep_hour is dep_time.hour,
-        dep_minute is dep_time.minute,
-        dep_second is dep_time.second
-      aggregate: flight_count
-      order_by: dep_second
-      limit: 1
-    }
-    query: top_carriers_no_join is flights -> {
-      group_by: carrier
-      aggregate:
-        flight_count
-      limit: 1
-    }
-    query: top_carriers_raw_renamed is flights -> {
-      group_by: nick is carriers.nickname
-      aggregate:
-        flight_count
-      limit: 1
-    }
-    query: top_carriers_raw_renamed_2 is flights -> {
-      group_by: c is carrier
-      aggregate:
-        flight_count
-      limit: 1
-    }
-    query: over_time is flights -> over_time
-    query: by_origin is flights -> by_origin
-    query: no_filter is flights -> no_filter
-    query: cool_carriers is flights -> cool_carriers
-    query: negative_value is flights -> negative_value
-    query: literal_with_nested_view_stable is flights -> {
-      where:
-        \`Origin Code\` ~ f'SFO, ORD',
-        destination = 'SJC'
-      group_by: carrier
-      nest: cool_carriers
-    }
-    query: literal_with_nested_view_unstable is flights -> {
-      where:
-        carriers.nickname ~ '%A%',
-        distance > 100,
-        month(dep_time) = 7
-      group_by: carrier
-      nest: cool_carriers
-      having: flight_count > 100
-    }
-    query: already_has_some_drills is flights -> {
-      drill:
-        \`Origin Code\` ~ f\`SFO, ORD\`,
-        destination = "SJC",
-        carrier = "AA",
-        cool_carriers.\`Origin Code\` = "ORD"
-    } + over_time
-    query: source_has_parameters is flights_with_parameters(
-      number_param is 1,
-      string_param is 'foo',
-      boolean_param is true,
-      date_param is @2000,
-      timestamp_param is @2004-01-01 10:00,
-      filter_expression_param is f'> 3'
-    ) -> top_carriers
-    query: source_has_timezone_param is flights_with_timestamp_param(
-      timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]
-    ) -> top_carriers
-    query: only_default_params is flights_with_parameters -> top_carriers
-    query: deeply_nested is flights -> deeply_nested
-    query: nested is flights -> {
-      nest: tc is top_carriers
-    }
-  `;
-
   beforeEach(() => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   test('can handle joined-in table fields in literal query', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('top_carriers_raw')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by: carriers.nickname
+        aggregate: flight_count
+        limit: 1
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { drill: carriers.nickname = "Southwest" } + { select: * }';
+      'run: flights_base -> { drill: carriers.nickname = "Southwest" } + { select: * }';
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can time truncation field renamed', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('by_date_raw_renamed')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by: dep_time.month
+        aggregate: flight_count
+      }
+    `;
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { drill: dep_time.month = @2005-12 } + { select: * }';
+      'run: flights_base -> { drill: dep_time.month = @2005-12 } + { select: * }';
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can time truncation field not renamed', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('by_date_raw')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by: dep_month is dep_time.month,
+        aggregate: flight_count
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { drill: dep_time.month = @2005-12 } + { select: * }';
+      'run: flights_base -> { drill: dep_time.month = @2005-12 } + { select: * }';
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('correct literal syntax for all date truncations', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('by_date_all_truncations')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by:
+          dep_year is dep_time.year,
+          dep_quarter is dep_time.quarter,
+          dep_month is dep_time.month,
+          dep_week is dep_time.week,
+          dep_day is dep_time.day,
+          dep_hour is dep_time.hour,
+          dep_minute is dep_time.minute,
+          dep_second is dep_time.second
+        aggregate: flight_count
+        order_by: dep_second
+        limit: 1
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
-    const expDrillQuery = `run: flights -> {
+    const expDrillQuery = `run: flights_base -> {
   drill:
     dep_time.year = @2000,
     dep_time.quarter = @2000-Q1,
@@ -232,45 +116,71 @@ describe('drill query', () => {
   });
 
   test('can handle normal field in literal query', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('top_carriers_no_join')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by: carrier
+        aggregate: flight_count
+        limit: 1
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { drill: carrier = "WN" } + { select: * }';
+      'run: flights_base -> { drill: carrier = "WN" } + { select: * }';
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle renamed joined-in table fields in literal query', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('top_carriers_raw_renamed')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by: nick is carriers.nickname
+        aggregate: flight_count
+        limit: 1
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { drill: carriers.nickname = "Southwest" } + { select: * }';
+      'run: flights_base -> { drill: carriers.nickname = "Southwest" } + { select: * }';
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle renamed table fields in literal query', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('top_carriers_raw_renamed_2')
-      .run();
+    const query = `
+      run: flights_base -> {
+        group_by: c is carrier
+        aggregate: flight_count
+        limit: 1
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { drill: carrier = "WN" } + { select: * }';
+      'run: flights_base -> { drill: carrier = "WN" } + { select: * }';
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle joined-in table fields in view', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: top_carriers is {
+          group_by: carriers.nickname
+          aggregate: flight_count
+          limit: 1
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('top_carriers')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> top_carriers')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
@@ -280,9 +190,20 @@ describe('drill query', () => {
   });
 
   test('can handle expression fields', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: over_time is {
+          group_by: dep_month is month(dep_time)
+          aggregate: flight_count
+          limit: 1
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('over_time')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> over_time')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
@@ -292,9 +213,20 @@ describe('drill query', () => {
   });
 
   test('can handle renamed and multi-word field names', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: by_origin is {
+          group_by: \`Origin Code\`
+          aggregate: flight_count
+          limit: 1
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('by_origin')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> by_origin')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
@@ -304,9 +236,18 @@ describe('drill query', () => {
   });
 
   test('can handle queries with no filter', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: no_filter is {
+          aggregate: flight_count
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('no_filter')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> no_filter')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = 'run: flights -> { select: * }';
@@ -315,9 +256,19 @@ describe('drill query', () => {
   });
 
   test('can handle view filters', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: cool_carriers is {
+          where: carrier = 'AA' or carrier = 'WN'
+          group_by: \`Origin Code\`
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('cool_carriers')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> cool_carriers')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
@@ -327,10 +278,26 @@ describe('drill query', () => {
   });
 
   test('can handle filters that are not in a view (not stable compatible)', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('literal_with_nested_view_unstable')
-      .run();
+    const query = `
+      source: flights is flights_base extend {
+        view: cool_carriers is {
+          where: carrier = 'AA' or carrier = 'WN'
+          group_by: \`Origin Code\`
+        }
+      }
+
+      run: flights -> {
+        where:
+          carriers.nickname ~ '%A%',
+          distance > 100,
+          month(dep_time) = 7
+        group_by: carrier
+        nest: cool_carriers
+        having: flight_count > 100
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
@@ -358,9 +325,22 @@ describe('drill query', () => {
   });
 
   test('can handle deeply nested', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: deeply_nested is {
+          nest: level_one is {
+            nest: level_two is {
+              group_by: field is 1
+            }
+          }
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('deeply_nested')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> deeply_nested')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
@@ -377,10 +357,20 @@ describe('drill query', () => {
   });
 
   test('can handle nested reference', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('nested')
-      .run();
+    const query = `
+      source: flights is flights_base extend {
+        view: top_carriers is {
+          group_by: carriers.nickname
+          aggregate: flight_count
+          limit: 1
+        }
+      }
+      run: flights -> {
+        nest: tc is top_carriers
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: tc.nickname = "Southwest" } + { select: * }';
@@ -393,10 +383,23 @@ describe('drill query', () => {
   });
 
   test('can handle filters that are not in a view (stable compatible)', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('literal_with_nested_view_stable')
-      .run();
+    const query = `
+      source: flights is flights_base extend {
+        view: cool_carriers is {
+          where: carrier = 'AA' or carrier = 'WN'
+          group_by: \`Origin Code\`
+        }
+      }
+      run: flights -> {
+        where:
+          \`Origin Code\` ~ f'SFO, ORD',
+          destination = 'SJC'
+        group_by: carrier
+        nest: cool_carriers
+      }
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
@@ -422,10 +425,28 @@ describe('drill query', () => {
   });
 
   test('can handle drills that are already there', async () => {
-    const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('already_has_some_drills')
-      .run();
+    const query = `
+      source: flights is flights_base extend {
+        view: cool_carriers is {
+          where: carrier = 'AA' or carrier = 'WN'
+          group_by: \`Origin Code\`
+        }
+        view: over_time is {
+          group_by: dep_month is month(dep_time)
+          aggregate: flight_count
+          limit: 1
+        }
+      }
+      run: flights -> {
+        drill:
+          \`Origin Code\` ~ f\`SFO, ORD\`,
+          destination = "SJC",
+          carrier = "AA",
+          cool_carriers.\`Origin Code\` = "ORD"
+      } + over_time
+    `;
+
+    const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery = `run: flights -> {
   drill:
@@ -440,9 +461,18 @@ describe('drill query', () => {
   });
 
   test('negative number can be used in stable query filter', async () => {
+    const model = `
+      source: flights is flights_base extend {
+        view: negative_value is {
+          group_by: negative_one is -1
+        }
+      }
+    `;
+
     const result = await duckdb
-      .loadModel(model)
-      .loadQueryByName('negative_value')
+      .loadModel(baseModel)
+      .extendModel(model)
+      .loadQuery('run: flights -> negative_value')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
@@ -482,10 +512,32 @@ describe('drill query', () => {
 
   describe('source parameters', () => {
     test('can handle source parameters', async () => {
-      const result = await duckdb
-        .loadModel(model)
-        .loadQueryByName('source_has_parameters')
-        .run();
+      const query = `
+        source: flights_with_parameters(
+          number_param is 1,
+          string_param is 'foo',
+          boolean_param is true,
+          date_param is @2000,
+          timestamp_param is @2004-01-01 10:00,
+          filter_expression_param::filter<number> is f'> 3'
+        ) is flights_base extend {
+          view: top_carriers is {
+            group_by: carriers.nickname
+            aggregate: flight_count
+            limit: 1
+          }
+        }
+        run: flights_with_parameters(
+          number_param is 1,
+          string_param is 'foo',
+          boolean_param is true,
+          date_param is @2000,
+          timestamp_param is @2004-01-01 10:00,
+          filter_expression_param is f'> 3'
+        ) -> top_carriers
+      `;
+
+      const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
       const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery = `run: flights_with_parameters(
   number_param is 1,
@@ -500,10 +552,22 @@ describe('drill query', () => {
     });
 
     test('can handle timezone in source parameter', async () => {
-      const result = await duckdb
-        .loadModel(model)
-        .loadQueryByName('source_has_timezone_param')
-        .run();
+      const query = `
+        source: flights_with_timestamp_param(
+          timestamp_param is @2004-01-01 10:00
+        ) is flights_base extend {
+          view: top_carriers is {
+            group_by: carriers.nickname
+            aggregate: flight_count
+            limit: 1
+          }
+        }
+        run: flights_with_timestamp_param(
+          timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]
+        ) -> top_carriers
+      `;
+
+      const result = await duckdb.loadModel(baseModel).loadQuery(query).run();
       const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery =
         'run: flights_with_timestamp_param(timestamp_param is @2004-01-01 10:00:00[America/Los_Angeles]) -> { drill: top_carriers.nickname = "Southwest" } + { select: * }';
@@ -512,9 +576,27 @@ describe('drill query', () => {
     });
 
     test('default_params_are_not_included', async () => {
+      const model = `
+        source: flights_with_parameters(
+          number_param is 1,
+          string_param is 'foo',
+          boolean_param is true,
+          date_param is @2000,
+          timestamp_param is @2004-01-01 10:00,
+          filter_expression_param::filter<number> is f'> 3'
+        ) is flights_base extend {
+          view: top_carriers is {
+            group_by: carriers.nickname
+            aggregate: flight_count
+            limit: 1
+          }
+        }
+      `;
+
       const result = await duckdb
-        .loadModel(model)
-        .loadQueryByName('only_default_params')
+        .loadModel(baseModel)
+        .extendModel(model)
+        .loadQuery('run: flights_with_parameters -> top_carriers')
         .run();
       const table = getDataTree(API.util.wrapResult(result));
       const expDrillQuery =
