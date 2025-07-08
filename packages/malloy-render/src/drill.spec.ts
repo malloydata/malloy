@@ -89,8 +89,22 @@ describe('drill query', () => {
       aggregate: flight_count
     }
     query: by_date_raw_renamed is flights -> {
-      group_by: dep_time.month,
+      group_by: dep_time.month
       aggregate: flight_count
+    }
+    query: by_date_all_truncations is flights -> {
+      group_by:
+        dep_year is dep_time.year,
+        dep_quarter is dep_time.quarter,
+        dep_month is dep_time.month,
+        dep_week is dep_time.week,
+        dep_day is dep_time.day,
+        dep_hour is dep_time.hour,
+        dep_minute is dep_time.minute,
+        dep_second is dep_time.second
+      aggregate: flight_count
+      order_by: dep_second
+      limit: 1
     }
     query: top_carriers_no_join is flights -> {
       group_by: carrier
@@ -189,6 +203,27 @@ describe('drill query', () => {
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
       'run: flights -> { drill: dep_time.month = @2005-12 } + { select: * }';
+    const row = table.rows[0];
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
+  });
+
+  test('correct literal syntax for all date truncations', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('by_date_all_truncations')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery = `run: flights -> {
+  drill:
+    dep_time.year = @2000,
+    dep_time.quarter = @2000-Q1,
+    dep_time.month = @2000-01,
+    dep_time.week = @1999-12-26-WK,
+    dep_time.day = @2000-01-01,
+    dep_time.hour = @2000-01-01 00,
+    dep_time.minute = @2000-01-01 00:00,
+    dep_time.second = @2000-01-01 00:00:00
+} + { select: * }`;
     const row = table.rows[0];
     expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });

@@ -148,7 +148,7 @@ function serializeDateAsLiteral(
       return `@${year}-${month}`;
     }
     case 'week': {
-      return `@WK${year}-${month}-${day}`;
+      return `@${year}-${month}-${day}-WK`;
     }
     case 'day': {
       return `@${year}-${month}-${day}`;
