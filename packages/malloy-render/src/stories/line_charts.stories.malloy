@@ -306,11 +306,23 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   #(story)
   # line_chart
   view: time_series is {
-    # x
     group_by: date_of_sale
 
     # series
     group_by: brand
+
+    # y
+    aggregate: `Sales $` is retail_price.avg()*500
+    where: date_of_sale >= @2001-02-01 and date_of_sale < @2001-04-01
+    order_by: date_of_sale
+    limit: 20
+  }
+
+  #(story)
+  # line_chart
+  view: time_series_custom_format is {
+    # x number='dd/mm/yyyy'
+    group_by: date_of_sale
 
     # y
     aggregate: `Sales $` is retail_price.avg()*500

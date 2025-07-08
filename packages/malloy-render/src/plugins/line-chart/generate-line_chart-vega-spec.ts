@@ -27,16 +27,15 @@ import type {
   Spec,
   SymbolMark,
 } from 'vega';
-import {renderNumericField} from '@/component/render-numeric-field';
+import {
+  renderNumericField,
+  renderDateTimeField,
+} from '@/component/render-numeric-field';
 import {getMarkName} from '@/component/vega/vega-utils';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
-import {
-  NULL_SYMBOL,
-  renderTimeString,
-  type RenderTimeStringOptions,
-} from '@/util';
+import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
@@ -1113,7 +1112,7 @@ export function generateLineChartVegaSpecV2(
         const title = xIsDateorTime
           ? x === NULL_SYMBOL
             ? NULL_SYMBOL
-            : renderTimeString(new Date(x), {
+            : renderDateTimeField(xField, new Date(x), {
                 isDate: xField.isDate(),
                 timeframe: xField.isTime() ? xField.timeframe : undefined,
                 extractFormat,
@@ -1156,7 +1155,7 @@ export function generateLineChartVegaSpecV2(
         const title = xIsDateorTime
           ? itemData.x === NULL_SYMBOL
             ? NULL_SYMBOL
-            : renderTimeString(new Date(itemData.x), {
+            : renderDateTimeField(xField, new Date(itemData.x), {
                 isDate: xField.isDate(),
                 timeframe: xField.isTime() ? xField.timeframe : undefined,
                 extractFormat,
