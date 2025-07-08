@@ -356,7 +356,11 @@ describe('query builder', () => {
                         {
                           filter: {
                             kind: 'filter_string',
-                            field_reference: {name: 'carrier'},
+
+                            expression: {
+                              kind: 'field_reference',
+                              name: 'carrier',
+                            },
                             filter: 'WN, AA',
                           },
                         },
@@ -406,7 +410,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: 'WN, AA',
                 },
               },
@@ -450,7 +458,12 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'state', path: ['origin']},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'state',
+                    path: ['origin'],
+                  },
                   filter: 'TX',
                 },
               },
@@ -497,7 +510,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: 'WN, AA',
                 },
               },
@@ -553,7 +570,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: "'",
                 },
               },
@@ -561,7 +581,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: '\'"',
                 },
               },
@@ -569,7 +593,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: '`',
                 },
               },
@@ -577,7 +605,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: "`'",
                 },
               },
@@ -585,7 +617,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: '`\'"',
                 },
               },
@@ -593,7 +629,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: "`'\"\"\"'''",
                 },
               },
@@ -632,7 +672,8 @@ describe('query builder', () => {
       segment.addDrill({
         filter: {
           kind: 'filter_string',
-          field_reference: {
+          expression: {
+            kind: 'field_reference',
             name: 'carrier',
           },
           filter: 'WN, AA',
@@ -641,7 +682,8 @@ describe('query builder', () => {
       segment.addDrill({
         filter: {
           kind: 'literal_equality',
-          field_reference: {
+          expression: {
+            kind: 'field_reference',
             name: 'nickname',
             path: ['top_carriers'],
           },
@@ -668,7 +710,11 @@ describe('query builder', () => {
                 kind: 'drill',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: 'WN, AA',
                 },
               },
@@ -676,7 +722,9 @@ describe('query builder', () => {
                 kind: 'drill',
                 filter: {
                   kind: 'literal_equality',
-                  field_reference: {
+
+                  expression: {
+                    kind: 'field_reference',
                     name: 'nickname',
                     path: ['top_carriers'],
                   },
@@ -718,7 +766,8 @@ describe('query builder', () => {
     const drill = segment.addDrill({
       filter: {
         kind: 'literal_equality',
-        field_reference: {
+        expression: {
+          kind: 'field_reference',
           name: 'nickname',
           path: ['top_carriers'],
         },
@@ -728,7 +777,7 @@ describe('query builder', () => {
         },
       },
     });
-    expect(drill.filter.fieldReference.getFieldInfo()).toMatchObject({
+    expect(drill.filter.expression.getFieldInfo()).toMatchObject({
       kind: 'dimension',
       type: {kind: 'string_type'},
     });
@@ -766,7 +815,11 @@ describe('query builder', () => {
                 kind: 'having',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'flight_count'},
+
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'flight_count',
+                  },
                   filter: '>100',
                 },
               },
@@ -3051,7 +3104,10 @@ describe('query builder', () => {
                   filter: {
                     kind: 'filter_string',
                     filter: '> 10',
-                    field_reference: {name: 'd1'},
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                    },
                   },
                 },
                 {
@@ -3059,7 +3115,10 @@ describe('query builder', () => {
                   filter: {
                     kind: 'filter_string',
                     filter: '> 10',
-                    field_reference: {name: 'm1'},
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'm1',
+                    },
                   },
                 },
                 {kind: 'limit', limit: 10},
@@ -3242,7 +3301,12 @@ describe('query builder', () => {
                   kind: 'where',
                   filter: {
                     kind: 'filter_string',
-                    field_reference: {name: 'd1', path: ['r1']},
+
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                      path: ['r1'],
+                    },
                     filter: 'WN, AA',
                   },
                 },
@@ -3286,7 +3350,12 @@ describe('query builder', () => {
                   kind: 'where',
                   filter: {
                     kind: 'filter_string',
-                    field_reference: {name: 'd1', path: ['rr1']},
+
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                      path: ['rr1'],
+                    },
                     filter: 'WN, AA',
                   },
                 },
