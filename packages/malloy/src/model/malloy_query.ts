@@ -4185,7 +4185,7 @@ class QueryQueryIndexStage extends QueryQuery {
           resultIndex,
           type: 'result',
         },
-        drillExpressionFromReferencePath(referencePath)
+        undefined
       );
       if (field instanceof QueryAtomicField) {
         this.addDependancies(resultStruct, field);
@@ -5420,15 +5420,4 @@ export class QueryModel {
     });
     return result.rows as unknown as SearchIndexResult[];
   }
-}
-
-function drillExpressionFromReferencePath(
-  path: string[] | undefined
-): Malloy.Expression | undefined {
-  if (path === undefined) return undefined;
-  return {
-    kind: 'field_reference',
-    name: path[path.length - 1],
-    path: path.slice(0, -1),
-  };
 }
