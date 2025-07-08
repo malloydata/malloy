@@ -406,9 +406,43 @@ export class Drill extends Filter implements QueryPropertyInterface {
   }
 }
 
+export function updateNestedDrillPaths(
+  nest: TurtleDef,
+  name: string
+): TurtleDef {
+  if (nest.pipeline.length !== 1 || !isQuerySegment(nest.pipeline[0])) {
+    return nest;
+  }
+  return {
+    ...nest,
+    pipeline: [
+      {
+        ...nest.pipeline[0],
+        queryFields: nest.pipeline[0].queryFields.map(f => {
+          if (f.type === 'turtle') {
+            return updateNestedDrillPaths(f, name);
+          }
+          const existing = f.drillExpression;
+          if (existing === undefined) return f;
+          if (existing.kind !== 'field_reference') {
+            return {...f, drillExpression: undefined};
+          }
+          return {
+            ...f,
+            drillExpression: {
+              ...existing,
+              path: [name, ...(existing.path ?? [])],
+            },
+          };
+        }),
+      },
+    ],
+  };
+}
+
 export function attachDrillPaths(
   pipeline: PipeSegment[],
-  name: string
+  nestName: string
 ): PipeSegment[] {
   if (pipeline.length !== 1) return pipeline;
   if (!isQuerySegment(pipeline[0])) return pipeline;
@@ -417,12 +451,24 @@ export function attachDrillPaths(
       ...pipeline[0],
       filterList: pipeline[0].filterList?.map(f => ({
         ...f,
-        drillView: name,
+        drillView: nestName,
       })),
-      queryFields: pipeline[0].queryFields.map(f => ({
-        ...f,
-        drillView: name,
-      })),
+      queryFields: pipeline[0].queryFields.map(f => {
+        if (f.type === 'turtle') {
+          return updateNestedDrillPaths(f, nestName);
+        }
+        const fieldName =
+          f.type === 'fieldref' ? f.path[f.path.length - 1] : f.as ?? f.name;
+
+        return {
+          ...f,
+          drillExpression: {
+            kind: 'field_reference',
+            name: fieldName,
+            path: [nestName],
+          },
+        };
+      }),
     },
   ];
 }

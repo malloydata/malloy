@@ -389,7 +389,7 @@ describe('drill query', () => {
     expect(levelOne.isRepeatedRecord()).toBe(true);
     if (!levelOne.isRepeatedRecord()) return;
     const row = levelOne.rows[0];
-    expect(row.getDrillQueryMalloy()).toEqual(expDrillQuery);
+    expect(row.getStableDrillQueryMalloy()).toEqual(expDrillQuery);
   });
 
   test('can handle filters that are not in a view (stable compatible)', async () => {

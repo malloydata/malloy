@@ -56,7 +56,7 @@ export class FilterElement extends MalloyElement {
       this.expr.op === '=' &&
       isLiteral(this.expr.right)
     ) {
-      const lhs = this.expr.left.stableExpression();
+      const lhs = this.expr.left.drillExpression();
       if (lhs === undefined) return undefined;
       return {
         kind: 'literal_equality',
@@ -68,7 +68,7 @@ export class FilterElement extends MalloyElement {
       this.expr.op === '~' &&
       this.expr.right instanceof ExprFilterExpression
     ) {
-      const lhs = this.expr.left.stableExpression();
+      const lhs = this.expr.left.drillExpression();
       if (lhs === undefined) return undefined;
       return {
         kind: 'filter_string',

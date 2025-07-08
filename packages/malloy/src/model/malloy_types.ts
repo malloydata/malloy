@@ -426,8 +426,7 @@ export interface Expression {
   fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
-  // Maybe call this drillExpression?
-  stableExpression?: Malloy.Expression;
+  drillExpression?: Malloy.Expression;
 }
 
 type ConstantExpr = Expr;
@@ -731,7 +730,6 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
-  drillView?: string;
   drillExpression?: Malloy.Expression | undefined;
 }
 
@@ -1168,7 +1166,6 @@ export interface TurtleDef extends NamedObject, Pipeline {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
-  drillView?: string;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1531,7 +1528,7 @@ export interface RefToField {
   path: string[];
   annotation?: Annotation;
   at?: DocumentLocation;
-  drillView?: string;
+  drillExpression?: Malloy.Expression | undefined;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

@@ -58,8 +58,8 @@ export class ExprGranularTime extends ExpressionDef {
     return true;
   }
 
-  stableExpression(): Malloy.Expression | undefined {
-    const lhs = this.expr.stableExpression();
+  drillExpression(): Malloy.Expression | undefined {
+    const lhs = this.expr.drillExpression();
     if (lhs?.kind !== 'field_reference') return undefined;
     return {
       kind: 'time_truncation',

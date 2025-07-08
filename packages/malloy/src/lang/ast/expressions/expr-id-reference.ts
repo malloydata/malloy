@@ -40,7 +40,7 @@ export class ExprIdReference extends ExpressionDef {
     return this.fieldReference.refString;
   }
 
-  stableExpression(): Malloy.Expression | undefined {
+  drillExpression(): Malloy.Expression | undefined {
     return {
       kind: 'field_reference',
       name: this.fieldReference.nameString,

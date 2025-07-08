@@ -257,12 +257,6 @@ function getResultMetadataAnnotation(
     tag.set(['drillable']);
     hasAny = true;
   }
-  if (isAtomic(field) || isTurtle(field)) {
-    if (field.drillView !== undefined) {
-      tag.set(['drill_view'], field.drillView);
-      hasAny = true;
-    }
-  }
   if (resultMetadata.filterList) {
     addDrillFiltersTag(tag, resultMetadata.filterList);
     hasAny = true;

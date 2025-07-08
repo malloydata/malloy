@@ -118,7 +118,6 @@ import {
   isJoinedSource,
   isBasicArray,
   mkTemporal,
-  isTurtle,
 } from './malloy_types';
 
 import type {Connection} from '../connection/types';
@@ -1790,18 +1789,6 @@ class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
-  get drillViewPath(): string[] | undefined {
-    const thisSegment = this.turtleDef.drillView;
-    if (thisSegment === undefined) return [];
-    if (this.parent !== undefined) {
-      const parentPath = this.parent.drillViewPath;
-      if (parentPath !== undefined) {
-        return [...parentPath, thisSegment];
-      }
-    }
-    return [thisSegment];
-  }
-
   /**
    * Information about the query containing this result set. Invented
    * to pass on timezone information, but maybe more things will
@@ -2710,27 +2697,10 @@ class QueryQuery extends QueryField {
       : [];
   }
 
-  private getDrillExpression(
-    f: QueryFieldDef,
-    resultStruct: FieldInstanceResult
-  ): Malloy.Expression | undefined {
-    if (f.type === 'turtle') return undefined;
-    if (f.drillView) {
-      const drillViewPath = resultStruct.drillViewPath;
-      if (drillViewPath) {
-        return {
-          kind: 'field_reference',
-          name:
-            f.type === 'fieldref' ? f.path[f.path.length - 1] : f.as ?? f.name,
-          path: [...resultStruct.drillViewPath, f.drillView],
-        };
-      }
-    }
+  private getDrillExpression(f: QueryFieldDef): Malloy.Expression | undefined {
+    if (isAtomic(f)) return f.drillExpression;
     if (f.type === 'fieldref') {
-      return drillExpressionFromReferencePath(f.path);
-    }
-    if (isAtomic(f)) {
-      return f.stableExpression;
+      return f.drillExpression ?? drillExpressionFromReferencePath(f.path);
     }
     return undefined;
   }
@@ -2739,7 +2709,7 @@ class QueryQuery extends QueryField {
     let resultIndex = 1;
     for (const f of this.getSegmentFields(resultStruct)) {
       const {as, field} = this.expandField(f);
-      const drillExpression = this.getDrillExpression(f, resultStruct);
+      const drillExpression = this.getDrillExpression(f);
 
       if (field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
@@ -2976,7 +2946,6 @@ class QueryQuery extends QueryField {
             join: 'many',
             name,
             resultMetadata,
-            drillView: fi.turtleDef.drillView,
           };
           fields.push(multiLineNest);
         } else {
@@ -2986,7 +2955,6 @@ class QueryQuery extends QueryField {
             join: 'one',
             name,
             resultMetadata,
-            drillView: fi.turtleDef.drillView,
           };
           fields.push(oneLineNest);
         }
@@ -3015,14 +2983,11 @@ class QueryQuery extends QueryField {
 
           const location = fOut.location;
           const annotation = fOut.annotation;
-          const drillView =
-            isAtomic(fOut) || isTurtle(fOut) ? fOut.drillView : undefined;
 
           const common = {
             resultMetadata,
             location,
             annotation,
-            drillView,
           };
 
           // build out the result fields...
@@ -4066,7 +4031,6 @@ class QueryQuery extends QueryField {
         type: 'turtle',
         name: 'starthere',
         pipeline,
-        drillView: fi.turtleDef.drillView,
       };
       const inputStruct: NestSourceDef = {
         type: 'nest_source',
@@ -5062,9 +5026,9 @@ class QueryStruct {
   }
 
   getQueryFieldReference(f: RefToField): QueryField {
-    const {path, annotation, drillView} = f;
+    const {path, annotation, drillExpression} = f;
     const field = this.getFieldByName(path);
-    if (annotation || drillView) {
+    if (annotation || drillExpression) {
       if (field.parent === undefined) {
         throw new Error(
           'Inconcievable, field reference to orphaned query field'
@@ -5073,7 +5037,7 @@ class QueryStruct {
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
-        const newDef = {...field.fieldDef, annotation, drillView};
+        const newDef = {...field.fieldDef, annotation, drillExpression};
         return new QueryFieldStruct(
           newDef,
           undefined,
@@ -5082,7 +5046,7 @@ class QueryStruct {
           field.referenceId
         );
       } else {
-        const newDef = {...field.fieldDef, annotation, drillView};
+        const newDef = {...field.fieldDef, annotation, drillExpression};
         return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }
@@ -5148,7 +5112,6 @@ class QueryStruct {
       pipeline,
       annotation,
       location: turtleDef.location,
-      drillView: turtleDef.drillView,
     };
     return flatTurtleDef;
   }

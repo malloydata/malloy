@@ -129,7 +129,7 @@ export abstract class ExpressionDef extends MalloyElement {
     return true;
   }
 
-  stableExpression(): Malloy.Expression | undefined {
+  drillExpression(): Malloy.Expression | undefined {
     return undefined;
   }
 
