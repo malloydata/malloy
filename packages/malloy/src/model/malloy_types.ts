@@ -1530,7 +1530,6 @@ export interface RefToField {
   path: string[];
   annotation?: Annotation;
   at?: DocumentLocation;
-  // TODO remove
   drillView?: string;
   drillExpression?: Malloy.Expression | undefined;
 }

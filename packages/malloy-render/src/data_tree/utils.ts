@@ -29,7 +29,7 @@ import {
 } from './fields';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
 import type {FieldBase} from './fields/base';
-import {API} from '@malloydata/malloy';
+import {extractMalloyObjectFromTag} from '@malloydata/malloy';
 
 export function isArrayFieldInfo(
   field: Malloy.DimensionInfo
@@ -161,10 +161,7 @@ export function extractExpressionFromTag(
   tag: Tag
 ): Malloy.Expression | undefined {
   try {
-    return API.util.extractMalloyObjectFromTag(
-      tag,
-      'Expression'
-    ) as Malloy.Expression;
+    return extractMalloyObjectFromTag(tag, 'Expression') as Malloy.Expression;
   } catch (e) {
     return undefined;
   }
@@ -174,7 +171,7 @@ export function extractLiteralFromTag(
   tag: Tag
 ): Malloy.LiteralValue | undefined {
   try {
-    return API.util.extractMalloyObjectFromTag(
+    return extractMalloyObjectFromTag(
       tag,
       'LiteralValue'
     ) as Malloy.LiteralValue;

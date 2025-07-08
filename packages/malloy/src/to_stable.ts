@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type * as Malloy from '@malloydata/malloy-interfaces';
+import * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   AtomicTypeDef,
   DateUnit,
@@ -38,7 +38,6 @@ import {
 } from './model/malloy_query';
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
-import {writeMalloyObjectToTag} from './api/util';
 
 export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
   const parameters: Malloy.ParameterInfo[] | undefined =
@@ -529,4 +528,149 @@ function convertTimestampTimeframe(
 
 function convertJoinType(type: JoinType): Malloy.Relationship {
   return type;
+}
+
+/**
+ * Writes a Malloy interface object to a tag at a given path.
+ *
+ * E.g. `writeMalloyObjectToTag(tag, ['expr'], 'Expression', {kind: 'field_reference', name: 'carrier'})`
+ *
+ * produces the tag `#(malloy) expr { kind = field_reference name = carrier }`
+ */
+export function writeMalloyObjectToTag(
+  tag: Tag,
+  path: (string | number)[],
+  obj: unknown,
+  type: string
+) {
+  if (type === 'string') {
+    tag.set(path, obj as string);
+    return;
+  } else if (type === 'number') {
+    tag.set(path, obj as number);
+    return;
+  } else if (type === 'boolean') {
+    tag.set(path, (obj as boolean).toString());
+    return;
+  }
+  const typelookup = Malloy.MALLOY_INTERFACE_TYPES[type];
+  if (typelookup === undefined) {
+    throw new Error(`Unknown Malloy interface type ${type}`);
+  }
+  if (typelookup.type === 'enum') {
+    if (typeof obj === 'string') {
+      tag.set(path, obj);
+    } else {
+      throw new Error(`Expected string for enum ${type}`);
+    }
+  } else if (typelookup.type === 'struct') {
+    for (const key in typelookup.fields) {
+      const valueType = typelookup.fields[key];
+      const value = (obj as Record<string, unknown>)[key];
+      if (value === undefined) {
+        if (!valueType.optional) {
+          throw new Error(
+            `Mising value for non-optional field ${key} in type ${type}`
+          );
+        }
+      } else if (valueType.array) {
+        if (Array.isArray(value)) {
+          for (let i = 0; i < value.length; i++) {
+            writeMalloyObjectToTag(
+              tag,
+              [...path, key, i],
+              value[i],
+              valueType.type
+            );
+          }
+        } else {
+          throw new Error(
+            `Expected array for field ${key} of type ${type} but got ${typeof obj}`
+          );
+        }
+      } else {
+        writeMalloyObjectToTag(tag, [...path, key], value, valueType.type);
+      }
+    }
+  } else {
+    // enum
+    const kind = (obj as {kind: 'string'}).kind;
+    tag.set([...path, 'kind'], kind);
+    const unionType = typelookup.options[kind];
+    if (unionType === undefined) {
+      throw new Error(
+        `Unknown Malloy interface union kind ${kind} for type ${type}`
+      );
+    }
+    writeMalloyObjectToTag(tag, path, obj, unionType);
+  }
+}
+
+/**
+ * Extracts a Malloy interface object from a tag at a given path; the inverse of `writeMalloyObjectToTag`.
+ */
+export function extractMalloyObjectFromTag(tag: Tag, type: string): unknown {
+  if (type === 'string') {
+    return tag.text();
+  } else if (type === 'number') {
+    return tag.numeric();
+  } else if (type === 'boolean') {
+    return tag.text() === 'true';
+  }
+  const typeDef = Malloy.MALLOY_INTERFACE_TYPES[type];
+  if (typeDef === undefined) {
+    throw new Error(`Unknown Malloy interface type ${type}`);
+  }
+  if (typeDef.type === 'enum') {
+    const value = tag.text();
+    if (value === undefined) {
+      throw new Error(`Missing value for enum ${type}`);
+    }
+    if (value in typeDef.values) {
+      return value;
+    }
+    throw new Error(`Unknown value ${value} for enum ${type}`);
+  } else if (typeDef.type === 'struct') {
+    const result: Record<string, unknown> = {};
+    for (const [key, type] of Object.entries(typeDef.fields)) {
+      const valueTag = tag.tag(key);
+      if (valueTag === undefined) {
+        if (type.optional) continue;
+        else {
+          throw new Error(`Missing value for key ${key} of type ${type}`);
+        }
+      }
+      if (type.array) {
+        const arr: unknown[] = [];
+        const values = valueTag.array();
+        if (values === undefined) {
+          throw new Error(`Missing array value for key ${key} of type ${type}`);
+        }
+        for (const value of values) {
+          arr.push(extractMalloyObjectFromTag(value, type.type));
+        }
+        result[key] = arr;
+      } else {
+        const value = extractMalloyObjectFromTag(valueTag, type.type);
+        if (value !== undefined && value !== null) {
+          result[key] = value;
+        }
+      }
+    }
+    return result;
+  } /* (typeDef.type === 'union') */ else {
+    const kind = tag.text('kind');
+    if (kind === undefined) {
+      throw new Error(`Missing kind for union ${type}`);
+    }
+    const unionType = typeDef.options[kind];
+    if (unionType === undefined) {
+      throw new Error(`Unknown kind ${kind} for union ${type}`);
+    }
+    const value = extractMalloyObjectFromTag(tag, unionType) as Record<
+      string,
+      unknown
+    >;
+    return {kind, ...value};
+  }
 }
