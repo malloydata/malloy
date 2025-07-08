@@ -4776,17 +4776,6 @@ class QueryStruct {
     }
   }
 
-  getFullOutputPath(): string[] {
-    if (this.parent) {
-      return [
-        ...this.parent.getFullOutputPath(),
-        getIdentifier(this.structDef),
-      ];
-    } else {
-      return [];
-    }
-  }
-
   needsSymetricCalculation(resultSet: FieldInstanceResult): boolean {
     const joinName = this.getJoinableParent().getIdentifier();
     const join = resultSet.root().joins.get(joinName);
