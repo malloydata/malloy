@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   AtomicTypeDef,
   DateUnit,
@@ -38,6 +38,7 @@ import {
 } from './model/malloy_query';
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
+import {writeMalloyObjectToTag} from './api/util';
 
 export function sourceDefToSourceInfo(sourceDef: SourceDef): Malloy.SourceInfo {
   const parameters: Malloy.ParameterInfo[] | undefined =
@@ -332,28 +333,6 @@ function writeExpressionToTag(
   expression: Malloy.Expression
 ) {
   writeMalloyObjectToTag(tag, path, expression, 'Expression');
-  // tag.set([...path, 'kind'], expression.kind);
-  // switch (expression.kind) {
-  //   case 'field_reference':
-  //     tag.set(
-  //       [...path, 'field_reference'],
-  //       [...(expression.path ?? []), expression.name]
-  //     );
-  //     break;
-  //   case 'time_truncation':
-  //     tag.set(
-  //       [...path, 'field_reference'],
-  //       [
-  //         ...(expression.field_reference.path ?? []),
-  //         expression.field_reference.name,
-  //       ]
-  //     );
-  //     tag.set([...path, 'truncation'], expression.truncation);
-  //     break;
-  //   case 'filtered_field':
-  //   case 'literal_value':
-  //     return; // not supported
-  // }
 }
 
 export function writeLiteralToTag(
@@ -362,34 +341,6 @@ export function writeLiteralToTag(
   literal: Malloy.LiteralValue
 ) {
   writeMalloyObjectToTag(tag, path, literal, 'LiteralValue');
-  // tag.set([...path, 'kind'], literal.kind);
-  // switch (literal.kind) {
-  //   case 'string_literal':
-  //     tag.set([...path, 'string_value'], literal.string_value);
-  //     break;
-  //   case 'number_literal':
-  //     tag.set([...path, 'number_value'], literal.number_value);
-  //     break;
-  //   case 'boolean_literal':
-  //     tag.set([...path, 'boolean_value'], literal.boolean_value.toString());
-  //     break;
-  //   case 'date_literal':
-  //     tag.set([...path, 'date_value'], literal.date_value);
-  //     tag.set([...path, 'timezone'], literal.timezone);
-  //     tag.set([...path, 'granularity'], literal.granularity);
-  //     break;
-  //   case 'timestamp_literal':
-  //     tag.set([...path, 'timestamp_value'], literal.timestamp_value);
-  //     tag.set([...path, 'timezone'], literal.timezone);
-  //     tag.set([...path, 'granularity'], literal.granularity);
-  //     break;
-  //   case 'filter_expression_literal':
-  //     tag.set(
-  //       [...path, 'filter_expression_value'],
-  //       literal.filter_expression_value
-  //     );
-  //     break;
-  // }
 }
 
 function escapeIdentifier(str: string) {
@@ -578,73 +529,4 @@ function convertTimestampTimeframe(
 
 function convertJoinType(type: JoinType): Malloy.Relationship {
   return type;
-}
-
-export function writeMalloyObjectToTag(
-  tag: Tag,
-  path: (string | number)[],
-  obj: unknown,
-  type: string
-) {
-  if (type === 'string') {
-    tag.set(path, obj as string);
-    return;
-  } else if (type === 'number') {
-    tag.set(path, obj as number);
-    return;
-  } else if (type === 'boolean') {
-    tag.set(path, (obj as boolean).toString());
-    return;
-  }
-  const typelookup = Malloy.MALLOY_INTERFACE_TYPES[type];
-  if (typelookup === undefined) {
-    throw new Error(`Unknown Malloy interface type ${type}`);
-  }
-  if (typelookup.type === 'enum') {
-    if (typeof obj === 'string') {
-      tag.set(path, obj);
-    } else {
-      throw new Error(`Expected string for enum ${type}`);
-    }
-  } else if (typelookup.type === 'struct') {
-    for (const key in typelookup.fields) {
-      const valueType = typelookup.fields[key];
-      const value = (obj as Record<string, unknown>)[key];
-      if (value === undefined) {
-        if (!valueType.optional) {
-          throw new Error(
-            `Mising value for non-optional field ${key} in type ${type}`
-          );
-        }
-      } else if (valueType.array) {
-        if (Array.isArray(value)) {
-          for (let i = 0; i < value.length; i++) {
-            writeMalloyObjectToTag(
-              tag,
-              [...path, key, i],
-              value[i],
-              valueType.type
-            );
-          }
-        } else {
-          throw new Error(
-            `Expected array for field ${key} of type ${type} but got ${typeof obj}`
-          );
-        }
-      } else {
-        writeMalloyObjectToTag(tag, [...path, key], value, valueType.type);
-      }
-    }
-  } else {
-    // enum
-    const kind = (obj as {kind: 'string'}).kind;
-    tag.set([...path, 'kind'], kind);
-    const unionType = typelookup.options[kind];
-    if (unionType === undefined) {
-      throw new Error(
-        `Unknown Malloy interface union kind ${kind} for type ${type}`
-      );
-    }
-    writeMalloyObjectToTag(tag, path, obj, unionType);
-  }
 }

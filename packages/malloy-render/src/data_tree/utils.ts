@@ -1,6 +1,6 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import {tagFromAnnotations} from '../util';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   BooleanFieldInfo,
   DateFieldInfo,
@@ -29,6 +29,7 @@ import {
 } from './fields';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
 import type {FieldBase} from './fields/base';
+import {API} from '@malloydata/malloy';
 
 export function isArrayFieldInfo(
   field: Malloy.DimensionInfo
@@ -160,75 +161,12 @@ export function extractExpressionFromTag(
   tag: Tag
 ): Malloy.Expression | undefined {
   try {
-    return extractMalloyObjectFromTag(tag, 'Expression') as Malloy.Expression;
+    return API.util.extractMalloyObjectFromTag(
+      tag,
+      'Expression'
+    ) as Malloy.Expression;
   } catch (e) {
     return undefined;
-  }
-}
-
-export function extractMalloyObjectFromTag(tag: Tag, type: string): unknown {
-  if (type === 'string') {
-    return tag.text();
-  } else if (type === 'number') {
-    return tag.numeric();
-  } else if (type === 'boolean') {
-    return tag.text() === 'true';
-  }
-  const typeDef = Malloy.MALLOY_INTERFACE_TYPES[type];
-  if (typeDef === undefined) {
-    throw new Error(`Unknown Malloy interface type ${type}`);
-  }
-  if (typeDef.type === 'enum') {
-    const value = tag.text();
-    if (value === undefined) {
-      throw new Error(`Missing value for enum ${type}`);
-    }
-    if (value in typeDef.values) {
-      return value;
-    }
-    throw new Error(`Unknown value ${value} for enum ${type}`);
-  } else if (typeDef.type === 'struct') {
-    const result: Record<string, unknown> = {};
-    for (const [key, type] of Object.entries(typeDef.fields)) {
-      const valueTag = tag.tag(key);
-      if (valueTag === undefined) {
-        if (type.optional) continue;
-        else {
-          throw new Error(`Missing value for key ${key} of type ${type}`);
-        }
-      }
-      if (type.array) {
-        const arr: unknown[] = [];
-        const values = valueTag.array();
-        if (values === undefined) {
-          throw new Error(`Missing array value for key ${key} of type ${type}`);
-        }
-        for (const value of values) {
-          arr.push(extractMalloyObjectFromTag(value, type.type));
-        }
-        result[key] = arr;
-      } else {
-        const value = extractMalloyObjectFromTag(valueTag, type.type);
-        if (value !== undefined && value !== null) {
-          result[key] = value;
-        }
-      }
-    }
-    return result;
-  } /* (typeDef.type === 'union') */ else {
-    const kind = tag.text('kind');
-    if (kind === undefined) {
-      throw new Error(`Missing kind for union ${type}`);
-    }
-    const unionType = typeDef.options[kind];
-    if (unionType === undefined) {
-      throw new Error(`Unknown kind ${kind} for union ${type}`);
-    }
-    const value = extractMalloyObjectFromTag(tag, unionType) as Record<
-      string,
-      unknown
-    >;
-    return {kind, ...value};
   }
 }
 
@@ -236,7 +174,7 @@ export function extractLiteralFromTag(
   tag: Tag
 ): Malloy.LiteralValue | undefined {
   try {
-    return extractMalloyObjectFromTag(
+    return API.util.extractMalloyObjectFromTag(
       tag,
       'LiteralValue'
     ) as Malloy.LiteralValue;
@@ -244,79 +182,6 @@ export function extractLiteralFromTag(
     return undefined;
   }
 }
-
-// export function extractLiteralFromTag(
-//   value: Tag | undefined
-// ): Malloy.LiteralValue | undefined {
-//   if (value === undefined) return undefined;
-//   const valueKind = value.text('kind');
-//   if (valueKind === undefined) return undefined;
-//   switch (valueKind) {
-//     case 'string_literal': {
-//       const stringValue = value.text('string_value');
-//       if (stringValue === undefined) return undefined;
-//       return {
-//         kind: 'string_literal',
-//         string_value: stringValue,
-//       };
-//     }
-//     case 'number_literal': {
-//       const numberValue = value.numeric('number_value');
-//       if (numberValue === undefined) return undefined;
-//       return {
-//         kind: 'number_literal',
-//         number_value: numberValue,
-//       };
-//     }
-//     case 'date_literal': {
-//       const dateValue = value.text('date_value');
-//       const granularity = value.text('granularity');
-//       const timezone = value.text('timezone');
-//       if (granularity && !isDateUnit(granularity)) return undefined;
-//       if (dateValue === undefined) return undefined;
-//       return {
-//         kind: 'date_literal',
-//         date_value: dateValue,
-//         granularity: granularity as Malloy.DateTimeframe,
-//         timezone,
-//       };
-//     }
-//     case 'timestamp_literal': {
-//       const timestampValue = value.text('timestamp_value');
-//       const granularity = value.text('granularity');
-//       const timezone = value.text('timezone');
-//       if (timestampValue === undefined) return undefined;
-//       if (granularity && !isTimestampUnit(granularity)) return undefined;
-//       return {
-//         kind: 'timestamp_literal',
-//         timestamp_value: timestampValue,
-//         granularity: granularity as Malloy.TimestampTimeframe,
-//         timezone,
-//       };
-//     }
-//     case 'boolean_literal': {
-//       const booleanValue = value.text('boolean_value');
-//       if (booleanValue === undefined) return undefined;
-//       return {
-//         kind: 'boolean_literal',
-//         boolean_value: booleanValue === 'true',
-//       };
-//     }
-//     case 'null_literal':
-//       return {
-//         kind: 'null_literal',
-//       };
-//     case 'filter_expression_literal': {
-//       const filterExpressionValue = value.text('filter_expression_value');
-//       if (filterExpressionValue === undefined) return undefined;
-//       return {
-//         kind: 'filter_expression_literal',
-//         filter_expression_value: filterExpressionValue,
-//       };
-//     }
-//   }
-//   return undefined;
-// }
 
 export function getFieldType(field: Field): FieldType {
   if (field instanceof RepeatedRecordField) return FieldType.RepeatedRecord;
