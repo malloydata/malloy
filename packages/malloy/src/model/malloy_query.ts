@@ -2698,10 +2698,7 @@ class QueryQuery extends QueryField {
   }
 
   private getDrillExpression(f: QueryFieldDef): Malloy.Expression | undefined {
-    if (isAtomic(f)) return f.drillExpression;
-    if (f.type === 'fieldref') {
-      return f.drillExpression ?? drillExpressionFromReferencePath(f.path);
-    }
+    if (isAtomic(f) || f.type === 'fieldref') return f.drillExpression;
     return undefined;
   }
 

@@ -80,6 +80,11 @@ export class ReferenceField extends SpaceField {
           type: 'fieldref',
           path,
           at: this.fieldRef.location,
+          drillExpression: {
+            kind: 'field_reference',
+            name: path[path.length - 1],
+            path: path.slice(0, -1),
+          },
         };
       }
       const refTo = this.referenceTo;
