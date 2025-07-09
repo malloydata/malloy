@@ -6,87 +6,87 @@
 import type {Token} from 'moo';
 import {parseString} from './util';
 
-export interface AstNode {
+interface TagASTBase {
   type: string;
 }
 
-export interface StringLiteral extends AstNode {
+interface StringLiteral extends TagASTBase {
   type: 'StringLiteral';
   value: string;
 }
 
-export interface NumberLiteral extends AstNode {
+interface NumberLiteral extends TagASTBase {
   type: 'NumberLiteral';
   value: string;
 }
 
-export interface Identifier extends AstNode {
+interface Identifier extends TagASTBase {
   type: 'Identifier';
   value: string;
 }
 
 // Represents a dot-separated property path
-export interface PropertyPath extends AstNode {
+interface PropertyPath extends TagASTBase {
   type: 'PropertyPath';
   value: string[];
 }
 
-export interface Properties extends AstNode {
+export interface Properties extends TagASTBase {
   type: 'Properties';
   isDotty: boolean;
   tags: TagSpec[];
 }
 
-export interface ArrayValue extends AstNode {
+export interface ArrayValue extends TagASTBase {
   type: 'ArrayValue';
   elements: ArrayElement[];
 }
 
-export interface ArrayElement extends AstNode {
+interface ArrayElement extends TagASTBase {
   type: 'ArrayElement';
   value: StringLiteral | NumberLiteral | ArrayValue | Properties;
   properties?: Properties;
 }
 
 // New interface for the top-level node
-export interface TagLine extends AstNode {
+export interface TagLine extends TagASTBase {
   type: 'TagLine';
   tags: TagSpec[];
 }
 
 // --- Specific TagSpec Interfaces ---
 
-export interface TagSpec_EqValue extends AstNode {
+interface TagSpec_EqValue extends TagASTBase {
   type: 'TagSpec_EqValue';
   propName: PropertyPath;
   value: StringLiteral | NumberLiteral | ArrayValue;
   properties?: Properties;
 }
 
-export interface TagSpec_EqDotty extends AstNode {
+interface TagSpec_EqDotty extends TagASTBase {
   type: 'TagSpec_EqDotty';
   isDotty: boolean;
   propName: PropertyPath;
   properties: Properties;
 }
 
-export interface TagSpec_PropOnly extends AstNode {
+interface TagSpec_PropOnly extends TagASTBase {
   type: 'TagSpec_PropOnly';
   propName: PropertyPath;
   properties: Properties;
 }
 
-export interface TagSpec_MinusProp extends AstNode {
+interface TagSpec_MinusProp extends TagASTBase {
   type: 'TagSpec_MinusProp';
   propName: PropertyPath;
   isNegated: boolean;
 }
 
-export interface TagSpec_MinusDotty extends AstNode {
+interface TagSpec_MinusDotty extends TagASTBase {
   type: 'TagSpec_MinusDotty';
 }
 
-// Union type for any kind of TagSpec
+// Union type for rules which make a tag
 export type TagSpec =
   | TagSpec_EqValue
   | TagSpec_EqDotty
@@ -95,7 +95,7 @@ export type TagSpec =
   | TagSpec_MinusDotty;
 
 // Union type for any AST node in the tree
-export type AnyAstNode =
+export type TagAST =
   | StringLiteral
   | NumberLiteral
   | Identifier
@@ -112,7 +112,7 @@ function isToken(t: unknown): t is Token {
   return typeof t === 'object' && t !== null && 'value' in t && 'text' in t;
 }
 
-function isAstNode(node: unknown): node is AstNode {
+function isAstNode(node: unknown): node is TagASTBase {
   return typeof node === 'object' && node !== null && 'type' in node;
 }
 
@@ -144,11 +144,11 @@ function isArrayElement(node: unknown): node is ArrayElement {
   return isAstNode(node) && node.type === 'ArrayElement';
 }
 
-function isTagLine(node: unknown): node is TagLine {
+export function isTagLine(node: unknown): node is TagLine {
   return isAstNode(node) && node.type === 'TagLine';
 }
 
-function isTagSpec(node: unknown): node is TagSpec {
+export function isTagSpec(node: unknown): node is TagSpec {
   if (!isAstNode(node)) return false;
   return (
     node.type === 'TagSpec_EqValue' ||
@@ -159,7 +159,7 @@ function isTagSpec(node: unknown): node is TagSpec {
   );
 }
 
-export function isAnyAstNode(node: unknown): node is AnyAstNode {
+export function isTagAST(node: unknown): node is TagAST {
   return (
     isStringLiteral(node) ||
     isNumberLiteral(node) ||
@@ -334,7 +334,7 @@ export function createNumberLiteral(data: unknown[]): NumberLiteral {
   return {type: 'NumberLiteral', value: token.text};
 }
 
-export function processEqValue(data: unknown[]): AstNode {
+export function processEqValue(data: unknown[]): TagASTBase {
   const [value] = data;
   if (!isAstNode(value)) {
     throw new Error('processEqValue expected an AstNode');

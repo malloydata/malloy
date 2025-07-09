@@ -508,7 +508,7 @@ export class Tag implements TagInterface {
 
 import * as nearley from 'nearley';
 import grammar_spec from './lib/MalloyTagNew';
-import * as ast from './new-tag-ast';
+import * as ast from './tag-ast';
 
 let tag_grammar: nearley.Grammar | undefined = undefined;
 
@@ -546,9 +546,11 @@ function parseTagLine(
       };
     }
     const firstTree = parsed[0];
-    if (ast.isAnyAstNode(firstTree)) {
+    if (ast.isTagLine(firstTree)) {
       const into = extending?.clone() || new Tag();
-      tagAstToTag(firstTree, into);
+      for (const spec of firstTree.tags) {
+        tagSpecInto(spec, into);
+      }
       return {
         tag: into,
         log: [],
@@ -572,7 +574,7 @@ function parseTagLine(
   }
 }
 
-export function tagAstToTag(n: ast.AnyAstNode, into: Tag) {
+function tagSpecInto(n: ast.TagSpec, into: Tag) {
   switch (n.type) {
     case 'TagSpec_MinusProp':
       {
@@ -583,12 +585,6 @@ export function tagAstToTag(n: ast.AnyAstNode, into: Tag) {
         }
       }
       break;
-    case 'TagLine': {
-      for (const spec of n.tags) {
-        tagAstToTag(spec, into);
-      }
-      break;
-    }
     case 'TagSpec_EqValue': {
       const dest = into.walkTo(n.propName.value);
       const eq = n.value;
@@ -624,8 +620,6 @@ export function tagAstToTag(n: ast.AnyAstNode, into: Tag) {
       );
       break;
     }
-    default:
-      throw new Error(`No handler for node ${n.type}`);
   }
 }
 
@@ -635,7 +629,7 @@ function applyProps(t: Tag, replace: boolean, p: ast.Properties | undefined) {
       t.properties = undefined;
     }
     for (const prop of p.tags) {
-      tagAstToTag(prop, t);
+      tagSpecInto(prop, t);
     }
   }
 }
