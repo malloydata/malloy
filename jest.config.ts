@@ -150,6 +150,11 @@ const config: Config = {
       displayName: 'db-snowflake',
       roots: ['<rootDir>/packages/malloy-db-snowflake/'],
     },
+    {
+      ...defaultConfig,
+      displayName: 'db-sqlserver',
+      roots: ['<rootDir>/packages/malloy-db-sqlserver/'],
+    },
   ],
 };
 
