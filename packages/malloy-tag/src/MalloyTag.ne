@@ -41,7 +41,7 @@ tag_lexer.next = (next => () => {
   }
 })(actual_next);
 
-import * as ast from "../new-tag-ast"
+import * as ast from "../tag-ast"
 %}
 
 @lexer tag_lexer
