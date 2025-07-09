@@ -4912,7 +4912,7 @@ export class ASTAnnotation extends ASTObjectNode<
 
   removeTagProperty(path: Path) {
     this.value = this.getTag()
-      .unset(...path)
+      .delete(...path)
       .toString();
   }
 }
