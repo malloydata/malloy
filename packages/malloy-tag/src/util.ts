@@ -16,11 +16,9 @@ enum ParseState {
  * @returns a string with the \ processing completed
  */
 export function parseString(str: string, surround = ''): string {
-  let inner = str.slice(surround.length);
+  const inner =
+    surround.length > 0 ? str.slice(surround.length, -surround.length) : str;
   let state = ParseState.Normal;
-  if (surround.length) {
-    inner = inner.slice(0, -surround.length);
-  }
   let out = '';
   let unicode = '';
   for (const c of inner) {
@@ -34,25 +32,25 @@ export function parseString(str: string, surround = ''): string {
         break;
       }
       case ParseState.ReverseVirgule: {
-        let outc = c;
         if (c === 'u') {
           state = ParseState.Unicode;
           unicode = '';
           continue;
         }
-        if (c === 'b') {
-          outc = '\b';
-        } else if (c === 'f') {
-          outc = '\f';
-        } else if (c === 'n') {
-          outc = '\n';
-        } else if (c === 'r') {
-          outc = '\r';
-        } else if (c === 't') {
-          outc = '\t';
-        }
-        out += outc;
         state = ParseState.Normal;
+        if (c === 'b') {
+          out += '\b';
+        } else if (c === 'f') {
+          out += '\f';
+        } else if (c === 'n') {
+          out += '\n';
+        } else if (c === 'r') {
+          out += '\r';
+        } else if (c === 't') {
+          out += '\t';
+        } else {
+          out += c;
+        }
         break;
       }
       case ParseState.Unicode: {
@@ -63,7 +61,7 @@ export function parseString(str: string, surround = ''): string {
             state = ParseState.Normal;
           }
         } else {
-          // Don't think we ever get here ...
+          // Correct tokenization would mean this is "not possible"
           state = ParseState.Normal;
         }
       }
