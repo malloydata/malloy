@@ -22,7 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Filter} from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 // clang-format off
 
@@ -151,8 +151,10 @@ export interface FilterCondition extends ExprE {
   code: string;
   expressionType: ExpressionType;
   fieldUsage?: FieldUsage[];
-  drillView?: string;
-  stableFilter?: Filter;
+  // Attached to filters which come from a view rather than direct in the query
+  // allows the renderer to know which filters should NOT be included in drill queries
+  filterView?: string;
+  stableFilter?: Malloy.Filter;
   isSourceFilter?: boolean;
 }
 
@@ -426,6 +428,7 @@ export interface Expression {
   fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
+  drillExpression?: Malloy.Expression;
 }
 
 type ConstantExpr = Expr;
@@ -558,6 +561,7 @@ export interface ResultMetadataDef {
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
   referenceId?: string;
+  drillExpression?: Malloy.Expression | undefined;
   drillable?: boolean;
 }
 
@@ -728,7 +732,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
-  drillView?: string;
+  drillExpression?: Malloy.Expression | undefined;
 }
 
 // this field definition represents something in the database.
@@ -1164,7 +1168,6 @@ export interface TurtleDef extends NamedObject, Pipeline {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
-  drillView?: string;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1527,7 +1530,7 @@ export interface RefToField {
   path: string[];
   annotation?: Annotation;
   at?: DocumentLocation;
-  drillView?: string;
+  drillExpression?: Malloy.Expression | undefined;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

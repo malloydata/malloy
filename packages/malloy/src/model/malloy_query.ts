@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {v4 as uuidv4} from 'uuid';
 import type {
   QueryInfo,
@@ -116,7 +118,6 @@ import {
   isJoinedSource,
   isBasicArray,
   mkTemporal,
-  isTurtle,
 } from './malloy_types';
 
 import type {Connection} from '../connection/types';
@@ -1728,7 +1729,8 @@ class FieldInstanceField implements FieldInstance {
   constructor(
     public f: QueryField,
     public fieldUsage: FieldUsage,
-    public parent: FieldInstanceResult
+    public parent: FieldInstanceResult,
+    public readonly drillExpression: Malloy.Expression | undefined
   ) {}
 
   root(): FieldInstanceResultRoot {
@@ -1806,7 +1808,12 @@ class FieldInstanceResult implements FieldInstance {
     return {};
   }
 
-  addField(as: string, field: QueryField, usage: FieldUsage) {
+  addField(
+    as: string,
+    field: QueryField,
+    usage: FieldUsage,
+    drillExpression: Malloy.Expression | undefined
+  ) {
     const fi = this.allFields.get(as);
     if (fi) {
       if (fi.type === 'query') {
@@ -1826,7 +1833,7 @@ class FieldInstanceResult implements FieldInstance {
         }
       }
     }
-    this.add(as, new FieldInstanceField(field, usage, this));
+    this.add(as, new FieldInstanceField(field, usage, this, drillExpression));
   }
 
   parentGroupSet(): number {
@@ -2690,10 +2697,16 @@ class QueryQuery extends QueryField {
       : [];
   }
 
+  private getDrillExpression(f: QueryFieldDef): Malloy.Expression | undefined {
+    if (isAtomic(f) || f.type === 'fieldref') return f.drillExpression;
+    return undefined;
+  }
+
   expandFields(resultStruct: FieldInstanceResult) {
     let resultIndex = 1;
     for (const f of this.getSegmentFields(resultStruct)) {
       const {as, field} = this.expandField(f);
+      const drillExpression = this.getDrillExpression(f);
 
       if (field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
@@ -2708,10 +2721,15 @@ class QueryQuery extends QueryField {
         this.expandFields(fir);
         resultStruct.add(as, fir);
       } else if (field instanceof QueryAtomicField) {
-        resultStruct.addField(as, field, {
-          resultIndex,
-          type: 'result',
-        });
+        resultStruct.addField(
+          as,
+          field,
+          {
+            resultIndex,
+            type: 'result',
+          },
+          drillExpression
+        );
         this.addDependancies(resultStruct, field);
 
         if (isBasicAggregate(field)) {
@@ -2725,10 +2743,15 @@ class QueryQuery extends QueryField {
         if (field.isAtomic()) {
           this.addDependancies(resultStruct, field);
         }
-        resultStruct.addField(as, field, {
-          resultIndex,
-          type: 'result',
-        });
+        resultStruct.addField(
+          as,
+          field,
+          {
+            resultIndex,
+            type: 'result',
+          },
+          drillExpression
+        );
       }
       // else if (
       //   this.firstSegment.type === "project" &&
@@ -2836,11 +2859,13 @@ class QueryQuery extends QueryField {
           : undefined;
         const sourceClasses = [sourceField];
         const referenceId = fi.f.referenceId;
+        const drillExpression = fi.drillExpression;
         const base = {
           sourceField,
           sourceExpression,
           sourceClasses,
           referenceId,
+          drillExpression,
         };
         if (isBasicCalculation(fi.f)) {
           filterList = fi.f.getFilterList();
@@ -2918,7 +2943,6 @@ class QueryQuery extends QueryField {
             join: 'many',
             name,
             resultMetadata,
-            drillView: fi.turtleDef.drillView,
           };
           fields.push(multiLineNest);
         } else {
@@ -2928,7 +2952,6 @@ class QueryQuery extends QueryField {
             join: 'one',
             name,
             resultMetadata,
-            drillView: fi.turtleDef.drillView,
           };
           fields.push(oneLineNest);
         }
@@ -2957,14 +2980,11 @@ class QueryQuery extends QueryField {
 
           const location = fOut.location;
           const annotation = fOut.annotation;
-          const drillView =
-            isAtomic(fOut) || isTurtle(fOut) ? fOut.drillView : undefined;
 
           const common = {
             resultMetadata,
             location,
             annotation,
-            drillView,
           };
 
           // build out the result fields...
@@ -4008,7 +4028,6 @@ class QueryQuery extends QueryField {
         type: 'turtle',
         name: 'starthere',
         pipeline,
-        drillView: fi.turtleDef.drillView,
       };
       const inputStruct: NestSourceDef = {
         type: 'nest_source',
@@ -4156,12 +4175,18 @@ class QueryQueryIndexStage extends QueryQuery {
 
     for (const f of (this.firstSegment as IndexSegment).indexFields) {
       const {as, field} = this.expandField(f);
-      this.indexPaths[as] = f.path;
+      const referencePath = f.path;
+      this.indexPaths[as] = referencePath;
 
-      resultStruct.addField(as, field as QueryField, {
-        resultIndex,
-        type: 'result',
-      });
+      resultStruct.addField(
+        as,
+        field as QueryField,
+        {
+          resultIndex,
+          type: 'result',
+        },
+        undefined
+      );
       if (field instanceof QueryAtomicField) {
         this.addDependancies(resultStruct, field);
       }
@@ -4170,10 +4195,15 @@ class QueryQueryIndexStage extends QueryQuery {
     const measure = (this.firstSegment as IndexSegment).weightMeasure;
     if (measure !== undefined) {
       const f = this.parent.getFieldByName([measure]) as QueryField;
-      resultStruct.addField(measure, f, {
-        resultIndex,
-        type: 'result',
-      });
+      resultStruct.addField(
+        measure,
+        f,
+        {
+          resultIndex,
+          type: 'result',
+        },
+        undefined
+      );
       this.addDependancies(resultStruct, f);
     }
     this.expandFilters(resultStruct);
@@ -4982,9 +5012,9 @@ class QueryStruct {
   }
 
   getQueryFieldReference(f: RefToField): QueryField {
-    const {path, annotation, drillView} = f;
+    const {path, annotation, drillExpression} = f;
     const field = this.getFieldByName(path);
-    if (annotation || drillView) {
+    if (annotation || drillExpression) {
       if (field.parent === undefined) {
         throw new Error(
           'Inconcievable, field reference to orphaned query field'
@@ -4993,7 +5023,7 @@ class QueryStruct {
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
-        const newDef = {...field.fieldDef, annotation, drillView};
+        const newDef = {...field.fieldDef, annotation, drillExpression};
         return new QueryFieldStruct(
           newDef,
           undefined,
@@ -5002,7 +5032,7 @@ class QueryStruct {
           field.referenceId
         );
       } else {
-        const newDef = {...field.fieldDef, annotation, drillView};
+        const newDef = {...field.fieldDef, annotation, drillExpression};
         return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }
@@ -5068,7 +5098,6 @@ class QueryStruct {
       pipeline,
       annotation,
       location: turtleDef.location,
-      drillView: turtleDef.drillView,
     };
     return flatTurtleDef;
   }

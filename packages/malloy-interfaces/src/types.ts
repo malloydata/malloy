@@ -589,8 +589,8 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'type': 'struct',
     'name': 'FilterStringApplication',
     'fields': {
-      'field_reference': {
-        'type': 'Reference',
+      'expression': {
+        'type': 'Expression',
         'optional': false,
         'array': false,
       },
@@ -701,8 +701,8 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'type': 'struct',
     'name': 'LiteralEqualityComparison',
     'fields': {
-      'field_reference': {
-        'type': 'Reference',
+      'expression': {
+        'type': 'Expression',
         'optional': false,
         'array': false,
       },
@@ -1932,7 +1932,7 @@ export type FilterOperation = {
 };
 
 export type FilterStringApplication = {
-  field_reference: Reference;
+  expression: Expression;
   filter: string;
 };
 
@@ -1992,7 +1992,7 @@ export type Limit = {
 };
 
 export type LiteralEqualityComparison = {
-  field_reference: Reference;
+  expression: Expression;
   value: LiteralValue;
 };
 

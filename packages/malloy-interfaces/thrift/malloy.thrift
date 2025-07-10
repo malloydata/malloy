@@ -316,12 +316,12 @@ union Filter {
 }
 
 struct FilterStringApplication {
-  1: required Reference field_reference,
+  1: required Expression expression,
   2: required string filter,
 }
 
 struct LiteralEqualityComparison {
-  1: required Reference field_reference,
+  1: required Expression expression,
   2: required LiteralValue value,
 }
 

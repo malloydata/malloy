@@ -1124,16 +1124,7 @@ export class ASTFieldReference extends ASTReference {
       parent instanceof ASTFilterWithFilterString ||
       parent instanceof ASTFilterWithLiteralEquality
     ) {
-      const grand = parent.parent as
-        | ASTFilterOperation
-        | ASTWhereViewOperation
-        | ASTDrillViewOperation
-        | ASTHavingViewOperation;
-      if (grand instanceof ASTFilterOperation) {
-        return grand.list.expression.field.segment;
-      } else {
-        return grand.list.segment;
-      }
+      return parent.segment;
     } else {
       return parent.list.segment;
     }
@@ -1148,14 +1139,7 @@ export class ASTFieldReference extends ASTReference {
 
   getFieldInfo() {
     const schema = this.getReferenceSchema();
-    const isDrill =
-      this.parent instanceof ASTFilterWithLiteralEquality &&
-      this.parent.parent instanceof ASTDrillViewOperation;
-    if (isDrill) {
-      return ASTNode.schemaGetDrillField(schema, this.name, this.path);
-    } else {
-      return ASTNode.schemaGet(schema, this.name, this.path);
-    }
+    return ASTNode.schemaGet(schema, this.name, this.path);
   }
 }
 
@@ -2942,7 +2926,11 @@ export class ASTSegmentViewDefinition
       kind: 'where',
       filter: {
         kind: 'filter_string',
-        field_reference: {name, path},
+        expression: {
+          kind: 'field_reference',
+          name,
+          path,
+        },
         filter: filterString,
       },
     });
@@ -2980,7 +2968,11 @@ export class ASTSegmentViewDefinition
       kind: 'having',
       filter: {
         kind: 'filter_string',
-        field_reference: {name, path},
+        expression: {
+          kind: 'field_reference',
+          name,
+          path,
+        },
         filter: filterString,
       },
     });
@@ -3758,7 +3750,11 @@ export class ASTAggregateViewOperation
     const where: Malloy.FilterOperation = {
       filter: {
         kind: 'filter_string',
-        field_reference: {name, path},
+        expression: {
+          kind: 'field_reference',
+          name,
+          path,
+        },
         filter: filterString,
       },
     };
@@ -3966,8 +3962,18 @@ export class ASTReferenceExpression
   /**
    * @internal
    */
-  get field() {
-    return this.parent.as.Field();
+  get segment() {
+    const parent = this.parent;
+    if (parent instanceof ASTField) {
+      return parent.segment;
+    } else if (
+      parent instanceof ASTFilterWithFilterString ||
+      parent instanceof ASTFilterWithLiteralEquality
+    ) {
+      return parent.segment;
+    } else {
+      throw new Error('Invalid expression parent');
+    }
   }
 
   get path() {
@@ -3979,8 +3985,13 @@ export class ASTReferenceExpression
   }
 
   getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
-    const schema = this.field.segment.getInputSchema();
-    const def = ASTNode.schemaGet(schema, this.name, this.path);
+    const schema = this.segment.getInputSchema();
+    const isDrill =
+      this.parent instanceof ASTFilterWithLiteralEquality &&
+      this.parent.parent instanceof ASTDrillViewOperation;
+    const def = isDrill
+      ? ASTNode.schemaGetDrillField(schema, this.name, this.path)
+      : ASTNode.schemaGet(schema, this.name, this.path);
     if (def.kind !== 'dimension' && def.kind !== 'measure') {
       throw new Error('Invalid field for ASTReferenceExpression');
     }
@@ -4116,6 +4127,10 @@ export class ASTLiteralValueExpression extends ASTObjectNode<
 
   getInheritedAnnotations(): Malloy.Annotation[] {
     return [];
+  }
+
+  getFieldInfo() {
+    return undefined;
   }
 }
 
@@ -4499,13 +4514,25 @@ export const ASTFilter = {
         return new ASTFilterWithLiteralEquality(filter);
     }
   },
+  getSegment(filter: ASTFilter) {
+    const grand = filter.parent as
+      | ASTFilterOperation
+      | ASTWhereViewOperation
+      | ASTDrillViewOperation
+      | ASTHavingViewOperation;
+    if (grand instanceof ASTFilterOperation) {
+      return grand.list.expression.field.segment;
+    } else {
+      return grand.list.segment;
+    }
+  },
 };
 
 export class ASTFilterWithFilterString extends ASTObjectNode<
   Malloy.FilterWithFilterString,
   {
     kind: 'filter_string';
-    field_reference: ASTFieldReference;
+    expression: ASTExpression;
     filter: string;
   }
 > {
@@ -4513,13 +4540,13 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
   constructor(public node: Malloy.FilterWithFilterString) {
     super(node, {
       kind: 'filter_string',
-      field_reference: new ASTFieldReference(node.field_reference),
+      expression: ASTExpression.from(node.expression),
       filter: node.filter,
     });
   }
 
-  get fieldReference() {
-    return this.children.field_reference;
+  get expression() {
+    return this.children.expression;
   }
 
   get filterString() {
@@ -4537,9 +4564,16 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
     this.filterString = filterString;
   }
 
+  get segment() {
+    return ASTFilter.getSegment(this);
+  }
+
   getFieldInfo() {
-    const field = this.fieldReference.getFieldInfo();
-    if (field.kind !== 'dimension' && field.kind !== 'measure') {
+    const field = this.expression.getFieldInfo();
+    if (
+      field === undefined ||
+      (field.kind !== 'dimension' && field.kind !== 'measure')
+    ) {
       throw new Error('Invalid field type for filter with filter string');
     }
     return field;
@@ -4570,7 +4604,7 @@ export class ASTFilterWithLiteralEquality extends ASTObjectNode<
   Malloy.FilterWithLiteralEquality,
   {
     kind: 'literal_equality';
-    field_reference: ASTFieldReference;
+    expression: ASTExpression;
     value: ASTLiteralValue;
   }
 > {
@@ -4578,17 +4612,21 @@ export class ASTFilterWithLiteralEquality extends ASTObjectNode<
   constructor(public node: Malloy.FilterWithLiteralEquality) {
     super(node, {
       kind: 'literal_equality',
-      field_reference: new ASTFieldReference(node.field_reference),
+      expression: ASTExpression.from(node.expression),
       value: ASTLiteralValue.from(node.value),
     });
   }
 
-  get fieldReference() {
-    return this.children.field_reference;
+  get expression() {
+    return this.children.expression;
   }
 
   get value() {
     return this.children.value;
+  }
+
+  get segment() {
+    return ASTFilter.getSegment(this);
   }
 }
 

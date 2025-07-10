@@ -8,6 +8,7 @@
 import {Tag} from '@malloydata/malloy-tag';
 import {compileModel, compileQuery, compileSource} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {extractMalloyObjectFromTag} from '../to_stable';
 
 type DeepPartial<T> = T extends object
   ? {
@@ -908,15 +909,17 @@ LIMIT 101
         };
         expect(result).toMatchObject(expected);
         const carrier = result.result?.schema.fields[0];
-        const carrierTag = tagFor(carrier);
-        expect(carrierTag?.text('drill_view')).toBe('dashboard');
+        expect(drillExpressionFor(carrier)).toMatchObject({
+          kind: 'field_reference',
+          name: 'carrier',
+          path: ['dashboard'],
+        });
         const expression = result.result?.schema.fields[1];
         const expressionTag = tagFor(expression);
-        expect(expressionTag?.text('drill_view')).toBe('dashboard');
+        expect(expressionTag?.text('drill_expression', 'code')).toBe('1');
         const byCarrier = result.result?.schema.fields[2];
         const byCarrierTag = tagFor(byCarrier);
         expect(byCarrierTag?.has('drillable')).toBe(true);
-        expect(byCarrierTag?.text('drill_view')).toBe('dashboard');
         const pipeline = result.result?.schema.fields[4];
         const pipelineTag = tagFor(pipeline);
         expect(pipelineTag?.has('drillable')).toBe(false);
@@ -1335,4 +1338,10 @@ function tagFor(field: HasAnnotations | undefined) {
       ?.filter(a => a.value.startsWith('#(malloy) '))
       .map(a => a.value) ?? []
   ).tag;
+}
+
+function drillExpressionFor(field: HasAnnotations | undefined) {
+  const tag = tagFor(field)?.tag('drill_expression');
+  if (tag === undefined) return undefined;
+  return extractMalloyObjectFromTag(tag, 'Expression');
 }

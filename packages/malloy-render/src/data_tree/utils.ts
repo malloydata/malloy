@@ -1,7 +1,6 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import {tagFromAnnotations} from '../util';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {isDateUnit, isTimestampUnit} from '@malloydata/malloy';
 import type {
   BooleanFieldInfo,
   DateFieldInfo,
@@ -30,6 +29,7 @@ import {
 } from './fields';
 import {convertLegacyToVizTag, VIZ_CHART_TYPES} from '../component/tag-utils';
 import type {FieldBase} from './fields/base';
+import {extractMalloyObjectFromTag} from '@malloydata/malloy';
 
 export function isArrayFieldInfo(
   field: Malloy.DimensionInfo
@@ -157,77 +157,27 @@ export function tagFor(field: Malloy.DimensionInfo, prefix = '# ') {
   return tagFromAnnotations(field.annotations, prefix);
 }
 
-export function extractLiteralFromTag(
-  value: Tag | undefined
-): Malloy.LiteralValue | undefined {
-  if (value === undefined) return undefined;
-  const valueKind = value.text('kind');
-  if (valueKind === undefined) return undefined;
-  switch (valueKind) {
-    case 'string_literal': {
-      const stringValue = value.text('string_value');
-      if (stringValue === undefined) return undefined;
-      return {
-        kind: 'string_literal',
-        string_value: stringValue,
-      };
-    }
-    case 'number_literal': {
-      const numberValue = value.numeric('number_value');
-      if (numberValue === undefined) return undefined;
-      return {
-        kind: 'number_literal',
-        number_value: numberValue,
-      };
-    }
-    case 'date_literal': {
-      const dateValue = value.text('date_value');
-      const granularity = value.text('granularity');
-      const timezone = value.text('timezone');
-      if (granularity && !isDateUnit(granularity)) return undefined;
-      if (dateValue === undefined) return undefined;
-      return {
-        kind: 'date_literal',
-        date_value: dateValue,
-        granularity: granularity as Malloy.DateTimeframe,
-        timezone,
-      };
-    }
-    case 'timestamp_literal': {
-      const timestampValue = value.text('timestamp_value');
-      const granularity = value.text('granularity');
-      const timezone = value.text('timezone');
-      if (timestampValue === undefined) return undefined;
-      if (granularity && !isTimestampUnit(granularity)) return undefined;
-      return {
-        kind: 'timestamp_literal',
-        timestamp_value: timestampValue,
-        granularity: granularity as Malloy.TimestampTimeframe,
-        timezone,
-      };
-    }
-    case 'boolean_literal': {
-      const booleanValue = value.text('boolean_value');
-      if (booleanValue === undefined) return undefined;
-      return {
-        kind: 'boolean_literal',
-        boolean_value: booleanValue === 'true',
-      };
-    }
-    case 'null_literal':
-      return {
-        kind: 'null_literal',
-      };
-    case 'filter_expression_literal': {
-      const filterExpressionValue = value.text('filter_expression_value');
-      if (filterExpressionValue === undefined) return undefined;
-      return {
-        kind: 'filter_expression_literal',
-        filter_expression_value: filterExpressionValue,
-      };
-    }
+export function extractExpressionFromTag(
+  tag: Tag
+): Malloy.Expression | undefined {
+  try {
+    return extractMalloyObjectFromTag(tag, 'Expression') as Malloy.Expression;
+  } catch (e) {
+    return undefined;
   }
-  return undefined;
+}
+
+export function extractLiteralFromTag(
+  tag: Tag
+): Malloy.LiteralValue | undefined {
+  try {
+    return extractMalloyObjectFromTag(
+      tag,
+      'LiteralValue'
+    ) as Malloy.LiteralValue;
+  } catch (e) {
+    return undefined;
+  }
 }
 
 export function getFieldType(field: Field): FieldType {

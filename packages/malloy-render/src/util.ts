@@ -271,7 +271,7 @@ export function renderTimeString(
 }
 
 function filterQuote(s: string): string {
-  return `'${s.replace(/(['\\])/g, '\\$1')}'`;
+  return `"${s.replace(/(["\\])/g, '\\$1')}"`;
 }
 
 export function valueToMalloy(value: Cell) {
