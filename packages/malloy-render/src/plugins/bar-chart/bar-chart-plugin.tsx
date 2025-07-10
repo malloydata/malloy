@@ -87,7 +87,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
       const hasMultipleSeriesFields = settings.seriesChannel.fields.length > 1;
 
       const pluginInstance: BarChartPluginInstance = {
-        name: 'bar_chart',
+        name: 'bar',
         field,
         renderMode: 'solidjs',
         sizingStrategy: 'fill',
