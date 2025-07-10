@@ -168,6 +168,10 @@ export function viteMalloyStoriesPlugin(): PluginOption {
                   DummyPluginFactory,
                   DummyDOMPluginFactory,
                 ],
+                onDrill: console.log,
+                tableConfig: {
+                  enableDrill: true,
+                },
               });
               const viz = renderer.createViz({
                 onError: error => {
