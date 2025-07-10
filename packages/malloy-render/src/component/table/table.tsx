@@ -229,11 +229,12 @@ const TableField = (props: {
 
   const config = useConfig();
   const isDrillingEnabled = config.tableConfig().enableDrill;
+  const metadata = useResultContext();
   const handleClick = async (evt: MouseEvent) => {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
-        metadata: useResultContext(),
+        metadata,
         data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });
