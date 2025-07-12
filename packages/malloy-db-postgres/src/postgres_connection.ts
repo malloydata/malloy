@@ -48,9 +48,8 @@ import type {
 import {PostgresDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {Client, Pool} from 'pg';
+import {Client, FieldDef, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
-import {randomUUID} from 'crypto';
 
 interface PostgresConnectionConfiguration {
   host?: string;
@@ -59,6 +58,23 @@ interface PostgresConnectionConfiguration {
   password?: string;
   databaseName?: string;
   connectionString?: string;
+}
+
+interface InfoSchemaColumn {
+  columnName: string;
+  dataType: string; // c.data_type    (e.g. 'ARRAY', 'integer', 'USER-DEFINED')
+  elementType: string | null; // e.data_type    (or NULL for scalars)
+}
+
+/** internal shape of pg_type we care about */
+interface PgTypeRow {
+  oid: number;
+  typname: string;
+  typtype: string; // 'b'=base, 'd'=domain, 'e'=enum, 'c'=composite, 'r'=range, 'm'=multirange, 'p'=pseudo
+  typcategory: string; // 'A'=array
+  typelem: number; // element OID if array
+  typbasetype: number; // base OID if domain
+  formatted: string; // format_type(oid,NULL)
 }
 
 type PostgresConnectionConfigurationReader =
@@ -203,23 +219,105 @@ export class PostgresConnection
       fields: [],
       name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
-    const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
-    const infoQuery = `
-      drop table if exists ${tempTableName};
-      create temp table ${tempTableName} as SELECT * FROM (
-        ${sqlRef.selectStr}
-      ) as x where false;
-      SELECT column_name, c.data_type, e.data_type as element_type
-      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
-        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
-          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
-      where table_name='${tempTableName}';
-    `;
-    try {
-      await this.schemaFromQuery(infoQuery, structDef);
-    } catch (error) {
-      return `Error fetching schema for ${structDef.name}: ${error}`;
+    const client = await this.getClient();
+    await client.connect();
+    await this.connectionSetup(client);
+    // 1) Get row-descriptor without fetching data
+    const res = await client.query({
+      text: `SELECT * FROM (${sqlRef.selectStr}) _t LIMIT 0`,
+    });
+
+    // 2) Resolve every OID we might touch (field, array element, domain base)
+    const neededOids = new Set<number>();
+
+    res.fields.forEach(f => neededOids.add(f.dataTypeID));
+    // we'll add more OIDs later (typelem / typebasetype) lazily
+
+    // helper to fetch pg_type rows on demand, with cache
+    const pgTypeCache = new Map<number, PgTypeRow>();
+
+    const loadTypes = async (oids: number[]) => {
+      if (oids.length === 0) return;
+      const params = oids.map((_, i) => `$${i + 1}`).join(',');
+      const {rows} = await client.query<PgTypeRow>(
+        `
+      SELECT
+        oid,
+        typname,
+        typtype,
+        typcategory,
+        typelem,
+        typbasetype,
+        format_type(oid, NULL) AS formatted
+      FROM pg_type
+      WHERE oid IN (${params})
+      `,
+        oids
+      );
+      rows.forEach(r => pgTypeCache.set(r.oid, r));
+    };
+
+    // Prime the cache
+    await loadTypes([...neededOids]);
+
+    // 3) recursive mapper → info-schema compliant strings
+    const mapDataType = async (oid: number): Promise<string> => {
+      let t = pgTypeCache.get(oid);
+      if (!t) {
+        await loadTypes([oid]);
+        t = pgTypeCache.get(oid)!;
+      }
+
+      // ARRAY?
+      if (t.typcategory === 'A') return 'ARRAY';
+
+      // DOMAIN?  recurse to its base type
+      if (t.typtype === 'd') return mapDataType(t.typbasetype);
+
+      // ENUM, COMPOSITE, RANGE, MULTIRANGE, PSEUDO  → USER-DEFINED
+      if (['e', 'c', 'r', 'm', 'p'].includes(t.typtype)) return 'USER-DEFINED';
+
+      // built-in scalar or base type of domain
+      return t.formatted;
+    };
+
+    // helper to resolve element_type (NULL for scalars)
+    const mapElementType = async (oid: number): Promise<string | null> => {
+      let t = pgTypeCache.get(oid);
+      if (!t) {
+        await loadTypes([oid]);
+        t = pgTypeCache.get(oid)!;
+      }
+      if (t.typcategory !== 'A') return null; // not an array
+
+      // Ensure element row cached
+      if (!pgTypeCache.has(t.typelem)) await loadTypes([t.typelem]);
+      return mapDataType(t.typelem);
+    };
+
+    // 4) Build final array in original column order
+    const result: InfoSchemaColumn[] = [];
+    for (const field of res.fields as FieldDef[]) {
+      result.push({
+        columnName: field.name,
+        dataType: await mapDataType(field.dataTypeID),
+        elementType: await mapElementType(field.dataTypeID),
+      });
     }
+    for (const row of result) {
+      const postgresDataType = row.dataType;
+      const name = row.columnName;
+      if (postgresDataType === 'ARRAY') {
+        const elementType = this.dialect.sqlTypeToMalloyType(
+          row.elementType as string
+        );
+        structDef.fields.push(mkArrayDef(elementType, name));
+      } else {
+        const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
+        structDef.fields.push({...malloyType, name});
+      }
+    }
+    await client.end();
     return structDef;
   }
 
