@@ -48,7 +48,8 @@ import type {
 import {PostgresDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {Client, FieldDef, Pool} from 'pg';
+import {Client, Pool} from 'pg';
+import type {FieldDef} from 'pg';
 import QueryStream from 'pg-query-stream';
 
 interface PostgresConnectionConfiguration {
