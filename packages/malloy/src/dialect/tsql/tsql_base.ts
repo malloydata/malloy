@@ -144,10 +144,11 @@ export abstract class TSQLBase extends Dialect {
   sqlGroupSetTable(groupSetCount: number): string {
     // SQL Server doesn't have GENERATE_SERIES, use a common table expression
     // to generate numbers from 0 to groupSetCount
+    // TODO (vitor): Figure out a way not to need schema here.
     return `
     CROSS JOIN (
       SELECT n AS group_set
-      FROM dbo.malloynumbers
+      FROM malloytest.malloynumbers
       WHERE n <= ${groupSetCount}
     ) AS group_set
     `;

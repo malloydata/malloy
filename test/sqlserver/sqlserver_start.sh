@@ -13,6 +13,7 @@ PASSWORD=saTEST_0pword
 CONTAINER_NAME=malloysqlserver
 SERVER_NAME=$CONTAINER_NAME
 DATABASE_NAME=malloytestdb
+SCHEMA=malloytest
 
 # check if the container exists
 if [ "$(docker ps -a -q -f name=^/${CONTAINER_NAME}$)" ]; then
@@ -45,7 +46,7 @@ do
   then
     docker logs $CONTAINER_NAME >& "./.tmp/$CONTAINER_NAME.logs"
     docker rm -f $CONTAINER_NAME
-    echo "SQL Server did not start successfully, check .tmp/$CONTAINER_NAME.logs"
+    echo "SQL Server did not start successfully, check ./.tmp/$CONTAINER_NAME.logs"
     exit 1
     break
   fi
@@ -54,6 +55,7 @@ done
 
 # load the test data.
 echo
+
 echo Loading Test Data
 docker exec $CONTAINER_NAME tar -xzvf /init_data/malloytest-sqlserver.tar.gz -C /tmp
 echo Volume mounted
@@ -61,19 +63,60 @@ docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S localhost -U $USERNAM
 echo Database created
 docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -i "/tmp/malloytest-sqlserver.sql"
 echo Schema created
+
+echo Loading CLR
+docker exec -it $CONTAINER_NAME mkdir -p /var/opt/mssql/assemblies
+docker exec -it $CONTAINER_NAME cp /init_data/CLRMalloy.dll /var/opt/mssql/assemblies/CLRMalloy.dll
+
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -Q "
+sp_configure 'show advanced options', 1;
+GO
+RECONFIGURE;
+GO
+sp_configure 'clr enabled', 1;
+GO
+RECONFIGURE;
+GO
+"
+
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -Q "
+sp_configure 'clr strict security', 0;
+GO
+RECONFIGURE;
+GO
+"
+
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -Q "
+CREATE ASSEMBLY CLRMalloy
+    FROM '/var/opt/mssql/assemblies/CLRMalloy.dll'
+    WITH PERMISSION_SET = SAFE;
+GO
+"
+
+docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -Q "
+CREATE FUNCTION $SCHEMA.RegexpMatch(
+    @input NVARCHAR(MAX),
+    @pattern NVARCHAR(MAX)
+)
+    RETURNS BIT
+AS
+    EXTERNAL NAME CLRMalloy.[CLRMalloy.Regexp].Match;
+GO
+"
+
 docker exec -e USERNAME=$USERNAME -e PASSWORD=$PASSWORD -e DATABASE_NAME=$DATABASE_NAME -e SERVER_NAME=$SERVER_NAME $CONTAINER_NAME /tmp/seed/seed.sh
 echo Seed completed
 
 # Lib consumers will have to run this somehow. Idk where to put it.
 echo Creating malloynumbers table
 docker exec $CONTAINER_NAME /opt/mssql-tools/bin/sqlcmd -S $SERVER_NAME -d $DATABASE_NAME -U $USERNAME -P "$PASSWORD" -Q "
-IF OBJECT_ID('[dbo].malloynumbers', 'U') IS NULL
+IF OBJECT_ID('[malloytest].malloynumbers', 'U') IS NULL
     BEGIN
-        PRINT 'Creating [dbo].malloynumbers...';
-        CREATE TABLE [dbo].malloynumbers (
+        PRINT 'Creating [malloytest].malloynumbers...';
+        CREATE TABLE [malloytest].malloynumbers (
             n INT NOT NULL PRIMARY KEY
         );
-        PRINT 'Populating [dbo].malloynumbers with 10 million rows...';
+        PRINT 'Populating [malloytest].malloynumbers with 10 million rows...';
         ;WITH
         E1 AS (SELECT 1 AS n FROM (VALUES(1),(1),(1),(1),(1),(1),(1),(1),(1),(1)) AS x(n)), -- 10
         E2 AS (SELECT 1 AS n FROM E1 AS a CROSS JOIN E1 AS b),                             -- 100
@@ -85,14 +128,14 @@ IF OBJECT_ID('[dbo].malloynumbers', 'U') IS NULL
                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS n
             FROM E5
         )
-        INSERT INTO [dbo].malloynumbers (n)
+        INSERT INTO [malloytest].malloynumbers (n)
         SELECT n FROM Tally
         OPTION (MAXRECURSION 0);
-        PRINT '[dbo].malloynumbers created and populated.';
+        PRINT '[malloytest].malloynumbers created and populated.';
     END
     ELSE
     BEGIN
-        PRINT '[dbo].malloynumbers already exists. Skipping creation.';
+        PRINT '[malloytest].malloynumbers already exists. Skipping creation.';
     END;
 "
 
