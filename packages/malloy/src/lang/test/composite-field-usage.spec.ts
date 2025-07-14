@@ -142,6 +142,28 @@ describe('composite sources', () => {
         `
       ).toTranslate();
     });
+    test('required group by mixed with missing field', () => {
+      expect(
+        `
+              ##! experimental { composite_sources grouped_by }
+              source: aext is compose(
+                a extend {
+                  dimension: x is 1
+                  dimension: y is 1
+                  measure: aisum is ai.sum() { grouped_by: x }
+                },
+                a extend {
+                  measure: aisum is ai.sum()
+                }
+              )
+              run: aext -> { aggregate: aisum, group_by: y }
+            `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `y` and some composite input sources have unsatisfied required grouping on `x` (fields required in source: `aisum` and `y`)'
+        )
+      );
+    });
     test('error message when composited join (join is a nested composite) results in failure', () => {
       expect(`
         ##! experimental.composite_sources
