@@ -1310,6 +1310,7 @@ export type BasicExpressionType = Exclude<
 >;
 
 export interface RequiredGroupBy {
+  fieldUsage?: FieldUsage;
   at?: DocumentLocation;
   path: string[];
 }

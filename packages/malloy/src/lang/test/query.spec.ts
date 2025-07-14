@@ -2399,10 +2399,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
-        ),
-        errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as some composite input sources have unsatisfied required grouping on `x` and/or `y` (fields required in source: `aisum`)'
         )
       );
     });
