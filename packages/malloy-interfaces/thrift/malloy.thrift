@@ -636,6 +636,12 @@ struct LogMessage {
   4: required string message;
 }
 
+struct TimingInfo {
+  1: required string name;
+  3: required i32 duration_ms;
+  4: optional list<TimingInfo> detailed_timing;
+}
+
 // Given the URL to a model, return the StableModelDef for that model
 
 struct CompileModelRequest {
@@ -651,6 +657,7 @@ struct CompileModelResponse {
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
   10: optional list<Translation> translations;
+  11: optional TimingInfo timing_info;
 }
 
 // Given the URL to a model and a name of a queryable thing, get a StableSourceDef
@@ -668,6 +675,7 @@ struct CompileSourceResponse {
 
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  11: optional TimingInfo timing_info;
 }
 
 // Given a StableQueryDef and the URL to a model, run it and return a StableResult
@@ -686,6 +694,7 @@ struct RunQueryResponse {
   7: optional i32 default_row_limit_added,
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
+  11: optional TimingInfo timing_info;
 }
 
 // Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
@@ -705,6 +714,7 @@ struct CompileQueryResponse {
   8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
   10: optional list<Translation> translations;
+  11: optional TimingInfo timing_info;
 }
 
 // Given a URL to a model and the name of a source, run the indexing query
@@ -720,4 +730,5 @@ struct RunIndexQueryResponse {
   1: optional Result result,
 
   9: optional CompilerNeeds compiler_needs,
+  11: optional TimingInfo timing_info;
 }

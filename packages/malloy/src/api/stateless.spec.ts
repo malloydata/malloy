@@ -1326,6 +1326,168 @@ LIMIT 101
       'locations of annotations should match the location of the table call'
     );
   });
+  describe('timing_info', () => {
+    test('compile model timing info', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      expect(result).toMatchObject({
+        timing_info: {
+          name: 'compile_model',
+          duration_ms: expect.any(Number),
+          detailed_timing: [
+            {
+              name: 'parse_malloy',
+              duration_ms: expect.any(Number),
+            },
+            {
+              name: 'generate_ast',
+              duration_ms: expect.any(Number),
+              detailed_timing: [
+                {
+                  name: 'parse_compiler_flags',
+                  duration_ms: expect.any(Number),
+                },
+              ],
+            },
+            {
+              name: 'compile_malloy',
+              duration_ms: expect.any(Number),
+            },
+          ],
+        },
+      });
+    });
+  });
+  test('compile query', () => {
+    const result = compileQuery({
+      model_url: 'file://test.malloy',
+      query: {
+        annotations: [{value: '#(test) hello'}],
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {kind: 'field_reference', name: 'carrier'},
+                },
+              },
+            ],
+          },
+        },
+      },
+      compiler_needs: {
+        table_schemas: [
+          {
+            connection_name: 'connection',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        files: [
+          {
+            url: 'file://test.malloy',
+            contents: "source: flights is connection.table('flights')",
+          },
+        ],
+        connections: [{name: 'connection', dialect: 'duckdb'}],
+      },
+    });
+    expect(result).toMatchObject({
+      timing_info: {
+        name: 'compile_query',
+        duration_ms: expect.any(Number),
+        detailed_timing: [
+          {
+            name: 'compile_model',
+            duration_ms: expect.any(Number),
+            detailed_timing: [
+              {
+                name: 'parse_malloy',
+                duration_ms: expect.any(Number),
+              },
+              {
+                name: 'generate_ast',
+                duration_ms: expect.any(Number),
+                detailed_timing: [
+                  {
+                    name: 'parse_compiler_flags',
+                    duration_ms: expect.any(Number),
+                  },
+                ],
+              },
+              {
+                name: 'compile_malloy',
+                duration_ms: expect.any(Number),
+              },
+            ],
+          },
+          {
+            name: 'parse_compiler_flags',
+            duration_ms: expect.any(Number),
+          },
+          {
+            name: 'parse_malloy',
+            duration_ms: expect.any(Number),
+          },
+          {
+            name: 'generate_ast',
+            duration_ms: expect.any(Number),
+            detailed_timing: [
+              {
+                name: 'parse_compiler_flags',
+                duration_ms: expect.any(Number),
+              },
+            ],
+          },
+          {
+            name: 'compile_malloy',
+            duration_ms: expect.any(Number),
+          },
+          {
+            name: 'generate_sql',
+            duration_ms: expect.any(Number),
+          },
+        ],
+      },
+    });
+  });
 });
 
 interface HasAnnotations {
