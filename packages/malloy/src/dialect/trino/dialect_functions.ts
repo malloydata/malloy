@@ -354,6 +354,10 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   reverse: string_reverse,
 
   // aggregate functions
+  max_by,
+  min_by,
+  string_agg_distinct,
+
   // TODO: Approx percentile can be called with a third argument; we probably
   // want to implement that at some point
   // In Presto, this is an "error" parameter between 0 and 1

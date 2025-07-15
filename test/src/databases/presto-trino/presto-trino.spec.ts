@@ -43,7 +43,7 @@ describe.each(runtimes.runtimeList)(
           {category: 'A', hll_moving: 1},
           {category: 'A', hll_moving: 2},
           {category: 'B', hll_moving: 1},
-          {category: 'B', hll_moving: 1}
+          {category: 'B', hll_moving: 1},
         ]);
       });
 
@@ -60,7 +60,7 @@ describe.each(runtimes.runtimeList)(
           calculate: combined_hll is hll_estimate_moving(hll_combine_moving(hll_set, 1), 1)
         }`).malloyResultMatches(runtime, [
           {category: 'A', combined_hll: 2},
-          {category: 'B', combined_hll: 1}
+          {category: 'B', combined_hll: 1},
         ]);
       });
 
@@ -77,7 +77,7 @@ describe.each(runtimes.runtimeList)(
           calculate: estimated_count is hll_estimate_moving(hll_set, 1)
         }`).malloyResultMatches(runtime, [
           {category: 'A', estimated_count: 2},
-          {category: 'B', estimated_count: 1}
+          {category: 'B', estimated_count: 1},
         ]);
       });
     });
