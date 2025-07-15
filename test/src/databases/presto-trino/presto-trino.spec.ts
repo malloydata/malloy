@@ -27,6 +27,60 @@ describe.each(runtimes.runtimeList)(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`
       ).malloyResultMatches(runtime, {n: 1});
     });
+
+    describe('HLL Window Functions', () => {
+      it(`hll_accumulate_moving function - ${databaseName}`, async () => {
+        await expect(`run: ${databaseName}.sql("""
+          SELECT 'A' as category, 'value1' as val, 1 as seq
+          UNION ALL SELECT 'A' as category, 'value2' as val, 2 as seq
+          UNION ALL SELECT 'B' as category, 'value1' as val, 1 as seq
+          UNION ALL SELECT 'B' as category, 'value3' as val, 2 as seq
+        """) -> {
+          group_by: category
+          order_by: category, seq
+          calculate: hll_moving is hll_estimate_moving(hll_accumulate_moving(val, 1), 1)
+        }`).malloyResultMatches(runtime, [
+          {category: 'A', hll_moving: 1},
+          {category: 'A', hll_moving: 2},
+          {category: 'B', hll_moving: 1},
+          {category: 'B', hll_moving: 1}
+        ]);
+      });
+
+      it(`hll_combine_moving function - ${databaseName}`, async () => {
+        await expect(`run: ${databaseName}.sql("""
+          SELECT 'A' as category, 'value1' as val, 1 as seq
+          UNION ALL SELECT 'A' as category, 'value2' as val, 2 as seq
+          UNION ALL SELECT 'B' as category, 'value1' as val, 1 as seq
+        """) -> {
+          group_by: category
+          aggregate: hll_set is hll_accumulate(val)
+        } -> {
+          order_by: category
+          calculate: combined_hll is hll_estimate_moving(hll_combine_moving(hll_set, 1), 1)
+        }`).malloyResultMatches(runtime, [
+          {category: 'A', combined_hll: 2},
+          {category: 'B', combined_hll: 1}
+        ]);
+      });
+
+      it(`hll_estimate_moving function - ${databaseName}`, async () => {
+        await expect(`run: ${databaseName}.sql("""
+          SELECT 'A' as category, 'value1' as val, 1 as seq
+          UNION ALL SELECT 'A' as category, 'value2' as val, 2 as seq
+          UNION ALL SELECT 'B' as category, 'value1' as val, 1 as seq
+        """) -> {
+          group_by: category
+          aggregate: hll_set is hll_accumulate(val)
+        } -> {
+          order_by: category
+          calculate: estimated_count is hll_estimate_moving(hll_set, 1)
+        }`).malloyResultMatches(runtime, [
+          {category: 'A', estimated_count: 2},
+          {category: 'B', estimated_count: 1}
+        ]);
+      });
+    });
     test.when(databaseName === 'presto')(
       'schema parser does not throw on compound types',
       async () => {

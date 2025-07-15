@@ -236,6 +236,111 @@ const string_reverse: DefinitionBlueprint = {
   impl: {sql: 'REVERSE(CAST(${str} AS VARCHAR))'},
 };
 
+const set_agg: DefinitionBlueprint = {
+  generic: {'T': ['any']},
+  takes: {'value': {dimension: T}},
+  returns: {measure: {array: T}},
+  impl: {function: 'SET_AGG'},
+  isSymmetric: true,
+};
+
+const set_union: DefinitionBlueprint = {
+  generic: {'T': ['any']},
+  takes: {x: {array: T}},
+  returns: {measure: {array: T}},
+  impl: {function: 'SET_UNION'},
+};
+
+const hll_accumulate_moving: OverloadedDefinitionBlueprint = {
+  preceding: {
+    takes: {
+      'value': {dimension: T},
+      'preceding': {literal: 'number'},
+    },
+    returns: {calculation: {sql_native: 'hyperloglog'}},
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
+    impl: {
+      function: 'APPROX_SET',
+      needsWindowOrderBy: true,
+      between: {preceding: 'preceding', following: 0},
+    },
+  },
+  following: {
+    takes: {
+      'value': {dimension: T},
+      'preceding': {literal: 'number'},
+      'following': {literal: 'number'},
+    },
+    returns: {calculation: {sql_native: 'hyperloglog'}},
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
+    impl: {
+      function: 'APPROX_SET',
+      needsWindowOrderBy: true,
+      between: {preceding: 'preceding', following: 'following'},
+    },
+  },
+};
+
+const hll_combine_moving: OverloadedDefinitionBlueprint = {
+  preceding: {
+    takes: {
+      'value': {sql_native: 'hyperloglog'},
+      'preceding': {literal: 'number'},
+    },
+    returns: {calculation: {sql_native: 'hyperloglog'}},
+    impl: {
+      function: 'MERGE',
+      needsWindowOrderBy: true,
+      between: {preceding: 'preceding', following: 0},
+    },
+  },
+  following: {
+    takes: {
+      'value': {sql_native: 'hyperloglog'},
+      'preceding': {literal: 'number'},
+      'following': {literal: 'number'},
+    },
+    returns: {calculation: {sql_native: 'hyperloglog'}},
+    impl: {
+      function: 'MERGE',
+      needsWindowOrderBy: true,
+      between: {preceding: 'preceding', following: 'following'},
+    },
+  },
+};
+
+const hll_estimate_moving: OverloadedDefinitionBlueprint = {
+  preceding: {
+    takes: {
+      'value': {sql_native: 'hyperloglog'},
+      'preceding': {literal: 'number'},
+    },
+    returns: {calculation: 'number'},
+    impl: {
+      function: 'CARDINALITY',
+      needsWindowOrderBy: true,
+      between: {preceding: 'preceding', following: 0},
+    },
+  },
+  following: {
+    takes: {
+      'value': {sql_native: 'hyperloglog'},
+      'preceding': {literal: 'number'},
+      'following': {literal: 'number'},
+    },
+    returns: {calculation: 'number'},
+    impl: {
+      function: 'CARDINALITY',
+      needsWindowOrderBy: true,
+      between: {preceding: 'preceding', following: 'following'},
+    },
+  },
+};
+
 /**
  * This map is for functions which exist in both Presto and Trino.
  * If you are adding functions which only exist in Presto, put them in
@@ -343,10 +448,9 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     returns: {dimension: {sql_native: 'hyperloglog'}},
     impl: {sql: 'CAST(${value} AS HyperLogLog)'},
   },
-  max_by,
-  min_by,
-  string_agg,
-  string_agg_distinct,
+  hll_accumulate_moving,
+  hll_combine_moving,
+  hll_estimate_moving,
   ...def('variance', {'n': 'number'}, {measure: 'number'}),
 
   // scalar functions
@@ -383,6 +487,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   array_agg_distinct,
   array_join,
   sequence,
+  set_agg,
+  set_union,
   ...def('array_distinct', {'x': {array: T}}, {array: T}),
   ...def('array_except', {'x': {array: T}, 'y': {array: T}}, {array: T}),
   ...def('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
@@ -483,6 +589,39 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
       },
       isSymmetric: true,
       impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
+    },
+  },
+  hll_accumulate_moving: {
+    preceding: {
+      takes: {
+        'value': {dimension: T},
+        'preceding': {literal: 'number'},
+      },
+      returns: {calculation: {sql_native: 'hyperloglog'}},
+      generic: {
+        'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+      },
+      impl: {
+        sql: 'APPROX_SET(${value}, 0.0040625)',
+        needsWindowOrderBy: true,
+        between: {preceding: 'preceding', following: 0},
+      },
+    },
+    following: {
+      takes: {
+        'value': {dimension: T},
+        'preceding': {literal: 'number'},
+        'following': {literal: 'number'},
+      },
+      returns: {calculation: {sql_native: 'hyperloglog'}},
+      generic: {
+        'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+      },
+      impl: {
+        sql: 'APPROX_SET(${value}, 0.0040625)',
+        needsWindowOrderBy: true,
+        between: {preceding: 'preceding', following: 'following'},
+      },
     },
   },
 };
