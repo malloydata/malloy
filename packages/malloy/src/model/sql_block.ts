@@ -22,7 +22,7 @@
  */
 
 import type {SQLSourceRequest} from '../lang/translate-response';
-import {QueryModel} from './malloy_query';
+import {QueryModel} from './malloy_query_index';
 import type {SQLPhraseSegment, ModelDef} from './malloy_types';
 import {isSegmentSQL} from './malloy_types';
 import {generateHash} from './utils';

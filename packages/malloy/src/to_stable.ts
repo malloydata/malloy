@@ -35,7 +35,7 @@ import {
 import {
   getResultStructDefForQuery,
   getResultStructDefForView,
-} from './model/malloy_query';
+} from './model';
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
 

@@ -23,7 +23,7 @@
 
 import {inspect} from 'util';
 
-import {Segment} from '../../model/malloy_query';
+import {Segment} from '../../model';
 import type {
   FieldDef,
   PipeSegment,
