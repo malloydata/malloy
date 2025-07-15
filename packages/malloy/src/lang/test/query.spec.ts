@@ -2399,7 +2399,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as some composite input sources have unsatisfied required grouping on `x` and/or `y` (fields required in source: `aisum`)'
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `x` and/or `y` (fields required in source: `aisum`)'
         )
       );
     });
@@ -2680,7 +2680,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `x` and/or `y` (fields required in source: `aisum`)'
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `astr` and/or `abool` (fields required in source: `astr`, `abool`, and `aisum`)'
         )
       );
     });
