@@ -160,7 +160,7 @@ describe('composite sources', () => {
             `
       ).toLog(
         errorMessage(
-          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `y` and some composite input sources have unsatisfied required grouping on `x` (fields required in source: `aisum` and `y`)'
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines `y` without having an unsatisfied required group by or single value filter on `x` (fields required in source: `aisum` and `y`)'
         )
       );
     });

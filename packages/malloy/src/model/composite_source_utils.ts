@@ -1149,43 +1149,50 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
     const conflictingUsage = firstFails
       .filter(i => i.type === 'missing-field')
       .map(i => i.field);
-    const conflictingUsageProblem =
+    const fConflictingUsage = formatFieldUsages(conflictingUsage);
+    const dConflictingUsage =
       conflictingUsage.length > 0
-        ? `there is no composite input source which defines all of ${formatFieldUsages(
-            conflictingUsage
-          )}`
+        ? `there is no composite input source which defines all of ${fConflictingUsage}`
         : undefined;
     const missingGroupBys = firstFails
       .filter(i => i.type === 'missing-required-group-by')
       .map(i => i.requiredGroupBy);
-    const missingGroupingProblem =
+    const fMissingGroupBys = formatRequiredGroupings(missingGroupBys);
+    const dGrouping = 'required group by or single value filter';
+    const dMissingGroupBys =
       missingGroupBys.length > 0
-        ? `some composite input sources have unsatisfied required grouping on ${formatRequiredGroupings(
-            missingGroupBys
-          )}`
+        ? `there is a missing ${dGrouping} of ${fMissingGroupBys}`
+        : undefined;
+    const dConflictingUsageAndMissingGroupBys =
+      conflictingUsage.length > 0 && missingGroupBys.length > 0
+        ? `there is no composite input source which defines ${fConflictingUsage} without having an unsatisfied ${dGrouping} on ${fMissingGroupBys}`
         : undefined;
     const failedJoins = firstFails
       .filter(i => i.type === 'join-failed')
       .map(i => i.path);
     const uniqueFailedJoins = dedupPaths(failedJoins);
     const joinPlural = uniqueFailedJoins.length > 1 ? 'joins' : 'join';
-    const failedJoinProblem =
+    const dFailedJoins =
       failedJoins.length > 0
         ? `${joinPlural} ${formatPaths(
             uniqueFailedJoins
           )} could not be resolved`
         : undefined;
-    const lastIssueProblem = lastUsage
+    const dLastIssue = lastUsage
       ? `uses field ${formatFieldUsages([lastUsage])}, resulting in`
       : 'results in';
-    const allProblems = commaAndList(
-      [
-        conflictingUsageProblem,
-        missingGroupingProblem,
-        failedJoinProblem,
-      ].filter(isNotUndefined)
-    );
-    const message = `This operation ${lastIssueProblem} invalid usage of the composite source, as ${allProblems} (fields required in source: ${formatFieldUsages(
+    const dIssues = dConflictingUsageAndMissingGroupBys
+      ? commaAndList(
+          [dConflictingUsageAndMissingGroupBys, dFailedJoins].filter(
+            isNotUndefined
+          )
+        )
+      : commaAndList(
+          [dConflictingUsage, dMissingGroupBys, dFailedJoins].filter(
+            isNotUndefined
+          )
+        );
+    const message = `This operation ${dLastIssue} invalid usage of the composite source, as ${dIssues} (fields required in source: ${formatFieldUsages(
       error.data.usage
     )})`;
 
