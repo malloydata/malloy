@@ -3698,6 +3698,41 @@ export class ASTAggregateViewOperation
   }
 
   /**
+   * Removes this aggregate item from the query and replaces it with a smoothed
+   * calculation of the same field.
+   */
+  convertToCalculateMovingAverage(
+    rows_preceding: number,
+    rows_following = 0
+  ): ASTCalculateViewOperation {
+    if (!(this.field.expression instanceof ASTReferenceExpression)) {
+      throw new Error(
+        'Cannot convert aggregate to smoothed metric unless it is a field reference'
+      );
+    }
+
+    this.list.remove(this);
+
+    const calculateItem = new ASTCalculateViewOperation({
+      kind: 'calculate',
+      name: this.name,
+      field: {
+        expression: {
+          kind: 'moving_average',
+          field_reference: {
+            name: this.field.expression.name ?? this.name,
+            path: this.field.expression.path ?? [],
+          },
+          rows_preceding,
+          rows_following,
+        },
+      },
+    });
+    this.list.add(calculateItem);
+    return calculateItem;
+  }
+
+  /**
    * @internal
    */
   get list() {
@@ -4614,9 +4649,9 @@ export class ASTCalculateViewOperation extends ASTObjectNode<
   }
 
   get expression() {
-    return this.children.field.expression;
+    return this.children.field.expression as ASTMovingAverageExpression;
   }
-  set expression(expression: ASTExpression) {
+  set expression(expression: ASTMovingAverageExpression) {
     this.edit();
     this.children.field.expression = expression;
     expression.parent = this;
@@ -4629,6 +4664,20 @@ export class ASTCalculateViewOperation extends ASTObjectNode<
     this.edit();
     this.node.name = name;
   }
+
+  getFieldInfo(): Malloy.FieldInfo {
+    return {
+      annotations: [
+        {
+          value: Tag.withPrefix('#(malloy) ').set(['calculation']).toString(),
+        },
+      ],
+      kind: 'dimension',
+      name: this.name,
+      type: this.expression.fieldType,
+    };
+  }
+
   /**
    * @internal
    */
