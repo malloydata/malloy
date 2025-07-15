@@ -120,7 +120,6 @@ export type QueryStructParams = [
   prepareResultOptions: PrepareResultOptions,
 ];
 
-
 /** Structure object as it is used to build a query */
 export class QueryStruct {
   parent: QueryStruct | undefined;

@@ -19,6 +19,7 @@ import type {
   SearchIndexResult,
   CompiledQuery,
   RefToField,
+  TurtleDefPlusFilters,
 } from './malloy_types';
 import {isSourceDef, getIdentifier, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
@@ -29,7 +30,6 @@ import {
   shouldMaterialize,
 } from './materialization/utils';
 import type {Connection} from '../connection/types';
-import type {TurtleDefPlusFilters} from './malloy_types';
 
 // Parent interface for QueryModel
 export interface ParentQueryModel {

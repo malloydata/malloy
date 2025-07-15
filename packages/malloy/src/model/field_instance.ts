@@ -4,7 +4,7 @@
  */
 
 import type {QueryInfo} from '../dialect';
-import type {QueryStruct} from './malloy_query_index';
+import type {QueryStruct, QueryQuery} from './malloy_query_index';
 import type {OrderBy, PipeSegment, TurtleDef} from './malloy_types';
 import {
   isIndexSegment,
@@ -15,9 +15,7 @@ import {
 } from './malloy_types';
 import {AndChain} from './utils';
 import {JoinInstance} from './join_instance';
-import type {QueryField} from './query_field';
-import type {QueryQuery} from './malloy_query_index';
-import type {UniqueKeyPossibleUse} from './query_field';
+import type {QueryField, UniqueKeyPossibleUse} from './query_field';
 import {
   isBasicAggregate,
   isBasicScalar,

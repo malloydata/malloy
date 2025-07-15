@@ -3,17 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { QueryFieldBoolean, QueryStruct, getDialectFieldList } from './malloy_query_index';
-import { UniqueKeyUse } from './query_field';
-import type {
-  JoinRelationship
-} from './malloy_types';
+import type {QueryStruct} from './malloy_query_index';
+import {QueryFieldBoolean, getDialectFieldList} from './malloy_query_index';
+import {UniqueKeyUse} from './query_field';
+import type {JoinRelationship} from './malloy_types';
 
-import {
-  isSourceDef,
-  isJoined
-} from './malloy_types';
-import type { DialectFieldList } from '../dialect';
+import {isSourceDef, isJoined} from './malloy_types';
+import type {DialectFieldList} from '../dialect';
 
 export class JoinInstance {
   uniqueKeyPossibleUses: UniqueKeyUse = new UniqueKeyUse();

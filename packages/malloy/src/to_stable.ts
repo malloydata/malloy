@@ -31,8 +31,6 @@ import {
   isRepeatedRecord,
   isSourceDef,
   isTurtle,
-} from './model';
-import {
   getResultStructDefForQuery,
   getResultStructDefForView,
 } from './model';
