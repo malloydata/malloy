@@ -356,6 +356,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // aggregate functions
   max_by,
   min_by,
+  string_agg,
   string_agg_distinct,
 
   // TODO: Approx percentile can be called with a third argument; we probably
