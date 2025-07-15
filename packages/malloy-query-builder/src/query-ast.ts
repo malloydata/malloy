@@ -2696,6 +2696,7 @@ export class ASTSegmentViewDefinition
     'having',
     'nest',
     'order_by',
+    'calculate',
     'limit',
   ];
 
@@ -2980,6 +2981,29 @@ export class ASTSegmentViewDefinition
     return item;
   }
 
+  addCalculateMovingAverage(
+    outputName: string,
+    inputName: string,
+    inputPath: string[],
+    rowsPreceding: number,
+    rowsFollowing: number
+  ): ASTCalculateViewOperation {
+    const item = new ASTCalculateViewOperation({
+      kind: 'calculate',
+      name: outputName,
+      field: {
+        expression: {
+          kind: 'moving_average',
+          field_reference: {name: inputName, path: inputPath},
+          rows_preceding: rowsPreceding,
+          rows_following: rowsFollowing,
+        },
+      },
+    });
+    this.addOperation(item);
+    return item;
+  }
+
   private addTimeGroupBy(
     name: string,
     path: string[],
@@ -3159,11 +3183,13 @@ export class ASTSegmentViewDefinition
       | ASTHavingViewOperation
       | ASTOrderByViewOperation
       | ASTDrillViewOperation
+      | ASTCalculateViewOperation
   ) {
     if (
       item instanceof ASTGroupByViewOperation ||
       item instanceof ASTAggregateViewOperation ||
-      item instanceof ASTNestViewOperation
+      item instanceof ASTNestViewOperation ||
+      item instanceof ASTCalculateViewOperation
     ) {
       if (this.hasFieldNamed(item.name)) {
         throw new Error(`Query already has a field named ${item.name}`);
@@ -3318,7 +3344,8 @@ export type ASTViewOperation =
   | ASTLimitViewOperation
   | ASTWhereViewOperation
   | ASTDrillViewOperation
-  | ASTHavingViewOperation;
+  | ASTHavingViewOperation
+  | ASTCalculateViewOperation;
 export const ASTViewOperation = {
   from(value: Malloy.ViewOperation): ASTViewOperation {
     switch (value.kind) {
@@ -3338,6 +3365,8 @@ export const ASTViewOperation = {
         return new ASTDrillViewOperation(value);
       case 'having':
         return new ASTHavingViewOperation(value);
+      case 'calculate':
+        return new ASTCalculateViewOperation(value);
     }
   },
   isLimit(x: ASTViewOperation): x is ASTLimitViewOperation {
@@ -3906,7 +3935,8 @@ export type ASTExpression =
   | ASTReferenceExpression
   | ASTFilteredFieldExpression
   | ASTTimeTruncationExpression
-  | ASTLiteralValueExpression;
+  | ASTLiteralValueExpression
+  | ASTMovingAverageExpression;
 export const ASTExpression = {
   from(value: Malloy.Expression): ASTExpression {
     switch (value.kind) {
@@ -3918,6 +3948,8 @@ export const ASTExpression = {
         return new ASTTimeTruncationExpression(value);
       case 'literal_value':
         return new ASTLiteralValueExpression(value);
+      case 'moving_average':
+        return new ASTMovingAverageExpression(value);
     }
   },
 };
@@ -4131,6 +4163,68 @@ export class ASTLiteralValueExpression extends ASTObjectNode<
 
   getFieldInfo() {
     return undefined;
+  }
+}
+
+export class ASTMovingAverageExpression extends ASTObjectNode<
+  Malloy.ExpressionWithMovingAverage,
+  {
+    kind: 'moving_average';
+    field_reference: ASTFieldReference;
+    rows_preceding?: number;
+    rows_following?: number;
+  }
+> {
+  readonly kind: Malloy.ExpressionType = 'moving_average';
+
+  constructor(public node: Malloy.ExpressionWithMovingAverage) {
+    super(node, {
+      kind: node.kind,
+      field_reference: new ASTFieldReference(node.field_reference),
+      rows_preceding: node.rows_preceding,
+      rows_following: node.rows_following,
+    });
+  }
+  getReference() {
+    return this.fieldReference.build();
+  }
+  get fieldReference() {
+    return this.children.field_reference;
+  }
+  get rowsPreceding() {
+    return this.children.rows_preceding;
+  }
+  set rowsPreceding(rows: number | undefined) {
+    this.edit();
+    this.children.rows_preceding = rows;
+  }
+  get rowsFollowing() {
+    return this.children.rows_following;
+  }
+  set rowsFollowing(rows: number | undefined) {
+    this.edit();
+    this.children.rows_following = rows;
+  }
+  get name() {
+    return this.fieldReference.name;
+  }
+  get field() {
+    return this.parent.as.Field();
+  }
+  getFieldInfo() {
+    const schema = this.field.segment.getInputSchema();
+    const def = ASTNode.schemaGet(schema, this.name, this.fieldReference.path);
+    if (def.kind !== 'dimension' && def.kind !== 'measure') {
+      throw new Error('Invalid field for ASTReferenceExpression');
+    }
+    return def;
+  }
+  get fieldType() {
+    return this.getFieldInfo().type;
+  }
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    const field = this.getFieldInfo();
+    return field.annotations ?? [];
   }
 }
 
@@ -4497,6 +4591,50 @@ export class ASTHavingViewOperation extends ASTObjectNode<
     return this.parent.as.ViewOperationList();
   }
 
+  delete() {
+    this.list.remove(this);
+  }
+}
+
+export class ASTCalculateViewOperation extends ASTObjectNode<
+  Malloy.ViewOperationWithCalculate,
+  {
+    kind: 'calculate';
+    field: ASTField;
+    name: string;
+  }
+> {
+  readonly kind: Malloy.ViewOperationType = 'calculate';
+  constructor(public node: Malloy.ViewOperationWithCalculate) {
+    super(node, {
+      kind: 'calculate',
+      field: new ASTField(node.field),
+      name: node.name,
+    });
+  }
+
+  get expression() {
+    return this.children.field.expression;
+  }
+  set expression(expression: ASTExpression) {
+    this.edit();
+    this.children.field.expression = expression;
+    expression.parent = this;
+  }
+  get name() {
+    return this.node.name;
+  }
+  set name(name: string) {
+    if (this.name === name) return;
+    this.edit();
+    this.node.name = name;
+  }
+  /**
+   * @internal
+   */
+  get list() {
+    return this.parent.as.ViewOperationList();
+  }
   delete() {
     this.list.remove(this);
   }
