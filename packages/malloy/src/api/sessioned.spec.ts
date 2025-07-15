@@ -103,6 +103,7 @@ describe('api', () => {
         session_id: result.session_id,
       };
       expect(result).toMatchObject(expected);
+      expect(result.timing_info).toBe('foo');
       expect(result).toMatchObject({
         timing_info: {
           name: 'compile_model',

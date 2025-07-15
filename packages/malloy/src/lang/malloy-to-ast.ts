@@ -113,8 +113,8 @@ export class MalloyToAST
     compilerFlags: Tag;
     timingInfo: Malloy.TimingInfo;
   } {
-    const compilerFlags = this.compilerFlags;
     const ast = this.visit(this.parseInfo.root);
+    const compilerFlags = this.compilerFlags;
     return {
       ast,
       compilerFlags,
