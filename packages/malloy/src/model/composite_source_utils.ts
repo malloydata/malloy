@@ -40,6 +40,7 @@ import {
   isTurtle,
 } from './malloy_types';
 import {exprWalk} from './utils';
+import {isNotUndefined} from '../lang/utils';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -570,27 +571,47 @@ export function fieldUsagePaths(fieldUsage: FieldUsage[]): string[][] {
   return fieldUsage.map(u => u.path);
 }
 
-export function formatFieldUsages(fieldUsage: FieldUsage[]) {
+function dedupPaths(paths: string[][]) {
   const deduped: string[][] = [];
-  for (const usage of fieldUsage) {
-    if (!deduped.some(p => pathEq(p, usage.path))) {
-      deduped.push(usage.path);
+  for (const path of paths) {
+    if (!deduped.some(p => pathEq(p, path))) {
+      deduped.push(path);
     }
   }
+  return deduped;
+}
+
+function formatPaths(paths: string[][], combinator = 'and') {
+  const deduped = dedupPaths(paths);
   const formattedUsages = deduped.map(fieldUsage =>
     formatFieldUsage(fieldUsage)
   );
-  if (formattedUsages.length === 0) {
+  return commaAndList(formattedUsages, combinator);
+}
+
+function formatRequiredGroupings(requiredGroupings: RequiredGroupBy[]) {
+  return formatPaths(
+    requiredGroupings.map(g => g.path),
+    'and/or'
+  );
+}
+
+function commaAndList(strs: string[], combinator = 'and') {
+  if (strs.length === 0) {
     return '';
-  } else if (formattedUsages.length === 1) {
-    return formattedUsages[0];
-  } else if (formattedUsages.length === 2) {
-    return `${formattedUsages[0]} and ${formattedUsages[1]}`;
+  } else if (strs.length === 1) {
+    return strs[0];
+  } else if (strs.length === 2) {
+    return `${strs[0]} ${combinator} ${strs[1]}`;
   } else {
-    return `${formattedUsages.slice(0, -1).join(', ')}, and ${
-      formattedUsages[formattedUsages.length - 1]
+    return `${strs.slice(0, -1).join(', ')}, ${combinator} ${
+      strs[strs.length - 1]
     }`;
   }
+}
+
+export function formatFieldUsages(fieldUsage: FieldUsage[]) {
+  return formatPaths(fieldUsage.map(u => u.path));
 }
 
 function countFieldUsage(fieldUsage: FieldUsage[]): number {
@@ -728,6 +749,7 @@ function requiredGroupBysAt(
   if (at === undefined) return requiredGroupBys;
   return requiredGroupBys?.map(r => ({
     ...r,
+    fieldUsage: r.fieldUsage ? fieldUsageAt([r.fieldUsage], at)[0] : undefined,
     at,
   }));
 }
@@ -917,7 +939,7 @@ function expandRefs(
             missingFields.push(field);
             continue;
           }
-          requiredGroupBys.push({path, at: field.at});
+          requiredGroupBys.push({path, at: field.at, fieldUsage: field});
         }
       }
       if (def.ungroupings) {
@@ -1081,8 +1103,20 @@ function compareLocations(
   return 0;
 }
 
-export function sortFieldUsageByReferenceLocation(usage: FieldUsage[]) {
-  return usage.sort((a, b) => compareLocations(a.at, b.at));
+function issueLocation(issue: CompositeIssue) {
+  if (issue.type === 'missing-field') {
+    return issue.field.at;
+  } else if (issue.type === 'missing-required-group-by') {
+    return issue.requiredGroupBy.at;
+  } else {
+    return issue.firstUsage.at;
+  }
+}
+
+function sortIssuesByReferenceLocation(issues: CompositeIssue[]) {
+  return issues.sort((a, b) => {
+    return compareLocations(issueLocation(a), issueLocation(b));
+  });
 }
 
 export function hasCompositesAnywhere(source: StructDef): boolean {
@@ -1095,75 +1129,76 @@ export function hasCompositesAnywhere(source: StructDef): boolean {
   return false;
 }
 
+function issueFieldUsage(issue: CompositeIssue): FieldUsage | undefined {
+  if (issue.type === 'missing-field') {
+    return issue.field;
+  } else if (issue.type === 'missing-required-group-by') {
+    return issue.requiredGroupBy.fieldUsage;
+  } else {
+    return undefined;
+  }
+}
+
 export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
   if (error.code === 'no_suitable_composite_source_input') {
-    if (
-      error.data.failures.length > 0 &&
-      error.data.failures.every(failure => {
-        return (
-          failure.issues.length > 0 &&
-          failure.issues.every(issue => issue.type === 'missing-field')
+    const firstFails = error.data.failures.map(failure => failure.issues[0]);
+    const sorted = sortIssuesByReferenceLocation(firstFails);
+    const usages = sorted.map(issueFieldUsage);
+    const lastIssue = sorted[sorted.length - 1];
+    const lastUsage = usages[usages.length - 1];
+    const conflictingUsage = firstFails
+      .filter(i => i.type === 'missing-field')
+      .map(i => i.field);
+    const fConflictingUsage = formatFieldUsages(conflictingUsage);
+    const dConflictingUsage =
+      conflictingUsage.length > 0
+        ? `there is no composite input source which defines all of ${fConflictingUsage}`
+        : undefined;
+    const missingGroupBys = firstFails
+      .filter(i => i.type === 'missing-required-group-by')
+      .map(i => i.requiredGroupBy);
+    const fMissingGroupBys = formatRequiredGroupings(missingGroupBys);
+    const dGrouping = 'required group by or single value filter';
+    const dMissingGroupBys =
+      missingGroupBys.length > 0
+        ? `there is a missing ${dGrouping} of ${fMissingGroupBys}`
+        : undefined;
+    const dConflictingUsageAndMissingGroupBys =
+      conflictingUsage.length > 0 && missingGroupBys.length > 0
+        ? `there is no composite input source which defines ${fConflictingUsage} without having an unsatisfied ${dGrouping} on ${fMissingGroupBys}`
+        : undefined;
+    const failedJoins = firstFails
+      .filter(i => i.type === 'join-failed')
+      .map(i => i.path);
+    const uniqueFailedJoins = dedupPaths(failedJoins);
+    const joinPlural = uniqueFailedJoins.length > 1 ? 'joins' : 'join';
+    const dFailedJoins =
+      failedJoins.length > 0
+        ? `${joinPlural} ${formatPaths(
+            uniqueFailedJoins
+          )} could not be resolved`
+        : undefined;
+    const dLastIssue = lastUsage
+      ? `uses field ${formatFieldUsages([lastUsage])}, resulting in`
+      : 'results in';
+    const dIssues = dConflictingUsageAndMissingGroupBys
+      ? commaAndList(
+          [dConflictingUsageAndMissingGroupBys, dFailedJoins].filter(
+            isNotUndefined
+          )
+        )
+      : commaAndList(
+          [dConflictingUsage, dMissingGroupBys, dFailedJoins].filter(
+            isNotUndefined
+          )
         );
-      })
-    ) {
-      const firstFails = error.data.failures.map(failure => {
-        if (failure.issues[0].type !== 'missing-field')
-          throw new Error('Programmer error');
-        return failure.issues[0].field;
-      });
-      const sorted = sortFieldUsageByReferenceLocation(firstFails);
-      const lastUsage = sorted[sorted.length - 1];
-      logTo.logError(
-        'invalid-composite-field-usage',
-        {
-          newUsage: [lastUsage],
-          conflictingUsage: sorted,
-          allUsage: error.data.usage,
-        },
-        {
-          at: lastUsage.at,
-        }
-      );
-    } else {
-      for (let i = 0; i < error.data.failures.length; i++) {
-        const failure = error.data.failures[i];
-        const sourceName = failure.source.as
-          ? ` (\`${failure.source.as}\`)`
-          : '';
-        const join =
-          error.data.path.length === 0
-            ? ''
-            : `join ${error.data.path.join('.')} of `;
-        const source = `${join}composed source #${i + 1}${sourceName}`;
-        const requiredFields = `\nFields required in source: ${formatFieldUsages(
-          error.data.usage
-        )}`;
-        for (const issue of failure.issues) {
-          if (issue.type === 'missing-field') {
-            const fieldRef = `\`${issue.field.path.join('.')}\``;
-            logTo.logError(
-              'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing field ${fieldRef} in ${source}${requiredFields}`,
-              {at: issue.field.at}
-            );
-          } else if (issue.type === 'missing-required-group-by') {
-            const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
-            logTo.logError(
-              'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing group by or single value filter of ${fieldRef} as required in ${source}${requiredFields}`,
-              {at: issue.requiredGroupBy.at}
-            );
-          } else {
-            const joinRef = `\`${issue.path.join('.')}\``;
-            logTo.logError(
-              'could-not-resolve-composite-source',
-              `Could not resolve composite source: join ${joinRef} could not be resolved in ${source}${requiredFields}`,
-              {at: issue.firstUsage.at}
-            );
-          }
-        }
-      }
-    }
+    const message = `This operation ${dLastIssue} invalid usage of the composite source, as ${dIssues} (fields required in source: ${formatFieldUsages(
+      error.data.usage
+    )})`;
+
+    logTo.logError('could-not-resolve-composite-source', message, {
+      at: issueLocation(lastIssue),
+    });
   } else {
     logTo.logError(
       'could-not-resolve-composite-source',

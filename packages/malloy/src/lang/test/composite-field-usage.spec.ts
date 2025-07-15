@@ -92,7 +92,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -108,7 +108,7 @@ describe('composite sources', () => {
         } + ${'two'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -126,7 +126,7 @@ describe('composite sources', () => {
         } + ${'v'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -141,6 +141,28 @@ describe('composite sources', () => {
           run: y -> { group_by: x.foo }
         `
       ).toTranslate();
+    });
+    test('required group by mixed with missing field', () => {
+      expect(
+        `
+              ##! experimental { composite_sources grouped_by }
+              source: aext is compose(
+                a extend {
+                  dimension: x is 1
+                  dimension: y is 1
+                  measure: aisum is ai.sum() { grouped_by: x }
+                },
+                a extend {
+                  measure: aisum is ai.sum()
+                }
+              )
+              run: aext -> { aggregate: aisum, group_by: y }
+            `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines `y` without having an unsatisfied required group by or single value filter on `x` (fields required in source: `aisum` and `y`)'
+        )
+      );
     });
     test('error message when composited join (join is a nested composite) results in failure', () => {
       expect(`
@@ -163,10 +185,7 @@ describe('composite sources', () => {
         run: c -> { group_by: ${'j.jf2'}, j.jf1 }
       `).toLog(
         errorMessage(
-          'Could not resolve composite source: join `j` could not be resolved in composed source #1 (`s1`)\nFields required in source: `j.jf2` and `j.jf1`'
-        ),
-        errorMessage(
-          'Could not resolve composite source: join `j` could not be resolved in composed source #2 (`s2`)\nFields required in source: `j.jf2` and `j.jf1`'
+          'This operation results in invalid usage of the composite source, as join `j` could not be resolved (fields required in source: `j.jf2` and `j.jf1`)'
         )
       );
     });
@@ -189,7 +208,7 @@ describe('composite sources', () => {
         run: c -> { group_by: f1, ${'j.jf2'} }
       `).toLog(
         errorMessage(
-          'This operation uses field `j.jf2`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and `j.jf2`\nFields required in source: `f1` and `j.jf2`'
+          'This operation uses field `j.jf2`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and `j.jf2` (fields required in source: `f1` and `j.jf2`)'
         )
       );
     });
@@ -210,7 +229,7 @@ describe('composite sources', () => {
         run: c -> { group_by: j.jf2, ${'j.jf1'} }
       `).toLog(
         errorMessage(
-          'This operation uses field `j.jf1`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `j.jf2` and `j.jf1`\nFields required in source: `j.jf2` and `j.jf1`'
+          'This operation uses field `j.jf1`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `j.jf2` and `j.jf1` (fields required in source: `j.jf2` and `j.jf1`)'
         )
       );
     });
@@ -228,7 +247,7 @@ describe('composite sources', () => {
         } + ${'x'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -245,7 +264,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -261,7 +280,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two`\nFields required in source: `one` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two` (fields required in source: `one` and `two`)'
         )
       );
     });
@@ -344,7 +363,7 @@ describe('composite sources', () => {
         run: foo -> { group_by: x, y }
       `).toLog(
         errorMessage(
-          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y`\nFields required in source: `x` and `y`'
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y` (fields required in source: `x` and `y`)'
         )
       );
     });
