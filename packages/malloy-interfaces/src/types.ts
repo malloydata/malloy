@@ -147,6 +147,27 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'name': 'BooleanType',
     'fields': {},
   },
+  'CalculateInfo': {
+    'type': 'struct',
+    'name': 'CalculateInfo',
+    'fields': {
+      'name': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'type': {
+        'type': 'AtomicType',
+        'optional': false,
+        'array': false,
+      },
+      'annotations': {
+        'type': 'Annotation',
+        'array': true,
+        'optional': true,
+      },
+    },
+  },
   'CalculateOperation': {
     'type': 'struct',
     'name': 'CalculateOperation',
@@ -538,6 +559,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'measure': 'MeasureInfo',
       'join': 'JoinInfo',
       'view': 'ViewInfo',
+      'calculate': 'CalculateInfo',
     },
   },
   'File': {
@@ -1749,6 +1771,12 @@ export type BooleanLiteral = {
 
 export type BooleanType = {};
 
+export type CalculateInfo = {
+  name: string;
+  type: AtomicType;
+  annotations?: Array<Annotation>;
+};
+
 export type CalculateOperation = {
   name: string;
   field: Field;
@@ -1935,13 +1963,19 @@ export type Field = {
   annotations?: Array<Annotation>;
 };
 
-export type FieldInfoType = 'dimension' | 'measure' | 'join' | 'view';
+export type FieldInfoType =
+  | 'dimension'
+  | 'measure'
+  | 'join'
+  | 'view'
+  | 'calculate';
 
 export type FieldInfo =
   | FieldInfoWithDimension
   | FieldInfoWithMeasure
   | FieldInfoWithJoin
-  | FieldInfoWithView;
+  | FieldInfoWithView
+  | FieldInfoWithCalculate;
 
 export type FieldInfoWithDimension = {kind: 'dimension'} & DimensionInfo;
 
@@ -1950,6 +1984,8 @@ export type FieldInfoWithMeasure = {kind: 'measure'} & MeasureInfo;
 export type FieldInfoWithJoin = {kind: 'join'} & JoinInfo;
 
 export type FieldInfoWithView = {kind: 'view'} & ViewInfo;
+
+export type FieldInfoWithCalculate = {kind: 'calculate'} & CalculateInfo;
 
 export type File = {
   url: string;

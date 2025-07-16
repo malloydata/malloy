@@ -95,6 +95,7 @@ union FieldInfo {
   2: required MeasureInfo measure,
   3: required JoinInfo join,
   4: required ViewInfo view,
+  5: required CalculateInfo calculate,
 }
 
 // TODO should these just be "AtomicField" with a "fieldtype"
@@ -138,6 +139,12 @@ struct ViewInfo {
   // "openable view"
   4: optional View definition,
   // Possibly need `filterList` depending on how we do drills
+}
+
+struct CalculateInfo {
+  1: required string name,
+  2: required AtomicType type,
+  3: optional list<Annotation> annotations,
 }
 
 struct View {
@@ -473,8 +480,8 @@ struct FilteredField {
 
 struct MovingAverage {
   1: required Reference field_reference,
-  2: optional i32 rows_preceding
-  3: optional i32 rows_following
+  2: optional i32 rows_preceding,
+  3: optional i32 rows_following,
 }
 
 struct StringCell {

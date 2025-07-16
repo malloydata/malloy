@@ -4672,7 +4672,7 @@ export class ASTCalculateViewOperation extends ASTObjectNode<
           value: Tag.withPrefix('#(malloy) ').set(['calculation']).toString(),
         },
       ],
-      kind: 'dimension',
+      kind: 'calculate',
       name: this.name,
       type: this.expression.fieldType,
     };
