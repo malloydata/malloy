@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {QueryStruct} from './malloy_query_index';
-import {QueryFieldBoolean, getDialectFieldList} from './malloy_query_index';
-import {UniqueKeyUse} from './query_field';
+import type {QueryStruct} from './query_node';
+import {QueryFieldBoolean, UniqueKeyUse} from './query_node';
+import {getDialectFieldList} from './utils';
 import type {JoinRelationship} from './malloy_types';
 
 import {isSourceDef, isJoined} from './malloy_types';

@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {createQueryStruct, QueryModel, QueryQuery} from './malloy_query_index';
 import type {
   SourceDef,
   PipeSegment,
   QueryResultDef,
   TurtleDef,
 } from './malloy_types';
+import {QueryModel} from './query_model';
+import {QueryStruct} from './query_node';
+import {QueryQuery} from './query_query';
 import {StageWriter} from './stage_writer';
 
 /**
@@ -22,7 +24,7 @@ export class Segment {
     structDef: SourceDef,
     segment: PipeSegment
   ): QueryResultDef {
-    const qs = createQueryStruct(
+    const qs = new QueryStruct(
       structDef,
       undefined,
       {

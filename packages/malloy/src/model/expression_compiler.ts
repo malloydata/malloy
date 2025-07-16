@@ -9,6 +9,7 @@ import {
   exprHasKids,
   exprHasE,
   expressionIsAggregate,
+  hasExpression,
 } from './malloy_types';
 import type {
   Expr,
@@ -18,6 +19,16 @@ import type {
   FunctionParameterDef,
   FunctionOrderBy,
   QuerySegment,
+  FieldnameNode,
+  OutputFieldNode,
+  GenericSQLExpr,
+  FilteredExpr,
+  UngroupNode,
+  ParameterNode,
+  SpreadExpr,
+  AggregateExpr,
+  SourceReferenceNode,
+  CaseExpr,
 } from './malloy_types';
 import type {
   FilterParserResponse,
@@ -29,12 +40,13 @@ import {
   BooleanFilterExpression,
   TemporalFilterExpression,
 } from '@malloydata/malloy-filter';
-import type {FieldInstanceResult} from './field_instance';
+import type {FieldInstanceResult, UngroupSet} from './field_instance';
 import {FilterCompilers} from './filter_compilers';
 import type {SQLExprElement} from './utils';
-import {exprMap, composeSQLExpr, range} from './utils';
-import type {QueryStruct} from './query_struct';
-import type {QueryField} from './query_field';
+import {exprMap, composeSQLExpr, range, AndChain} from './utils';
+import {isBasicScalar} from './query_node';
+import type {QueryStruct, QueryField} from './query_node';
+import type {Dialect} from '../dialect';
 
 class GenerateState {
   whereSQL?: string;
@@ -64,6 +76,30 @@ class GenerateState {
     newState.totalGroupSet = groupSet;
     return newState;
   }
+}
+
+const NUMERIC_DECIMAL_PRECISION = 9;
+
+function sqlSumDistinct(
+  dialect: Dialect,
+  sqlExp: string,
+  sqlDistintKey: string
+) {
+  const precision = 9;
+  const uniqueInt = dialect.sqlSumDistinctHashedKey(sqlDistintKey);
+  const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
+  const sumSQL = `
+  (
+    SUM(DISTINCT
+      (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS ${dialect.defaultDecimalType}) +
+      ${uniqueInt}
+    ))
+    -
+     SUM(DISTINCT ${uniqueInt})
+  )`;
+  let ret = `(${sumSQL}/(${multiplier}*1.0))`;
+  ret = `CAST(${ret} AS ${dialect.defaultNumberType})`;
+  return ret;
 }
 
 /**
@@ -122,32 +158,32 @@ export function exprToSQL(
 
   switch (expr.node) {
     case 'field':
-      return field.generateFieldFragment(resultSet, context, expr, state);
+      return generateFieldFragment(field, resultSet, context, expr, state);
     case 'parameter':
-      return field.generateParameterFragment(resultSet, context, expr, state);
+      return generateParameterFragment(field, resultSet, context, expr, state);
     case 'filteredExpr':
-      return field.generateFilterFragment(resultSet, context, expr, state);
+      return generateFilterFragment(field, resultSet, context, expr, state);
     case 'all':
     case 'exclude':
-      return field.generateUngroupedFragment(resultSet, context, expr, state);
+      return generateUngroupedFragment(field, resultSet, context, expr, state);
     case 'genericSQLExpr':
       return Array.from(
-        field.stringsFromSQLExpression(resultSet, context, expr, state)
+        stringsFromSQLExpression(field, resultSet, context, expr, state)
       ).join('');
     case 'aggregate': {
       let agg = '';
       if (expr.function === 'sum') {
-        agg = field.generateSumFragment(resultSet, context, expr, state);
+        agg = generateSumFragment(field, resultSet, context, expr, state);
       } else if (expr.function === 'avg') {
-        agg = field.generateAvgFragment(resultSet, context, expr, state);
+        agg = generateAvgFragment(field, resultSet, context, expr, state);
       } else if (expr.function === 'count') {
-        agg = field.generateCountFragment(resultSet, context, expr, state);
+        agg = generateCountFragment(field, resultSet, context, expr, state);
       } else if (
         expr.function === 'min' ||
         expr.function === 'max' ||
         expr.function === 'distinct'
       ) {
-        agg = field.generateSymmetricFragment(resultSet, context, expr, state);
+        agg = generateSymmetricFragment(field, resultSet, context, expr, state);
       } else {
         throw new Error(
           `Internal Error: Unknown aggregate function ${expr.function}`
@@ -158,7 +194,7 @@ export function exprToSQL(
         if (state.totalGroupSet !== -1) {
           groupSet = state.totalGroupSet;
         }
-        return field.caseGroup([groupSet], agg);
+        return caseGroup(field, [groupSet], agg);
       }
       return agg;
     }
@@ -167,7 +203,13 @@ export function exprToSQL(
         'Internal Error: Function parameter fragment remaining during SQL generation'
       );
     case 'outputField':
-      return field.generateOutputFieldFragment(resultSet, context, expr, state);
+      return generateOutputFieldFragment(
+        field,
+        resultSet,
+        context,
+        expr,
+        state
+      );
     case 'function_call':
       return generateFunctionCallExpression(
         field,
@@ -177,9 +219,9 @@ export function exprToSQL(
         state
       );
     case 'spread':
-      return field.generateSpread(resultSet, context, expr, state);
+      return generateSpread(field, resultSet, context, expr, state);
     case 'source-reference':
-      return field.generateSourceReference(resultSet, context, expr);
+      return generateSourceReference(field, resultSet, context, expr);
     case '+':
     case '-':
     case '*':
@@ -235,7 +277,7 @@ export function exprToSQL(
     case 'null':
       return 'NULL';
     case 'case':
-      return field.generateCaseSQL(expr);
+      return generateCaseSQL(field, expr);
     case '':
       return '';
     case 'filterCondition':
@@ -418,9 +460,9 @@ function generateAsymmetricStringAggExpression(
       `Function \`string_agg\` does not support fanning out with an order by in ${dialectName}`
     );
   }
-  const valueSQL = field.generateDimFragment(resultSet, context, value, state);
+  const valueSQL = generateDimFragment(field, resultSet, context, value, state);
   const separatorSQL = separator
-    ? field.generateDimFragment(resultSet, context, separator, state)
+    ? generateDimFragment(field, resultSet, context, separator, state)
     : '';
 
   return field.parent.dialect.sqlStringAggDistinct(
@@ -443,7 +485,8 @@ function generateAnalyticFragment(
   funcOrdering?: string
 ): string {
   const isComplex = resultStruct.root().isComplexQuery;
-  const partitionFields = field.getAnalyticPartitions(
+  const partitionFields = getAnalyticPartitions(
+    field,
     resultStruct,
     partitionByFields
   );
@@ -542,7 +585,7 @@ export function generateFunctionCallExpression(
   const distinctKey =
     expressionIsAggregate(overload.returnType.expressionType) &&
     !isSymmetric &&
-    field.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
+    generateDistinctKeyIfNecessary(field, resultSet, context, frag.structPath);
   const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
   if (
     frag.name === 'string_agg' &&
@@ -569,7 +612,7 @@ export function generateFunctionCallExpression(
       );
     }
     const argsExpressions = args.map(arg => {
-      return field.generateDimFragment(resultSet, context, arg, state);
+      return generateDimFragment(field, resultSet, context, arg, state);
     });
     const orderBys = frag.kids.orderBy ?? [];
     const orderByExpressions = orderBys.map(ob => {
@@ -577,7 +620,7 @@ export function generateFunctionCallExpression(
         overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
       const expr =
         ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
-      return field.generateDimFragment(resultSet, context, expr, state);
+      return generateDimFragment(field, resultSet, context, expr, state);
     });
     return context.dialect.sqlAggDistinct(
       distinctKey,
@@ -601,7 +644,8 @@ export function generateFunctionCallExpression(
           .map((e, i) => {
             return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
           });
-        const orderBySQL = field.getFunctionOrderBy(
+        const orderBySQL = getFunctionOrderBy(
+          field,
           resultSet,
           context,
           state,
@@ -638,12 +682,13 @@ export function generateFunctionCallExpression(
           return param.allowedTypes.every(t => isLiteral(t.evalSpace))
             ? arg
             : composeSQLExpr([
-                field.generateDimFragment(resultSet, context, arg, state),
+                generateDimFragment(field, resultSet, context, arg, state),
               ]);
         })
       : args;
     const orderBySql = frag.kids.orderBy
-      ? field.getFunctionOrderBy(
+      ? getFunctionOrderBy(
+          field,
           resultSet,
           context,
           state,
@@ -678,5 +723,399 @@ export function generateFunctionCallExpression(
       );
     }
     return exprToSQL(field, resultSet, context, funcCall, state);
+  }
+}
+
+// ============================================================================
+// Fragment generation functions moved from QueryField
+// ============================================================================
+
+export function generateFieldFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: FieldnameNode,
+  state: GenerateState
+): string {
+  // find the structDef and return the path to the field...
+  const fieldRef = context.getFieldByName(expr.path);
+  if (hasExpression(fieldRef.fieldDef)) {
+    const ret = exprToSQL(
+      field,
+      resultSet,
+      fieldRef.parent,
+      fieldRef.fieldDef.e,
+      state
+    );
+    return `(${ret})`;
+  } else {
+    return fieldRef.generateExpression(resultSet);
+  }
+}
+
+export function generateOutputFieldFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  _context: QueryStruct,
+  frag: OutputFieldNode,
+  _state: GenerateState
+): string {
+  return `(${resultSet.getField(frag.name).getAnalyticalSQL(false)})`;
+}
+
+export function generateParameterFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: ParameterNode,
+  state: GenerateState
+): string {
+  const name = expr.path[0];
+  context.eventStream?.emit('source-argument-compiled', {name});
+  const argument = context.arguments()[name];
+  if (argument.value) {
+    return exprToSQL(field, resultSet, context, argument.value, state);
+  }
+  throw new Error(`Can't generate SQL, no value for ${expr.path}`);
+}
+
+export function generateFilterFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: FilteredExpr,
+  state: GenerateState
+): string {
+  const allWhere = new AndChain(state.whereSQL);
+  for (const cond of expr.kids.filterList) {
+    allWhere.add(
+      exprToSQL(field, resultSet, context, cond.e, state.withWhere())
+    );
+  }
+  return exprToSQL(
+    field,
+    resultSet,
+    context,
+    expr.kids.e,
+    state.withWhere(allWhere.sql())
+  );
+}
+
+export function generateDimFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: Expr,
+  state: GenerateState
+): string {
+  let dim = exprToSQL(field, resultSet, context, expr, state);
+  if (state.whereSQL) {
+    dim = `CASE WHEN ${state.whereSQL} THEN ${dim} END`;
+  }
+  return dim;
+}
+
+export function generateUngroupedFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: UngroupNode,
+  state: GenerateState
+): string {
+  if (state.totalGroupSet !== -1) {
+    throw new Error('Already in ALL.  Cannot nest within an all calcuation.');
+  }
+
+  let totalGroupSet;
+  let ungroupSet: UngroupSet | undefined;
+
+  if (expr.fields && expr.fields.length > 0) {
+    const key = expr.fields.sort().join('|') + expr.node;
+    ungroupSet = resultSet.ungroupedSets.get(key);
+    if (ungroupSet === undefined) {
+      throw new Error(`Internal Error, cannot find groupset with key ${key}`);
+    }
+    totalGroupSet = ungroupSet.groupSet;
+  } else {
+    totalGroupSet = resultSet.parent ? resultSet.parent.groupSet : 0;
+  }
+
+  const s = exprToSQL(
+    field,
+    resultSet,
+    context,
+    expr.e,
+    state.withTotal(totalGroupSet)
+  );
+
+  const fields = resultSet.getUngroupPartitions(ungroupSet);
+
+  let partitionBy = '';
+  const fieldsString = fields.map(f => f.getAnalyticalSQL(true)).join(', ');
+  if (fieldsString.length > 0) {
+    partitionBy = `PARTITION BY ${fieldsString}`;
+  }
+  return `MAX(${s}) OVER (${partitionBy})`;
+}
+
+export function generateDistinctKeyIfNecessary(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  structPath: string[] | undefined
+): string | undefined {
+  let struct = context;
+  if (structPath) {
+    struct = field.parent.root().getStructByName(structPath);
+  }
+  if (struct.needsSymetricCalculation(resultSet)) {
+    return struct.getDistinctKey().generateExpression(resultSet);
+  } else {
+    return undefined;
+  }
+}
+
+export function generateSumFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: AggregateExpr,
+  state: GenerateState
+): string {
+  const dimSQL = generateDimFragment(field, resultSet, context, expr.e, state);
+  const distinctKeySQL = generateDistinctKeyIfNecessary(
+    field,
+    resultSet,
+    context,
+    expr.structPath
+  );
+  let ret;
+  if (distinctKeySQL) {
+    if (field.parent.dialect.supportsSumDistinctFunction) {
+      ret = field.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
+    } else {
+      ret = sqlSumDistinct(field.parent.dialect, dimSQL, distinctKeySQL);
+    }
+  } else {
+    ret = `SUM(${dimSQL})`;
+  }
+  return `COALESCE(${ret},0)`;
+}
+
+export function generateSymmetricFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: AggregateExpr,
+  state: GenerateState
+): string {
+  const dimSQL = generateDimFragment(field, resultSet, context, expr.e, state);
+  const f =
+    expr.function === 'distinct' ? 'count(distinct ' : expr.function + '(';
+  return `${f}${dimSQL})`;
+}
+
+export function generateAvgFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: AggregateExpr,
+  state: GenerateState
+): string {
+  const dimSQL = generateDimFragment(field, resultSet, context, expr.e, state);
+  const distinctKeySQL = generateDistinctKeyIfNecessary(
+    field,
+    resultSet,
+    context,
+    expr.structPath
+  );
+  if (distinctKeySQL) {
+    let countDistinctKeySQL = distinctKeySQL;
+    if (state.whereSQL) {
+      countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
+    }
+    let sumDistinctSQL;
+    let avgDistinctSQL;
+    if (field.parent.dialect.supportsSumDistinctFunction) {
+      avgDistinctSQL = field.parent.dialect.sqlSumDistinct(
+        distinctKeySQL,
+        dimSQL,
+        'AVG'
+      );
+    } else {
+      sumDistinctSQL = sqlSumDistinct(
+        field.parent.dialect,
+        dimSQL,
+        distinctKeySQL
+      );
+      avgDistinctSQL = `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${dimSQL} IS NOT NULL THEN ${countDistinctKeySQL} END),0)`;
+    }
+    return avgDistinctSQL;
+  } else {
+    return `AVG(${dimSQL})`;
+  }
+}
+
+export function generateCountFragment(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: AggregateExpr,
+  state: GenerateState
+): string {
+  let func = 'COUNT(';
+  let thing = '1';
+
+  let struct = context;
+  if (expr.structPath) {
+    struct = field.parent.root().getStructByName(expr.structPath);
+  }
+  const joinName = struct.getJoinableParent().getIdentifier();
+  const join = resultSet.root().joins.get(joinName);
+  if (!join) {
+    throw new Error(`Join ${joinName} not found in result set`);
+  }
+  if (!join.leafiest || join.makeUniqueKey) {
+    func = 'COUNT(DISTINCT ';
+    thing = struct.getDistinctKey().generateExpression(resultSet);
+  }
+
+  if (state.whereSQL) {
+    return `${func}CASE WHEN ${state.whereSQL} THEN ${thing} END)`;
+  } else {
+    return `${func}${thing})`;
+  }
+}
+
+export function generateSpread(
+  field: QueryField,
+  _resultSet: FieldInstanceResult,
+  _context: QueryStruct,
+  _frag: SpreadExpr,
+  _state: GenerateState
+): string {
+  throw new Error(
+    `Unexpanded spread encountered during SQL generation for ${field.getIdentifier()}`
+  );
+}
+
+export function generateSourceReference(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: SourceReferenceNode
+): string {
+  if (expr.path === undefined) {
+    return context.getSQLIdentifier();
+  } else {
+    return context.getFieldByName(expr.path).getIdentifier();
+  }
+}
+
+export function generateCaseSQL(field: QueryField, pf: CaseExpr): string {
+  const caseStmt = ['CASE'];
+  if (pf.kids.caseValue !== undefined) {
+    caseStmt.push(`${pf.kids.caseValue.sql}`);
+  }
+  for (let i = 0; i < pf.kids.caseWhen.length; i += 1) {
+    caseStmt.push(
+      `WHEN ${pf.kids.caseWhen[i].sql} THEN ${pf.kids.caseThen[i].sql}`
+    );
+  }
+  if (pf.kids.caseElse !== undefined) {
+    caseStmt.push(`ELSE ${pf.kids.caseElse.sql}`);
+  }
+  caseStmt.push('END');
+  return caseStmt.join(' ');
+}
+
+export function getFunctionOrderBy(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  state: GenerateState,
+  orderBy: FunctionOrderBy[],
+  args: Expr[],
+  overload: FunctionOverloadDef
+): string | undefined {
+  if (orderBy.length === 0) return undefined;
+  return (
+    'ORDER BY ' +
+    orderBy
+      .map(ob => {
+        const defaultOrderByArgIndex =
+          overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
+        const expr =
+          ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
+        const osql = generateDimFragment(
+          field,
+          resultSet,
+          context,
+          expr,
+          state
+        );
+        const dirsql =
+          ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
+        return `${osql}${dirsql}`;
+      })
+      .join(', ')
+  );
+}
+
+export function getAnalyticPartitions(
+  field: QueryField,
+  resultStruct: FieldInstanceResult,
+  extraPartitionFields?: string[]
+): string[] {
+  const ret: string[] = [];
+  let p = resultStruct.parent;
+  while (p !== undefined) {
+    const scalars = p.fields(
+      fi => isBasicScalar(fi.f) && fi.fieldUsage.type === 'result'
+    );
+    const partitionSQLs = scalars.map(fi => fi.getAnalyticalSQL(true));
+    ret.push(...partitionSQLs);
+    p = p.parent;
+  }
+  if (extraPartitionFields) {
+    ret.push(...extraPartitionFields);
+  }
+  return ret;
+}
+
+export function caseGroup(
+  field: QueryField,
+  groupSets: number[],
+  s: string
+): string {
+  if (groupSets.length === 0) {
+    return s;
+  } else {
+    const exp =
+      groupSets.length === 1
+        ? `=${groupSets[0]}`
+        : ` IN (${groupSets.join(',')})`;
+    return `CASE WHEN group_set${exp} THEN\n  ${s}\n  END`;
+  }
+}
+
+export function* stringsFromSQLExpression(
+  field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  e: GenericSQLExpr,
+  state: GenerateState
+): Generator<string, void, unknown> {
+  /*
+   * Like template strings, the array of strings is paired with template insertions,
+   * each string is followed by at most one expression to be inserted
+   */
+  const subExprList = [...e.kids.args];
+  for (const str of e.src) {
+    yield str;
+    const expr = subExprList.shift();
+    if (expr) {
+      yield exprToSQL(field, resultSet, context, expr, state);
+    }
   }
 }

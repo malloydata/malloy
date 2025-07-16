@@ -22,8 +22,19 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import type {Expr, ExprWithKids, GenericSQLExpr} from './malloy_types';
-import {exprHasE, exprHasKids} from './malloy_types';
+import type {
+  Expr,
+  ExprWithKids,
+  GenericSQLExpr,
+  StructDef,
+} from './malloy_types';
+import {
+  exprHasE,
+  exprHasKids,
+  fieldIsIntrinsic,
+  getIdentifier,
+} from './malloy_types';
+import type {DialectFieldList} from '../dialect';
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -199,4 +210,18 @@ export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
     }
   }
   return ret;
+}
+
+export function getDialectFieldList(structDef: StructDef): DialectFieldList {
+  const dialectFieldList: DialectFieldList = [];
+
+  for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
+    dialectFieldList.push({
+      typeDef: f,
+      sqlExpression: getIdentifier(f),
+      rawName: getIdentifier(f),
+      sqlOutputName: getIdentifier(f),
+    });
+  }
+  return dialectFieldList;
 }

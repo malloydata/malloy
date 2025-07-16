@@ -4,7 +4,8 @@
  */
 
 import type {QueryInfo} from '../dialect';
-import type {QueryStruct, QueryQuery} from './malloy_query_index';
+import type {QueryStruct} from './query_node';
+import type {QueryQuery} from './query_query';
 import type {OrderBy, PipeSegment, TurtleDef} from './malloy_types';
 import {
   isIndexSegment,
@@ -15,13 +16,15 @@ import {
 } from './malloy_types';
 import {AndChain} from './utils';
 import {JoinInstance} from './join_instance';
-import type {QueryField, UniqueKeyPossibleUse} from './query_field';
 import {
   isBasicAggregate,
   isBasicScalar,
   isScalarField,
   QueryFieldStruct,
-} from './query_field';
+  type QueryField,
+  type UniqueKeyPossibleUse,
+} from './query_node';
+import {caseGroup} from './expression_compiler';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 type InstanceFieldUsage =
@@ -51,7 +54,8 @@ export class FieldInstanceField implements FieldInstance {
   getSQL() {
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
-      exp = this.f.caseGroup(
+      exp = caseGroup(
+        this.f,
         this.parent.groupSet > 0
           ? this.parent.childGroups.concat(this.additionalGroupSets)
           : [],

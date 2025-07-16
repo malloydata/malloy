@@ -4,7 +4,7 @@
  */
 
 import type {DialectFieldList} from '../dialect';
-import {exprToSQL} from './expression_compiler';
+import {exprToSQL, caseGroup} from './expression_compiler';
 import type {
   TurtleDef,
   IndexFieldDef,
@@ -46,10 +46,10 @@ import {
   isIndexSegment,
   isBaseTable,
 } from './malloy_types';
-import {exprWalk, AndChain, indent} from './utils';
-import type {JoinInstance, QueryStruct} from './malloy_query_index';
+import {exprWalk, AndChain, indent, getDialectFieldList} from './utils';
+import type {JoinInstance} from './join_instance';
 import {
-  createQueryStruct,
+  QueryStruct,
   isBasicAggregate,
   isBasicCalculation,
   isBasicScalar,
@@ -58,9 +58,8 @@ import {
   QueryFieldBoolean,
   QueryFieldStruct,
   QueryField,
-  getDialectFieldList,
-  QueryModel,
-} from './malloy_query_index';
+  type UniqueKeyPossibleUse,
+} from './query_node';
 import {StageWriter} from './stage_writer';
 import type {FieldInstance} from './field_instance';
 import {
@@ -68,8 +67,8 @@ import {
   FieldInstanceResult,
   FieldInstanceResultRoot,
 } from './field_instance';
+import {QueryModel} from './query_model';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import type {UniqueKeyPossibleUse} from './query_field';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -154,7 +153,7 @@ export class QueryQuery extends QueryField {
       isQuerySegment(firstStage) &&
       firstStage.extendSource !== undefined
     ) {
-      parent = createQueryStruct(
+      parent = new QueryStruct(
         {
           ...sourceDef,
           fields: [...sourceDef.fields, ...firstStage.extendSource],
@@ -1349,7 +1348,8 @@ export class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           if (isScalarField(fi.f)) {
-            const exp = this.caseGroup(
+            const exp = caseGroup(
+              this,
               resultSet.groupSet > 0 ? resultSet.childGroups : [],
               sqlFieldName
             );
@@ -1735,7 +1735,7 @@ export class QueryQuery extends QueryField {
         connection: structDef.connection,
         dialect: structDef.dialect,
       };
-      const qs = createQueryStruct(
+      const qs = new QueryStruct(
         inputStruct,
         undefined,
         {model: this.parent.getModel()},
@@ -1811,7 +1811,7 @@ export class QueryQuery extends QueryField {
         const parent = this.parent.parent
           ? {struct: this.parent.parent}
           : {model: this.parent.getModel()};
-        const s = createQueryStruct(
+        const s = new QueryStruct(
           structDef,
           undefined,
           parent,
@@ -2164,7 +2164,7 @@ export function getResultStructDefForView(
   source: SourceDef,
   view: TurtleDef
 ): SourceDef {
-  const qs = createQueryStruct(
+  const qs = new QueryStruct(
     source,
     undefined,
     {

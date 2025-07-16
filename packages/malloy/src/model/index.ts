@@ -23,11 +23,7 @@
 
 export * from './malloy_types';
 export {Segment} from './segment';
-export {
-  QueryModel,
-  QueryStruct,
-  QueryField,
-  getResultStructDefForQuery,
-  getResultStructDefForView,
-} from './malloy_query_index';
+export {QueryStruct, QueryField} from './query_node';
+export {QueryModel, getResultStructDefForQuery} from './query_model';
+export {getResultStructDefForView} from './query_query';
 export {indent, composeSQLExpr} from './utils';

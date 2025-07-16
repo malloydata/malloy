@@ -3,37 +3,29 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {isBasicScalar, QueryFieldStruct} from './query_field';
-import type {FieldInstanceResult} from './field_instance';
+import {v4 as uuidv4} from 'uuid';
 import type {
-  QueryField,
-  QueryFieldString,
-  QueryFieldDate,
-  QueryFieldTimestamp,
-  QueryFieldNumber,
-  QueryFieldBoolean,
-  QueryFieldJSON,
-  QueryFieldUnsupported,
-  QueryFieldDistinctKey,
-  QueryBasicField,
-} from './query_field';
-import {QueryQuery} from './malloy_query_index';
-import type {ParentQueryModel, QueryModel} from './malloy_query_index';
-import type {
-  StructDef,
   FieldDef,
-  StringFieldDef,
-  DateFieldDef,
-  TimestampFieldDef,
-  NumberFieldDef,
   BooleanFieldDef,
+  DateFieldDef,
+  StringFieldDef,
   JSONFieldDef,
+  NumberFieldDef,
+  TimestampFieldDef,
   NativeUnsupportedFieldDef,
   JoinFieldDef,
+  DateUnit,
   Argument,
   PrepareResultOptions,
+  AtomicFieldDef,
+  BasicAtomicDef,
+  FilterCondition,
+  AggregateFunctionType,
+  TimestampUnit,
+  TimeTruncExpr,
   Parameter,
   RefToField,
+  StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
 } from './malloy_types';
@@ -44,6 +36,9 @@ import {
   hasExpression,
   isAtomic,
   isJoinedSource,
+  expressionIsAggregate,
+  expressionIsCalculation,
+  mkTemporal,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
 import {annotationToTag} from '../annotation';
@@ -54,54 +49,353 @@ import {exprMap} from './utils';
 import type {StageWriter} from './stage_writer';
 import {shouldMaterialize} from './materialization/utils';
 import {exprToSQL} from './expression_compiler';
+import type {FieldInstanceResult} from './field_instance';
+import type {ParentQueryModel, QueryModel} from './query_model';
+import {QueryQuery} from './query_query';
 
-// QueryFieldFactories interface for dependency injection
-export interface QueryFieldFactories {
-  createString(
-    field: StringFieldDef,
+export type UniqueKeyPossibleUse =
+  | AggregateFunctionType
+  | 'generic_asymmetric_aggregate';
+
+export class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
+  add_use(k: UniqueKeyPossibleUse | undefined) {
+    if (k !== undefined) {
+      return this.add(k);
+    }
+  }
+
+  hasAsymetricFunctions(): boolean {
+    return (
+      this.has('sum') ||
+      this.has('avg') ||
+      this.has('count') ||
+      this.has('generic_asymmetric_aggregate')
+    );
+  }
+}
+
+export abstract class QueryNode {
+  readonly referenceId: string;
+  constructor(referenceId?: string) {
+    this.referenceId = referenceId ?? uuidv4();
+  }
+  abstract getIdentifier(): string;
+  getChildByName(_name: string): QueryField | undefined {
+    return undefined;
+  }
+}
+
+export class QueryField extends QueryNode {
+  fieldDef: FieldDef;
+  parent: QueryStruct;
+
+  constructor(fieldDef: FieldDef, parent: QueryStruct, referenceId?: string) {
+    super(referenceId);
+    this.fieldDef = fieldDef;
+    this.parent = parent;
+    this.fieldDef = fieldDef;
+  }
+
+  getIdentifier() {
+    return getIdentifier(this.fieldDef);
+  }
+
+  uniqueKeyPossibleUse(): UniqueKeyPossibleUse | undefined {
+    return undefined;
+  }
+
+  getJoinableParent(): QueryStruct {
+    const parent = this.parent;
+    if (parent.structDef.type === 'record') {
+      return parent.getJoinableParent();
+    }
+    return parent;
+  }
+
+  isAtomic() {
+    return isAtomic(this.fieldDef);
+  }
+
+  getFullOutputName() {
+    return this.parent.getFullOutputName() + this.getIdentifier();
+  }
+
+  isNestedInParent(parentDef: FieldDef) {
+    switch (parentDef.type) {
+      case 'record':
+      case 'array':
+        return true;
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  isArrayElement(parentDef: FieldDef) {
+    return (
+      parentDef.type === 'array' &&
+      parentDef.elementTypeDef.type !== 'record_element'
+    );
+  }
+
+  generateExpression(resultSet: FieldInstanceResult): string {
+    // If the field itself is an expression, generate it ..
+    if (hasExpression(this.fieldDef)) {
+      return exprToSQL(this, resultSet, this.parent, this.fieldDef.e);
+    }
+    // The field itself is not an expression, so we would like
+    // to generate a dotted path to the field, EXCEPT ...
+    // some of the steps in the dotting might not exist
+    // in the namespace of their parent, but rather be record
+    // expressions which should be evaluated in the namespace
+    // of their parent.
+
+    // So we walk the tree and ask each one to compute itself
+    for (
+      let ancestor: QueryStruct | undefined = this.parent;
+      ancestor !== undefined;
+      ancestor = ancestor.parent
+    ) {
+      if (
+        ancestor.structDef.type === 'record' &&
+        hasExpression(ancestor.structDef) &&
+        ancestor.recordAlias === undefined
+      ) {
+        if (!ancestor.parent) {
+          throw new Error(
+            'Inconcievable record ancestor with expression but no parent'
+          );
+        }
+        const aliasValue = exprToSQL(
+          this,
+          resultSet,
+          ancestor.parent,
+          ancestor.structDef.e
+        );
+        ancestor.informOfAliasValue(aliasValue);
+      }
+    }
+    return this.parent.sqlChildReference(
+      this.fieldDef.name,
+      this.parent.structDef.type === 'record'
+        ? {
+            result: resultSet,
+            field: this,
+          }
+        : undefined
+    );
+  }
+
+  includeInWildcard() {
+    return false;
+  }
+}
+
+export abstract class QueryAtomicField<
+  T extends AtomicFieldDef,
+> extends QueryField {
+  fieldDef: T;
+
+  constructor(fieldDef: T, parent: QueryStruct, refId?: string) {
+    super(fieldDef, parent, refId);
+    this.fieldDef = fieldDef; // wish I didn't have to do this
+  }
+
+  includeInWildcard(): boolean {
+    return true;
+  }
+
+  getFilterList(): FilterCondition[] {
+    return [];
+  }
+}
+
+export class QueryFieldBoolean extends QueryAtomicField<BooleanFieldDef> {}
+
+export class QueryFieldDate extends QueryAtomicField<DateFieldDef> {
+  generateExpression(resultSet: FieldInstanceResult): string {
+    const fd = this.fieldDef;
+    const superExpr = super.generateExpression(resultSet);
+    if (!fd.timeframe) {
+      return superExpr;
+    } else {
+      const truncated: TimeTruncExpr = {
+        node: 'trunc',
+        e: mkTemporal(
+          {node: 'genericSQLExpr', src: [superExpr], kids: {args: []}},
+          'date'
+        ),
+        units: fd.timeframe,
+      };
+      return exprToSQL(this, resultSet, this.parent, truncated);
+    }
+  }
+
+  // clone ourselves on demand as a timeframe.
+  getChildByName(name: DateUnit): QueryFieldDate {
+    const fieldDef: DateFieldDef = {
+      ...this.fieldDef,
+      as: `${this.getIdentifier()}_${name}`,
+      timeframe: name,
+    };
+    return new QueryFieldDate(fieldDef, this.parent);
+  }
+}
+
+export class QueryFieldDistinctKey extends QueryAtomicField<StringFieldDef> {
+  generateExpression(resultSet: FieldInstanceResult): string {
+    if (this.parent.primaryKey()) {
+      const pk = this.parent.getPrimaryKeyField(this.fieldDef);
+      return pk.generateExpression(resultSet);
+    } else if (this.parent.structDef.type === 'array') {
+      const parentKey = this.parent.parent
+        ?.getDistinctKey()
+        .generateExpression(resultSet);
+      return this.parent.dialect.sqlMakeUnnestKey(
+        parentKey || '', // shouldn't have to do this...
+        this.parent.dialect.sqlFieldReference(
+          this.parent.getIdentifier(),
+          'table',
+          '__row_id',
+          'string'
+        )
+      );
+    } else {
+      // return this.parent.getIdentifier() + "." + "__distinct_key";
+      return this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        'table',
+        '__distinct_key',
+        'string'
+      );
+    }
+  }
+
+  includeInWildcard(): boolean {
+    return false;
+  }
+}
+
+export class QueryFieldJSON extends QueryAtomicField<JSONFieldDef> {}
+
+export class QueryFieldNumber extends QueryAtomicField<NumberFieldDef> {}
+
+export class QueryFieldString extends QueryAtomicField<StringFieldDef> {}
+
+/*
+ * The input to a query will always be a QueryStruct. A QueryStruct is also a namespace
+ * for tracking joins, and so a QueryFieldStruct is a QueryField which has a QueryStruct.
+ *
+ * This is a result of it being impossible to inherit both from QueryStruct and QueryField
+ * for array and record types.
+ */
+export class QueryFieldStruct extends QueryField {
+  queryStruct: QueryStruct;
+  fieldDef: JoinFieldDef;
+  constructor(
+    jfd: JoinFieldDef,
+    sourceArguments: Record<string, Argument> | undefined,
     parent: QueryStruct,
-    ref?: string
-  ): QueryFieldString;
-  createDate(
-    field: DateFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldDate;
-  createTimestamp(
-    field: TimestampFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldTimestamp;
-  createNumber(
-    field: NumberFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldNumber;
-  createBoolean(
-    field: BooleanFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldBoolean;
-  createJSON(
-    field: JSONFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldJSON;
-  createUnsupported(
-    field: NativeUnsupportedFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldUnsupported;
-  createStruct(
-    field: JoinFieldDef,
-    parent: QueryStruct,
-    ref?: string
-  ): QueryFieldStruct;
-  createDistinctKey(
-    field: StringFieldDef,
-    parent: QueryStruct
-  ): QueryFieldDistinctKey;
-  createFromDef(field: FieldDef, parent: QueryStruct, ref?: string): QueryField;
+    prepareResultOptions: PrepareResultOptions,
+    referenceId?: string
+  ) {
+    super(jfd, parent, referenceId);
+    this.fieldDef = jfd;
+    this.queryStruct = new QueryStruct(
+      jfd,
+      sourceArguments,
+      {struct: parent},
+      prepareResultOptions
+    );
+  }
+
+  /*
+   * Proxy the field-like methods that QueryStruct implements, eventually
+   * those probably should be in here ... I thought this would be important
+   * but maybe it isn't, it doesn't fix the problem I am working on ...
+   */
+
+  getJoinableParent() {
+    return this.queryStruct.getJoinableParent();
+  }
+
+  getFullOutputName() {
+    return this.queryStruct.getFullOutputName();
+  }
+
+  includeInWildcard(): boolean {
+    return this.isAtomic();
+  }
+}
+
+export class QueryFieldTimestamp extends QueryAtomicField<TimestampFieldDef> {
+  // clone ourselves on demand as a timeframe.
+  getChildByName(name: TimestampUnit): QueryFieldTimestamp {
+    const fieldDef = {
+      ...this.fieldDef,
+      as: `${this.getIdentifier()}_${name}`,
+      timeframe: name,
+    };
+    return new QueryFieldTimestamp(fieldDef, this.parent);
+  }
+}
+
+export class QueryFieldUnsupported extends QueryAtomicField<NativeUnsupportedFieldDef> {}
+/*
+ * When compound (arrays, records) types became atomic types, it became unclear
+ * which code wanted just "numbers and strings" and which code wanted anything
+ * atomic.
+ *
+ * All of the original QueryFields are now members of "QueryBasicField"
+ *
+ * I think the re-factor for adding atomic compound types isn't done yet,
+ * but things are working well enough now. A bug with nesting repeated
+ * records revealed the need for isScalarField, but I was not brave
+ * enough to look at all the calls is isBasicScalar.
+ */
+export type QueryBasicField = QueryAtomicField<BasicAtomicDef>;
+
+// ============================================================================
+// QueryField utility functions (consolidated from is_* files)
+// ============================================================================
+
+export function isAggregateField(f: QueryField): boolean {
+  if (f.isAtomic() && hasExpression(f.fieldDef)) {
+    return expressionIsAggregate(f.fieldDef.expressionType);
+  }
+  return false;
+}
+
+export function isCalculatedField(f: QueryField): boolean {
+  if (f.isAtomic() && hasExpression(f.fieldDef)) {
+    return expressionIsCalculation(f.fieldDef.expressionType);
+  }
+  return false;
+}
+
+export function isScalarField(f: QueryField): boolean {
+  if (f.isAtomic()) {
+    if (hasExpression(f.fieldDef)) {
+      const et = f.fieldDef.expressionType;
+      if (expressionIsCalculation(et) || expressionIsAggregate(et)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+export function isBasicAggregate(f: QueryField): f is QueryBasicField {
+  return f instanceof QueryAtomicField && isAggregateField(f);
+}
+
+export function isBasicCalculation(f: QueryField): f is QueryBasicField {
+  return f instanceof QueryAtomicField && isCalculatedField(f);
+}
+
+export function isBasicScalar(f: QueryField): f is QueryBasicField {
+  return f instanceof QueryAtomicField && isScalarField(f);
 }
 
 // Parent interface for QueryStruct
@@ -112,14 +406,6 @@ export interface ParentQueryStruct {
 function identifierNormalize(s: string) {
   return s.replace(/[^a-zA-Z0-9_]/g, '_o_');
 }
-
-// Export types for factory parameters
-export type QueryStructParams = [
-  structDef: StructDef,
-  sourceArguments: Record<string, Argument> | undefined,
-  parent: ParentQueryStruct | ParentQueryModel,
-  prepareResultOptions: PrepareResultOptions,
-];
 
 /** Structure object as it is used to build a query */
 export class QueryStruct {
@@ -132,7 +418,6 @@ export class QueryStruct {
   recordAlias?: string;
 
   constructor(
-    private fieldFactories: QueryFieldFactories,
     public structDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
     parent: ParentQueryStruct | ParentQueryModel,
@@ -262,7 +547,7 @@ export class QueryStruct {
     if (!this.nameMap.has('__distinct_key')) {
       this.addFieldToNameMap(
         '__distinct_key',
-        this.fieldFactories.createDistinctKey(
+        new QueryFieldDistinctKey(
           {type: 'string', name: '__distinct_key'},
           this
         )
@@ -501,21 +786,26 @@ export class QueryStruct {
       case 'table':
       case 'sql_select':
       case 'composite':
-        return this.fieldFactories.createStruct(field, this, referenceId);
+        return new QueryFieldStruct(
+          field,
+          undefined,
+          this,
+          this.prepareResultOptions
+        );
       case 'string':
-        return this.fieldFactories.createString(field, this, referenceId);
+        return new QueryFieldString(field, this, referenceId);
       case 'date':
-        return this.fieldFactories.createDate(field, this, referenceId);
+        return new QueryFieldDate(field, this, referenceId);
       case 'timestamp':
-        return this.fieldFactories.createTimestamp(field, this, referenceId);
+        return new QueryFieldTimestamp(field, this, referenceId);
       case 'number':
-        return this.fieldFactories.createNumber(field, this, referenceId);
+        return new QueryFieldNumber(field, this, referenceId);
       case 'boolean':
-        return this.fieldFactories.createBoolean(field, this, referenceId);
+        return new QueryFieldBoolean(field, this, referenceId);
       case 'json':
-        return this.fieldFactories.createJSON(field, this, referenceId);
+        return new QueryFieldJSON(field, this, referenceId);
       case 'sql native':
-        return this.fieldFactories.createUnsupported(field, this, referenceId);
+        return new QueryFieldUnsupported(field, this, referenceId);
       case 'turtle':
         return QueryQuery.makeQuery(field, this, undefined, false);
       default:
@@ -629,9 +919,11 @@ export class QueryStruct {
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
         const newDef = {...field.fieldDef, annotation, drillExpression};
-        return this.fieldFactories.createStruct(
+        return new QueryFieldStruct(
           newDef,
+          undefined,
           field.parent,
+          field.parent.prepareResultOptions,
           field.referenceId
         );
       } else {

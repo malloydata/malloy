@@ -4,7 +4,6 @@
  */
 
 import type {Dialect} from '../dialect';
-import {getDialectFieldList} from './malloy_query_index';
 import type {
   QueryToMaterialize,
   StructDef,
@@ -12,7 +11,7 @@ import type {
   Query,
 } from './malloy_types';
 import {buildQueryMaterializationSpec} from './materialization/utils';
-import {indent, generateHash} from './utils';
+import {indent, generateHash, getDialectFieldList} from './utils';
 
 export class StageWriter {
   withs: string[] = [];

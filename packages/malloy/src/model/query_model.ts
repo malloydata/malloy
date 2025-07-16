@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {
-  type QueryStruct,
-  createQueryStruct,
-  isScalarField,
-  QueryQuery,
-} from './malloy_query_index';
+import {QueryQuery} from './query_query';
 import type {
   ModelDef,
   StructRef,
@@ -30,6 +25,7 @@ import {
   shouldMaterialize,
 } from './materialization/utils';
 import type {Connection} from '../connection/types';
+import {QueryStruct, isScalarField} from './query_node';
 
 // Parent interface for QueryModel
 export interface ParentQueryModel {
@@ -63,7 +59,7 @@ export class QueryModel {
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (isSourceDef(s)) {
-        qs = createQueryStruct(s, undefined, {model: this}, {});
+        qs = new QueryStruct(s, undefined, {model: this}, {});
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
       } else if (s.type === 'query') {
@@ -91,7 +87,7 @@ export class QueryModel {
     if (typeof structRef === 'string') {
       const ret = this.getStructByName(structRef);
       if (sourceArguments !== undefined) {
-        return createQueryStruct(
+        return new QueryStruct(
           ret.structDef,
           sourceArguments,
           ret.parent ?? {model: this},
@@ -100,7 +96,7 @@ export class QueryModel {
       }
       return ret;
     }
-    return createQueryStruct(
+    return new QueryStruct(
       structRef,
       sourceArguments,
       {model: this},
