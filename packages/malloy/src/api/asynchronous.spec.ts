@@ -246,6 +246,40 @@ ORDER BY 1 asc NULLS LAST
         },
       };
       expect(result).toMatchObject(expected);
+      expect(result).toMatchObject({
+        timing_info: {
+          name: 'run_query',
+          duration_ms: expect.any(Number),
+          detailed_timing: [
+            {name: 'compile_model'},
+            {name: 'read_url'},
+            {name: 'compile_model', detailed_timing: [{name: 'parse_malloy'}]},
+            {name: 'lookup_connection'},
+            {name: 'lookup_connection'},
+            {name: 'fetch_table_schemas'},
+            {
+              name: 'compile_model',
+              detailed_timing: [
+                {
+                  name: 'generate_ast',
+                  detailed_timing: [{name: 'parse_compiler_flags'}],
+                },
+                {name: 'compile_malloy'},
+              ],
+            },
+            {name: 'parse_compiler_flags'},
+            {name: 'parse_malloy'},
+            {
+              name: 'generate_ast',
+              detailed_timing: [{name: 'parse_compiler_flags'}],
+            },
+            {name: 'compile_malloy'},
+            {name: 'generate_sql'},
+            {name: 'lookup_connection'},
+            {name: 'run_sql'},
+          ],
+        },
+      });
     });
   });
 });

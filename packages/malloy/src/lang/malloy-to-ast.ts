@@ -64,6 +64,8 @@ import {
 import {Tag} from '@malloydata/malloy-tag';
 import {isNotUndefined, rangeFromContext} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import {Timer} from '../timing';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -90,16 +92,34 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyParserVisitor<ast.MalloyElement>
 {
+  readonly timer: Timer;
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
     public compilerFlags: Tag
   ) {
     super();
+    this.timer = new Timer('generate_ast');
+    const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
     for (const flag of DEFAULT_COMPILER_FLAGS) {
       const withNewTag = Tag.fromTagLine(flag, 0, this.compilerFlags);
       this.compilerFlags = withNewTag.tag;
     }
+    this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+  }
+
+  public run(): {
+    ast: ast.MalloyElement;
+    compilerFlags: Tag;
+    timingInfo: Malloy.TimingInfo;
+  } {
+    const ast = this.visit(this.parseInfo.root);
+    const compilerFlags = this.compilerFlags;
+    return {
+      ast,
+      compilerFlags,
+      timingInfo: this.timer.stop(),
+    };
   }
 
   /**
@@ -1794,6 +1814,12 @@ export class MalloyToAST
     return new ast.SampleProperty({enable: enabled});
   }
 
+  updateCompilerFlags(tags: ast.ModelAnnotation) {
+    const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
+    this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+  }
+
   visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
     const allNotes = pcx.DOC_ANNOTATION().map(note => {
       return {
@@ -1802,7 +1828,7 @@ export class MalloyToAST
       };
     });
     const tags = new ast.ModelAnnotation(allNotes);
-    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
+    this.updateCompilerFlags(tags);
     return tags;
   }
 

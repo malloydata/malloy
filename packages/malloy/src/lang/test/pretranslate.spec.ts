@@ -13,7 +13,7 @@ describe('pretranslated models', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     docParse.update({
       translations: {
         'internal://test/langtests/child': {

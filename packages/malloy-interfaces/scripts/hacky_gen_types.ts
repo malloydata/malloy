@@ -86,7 +86,7 @@ for (const file of fs.readdirSync('./generated-types')) {
     const name = nameMatch[1];
     const fields: Record<string, MalloyInterfaceFieldType> = {};
     const fieldMatches = actualTypes.matchAll(
-      / {4}([a-z_]+)(\?)?: (?:([a-z]+)|([A-Za-z]+)\.[A-Za-z]+|(?:Array<([a-z]+)>)|(?:Array<([A-Za-z]+)\.[A-Za-z]+>));/g
+      / {4}([a-z_]+)(\?)?: (?:([a-z]+)|([A-Za-z]+)\.[A-Za-z]+|I([A-Za-z]+)|(?:Array<([a-z]+)>)|(?:Array<([A-Za-z]+)\.[A-Za-z]+>)|(?:Array<I([A-Za-z]+)>));/g
     );
     for (const fieldMatch of fieldMatches) {
       const [
@@ -94,8 +94,10 @@ for (const file of fs.readdirSync('./generated-types')) {
         optionalQ,
         basicType,
         specialType,
+        recursiveType,
         arrayBasicType,
         arraySpecialType,
+        arrayRecursiveType,
       ] = [
         fieldMatch[1],
         fieldMatch[2],
@@ -103,11 +105,14 @@ for (const file of fs.readdirSync('./generated-types')) {
         fieldMatch[4],
         fieldMatch[5],
         fieldMatch[6],
+        fieldMatch[7],
+        fieldMatch[8],
       ];
       const optional = optionalQ === '?';
       const type =
         (basicType && {type: basicType, optional, array: false}) ??
         (specialType && {type: specialType, optional, array: false}) ??
+        (recursiveType && {type: recursiveType, optional, array: false}) ??
         (arrayBasicType && {
           type: arrayBasicType,
           array: true,
@@ -115,6 +120,11 @@ for (const file of fs.readdirSync('./generated-types')) {
         }) ??
         (arraySpecialType && {
           type: arraySpecialType,
+          array: true,
+          optional,
+        }) ??
+        (arrayRecursiveType && {
+          type: arrayRecursiveType,
           array: true,
           optional,
         });
