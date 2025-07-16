@@ -20,7 +20,7 @@ import {def} from '../functions/util';
  * So in this file we are experimenting with various ways to define things.
  * The most general and powerful is to write a DefinitionBlueprint or
  * OverloadedDefinitionBlueprint, naming it with the name of the function
- * you want to add, and then to add that name to the dialcect function list.
+ * you want to add, and then to add that name to the dialect function list.
  *
  * Experimentally, there is also a function def which creates a
  * DefinitionBlueprint for you. For simple blueprints, you can use the wrapper
@@ -262,7 +262,7 @@ const hll_accumulate_moving: OverloadedDefinitionBlueprint = {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
     impl: {
-      function: 'APPROX_SET',
+      sql: 'APPROX_SET(${value}, 0.0040625)',
       needsWindowOrderBy: true,
       between: {preceding: 'preceding', following: 0},
     },
@@ -278,7 +278,7 @@ const hll_accumulate_moving: OverloadedDefinitionBlueprint = {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
     impl: {
-      function: 'APPROX_SET',
+      sql: 'APPROX_SET(${value}, 0.0040625)',
       needsWindowOrderBy: true,
       between: {preceding: 'preceding', following: 'following'},
     },
@@ -293,7 +293,7 @@ const hll_combine_moving: OverloadedDefinitionBlueprint = {
     },
     returns: {calculation: {sql_native: 'hyperloglog'}},
     impl: {
-      function: 'MERGE',
+      sql: 'MERGE(${value})',
       needsWindowOrderBy: true,
       between: {preceding: 'preceding', following: 0},
     },
@@ -313,32 +313,110 @@ const hll_combine_moving: OverloadedDefinitionBlueprint = {
   },
 };
 
-const hll_estimate_moving: OverloadedDefinitionBlueprint = {
-  preceding: {
+// T-Digest functions for approximate quantile analytics
+
+const tdigest_agg: OverloadedDefinitionBlueprint = {
+  default: {
+    takes: {'value': {dimension: 'number'}},
+    returns: {measure: {sql_native: 'tdigest'}},
+    impl: {function: 'TDIGEST_AGG'},
+    isSymmetric: true,
+  },
+  with_weight: {
+    takes: {'value': {dimension: 'number'}, 'weight': {dimension: 'number'}},
+    returns: {measure: {sql_native: 'tdigest'}},
+    impl: {function: 'TDIGEST_AGG'},
+    isSymmetric: true,
+  },
+  with_weight_and_compression: {
     takes: {
-      'value': {sql_native: 'hyperloglog'},
-      'preceding': {literal: 'number'},
+      'value': {dimension: 'number'},
+      'weight': {dimension: 'number'},
+      'compression': {literal: 'number'},
     },
-    returns: {calculation: 'number'},
-    impl: {
-      function: 'CARDINALITY',
-      needsWindowOrderBy: true,
-      between: {preceding: 'preceding', following: 0},
+    returns: {measure: {sql_native: 'tdigest'}},
+    impl: {function: 'TDIGEST_AGG'},
+    isSymmetric: true,
+  },
+};
+
+const merge_tdigest: DefinitionBlueprint = {
+  takes: {'tdigest_val': {sql_native: 'tdigest'}},
+  returns: {measure: {sql_native: 'tdigest'}},
+  impl: {function: 'MERGE'},
+  isSymmetric: true,
+};
+
+const value_at_quantile: DefinitionBlueprint = {
+  takes: {'tdigest_val': {sql_native: 'tdigest'}, 'quantile': 'number'},
+  returns: 'number',
+  impl: {function: 'VALUE_AT_QUANTILE'},
+};
+
+const quantile_at_value: DefinitionBlueprint = {
+  takes: {'tdigest_val': {sql_native: 'tdigest'}, 'value': 'number'},
+  returns: 'number',
+  impl: {function: 'QUANTILE_AT_VALUE'},
+};
+
+const scale_tdigest: DefinitionBlueprint = {
+  takes: {'tdigest_val': {sql_native: 'tdigest'}, 'scale_factor': 'number'},
+  returns: {sql_native: 'tdigest'},
+  impl: {function: 'SCALE_TDIGEST'},
+};
+
+const values_at_quantiles: DefinitionBlueprint = {
+  takes: {
+    'tdigest_val': {sql_native: 'tdigest'},
+    'quantiles': {array: 'number'},
+  },
+  returns: {array: 'number'},
+  impl: {function: 'VALUES_AT_QUANTILES'},
+};
+
+const trimmed_mean: DefinitionBlueprint = {
+  takes: {
+    'tdigest_val': {sql_native: 'tdigest'},
+    'lower_quantile': 'number',
+    'upper_quantile': 'number',
+  },
+  returns: 'number',
+  impl: {function: 'TRIMMED_MEAN'},
+};
+
+const destructure_tdigest: DefinitionBlueprint = {
+  takes: {'tdigest_val': {sql_native: 'tdigest'}},
+  returns: {
+    record: {
+      'centroid_means': {array: 'number'},
+      'centroid_weights': {array: 'number'},
+      'min_value': 'number',
+      'max_value': 'number',
+      'sum_value': 'number',
+      'count_value': 'number',
     },
   },
-  following: {
-    takes: {
-      'value': {sql_native: 'hyperloglog'},
-      'preceding': {literal: 'number'},
-      'following': {literal: 'number'},
-    },
-    returns: {calculation: 'number'},
-    impl: {
-      function: 'CARDINALITY',
-      needsWindowOrderBy: true,
-      between: {preceding: 'preceding', following: 'following'},
-    },
+  impl: {function: 'DESTRUCTURE_TDIGEST'},
+};
+
+const construct_tdigest: DefinitionBlueprint = {
+  takes: {
+    'centroid_means': {array: 'number'},
+    'centroid_weights': {array: 'number'},
+    'min_value': 'number',
+    'max_value': 'number',
+    'sum_value': 'number',
+    'count_value': 'number',
+    'compression': 'number',
   },
+  returns: {sql_native: 'tdigest'},
+  impl: {function: 'CONSTRUCT_TDIGEST'},
+};
+
+const merge_tdigest_array: DefinitionBlueprint = {
+  takes: {'tdigest_array': {array: {sql_native: 'tdigest'}}},
+  returns: {sql_native: 'tdigest'},
+  impl: {function: 'MERGE_TDIGEST'},
 };
 
 /**
@@ -453,9 +531,6 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     returns: {dimension: {sql_native: 'hyperloglog'}},
     impl: {sql: 'CAST(${value} AS HyperLogLog)'},
   },
-  hll_accumulate_moving,
-  hll_combine_moving,
-  hll_estimate_moving,
   ...def('variance', {'n': 'number'}, {measure: 'number'}),
 
   // scalar functions
@@ -596,37 +671,18 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
       impl: {sql: 'APPROX_SET(${value}, 0.0040625)'},
     },
   },
-  hll_accumulate_moving: {
-    preceding: {
-      takes: {
-        'value': {dimension: T},
-        'preceding': {literal: 'number'},
-      },
-      returns: {calculation: {sql_native: 'hyperloglog'}},
-      generic: {
-        'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
-      },
-      impl: {
-        sql: 'APPROX_SET(${value}, 0.0040625)',
-        needsWindowOrderBy: true,
-        between: {preceding: 'preceding', following: 0},
-      },
-    },
-    following: {
-      takes: {
-        'value': {dimension: T},
-        'preceding': {literal: 'number'},
-        'following': {literal: 'number'},
-      },
-      returns: {calculation: {sql_native: 'hyperloglog'}},
-      generic: {
-        'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
-      },
-      impl: {
-        sql: 'APPROX_SET(${value}, 0.0040625)',
-        needsWindowOrderBy: true,
-        between: {preceding: 'preceding', following: 'following'},
-      },
-    },
-  },
+  hll_accumulate_moving,
+  hll_combine_moving,
+
+  // T-Digest functions
+  tdigest_agg,
+  merge_tdigest,
+  value_at_quantile,
+  quantile_at_value,
+  scale_tdigest,
+  values_at_quantiles,
+  trimmed_mean,
+  destructure_tdigest,
+  construct_tdigest,
+  merge_tdigest_array,
 };
