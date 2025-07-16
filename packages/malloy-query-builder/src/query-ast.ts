@@ -3703,7 +3703,8 @@ export class ASTAggregateViewOperation
    */
   convertToCalculateMovingAverage(
     rows_preceding: number,
-    rows_following = 0
+    rows_following = 0,
+    partition_fields: string[] = []
   ): ASTCalculateViewOperation {
     if (!(this.field.expression instanceof ASTReferenceExpression)) {
       throw new Error(
@@ -3725,6 +3726,9 @@ export class ASTAggregateViewOperation
           },
           rows_preceding,
           rows_following,
+          partition_fields: partition_fields.map(fieldName => ({
+            name: fieldName,
+          })),
         },
       },
     });
@@ -4201,6 +4205,18 @@ export class ASTLiteralValueExpression extends ASTObjectNode<
   }
 }
 
+export class ASTFieldReferenceList extends ASTListNode<
+  Malloy.Reference,
+  ASTFieldReference
+> {
+  constructor(fields: Malloy.Reference[]) {
+    super(
+      fields,
+      fields.map(p => new ASTFieldReference(p))
+    );
+  }
+}
+
 export class ASTMovingAverageExpression extends ASTObjectNode<
   Malloy.ExpressionWithMovingAverage,
   {
@@ -4208,6 +4224,7 @@ export class ASTMovingAverageExpression extends ASTObjectNode<
     field_reference: ASTFieldReference;
     rows_preceding?: number;
     rows_following?: number;
+    partition_fields: ASTFieldReferenceList;
   }
 > {
   readonly kind: Malloy.ExpressionType = 'moving_average';
@@ -4218,6 +4235,7 @@ export class ASTMovingAverageExpression extends ASTObjectNode<
       field_reference: new ASTFieldReference(node.field_reference),
       rows_preceding: node.rows_preceding,
       rows_following: node.rows_following,
+      partition_fields: new ASTFieldReferenceList(node.partition_fields || []),
     });
   }
   getReference() {
@@ -4986,6 +5004,8 @@ function fieldTypeToAction(type: Malloy.FieldInfoType): string {
       return 'nest';
     case 'join':
       return 'join';
+    case 'calculate':
+      return 'calculate';
   }
 }
 

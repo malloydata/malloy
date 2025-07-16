@@ -892,6 +892,15 @@ describe('query builder', () => {
           kind: 'segment',
           operations: [
             {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'carrier',
+                },
+              },
+            },
+            {
               kind: 'aggregate',
               field: {
                 expression: {
@@ -906,10 +915,10 @@ describe('query builder', () => {
     };
     expect((q: ASTArrowQueryDefinition) => {
       const segment = q.getOrAddDefaultSegment();
-      const aggregteOperation = segment.operations.index(
-        0
+      const aggregateOperation = segment.operations.index(
+        1
       ) as ASTAggregateViewOperation;
-      aggregteOperation.convertToCalculateMovingAverage(7);
+      aggregateOperation.convertToCalculateMovingAverage(7, 0, ['carrier']);
     }).toModifyQuery({
       model: flights_model,
       from,
@@ -924,6 +933,15 @@ describe('query builder', () => {
             kind: 'segment',
             operations: [
               {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+              {
                 kind: 'calculate',
                 name: 'flight_count',
                 field: {
@@ -935,6 +953,11 @@ describe('query builder', () => {
                     },
                     rows_preceding: 7,
                     rows_following: 0,
+                    partition_fields: [
+                      {
+                        name: 'carrier',
+                      },
+                    ],
                   },
                 },
               },
@@ -942,8 +965,10 @@ describe('query builder', () => {
           },
         },
       },
-      malloy:
-        'run: flights -> { calculate: flight_count is avg_moving( flight_count, 7, 0 ) }',
+      malloy: `run: flights -> {
+  group_by: carrier
+  calculate: flight_count is avg_moving( flight_count, 7, 0 ) { partition_by: carrier }
+}`,
     });
   });
   test('add a date group by', () => {

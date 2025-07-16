@@ -482,6 +482,7 @@ struct MovingAverage {
   1: required Reference field_reference,
   2: optional i32 rows_preceding,
   3: optional i32 rows_following,
+  4: optional list<Reference> partition_fields,
 }
 
 struct StringCell {

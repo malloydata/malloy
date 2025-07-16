@@ -381,8 +381,8 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
       ];
     case 'literal_value':
       return literalToFragments(expression.literal_value);
-    case 'moving_average':
-      return [
+    case 'moving_average': {
+      const fragments = [
         'avg_moving',
         ...wrap(
           '(',
@@ -398,6 +398,25 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
           ')'
         ),
       ];
+
+      if (expression.partition_fields?.length) {
+        fragments.push(
+          ...wrap(
+            ' {',
+            [
+              'partition_by',
+              ': ',
+              ...expression.partition_fields.flatMap(partitionField =>
+                referenceToFragments(partitionField)
+              ),
+            ],
+            '}'
+          )
+        );
+      }
+
+      return fragments;
+    }
   }
 }
 

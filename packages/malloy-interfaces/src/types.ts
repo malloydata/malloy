@@ -897,6 +897,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'partition_fields': {
+        'type': 'Reference',
+        'array': true,
+        'optional': true,
+      },
     },
   },
   'Nest': {
@@ -2168,6 +2173,7 @@ export type MovingAverage = {
   field_reference: Reference;
   rows_preceding?: number;
   rows_following?: number;
+  partition_fields?: Array<Reference>;
 };
 
 export type Nest = {
