@@ -53,6 +53,7 @@ import {getDialect} from '../dialect';
 import {exprMap} from './utils';
 import type {StageWriter} from './stage_writer';
 import {shouldMaterialize} from './materialization/utils';
+import {exprToSQL} from './expression_compiler';
 
 // QueryFieldFactories interface for dependency injection
 export interface QueryFieldFactories {
@@ -322,7 +323,8 @@ export class QueryStruct {
       if (!this.parent) {
         throw new Error(`Cannot expand reference to ${name} without parent`);
       }
-      parentRef = expand.field.exprToSQL(
+      parentRef = exprToSQL(
+        expand.field,
         expand.result,
         this.parent,
         this.structDef.e

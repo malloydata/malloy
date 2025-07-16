@@ -4,6 +4,7 @@
  */
 
 import type {DialectFieldList} from '../dialect';
+import {exprToSQL} from './expression_compiler';
 import type {
   TurtleDef,
   IndexFieldDef,
@@ -262,7 +263,7 @@ export class QueryQuery extends QueryField {
           qs.parent
         ) {
           qs.informOfAliasValue(
-            this.exprToSQL(this.rootResult, qs.parent, qs.structDef.e)
+            exprToSQL(this, this.rootResult, qs.parent, qs.structDef.e)
           );
         }
         context = qs;
@@ -498,7 +499,8 @@ export class QueryQuery extends QueryField {
         (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
         (which === 'where' && expressionIsScalar(cond.expressionType))
       ) {
-        const sqlClause = this.exprToSQL(
+        const sqlClause = exprToSQL(
+          this,
           resultStruct,
           context,
           cond.e,
@@ -841,7 +843,7 @@ export class QueryQuery extends QueryField {
         // If this array is NOT contained in the parent, but a computed entity
         // then the thing we are joining is not "parent.childName", but
         // the expression which is built in that namespace
-        arrayExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
+        arrayExpression = exprToSQL(this, this.rootResult, qs.parent, qsDef.e);
       } else {
         // If this is a reference through an expression at the top level,
         // need to generate the expression because the expression is written
