@@ -51,7 +51,7 @@
     "ci-presto": "MALLOY_DATABASE=presto JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto-trino --reporters jest-silent-reporter summary",
     "ci-publisher": "MALLOY_DATABASE=publisher JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-publisher --reporters jest-silent-reporter summary",
     "ci-snowflake": "MALLOY_DATABASE=snowflake JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-snowflake --reporters jest-silent-reporter summary",
-    "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto-trino",
+    "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto-trino --reporters jest-silent-reporter summary",
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
