@@ -9,7 +9,7 @@ import type {
   QueryResultDef,
   TurtleDef,
 } from './malloy_types';
-import {QueryModel} from './query_model';
+import {makeQueryModel} from './query_model';
 import {QueryStruct} from './query_node';
 import {QueryQuery} from './query_query';
 import {StageWriter} from './stage_writer';
@@ -28,7 +28,7 @@ export class Segment {
       structDef,
       undefined,
       {
-        model: new QueryModel(undefined),
+        model: makeQueryModel(undefined),
       },
       {}
     );

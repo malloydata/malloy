@@ -24,6 +24,9 @@
 export * from './malloy_types';
 export {Segment} from './segment';
 export {QueryStruct, QueryField} from './query_node';
-export {QueryModel, getResultStructDefForQuery} from './query_model';
+export {
+  getResultStructDefForQuery,
+  QueryModelImpl as QueryModel,
+} from './query_model_impl';
 export {getResultStructDefForView} from './query_query';
 export {indent, composeSQLExpr} from './utils';

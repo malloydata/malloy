@@ -67,8 +67,8 @@ import {
   FieldInstanceResult,
   FieldInstanceResultRoot,
 } from './field_instance';
-import {QueryModel} from './query_model';
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {makeQueryModel} from './query_model_impl';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -2168,7 +2168,7 @@ export function getResultStructDefForView(
     source,
     undefined,
     {
-      model: new QueryModel(undefined),
+      model: makeQueryModel(undefined),
     },
     {}
   );

@@ -721,7 +721,13 @@ export class QueryStruct {
   resolveQueryFields() {
     if (this.structDef.type === 'query_source') {
       const resultStruct = this.model
-        .loadQuery(this.structDef.query, undefined, this.prepareResultOptions)
+        .loadQuery(
+          this.structDef.query,
+          undefined,
+          this.prepareResultOptions,
+          false,
+          false
+        )
         .structs.pop();
 
       // should never happen.
