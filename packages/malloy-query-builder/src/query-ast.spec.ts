@@ -8,7 +8,11 @@
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {flights_model} from './flights_model';
 import './expects';
-import type {ASTOrderByViewOperation} from './query-ast';
+import type {
+  ASTAggregateViewOperation,
+  ASTArrowQueryDefinition,
+  ASTOrderByViewOperation,
+} from './query-ast';
 import {ASTQuery} from './query-ast';
 
 function dedent(strs: TemplateStringsArray) {
@@ -816,6 +820,130 @@ describe('query builder', () => {
         },
       },
       malloy: 'run: flights -> { having: flight_count ~ f`>100` }',
+    });
+  });
+  test('add a calculate moving average', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addCalculateMovingAverage(
+        'flight_count_smoothed',
+        'flight_count',
+        [],
+        7,
+        0
+      );
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'calculate',
+                name: 'flight_count_smoothed',
+                field: {
+                  expression: {
+                    kind: 'moving_average',
+                    field_reference: {
+                      name: 'flight_count',
+                      path: [],
+                    },
+                    rows_preceding: 7,
+                    rows_following: 0,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy:
+        'run: flights -> { calculate: flight_count_smoothed is avg_moving( flight_count, 7, 0 ) }',
+    });
+  });
+  test('convert an aggregate to a moving average', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'aggregate',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'flight_count',
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+    expect((q: ASTArrowQueryDefinition) => {
+      const segment = q.getOrAddDefaultSegment();
+      const aggregteOperation = segment.operations.index(
+        0
+      ) as ASTAggregateViewOperation;
+      aggregteOperation.convertToCalculateMovingAverage(7);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'calculate',
+                name: 'flight_count',
+                field: {
+                  expression: {
+                    kind: 'moving_average',
+                    field_reference: {
+                      name: 'flight_count',
+                      path: [],
+                    },
+                    rows_preceding: 7,
+                    rows_following: 0,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy:
+        'run: flights -> { calculate: flight_count is avg_moving( flight_count, 7, 0 ) }',
     });
   });
   test('add a date group by', () => {

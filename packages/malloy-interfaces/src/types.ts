@@ -147,6 +147,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'name': 'BooleanType',
     'fields': {},
   },
+  'CalculateOperation': {
+    'type': 'struct',
+    'name': 'CalculateOperation',
+    'fields': {
+      'name': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'field': {
+        'type': 'Field',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
   'Cell': {
     'type': 'union',
     'name': 'Cell',
@@ -510,6 +526,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'time_truncation': 'TimeTruncationFieldReference',
       'filtered_field': 'FilteredField',
       'literal_value': 'LiteralValueExpression',
+      'moving_average': 'MovingAverage',
     },
   },
   'Field': {
@@ -851,6 +868,27 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'AnonymousQueryInfo',
         'array': true,
         'optional': false,
+      },
+    },
+  },
+  'MovingAverage': {
+    'type': 'struct',
+    'name': 'MovingAverage',
+    'fields': {
+      'field_reference': {
+        'type': 'Reference',
+        'optional': false,
+        'array': false,
+      },
+      'rows_preceding': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'rows_following': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
       },
     },
   },
@@ -1646,6 +1684,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'nest': 'Nest',
       'having': 'FilterOperation',
       'drill': 'DrillOperation',
+      'calculate': 'CalculateOperation',
     },
   },
   'ViewRefinement': {
@@ -1755,6 +1794,11 @@ export type BooleanLiteral = {
 };
 
 export type BooleanType = {};
+
+export type CalculateOperation = {
+  name: string;
+  field: Field;
+};
 
 export type CellType =
   | 'string_cell'
@@ -1905,13 +1949,15 @@ export type ExpressionType =
   | 'field_reference'
   | 'time_truncation'
   | 'filtered_field'
-  | 'literal_value';
+  | 'literal_value'
+  | 'moving_average';
 
 export type Expression =
   | ExpressionWithFieldReference
   | ExpressionWithTimeTruncation
   | ExpressionWithFilteredField
-  | ExpressionWithLiteralValue;
+  | ExpressionWithLiteralValue
+  | ExpressionWithMovingAverage;
 
 export type ExpressionWithFieldReference = {
   kind: 'field_reference';
@@ -1928,6 +1974,10 @@ export type ExpressionWithFilteredField = {
 export type ExpressionWithLiteralValue = {
   kind: 'literal_value';
 } & LiteralValueExpression;
+
+export type ExpressionWithMovingAverage = {
+  kind: 'moving_average';
+} & MovingAverage;
 
 export type Field = {
   expression: Expression;
@@ -2125,6 +2175,12 @@ export type ModelInfo = {
   entries: Array<ModelEntryValue>;
   annotations?: Array<Annotation>;
   anonymous_queries: Array<AnonymousQueryInfo>;
+};
+
+export type MovingAverage = {
+  field_reference: Reference;
+  rows_preceding?: number;
+  rows_following?: number;
 };
 
 export type Nest = {
@@ -2467,7 +2523,8 @@ export type ViewOperationType =
   | 'where'
   | 'nest'
   | 'having'
-  | 'drill';
+  | 'drill'
+  | 'calculate';
 
 export type ViewOperation =
   | ViewOperationWithGroupBy
@@ -2477,7 +2534,8 @@ export type ViewOperation =
   | ViewOperationWithWhere
   | ViewOperationWithNest
   | ViewOperationWithHaving
-  | ViewOperationWithDrill;
+  | ViewOperationWithDrill
+  | ViewOperationWithCalculate;
 
 export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
 
@@ -2494,6 +2552,10 @@ export type ViewOperationWithNest = {kind: 'nest'} & Nest;
 export type ViewOperationWithHaving = {kind: 'having'} & FilterOperation;
 
 export type ViewOperationWithDrill = {kind: 'drill'} & DrillOperation;
+
+export type ViewOperationWithCalculate = {
+  kind: 'calculate';
+} & CalculateOperation;
 
 export type ViewRefinement = {
   base: ViewDefinition;

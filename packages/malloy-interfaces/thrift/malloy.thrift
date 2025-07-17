@@ -265,6 +265,7 @@ union ViewOperation {
   6: required Nest nest,
   7: required FilterOperation having,
   8: required DrillOperation drill,
+  9: required CalculateOperation calculate,
 }
 
 struct GroupBy {
@@ -308,6 +309,11 @@ struct FilterOperation {
 
 struct DrillOperation {
   1: required Filter filter,
+}
+
+struct CalculateOperation {
+  1: required string name,
+  2: required Field field,
 }
 
 union Filter {
@@ -452,6 +458,7 @@ union Expression {
   2: required TimeTruncationFieldReference time_truncation,
   3: required FilteredField filtered_field,
   4: required LiteralValueExpression literal_value,
+  5: required MovingAverage moving_average
 }
 
 struct TimeTruncationFieldReference {
@@ -462,6 +469,12 @@ struct TimeTruncationFieldReference {
 struct FilteredField {
   1: required Reference field_reference,
   2: required list<FilterOperation> where,
+}
+
+struct MovingAverage {
+  1: required Reference field_reference,
+  2: optional i32 rows_preceding
+  3: optional i32 rows_following
 }
 
 struct StringCell {

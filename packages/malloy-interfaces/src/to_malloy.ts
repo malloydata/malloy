@@ -318,6 +318,8 @@ function groupedOperationsToFragments(
       return havingToFragments(operations as Malloy.FilterOperation[]);
     case 'drill':
       return drillToFragments(operations as Malloy.DrillOperation[]);
+    case 'calculate':
+      return calculateToFragments(operations as Malloy.CalculateOperation[]);
   }
 }
 
@@ -379,6 +381,23 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
       ];
     case 'literal_value':
       return literalToFragments(expression.literal_value);
+    case 'moving_average':
+      return [
+        'avg_moving',
+        ...wrap(
+          '(',
+          [
+            ...referenceToFragments(expression.field_reference),
+            expression.rows_preceding !== undefined
+              ? `, ${expression.rows_preceding}`
+              : ', 0',
+            expression.rows_following !== undefined
+              ? `, ${expression.rows_following}`
+              : '',
+          ],
+          ')'
+        ),
+      ];
   }
 }
 
@@ -503,6 +522,24 @@ function drillToFragments(drill: Malloy.DrillOperation[]): Fragment[] {
 
 function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('having', having.map(filterOperationItemToFragments), ',');
+}
+
+function calculateToFragments(
+  calculate: Malloy.CalculateOperation[]
+): Fragment[] {
+  const fragments: Fragment[] = [];
+  for (let i = 0; i < calculate.length; i++) {
+    const operation = calculate[i];
+    if (i !== 0) {
+      fragments.push(NEWLINE);
+    }
+    if (operation.name) {
+      fragments.push(maybeQuoteIdentifier(operation.name));
+      fragments.push(' is ');
+    }
+    fragments.push(...fieldToFragments(operation.field));
+  }
+  return formatBlock('calculate', [fragments]);
 }
 
 const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly
