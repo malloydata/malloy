@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-snowflake",
-  "version": "0.0.297",
+  "version": "0.0.298",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.297",
+    "@malloydata/malloy": "0.0.298",
     "generic-pool": "^3.9.0",
     "snowflake-sdk": "2.0.2",
     "toml": "^3.0.0"
