@@ -2353,7 +2353,8 @@ export class Segment {
       {
         model: new QueryModel(undefined),
       },
-      {}
+      {},
+      undefined
     );
     const turtleDef: TurtleDef = {
       type: 'turtle',
@@ -2365,7 +2366,8 @@ export class Segment {
       turtleDef,
       qs,
       new StageWriter(true, undefined), // stage write indicates we want to get a result.
-      false
+      false,
+      undefined
     );
     return queryQueryQuery.getResultStructDef();
   }
@@ -2381,13 +2383,15 @@ export function getResultStructDefForView(
     {
       model: new QueryModel(undefined),
     },
-    {}
+    {},
+    undefined
   );
   const queryQueryQuery = QueryQuery.makeQuery(
     view,
     qs,
     new StageWriter(true, undefined), // stage write indicates we want to get a result.
-    false
+    false,
+    undefined
   );
   return queryQueryQuery.getResultStructDef();
 }
@@ -2443,7 +2447,8 @@ class QueryQuery extends QueryField {
     fieldDef: TurtleDef,
     parentStruct: QueryStruct,
     stageWriter: StageWriter | undefined = undefined,
-    isJoinedSubquery: boolean
+    isJoinedSubquery: boolean,
+    lexicalParent: QueryStruct | undefined
   ): QueryQuery {
     let parent = parentStruct;
 
@@ -2453,7 +2458,7 @@ class QueryQuery extends QueryField {
     const sourceDef = parentStruct.structDef;
 
     // if we are generating code
-    //  and have extended declaration, we need to make a new QueryStruct
+    //  and have extended declaration, or a lexical parent, we need to make a new QueryStruct
     //  copy the definitions into a new structdef
     //  edit the declations from the pipeline
     if (
@@ -2468,7 +2473,8 @@ class QueryQuery extends QueryField {
         },
         parentStruct.sourceArguments,
         parent.parent ? {struct: parent} : {model: parent.model},
-        parent.prepareResultOptions
+        parent.prepareResultOptions,
+        lexicalParent
       );
       turtleWithFilters = {
         ...turtleWithFilters,
@@ -2480,6 +2486,14 @@ class QueryQuery extends QueryField {
           ...turtleWithFilters.pipeline.slice(1),
         ],
       };
+    } else if (lexicalParent !== undefined) {
+      parent = new QueryStruct(
+        sourceDef,
+        parentStruct.sourceArguments,
+        parent.parent ? {struct: parent} : {model: parent.model},
+        parent.prepareResultOptions,
+        lexicalParent
+      );
     }
 
     if (
@@ -3062,7 +3076,7 @@ class QueryQuery extends QueryField {
     qs.eventStream?.emit('join-used', {name: getIdentifier(qsDef)});
     qs.maybeEmitParameterizedSourceUsage();
     if (isJoinedSource(qsDef)) {
-      let structSQL = qs.structSourceSQL(stageWriter);
+      let structSQL = qs.structSourceSQL(stageWriter, this.parent);
       const matrixOperation = (qsDef.matrixOperation || 'left').toUpperCase();
       if (!this.parent.dialect.supportsFullJoin && matrixOperation === 'FULL') {
         throw new Error('FULL JOIN not supported');
@@ -3212,7 +3226,7 @@ class QueryQuery extends QueryField {
     const [[, ji]] = this.rootResult.joins;
     const qs = ji.queryStruct;
     // Joins
-    let structSQL = qs.structSourceSQL(stageWriter);
+    let structSQL = qs.structSourceSQL(stageWriter, this.parent.lexicalParent);
     if (isIndexSegment(this.firstSegment)) {
       structSQL = this.parent.dialect.sqlSampleTable(
         structSQL,
@@ -4045,13 +4059,15 @@ class QueryQuery extends QueryField {
         inputStruct,
         undefined,
         {model: this.parent.getModel()},
-        this.parent.prepareResultOptions
+        this.parent.prepareResultOptions,
+        undefined
       );
       const q = QueryQuery.makeQuery(
         newTurtle,
         qs,
         stageWriter,
-        this.isJoinedSubquery
+        this.isJoinedSubquery,
+        undefined
       );
       pipeOut = q.generateSQLFromPipeline(stageWriter);
       outputRepeatedResultType = q.rootResult.getRepeatedResultType();
@@ -4121,13 +4137,15 @@ class QueryQuery extends QueryField {
           structDef,
           undefined,
           parent,
-          this.parent.prepareResultOptions
+          this.parent.prepareResultOptions,
+          undefined
         );
         const q = QueryQuery.makeQuery(
           {type: 'turtle', name: '~computeLastStage~', pipeline: [transform]},
           s,
           stageWriter,
-          this.isJoinedSubquery
+          this.isJoinedSubquery,
+          undefined
         );
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
@@ -4490,7 +4508,8 @@ class QueryFieldStruct extends QueryField {
       jfd,
       sourceArguments,
       {struct: parent},
-      prepareResultOptions
+      prepareResultOptions,
+      parent
     );
   }
 
@@ -4527,7 +4546,8 @@ class QueryStruct {
     public structDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
     parent: ParentQueryStruct | ParentQueryModel,
-    readonly prepareResultOptions: PrepareResultOptions
+    readonly prepareResultOptions: PrepareResultOptions,
+    readonly lexicalParent: QueryStruct | undefined
   ) {
     this.setParent(parent);
 
@@ -4595,13 +4615,20 @@ class QueryStruct {
           : exprMap(param.value, frag => {
               if (frag.node === 'parameter') {
                 const resolved1 = (
-                  this.parent ? this.parent.arguments() : this.arguments()
+                  this.lexicalParent
+                    ? this.lexicalParent.arguments()
+                    : this.parent
+                    ? this.parent.arguments()
+                    : this.arguments()
                 )[frag.path[0]];
+                if (resolved1 === undefined || resolved1.value === null) {
+                  return {node: 'null'}; // TODO
+                }
                 const resolved2 = this.parent
                   ? this.parent.resolveParentParameterReferences(resolved1)
                   : resolved1;
-                if (resolved2.value === null) {
-                  throw new Error('Invalid parameter value');
+                if (resolved2 === undefined || resolved2.value === null) {
+                  return {node: 'null'}; // TODO
                 } else {
                   return resolved2.value;
                 }
@@ -4641,7 +4668,7 @@ class QueryStruct {
       if (field.type === 'turtle') {
         this.addFieldToNameMap(
           as,
-          QueryQuery.makeQuery(field, this, undefined, false)
+          QueryQuery.makeQuery(field, this, undefined, false, undefined)
         );
       } else if (isAtomic(field) || isJoinedSource(field)) {
         this.addFieldToNameMap(as, this.makeQueryField(field));
@@ -4826,7 +4853,12 @@ class QueryStruct {
   resolveQueryFields() {
     if (this.structDef.type === 'query_source') {
       const resultStruct = this.model
-        .loadQuery(this.structDef.query, undefined, this.prepareResultOptions)
+        .loadQuery(
+          this.structDef.query,
+          undefined,
+          this.parent,
+          this.prepareResultOptions
+        )
         .structs.pop();
 
       // should never happen.
@@ -4912,7 +4944,7 @@ class QueryStruct {
       case 'sql native':
         return new QueryFieldUnsupported(field, this, referenceId);
       case 'turtle':
-        return QueryQuery.makeQuery(field, this, undefined, false);
+        return QueryQuery.makeQuery(field, this, undefined, false, undefined);
       default:
         throw new Error(
           `unknown field definition ${(JSON.stringify(field), undefined, 2)}`
@@ -4920,7 +4952,10 @@ class QueryStruct {
     }
   }
 
-  structSourceSQL(stageWriter: StageWriter): string {
+  structSourceSQL(
+    stageWriter: StageWriter,
+    lexicalParent: QueryStruct | undefined
+  ): string {
     switch (this.structDef.type) {
       case 'table':
         return this.dialect.quoteTablePath(this.structDef.tablePath);
@@ -4950,6 +4985,7 @@ class QueryStruct {
           return this.model.loadQuery(
             this.structDef.query,
             stageWriter,
+            lexicalParent,
             this.prepareResultOptions,
             false,
             true // this is an intermediate stage.
@@ -5134,7 +5170,7 @@ export class QueryModel {
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (isSourceDef(s)) {
-        qs = new QueryStruct(s, undefined, {model: this}, {});
+        qs = new QueryStruct(s, undefined, {model: this}, {}, undefined);
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
       } else if (s.type === 'query') {
@@ -5166,7 +5202,8 @@ export class QueryModel {
           ret.structDef,
           sourceArguments,
           ret.parent ?? {model: this},
-          prepareResultOptions
+          prepareResultOptions,
+          undefined
         );
       }
       return ret;
@@ -5175,13 +5212,15 @@ export class QueryModel {
       structRef,
       sourceArguments,
       {model: this},
-      prepareResultOptions
+      prepareResultOptions,
+      undefined
     );
   }
 
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
+    lexicalParent: QueryStruct | undefined,
     prepareResultOptions?: PrepareResultOptions,
     emitFinalStage = false,
     isJoinedSubquery = false
@@ -5209,7 +5248,8 @@ export class QueryModel {
         prepareResultOptions
       ),
       stageWriter,
-      isJoinedSubquery
+      isJoinedSubquery,
+      lexicalParent
     );
 
     const ret = q.generateSQLFromPipeline(stageWriter);
@@ -5280,6 +5320,7 @@ export class QueryModel {
     const m = newModel || this;
     const ret = m.loadQuery(
       query,
+      undefined,
       undefined,
       prepareResultOptions,
       finalize,
