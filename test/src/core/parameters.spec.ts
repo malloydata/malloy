@@ -267,7 +267,7 @@ describe('parameters', () => {
       }
     `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
-  it.skip('can pass param into query definition', async () => {
+  it('can pass param into query source', async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(
@@ -282,6 +282,18 @@ describe('parameters', () => {
         select: state
       }
     `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it.skip('can pass param into query definition', async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts is duckdb.table('malloytest.state_facts')
+
+      source: state_facts_query(the_state::string) is state_facts -> { select: the_state }
+
+      run: state_facts_query(the_state is "CA") -> {
+        select: the_state
+      }
+    `).malloyResultMatches(runtime, {the_state: 'CA'});
   });
   it('can use param in join on', async () => {
     await expect(`
