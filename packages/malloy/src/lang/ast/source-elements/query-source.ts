@@ -24,7 +24,7 @@
 import type {SourceDef, QuerySourceDef} from '../../../model/malloy_types';
 import {Source} from './source';
 import type {QueryElement} from '../types/query-element';
-import type {ParameterSpace} from '../field-space/parameter-space';
+import {ParameterSpace} from '../field-space/parameter-space';
 import type {HasParameter} from '../parameters/has-parameter';
 import {v4 as uuidv4} from 'uuid';
 
@@ -42,7 +42,8 @@ export class QuerySource extends Source {
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): SourceDef {
-    const comp = this.query.queryComp(false);
+    const paramSpace = parameterSpace ?? new ParameterSpace(pList ?? []);
+    const comp = this.query.queryComp(false, paramSpace);
     const queryStruct: QuerySourceDef = {
       ...comp.outputStruct,
       name: `QuerySource-${uuidv4()}`,
