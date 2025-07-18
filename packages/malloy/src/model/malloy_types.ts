@@ -1207,14 +1207,16 @@ export interface CompositeSourceDef extends SourceDefBase {
 export interface SQLStringSegment {
   sql: string;
 }
-export type SQLPhraseSegment = Query | SQLStringSegment;
+export type SQLPhraseSegment = Query | SQLStringSegment | Expr;
 export function isSegmentSQL(f: SQLPhraseSegment): f is SQLStringSegment {
   return 'sql' in f;
 }
 
 export interface SQLSourceDef extends SourceDefBase {
   type: 'sql_select';
+  // TODO update these names
   selectStr: string;
+  selectTemplate: GenericSQLExpr;
 }
 
 export interface QuerySourceDef extends SourceDefBase {

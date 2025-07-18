@@ -455,7 +455,19 @@ export class DocStatementList
       } else {
         const needs = el.needs(doc);
         if (needs) return needs;
-        el.execute(doc);
+        try {
+          // TODO: clear dirty bit on the model namespace
+          el.execute(doc);
+        } catch (error) {
+          if (error instanceof UnresolvedNeeds) {
+            // TODO: check dirty bit on the model namespace, and if it has been set
+            // throw an error like "Illegal throw of UnresolvedNeeds after model has been changed"
+            // TODO: make changes to the model namespace set a dirty bit
+            return error.needs;
+          } else {
+            throw error;
+          }
+        }
       }
       this.execCursor += 1;
     }
@@ -654,5 +666,11 @@ export class Document extends MalloyElement implements NameSpace {
     const ns = new DialectNameSpace(dialect);
     this.dialectNameSpaces.set(dialectName, ns);
     return ns;
+  }
+}
+
+export class UnresolvedNeeds extends Error {
+  constructor(public needs: ModelDataRequest) {
+    super();
   }
 }

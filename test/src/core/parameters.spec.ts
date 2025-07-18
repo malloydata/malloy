@@ -283,6 +283,40 @@ describe('parameters', () => {
       }
     `).malloyResultMatches(runtime, {state: 'CA'});
   });
+  it('can pass param into sql source', async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts(
+        state_filter::string is 'IL'
+      ) is duckdb.sql("""
+        SELECT * FROM malloytest.state_facts WHERE state = %{state_filter}
+      """)
+
+      source: state_facts(
+        state_filter::filter<string> is f'IL, CA'
+      ) is duckdb.sql("""
+        SELECT * FROM malloytest.state_facts WHERE %{sql_string("state") ~ state_filter}
+      """)
+
+      run: state_facts(state_filter is "CA") -> {
+        select: state
+      }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it('can pass expression involving param into sql source', async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts(
+        state_filter::filter<string> is f'IL, CA'
+      ) is duckdb.sql("""
+        SELECT * FROM malloytest.state_facts WHERE %{sql_string("state") ~ state_filter}
+      """)
+
+      run: state_facts(state_filter is f"CA") -> {
+        select: state
+      }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
   it.skip('can pass param into query definition', async () => {
     await expect(`
       ##! experimental.parameters

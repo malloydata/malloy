@@ -282,6 +282,11 @@ class ImportsAndTablesStep implements TranslationStep {
         };
       }
       allMissing = {tables};
+      // To implement SQL generation of parameter default values
+      // in the SQL query whose schema we will fetch, we need to add
+      // connection fetching to the translator API. This already exists
+      // as part of the new external API, so it should be a pretty minimal change.
+      // allMissing.connections = {};
     }
 
     const missingImports = (that.root.importZone.getUndefined() ?? []).filter(

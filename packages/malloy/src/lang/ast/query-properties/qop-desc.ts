@@ -112,7 +112,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       outputSpace: () =>
         // TODO someday we'd like to get rid of the call to opOutputStruct here.
         // If the `build.resultFS` is correct, then we should be able to just use that
-        // in a more direct way.
+        // in a more direct way, i.e. `build.resultFS.structDef()`.
         new StaticSourceSpace(
           opOutputStruct(this, inputFS.structDef(), segment),
           'public'
