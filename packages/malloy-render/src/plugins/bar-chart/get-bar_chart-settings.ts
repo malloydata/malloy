@@ -42,7 +42,7 @@ export function getBarChartSettings(
   const hideReferences = isSpark;
 
   // Parse size property
-  let size: BarChartSettings['size'];
+  let size: BarChartSettings['size'] = defaultBarChartSettings.size;
   if (vizTag.has('size')) {
     const sizeText = vizTag.text('size');
     if (sizeText && ['xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(sizeText)) {

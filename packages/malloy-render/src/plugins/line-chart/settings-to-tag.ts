@@ -94,5 +94,14 @@ export function lineChartSettingsToTag(settings: LineChartSettings): Tag {
     );
   }
 
+  if (settings.size) {
+    if (typeof settings.size === 'object') {
+      tag.set(['viz', 'size', 'width'], settings.size.width);
+      tag.set(['viz', 'size', 'height'], settings.size.height);
+    } else {
+      tag.set(['viz', 'size'], settings.size);
+    }
+  }
+
   return tag;
 }

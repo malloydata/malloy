@@ -170,7 +170,7 @@ export function getLineChartSettings(
     (vizTag.text('mode') as 'yoy' | 'normal') ?? defaultLineChartSettings.mode;
 
   // Parse size property
-  let size: LineChartSettings['size'];
+  let size: LineChartSettings['size'] = defaultLineChartSettings.size;
   if (vizTag.has('size')) {
     const sizeText = vizTag.text('size');
     if (sizeText && ['xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(sizeText)) {

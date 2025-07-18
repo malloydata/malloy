@@ -24,6 +24,8 @@ export interface BarChartSettings extends Record<string, unknown> {
   hideReferences: boolean;
   disableEmbedded: boolean;
   size?:
+    | 'fill'
+    | 'spark'
     | 'xs'
     | 'sm'
     | 'md'
@@ -55,6 +57,7 @@ export const defaultBarChartSettings: BarChartSettings = {
   interactive: true,
   hideReferences: false,
   disableEmbedded: false,
+  size: 'fill',
 };
 
 // Specific typed interface for the bar chart schema
@@ -249,7 +252,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
       oneOf: [
         {
           type: 'string',
-          enum: ['xs', 'sm', 'md', 'lg', 'xl', '2xl'],
+          enum: ['fill', 'spark', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'],
         },
         {
           type: 'object',

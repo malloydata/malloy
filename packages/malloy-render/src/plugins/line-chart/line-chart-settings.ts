@@ -25,6 +25,7 @@ export interface LineChartSettings extends Record<string, unknown> {
   disableEmbedded: boolean;
   mode?: 'yoy' | 'normal';
   size?:
+    | 'fill'
     | 'xs'
     | 'sm'
     | 'md'
@@ -61,6 +62,7 @@ export const defaultLineChartSettings: LineChartSettings = {
   interactive: true,
   disableEmbedded: false,
   mode: 'normal',
+  size: 'fill',
 };
 
 // Specific typed interface for the line chart schema
@@ -257,7 +259,7 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
       oneOf: [
         {
           type: 'string',
-          enum: ['xs', 'sm', 'md', 'lg', 'xl', '2xl'],
+          enum: ['fill', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'],
         },
         {
           type: 'object',
