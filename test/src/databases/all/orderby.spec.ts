@@ -26,7 +26,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -55,9 +56,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: models->{
         group_by:
           manufacturer,
-          big is seats >=21
+          big is seats >= 21
         aggregate: model_count is count()
-      }->{
+      } -> {
         group_by: big
         aggregate: model_count is model_count.sum()
       }

@@ -1662,10 +1662,11 @@ export class Explore extends Entity implements Taggable {
       type: 'query',
       structRef,
       pipeline: [
-        {
-          type: 'reduce',
-          queryFields: [{type: 'fieldref', path: [name]}],
-        },
+        // TODO this seems wrong anyway... why is it nesting the field???
+        // {
+        //   type: 'reduce',
+        //   queryFields: [{type: 'fieldref', path: [name]}],
+        // },
       ],
     };
     return new PreparedQuery(internalQuery, this.modelDef, [], name);

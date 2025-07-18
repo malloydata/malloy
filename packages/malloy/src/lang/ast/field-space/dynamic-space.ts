@@ -98,6 +98,7 @@ export abstract class DynamicSpace
   }
 
   structDef(): model.SourceDef {
+    const isOutput = this.isQueryFieldSpace();
     this.complete = true;
     if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
@@ -139,7 +140,15 @@ export abstract class DynamicSpace
           const fieldDef = field.fieldDef();
           if (fieldDef) {
             fieldIndices.set(name, this.sourceDef.fields.length);
-            this.sourceDef.fields.push(fieldDef);
+            const maybeOutputized: model.FieldDef =
+              isOutput && model.isAtomic(fieldDef)
+                ? {
+                    ...fieldDef,
+                    expressionType: 'scalar',
+                    e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
+                  }
+                : fieldDef;
+            this.sourceDef.fields.push(maybeOutputized);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
           // out ReferenceFields and still make this check.

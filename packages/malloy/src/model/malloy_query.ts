@@ -95,6 +95,7 @@ import type {
   Expression,
   AtomicFieldDef,
   FilterMatchExpr,
+  ColumnExpr,
 } from './malloy_types';
 import {
   expressionIsAggregate,
@@ -503,6 +504,17 @@ class QueryField extends QueryNode {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
     }
+  }
+
+  generateColumnFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: ColumnExpr,
+    _state: GenerateState
+  ): string {
+    // find the structDef and return the path to the field...
+    const field = context.getFieldByName(expr.path);
+    return field.generateExpression(resultSet);
   }
 
   generateOutputFieldFragment(
@@ -1255,6 +1267,8 @@ class QueryField extends QueryNode {
     }
 
     switch (expr.node) {
+      case 'column':
+        return this.generateColumnFragment(resultSet, context, expr, state);
       case 'field':
         return this.generateFieldFragment(resultSet, context, expr, state);
       case 'parameter':
@@ -2531,10 +2545,18 @@ class QueryQuery extends QueryField {
 
   // get a field ref and expand it.
   expandField(f: QueryFieldDef) {
-    const field =
-      f.type === 'fieldref'
-        ? this.parent.getQueryFieldReference(f)
-        : this.parent.makeQueryField(f);
+    let def: FieldDef;
+    if (f.type === 'fieldref') {
+      if (f.def === undefined) {
+        throw new Error(
+          `Expected fieldref ${f.path} to be resolved in translator`
+        );
+      }
+      def = f.def;
+    } else {
+      def = f;
+    }
+    const field = this.parent.makeQueryField(def);
     const as = field.getIdentifier();
     return {as, field};
   }
@@ -5352,6 +5374,20 @@ export class QueryModel {
           type: 'index',
           indexFields: indexStar,
           sample: struct.dialect.defaultSampling,
+          outputStruct: {
+            type: 'query_result',
+            name: 'index',
+            // TODO
+            connection: 'foo',
+            dialect: 'bar',
+            fields: [
+              {name: 'fieldName', type: 'string'},
+              {name: 'fieldPath', type: 'string'},
+              {name: 'fieldType', type: 'string'},
+              {name: 'weight', type: 'number'},
+              {name: 'fieldValue', type: 'string'},
+            ],
+          },
         },
       ],
     };

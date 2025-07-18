@@ -84,14 +84,26 @@ export class ErrorFactory {
   }
 
   static get reduceSegment(): ReduceSegment {
-    return {type: 'reduce', queryFields: []};
+    return {
+      type: 'reduce',
+      queryFields: [],
+      outputStruct: ErrorFactory.structDef,
+    };
   }
 
   static get projectSegment(): ProjectSegment {
-    return {type: 'project', queryFields: []};
+    return {
+      type: 'project',
+      queryFields: [],
+      outputStruct: ErrorFactory.structDef,
+    };
   }
 
   static get indexSegment(): IndexSegment {
-    return {type: 'index', indexFields: []};
+    return {
+      type: 'index',
+      indexFields: [],
+      outputStruct: ErrorFactory.structDef,
+    };
   }
 }

@@ -51,6 +51,7 @@ import {
   mergeFieldUsage,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
+import {ErrorFactory} from '../error-factory';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -410,12 +411,14 @@ export abstract class QuerySpace extends QueryOperationSpace {
         'unexpected-index-segment',
         'internal error generating index segment from non index query'
       );
-      return {type: 'reduce', queryFields: []};
+      return ErrorFactory.reduceSegment;
     }
 
     const segment: model.QuerySegment = {
       type: this.segmentType,
       queryFields: this.queryFieldDefs(),
+      // TODO actually update this with the new refine fields?
+      outputStruct: this.structDef(),
     };
 
     segment.queryFields = mergeFields(

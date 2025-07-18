@@ -90,17 +90,18 @@ export class ReferenceView extends View {
       throw new Error('Expected field to have definition');
     }
     if (isAtomic(fieldDef)) {
-      const newSegment: PipeSegment = {
-        type: 'reduce',
-        queryFields: [this.reference.refToField],
-        fieldUsage: fieldDef.fieldUsage,
-      };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
         ...sourceBase(fs.structDef()),
         type: 'query_result',
         name,
         fields: [fieldDef],
+      };
+      const newSegment: PipeSegment = {
+        type: 'reduce',
+        queryFields: [this.reference.refToField],
+        fieldUsage: fieldDef.fieldUsage,
+        outputStruct,
       };
       return {
         pipeline: [newSegment],

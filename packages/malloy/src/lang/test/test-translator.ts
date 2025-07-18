@@ -312,6 +312,14 @@ export class TestTranslator extends MalloyTranslator {
                   {type: 'fieldref', path: ['astr']},
                   {type: 'fieldref', path: ['acount']},
                 ],
+                // TODO
+                outputStruct: {
+                  type: 'query_result',
+                  name: 'result',
+                  fields: [],
+                  connection: 'foo',
+                  dialect: 'bar',
+                },
               },
             ],
           },

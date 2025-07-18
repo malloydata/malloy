@@ -99,6 +99,7 @@ export type Expr =
   | CaseExpr
   | InCompareExpr
   | CompositeFieldExpr
+  | ColumnExpr
   | ErrorNode;
 
 export type BinaryOperator =
@@ -212,6 +213,11 @@ export interface SpreadExpr extends ExprE {
   node: 'spread';
   prefix: string | undefined;
   suffix: string | undefined;
+}
+
+export interface ColumnExpr extends ExprLeaf {
+  node: 'column';
+  path: string[];
 }
 
 export interface FieldnameNode extends ExprLeaf {
@@ -1121,6 +1127,7 @@ export interface RawSegment extends Filtered {
   type: 'raw';
   fields: never[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
@@ -1138,6 +1145,7 @@ export interface IndexSegment extends Filtered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -1157,6 +1165,7 @@ export interface QuerySegment extends Filtered, Ordered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
@@ -1532,6 +1541,8 @@ export interface RefToField {
   annotation?: Annotation;
   at?: DocumentLocation;
   drillExpression?: Malloy.Expression | undefined;
+  // Queries produced by the translator will always have `def` set on all field refs.
+  def?: FieldDef;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

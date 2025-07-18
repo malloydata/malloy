@@ -29,6 +29,7 @@ import type {
   FieldUsage,
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
 import {
   FieldReference,
   IndexFieldReference,
@@ -66,7 +67,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         'refinement-of-index-segment',
         'index query operations cannot be refined'
       );
-      return {type: 'index', indexFields: []};
+      return ErrorFactory.indexSegment;
     }
     let fieldUsage = emptyFieldUsage();
     const indexFields: IndexFieldDef[] = [];
@@ -100,7 +101,8 @@ export class IndexFieldSpace extends QueryOperationSpace {
       }
     }
     this._fieldUsage = fieldUsage;
-    return {type: 'index', indexFields};
+    const outputStruct = this.structDef();
+    return {type: 'index', indexFields, outputStruct};
   }
 
   addRefineFromFields(_refineThis: never) {}
