@@ -45,20 +45,19 @@ export class QueryRefine extends QueryBase implements QueryElement {
   queryComp(isRefOk: boolean): QueryComp {
     const q = this.base.queryComp(isRefOk);
     const inputFS = new StaticSourceSpace(q.inputStruct, 'public');
-    const {pipeline: resultPipe, outputStruct} = this.refinement.refine(
+    const pipeline = this.refinement.refine(
       inputFS,
       q.query.pipeline,
       undefined
     );
     const query = {
       ...q.query,
-      pipeline: resultPipe,
-      outputStruct,
+      pipeline,
     };
 
     const compositeResolvedSourceDef = this.resolveCompositeSource(
       q.inputStruct,
-      resultPipe
+      pipeline
     );
 
     return {
@@ -66,7 +65,8 @@ export class QueryRefine extends QueryBase implements QueryElement {
         ...query,
         compositeResolvedSourceDef,
       },
-      outputStruct,
+      // TODO bleh
+      outputStruct: pipeline[pipeline.length - 1].outputStruct,
       inputStruct: q.inputStruct,
     };
   }

@@ -26,7 +26,6 @@ import {isRawSegment} from '../../../model/malloy_types';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
-import {getFinalStruct} from '../struct-utils';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
@@ -79,7 +78,13 @@ export class QOpDescView extends View {
     }
     if (pipeline.length === 1) {
       this.operation.refineFrom(pipeline[0]);
-      return [this.getOp(inputFS, isNestIn, this.operation, pipeline[0])];
+      const segment = this.getOp(
+        inputFS,
+        isNestIn,
+        this.operation,
+        pipeline[0]
+      );
+      return [segment];
     }
     const headRefinements = new QOpDesc([]);
     const tailRefinements = new QOpDesc([]);
@@ -116,13 +121,18 @@ export class QOpDescView extends View {
     if (tailRefinements.notEmpty()) {
       const last = pipeline.length - 1;
       this.has({tailRefinements});
-      const finalIn = getFinalStruct(
-        this,
-        inputFS.structDef(),
-        pipeline.slice(-1)
-      );
-      pipeline[last] = this.getOp(
-        new StaticSourceSpace(finalIn, 'public'),
+      // The changes above should not be allowed to change the input struct
+      // for the final segment meaningfully, so we can continue to use the existing
+      // second-to-last struct
+      const finalIn =
+        pipeline.length > 1
+          ? new StaticSourceSpace(
+              pipeline[pipeline.length - 2].outputStruct,
+              'public'
+            )
+          : inputFS;
+      pipeline[pipeline.length - 1] = this.getOp(
+        finalIn,
         undefined,
         tailRefinements,
         pipeline[last]

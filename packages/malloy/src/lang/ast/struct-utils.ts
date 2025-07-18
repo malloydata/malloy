@@ -21,74 +21,57 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {inspect} from 'util';
+import type {FieldDef, StructDef} from '../../model/malloy_types';
 
-import {Segment} from '../../model/malloy_query';
-import type {
-  FieldDef,
-  PipeSegment,
-  SourceDef,
-  StructDef,
-} from '../../model/malloy_types';
-import {
-  isPartialSegment,
-  isSourceDef,
-  segmentHasErrors,
-  structHasErrors,
-} from '../../model/malloy_types';
+// export function opOutputStruct(
+//   logTo: MalloyElement,
+//   inputStruct: SourceDef,
+//   opDesc: PipeSegment
+// ): SourceDef {
+//   const badModel =
+//     ErrorFactory.didCreate(inputStruct) || structHasErrors(inputStruct);
+//   // We don't want to expose partial segments to the compiler
+//   if (isPartialSegment(opDesc)) {
+//     opDesc = {...opDesc, type: 'reduce'};
+//   }
+//   const badOpDesc = segmentHasErrors(opDesc);
+//   // Don't call into the model code with a broken model
+//   if (!badModel && !badOpDesc) {
+//     try {
+//       const pipeOutputStruct = Segment.nextStructDef(inputStruct, opDesc);
+//       if (isSourceDef(pipeOutputStruct)) {
+//         return pipeOutputStruct;
+//       }
+//       // Inconcievable, a pipe deosnt output a record or an array
+//       logTo.logError(
+//         'failed-to-compute-output-schema',
+//         'INTERNAL ERROR model/Segment.nextStructDef: RETURNED A NON SOURCE\n' +
+//           `STRUCTDEF: ${inspect(pipeOutputStruct, {
+//             breakLength: 72,
+//             depth: Infinity,
+//           })}`
+//       );
+//     } catch (e) {
+//       logTo.logError(
+//         'failed-to-compute-output-schema',
+//         `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
+//           `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`
+//       );
+//     }
+//   }
+//   return ErrorFactory.structDef;
+// }
 
-import {ErrorFactory} from './error-factory';
-import type {MalloyElement} from './types/malloy-element';
-
-export function opOutputStruct(
-  logTo: MalloyElement,
-  inputStruct: SourceDef,
-  opDesc: PipeSegment
-): SourceDef {
-  const badModel =
-    ErrorFactory.didCreate(inputStruct) || structHasErrors(inputStruct);
-  // We don't want to expose partial segments to the compiler
-  if (isPartialSegment(opDesc)) {
-    opDesc = {...opDesc, type: 'reduce'};
-  }
-  const badOpDesc = segmentHasErrors(opDesc);
-  // Don't call into the model code with a broken model
-  if (!badModel && !badOpDesc) {
-    try {
-      const pipeOutputStruct = Segment.nextStructDef(inputStruct, opDesc);
-      if (isSourceDef(pipeOutputStruct)) {
-        return pipeOutputStruct;
-      }
-      // Inconcievable, a pipe deosnt output a record or an array
-      logTo.logError(
-        'failed-to-compute-output-schema',
-        'INTERNAL ERROR model/Segment.nextStructDef: RETURNED A NON SOURCE\n' +
-          `STRUCTDEF: ${inspect(pipeOutputStruct, {
-            breakLength: 72,
-            depth: Infinity,
-          })}`
-      );
-    } catch (e) {
-      logTo.logError(
-        'failed-to-compute-output-schema',
-        `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
-          `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`
-      );
-    }
-  }
-  return ErrorFactory.structDef;
-}
-
-export function getFinalStruct(
-  logTo: MalloyElement,
-  walkStruct: SourceDef,
-  pipeline: PipeSegment[]
-): SourceDef {
-  for (const modelQop of pipeline) {
-    walkStruct = opOutputStruct(logTo, walkStruct, modelQop);
-  }
-  return walkStruct;
-}
+// export function getFinalStruct(
+//   logTo: MalloyElement,
+//   walkStruct: SourceDef,
+//   pipeline: PipeSegment[]
+// ): SourceDef {
+//   for (const modelQop of pipeline) {
+//     walkStruct = opOutputStruct(logTo, walkStruct, modelQop);
+//   }
+//   return walkStruct;
+// }
 
 export function getStructFieldDef(
   s: StructDef,

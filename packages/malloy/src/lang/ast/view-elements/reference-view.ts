@@ -33,7 +33,6 @@ import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {attachDrillPaths} from '../query-properties/drill';
-import {getFinalStruct} from '../struct-utils';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
@@ -136,11 +135,7 @@ export class ReferenceView extends View {
         pipeline,
         name: fieldDef.name,
         annotation: fieldDef.annotation,
-        outputStruct: getFinalStruct(
-          this.reference,
-          fs.structDef(),
-          fieldDef.pipeline
-        ),
+        outputStruct: pipeline[pipeline.length - 1].outputStruct,
       };
     } else {
       if (forRefinement) {
