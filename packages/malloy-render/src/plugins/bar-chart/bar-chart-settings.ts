@@ -23,6 +23,14 @@ export interface BarChartSettings extends Record<string, unknown> {
   interactive: boolean;
   hideReferences: boolean;
   disableEmbedded: boolean;
+  size?:
+    | 'xs'
+    | 'sm'
+    | 'md'
+    | 'lg'
+    | 'xl'
+    | '2xl'
+    | {width: number; height: number};
 }
 
 // Default settings object
@@ -84,6 +92,7 @@ export interface IBarChartSettingsSchema extends JSONSchemaObject {
     interactive: JSONSchemaBoolean;
     hideReferences: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
+    size?: JSONSchemaOneOf;
   };
 }
 
@@ -231,6 +240,32 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
         'Whether to ignore field-level tags for x, y, and series channel assignment',
       type: 'boolean',
       default: false,
+    },
+    size: {
+      title: 'Chart Size',
+      description:
+        'Size preset (xs, sm, md, lg, xl, 2xl) or custom dimensions with width and height',
+      type: 'oneOf',
+      oneOf: [
+        {
+          type: 'string',
+          enum: ['xs', 'sm', 'md', 'lg', 'xl', '2xl'],
+        },
+        {
+          type: 'object',
+          properties: {
+            width: {
+              type: 'number',
+              minimum: 1,
+            },
+            height: {
+              type: 'number',
+              minimum: 1,
+            },
+          },
+          required: ['width', 'height'],
+        },
+      ],
     },
   },
   required: [
