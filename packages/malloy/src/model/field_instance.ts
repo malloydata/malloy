@@ -24,7 +24,7 @@ import {
   type QueryField,
   type UniqueKeyPossibleUse,
 } from './query_node';
-import {caseGroup} from './expression_compiler';
+import {caseGroup} from './expression_utils';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
 type InstanceFieldUsage =

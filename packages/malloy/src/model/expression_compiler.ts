@@ -46,6 +46,7 @@ import type {SQLExprElement} from './utils';
 import {exprMap, composeSQLExpr, range, AndChain} from './utils';
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
+import {caseGroup} from './expression_utils';
 import type {Dialect} from '../dialect';
 
 class GenerateState {
@@ -1083,21 +1084,6 @@ export function getAnalyticPartitions(
   return ret;
 }
 
-export function caseGroup(
-  field: QueryField,
-  groupSets: number[],
-  s: string
-): string {
-  if (groupSets.length === 0) {
-    return s;
-  } else {
-    const exp =
-      groupSets.length === 1
-        ? `=${groupSets[0]}`
-        : ` IN (${groupSets.join(',')})`;
-    return `CASE WHEN group_set${exp} THEN\n  ${s}\n  END`;
-  }
-}
 
 export function* stringsFromSQLExpression(
   field: QueryField,
