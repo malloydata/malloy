@@ -15,7 +15,7 @@
   "scripts": {
     "test": "jest --config=../../jest.config.js",
     "build-parser": "node scripts/build_parser.js",
-    "clean": "tsc --build --clean && rimraf @flowtyped",
+    "clean": "tsc --build --clean && rimraf @flowtyped  && rm -rf src/lib",
     "build": "npm run build-parser && tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"

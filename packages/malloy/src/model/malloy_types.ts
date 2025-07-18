@@ -1170,6 +1170,8 @@ export interface TurtleDef extends NamedObject, Pipeline {
   requiredGroupBys?: string[][];
 }
 
+export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
+
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
   annotation?: Annotation;
