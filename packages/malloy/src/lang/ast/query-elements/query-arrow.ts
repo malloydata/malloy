@@ -74,19 +74,23 @@ export class QueryArrow extends QueryBase implements QueryElement {
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
     }
-    const {pipeline, annotation, outputStruct, name} =
-      this.view.pipelineComp(fieldSpace);
+    const {
+      pipeline: rhsPipeline,
+      annotation,
+      outputStruct,
+      name,
+    } = this.view.pipelineComp(fieldSpace);
 
     const query = {
       ...queryBase,
       name,
       annotation,
-      pipeline: [...queryBase.pipeline, ...pipeline],
+      pipeline: [...queryBase.pipeline, ...rhsPipeline],
     };
 
     const compositeResolvedSourceDef =
       query.compositeResolvedSourceDef ??
-      this.resolveCompositeSource(inputStruct, pipeline);
+      this.resolveCompositeSource(inputStruct, rhsPipeline);
 
     const segment = query.pipeline[0];
     if (segment !== undefined) {
@@ -107,10 +111,21 @@ export class QueryArrow extends QueryBase implements QueryElement {
       }
     }
 
+    const pipelineWithExpandedFieldUsage = [
+      // The base query (if it exists) will already have its `expandedFieldUsage` computed
+      ...queryBase.pipeline,
+      // The arrow part should use the `compositeResolvedSourceDef` if it exists, otherwise its `inputStruct`
+      ...this.expandFieldUsage(
+        compositeResolvedSourceDef ?? inputStruct,
+        rhsPipeline
+      ),
+    ];
+
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
+        pipeline: pipelineWithExpandedFieldUsage,
       },
       outputStruct,
       inputStruct,

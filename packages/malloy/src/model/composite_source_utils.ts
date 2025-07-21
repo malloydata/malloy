@@ -33,6 +33,7 @@ import type {
 import {
   expressionIsScalar,
   isAtomic,
+  isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
@@ -95,7 +96,7 @@ function _resolveCompositeSources(
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
   const expandedForError = onlyCompositeUsage(
-    expandFieldUsage(fieldUsage, rootFields).result,
+    _expandFieldUsage(fieldUsage, rootFields).result,
     source.fields
   );
   if (source.type === 'composite') {
@@ -124,7 +125,7 @@ function _resolveCompositeSources(
       }
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = expandFieldUsage(fieldUsage, fieldsForLookup);
+      const expanded = _expandFieldUsage(fieldUsage, fieldsForLookup);
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -253,7 +254,7 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const expanded = expandFieldUsage(
+    const expanded = _expandFieldUsage(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
@@ -294,7 +295,19 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
   });
 }
 
-function expandFieldUsage(
+export function expandFieldUsage(
+  segment: PipeSegment,
+  source: SourceDef
+): FieldUsage[] {
+  const sourceExtensions = isQuerySegment(segment)
+    ? segment.extendSource ?? []
+    : [];
+  const fields = mergeFields(source.fields, sourceExtensions);
+  const fieldUsage = segmentFieldUsage(segment);
+  return _expandFieldUsage(fieldUsage, fields).result;
+}
+
+function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
 ): {result: FieldUsage[]; missingFields: FieldUsage[]} {
@@ -538,13 +551,21 @@ export interface NarrowedCompositeFieldResolution {
   joined: NarrowedCompositeFieldResolutionByJoinName;
 }
 
+function segmentFieldUsage(segment: PipeSegment): FieldUsage[] {
+  return (
+    (isQuerySegment(segment) || isIndexSegment(segment)
+      ? segment.fieldUsage
+      : undefined) ?? emptyFieldUsage()
+  );
+}
+
 export function resolveCompositeSources(
   source: SourceDef,
-  segment: PipeSegment,
-  fieldUsage: FieldUsage[]
+  segment: PipeSegment
 ):
   | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
+  const fieldUsage = segmentFieldUsage(segment);
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
