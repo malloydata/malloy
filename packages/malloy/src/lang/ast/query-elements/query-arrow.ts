@@ -114,9 +114,12 @@ export class QueryArrow extends QueryBase implements QueryElement {
     const pipelineWithExpandedFieldUsage = [
       // The base query (if it exists) will already have its `expandedFieldUsage` computed
       ...queryBase.pipeline,
-      // The arrow part should use the `compositeResolvedSourceDef` if it exists, otherwise its `inputStruct`
       ...this.expandFieldUsage(
-        compositeResolvedSourceDef ?? inputStruct,
+        this.source instanceof Source
+          ? // If `source ->` then use the composite resolved struct,
+            compositeResolvedSourceDef ?? inputStruct
+          : // Otherwise just use the `inputStruct`
+            inputStruct,
         rhsPipeline
       ),
     ];

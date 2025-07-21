@@ -208,6 +208,40 @@ describe('composite sources', () => {
         {path: ['param_value']},
       ]);
     });
+
+    test('query arrow usage', () => {
+      const m = model`
+        query: q is a -> { group_by: ai }
+        run: q -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('query arrow usage with composite ', () => {
+      const m = model`
+        ##! experimental.composite_sources
+        query: q is compose(
+          a extend {
+            dimension: ai_1 is 1
+            where: astr = 'foo'
+          },
+          a extend {
+            dimension: ai_2 is 2
+            where: ai = 2
+          }
+        ) -> { group_by: ai is ai_2 }
+        run: q -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
   });
 
   describe('composite source resolution and validation', () => {
