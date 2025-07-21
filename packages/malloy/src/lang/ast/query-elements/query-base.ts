@@ -151,7 +151,16 @@ export abstract class QueryBase extends MalloyElement {
     segment: PipeSegment,
     inputSource: SourceDef
   ): PipeSegment {
-    const fs = new StaticSourceSpace(inputSource, 'public');
+    const sourceExtensions = isQuerySegment(segment)
+      ? segment.extendSource ?? []
+      : [];
+    const fs = new StaticSourceSpace(
+      {
+        ...inputSource,
+        fields: [...inputSource.fields, ...sourceExtensions],
+      },
+      'public'
+    );
     if (isIndexSegment(segment)) {
       return {
         ...segment,
