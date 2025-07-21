@@ -7,6 +7,8 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
+import type {PipeSegment} from '../../model';
+import {isIndexSegment, isQuerySegment} from '../../model';
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -60,6 +62,151 @@ describe('composite sources', () => {
     test('join use in method-style aggregate', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
       expect(mexpr`x.ai.sum()`).hasFieldUsage([['ai']]);
+    });
+  });
+
+  describe('expanded field usage', () => {
+    function segmentExpandedFieldUsage(segment: PipeSegment) {
+      return isQuerySegment(segment) || isIndexSegment(segment)
+        ? segment.expandedFieldUsage
+        : undefined;
+    }
+    test('direct field reference', () => {
+      const m = model`
+        run: a -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('dimension reference', () => {
+      const m = model`
+        run: a extend {
+          dimension: ai_2 is ai
+        } -> { group_by: ai_2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('join on reference', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a on b.ai = ai
+        } -> { group_by: b.astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'astr']},
+        {path: ['b', 'ai']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('two-step resolution of dimension', () => {
+      const m = model`
+        run: a extend {
+          dimension: ai_2 is ai
+          dimension: ai_3 is ai_2
+        } -> { group_by: ai_3 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai_3']},
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('source where is included', () => {
+      const m = model`
+        run: a extend {
+          where: ai = 2
+        } -> { group_by: astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['astr']},
+      ]);
+    });
+
+    test('join where is included', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a extend { where: ai = 1 } on true
+        } -> { group_by: b.astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'astr']},
+        {path: ['b', 'ai']},
+      ]);
+    });
+
+    test('expansion respects selected composite', () => {
+      const m = model`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend {
+            dimension: ai_1 is 1
+            where: astr = 'foo'
+          },
+          a extend {
+            dimension: ai_2 is 2
+            where: ai = 2
+          }
+        ) -> { group_by: ai_2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['ai_2']},
+      ]);
+    });
+
+    test('second-stage extend dimension works', () => {
+      const m = model`
+        run: a -> { group_by: ai } -> {
+          extend: {
+            dimension: ai_2 is ai
+          }
+          group_by: ai_2
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('param is not included', () => {
+      const m = model`
+        ##! experimental.parameters
+        source: a_2(param is 1) is a extend {
+          dimension: param_value is param
+        }
+        run: a_2(param is 2) -> { group_by: param_value }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['param_value']},
+      ]);
     });
   });
 
