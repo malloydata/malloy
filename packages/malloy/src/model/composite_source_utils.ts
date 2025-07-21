@@ -313,10 +313,11 @@ export function expandFieldUsage(
     ? segment.extendSource ?? []
     : [];
   const fields = mergeFields(source.fields, sourceExtensions);
-  const fieldUsage = mergeFieldUsage(
-    getFieldUsageFromFilterList(source),
-    segmentFieldUsage(segment)
-  );
+  const fieldUsage =
+    mergeFieldUsage(
+      getFieldUsageFromFilterList(source),
+      segmentFieldUsage(segment)
+    ) ?? [];
   return _expandFieldUsage(fieldUsage, fields).result;
 }
 
