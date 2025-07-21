@@ -45,12 +45,9 @@ import type {
   MessageParameterType,
 } from '../../parse-log';
 import {
-  fieldUsageJoinPaths,
   emptyFieldUsage,
-  joinedFieldUsage,
   mergeFieldUsage,
 } from '../../../model/composite_source_utils';
-import {StructSpaceFieldBase} from './struct-space-field-base';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -222,34 +219,6 @@ export abstract class QueryOperationSpace
     }
   }
 
-  private getJoinOnFieldUsage(joinPath: string[]): model.FieldUsage[] {
-    const reference = joinPath.map(n => new FieldName(n));
-    this.astEl.has({reference});
-    const lookup = this.exprSpace.lookup(reference, 'private');
-    // Should always be found...
-    if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return joinedFieldUsage(
-        joinPath.slice(0, -1),
-        lookup.found.fieldDef().onFieldUsage ?? emptyFieldUsage()
-      );
-    }
-    throw new Error('Unexpected join lookup was not found or not a struct');
-  }
-
-  protected getFieldUsageIncludingJoinOns(
-    fieldUsage: model.FieldUsage[]
-  ): model.FieldUsage[] {
-    let fieldUsageIncludingJoinOns = fieldUsage;
-    const joinPaths = fieldUsageJoinPaths(fieldUsage);
-    for (const joinPath of joinPaths) {
-      fieldUsageIncludingJoinOns = mergeFieldUsage(
-        this.getJoinOnFieldUsage(joinPath),
-        fieldUsageIncludingJoinOns
-      );
-    }
-    return fieldUsageIncludingJoinOns;
-  }
-
   public addFieldUserFromFilter(
     filter: model.FilterCondition,
     logTo: MalloyElement
@@ -264,19 +233,6 @@ export abstract class QueryOperationSpace
       this.compositeFieldUsers.push({type: 'field', name, field: entry, logTo});
     }
     super.newEntry(name, logTo, entry);
-  }
-
-  protected applyNextFieldUsage(
-    source: model.SourceDef,
-    fieldUsage: model.FieldUsage[],
-    nextFieldUsage: model.FieldUsage[] | undefined,
-    _logTo: MalloyElement | undefined
-  ) {
-    if (nextFieldUsage) {
-      const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
-      fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage) ?? [];
-    }
-    return fieldUsage;
   }
 }
 
@@ -330,7 +286,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     let fieldUsage = emptyFieldUsage();
-    const source = this.inputSpace().structDef();
     for (const user of this.compositeFieldUsers) {
       let nextFieldUsage: model.FieldUsage[] | undefined = undefined;
       if (user.type === 'filter') {
@@ -370,12 +325,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
           // fields, but the individual fields didn't have field defs.
         }
       }
-      fieldUsage = this.applyNextFieldUsage(
-        source,
-        fieldUsage,
-        nextFieldUsage,
-        user.logTo
-      );
+      fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
     }
     this._fieldUsage = fieldUsage;
 

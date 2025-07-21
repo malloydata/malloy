@@ -39,7 +39,6 @@ import {
   isSourceDef,
   isTurtle,
 } from './malloy_types';
-import {exprWalk} from './utils';
 import {isNotUndefined} from '../lang/utils';
 
 type CompositeCouldNotFindFieldError = {
@@ -317,7 +316,7 @@ function expandFieldUsage(
       continue;
     }
     if (isAtomic(def)) {
-      const fieldUsage = getFieldUsageForField(def);
+      const fieldUsage = def.fieldUsage ?? [];
       allFieldPathsReferenced.push(
         ...fieldUsageAt(
           joinedFieldUsage(referenceJoinPath, fieldUsage),
@@ -333,7 +332,7 @@ function expandFieldUsage(
         const join = lookup(referenceJoinPath, fields);
         // Don't want to actually include the name of the join; just the path to the join
         const joinJoinPath = referenceJoinPath.slice(0, -1);
-        const fieldUsage = getFieldUsageForField(join);
+        const fieldUsage = join.fieldUsage ?? [];
         allFieldPathsReferenced.push(
           ...fieldUsageAt(
             joinedFieldUsage(joinJoinPath, fieldUsage),
@@ -703,28 +702,6 @@ interface NestLevels {
   singleValueFilters: string[][];
 }
 
-function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
-  const fieldUsage: FieldUsage[] = [];
-  for (const node of exprWalk(expr)) {
-    if (node.node === 'field') {
-      fieldUsage.push({
-        path: node.path,
-        at: node.at,
-      });
-    }
-  }
-  return fieldUsage;
-}
-
-function getFieldUsageForField(field: FieldDef): FieldUsage[] {
-  if (isAtomic(field) && field.e) {
-    return getFieldUsageFromExpr(field.e);
-  } else if (isJoined(field) && field.onExpression) {
-    return getFieldUsageFromExpr(field.onExpression);
-  }
-  return [];
-}
-
 function nestLevelsAt(nests: NestLevels, at?: DocumentLocation): NestLevels {
   if (at === undefined) return nests;
   return {
@@ -813,7 +790,8 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         const head = field.pipeline[0];
         nested.push(nestLevelsAt(extractNestLevels(head), head.referencedAt));
       } else {
-        fieldsReferenced.push(...getFieldUsageForField(field));
+        const fieldUsage = field.fieldUsage ?? [];
+        fieldsReferenced.push(...fieldUsage);
         ungroupings.push(...(field.ungroupings ?? []));
         requiredGroupBys.push(...(field.requiresGroupBy ?? []));
       }
@@ -950,7 +928,7 @@ function expandRefs(
           )
         );
       }
-      const fieldUsage = getFieldUsageForField(def);
+      const fieldUsage = def.fieldUsage ?? [];
       const moreReferences = fieldUsageAt(
         joinedFieldUsage(joinPath, fieldUsage),
         field.at
@@ -963,7 +941,7 @@ function expandRefs(
         const join = lookup(joinPath, fields);
         // Don't want to actually include the name of the join; just the path to the join
         const joinJoinPath = joinPath.slice(0, -1);
-        const fieldUsage = getFieldUsageForField(join);
+        const fieldUsage = join.fieldUsage ?? [];
         references.push(
           ...fieldUsageAt(
             joinedFieldUsage(joinJoinPath, fieldUsage),
