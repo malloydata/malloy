@@ -18,7 +18,6 @@ import type {
   PipeSegment,
   QuerySegment,
   QueryFieldDef,
-  Expr,
   SegmentFieldDef,
   FieldDef,
   RepeatedRecordDef,
@@ -26,7 +25,6 @@ import type {
   TemporalTypeDef,
   NestSourceDef,
   FinalizeSourceDef,
-  SourceDef,
   OrderBy,
   Expression,
 } from './malloy_types';
@@ -35,7 +33,6 @@ import {
   isSourceDef,
   isQuerySegment,
   hasExpression,
-  expressionIsAnalytic,
   expressionIsAggregate,
   isAsymmetricExpr,
   isAtomic,
@@ -47,7 +44,7 @@ import {
   isIndexSegment,
   isBaseTable,
 } from './malloy_types';
-import {exprWalk, AndChain, indent, getDialectFieldList} from './utils';
+import {AndChain, indent, getDialectFieldList} from './utils';
 import type {JoinInstance} from './join_instance';
 import {
   QueryStruct,
@@ -69,7 +66,12 @@ import {
   FieldInstanceResultRoot,
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {makeQueryModel} from './query_model_impl';
+import {shouldMaterialize} from './materialization/utils';
+
+// Tell query structs how to make nested queries
+QueryStruct.registerTurtleFieldMaker((field, parent) =>
+  QueryQuery.makeQuery(field, parent, undefined, false)
+);
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -234,37 +236,40 @@ export class QueryQuery extends QueryField {
 
   private processDependencies(resultStruct: FieldInstanceResult) {
     // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
-    const fieldUsage = 'fieldUsage' in this.firstSegment ? this.firstSegment.fieldUsage || [] : [];
-    
+    const fieldUsage =
+      'fieldUsage' in this.firstSegment
+        ? this.firstSegment.fieldUsage || []
+        : [];
+
     for (const usage of fieldUsage) {
       const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
-      
+
       try {
         const field = this.parent.getFieldByName(usage.path);
-        resultStruct.root().addStructToJoin(
-          field.parent.getJoinableParent(),
-          this,
-          uniqueKeyUse,
-          []
-        );
+        resultStruct
+          .root()
+          .addStructToJoin(field.parent.getJoinableParent(), uniqueKeyUse, []);
       } catch {
         // Field not found - translator should have caught this
       }
     }
   }
 
-  private getUniqueKeyUseForPath(path: string[]): UniqueKeyPossibleUse | undefined {
+  private getUniqueKeyUseForPath(
+    path: string[]
+  ): UniqueKeyPossibleUse | undefined {
     try {
       const field = this.parent.getFieldByName(path);
-      
-      if (hasExpression(field.fieldDef) && 
-          expressionIsAggregate(field.fieldDef.expressionType)) {
-        
+
+      if (
+        hasExpression(field.fieldDef) &&
+        expressionIsAggregate(field.fieldDef.expressionType)
+      ) {
         const expr = field.fieldDef.e;
         if (expr?.node === 'aggregate' && isAsymmetricExpr(expr)) {
           return expr.function;
         }
-        
+
         if (expr?.node === 'function_call') {
           const isSymmetric = expr.overload.isSymmetric ?? false;
           if (!isSymmetric) {
@@ -275,13 +280,9 @@ export class QueryQuery extends QueryField {
     } catch {
       // Field not found
     }
-    
+
     return undefined;
   }
-
-
-
-
 
   getSegmentFields(resultStruct: FieldInstanceResult): SegmentFieldDef[] {
     const fs = resultStruct.firstSegment;
@@ -348,7 +349,6 @@ export class QueryQuery extends QueryField {
     }
   }
 
-
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
     which: 'where' | 'having'
@@ -386,22 +386,22 @@ export class QueryQuery extends QueryField {
     if (!this.prepared) {
       // Process all dependencies from translator's fieldUsage
       this.processDependencies(this.rootResult);
-      
+
       // Expand fields (just adds them to result, no dependency tracking)
       this.expandFields(this.rootResult);
-      
+
       // Add the root base join to the joins map
-      this.rootResult.addStructToJoin(this.parent, this, undefined, []);
-      
+      this.rootResult.addStructToJoin(this.parent, undefined, []);
+
       // Find and add joins for all fields in the result
-      this.rootResult.findJoins(this);
-      
+      this.rootResult.findJoins();
+
       // Handle always joins
       this.addAlwaysJoins(this.rootResult);
-      
+
       // Calculate symmetric aggregates based on the joins
       this.rootResult.calculateSymmetricAggregates();
-      
+
       this.prepared = true;
     }
   }
@@ -413,7 +413,7 @@ export class QueryQuery extends QueryField {
       for (const joinName of alwaysJoins) {
         const qs = this.parent.getChildByName(joinName);
         if (qs instanceof QueryFieldStruct) {
-          rootResult.addStructToJoin(qs.queryStruct, this, undefined, []);
+          rootResult.addStructToJoin(qs.queryStruct, undefined, []);
         }
       }
     }
@@ -628,6 +628,51 @@ export class QueryQuery extends QueryField {
     return outputStruct;
   }
 
+  getStructSourceSQL(qs: QueryStruct, stageWriter: StageWriter): string {
+    switch (qs.structDef.type) {
+      case 'table':
+        return this.parent.dialect.quoteTablePath(qs.structDef.tablePath);
+      case 'composite':
+        // TODO: throw an error here; not simple because we call into this
+        // code currently before the composite source is resolved in some cases
+        return '{COMPOSITE SOURCE}';
+      case 'finalize':
+        return qs.structDef.name;
+      case 'sql_select':
+        return `(${qs.structDef.selectStr})`;
+      case 'nest_source':
+        return qs.structDef.pipeSQL;
+      case 'query_source': {
+        // cache derived table.
+        if (
+          qs.prepareResultOptions?.replaceMaterializedReferences &&
+          shouldMaterialize(qs.structDef.query.annotation)
+        ) {
+          return stageWriter.addMaterializedQuery(
+            getIdentifier(qs.structDef),
+            qs.structDef.query,
+            qs.prepareResultOptions?.materializedTablePrefix
+          );
+        } else {
+          // Now we can access the model through our parent chain
+          return this.model.loadQuery(
+            qs.structDef.query,
+            stageWriter,
+            qs.prepareResultOptions,
+            false,
+            true // this is an intermediate stage
+          ).lastStageName;
+        }
+      }
+      default:
+        throw new Error(
+          `Cannot create SQL StageWriter from '${getIdentifier(
+            qs.structDef
+          )}' type '${qs.structDef.type}`
+        );
+    }
+  }
+
   generateSQLJoinBlock(
     stageWriter: StageWriter,
     ji: JoinInstance,
@@ -639,7 +684,7 @@ export class QueryQuery extends QueryField {
     qs.eventStream?.emit('join-used', {name: getIdentifier(qsDef)});
     qs.maybeEmitParameterizedSourceUsage();
     if (isJoinedSource(qsDef)) {
-      let structSQL = qs.structSourceSQL(stageWriter);
+      let structSQL = this.getStructSourceSQL(qs, stageWriter);
       const matrixOperation = (qsDef.matrixOperation || 'left').toUpperCase();
       if (!this.parent.dialect.supportsFullJoin && matrixOperation === 'FULL') {
         throw new Error('FULL JOIN not supported');
@@ -789,7 +834,7 @@ export class QueryQuery extends QueryField {
     const [[, ji]] = this.rootResult.joins;
     const qs = ji.queryStruct;
     // Joins
-    let structSQL = qs.structSourceSQL(stageWriter);
+    let structSQL = this.getStructSourceSQL(qs, stageWriter);
     if (isIndexSegment(this.firstSegment)) {
       structSQL = this.parent.dialect.sqlSampleTable(
         structSQL,
@@ -2037,24 +2082,3 @@ class QueryQueryRaw extends QueryQuery {
 }
 
 class QueryQueryReduce extends QueryQuery {}
-
-export function getResultStructDefForView(
-  source: SourceDef,
-  view: TurtleDef
-): SourceDef {
-  const qs = new QueryStruct(
-    source,
-    undefined,
-    {
-      model: makeQueryModel(undefined),
-    },
-    {}
-  );
-  const queryQueryQuery = QueryQuery.makeQuery(
-    view,
-    qs,
-    new StageWriter(true, undefined), // stage write indicates we want to get a result.
-    false
-  );
-  return queryQueryQuery.getResultStructDef();
-}

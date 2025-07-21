@@ -25,6 +25,7 @@ import {
   shouldMaterialize,
 } from './materialization/utils';
 import type {Connection} from '../connection/types';
+import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
 
@@ -35,7 +36,7 @@ export function makeQueryModel(
   return new QueryModelImpl(modelDef, eventStream);
 }
 
-export class QueryModelImpl implements QueryModel {
+export class QueryModelImpl implements QueryModel, ModelRootInterface {
   dialect: Dialect = new StandardSQLDialect();
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
@@ -49,6 +50,16 @@ export class QueryModelImpl implements QueryModel {
     }
   }
 
+  // Another circularity breaking method ... call into QueryQuery
+  // to find the output shape of a query
+  getFinalOutputStruct(
+    query: Query,
+    options: PrepareResultOptions | undefined
+  ): SourceDef | undefined {
+    const result = this.loadQuery(query, undefined, options, false, false);
+    return result.structs.pop();
+  }
+
   loadModelFromDef(modelDef: ModelDef): void {
     this.modelDef = modelDef;
     for (const s of Object.values(this.modelDef.contents)) {
@@ -56,7 +67,9 @@ export class QueryModelImpl implements QueryModel {
       if (isSourceDef(s)) {
         qs = new QueryStruct(s, undefined, {model: this}, {});
         this.structs.set(getIdentifier(s), qs);
-        qs.resolveQueryFields();
+        qs.resolveQueryFields((query, options) =>
+          this.getFinalOutputStruct(query, options)
+        );
       } else if (s.type === 'query') {
         /* TODO */
       } else {
@@ -85,7 +98,7 @@ export class QueryModelImpl implements QueryModel {
         return new QueryStruct(
           ret.structDef,
           sourceArguments,
-          ret.parent ?? {model: this},
+          ret.parent ? {struct: ret.parent} : {model: this},
           prepareResultOptions
         );
       }

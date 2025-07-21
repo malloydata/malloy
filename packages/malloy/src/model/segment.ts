@@ -47,3 +47,24 @@ export class Segment {
     return queryQueryQuery.getResultStructDef();
   }
 }
+
+export function getResultStructDefForView(
+  source: SourceDef,
+  view: TurtleDef
+): SourceDef {
+  const qs = new QueryStruct(
+    source,
+    undefined,
+    {
+      model: makeQueryModel(undefined),
+    },
+    {}
+  );
+  const queryQueryQuery = QueryQuery.makeQuery(
+    view,
+    qs,
+    new StageWriter(true, undefined), // stage write indicates we want to get a result.
+    false
+  );
+  return queryQueryQuery.getResultStructDef();
+}

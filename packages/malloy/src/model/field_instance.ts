@@ -6,7 +6,6 @@
 import type {QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
 import type {OrderBy, PipeSegment, TurtleDef} from './malloy_types';
-import type {QueryQuery} from './query_query';
 import {
   isIndexSegment,
   isRawSegment,
@@ -338,7 +337,6 @@ export class FieldInstanceResult implements FieldInstance {
 
   addStructToJoin(
     qs: QueryStruct,
-    query: QueryQuery,
     uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
     joinStack: string[]
   ): void {
@@ -360,7 +358,7 @@ export class FieldInstanceResult implements FieldInstance {
     const parentStruct = qs.parent?.getJoinableParent();
     if (parentStruct) {
       // add dependant expressions first...
-      this.addStructToJoin(parentStruct, query, undefined, joinStack);
+      this.addStructToJoin(parentStruct, undefined, joinStack);
       parent = this.root().joins.get(parentStruct.getIdentifier());
     }
 
@@ -373,19 +371,18 @@ export class FieldInstanceResult implements FieldInstance {
     join.uniqueKeyPossibleUses.add_use(uniqueKeyPossibleUse);
   }
 
-  findJoins(query: QueryQuery) {
+  findJoins() {
     for (const dim of this.fields()) {
       if (!(dim.f instanceof QueryFieldStruct)) {
         this.addStructToJoin(
           dim.f.getJoinableParent(),
-          query,
           dim.f.uniqueKeyPossibleUse(),
           []
         );
       }
     }
     for (const s of this.structs()) {
-      s.findJoins(query);
+      s.findJoins();
     }
   }
 

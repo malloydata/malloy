@@ -22,11 +22,23 @@
  */
 
 export * from './malloy_types';
-export {Segment} from './segment';
-export {QueryStruct, QueryField} from './query_node';
+
+// This is a little dance to break some circularity ...
+import {QueryField, QueryStruct} from './query_node';
+import {exprToSQL} from './expression_compiler';
+import {QueryQuery} from './query_query';
+
+// Step 2: Register the circle breaking functions
+QueryField.registerExpressionCompiler(exprToSQL);
+QueryStruct.registerTurtleFieldMaker((field, parent) =>
+  QueryQuery.makeQuery(field, parent, undefined, false)
+);
+
+export {QueryField, QueryStruct, QueryQuery};
+
 export {
   getResultStructDefForQuery,
   QueryModelImpl as QueryModel,
 } from './query_model_impl';
-export {getResultStructDefForView} from './query_query';
 export {indent, composeSQLExpr} from './utils';
+export {Segment, getResultStructDefForView} from './segment';

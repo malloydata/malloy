@@ -46,38 +46,8 @@ import type {SQLExprElement} from './utils';
 import {exprMap, composeSQLExpr, range, AndChain} from './utils';
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
-import {caseGroup} from './expression_utils';
+import {caseGroup, GenerateState} from './expression_utils';
 import type {Dialect} from '../dialect';
-
-class GenerateState {
-  whereSQL?: string;
-  applyValue?: string;
-  totalGroupSet = -1;
-
-  withWhere(s?: string): GenerateState {
-    const newState = new GenerateState();
-    newState.whereSQL = s;
-    newState.applyValue = this.applyValue;
-    newState.totalGroupSet = this.totalGroupSet;
-    return newState;
-  }
-
-  withApply(s: string): GenerateState {
-    const newState = new GenerateState();
-    newState.whereSQL = this.whereSQL;
-    newState.applyValue = s;
-    newState.totalGroupSet = this.totalGroupSet;
-    return newState;
-  }
-
-  withTotal(groupSet: number): GenerateState {
-    const newState = new GenerateState();
-    newState.whereSQL = this.whereSQL;
-    newState.applyValue = this.applyValue;
-    newState.totalGroupSet = groupSet;
-    return newState;
-  }
-}
 
 const NUMERIC_DECIMAL_PRECISION = 9;
 
@@ -1083,7 +1053,6 @@ export function getAnalyticPartitions(
   }
   return ret;
 }
-
 
 export function* stringsFromSQLExpression(
   field: QueryField,

@@ -28,6 +28,9 @@ import type {
   StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
+  Expr,
+  SourceDef,
+  Query,
 } from './malloy_types';
 import {
   isSourceDef,
@@ -46,12 +49,8 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
 import {exprMap} from './utils';
-import type {StageWriter} from './stage_writer';
-import {shouldMaterialize} from './materialization/utils';
-import {exprToSQL} from './expression_compiler';
 import type {FieldInstanceResult} from './field_instance';
-import type {ParentQueryModel, QueryModel} from './query_model';
-import {QueryQuery} from './query_query';
+import type {GenerateState} from './expression_utils';
 
 export type UniqueKeyPossibleUse =
   | AggregateFunctionType
@@ -96,6 +95,28 @@ export class QueryField extends QueryNode {
     this.fieldDef = fieldDef;
   }
 
+  // Add static property to hold the registered compiler
+  private static exprToSQLImpl?: (
+    field: QueryField,
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: Expr,
+    state?: GenerateState
+  ) => string;
+
+  // Add static registration method
+  static registerExpressionCompiler(
+    compiler: (
+      field: QueryField,
+      resultSet: FieldInstanceResult,
+      context: QueryStruct,
+      expr: Expr,
+      state?: GenerateState
+    ) => string
+  ) {
+    QueryField.exprToSQLImpl = compiler;
+  }
+
   getIdentifier() {
     return getIdentifier(this.fieldDef);
   }
@@ -138,10 +159,23 @@ export class QueryField extends QueryNode {
     );
   }
 
+  exprToSQL(
+    resultSet: FieldInstanceResult,
+    parent: QueryStruct,
+    e: Expr
+  ): string {
+    if (!QueryField.exprToSQLImpl) {
+      throw new Error(
+        'INTERNAL ERROR: Expression compiler not registered with QueryField'
+      );
+    }
+    return QueryField.exprToSQLImpl(this, resultSet, parent, e);
+  }
+
   generateExpression(resultSet: FieldInstanceResult): string {
     // If the field itself is an expression, generate it ..
     if (hasExpression(this.fieldDef)) {
-      return exprToSQL(this, resultSet, this.parent, this.fieldDef.e);
+      return this.exprToSQL(resultSet, this.parent, this.fieldDef.e);
     }
     // The field itself is not an expression, so we would like
     // to generate a dotted path to the field, EXCEPT ...
@@ -166,8 +200,7 @@ export class QueryField extends QueryNode {
             'Inconcievable record ancestor with expression but no parent'
           );
         }
-        const aliasValue = exprToSQL(
-          this,
+        const aliasValue = this.exprToSQL(
           resultSet,
           ancestor.parent,
           ancestor.structDef.e
@@ -227,7 +260,7 @@ export class QueryFieldDate extends QueryAtomicField<DateFieldDef> {
         ),
         units: fd.timeframe,
       };
-      return exprToSQL(this, resultSet, this.parent, truncated);
+      return this.exprToSQL(resultSet, this.parent, truncated);
     }
   }
 
@@ -403,6 +436,18 @@ export interface ParentQueryStruct {
   struct: QueryStruct;
 }
 
+/*
+ * So that we don't have to includeQueryModel. Put properties
+ * of query model which are needed in here.
+ */
+export interface ModelRootInterface {
+  eventStream?: EventStream;
+}
+
+export interface ParentQueryModel {
+  model: ModelRootInterface;
+}
+
 function identifierNormalize(s: string) {
   return s.replace(/[^a-zA-Z0-9_]/g, '_o_');
 }
@@ -410,7 +455,7 @@ function identifierNormalize(s: string) {
 /** Structure object as it is used to build a query */
 export class QueryStruct {
   parent: QueryStruct | undefined;
-  model: QueryModel;
+  model: ModelRootInterface;
   nameMap = new Map<string, QueryField>();
   pathAliasMap: Map<string, string>;
   dialect: Dialect;
@@ -441,6 +486,17 @@ export class QueryStruct {
 
     this.dialect = getDialect(this.findFirstDialect());
     this.addFieldsFromFieldList(structDef.fields);
+  }
+
+  // Injeected factory to break circularity with QueryQuery
+  private static turtleFieldMaker:
+    | ((field: TurtleDef, parent: QueryStruct) => QueryField)
+    | undefined;
+
+  static registerTurtleFieldMaker(
+    maker: (field: TurtleDef, parent: QueryStruct) => QueryField
+  ) {
+    QueryStruct.turtleFieldMaker = maker;
   }
 
   private _modelTag: Tag | undefined = undefined;
@@ -533,10 +589,12 @@ export class QueryStruct {
       const as = getIdentifier(field);
 
       if (field.type === 'turtle') {
-        this.addFieldToNameMap(
-          as,
-          QueryQuery.makeQuery(field, this, undefined, false)
-        );
+        if (!QueryStruct.turtleFieldMaker) {
+          throw new Error(
+            'INTERNAL ERROR: QueryQuery must initialize QueryStruct nested factory method'
+          );
+        }
+        this.addFieldToNameMap(as, QueryStruct.turtleFieldMaker(field, this));
       } else if (isAtomic(field) || isJoinedSource(field)) {
         this.addFieldToNameMap(as, this.makeQueryField(field));
       } else {
@@ -608,8 +666,7 @@ export class QueryStruct {
       if (!this.parent) {
         throw new Error(`Cannot expand reference to ${name} without parent`);
       }
-      parentRef = exprToSQL(
-        expand.field,
+      parentRef = expand.field.exprToSQL(
         expand.result,
         this.parent,
         this.structDef.e
@@ -717,18 +774,21 @@ export class QueryStruct {
    * called after all structure has been loaded.  Examine this structure to see
    * if if it is based on a query and if it is, add the output fields (unless
    * they exist) to the structure.
+   *
+   * finalOutputStruct exists so that query_node doesn't need to
+   * to import query_query
    */
-  resolveQueryFields() {
-    if (this.structDef.type === 'query_source') {
-      const resultStruct = this.model
-        .loadQuery(
-          this.structDef.query,
-          undefined,
-          this.prepareResultOptions,
-          false,
-          false
-        )
-        .structs.pop();
+  resolveQueryFields(
+    finalOutputStruct: (
+      query: Query,
+      options: PrepareResultOptions | undefined
+    ) => SourceDef | undefined
+  ) {
+    if (this.structDef.type === 'query_source' && finalOutputStruct) {
+      const resultStruct = finalOutputStruct(
+        this.structDef.query,
+        this.prepareResultOptions
+      );
 
       // should never happen.
       if (!resultStruct) {
@@ -750,12 +810,12 @@ export class QueryStruct {
     }
     for (const [, v] of this.nameMap) {
       if (v instanceof QueryFieldStruct) {
-        v.queryStruct.resolveQueryFields();
+        v.queryStruct.resolveQueryFields(finalOutputStruct);
       }
     }
   }
 
-  getModel(): QueryModel {
+  getModel(): ModelRootInterface {
     if (this.model) {
       return this.model;
     } else {
@@ -813,55 +873,15 @@ export class QueryStruct {
       case 'sql native':
         return new QueryFieldUnsupported(field, this, referenceId);
       case 'turtle':
-        return QueryQuery.makeQuery(field, this, undefined, false);
+        if (!QueryStruct.turtleFieldMaker) {
+          throw new Error(
+            'INTERNAL ERROR: QueryQuery must initialize QueryStruct nested factory method'
+          );
+        }
+        return QueryStruct.turtleFieldMaker(field, this);
       default:
         throw new Error(
           `unknown field definition ${(JSON.stringify(field), undefined, 2)}`
-        );
-    }
-  }
-
-  structSourceSQL(stageWriter: StageWriter): string {
-    switch (this.structDef.type) {
-      case 'table':
-        return this.dialect.quoteTablePath(this.structDef.tablePath);
-      case 'composite':
-        // TODO: throw an error here; not simple because we call into this
-        // code currently before the composite source is resolved in some cases
-        return '{COMPOSITE SOURCE}';
-      case 'finalize':
-        return this.structDef.name;
-      case 'sql_select':
-        return `(${this.structDef.selectStr})`;
-      case 'nest_source':
-        return this.structDef.pipeSQL;
-      case 'query_source': {
-        // cache derived table.
-        if (
-          this.prepareResultOptions?.replaceMaterializedReferences &&
-          shouldMaterialize(this.structDef.query.annotation)
-        ) {
-          return stageWriter.addMaterializedQuery(
-            getIdentifier(this.structDef),
-            this.structDef.query,
-            this.prepareResultOptions?.materializedTablePrefix
-          );
-        } else {
-          // returns the stage name.
-          return this.model.loadQuery(
-            this.structDef.query,
-            stageWriter,
-            this.prepareResultOptions,
-            false,
-            true // this is an intermediate stage.
-          ).lastStageName;
-        }
-      }
-      default:
-        throw new Error(
-          `Cannot create SQL StageWriter from '${getIdentifier(
-            this.structDef
-          )}' type '${this.structDef.type}`
         );
     }
   }
