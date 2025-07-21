@@ -2767,6 +2767,7 @@ export class ASTSegmentViewDefinition
     | ASTGroupByViewOperation
     | ASTAggregateViewOperation
     | ASTNestViewOperation
+    | ASTCalculateViewOperation
     | undefined {
     for (const operation of this.operations.iter()) {
       if (
@@ -2783,6 +2784,15 @@ export class ASTSegmentViewDefinition
         }
       } else if (operation instanceof ASTNestViewOperation) {
         if (operation.view instanceof ASTReferenceViewDefinition) {
+          return operation;
+        }
+      } else if (operation instanceof ASTCalculateViewOperation) {
+        const reference = operation.expression.field.getReference();
+        if (
+          reference &&
+          reference.name === name &&
+          pathsMatch(reference.path, path)
+        ) {
           return operation;
         }
       }
@@ -4263,6 +4273,12 @@ export class ASTMovingAverageExpression extends ASTObjectNode<
   }
   get field() {
     return this.parent.as.Field();
+  }
+  get partitionFields() {
+    return this.children.partition_fields;
+  }
+  setPartitionFields(references: Malloy.Reference[]) {
+    this.children.partition_fields = new ASTFieldReferenceList(references);
   }
   getFieldInfo() {
     const schema = this.field.segment.getInputSchema();

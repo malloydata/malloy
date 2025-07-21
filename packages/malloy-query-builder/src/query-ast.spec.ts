@@ -877,7 +877,7 @@ describe('query builder', () => {
         },
       },
       malloy:
-        'run: flights -> { calculate: flight_count_smoothed is avg_moving( flight_count, 7, 0 ) }',
+        'run: flights -> { calculate: flight_count_smoothed is avg_moving(flight_count, 7, 0) }',
     });
   });
   test('convert an aggregate to a moving average', () => {
@@ -967,7 +967,7 @@ describe('query builder', () => {
       },
       malloy: `run: flights -> {
   group_by: carrier
-  calculate: flight_count is avg_moving( flight_count, 7, 0 ) { partition_by: carrier }
+  calculate: flight_count is avg_moving(flight_count, 7, 0) { partition_by: carrier }
 }`,
     });
   });

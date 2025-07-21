@@ -72,6 +72,18 @@ function escapeString(str: string): {contents: string; quoteCharacter: string} {
   return {contents: str, quoteCharacter: '"'}; // TODO
 }
 
+function join(fragments: Fragment[], separator: string): Fragment[] {
+  const result: Fragment[] = [];
+  for (let i = 0; i < fragments.length; i++) {
+    const fragment = fragments[i];
+    result.push(fragment);
+    if (i < fragments.length - 1) {
+      result.push(separator);
+    }
+  }
+  return result;
+}
+
 function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
   switch (literal.kind) {
     case 'filter_expression_literal':
@@ -395,7 +407,8 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
               ? `, ${expression.rows_following}`
               : '',
           ],
-          ')'
+          ')',
+          {spaces: false}
         ),
       ];
 
@@ -406,8 +419,11 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
             [
               'partition_by',
               ': ',
-              ...expression.partition_fields.flatMap(partitionField =>
-                referenceToFragments(partitionField)
+              ...join(
+                expression.partition_fields.flatMap(partitionField =>
+                  referenceToFragments(partitionField)
+                ),
+                ', '
               ),
             ],
             '}'
