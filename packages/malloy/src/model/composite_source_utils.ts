@@ -168,9 +168,6 @@ function _resolveCompositeSources(
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
-          // TODO it seems like join usage is not included here, which used to not be an issue, but now
-          // is probably an issue because we now allow joins in composite source. Should write a test
-          // for attempting to define different joins in NESTED composites!
           compositeUsageInThisSource,
           inputSource.sources
         );

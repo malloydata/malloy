@@ -189,6 +189,32 @@ describe('composite sources', () => {
         )
       );
     });
+    test('nested composited join', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: jbase is compose(
+          a extend {
+            dimension: jf1 is 1
+          },
+          a extend {
+            dimension: jf2 is 2
+          }
+        )
+        source: s1 is a extend {
+          join_one: j is jbase on j.jf1 = 1
+        }
+        source: s2 is a extend {
+          join_one: j is jbase on j.jf2 = 2
+        }
+        source: c is compose(s1, s2)
+        source: c2 is compose(c, c extend { dimension: f1 is 1 })
+        run: c2 -> { group_by: f1, ${'j.jf2'}, j.jf1 }
+      `).toLog(
+        errorMessage(
+          'This operation results in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and join `j` could not be resolved (fields required in source: `f1`, `j.jf2`, and `j.jf1`)'
+        )
+      );
+    });
     test('composited join cannot use join from other source (with incompatible fields)', () => {
       expect(`
         ##! experimental.composite_sources
