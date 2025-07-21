@@ -5,14 +5,13 @@
 
 import type {QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
-import type {QueryQuery} from './query_query';
 import type {OrderBy, PipeSegment, TurtleDef} from './malloy_types';
+import type {QueryQuery} from './query_query';
 import {
   isIndexSegment,
   isRawSegment,
   isJoined,
   expressionIsAnalytic,
-  isJoinedSource,
 } from './malloy_types';
 import {AndChain} from './utils';
 import {JoinInstance} from './join_instance';
@@ -55,7 +54,6 @@ export class FieldInstanceField implements FieldInstance {
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
       exp = caseGroup(
-        this.f,
         this.parent.groupSet > 0
           ? this.parent.childGroups.concat(this.additionalGroupSets)
           : [],
@@ -366,19 +364,7 @@ export class FieldInstanceResult implements FieldInstance {
       parent = this.root().joins.get(parentStruct.getIdentifier());
     }
 
-    // add any dependant joins based on the ON
-    const sd = qs.structDef;
-    if (
-      isJoinedSource(sd) &&
-      qs.parent && // if the join has an ON, it must thave a parent
-      sd.onExpression &&
-      joinStack.indexOf(name) === -1
-    ) {
-      query.addDependantExpr(this, qs.parent, sd.onExpression, [
-        ...joinStack,
-        name,
-      ]);
-    }
+    // Note: ON expression dependencies are now handled by the translator's fieldUsage
 
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);

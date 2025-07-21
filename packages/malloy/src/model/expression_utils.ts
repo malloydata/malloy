@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {QueryField} from './query_node';
-
 export function caseGroup(
-  field: QueryField,
   groupSets: number[],
   s: string
 ): string {

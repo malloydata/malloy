@@ -4,7 +4,8 @@
  */
 
 import type {DialectFieldList} from '../dialect';
-import {exprToSQL, caseGroup} from './expression_compiler';
+import {exprToSQL} from './expression_compiler';
+import {caseGroup} from './expression_utils';
 import type {
   TurtleDef,
   IndexFieldDef,
@@ -231,154 +232,56 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
-  addDependantPath(
-    resultStruct: FieldInstanceResult,
-    context: QueryStruct,
-    path: string[],
-    uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
-    joinStack: string[]
-  ) {
-    if (path.length === 0) {
-      return;
-    }
-    const node = context.getFieldByName(path);
-    const joinableParent =
-      node instanceof QueryFieldStruct
-        ? node.queryStruct.getJoinableParent()
-        : node.parent.getJoinableParent();
-    resultStruct
-      .root()
-      .addStructToJoin(joinableParent, this, uniqueKeyPossibleUse, joinStack);
-  }
-
-  findRecordAliases(context: QueryStruct, path: string[]) {
-    for (const seg of path) {
-      const field = context.getFieldByName([seg]);
-      if (field instanceof QueryFieldStruct) {
-        const qs = field.queryStruct;
-        if (
-          qs.structDef.type === 'record' &&
-          hasExpression(qs.structDef) &&
-          qs.parent
-        ) {
-          qs.informOfAliasValue(
-            exprToSQL(this, this.rootResult, qs.parent, qs.structDef.e)
-          );
-        }
-        context = qs;
-      }
-    }
-  }
-
-  addDependantExpr(
-    resultStruct: FieldInstanceResult,
-    context: QueryStruct,
-    e: Expr,
-    joinStack: string[]
-  ): void {
-    for (const expr of exprWalk(e)) {
-      if (expr.node === 'function_call') {
-        if (
-          expressionIsAnalytic(expr.overload.returnType.expressionType) &&
-          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
-          resultStruct.firstSegment.type === 'reduce'
-        ) {
-          // force the use of a lateral_join_bag
-          resultStruct.root().isComplexQuery = true;
-          resultStruct.root().queryUsesPartitioning = true;
-        }
-        const isSymmetric = expr.overload.isSymmetric ?? false;
-        const isAggregate = expressionIsAggregate(
-          expr.overload.returnType.expressionType
+  private processDependencies(resultStruct: FieldInstanceResult) {
+    // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
+    const fieldUsage = 'fieldUsage' in this.firstSegment ? this.firstSegment.fieldUsage || [] : [];
+    
+    for (const usage of fieldUsage) {
+      const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
+      
+      try {
+        const field = this.parent.getFieldByName(usage.path);
+        resultStruct.root().addStructToJoin(
+          field.parent.getJoinableParent(),
+          this,
+          uniqueKeyUse,
+          []
         );
-        const isAsymmetricAggregate = isAggregate && !isSymmetric;
-        const uniqueKeyPossibleUse = isAsymmetricAggregate
-          ? 'generic_asymmetric_aggregate'
-          : undefined;
-        if (expr.structPath) {
-          this.addDependantPath(
-            resultStruct,
-            context,
-            expr.structPath,
-            uniqueKeyPossibleUse,
-            joinStack
-          );
-        } else if (isAsymmetricAggregate) {
-          resultStruct.addStructToJoin(
-            context,
-            this,
-            uniqueKeyPossibleUse,
-            joinStack
-          );
-        }
-        if (expressionIsAnalytic(expr.overload.returnType.expressionType)) {
-          resultStruct.root().queryUsesPartitioning = true;
-        }
-      } else if (expr.node === 'all' || expr.node === 'exclude') {
-        resultStruct.resultUsesUngrouped = true;
-        resultStruct.root().isComplexQuery = true;
-        resultStruct.root().queryUsesPartitioning = true;
-        if (expr.fields && expr.fields.length > 0) {
-          const key = expr.fields.sort().join('|') + expr.node;
-          if (resultStruct.ungroupedSets.get(key) === undefined) {
-            resultStruct.ungroupedSets.set(key, {
-              type: expr.node,
-              fields: expr.fields,
-              groupSet: -1,
-            });
-          }
-        }
-      }
-      if (expr.node === 'field') {
-        this.findRecordAliases(context, expr.path);
-        const field = context.getDimensionOrMeasureByName(expr.path);
-        if (hasExpression(field.fieldDef)) {
-          this.addDependantExpr(
-            resultStruct,
-            field.parent,
-            field.fieldDef.e,
-            joinStack
-          );
-        } else {
-          resultStruct
-            .root()
-            .addStructToJoin(
-              field.parent.getJoinableParent(),
-              this,
-              undefined,
-              joinStack
-            );
-        }
-      } else if (expr.node === 'aggregate') {
-        if (isAsymmetricExpr(expr)) {
-          if (expr.structPath) {
-            this.findRecordAliases(context, expr.structPath);
-            this.addDependantPath(
-              resultStruct,
-              context,
-              expr.structPath,
-              expr.function,
-              joinStack
-            );
-          } else {
-            // we are doing a sum in the root.  It may need symetric aggregates
-            resultStruct.addStructToJoin(
-              context,
-              this,
-              expr.function,
-              joinStack
-            );
-          }
-        }
+      } catch {
+        // Field not found - translator should have caught this
       }
     }
   }
 
-  addDependancies(resultStruct: FieldInstanceResult, field: QueryField): void {
-    if (hasExpression(field.fieldDef)) {
-      this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e, []);
+  private getUniqueKeyUseForPath(path: string[]): UniqueKeyPossibleUse | undefined {
+    try {
+      const field = this.parent.getFieldByName(path);
+      
+      if (hasExpression(field.fieldDef) && 
+          expressionIsAggregate(field.fieldDef.expressionType)) {
+        
+        const expr = field.fieldDef.e;
+        if (expr?.node === 'aggregate' && isAsymmetricExpr(expr)) {
+          return expr.function;
+        }
+        
+        if (expr?.node === 'function_call') {
+          const isSymmetric = expr.overload.isSymmetric ?? false;
+          if (!isSymmetric) {
+            return 'generic_asymmetric_aggregate';
+          }
+        }
+      }
+    } catch {
+      // Field not found
     }
+    
+    return undefined;
   }
+
+
+
+
 
   getSegmentFields(resultStruct: FieldInstanceResult): SegmentFieldDef[] {
     const fs = resultStruct.firstSegment;
@@ -422,7 +325,6 @@ export class QueryQuery extends QueryField {
           },
           drillExpression
         );
-        this.addDependancies(resultStruct, field);
 
         if (isBasicAggregate(field)) {
           if (this.firstSegment.type === 'project') {
@@ -432,9 +334,6 @@ export class QueryQuery extends QueryField {
           }
         }
       } else if (field instanceof QueryFieldStruct) {
-        if (field.isAtomic()) {
-          this.addDependancies(resultStruct, field);
-        }
         resultStruct.addField(
           as,
           field,
@@ -445,38 +344,10 @@ export class QueryQuery extends QueryField {
           drillExpression
         );
       }
-      // else if (
-      //   this.firstSegment.type === "project" &&
-      //   field instanceof QueryStruct
-      // ) {
-      //   // TODO lloyd refactor or comment why we do nothing here
-      // } else {
-      //   throw new Error(`'${as}' cannot be used as in this way.`);
-      // }
       resultIndex++;
     }
-    this.expandFilters(resultStruct);
   }
 
-  expandFilters(resultStruct: FieldInstanceResult) {
-    if (resultStruct.firstSegment.filterList === undefined) {
-      return;
-    }
-    // Go through the filters and make or find dependant fields
-    //  add them to the field index. Place the individual filters
-    // in the correct catgory.
-    for (const cond of resultStruct.firstSegment.filterList || []) {
-      const context = this.parent;
-      this.addDependantExpr(resultStruct, context, cond.e, []);
-    }
-    for (const join of resultStruct.root().joins.values() || []) {
-      for (const qf of join.joinFilterConditions || []) {
-        if (qf.fieldDef.type === 'boolean' && qf.fieldDef.e) {
-          this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e, []);
-        }
-      }
-    }
-  }
 
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
@@ -513,11 +384,24 @@ export class QueryQuery extends QueryField {
 
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
+      // Process all dependencies from translator's fieldUsage
+      this.processDependencies(this.rootResult);
+      
+      // Expand fields (just adds them to result, no dependency tracking)
       this.expandFields(this.rootResult);
+      
+      // Add the root base join to the joins map
       this.rootResult.addStructToJoin(this.parent, this, undefined, []);
+      
+      // Find and add joins for all fields in the result
       this.rootResult.findJoins(this);
+      
+      // Handle always joins
       this.addAlwaysJoins(this.rootResult);
+      
+      // Calculate symmetric aggregates based on the joins
       this.rootResult.calculateSymmetricAggregates();
+      
       this.prepared = true;
     }
   }
@@ -1349,7 +1233,6 @@ export class QueryQuery extends QueryField {
         if (fi.fieldUsage.type === 'result') {
           if (isScalarField(fi.f)) {
             const exp = caseGroup(
-              this,
               resultSet.groupSet > 0 ? resultSet.childGroups : [],
               sqlFieldName
             );
@@ -1876,9 +1759,6 @@ class QueryQueryIndexStage extends QueryQuery {
         },
         undefined
       );
-      if (field instanceof QueryAtomicField) {
-        this.addDependancies(resultStruct, field);
-      }
       resultIndex++;
     }
     const measure = (this.firstSegment as IndexSegment).weightMeasure;
@@ -1893,9 +1773,7 @@ class QueryQueryIndexStage extends QueryQuery {
         },
         undefined
       );
-      this.addDependancies(resultStruct, f);
     }
-    this.expandFilters(resultStruct);
   }
 
   generateSQL(stageWriter: StageWriter): string {

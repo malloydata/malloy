@@ -195,7 +195,7 @@ export function exprToSQL(
         if (state.totalGroupSet !== -1) {
           groupSet = state.totalGroupSet;
         }
-        return caseGroup(field, [groupSet], agg);
+        return caseGroup([groupSet], agg);
       }
       return agg;
     }
