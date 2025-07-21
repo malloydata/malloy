@@ -251,6 +251,84 @@ describe('composite sources', () => {
         )
       );
     });
+    test('compose fails due to filter in source', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          where: two = 2
+        } -> {
+          group_by: one
+          group_by: ${'three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `one`, `three`, and `two`)'
+        )
+      );
+    });
+    test('compose fails due to filter reference in source', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          dimension: two_prime is two + 1
+          where: two_prime = 2
+        } -> {
+          group_by: one
+          group_by: ${'three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `one`, `three`, and `two`)'
+        )
+      );
+    });
+    test('field usage from selected composite source where is picked up in resolution', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          compose(
+            a extend { dimension: one is 1, two is 2 },
+            a extend { dimension: one is 1, three is 3 }
+          ) extend {
+            where: two = 2
+          },
+          a extend { dimension: one is 1 }
+        ) -> {
+          group_by: one
+          group_by: ${'three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `one` and `three`)'
+        )
+      );
+    });
+    test('where in join is picked up', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: a extend {
+          join_one: b is compose(
+            a extend { dimension: one is 1, two is 2 },
+            a extend { dimension: one is 1, three is 3 }
+          ) extend {
+            where: two = 2
+          }
+        } -> {
+          group_by: b.one
+          group_by: ${'b.three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `b.three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `b.two` and `b.three` (fields required in source: `b.one`, `b.three`, and `b.two`)'
+        )
+      );
+    });
     test('compose fails on filter that is relevant', () => {
       expect(`
         ##! experimental.composite_sources
