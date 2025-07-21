@@ -123,8 +123,12 @@ function _resolveCompositeSources(
         }
       }
 
+      const fieldUsageWithWheres =
+        mergeFieldUsage(fieldUsage, getFieldUsageFromFilterList(inputSource)) ??
+        [];
+
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = expandFieldUsage(fieldUsage, fieldsForLookup);
+      const expanded = expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -164,12 +168,21 @@ function _resolveCompositeSources(
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
+          // TODO it seems like join usage is not included here, which used to not be an issue, but now
+          // is probably an issue because we now allow joins in composite source. Should write a test
+          // for attempting to define different joins in NESTED composites!
           compositeUsageInThisSource,
           inputSource.sources
         );
         if ('error' in resolveInner) {
-          // Third point where we abort; if a nested composite failed
-          abort();
+          // Third point where we abort; if a nested composite failed; we don't call abort() because we want to unnest the failures from
+          if (
+            resolveInner.error.code === 'no_suitable_composite_source_input'
+          ) {
+            failures.push(...resolveInner.error.data.failures);
+          } else {
+            abort();
+          }
           continue overSources;
         }
         base = {
@@ -332,7 +345,11 @@ function expandFieldUsage(
         const join = lookup(referenceJoinPath, fields);
         // Don't want to actually include the name of the join; just the path to the join
         const joinJoinPath = referenceJoinPath.slice(0, -1);
-        const fieldUsage = join.fieldUsage ?? [];
+        const fieldUsage =
+          mergeFieldUsage(
+            join.fieldUsage,
+            isSourceDef(join) ? getFieldUsageFromFilterList(join) : []
+          ) ?? [];
         allFieldPathsReferenced.push(
           ...fieldUsageAt(
             joinedFieldUsage(joinJoinPath, fieldUsage),
@@ -485,12 +502,14 @@ function processJoins(
       // Non-source join, like an array, skip it (no need to resolve)
       continue;
     }
+    const joinedUsageWithWheres =
+      mergeFieldUsage(joinedUsage, getFieldUsageFromFilterList(join)) ?? [];
     const resolved = _resolveCompositeSources(
       newPath,
       join,
       genRootFields(rootFields, path, base.fields),
       nests,
-      joinedUsage
+      joinedUsageWithWheres
     );
     if ('error' in resolved) {
       errors.push({
@@ -538,6 +557,10 @@ export interface NarrowedCompositeFieldResolution {
   joined: NarrowedCompositeFieldResolutionByJoinName;
 }
 
+function getFieldUsageFromFilterList(source: SourceDef) {
+  return (source.filterList ?? []).flatMap(filter => filter.fieldUsage ?? []);
+}
+
 export function resolveCompositeSources(
   source: SourceDef,
   segment: PipeSegment,
@@ -550,12 +573,14 @@ export function resolveCompositeSources(
     : [];
   const nestLevels = extractNestLevels(segment);
   const fields = mergeFields(source.fields, sourceExtensions);
+  const fieldUsageWithWheres =
+    mergeFieldUsage(fieldUsage, getFieldUsageFromFilterList(source)) ?? [];
   const result = _resolveCompositeSources(
     [],
     source,
     fields,
     nestLevels,
-    fieldUsage
+    fieldUsageWithWheres
   );
   if ('success' in result) {
     if (result.anyComposites) {
@@ -1121,13 +1146,16 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
   if (error.code === 'no_suitable_composite_source_input') {
     const firstFails = error.data.failures.map(failure => failure.issues[0]);
     const sorted = sortIssuesByReferenceLocation(firstFails);
+    const joinPath = error.data.path;
     const usages = sorted.map(issueFieldUsage);
     const lastIssue = sorted[sorted.length - 1];
     const lastUsage = usages[usages.length - 1];
     const conflictingUsage = firstFails
       .filter(i => i.type === 'missing-field')
       .map(i => i.field);
-    const fConflictingUsage = formatFieldUsages(conflictingUsage);
+    const fConflictingUsage = formatFieldUsages(
+      joinedFieldUsage(joinPath, conflictingUsage)
+    );
     const dConflictingUsage =
       conflictingUsage.length > 0
         ? `there is no composite input source which defines all of ${fConflictingUsage}`
@@ -1157,7 +1185,9 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
           )} could not be resolved`
         : undefined;
     const dLastIssue = lastUsage
-      ? `uses field ${formatFieldUsages([lastUsage])}, resulting in`
+      ? `uses field ${formatFieldUsages(
+          joinedFieldUsage(joinPath, [lastUsage])
+        )}, resulting in`
       : 'results in';
     const dIssues = dConflictingUsageAndMissingGroupBys
       ? commaAndList(
@@ -1171,7 +1201,7 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
           )
         );
     const message = `This operation ${dLastIssue} invalid usage of the composite source, as ${dIssues} (fields required in source: ${formatFieldUsages(
-      error.data.usage
+      joinedFieldUsage(joinPath, error.data.usage)
     )})`;
 
     logTo.logError('could-not-resolve-composite-source', message, {

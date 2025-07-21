@@ -72,12 +72,11 @@ export abstract class QueryOperationSpace
     satisfied: boolean;
   }[] = [];
   compositeFieldUsers: (
-    | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
+    | {type: 'filter'; filter: model.FilterCondition}
     | {
         type: 'field';
         name: string;
         field: SpaceField;
-        logTo: MalloyElement | undefined;
       }
   )[] = [];
 
@@ -214,23 +213,19 @@ export abstract class QueryOperationSpace
         type: 'field',
         name,
         field: entry,
-        logTo: undefined,
       });
     }
   }
 
-  public addFieldUserFromFilter(
-    filter: model.FilterCondition,
-    logTo: MalloyElement
-  ) {
+  public addFieldUserFromFilter(filter: model.FilterCondition) {
     if (filter.fieldUsage !== undefined) {
-      this.compositeFieldUsers.push({type: 'filter', filter, logTo});
+      this.compositeFieldUsers.push({type: 'filter', filter});
     }
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
     if (entry instanceof SpaceField) {
-      this.compositeFieldUsers.push({type: 'field', name, field: entry, logTo});
+      this.compositeFieldUsers.push({type: 'field', name, field: entry});
     }
     super.newEntry(name, logTo, entry);
   }
