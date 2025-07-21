@@ -340,18 +340,9 @@ function expandFieldUsage(
       if (!joinPathsProcessed.some(p => pathEq(p, referenceJoinPath))) {
         joinPathsProcessed.push(referenceJoinPath);
         const join = lookup(referenceJoinPath, fields);
-        // Don't want to actually include the name of the join; just the path to the join
-        const joinJoinPath = referenceJoinPath.slice(0, -1);
-        const fieldUsage =
-          mergeFieldUsage(
-            join.fieldUsage,
-            isSourceDef(join) ? getFieldUsageFromFilterList(join) : []
-          ) ?? [];
+        const joinFieldUsage = getJoinFieldUsage(join, referenceJoinPath);
         allFieldPathsReferenced.push(
-          ...fieldUsageAt(
-            joinedFieldUsage(joinJoinPath, fieldUsage),
-            reference.at
-          ).filter(
+          ...fieldUsageAt(joinFieldUsage, reference.at).filter(
             u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
           )
         );
@@ -499,14 +490,12 @@ function processJoins(
       // Non-source join, like an array, skip it (no need to resolve)
       continue;
     }
-    const joinedUsageWithWheres =
-      mergeFieldUsage(joinedUsage, getFieldUsageFromFilterList(join)) ?? [];
     const resolved = _resolveCompositeSources(
       newPath,
       join,
       genRootFields(rootFields, path, base.fields),
       nests,
-      joinedUsageWithWheres
+      joinedUsage
     );
     if ('error' in resolved) {
       errors.push({
@@ -961,14 +950,11 @@ function expandRefs(
       if (!joinPathsProcessed.some(p => pathEq(p, joinPath))) {
         joinPathsProcessed.push(joinPath);
         const join = lookup(joinPath, fields);
-        // Don't want to actually include the name of the join; just the path to the join
-        const joinJoinPath = joinPath.slice(0, -1);
-        const fieldUsage = join.fieldUsage ?? [];
+        const joinFieldUsage = getJoinFieldUsage(join, joinPath);
         references.push(
-          ...fieldUsageAt(
-            joinedFieldUsage(joinJoinPath, fieldUsage),
-            field.at
-          ).filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)))
+          ...fieldUsageAt(joinFieldUsage, field.at).filter(
+            u1 => !references.some(u2 => pathEq(u1.path, u2.path))
+          )
         );
       }
     }
@@ -1010,6 +996,21 @@ function expandRefs(
     },
     missingFields: missingFields.length > 0 ? missingFields : undefined,
   };
+}
+
+function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage[] {
+  return (
+    mergeFieldUsage(
+      // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
+      // already rooted at the parent
+      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? []),
+      // For `fieldUsage` from join `where`s, we need the path including the join name
+      joinedFieldUsage(
+        joinPath,
+        isSourceDef(join) ? getFieldUsageFromFilterList(join) : []
+      )
+    ) ?? []
+  );
 }
 
 function isUngroupedBy(ungrouping: AggregateUngrouping, groupedBy: string[]) {
