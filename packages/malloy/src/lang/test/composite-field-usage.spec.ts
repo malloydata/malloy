@@ -82,6 +82,91 @@ describe('composite sources', () => {
       ]);
     });
 
+    test('where reference', () => {
+      const m = model`
+        run: a -> { group_by: ai; where: af = 2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+
+    test('reference in calculate', () => {
+      const m = model`
+        run: a extend {
+          measure: c is count()
+        } -> { group_by: ai; calculate: lag_c is lag(c) }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['c']},
+      ]);
+    });
+
+    test('exclude field is not counted', () => {
+      const m = model`
+        run: a -> {
+          group_by: ai_2 is ai
+          nest: x is {
+            aggregate: c is exclude(count(), ai_2)
+          }
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('view is not included', () => {
+      const m = model`
+        run: a extend {
+          view: x is {
+            group_by: ai
+          }
+        } -> x
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('join in view is included', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a on true
+          view: x is {
+            group_by: b.ai
+          }
+        } -> x
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'ai']},
+      ]);
+    });
+
+    test('expression involving multiple fields', () => {
+      const m = model`
+        run: a -> { group_by: ai_plus_af is ai + af }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+
     test('dimension reference', () => {
       const m = model`
         run: a extend {
@@ -240,6 +325,19 @@ describe('composite sources', () => {
       const query = m.translator.modelDef.queryList[0];
       expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
         {path: ['ai']},
+      ]);
+    });
+
+    test('query refine usage', () => {
+      const m = model`
+        query: q is a -> { group_by: ai }
+        run: q + { group_by: af }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
       ]);
     });
   });
