@@ -65,6 +65,8 @@
     "@jest/globals": "^26.6.2",
     "@malloydata/db-bigquery": "*",
     "@malloydata/db-mysql": "*",
+    "@malloydata/malloy": "*",
+    "@malloydata/render": "*",
     "@types/fs-extra": "^9.0.13",
     "@types/jest": "^29.0.3",
     "@types/jest-expect-message": "^1.0.3",

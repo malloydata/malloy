@@ -315,9 +315,15 @@ function groupedOperationsToFragments(
 ): Fragment[] {
   switch (operations[0].kind) {
     case 'aggregate':
-      return aggregateToFragments(operations as Malloy.Aggregate[]);
+      return fieldOperationToFragments(
+        operations as Malloy.Aggregate[],
+        'aggregate'
+      );
     case 'group_by':
-      return groupByToFragments(operations as Malloy.GroupBy[]);
+      return fieldOperationToFragments(
+        operations as Malloy.Aggregate[],
+        'group_by'
+      );
     case 'order_by':
       return orderByToFragments(operations as Malloy.OrderBy[]);
     case 'nest':
@@ -331,7 +337,10 @@ function groupedOperationsToFragments(
     case 'drill':
       return drillToFragments(operations as Malloy.DrillOperation[]);
     case 'calculate':
-      return calculateToFragments(operations as Malloy.CalculateOperation[]);
+      return fieldOperationToFragments(
+        operations as Malloy.Aggregate[],
+        'calculate'
+      );
   }
 }
 
@@ -436,8 +445,8 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
   }
 }
 
-function groupByOrAggregateItemToFragments(
-  item: Malloy.GroupBy | Malloy.Aggregate,
+function fieldItemToFragments(
+  item: Malloy.GroupBy | Malloy.Aggregate | Malloy.CalculateOperation,
   hideAnnotations = false
 ): Fragment[] {
   const fragments: Fragment[] = [];
@@ -452,31 +461,22 @@ function groupByOrAggregateItemToFragments(
   return fragments;
 }
 
-function groupByToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
+function fieldOperationToFragments(
+  operation:
+    | Malloy.GroupBy[]
+    | Malloy.Aggregate[]
+    | Malloy.CalculateOperation[],
+  label: string
+): Fragment[] {
   const fragments: Fragment[] = [];
-  const hoistAnnotations = groupBy.length === 1;
+  const hoistAnnotations = operation.length === 1;
   if (hoistAnnotations) {
-    fragments.push(...annotationsToFragments(groupBy[0].field.annotations));
+    fragments.push(...annotationsToFragments(operation[0].field.annotations));
   }
   fragments.push(
     ...formatBlock(
-      'group_by',
-      groupBy.map(i => groupByOrAggregateItemToFragments(i, hoistAnnotations))
-    )
-  );
-  return fragments;
-}
-
-function aggregateToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
-  const fragments: Fragment[] = [];
-  const hoistAnnotations = groupBy.length === 1;
-  if (hoistAnnotations) {
-    fragments.push(...annotationsToFragments(groupBy[0].field.annotations));
-  }
-  fragments.push(
-    ...formatBlock(
-      'aggregate',
-      groupBy.map(i => groupByOrAggregateItemToFragments(i, hoistAnnotations))
+      label,
+      operation.map(i => fieldItemToFragments(i, hoistAnnotations))
     )
   );
   return fragments;
@@ -557,24 +557,6 @@ function drillToFragments(drill: Malloy.DrillOperation[]): Fragment[] {
 
 function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
   return formatBlock('having', having.map(filterOperationItemToFragments), ',');
-}
-
-function calculateToFragments(
-  calculate: Malloy.CalculateOperation[]
-): Fragment[] {
-  const fragments: Fragment[] = [];
-  for (let i = 0; i < calculate.length; i++) {
-    const operation = calculate[i];
-    if (i !== 0) {
-      fragments.push(NEWLINE);
-    }
-    if (operation.name) {
-      fragments.push(maybeQuoteIdentifier(operation.name));
-      fragments.push(' is ');
-    }
-    fragments.push(...fieldToFragments(operation.field));
-  }
-  return formatBlock('calculate', [fragments]);
 }
 
 const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly

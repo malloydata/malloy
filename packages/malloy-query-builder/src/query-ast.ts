@@ -2730,6 +2730,7 @@ export class ASTSegmentViewDefinition
     | ASTGroupByViewOperation
     | ASTAggregateViewOperation
     | ASTNestViewOperation
+    | ASTCalculateViewOperation
     | undefined {
     const field = this.tryGetFieldNamed(name);
     if (field === undefined) throw new Error('No such field');
@@ -2750,7 +2751,8 @@ export class ASTSegmentViewDefinition
   ):
     | ASTGroupByViewOperation
     | ASTAggregateViewOperation
-    | ASTNestViewOperation {
+    | ASTNestViewOperation
+    | ASTCalculateViewOperation {
     const field = this.tryGetField(name, path);
     if (field === undefined) {
       throw new Error('No such field');
@@ -2806,12 +2808,14 @@ export class ASTSegmentViewDefinition
     | ASTGroupByViewOperation
     | ASTAggregateViewOperation
     | ASTNestViewOperation
+    | ASTCalculateViewOperation
     | undefined {
     for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTGroupByViewOperation ||
         operation instanceof ASTAggregateViewOperation ||
-        operation instanceof ASTNestViewOperation
+        operation instanceof ASTNestViewOperation ||
+        operation instanceof ASTCalculateViewOperation
       ) {
         if (operation.name === name) {
           return operation;
@@ -3219,7 +3223,8 @@ export class ASTSegmentViewDefinition
       if (
         operation instanceof ASTGroupByViewOperation ||
         operation instanceof ASTAggregateViewOperation ||
-        operation instanceof ASTNestViewOperation
+        operation instanceof ASTNestViewOperation ||
+        operation instanceof ASTCalculateViewOperation
       ) {
         // TODO convert measures into dimensions for output
         fields.push(operation.getFieldInfo());
@@ -3712,6 +3717,7 @@ export class ASTAggregateViewOperation
    * calculation of the same field.
    */
   convertToCalculateMovingAverage(
+    name: string,
     rows_preceding: number,
     rows_following = 0,
     partition_fields: string[] = []
@@ -3726,13 +3732,13 @@ export class ASTAggregateViewOperation
 
     const calculateItem = new ASTCalculateViewOperation({
       kind: 'calculate',
-      name: this.name,
+      name: name,
       field: {
         expression: {
           kind: 'moving_average',
           field_reference: {
-            name: this.field.expression.name ?? this.name,
-            path: this.field.expression.path ?? [],
+            name: this.field.expression.name,
+            path: this.field.expression.path,
           },
           rows_preceding,
           rows_following,

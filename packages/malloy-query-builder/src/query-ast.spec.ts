@@ -906,6 +906,7 @@ describe('query builder', () => {
                 expression: {
                   kind: 'field_reference',
                   name: 'flight_count',
+                  path: [],
                 },
               },
             },
@@ -918,7 +919,12 @@ describe('query builder', () => {
       const aggregateOperation = segment.operations.index(
         1
       ) as ASTAggregateViewOperation;
-      aggregateOperation.convertToCalculateMovingAverage(7, 0, ['carrier']);
+      aggregateOperation.convertToCalculateMovingAverage(
+        'flight_count_7d',
+        7,
+        0,
+        ['carrier']
+      );
     }).toModifyQuery({
       model: flights_model,
       from,
@@ -943,7 +949,7 @@ describe('query builder', () => {
               },
               {
                 kind: 'calculate',
-                name: 'flight_count',
+                name: 'flight_count_7d',
                 field: {
                   expression: {
                     kind: 'moving_average',
@@ -967,7 +973,7 @@ describe('query builder', () => {
       },
       malloy: `run: flights -> {
   group_by: carrier
-  calculate: flight_count is avg_moving(flight_count, 7, 0) { partition_by: carrier }
+  calculate: flight_count_7d is avg_moving(flight_count, 7, 0) { partition_by: carrier }
 }`,
     });
   });
