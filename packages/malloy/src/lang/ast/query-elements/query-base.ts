@@ -43,6 +43,7 @@ import {
   type SourceDef,
 } from '../../../model/malloy_types';
 import {exprMap} from '../../../model/utils';
+import {ErrorFactory} from '../error-factory';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {FieldName, type FieldSpace} from '../types/field-space';
@@ -87,7 +88,7 @@ export abstract class QueryBase extends MalloyElement {
       if (lookup.found && lookup.found instanceof SpaceField) {
         const def = lookup.found.fieldDef();
         if (def && !isAtomic(def)) {
-          throw new Error('Non-atomic field included in expression definition');
+          return ErrorFactory.fieldDef;
         }
         if (def !== undefined) {
           return def;

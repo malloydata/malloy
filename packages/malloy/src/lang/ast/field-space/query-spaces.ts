@@ -279,6 +279,10 @@ export abstract class QueryOperationSpace
     }
     return fieldUsage;
   }
+
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return true;
+  }
 }
 
 // Project and Reduce or "QuerySegments" are built from a QuerySpace
@@ -455,10 +459,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
       return {...result, isOutputField: true};
     }
     return this.exprSpace.lookup(path);
-  }
-
-  isQueryFieldSpace(): this is QueryFieldSpace {
-    return true;
   }
 }
 
