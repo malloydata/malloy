@@ -33,13 +33,14 @@ import type {
 import {
   expressionIsScalar,
   isAtomic,
+  isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
   isSourceDef,
   isTurtle,
 } from './malloy_types';
-import {exprWalk} from './utils';
+import {isNotUndefined} from '../lang/utils';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -95,7 +96,7 @@ function _resolveCompositeSources(
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
   const expandedForError = onlyCompositeUsage(
-    expandFieldUsage(fieldUsage, rootFields).result,
+    _expandFieldUsage(fieldUsage, rootFields).result,
     source.fields
   );
   if (source.type === 'composite') {
@@ -123,8 +124,12 @@ function _resolveCompositeSources(
         }
       }
 
+      const fieldUsageWithWheres =
+        mergeFieldUsage(getFieldUsageFromFilterList(inputSource), fieldUsage) ??
+        [];
+
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = expandFieldUsage(fieldUsage, fieldsForLookup);
+      const expanded = _expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -168,8 +173,14 @@ function _resolveCompositeSources(
           inputSource.sources
         );
         if ('error' in resolveInner) {
-          // Third point where we abort; if a nested composite failed
-          abort();
+          // Third point where we abort; if a nested composite failed; we don't call abort() because we want to unnest the failures from
+          if (
+            resolveInner.error.code === 'no_suitable_composite_source_input'
+          ) {
+            failures.push(...resolveInner.error.data.failures);
+          } else {
+            abort();
+          }
           continue overSources;
         }
         base = {
@@ -253,7 +264,7 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const expanded = expandFieldUsage(
+    const expanded = _expandFieldUsage(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
@@ -294,7 +305,23 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
   });
 }
 
-function expandFieldUsage(
+export function expandFieldUsage(
+  segment: PipeSegment,
+  source: SourceDef
+): FieldUsage[] {
+  const sourceExtensions = isQuerySegment(segment)
+    ? segment.extendSource ?? []
+    : [];
+  const fields = mergeFields(source.fields, sourceExtensions);
+  const fieldUsage =
+    mergeFieldUsage(
+      getFieldUsageFromFilterList(source),
+      segmentFieldUsage(segment)
+    ) ?? [];
+  return _expandFieldUsage(fieldUsage, fields).result;
+}
+
+function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
 ): {result: FieldUsage[]; missingFields: FieldUsage[]} {
@@ -316,7 +343,7 @@ function expandFieldUsage(
       continue;
     }
     if (isAtomic(def)) {
-      const fieldUsage = getFieldUsageForField(def);
+      const fieldUsage = def.fieldUsage ?? [];
       allFieldPathsReferenced.push(
         ...fieldUsageAt(
           joinedFieldUsage(referenceJoinPath, fieldUsage),
@@ -330,14 +357,9 @@ function expandFieldUsage(
       if (!joinPathsProcessed.some(p => pathEq(p, referenceJoinPath))) {
         joinPathsProcessed.push(referenceJoinPath);
         const join = lookup(referenceJoinPath, fields);
-        // Don't want to actually include the name of the join; just the path to the join
-        const joinJoinPath = referenceJoinPath.slice(0, -1);
-        const fieldUsage = getFieldUsageForField(join);
+        const joinFieldUsage = getJoinFieldUsage(join, referenceJoinPath);
         allFieldPathsReferenced.push(
-          ...fieldUsageAt(
-            joinedFieldUsage(joinJoinPath, fieldUsage),
-            reference.at
-          ).filter(
+          ...fieldUsageAt(joinFieldUsage, reference.at).filter(
             u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
           )
         );
@@ -538,24 +560,38 @@ export interface NarrowedCompositeFieldResolution {
   joined: NarrowedCompositeFieldResolutionByJoinName;
 }
 
+function segmentFieldUsage(segment: PipeSegment): FieldUsage[] {
+  return (
+    (isQuerySegment(segment) || isIndexSegment(segment)
+      ? segment.fieldUsage
+      : undefined) ?? emptyFieldUsage()
+  );
+}
+
+function getFieldUsageFromFilterList(source: SourceDef) {
+  return (source.filterList ?? []).flatMap(filter => filter.fieldUsage ?? []);
+}
+
 export function resolveCompositeSources(
   source: SourceDef,
-  segment: PipeSegment,
-  fieldUsage: FieldUsage[]
+  segment: PipeSegment
 ):
   | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
+  const fieldUsage = segmentFieldUsage(segment);
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
   const nestLevels = extractNestLevels(segment);
   const fields = mergeFields(source.fields, sourceExtensions);
+  const fieldUsageWithWheres =
+    mergeFieldUsage(getFieldUsageFromFilterList(source), fieldUsage) ?? [];
   const result = _resolveCompositeSources(
     [],
     source,
     fields,
     nestLevels,
-    fieldUsage
+    fieldUsageWithWheres
   );
   if ('success' in result) {
     if (result.anyComposites) {
@@ -570,27 +606,47 @@ export function fieldUsagePaths(fieldUsage: FieldUsage[]): string[][] {
   return fieldUsage.map(u => u.path);
 }
 
-export function formatFieldUsages(fieldUsage: FieldUsage[]) {
+function dedupPaths(paths: string[][]) {
   const deduped: string[][] = [];
-  for (const usage of fieldUsage) {
-    if (!deduped.some(p => pathEq(p, usage.path))) {
-      deduped.push(usage.path);
+  for (const path of paths) {
+    if (!deduped.some(p => pathEq(p, path))) {
+      deduped.push(path);
     }
   }
+  return deduped;
+}
+
+function formatPaths(paths: string[][], combinator = 'and') {
+  const deduped = dedupPaths(paths);
   const formattedUsages = deduped.map(fieldUsage =>
     formatFieldUsage(fieldUsage)
   );
-  if (formattedUsages.length === 0) {
+  return commaAndList(formattedUsages, combinator);
+}
+
+function formatRequiredGroupings(requiredGroupings: RequiredGroupBy[]) {
+  return formatPaths(
+    requiredGroupings.map(g => g.path),
+    'and/or'
+  );
+}
+
+function commaAndList(strs: string[], combinator = 'and') {
+  if (strs.length === 0) {
     return '';
-  } else if (formattedUsages.length === 1) {
-    return formattedUsages[0];
-  } else if (formattedUsages.length === 2) {
-    return `${formattedUsages[0]} and ${formattedUsages[1]}`;
+  } else if (strs.length === 1) {
+    return strs[0];
+  } else if (strs.length === 2) {
+    return `${strs[0]} ${combinator} ${strs[1]}`;
   } else {
-    return `${formattedUsages.slice(0, -1).join(', ')}, and ${
-      formattedUsages[formattedUsages.length - 1]
+    return `${strs.slice(0, -1).join(', ')}, ${combinator} ${
+      strs[strs.length - 1]
     }`;
   }
+}
+
+export function formatFieldUsages(fieldUsage: FieldUsage[]) {
+  return formatPaths(fieldUsage.map(u => u.path));
 }
 
 function countFieldUsage(fieldUsage: FieldUsage[]): number {
@@ -682,28 +738,6 @@ interface NestLevels {
   singleValueFilters: string[][];
 }
 
-function getFieldUsageFromExpr(expr: Expr): FieldUsage[] {
-  const fieldUsage: FieldUsage[] = [];
-  for (const node of exprWalk(expr)) {
-    if (node.node === 'field') {
-      fieldUsage.push({
-        path: node.path,
-        at: node.at,
-      });
-    }
-  }
-  return fieldUsage;
-}
-
-function getFieldUsageForField(field: FieldDef): FieldUsage[] {
-  if (isAtomic(field) && field.e) {
-    return getFieldUsageFromExpr(field.e);
-  } else if (isJoined(field) && field.onExpression) {
-    return getFieldUsageFromExpr(field.onExpression);
-  }
-  return [];
-}
-
 function nestLevelsAt(nests: NestLevels, at?: DocumentLocation): NestLevels {
   if (at === undefined) return nests;
   return {
@@ -728,6 +762,7 @@ function requiredGroupBysAt(
   if (at === undefined) return requiredGroupBys;
   return requiredGroupBys?.map(r => ({
     ...r,
+    fieldUsage: r.fieldUsage ? fieldUsageAt([r.fieldUsage], at)[0] : undefined,
     at,
   }));
 }
@@ -791,7 +826,8 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         const head = field.pipeline[0];
         nested.push(nestLevelsAt(extractNestLevels(head), head.referencedAt));
       } else {
-        fieldsReferenced.push(...getFieldUsageForField(field));
+        const fieldUsage = field.fieldUsage ?? [];
+        fieldsReferenced.push(...fieldUsage);
         ungroupings.push(...(field.ungroupings ?? []));
         requiredGroupBys.push(...(field.requiresGroupBy ?? []));
       }
@@ -917,7 +953,7 @@ function expandRefs(
             missingFields.push(field);
             continue;
           }
-          requiredGroupBys.push({path, at: field.at});
+          requiredGroupBys.push({path, at: field.at, fieldUsage: field});
         }
       }
       if (def.ungroupings) {
@@ -928,7 +964,7 @@ function expandRefs(
           )
         );
       }
-      const fieldUsage = getFieldUsageForField(def);
+      const fieldUsage = def.fieldUsage ?? [];
       const moreReferences = fieldUsageAt(
         joinedFieldUsage(joinPath, fieldUsage),
         field.at
@@ -939,14 +975,11 @@ function expandRefs(
       if (!joinPathsProcessed.some(p => pathEq(p, joinPath))) {
         joinPathsProcessed.push(joinPath);
         const join = lookup(joinPath, fields);
-        // Don't want to actually include the name of the join; just the path to the join
-        const joinJoinPath = joinPath.slice(0, -1);
-        const fieldUsage = getFieldUsageForField(join);
+        const joinFieldUsage = getJoinFieldUsage(join, joinPath);
         references.push(
-          ...fieldUsageAt(
-            joinedFieldUsage(joinJoinPath, fieldUsage),
-            field.at
-          ).filter(u1 => !references.some(u2 => pathEq(u1.path, u2.path)))
+          ...fieldUsageAt(joinFieldUsage, field.at).filter(
+            u1 => !references.some(u2 => pathEq(u1.path, u2.path))
+          )
         );
       }
     }
@@ -988,6 +1021,21 @@ function expandRefs(
     },
     missingFields: missingFields.length > 0 ? missingFields : undefined,
   };
+}
+
+function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage[] {
+  return (
+    mergeFieldUsage(
+      // For `fieldUsage` from join `where`s, we need the path including the join name
+      joinedFieldUsage(
+        joinPath,
+        isSourceDef(join) ? getFieldUsageFromFilterList(join) : []
+      ),
+      // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
+      // already rooted at the parent
+      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? [])
+    ) ?? []
+  );
 }
 
 function isUngroupedBy(ungrouping: AggregateUngrouping, groupedBy: string[]) {
@@ -1081,8 +1129,20 @@ function compareLocations(
   return 0;
 }
 
-export function sortFieldUsageByReferenceLocation(usage: FieldUsage[]) {
-  return usage.sort((a, b) => compareLocations(a.at, b.at));
+function issueLocation(issue: CompositeIssue) {
+  if (issue.type === 'missing-field') {
+    return issue.field.at;
+  } else if (issue.type === 'missing-required-group-by') {
+    return issue.requiredGroupBy.at;
+  } else {
+    return issue.firstUsage.at;
+  }
+}
+
+function sortIssuesByReferenceLocation(issues: CompositeIssue[]) {
+  return issues.sort((a, b) => {
+    return compareLocations(issueLocation(a), issueLocation(b));
+  });
 }
 
 export function hasCompositesAnywhere(source: StructDef): boolean {
@@ -1095,75 +1155,81 @@ export function hasCompositesAnywhere(source: StructDef): boolean {
   return false;
 }
 
+function issueFieldUsage(issue: CompositeIssue): FieldUsage | undefined {
+  if (issue.type === 'missing-field') {
+    return issue.field;
+  } else if (issue.type === 'missing-required-group-by') {
+    return issue.requiredGroupBy.fieldUsage;
+  } else {
+    return undefined;
+  }
+}
+
 export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
   if (error.code === 'no_suitable_composite_source_input') {
-    if (
-      error.data.failures.length > 0 &&
-      error.data.failures.every(failure => {
-        return (
-          failure.issues.length > 0 &&
-          failure.issues.every(issue => issue.type === 'missing-field')
+    const firstFails = error.data.failures.map(failure => failure.issues[0]);
+    const sorted = sortIssuesByReferenceLocation(firstFails);
+    const joinPath = error.data.path;
+    const usages = sorted.map(issueFieldUsage);
+    const lastIssue = sorted[sorted.length - 1];
+    const lastUsage = usages[usages.length - 1];
+    const conflictingUsage = firstFails
+      .filter(i => i.type === 'missing-field')
+      .map(i => i.field);
+    const fConflictingUsage = formatFieldUsages(
+      joinedFieldUsage(joinPath, conflictingUsage)
+    );
+    const dConflictingUsage =
+      conflictingUsage.length > 0
+        ? `there is no composite input source which defines all of ${fConflictingUsage}`
+        : undefined;
+    const missingGroupBys = firstFails
+      .filter(i => i.type === 'missing-required-group-by')
+      .map(i => i.requiredGroupBy);
+    const fMissingGroupBys = formatRequiredGroupings(missingGroupBys);
+    const dGrouping = 'required group by or single value filter';
+    const dMissingGroupBys =
+      missingGroupBys.length > 0
+        ? `there is a missing ${dGrouping} of ${fMissingGroupBys}`
+        : undefined;
+    const dConflictingUsageAndMissingGroupBys =
+      conflictingUsage.length > 0 && missingGroupBys.length > 0
+        ? `there is no composite input source which defines ${fConflictingUsage} without having an unsatisfied ${dGrouping} on ${fMissingGroupBys}`
+        : undefined;
+    const failedJoins = firstFails
+      .filter(i => i.type === 'join-failed')
+      .map(i => i.path);
+    const uniqueFailedJoins = dedupPaths(failedJoins);
+    const joinPlural = uniqueFailedJoins.length > 1 ? 'joins' : 'join';
+    const dFailedJoins =
+      failedJoins.length > 0
+        ? `${joinPlural} ${formatPaths(
+            uniqueFailedJoins
+          )} could not be resolved`
+        : undefined;
+    const dLastIssue = lastUsage
+      ? `uses field ${formatFieldUsages(
+          joinedFieldUsage(joinPath, [lastUsage])
+        )}, resulting in`
+      : 'results in';
+    const dIssues = dConflictingUsageAndMissingGroupBys
+      ? commaAndList(
+          [dConflictingUsageAndMissingGroupBys, dFailedJoins].filter(
+            isNotUndefined
+          )
+        )
+      : commaAndList(
+          [dConflictingUsage, dMissingGroupBys, dFailedJoins].filter(
+            isNotUndefined
+          )
         );
-      })
-    ) {
-      const firstFails = error.data.failures.map(failure => {
-        if (failure.issues[0].type !== 'missing-field')
-          throw new Error('Programmer error');
-        return failure.issues[0].field;
-      });
-      const sorted = sortFieldUsageByReferenceLocation(firstFails);
-      const lastUsage = sorted[sorted.length - 1];
-      logTo.logError(
-        'invalid-composite-field-usage',
-        {
-          newUsage: [lastUsage],
-          conflictingUsage: sorted,
-          allUsage: error.data.usage,
-        },
-        {
-          at: lastUsage.at,
-        }
-      );
-    } else {
-      for (let i = 0; i < error.data.failures.length; i++) {
-        const failure = error.data.failures[i];
-        const sourceName = failure.source.as
-          ? ` (\`${failure.source.as}\`)`
-          : '';
-        const join =
-          error.data.path.length === 0
-            ? ''
-            : `join ${error.data.path.join('.')} of `;
-        const source = `${join}composed source #${i + 1}${sourceName}`;
-        const requiredFields = `\nFields required in source: ${formatFieldUsages(
-          error.data.usage
-        )}`;
-        for (const issue of failure.issues) {
-          if (issue.type === 'missing-field') {
-            const fieldRef = `\`${issue.field.path.join('.')}\``;
-            logTo.logError(
-              'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing field ${fieldRef} in ${source}${requiredFields}`,
-              {at: issue.field.at}
-            );
-          } else if (issue.type === 'missing-required-group-by') {
-            const fieldRef = `\`${issue.requiredGroupBy.path.join('.')}\``;
-            logTo.logError(
-              'could-not-resolve-composite-source',
-              `Could not resolve composite source: missing group by or single value filter of ${fieldRef} as required in ${source}${requiredFields}`,
-              {at: issue.requiredGroupBy.at}
-            );
-          } else {
-            const joinRef = `\`${issue.path.join('.')}\``;
-            logTo.logError(
-              'could-not-resolve-composite-source',
-              `Could not resolve composite source: join ${joinRef} could not be resolved in ${source}${requiredFields}`,
-              {at: issue.firstUsage.at}
-            );
-          }
-        }
-      }
-    }
+    const message = `This operation ${dLastIssue} invalid usage of the composite source, as ${dIssues} (fields required in source: ${formatFieldUsages(
+      joinedFieldUsage(joinPath, error.data.usage)
+    )})`;
+
+    logTo.logError('could-not-resolve-composite-source', message, {
+      at: issueLocation(lastIssue),
+    });
   } else {
     logTo.logError(
       'could-not-resolve-composite-source',

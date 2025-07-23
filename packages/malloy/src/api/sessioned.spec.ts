@@ -103,6 +103,22 @@ describe('api', () => {
         session_id: result.session_id,
       };
       expect(result).toMatchObject(expected);
+      expect(result).toMatchObject({
+        timing_info: {
+          name: 'compile_model',
+          duration_ms: expect.any(Number),
+          detailed_timing: [
+            {name: 'session_wait'},
+            {name: 'parse_malloy'},
+            {name: 'session_wait'},
+            {
+              name: 'generate_ast',
+              detailed_timing: [{name: 'parse_compiler_flags'}],
+            },
+            {name: 'compile_malloy'},
+          ],
+        },
+      });
     });
     test('compile source basic test', () => {
       let result = compileSource({

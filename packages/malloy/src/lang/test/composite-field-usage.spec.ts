@@ -7,6 +7,8 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
+import type {PipeSegment} from '../../model';
+import {isIndexSegment, isQuerySegment} from '../../model';
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -63,6 +65,283 @@ describe('composite sources', () => {
     });
   });
 
+  describe('expanded field usage', () => {
+    function segmentExpandedFieldUsage(segment: PipeSegment) {
+      return isQuerySegment(segment) || isIndexSegment(segment)
+        ? segment.expandedFieldUsage
+        : undefined;
+    }
+    test('direct field reference', () => {
+      const m = model`
+        run: a -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('where reference', () => {
+      const m = model`
+        run: a -> { group_by: ai; where: af = 2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+
+    test('reference in calculate', () => {
+      const m = model`
+        run: a extend {
+          measure: c is count()
+        } -> { group_by: ai; calculate: lag_c is lag(c) }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['c']},
+      ]);
+    });
+
+    test('exclude field is not counted', () => {
+      const m = model`
+        run: a -> {
+          group_by: ai_2 is ai
+          nest: x is {
+            aggregate: c is exclude(count(), ai_2)
+          }
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('view is not included', () => {
+      const m = model`
+        run: a extend {
+          view: x is {
+            group_by: ai
+          }
+        } -> x
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('join in view is included', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a on true
+          view: x is {
+            group_by: b.ai
+          }
+        } -> x
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'ai']},
+      ]);
+    });
+
+    test('expression involving multiple fields', () => {
+      const m = model`
+        run: a -> { group_by: ai_plus_af is ai + af }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+
+    test('dimension reference', () => {
+      const m = model`
+        run: a extend {
+          dimension: ai_2 is ai
+        } -> { group_by: ai_2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('join on reference', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a on b.ai = ai
+        } -> { group_by: b.astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'astr']},
+        {path: ['b', 'ai']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('two-step resolution of dimension', () => {
+      const m = model`
+        run: a extend {
+          dimension: ai_2 is ai
+          dimension: ai_3 is ai_2
+        } -> { group_by: ai_3 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai_3']},
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('source where is included', () => {
+      const m = model`
+        run: a extend {
+          where: ai = 2
+        } -> { group_by: astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['astr']},
+      ]);
+    });
+
+    test('join where is included', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a extend { where: ai = 1 } on true
+        } -> { group_by: b.astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'astr']},
+        {path: ['b', 'ai']},
+      ]);
+    });
+
+    test('expansion respects selected composite', () => {
+      const m = model`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend {
+            dimension: ai_1 is 1
+            where: astr = 'foo'
+          },
+          a extend {
+            dimension: ai_2 is 2
+            where: ai = 2
+          }
+        ) -> { group_by: ai_2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['ai_2']},
+      ]);
+    });
+
+    test('second-stage extend dimension works', () => {
+      const m = model`
+        run: a -> { group_by: ai } -> {
+          extend: {
+            dimension: ai_2 is ai
+          }
+          group_by: ai_2
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('param is not included', () => {
+      const m = model`
+        ##! experimental.parameters
+        source: a_2(param is 1) is a extend {
+          dimension: param_value is param
+        }
+        run: a_2(param is 2) -> { group_by: param_value }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['param_value']},
+      ]);
+    });
+
+    test('query arrow usage', () => {
+      const m = model`
+        query: q is a -> { group_by: ai }
+        run: q -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('query arrow usage with composite ', () => {
+      const m = model`
+        ##! experimental.composite_sources
+        query: q is compose(
+          a extend {
+            dimension: ai_1 is 1
+            where: astr = 'foo'
+          },
+          a extend {
+            dimension: ai_2 is 2
+            where: ai = 2
+          }
+        ) -> { group_by: ai is ai_2 }
+        run: q -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('query refine usage', () => {
+      const m = model`
+        query: q is a -> { group_by: ai }
+        run: q + { group_by: af }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+  });
+
   describe('composite source resolution and validation', () => {
     describe('compose type errors', () => {
       test('compose incompatible scalar types', () => {
@@ -92,7 +371,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -108,7 +387,7 @@ describe('composite sources', () => {
         } + ${'two'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -126,7 +405,7 @@ describe('composite sources', () => {
         } + ${'v'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -141,6 +420,28 @@ describe('composite sources', () => {
           run: y -> { group_by: x.foo }
         `
       ).toTranslate();
+    });
+    test('required group by mixed with missing field', () => {
+      expect(
+        `
+              ##! experimental { composite_sources grouped_by }
+              source: aext is compose(
+                a extend {
+                  dimension: x is 1
+                  dimension: y is 1
+                  measure: aisum is ai.sum() { grouped_by: x }
+                },
+                a extend {
+                  measure: aisum is ai.sum()
+                }
+              )
+              run: aext -> { aggregate: aisum, group_by: y }
+            `
+      ).toLog(
+        errorMessage(
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines `y` without having an unsatisfied required group by or single value filter on `x` (fields required in source: `aisum` and `y`)'
+        )
+      );
     });
     test('error message when composited join (join is a nested composite) results in failure', () => {
       expect(`
@@ -163,10 +464,33 @@ describe('composite sources', () => {
         run: c -> { group_by: ${'j.jf2'}, j.jf1 }
       `).toLog(
         errorMessage(
-          'Could not resolve composite source: join `j` could not be resolved in composed source #1 (`s1`)\nFields required in source: `j.jf2` and `j.jf1`'
-        ),
+          'This operation results in invalid usage of the composite source, as join `j` could not be resolved (fields required in source: `j.jf2` and `j.jf1`)'
+        )
+      );
+    });
+    test('nested composited join', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: jbase is compose(
+          a extend {
+            dimension: jf1 is 1
+          },
+          a extend {
+            dimension: jf2 is 2
+          }
+        )
+        source: s1 is a extend {
+          join_one: j is jbase on j.jf1 = 1
+        }
+        source: s2 is a extend {
+          join_one: j is jbase on j.jf2 = 2
+        }
+        source: c is compose(s1, s2)
+        source: c2 is compose(c, c extend { dimension: f1 is 1 })
+        run: c2 -> { group_by: f1, ${'j.jf2'}, j.jf1 }
+      `).toLog(
         errorMessage(
-          'Could not resolve composite source: join `j` could not be resolved in composed source #2 (`s2`)\nFields required in source: `j.jf2` and `j.jf1`'
+          'This operation results in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and join `j` could not be resolved (fields required in source: `f1`, `j.jf2`, and `j.jf1`)'
         )
       );
     });
@@ -189,7 +513,7 @@ describe('composite sources', () => {
         run: c -> { group_by: f1, ${'j.jf2'} }
       `).toLog(
         errorMessage(
-          'This operation uses field `j.jf2`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and `j.jf2`\nFields required in source: `f1` and `j.jf2`'
+          'This operation uses field `j.jf2`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `f1` and `j.jf2` (fields required in source: `f1` and `j.jf2`)'
         )
       );
     });
@@ -210,7 +534,7 @@ describe('composite sources', () => {
         run: c -> { group_by: j.jf2, ${'j.jf1'} }
       `).toLog(
         errorMessage(
-          'This operation uses field `j.jf1`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `j.jf2` and `j.jf1`\nFields required in source: `j.jf2` and `j.jf1`'
+          'This operation uses field `j.jf1`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `j.jf2` and `j.jf1` (fields required in source: `j.jf2` and `j.jf1`)'
         )
       );
     });
@@ -228,7 +552,85 @@ describe('composite sources', () => {
         } + ${'x'}
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
+        )
+      );
+    });
+    test('compose fails due to filter in source', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          where: two = 2
+        } -> {
+          group_by: one
+          group_by: ${'three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `two`, `one`, and `three`)'
+        )
+      );
+    });
+    test('compose fails due to filter reference in source', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) extend {
+          dimension: two_prime is two + 1
+          where: two_prime = 2
+        } -> {
+          group_by: one
+          group_by: ${'three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `one`, `three`, and `two`)'
+        )
+      );
+    });
+    test('field usage from selected composite source where is picked up in resolution', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          compose(
+            a extend { dimension: one is 1, two is 2 },
+            a extend { dimension: one is 1, three is 3 }
+          ) extend {
+            where: two = 2
+          },
+          a extend { dimension: one is 1 }
+        ) -> {
+          group_by: one
+          group_by: ${'three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `one` and `three`)'
+        )
+      );
+    });
+    test('where in join is picked up', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: a extend {
+          join_one: b is compose(
+            a extend { dimension: one is 1, two is 2 },
+            a extend { dimension: one is 1, three is 3 }
+          ) extend {
+            where: two = 2
+          }
+        } -> {
+          group_by: b.one
+          group_by: ${'b.three'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `b.three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `b.two` and `b.three` (fields required in source: `b.one`, `b.three`, and `b.two`)'
         )
       );
     });
@@ -245,7 +647,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two`\nFields required in source: `one`, `three`, and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `three` and `two` (fields required in source: `one`, `three`, and `two`)'
         )
       );
     });
@@ -261,7 +663,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two`\nFields required in source: `one` and `two`'
+          'This operation uses field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one` and `two` (fields required in source: `one` and `two`)'
         )
       );
     });
@@ -344,7 +746,7 @@ describe('composite sources', () => {
         run: foo -> { group_by: x, y }
       `).toLog(
         errorMessage(
-          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y`\nFields required in source: `x` and `y`'
+          'This operation uses field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x` and `y` (fields required in source: `x` and `y`)'
         )
       );
     });

@@ -217,7 +217,7 @@ export class Filter
       const fExpr = this.checkedFilterCondition(filterFS, filter);
       if (fExpr !== undefined) {
         executeFor.filters.push(fExpr);
-        executeFor.resultFS.addFieldUserFromFilter(fExpr, filter);
+        executeFor.resultFS.addFieldUserFromFilter(fExpr);
       }
     }
   }

@@ -54,6 +54,7 @@ import type {DocumentHelpContext} from './parse-tree-walkers/document-help-conte
 import {walkForDocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
 import {ReferenceList} from './reference-list';
 import type {
+  ResponseBase,
   ASTResponse,
   CompletionsResponse,
   DataRequestResponse,
@@ -82,6 +83,7 @@ import type {EventStream} from '../runtime_types';
 import {annotationToTag} from '../annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
+import {Timer} from '../timing';
 
 export type StepResponses =
   | DataRequestResponse
@@ -107,7 +109,11 @@ interface TranslationStep {
   step(that: MalloyTranslation): StepResponses;
 }
 
-interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
+interface ParseData
+  extends ResponseBase,
+    ProblemResponse,
+    NeedURLData,
+    FinalResponse {
   parse: MalloyParseInfo;
 }
 
@@ -132,6 +138,7 @@ class ParseStep implements TranslationStep {
   sourceInfo?: SourceInfo;
 
   step(that: MalloyTranslation): ParseResponse {
+    const stepTimer = new Timer('parse_step');
     if (this.response) {
       return this.response;
     }
@@ -157,6 +164,7 @@ class ParseStep implements TranslationStep {
       }
       return {urls: [that.sourceURL]};
     }
+    const parseModelTimer = new Timer('parse_malloy');
     const source = srcEnt.value === '' ? '\n' : srcEnt.value;
     this.sourceInfo = getSourceInfo(source);
 
@@ -168,6 +176,8 @@ class ParseStep implements TranslationStep {
       parse = undefined;
     }
 
+    stepTimer.contribute([parseModelTimer.stop()]);
+
     if (that.root.logger.hasErrors()) {
       this.response = {
         parse,
@@ -176,7 +186,7 @@ class ParseStep implements TranslationStep {
     } else {
       this.response = {parse};
     }
-    return this.response;
+    return {...this.response, timingInfo: stepTimer.stop()};
   }
 
   private runParser(
@@ -257,7 +267,7 @@ class ImportsAndTablesStep implements TranslationStep {
     if (that.root.logger.hasErrors()) {
       // Since we knew we parsed without errors, this would only be from
       // having a malformed URL on an import reference.
-      return null;
+      return {timingInfo: parseReq.timingInfo};
     }
 
     let allMissing: DataRequestResponse = {};
@@ -278,11 +288,14 @@ class ImportsAndTablesStep implements TranslationStep {
       url => that.root.pretranslatedModels.get(url) === undefined
     );
     if (missingImports.length > 0) {
-      allMissing = {...allMissing, urls: missingImports};
+      allMissing = {
+        ...allMissing,
+        urls: missingImports,
+      };
     }
 
     if (isNeedResponse(allMissing)) {
-      return allMissing;
+      return {...allMissing, timingInfo: parseReq.timingInfo};
     }
 
     for (const child of that.childTranslators.values()) {
@@ -295,7 +308,7 @@ class ImportsAndTablesStep implements TranslationStep {
       }
     }
 
-    return null;
+    return {timingInfo: parseReq.timingInfo};
   }
 }
 
@@ -305,12 +318,14 @@ class ASTStep implements TranslationStep {
   constructor(readonly importStep: ImportsAndTablesStep) {}
 
   step(that: MalloyTranslation): ASTResponse {
+    const stepTimer = new Timer('ast_step');
     if (this.response) {
       return this.response;
     }
 
     const mustResolve = this.importStep.step(that);
-    if (mustResolve) {
+    stepTimer.incorporate(mustResolve?.timingInfo);
+    if (isNeedResponse(mustResolve)) {
       return mustResolve;
     }
     const parseResponse = that.parseStep.response;
@@ -326,16 +341,18 @@ class ASTStep implements TranslationStep {
         'TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser'
       );
     }
+    stepTimer.incorporate(parseResponse.timingInfo);
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
       that.compilerFlags
     );
-    const newAst = secondPass.visit(parse.root);
-    that.compilerFlags = secondPass.compilerFlags;
+    const {ast: newAST, compilerFlags, timingInfo} = secondPass.run();
+    stepTimer.contribute([timingInfo]);
+    that.compilerFlags = compilerFlags;
 
-    if (newAst.elementType === 'unimplemented') {
-      newAst.logError(
+    if (newAST.elementType === 'unimplemented') {
+      newAST.logError(
         'untranslated-parse-node',
         'INTERNAL COMPILER ERROR: Untranslated parse node'
       );
@@ -345,7 +362,7 @@ class ASTStep implements TranslationStep {
       // The DocumentStatement.needs method has largely replaced the need to walk
       // the AST once it has been translated, this one check remains, though
       // it should probably never be hit
-      for (const walkedTo of newAst.walk()) {
+      for (const walkedTo of newAST.walk()) {
         if (walkedTo instanceof ast.Unimplemented) {
           walkedTo.logError(
             'untranslated-parse-node',
@@ -373,13 +390,13 @@ class ASTStep implements TranslationStep {
       }
     }
 
-    newAst.setTranslator(that);
+    newAST.setTranslator(that);
     this.response = {
       ...that.problemResponse(), // these problems will by definition all be warnings
-      ast: newAst,
+      ast: newAST,
       final: true,
     };
-    return this.response;
+    return {...this.response, timingInfo: stepTimer.stop()};
   }
 }
 
@@ -538,6 +555,7 @@ class TranslateStep implements TranslationStep {
   constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
+    const stepTimer = new Timer('translate_step');
     if (this.response) {
       return this.response;
     }
@@ -554,14 +572,17 @@ class TranslateStep implements TranslationStep {
 
     // begin with the compiler flags of the model we are extending
     if (extendingModel && !this.importedAnnotations) {
+      const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
       const tagParse = annotationToTag(extendingModel.annotation, {
         prefix: /^##! /,
       });
+      stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
       that.compilerFlags = tagParse.tag;
       this.importedAnnotations = true;
     }
 
     const astResponse = this.astStep.step(that);
+    stepTimer.incorporate(astResponse.timingInfo);
     if (isNeedResponse(astResponse)) {
       return astResponse;
     }
@@ -574,14 +595,17 @@ class TranslateStep implements TranslationStep {
       if (astResponse.ast instanceof ast.Document) {
         const doc = astResponse.ast;
         doc.initModelDef(extendingModel);
-        for (;;) {
-          const docCompile = doc.compile();
-          if (docCompile.needs) {
-            return docCompile.needs;
-          } else {
-            that.modelDef = docCompile.modelDef;
-            break;
-          }
+        const translateModelTimer = new Timer('compile_malloy');
+        const docCompile = doc.compile();
+        const translateTiming = translateModelTimer.stop();
+        stepTimer.contribute([translateTiming]);
+        if (docCompile.needs) {
+          return {
+            ...docCompile.needs,
+            timingInfo: stepTimer.stop(),
+          };
+        } else {
+          that.modelDef = docCompile.modelDef;
         }
       } else {
         that.root.logError(
@@ -610,7 +634,7 @@ class TranslateStep implements TranslationStep {
         final: true,
       };
     }
-    return this.response;
+    return {...this.response, timingInfo: stepTimer.stop()};
   }
 }
 

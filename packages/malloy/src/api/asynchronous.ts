@@ -11,11 +11,13 @@ import type {InfoConnection, Connection, LookupConnection} from './connection';
 import type {URLReader} from '../runtime_types';
 import type {CacheManager} from '../malloy';
 import {DEFAULT_LOG_RANGE} from './util';
+import {Timer} from '../timing';
 
 async function fetchNeeds(
   needs: Malloy.CompilerNeeds | undefined,
   fetchers: CompilerNeedFetch<InfoConnection>
-): Promise<Malloy.CompilerNeeds> {
+): Promise<{needs: Malloy.CompilerNeeds; timingInfo: Malloy.TimingInfo}> {
+  const timer = new Timer('fetch_needs');
   if (needs === undefined) {
     throw new Error(
       "Expected compiler to have needs because it didn't return a result"
@@ -24,7 +26,9 @@ async function fetchNeeds(
   const result: Malloy.CompilerNeeds = {};
   if (needs.connections) {
     for (const connection of needs.connections) {
+      const t = new Timer('lookup_connection');
       const info = await fetchers.connections.lookupConnection(connection.name);
+      timer.contribute([t.stop()]);
       result.connections ??= [];
       result.connections.push({
         ...connection,
@@ -35,7 +39,9 @@ async function fetchNeeds(
   if (needs.files) {
     for (const file of needs.files) {
       // TODO handle checking if the cache has the file...
+      const t = new Timer('read_url');
       const info = await fetchers.urls.readURL(new URL(file.url));
+      timer.contribute([t.stop()]);
       result.files ??= [];
       if (typeof info === 'string') {
         result.files.push({
@@ -60,17 +66,21 @@ async function fetchNeeds(
       tableSchemasByConnection[tableSchema.connection_name].push(tableSchema);
     }
     for (const connectionName in tableSchemasByConnection) {
+      const t1 = new Timer('lookup_connection');
       const connection =
         await fetchers.connections.lookupConnection(connectionName);
+      timer.contribute([t1.stop()]);
       const tableNames = tableSchemasByConnection[connectionName].map(
         t => t.name
       );
+      const t2 = new Timer('fetch_table_schemas');
       const schemas = await Promise.all(
         tableNames.map(async tableName => ({
           name: tableName,
           schema: await connection.fetchSchemaForTable(tableName),
         }))
       );
+      timer.contribute([t2.stop()]);
       result.table_schemas ??= [];
       for (const schema of schemas) {
         result.table_schemas.push({
@@ -90,17 +100,21 @@ async function fetchNeeds(
       sqlSchemasByConnectionName[sqlSchema.connection_name].push(sqlSchema);
     }
     for (const connectionName in sqlSchemasByConnectionName) {
+      const t1 = new Timer('lookup_connection');
       const connection =
         await fetchers.connections.lookupConnection(connectionName);
+      timer.contribute([t1.stop()]);
       const sqlQueries = sqlSchemasByConnectionName[connectionName].map(
         t => t.sql
       );
+      const t2 = new Timer('lookup_sql_schemas');
       const schemas = await Promise.all(
         sqlQueries.map(async sql => ({
           sql,
           schema: await connection.fetchSchemaForSQLQuery(sql),
         }))
       );
+      timer.contribute([t2.stop()]);
       result.sql_schemas ??= [];
       for (const schema of schemas) {
         result.sql_schemas.push({
@@ -111,7 +125,7 @@ async function fetchNeeds(
       }
     }
   }
-  return result;
+  return {needs: result, timingInfo: timer.stop()};
 }
 
 export interface CompilerNeedFetch<T extends InfoConnection> {
@@ -124,14 +138,20 @@ export async function compileModel(
   request: Malloy.CompileModelRequest,
   fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompileModelResponse> {
+  const timer = new Timer('compile_model');
   const state = Core.newCompileModelState(request);
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = Core.statedCompileModel(state);
+    timer.incorporate(result.timing_info);
     if (result.model || Core.hasErrors(result.logs)) {
-      return result;
+      return {...result, timing_info: timer.stop()};
     }
-    const needs = await fetchNeeds(result.compiler_needs, fetchers);
+    const {needs, timingInfo} = await fetchNeeds(
+      result.compiler_needs,
+      fetchers
+    );
+    timer.incorporate(timingInfo);
     Core.updateCompileModelState(state, needs);
   }
 }
@@ -140,14 +160,20 @@ export async function compileSource(
   request: Malloy.CompileSourceRequest,
   fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompileSourceResponse> {
+  const timer = new Timer('compile_source');
   const state = Core.newCompileSourceState(request);
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = Core.statedCompileSource(state, request.name);
+    timer.incorporate(result.timing_info);
     if (result.source || Core.hasErrors(result.logs)) {
-      return result;
+      return {...result, timing_info: timer.stop()};
     }
-    const needs = await fetchNeeds(result.compiler_needs, fetchers);
+    const {needs, timingInfo} = await fetchNeeds(
+      result.compiler_needs,
+      fetchers
+    );
+    timer.incorporate(timingInfo);
     Core.updateCompileModelState(state, needs);
   }
 }
@@ -156,14 +182,20 @@ export async function compileQuery(
   request: Malloy.CompileQueryRequest,
   fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompileQueryResponse> {
+  const timer = new Timer('compile_query');
   const state = Core.newCompileQueryState(request);
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = Core.statedCompileQuery(state);
+    timer.incorporate(result.timing_info);
     if (result.result || Core.hasErrors(result.logs)) {
-      return result;
+      return {...result, timing_info: timer.stop()};
     }
-    const needs = await fetchNeeds(result.compiler_needs, fetchers);
+    const {needs, timingInfo} = await fetchNeeds(
+      result.compiler_needs,
+      fetchers
+    );
+    timer.incorporate(timingInfo);
     Core.updateCompileModelState(state, needs);
   }
 }
@@ -172,9 +204,11 @@ export async function runQuery(
   request: Malloy.CompileQueryRequest,
   fetchers: CompilerNeedFetch<Connection>
 ): Promise<Malloy.CompileQueryResponse> {
+  const timer = new Timer('run_query');
   const compiled = await compileQuery(request, fetchers);
+  timer.incorporate(compiled.timing_info);
   if (compiled.result === undefined) {
-    return compiled;
+    return {...compiled, timing_info: timer.stop()};
   }
   const defaultURL = request.model_url;
   if (compiled.result.sql === undefined) {
@@ -191,19 +225,24 @@ export async function runQuery(
     };
   }
   try {
+    const t1 = new Timer('lookup_connection');
     const connection = await fetchers.connections.lookupConnection(
       compiled.result.connection_name
     );
+    timer.contribute([t1.stop()]);
+    const t2 = new Timer('run_sql');
     const data = await connection.runSQL(
       compiled.result.sql,
       compiled.result.schema
     );
+    timer.contribute([t2.stop()]);
     return {
       ...compiled,
       result: {
         ...compiled.result,
         data,
       },
+      timing_info: timer.stop(),
     };
   } catch (error) {
     return {
@@ -217,6 +256,7 @@ export async function runQuery(
           range: DEFAULT_LOG_RANGE,
         },
       ],
+      timing_info: timer.stop(),
     };
   }
 }

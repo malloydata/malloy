@@ -208,6 +208,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': true,
         'optional': true,
       },
+      'timing_info': {
+        'type': 'TimingInfo',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'CompileQueryRequest': {
@@ -265,6 +270,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': true,
         'optional': true,
       },
+      'timing_info': {
+        'type': 'TimingInfo',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'CompileSourceRequest': {
@@ -309,6 +319,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'compiler_needs': {
         'type': 'CompilerNeeds',
+        'optional': true,
+        'array': false,
+      },
+      'timing_info': {
+        'type': 'TimingInfo',
         'optional': true,
         'array': false,
       },
@@ -1249,6 +1264,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'timing_info': {
+        'type': 'TimingInfo',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'RunQueryRequest': {
@@ -1298,6 +1318,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'compiler_needs': {
         'type': 'CompilerNeeds',
+        'optional': true,
+        'array': false,
+      },
+      'timing_info': {
+        'type': 'TimingInfo',
         'optional': true,
         'array': false,
       },
@@ -1501,6 +1526,27 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'TimestampTimeframe',
         'optional': true,
         'array': false,
+      },
+    },
+  },
+  'TimingInfo': {
+    'type': 'struct',
+    'name': 'TimingInfo',
+    'fields': {
+      'name': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'duration_ms': {
+        'type': 'number',
+        'optional': false,
+        'array': false,
+      },
+      'detailed_timing': {
+        'type': 'TimingInfo',
+        'array': true,
+        'optional': true,
       },
     },
   },
@@ -1765,6 +1811,7 @@ export type CompileModelResponse = {
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
   translations?: Array<Translation>;
+  timing_info?: TimingInfo;
 };
 
 export type CompileQueryRequest = {
@@ -1780,6 +1827,7 @@ export type CompileQueryResponse = {
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
   translations?: Array<Translation>;
+  timing_info?: TimingInfo;
 };
 
 export type CompileSourceRequest = {
@@ -1793,6 +1841,7 @@ export type CompileSourceResponse = {
   source?: SourceInfo;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  timing_info?: TimingInfo;
 };
 
 export type CompilerNeeds = {
@@ -2270,6 +2319,7 @@ export type RunIndexQueryRequest = {
 export type RunIndexQueryResponse = {
   result?: Result;
   compiler_needs?: CompilerNeeds;
+  timing_info?: TimingInfo;
 };
 
 export type RunQueryRequest = {
@@ -2284,6 +2334,7 @@ export type RunQueryResponse = {
   default_row_limit_added?: number;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+  timing_info?: TimingInfo;
 };
 
 export type SQLNativeCell = {
@@ -2354,6 +2405,12 @@ export type TimestampTimeframe =
 
 export type TimestampType = {
   timeframe?: TimestampTimeframe;
+};
+
+export type TimingInfo = {
+  name: string;
+  duration_ms: number;
+  detailed_timing?: Array<TimingInfo>;
 };
 
 export type Translation = {

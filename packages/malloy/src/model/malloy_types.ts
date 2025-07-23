@@ -918,7 +918,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onFieldUsage?: FieldUsage[];
+  fieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1137,6 +1137,7 @@ export interface IndexSegment extends Filtered {
   sample?: Sampling;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
@@ -1156,6 +1157,7 @@ export interface QuerySegment extends Filtered, Ordered {
   queryTimezone?: string;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
 }
 
@@ -1312,6 +1314,7 @@ export type BasicExpressionType = Exclude<
 >;
 
 export interface RequiredGroupBy {
+  fieldUsage?: FieldUsage;
   at?: DocumentLocation;
   path: string[];
 }
