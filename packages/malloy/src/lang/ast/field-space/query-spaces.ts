@@ -137,6 +137,10 @@ export abstract class QueryOperationSpace
     return this;
   }
 
+  isQueryOutputSpace() {
+    return true;
+  }
+
   protected addWild(wild: WildcardFieldReference): void {
     let current: FieldSpace = this.exprSpace;
     const joinPath: string[] = [];

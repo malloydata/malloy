@@ -60,6 +60,7 @@ export interface SourceFieldSpace extends FieldSpace {
 export interface QueryFieldSpace extends SourceFieldSpace {
   outputSpace(): QueryOperationSpace;
   inputSpace(): SourceFieldSpace;
+  isQueryOutputSpace(): boolean;
 }
 
 export class FieldName extends MalloyElement {

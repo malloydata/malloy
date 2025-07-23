@@ -267,11 +267,22 @@ export class FieldDefinitionValue extends SpaceField {
     return this.fieldName;
   }
 
+  get exprSpace() {
+    if (this.space.isQueryFieldSpace()) {
+      return this.space.inputSpace();
+    }
+    return this.space;
+  }
+
   // A source will call this when it defines the field
   private defInSource?: FieldDef;
   fieldDef(): FieldDef {
+    // Need to pick the input space (via `this.exprSpace`) if we're in a query, because
+    // now we call `fieldDef()` when computing the OUTPUT structDef for the segment;
+    // otherwise, we pick the output space, which causes issues (e.g. being able
+    // to reference fields in the output space)
     const def =
-      this.defInSource ?? this.exprDef.fieldDef(this.space, this.name);
+      this.defInSource ?? this.exprDef.fieldDef(this.exprSpace, this.name);
     this.defInSource = def;
     return def;
   }

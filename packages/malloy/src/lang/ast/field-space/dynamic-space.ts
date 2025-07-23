@@ -98,7 +98,7 @@ export abstract class DynamicSpace
   }
 
   structDef(): model.SourceDef {
-    const isOutput = this.isQueryFieldSpace();
+    const isOutput = this.isQueryFieldSpace() && this.isQueryOutputSpace();
     this.complete = true;
     if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
@@ -137,17 +137,35 @@ export abstract class DynamicSpace
             field.join.fixupJoinOn(this, joinStruct);
           }
         } else {
-          const fieldDef = field.fieldDef();
+          // TODO this feels super icky that in order to produce the output space of the query
+          // we end up calling `getQueryFieldDef()` or `fieldDef()` a SECOND time
+          const queryFieldDef = isOutput
+            ? field.getQueryFieldDef(this.inputSpace())
+            : field.fieldDef();
+          const fieldDef =
+            queryFieldDef?.type === 'fieldref'
+              ? field.fieldDef()
+              : queryFieldDef;
           if (fieldDef) {
             fieldIndices.set(name, this.sourceDef.fields.length);
-            const maybeOutputized: model.FieldDef =
-              isOutput && model.isAtomic(fieldDef)
+            const maybeOutputized: model.FieldDef = isOutput
+              ? model.isAtomic(fieldDef)
                 ? {
                     ...fieldDef,
                     expressionType: 'scalar',
                     e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
                   }
-                : fieldDef;
+                : model.isTurtle(fieldDef)
+                ? {
+                    ...fieldDef.pipeline[fieldDef.pipeline.length - 1]
+                      .outputStruct,
+                    name: fieldDef.name,
+                    type: 'record',
+                    join: 'one',
+                    as: undefined,
+                  }
+                : fieldDef
+              : fieldDef;
             this.sourceDef.fields.push(maybeOutputized);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
