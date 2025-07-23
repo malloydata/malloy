@@ -870,7 +870,7 @@ export function generateDistinctKeyIfNecessary(
   if (structPath) {
     struct = field.parent.root().getStructByName(structPath);
   }
-  if (struct.needsSymetricCalculation(resultSet)) {
+  if (needsSymetricCalculation(struct, resultSet)) {
     return getDistinctKeySQL(struct, resultSet);
   } else {
     return undefined;
@@ -1153,4 +1153,16 @@ function generateDistinctKeySQL(
       'string'
     );
   }
+}
+
+function needsSymetricCalculation(
+  qs: QueryStruct,
+  resultSet: FieldInstanceResult
+): boolean {
+  const joinName = qs.getJoinableParent().getIdentifier();
+  const join = resultSet.root().joins.get(joinName);
+  if (join) {
+    return !join.leafiest;
+  }
+  throw new Error(`Join ${joinName} not found in result set`);
 }

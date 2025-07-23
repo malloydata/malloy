@@ -27,7 +27,6 @@ import type {
   TurtleDefPlusFilters,
   SourceDef,
   Query,
-  Expr,
 } from './malloy_types';
 import {
   isSourceDef,
@@ -45,7 +44,6 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
 import {exprMap} from './utils';
-import type {GenerateState} from './expression_utils';
 
 export type UniqueKeyPossibleUse =
   | AggregateFunctionType
@@ -553,15 +551,6 @@ export class QueryStruct {
     } else {
       return '';
     }
-  }
-
-  needsSymetricCalculation(resultSet: FieldInstanceResult): boolean {
-    const joinName = this.getJoinableParent().getIdentifier();
-    const join = resultSet.root().joins.get(joinName);
-    if (join) {
-      return !join.leafiest;
-    }
-    throw new Error(`Join ${joinName} not found in result set`);
   }
 
   unnestWithNumbers(): boolean {
