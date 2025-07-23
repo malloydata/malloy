@@ -72,22 +72,16 @@ export class RepeatedRecordField extends ArrayField {
      * This RecordField is used by RepeatedRecordCell when creating RecordCell
      * instances for each row. By sharing fields, we avoid creating duplicate
      * Field objects and parsing tags multiple times.
-     *
-     * skipFieldCreation=true prevents the RecordField from creating its own fields
-     * skipTagParsing=true prevents redundant tag parsing for this synthetic field
      */
     const recordFieldInfo: RecordFieldInfo = {
       name: 'record',
       type: this.field.type.element_type,
     };
 
-    const recordField = new RecordField(recordFieldInfo, this, true, true);
-
-    // Share our already-created fields to avoid duplication
-    recordField.fields = this.fields;
-    recordField.fieldsByName = this.fieldsByName;
-
-    this.nestedRecordField = recordField;
+    this.nestedRecordField = new RecordField(recordFieldInfo, this, {
+      fields: this.fields,
+      skipTagParsing: true
+    });
   }
 
   /**
@@ -173,23 +167,28 @@ export class RecordField extends FieldBase {
   public fields: Field[];
   public fieldsByName: Record<string, Field>;
   public readonly maxUniqueFieldValueCounts: Map<string, number> = new Map();
+  
   constructor(
     public readonly field: RecordFieldInfo,
     parent: Field | undefined,
     /**
-     * Performance optimization: Skip creating child fields when they will be
-     * provided externally. Used by RepeatedRecordField to share fields between
-     * the main field array and the synthetic nestedRecordField.
+     * Optional configuration for performance optimizations.
+     * - fields: Pre-created fields to share (avoids duplicate field creation)
+     * - skipTagParsing: Skip metadata tag parsing for synthetic fields
      */
-    skipFieldCreation = false,
-    skipTagParsing = false
+    options?: {
+      fields?: Field[];
+      skipTagParsing?: boolean;
+    }
   ) {
-    super(field, parent, skipTagParsing);
-    if (skipFieldCreation) {
-      // Fields will be assigned externally to avoid duplication
-      this.fields = [];
-      this.fieldsByName = {};
+    super(field, parent, options?.skipTagParsing);
+    
+    if (options?.fields) {
+      // Use provided fields to avoid duplication
+      this.fields = options.fields;
+      this.fieldsByName = Object.fromEntries(this.fields.map(f => [f.name, f]));
     } else {
+      // Create fields normally
       this.fields = field.type.fields.map(f => Field.from(f, this));
       this.fieldsByName = Object.fromEntries(this.fields.map(f => [f.name, f]));
     }
