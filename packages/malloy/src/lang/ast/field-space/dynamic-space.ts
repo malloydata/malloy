@@ -157,8 +157,10 @@ export abstract class DynamicSpace
                   }
                 : model.isTurtle(fieldDef)
                 ? {
-                    ...fieldDef.pipeline[fieldDef.pipeline.length - 1]
-                      .outputStruct,
+                    ...(fieldDef.pipeline.length > 0
+                      ? fieldDef.pipeline[fieldDef.pipeline.length - 1]
+                          .outputStruct
+                      : ErrorFactory.structDef),
                     name: fieldDef.name,
                     type: 'record',
                     join: 'one',
