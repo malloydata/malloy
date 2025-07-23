@@ -127,6 +127,9 @@ export abstract class DynamicSpace
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
+      if (isOutput && fields.length === 1) {
+        this.sourceDef.primaryKey = fields[0][0];
+      }
       const parameterSpace = this.parameterSpace();
       for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
