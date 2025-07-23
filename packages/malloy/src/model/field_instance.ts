@@ -3,14 +3,16 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {QueryInfo} from '../dialect';
+import type {FieldReferenceType, QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
-import type {OrderBy, PipeSegment, TurtleDef} from './malloy_types';
+import type {Expr, OrderBy, PipeSegment, TurtleDef} from './malloy_types';
 import {
   isIndexSegment,
   isRawSegment,
   isJoined,
   expressionIsAnalytic,
+  hasExpression,
+  isAtomic,
 } from './malloy_types';
 import {AndChain} from './utils';
 import {JoinInstance} from './join_instance';
@@ -24,6 +26,7 @@ import {
 } from './query_node';
 import {caseGroup} from './expression_utils';
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {GenerateState} from './expression_utils';
 
 type InstanceFieldUsage =
   | {
@@ -49,8 +52,29 @@ export class FieldInstanceField implements FieldInstance {
     return this.parent.root();
   }
 
+  // Breaking circularity with query_field requires registratrion
+  static exprCompiler?: (
+    field: QueryField,
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: Expr,
+    state?: GenerateState
+  ) => string;
+
+  static registerExpressionCompiler(
+    compiler: (
+      field: QueryField,
+      resultSet: FieldInstanceResult,
+      context: QueryStruct,
+      expr: Expr,
+      state?: GenerateState
+    ) => string
+  ) {
+    FieldInstanceField.exprCompiler = compiler;
+  }
+
   getSQL() {
-    let exp = this.f.generateExpression(this.parent);
+    let exp = this.generateExpression(); // Changed from this.f.generateExpression(this.parent)
     if (isScalarField(this.f)) {
       exp = caseGroup(
         this.parent.groupSet > 0
@@ -60,6 +84,108 @@ export class FieldInstanceField implements FieldInstance {
       );
     }
     return exp;
+  }
+
+  generateExpression(): string {
+    if (!FieldInstanceField.exprCompiler) {
+      throw new Error(
+        'Expression compiler not registered with FieldInstanceField'
+      );
+    }
+    // Check for distinct key by its characteristic properties
+    if (
+      this.f.fieldDef.type === 'string' &&
+      this.f.fieldDef.name === '__distinct_key'
+    ) {
+      return this.generateDistinctKeyExpression();
+    }
+
+    // Normal field expression generation
+    if (hasExpression(this.f.fieldDef)) {
+      return FieldInstanceField.exprCompiler(
+        this.f,
+        this.parent,
+        this.f.parent,
+        this.f.fieldDef.e
+      );
+    }
+
+    // Walk the tree and compute record aliases if needed
+    for (
+      let ancestor: QueryStruct | undefined = this.f.parent;
+      ancestor !== undefined;
+      ancestor = ancestor.parent
+    ) {
+      if (
+        ancestor.structDef.type === 'record' &&
+        hasExpression(ancestor.structDef) &&
+        ancestor.recordAlias === undefined
+      ) {
+        if (!ancestor.parent) {
+          throw new Error(
+            'Inconceivable record ancestor with expression but no parent'
+          );
+        }
+        const aliasValue = FieldInstanceField.exprCompiler(
+          this.f,
+          this.parent,
+          ancestor.parent,
+          ancestor.structDef.e
+        );
+        ancestor.informOfAliasValue(aliasValue);
+      }
+    }
+
+    return sqlFullChildReference(
+      this.f.parent,
+      this.f.fieldDef.name,
+      this.f.parent.structDef.type === 'record'
+        ? {
+            result: this.parent,
+            field: this.f,
+          }
+        : undefined
+    );
+  }
+
+  private generateDistinctKeyExpression(): string {
+    if (this.f.parent.primaryKey()) {
+      const pk = this.f.parent.getPrimaryKeyField(this.f.fieldDef);
+      const pkName = pk.fieldDef.as || pk.fieldDef.name;
+      const pkField = this.parent.getField(pkName);
+      return pkField.generateExpression();
+    } else if (this.f.parent.structDef.type === 'array') {
+      const parentDistinctKey = this.f.parent.parent?.getDistinctKey();
+      if (parentDistinctKey && this.parent.parent) {
+        const keyField = this.parent.parent.getField('__distinct_key');
+        const parentKeySQL = keyField.generateExpression();
+        return this.f.parent.dialect.sqlMakeUnnestKey(
+          parentKeySQL,
+          this.f.parent.dialect.sqlFieldReference(
+            this.f.parent.getIdentifier(),
+            'table',
+            '__row_id',
+            'string'
+          )
+        );
+      }
+      return this.f.parent.dialect.sqlMakeUnnestKey(
+        '',
+        this.f.parent.dialect.sqlFieldReference(
+          this.f.parent.getIdentifier(),
+          'table',
+          '__row_id',
+          'string'
+        )
+      );
+    } else {
+      return this.f.parent.dialect.sqlFieldReference(
+        this.f.parent.getIdentifier(),
+        'table',
+        '__distinct_key',
+        'string'
+      );
+    }
   }
 
   getAnalyticalSQL(forPartition: boolean): string {
@@ -564,4 +690,42 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
       }
     }
   }
+}
+
+export function sqlFullChildReference(
+  struct: QueryStruct,
+  name: string,
+  expand: {result: FieldInstanceResult; field: QueryField} | undefined
+): string {
+  let parentRef = struct.getSQLIdentifier();
+  if (expand && isAtomic(struct.structDef) && hasExpression(struct.structDef)) {
+    if (!struct.parent) {
+      throw new Error(`Cannot expand reference to ${name} without parent`);
+    }
+    if (!FieldInstanceField.exprCompiler) {
+      throw new Error(
+        'Expression compiler not registered with FieldInstanceField'
+      );
+    }
+    parentRef = FieldInstanceField.exprCompiler(
+      expand.field,
+      expand.result,
+      struct.parent,
+      struct.structDef.e
+    );
+  }
+  let refType: FieldReferenceType = 'table';
+  if (struct.structDef.type === 'record') {
+    refType = 'record';
+  } else if (struct.structDef.type === 'array') {
+    refType =
+      struct.structDef.elementTypeDef.type === 'record_element'
+        ? 'array[record]'
+        : 'array[scalar]';
+  } else if (struct.structDef.type === 'nest_source') {
+    refType = 'nest source';
+  }
+  const child = struct.getChildByName(name);
+  const childType = child?.fieldDef.type || 'unknown';
+  return struct.dialect.sqlFieldReference(parentRef, refType, name, childType);
 }

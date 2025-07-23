@@ -40,7 +40,11 @@ import {
   BooleanFilterExpression,
   TemporalFilterExpression,
 } from '@malloydata/malloy-filter';
-import type {FieldInstanceResult, UngroupSet} from './field_instance';
+import {
+  sqlFullChildReference,
+  type FieldInstanceResult,
+  type UngroupSet,
+} from './field_instance';
 import {FilterCompilers} from './filter_compilers';
 import type {SQLExprElement} from './utils';
 import {exprMap, composeSQLExpr, range, AndChain} from './utils';
@@ -697,10 +701,6 @@ export function generateFunctionCallExpression(
   }
 }
 
-// ============================================================================
-// Fragment generation functions moved from QueryField
-// ============================================================================
-
 export function generateFieldFragment(
   field: QueryField,
   resultSet: FieldInstanceResult,
@@ -720,7 +720,28 @@ export function generateFieldFragment(
     );
     return `(${ret})`;
   } else {
-    return fieldRef.generateExpression(resultSet);
+    // Instead of calling FieldInstanceFeild.generateExpression, which will just call back here
+    // copy what that would do ..
+
+    // Check for distinct key by its characteristic properties
+    if (
+      fieldRef.fieldDef.type === 'string' &&
+      fieldRef.fieldDef.name === '__distinct_key'
+    ) {
+      return generateDistinctKeySQL(fieldRef, resultSet);
+    }
+
+    // The normal case - just generate the SQL reference
+    return sqlFullChildReference(
+      fieldRef.parent,
+      fieldRef.fieldDef.name,
+      fieldRef.parent.structDef.type === 'record'
+        ? {
+            result: resultSet,
+            field: fieldRef,
+          }
+        : undefined
+    );
   }
 }
 
@@ -829,6 +850,16 @@ export function generateUngroupedFragment(
   return `MAX(${s}) OVER (${partitionBy})`;
 }
 
+function getDistinctKeySQL(
+  struct: QueryStruct,
+  resultSet: FieldInstanceResult
+): string {
+  const distinctKeyField = struct.getDistinctKey();
+  const distinctKeyName = distinctKeyField.fieldDef.name; // '__distinct_key'
+  const keyFieldInstance = resultSet.getField(distinctKeyName);
+  return keyFieldInstance.generateExpression();
+}
+
 export function generateDistinctKeyIfNecessary(
   field: QueryField,
   resultSet: FieldInstanceResult,
@@ -840,7 +871,7 @@ export function generateDistinctKeyIfNecessary(
     struct = field.parent.root().getStructByName(structPath);
   }
   if (struct.needsSymetricCalculation(resultSet)) {
-    return struct.getDistinctKey().generateExpression(resultSet);
+    return getDistinctKeySQL(struct, resultSet);
   } else {
     return undefined;
   }
@@ -948,7 +979,7 @@ export function generateCountFragment(
   }
   if (!join.leafiest || join.makeUniqueKey) {
     func = 'COUNT(DISTINCT ';
-    thing = struct.getDistinctKey().generateExpression(resultSet);
+    thing = getDistinctKeySQL(struct, resultSet);
   }
 
   if (state.whereSQL) {
@@ -1072,5 +1103,54 @@ export function* stringsFromSQLExpression(
     if (expr) {
       yield exprToSQL(field, resultSet, context, expr, state);
     }
+  }
+}
+
+// Add this function to expression_compiler.ts
+
+function generateDistinctKeySQL(
+  fieldRef: QueryField,
+  resultSet: FieldInstanceResult
+): string {
+  const parent = fieldRef.parent;
+
+  if (parent.primaryKey()) {
+    const pk = parent.getPrimaryKeyField(fieldRef.fieldDef);
+    // Recursively generate the primary key SQL
+    return generateFieldFragment(
+      fieldRef, // Use fieldRef as the field parameter
+      resultSet,
+      parent,
+      {node: 'field', path: [pk.getIdentifier()]},
+      new GenerateState()
+    );
+  } else if (parent.structDef.type === 'array') {
+    const parentDistinctKey = parent.parent?.getDistinctKey();
+    let parentKeySQL = '';
+    if (parentDistinctKey && parent.parent) {
+      parentKeySQL = generateFieldFragment(
+        fieldRef, // Use fieldRef as the field parameter
+        resultSet,
+        parent.parent,
+        {node: 'field', path: ['__distinct_key']},
+        new GenerateState()
+      );
+    }
+    return parent.dialect.sqlMakeUnnestKey(
+      parentKeySQL,
+      parent.dialect.sqlFieldReference(
+        parent.getIdentifier(),
+        'table',
+        '__row_id',
+        'string'
+      )
+    );
+  } else {
+    return parent.dialect.sqlFieldReference(
+      parent.getIdentifier(),
+      'table',
+      '__distinct_key',
+      'string'
+    );
   }
 }

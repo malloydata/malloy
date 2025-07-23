@@ -23,22 +23,36 @@
 
 export * from './malloy_types';
 
-// This is a little dance to break some circularity ...
+import type {ModelRootInterface} from './query_node';
 import {QueryField, QueryStruct} from './query_node';
 import {exprToSQL} from './expression_compiler';
 import {QueryQuery} from './query_query';
+import {FieldInstanceField} from './field_instance';
+import {QueryModelImpl} from './query_model_impl';
 
-// Step 2: Register the circle breaking functions
-QueryField.registerExpressionCompiler(exprToSQL);
+function getLookupFun(
+  mri: ModelRootInterface
+): (name: string) => QueryStruct | undefined {
+  if (mri instanceof QueryModelImpl) {
+    return (name: string) => mri.structs.get(name);
+  }
+  return () => undefined;
+}
+
+// Register the functions which break difficult circularity
+FieldInstanceField.registerExpressionCompiler(exprToSQL);
 QueryStruct.registerTurtleFieldMaker((field, parent) =>
-  QueryQuery.makeQuery(field, parent, undefined, false)
+  QueryQuery.makeQuery(
+    field,
+    parent,
+    undefined,
+    false,
+    getLookupFun(parent.getModel())
+  )
 );
 
-export {QueryField, QueryStruct, QueryQuery};
+export {QueryField, QueryStruct, QueryQuery, QueryModelImpl as QueryModel};
 
-export {
-  getResultStructDefForQuery,
-  QueryModelImpl as QueryModel,
-} from './query_model_impl';
+export {getResultStructDefForQuery} from './query_model_impl';
 export {indent, composeSQLExpr} from './utils';
 export {Segment, getResultStructDefForView} from './segment';

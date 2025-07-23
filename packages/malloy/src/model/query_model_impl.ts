@@ -142,7 +142,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         prepareResultOptions
       ),
       stageWriter,
-      isJoinedSubquery
+      isJoinedSubquery,
+      (name: string) => this.structs.get(name)
     );
 
     const ret = q.generateSQLFromPipeline(stageWriter);

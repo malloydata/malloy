@@ -42,7 +42,8 @@ export class Segment {
       turtleDef,
       qs,
       new StageWriter(true, undefined), // stage write indicates we want to get a result.
-      false
+      false,
+      () => undefined
     );
     return queryQueryQuery.getResultStructDef();
   }
@@ -64,7 +65,8 @@ export function getResultStructDefForView(
     view,
     qs,
     new StageWriter(true, undefined), // stage write indicates we want to get a result.
-    false
+    false,
+    () => undefined
   );
   return queryQueryQuery.getResultStructDef();
 }

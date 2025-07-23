@@ -14,23 +14,20 @@ import type {
   TimestampFieldDef,
   NativeUnsupportedFieldDef,
   JoinFieldDef,
-  DateUnit,
   Argument,
   PrepareResultOptions,
   AtomicFieldDef,
   BasicAtomicDef,
   FilterCondition,
   AggregateFunctionType,
-  TimestampUnit,
-  TimeTruncExpr,
   Parameter,
   RefToField,
   StructDef,
   TurtleDef,
   TurtleDefPlusFilters,
-  Expr,
   SourceDef,
   Query,
+  Expr,
 } from './malloy_types';
 import {
   isSourceDef,
@@ -41,7 +38,6 @@ import {
   isJoinedSource,
   expressionIsAggregate,
   expressionIsCalculation,
-  mkTemporal,
 } from './malloy_types';
 import type {EventStream} from '../runtime_types';
 import {annotationToTag} from '../annotation';
@@ -49,7 +45,6 @@ import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
 import {exprMap} from './utils';
-import type {FieldInstanceResult} from './field_instance';
 import type {GenerateState} from './expression_utils';
 
 export type UniqueKeyPossibleUse =
@@ -95,28 +90,6 @@ export class QueryField extends QueryNode {
     this.fieldDef = fieldDef;
   }
 
-  // Add static property to hold the registered compiler
-  private static exprToSQLImpl?: (
-    field: QueryField,
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    expr: Expr,
-    state?: GenerateState
-  ) => string;
-
-  // Add static registration method
-  static registerExpressionCompiler(
-    compiler: (
-      field: QueryField,
-      resultSet: FieldInstanceResult,
-      context: QueryStruct,
-      expr: Expr,
-      state?: GenerateState
-    ) => string
-  ) {
-    QueryField.exprToSQLImpl = compiler;
-  }
-
   getIdentifier() {
     return getIdentifier(this.fieldDef);
   }
@@ -159,66 +132,6 @@ export class QueryField extends QueryNode {
     );
   }
 
-  exprToSQL(
-    resultSet: FieldInstanceResult,
-    parent: QueryStruct,
-    e: Expr
-  ): string {
-    if (!QueryField.exprToSQLImpl) {
-      throw new Error(
-        'INTERNAL ERROR: Expression compiler not registered with QueryField'
-      );
-    }
-    return QueryField.exprToSQLImpl(this, resultSet, parent, e);
-  }
-
-  generateExpression(resultSet: FieldInstanceResult): string {
-    // If the field itself is an expression, generate it ..
-    if (hasExpression(this.fieldDef)) {
-      return this.exprToSQL(resultSet, this.parent, this.fieldDef.e);
-    }
-    // The field itself is not an expression, so we would like
-    // to generate a dotted path to the field, EXCEPT ...
-    // some of the steps in the dotting might not exist
-    // in the namespace of their parent, but rather be record
-    // expressions which should be evaluated in the namespace
-    // of their parent.
-
-    // So we walk the tree and ask each one to compute itself
-    for (
-      let ancestor: QueryStruct | undefined = this.parent;
-      ancestor !== undefined;
-      ancestor = ancestor.parent
-    ) {
-      if (
-        ancestor.structDef.type === 'record' &&
-        hasExpression(ancestor.structDef) &&
-        ancestor.recordAlias === undefined
-      ) {
-        if (!ancestor.parent) {
-          throw new Error(
-            'Inconcievable record ancestor with expression but no parent'
-          );
-        }
-        const aliasValue = this.exprToSQL(
-          resultSet,
-          ancestor.parent,
-          ancestor.structDef.e
-        );
-        ancestor.informOfAliasValue(aliasValue);
-      }
-    }
-    return this.parent.sqlChildReference(
-      this.fieldDef.name,
-      this.parent.structDef.type === 'record'
-        ? {
-            result: resultSet,
-            field: this,
-          }
-        : undefined
-    );
-  }
-
   includeInWildcard() {
     return false;
   }
@@ -235,7 +148,7 @@ export abstract class QueryAtomicField<
   }
 
   includeInWildcard(): boolean {
-    return true;
+    return this.fieldDef.name !== '__distinct_key';
   }
 
   getFilterList(): FilterCondition[] {
@@ -245,69 +158,9 @@ export abstract class QueryAtomicField<
 
 export class QueryFieldBoolean extends QueryAtomicField<BooleanFieldDef> {}
 
-export class QueryFieldDate extends QueryAtomicField<DateFieldDef> {
-  generateExpression(resultSet: FieldInstanceResult): string {
-    const fd = this.fieldDef;
-    const superExpr = super.generateExpression(resultSet);
-    if (!fd.timeframe) {
-      return superExpr;
-    } else {
-      const truncated: TimeTruncExpr = {
-        node: 'trunc',
-        e: mkTemporal(
-          {node: 'genericSQLExpr', src: [superExpr], kids: {args: []}},
-          'date'
-        ),
-        units: fd.timeframe,
-      };
-      return this.exprToSQL(resultSet, this.parent, truncated);
-    }
-  }
+export class QueryFieldDate extends QueryAtomicField<DateFieldDef> {}
 
-  // clone ourselves on demand as a timeframe.
-  getChildByName(name: DateUnit): QueryFieldDate {
-    const fieldDef: DateFieldDef = {
-      ...this.fieldDef,
-      as: `${this.getIdentifier()}_${name}`,
-      timeframe: name,
-    };
-    return new QueryFieldDate(fieldDef, this.parent);
-  }
-}
-
-export class QueryFieldDistinctKey extends QueryAtomicField<StringFieldDef> {
-  generateExpression(resultSet: FieldInstanceResult): string {
-    if (this.parent.primaryKey()) {
-      const pk = this.parent.getPrimaryKeyField(this.fieldDef);
-      return pk.generateExpression(resultSet);
-    } else if (this.parent.structDef.type === 'array') {
-      const parentKey = this.parent.parent
-        ?.getDistinctKey()
-        .generateExpression(resultSet);
-      return this.parent.dialect.sqlMakeUnnestKey(
-        parentKey || '', // shouldn't have to do this...
-        this.parent.dialect.sqlFieldReference(
-          this.parent.getIdentifier(),
-          'table',
-          '__row_id',
-          'string'
-        )
-      );
-    } else {
-      // return this.parent.getIdentifier() + "." + "__distinct_key";
-      return this.parent.dialect.sqlFieldReference(
-        this.parent.getIdentifier(),
-        'table',
-        '__distinct_key',
-        'string'
-      );
-    }
-  }
-
-  includeInWildcard(): boolean {
-    return false;
-  }
-}
+export class QueryFieldDistinctKey extends QueryAtomicField<StringFieldDef> {}
 
 export class QueryFieldJSON extends QueryAtomicField<JSONFieldDef> {}
 
@@ -361,17 +214,7 @@ export class QueryFieldStruct extends QueryField {
   }
 }
 
-export class QueryFieldTimestamp extends QueryAtomicField<TimestampFieldDef> {
-  // clone ourselves on demand as a timeframe.
-  getChildByName(name: TimestampUnit): QueryFieldTimestamp {
-    const fieldDef = {
-      ...this.fieldDef,
-      as: `${this.getIdentifier()}_${name}`,
-      timeframe: name,
-    };
-    return new QueryFieldTimestamp(fieldDef, this.parent);
-  }
-}
+export class QueryFieldTimestamp extends QueryAtomicField<TimestampFieldDef> {}
 
 export class QueryFieldUnsupported extends QueryAtomicField<NativeUnsupportedFieldDef> {}
 /*
@@ -657,21 +500,8 @@ export class QueryStruct {
     }
   }
 
-  sqlChildReference(
-    name: string,
-    expand: {result: FieldInstanceResult; field: QueryField} | undefined
-  ) {
-    let parentRef = this.getSQLIdentifier();
-    if (expand && isAtomic(this.structDef) && hasExpression(this.structDef)) {
-      if (!this.parent) {
-        throw new Error(`Cannot expand reference to ${name} without parent`);
-      }
-      parentRef = expand.field.exprToSQL(
-        expand.result,
-        this.parent,
-        this.structDef.e
-      );
-    }
+  sqlSimpleChildReference(name: string) {
+    const parentRef = this.getSQLIdentifier();
     let refType: FieldReferenceType = 'table';
     if (this.structDef.type === 'record') {
       refType = 'record';
@@ -708,10 +538,7 @@ export class QueryStruct {
 
     // if this is an inline object, include the parents alias.
     if (this.structDef.type === 'record' && this.parent) {
-      return this.parent.sqlChildReference(
-        getIdentifier(this.structDef),
-        undefined
-      );
+      return this.parent.sqlSimpleChildReference(getIdentifier(this.structDef));
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.
     return this.getAliasIdentifier();

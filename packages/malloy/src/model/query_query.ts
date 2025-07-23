@@ -27,6 +27,7 @@ import type {
   FinalizeSourceDef,
   OrderBy,
   Expression,
+  TurtleDefPlusFilters,
 } from './malloy_types';
 import {
   isRawSegment,
@@ -64,14 +65,10 @@ import {
   FieldInstanceField,
   FieldInstanceResult,
   FieldInstanceResultRoot,
+  sqlFullChildReference,
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {shouldMaterialize} from './materialization/utils';
-
-// Tell query structs how to make nested queries
-QueryStruct.registerTurtleFieldMaker((field, parent) =>
-  QueryQuery.makeQuery(field, parent, undefined, false)
-);
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -118,12 +115,14 @@ export class QueryQuery extends QueryField {
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
+  protected structRefToQueryStruct: (name: string) => QueryStruct | undefined;
 
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
     stageWriter: StageWriter | undefined,
-    isJoinedSubquery: boolean
+    isJoinedSubquery: boolean,
+    lookupStruct: (name: string) => QueryStruct | undefined
   ) {
     super(fieldDef, parent);
     this.fieldDef = fieldDef;
@@ -132,13 +131,15 @@ export class QueryQuery extends QueryField {
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
     this.isJoinedSubquery = isJoinedSubquery;
+    this.structRefToQueryStruct = lookupStruct;
   }
 
   static makeQuery(
     fieldDef: TurtleDef,
     parentStruct: QueryStruct,
     stageWriter: StageWriter | undefined = undefined,
-    isJoinedSubquery: boolean
+    isJoinedSubquery: boolean,
+    lookupStruct: (name: string) => QueryStruct | undefined
   ): QueryQuery {
     let parent = parentStruct;
 
@@ -192,28 +193,32 @@ export class QueryQuery extends QueryField {
           turtleWithFilters,
           parent,
           stageWriter,
-          isJoinedSubquery
+          isJoinedSubquery,
+          lookupStruct
         );
       case 'project':
         return new QueryQueryProject(
           turtleWithFilters,
           parent,
           stageWriter,
-          isJoinedSubquery
+          isJoinedSubquery,
+          lookupStruct
         );
       case 'index':
         return new QueryQueryIndex(
           turtleWithFilters,
           parent,
           stageWriter,
-          isJoinedSubquery
+          isJoinedSubquery,
+          lookupStruct
         );
       case 'raw':
         return new QueryQueryRaw(
           turtleWithFilters,
           parent,
           stageWriter,
-          isJoinedSubquery
+          isJoinedSubquery,
+          lookupStruct
         );
       case 'partial':
         throw new Error('Attempt to make query out of partial stage');
@@ -654,14 +659,46 @@ export class QueryQuery extends QueryField {
             qs.prepareResultOptions?.materializedTablePrefix
           );
         } else {
-          // Now we can access the model through our parent chain
-          return this.model.loadQuery(
-            qs.structDef.query,
+          // Inline what loadQuery does, circularity workaround, finds the
+          // the name of the last stage
+          const query = qs.structDef.query;
+          const turtleDef: TurtleDefPlusFilters = {
+            type: 'turtle',
+            name: 'ignoreme',
+            pipeline: query.pipeline,
+            filterList: query.filterList,
+          };
+
+          const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+
+          let sourceStruct: QueryStruct;
+          if (typeof structRef === 'string') {
+            const struct = this.structRefToQueryStruct(structRef);
+            if (!struct) {
+              throw new Error(
+                `Unexpected reference to an undefined source '${structRef}'`
+              );
+            }
+            sourceStruct = struct;
+          } else {
+            sourceStruct = new QueryStruct(
+              structRef,
+              query.sourceArguments,
+              {struct: qs},
+              qs.prepareResultOptions
+            );
+          }
+
+          const q = QueryQuery.makeQuery(
+            turtleDef,
+            sourceStruct,
             stageWriter,
-            qs.prepareResultOptions,
-            false,
-            true // this is an intermediate stage
-          ).lastStageName;
+            true, // isJoinedSubquery
+            this.structRefToQueryStruct
+          );
+
+          const ret = q.generateSQLFromPipeline(stageWriter);
+          return ret.lastStageName;
         }
       }
       default:
@@ -700,23 +737,37 @@ export class QueryQuery extends QueryField {
         throw new Error('Expected joined struct to have a parent.');
       }
       if (qsDef.onExpression) {
-        onCondition = new QueryFieldBoolean(
+        // Create a temporary field instance to generate the SQL
+        const boolField = new QueryFieldBoolean(
           {
             type: 'boolean',
             name: 'ignoreme',
             e: qsDef.onExpression,
           },
           qs.parent
-        ).generateExpression(this.rootResult);
+        );
+        const tempInstance = new FieldInstanceField(
+          boolField,
+          {type: 'where'}, // It's used in a WHERE-like context
+          this.rootResult,
+          undefined
+        );
+        onCondition = tempInstance.generateExpression();
       } else {
         onCondition = '1=1';
       }
       let filters = '';
       let conditions: string[] | undefined = undefined;
       if (ji.joinFilterConditions) {
-        conditions = ji.joinFilterConditions.map(qf =>
-          qf.generateExpression(this.rootResult)
-        );
+        conditions = ji.joinFilterConditions.map(qf => {
+          const tempInstance = new FieldInstanceField(
+            qf,
+            {type: 'where'},
+            this.rootResult,
+            undefined
+          );
+          return tempInstance.generateExpression();
+        });
       }
 
       if (
@@ -780,7 +831,8 @@ export class QueryQuery extends QueryField {
         // a join at the top level, and the name will exist.
         // ... not sure this is the right way to do this
         // ... the test for this is called "source repeated record containing an array"
-        arrayExpression = qs.parent.sqlChildReference(
+        arrayExpression = sqlFullChildReference(
+          qs.parent,
           qsDef.name,
           depth === 0 ? {result: this.rootResult, field: this} : undefined
         );
@@ -946,9 +998,7 @@ export class QueryQuery extends QueryField {
       const fi = field as FieldInstanceField;
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
-        fields.push(
-          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
-        );
+        fields.push(` ${fi.generateExpression()} as ${sqlName}`);
       }
     }
     s += indent(fields.join(',\n')) + '\n';
@@ -1517,7 +1567,7 @@ export class QueryQuery extends QueryField {
       ) {
         pushDialectField(dialectFieldList, {
           fieldDef: field.f.fieldDef,
-          sqlExpression: field.f.generateExpression(resultStruct),
+          sqlExpression: field.generateExpression(),
           rawName: name,
           sqlOutputName: sqlName,
         });
@@ -1563,9 +1613,7 @@ export class QueryQuery extends QueryField {
         );
       } else if (resultStruct.firstSegment.type === 'project') {
         obSQL.push(
-          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
-            ordering.dir || 'ASC'
-          }`
+          ` ${orderingField.fif.generateExpression()} ${ordering.dir || 'ASC'}`
         );
       }
     }
@@ -1673,7 +1721,8 @@ export class QueryQuery extends QueryField {
         newTurtle,
         qs,
         stageWriter,
-        this.isJoinedSubquery
+        this.isJoinedSubquery,
+        this.structRefToQueryStruct
       );
       pipeOut = q.generateSQLFromPipeline(stageWriter);
       outputRepeatedResultType = q.rootResult.getRepeatedResultType();
@@ -1749,7 +1798,8 @@ export class QueryQuery extends QueryField {
           {type: 'turtle', name: '~computeLastStage~', pipeline: [transform]},
           s,
           stageWriter,
-          this.isJoinedSubquery
+          this.isJoinedSubquery,
+          this.structRefToQueryStruct
         );
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
@@ -1773,9 +1823,10 @@ class QueryQueryIndexStage extends QueryQuery {
     fieldDef: TurtleDef,
     parent: QueryStruct,
     stageWriter: StageWriter | undefined,
-    isJoinedSubquery: boolean
+    isJoinedSubquery: boolean,
+    zz: (name: string) => QueryStruct | undefined
   ) {
-    super(fieldDef, parent, stageWriter, isJoinedSubquery);
+    super(fieldDef, parent, stageWriter, isJoinedSubquery, zz);
     this.fieldDef = fieldDef;
   }
 
@@ -1832,9 +1883,7 @@ class QueryQueryIndexStage extends QueryQuery {
     const weightColumn = dialect.sqlMaybeQuoteIdentifier('weight');
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
-      measureSQL = this.rootResult
-        .getField(measureName)
-        .f.generateExpression(this.rootResult);
+      measureSQL = this.rootResult.getField(measureName).generateExpression();
     }
 
     const fields: Array<{
@@ -1846,7 +1895,7 @@ class QueryQueryIndexStage extends QueryQuery {
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
-        const expression = fi.f.generateExpression(this.rootResult);
+        const expression = fi.generateExpression();
         const path = this.indexPaths[name] || [];
         fields.push({name, path, type: fi.f.fieldDef.type, expression});
       }
@@ -1946,9 +1995,10 @@ class QueryQueryIndex extends QueryQuery {
     fieldDef: TurtleDef,
     parent: QueryStruct,
     stageWriter: StageWriter | undefined,
-    isJoinedSubquery: boolean
+    isJoinedSubquery: boolean,
+    lookupStruct: (name: string) => QueryStruct | undefined
   ) {
-    super(fieldDef, parent, stageWriter, isJoinedSubquery);
+    super(fieldDef, parent, stageWriter, isJoinedSubquery, lookupStruct);
     this.fieldDef = fieldDef;
     this.fieldsToStages();
   }
@@ -2009,7 +2059,8 @@ class QueryQueryIndex extends QueryQuery {
         },
         this.parent,
         stageWriter,
-        this.isJoinedSubquery
+        this.isJoinedSubquery,
+        this.structRefToQueryStruct
       );
       q.prepare(stageWriter);
       const lastStageName = q.generateSQL(stageWriter);
