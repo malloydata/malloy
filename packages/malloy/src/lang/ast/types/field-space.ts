@@ -42,7 +42,8 @@ export interface FieldSpace {
   emptyStructDef(): StructDef;
   lookup(
     symbol: FieldName[],
-    accessLevel?: AccessModifierLabel | undefined
+    accessLevel?: AccessModifierLabel | undefined,
+    logReferences?: boolean
   ): LookupResult;
   entry(symbol: string): SpaceEntry | undefined;
   entries(): [string, SpaceEntry][];
