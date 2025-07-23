@@ -682,7 +682,7 @@ export interface HasExpression {
 export function hasExpression<T extends FieldDef>(
   f: T
 ): f is T & Expression & HasExpression {
-  return 'e' in f;
+  return 'e' in f && f.e !== undefined;
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';

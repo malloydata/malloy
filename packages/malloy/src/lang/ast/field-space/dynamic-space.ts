@@ -156,7 +156,9 @@ export abstract class DynamicSpace
                 ? {
                     ...fieldDef,
                     expressionType: 'scalar',
-                    e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
+                    // e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
+                    // TODO column fragments
+                    e: undefined,
                   }
                 : model.isTurtle(fieldDef)
                 ? {
