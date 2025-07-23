@@ -80,7 +80,7 @@ export class RepeatedRecordField extends ArrayField {
 
     this.nestedRecordField = new RecordField(recordFieldInfo, this, {
       fields: this.fields,
-      skipTagParsing: true
+      skipTagParsing: true,
     });
   }
 
@@ -167,7 +167,7 @@ export class RecordField extends FieldBase {
   public fields: Field[];
   public fieldsByName: Record<string, Field>;
   public readonly maxUniqueFieldValueCounts: Map<string, number> = new Map();
-  
+
   constructor(
     public readonly field: RecordFieldInfo,
     parent: Field | undefined,
@@ -182,7 +182,7 @@ export class RecordField extends FieldBase {
     }
   ) {
     super(field, parent, options?.skipTagParsing);
-    
+
     if (options?.fields) {
       // Use provided fields to avoid duplication
       this.fields = options.fields;
