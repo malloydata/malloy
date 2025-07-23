@@ -84,7 +84,7 @@ export abstract class QueryBase extends MalloyElement {
     if (field.type === 'fieldref') {
       const path = field.path.map(n => new FieldName(n));
       this.has({path});
-      const lookup = fs.lookup(path);
+      const lookup = fs.lookup(path, 'private');
       if (lookup.found && lookup.found instanceof SpaceField) {
         const def = lookup.found.fieldDef();
         if (def && !isAtomic(def)) {
