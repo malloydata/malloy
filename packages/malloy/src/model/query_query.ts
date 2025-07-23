@@ -242,8 +242,8 @@ export class QueryQuery extends QueryField {
   private processDependencies(resultStruct: FieldInstanceResult) {
     // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
     const fieldUsage =
-      'fieldUsage' in this.firstSegment
-        ? this.firstSegment.fieldUsage || []
+      'expandedFieldUsage' in this.firstSegment
+        ? this.firstSegment.expandedFieldUsage || []
         : [];
 
     for (const usage of fieldUsage) {
@@ -255,7 +255,9 @@ export class QueryQuery extends QueryField {
           .root()
           .addStructToJoin(field.parent.getJoinableParent(), uniqueKeyUse, []);
       } catch {
-        // Field not found - translator should have caught this
+        throw new Error(
+          'INTERAL ERROR: Undefined field in fieldUsage when loading query'
+        );
       }
     }
   }
