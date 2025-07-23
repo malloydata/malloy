@@ -205,11 +205,11 @@ describe('custom error messages', () => {
       expect(`
         source: x is a extend {
           view: t is {
-            aggregate: percent_of_total(time)
+            aggregate: pct_of_total(time)
           }
       }`).toLogAtLeast(
         errorMessage(
-          "Unknown function 'percent_of_total'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions"
+          "Unknown function 'pct_of_total'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions"
         )
       );
     });

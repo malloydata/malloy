@@ -215,7 +215,7 @@ export const malloyCustomErrorCases: ErrorCase[] = [
   // identifier that does not represent a valid function.
   {
     errorMessage:
-      "Unknown function 'percent_of_total'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions",
+      "Unknown function '${previousSymbol}'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions",
     offendingSymbol: MalloyParser.OPAREN,
     ruleContextOptions: ['vExpr'],
     precedingTokenOptions: [[MalloyParser.IDENTIFIER]],
