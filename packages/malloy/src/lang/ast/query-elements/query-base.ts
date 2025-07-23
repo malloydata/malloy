@@ -95,7 +95,9 @@ export abstract class QueryBase extends MalloyElement {
         }
       }
       throw new Error(
-        `Expected a definition for ${field.path} when resolving references in query`
+        `Expected a definition for ${field.path.join(
+          '.'
+        )} when resolving references in query`
       );
     } else if (field.type === 'turtle') {
       // TODO resolve references in the nest....

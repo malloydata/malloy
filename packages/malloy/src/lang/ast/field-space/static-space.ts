@@ -179,13 +179,7 @@ export class StaticSpace implements FieldSpace {
         });
       }
       if (definition?.accessModifier) {
-        // TODO path.length === 1 will not work with namespaces
-        if (
-          !(
-            path.length === 1 &&
-            accessAllowed(accessLevel, definition.accessModifier)
-          )
-        ) {
+        if (!accessAllowed(accessLevel, definition.accessModifier)) {
           return {
             error: {
               message: `'${head}' is ${definition?.accessModifier}`,
