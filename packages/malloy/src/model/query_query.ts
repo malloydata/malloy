@@ -247,6 +247,7 @@ export class QueryQuery extends QueryField {
         : [];
 
     for (const usage of fieldUsage) {
+      if (usage.path.length === 1) continue;
       const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
 
       try {
@@ -256,7 +257,9 @@ export class QueryQuery extends QueryField {
           .addStructToJoin(field.parent.getJoinableParent(), uniqueKeyUse, []);
       } catch {
         throw new Error(
-          'INTERAL ERROR: Undefined field in fieldUsage when loading query'
+          `INTERAL ERROR: Undefined field '${usage.path.join(
+            '.'
+          )}' in fieldUsage when loading query`
         );
       }
     }
@@ -391,11 +394,11 @@ export class QueryQuery extends QueryField {
 
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
-      // Process all dependencies from translator's fieldUsage
-      this.processDependencies(this.rootResult);
-
       // Expand fields (just adds them to result, no dependency tracking)
       this.expandFields(this.rootResult);
+
+      // Process all dependencies from translator's fieldUsage
+      this.processDependencies(this.rootResult);
 
       // Add the root base join to the joins map
       this.rootResult.addStructToJoin(this.parent, undefined, []);
