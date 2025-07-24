@@ -21,239 +21,77 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {SourceDef} from '@malloydata/malloy';
-import {composeSQLExpr} from '@malloydata/malloy';
-import {fToQF} from '../util';
+export const medicareModel = `
+  source: medicare_test is bigquery.table('malloytest.bq_medicare_test') extend {
+    primary_key: id
 
-// will it build?
+    rename:
+      discharges is total_discharges
 
-/** Medicare Model */
-export const medicareModel: SourceDef = {
-  as: 'medicare_test',
-  dialect: 'standardsql',
-  fields: [
-    // Fields in the flights table.
-    {name: 'id', numberType: 'integer', type: 'number'},
-    {name: 'drg_definition', type: 'string'},
-    {name: 'provider_id', numberType: 'integer', type: 'number'},
-    {name: 'provider_name', type: 'string'},
-    {name: 'provider_street', type: 'string'},
-    {name: 'provider_city', type: 'string'},
-    {name: 'provider_state', type: 'string'},
-    {name: 'provider_zipcode', numberType: 'integer', type: 'number'},
-    {name: 'hospital_referral_region_description', type: 'string'},
-    {
-      as: 'discharges',
-      name: 'total_discharges',
-      numberType: 'float',
-      type: 'number',
-    },
-    {
-      name: 'average_covered_charges',
-      numberType: 'float',
-      type: 'number',
-    },
-    {
-      name: 'average_total_payments',
-      numberType: 'float',
-      type: 'number',
-    },
-    {
-      name: 'average_medicare_payments',
-      numberType: 'float',
-      type: 'number',
-    },
-    {
-      type: 'number',
-      name: 'count_of_drugs',
-      expressionType: 'aggregate',
-      e: {node: 'aggregate', function: 'count', e: {node: ''}},
-    },
-    {
-      type: 'number',
-      name: 'provider_count',
-      expressionType: 'aggregate',
-      e: composeSQLExpr([
-        'COUNT(DISTINCT ',
-        {node: 'field', path: ['provider_id']},
-        ')',
-      ]),
-    },
-    {
-      type: 'number',
-      name: 'total_discharges',
-      expressionType: 'aggregate',
-      e: {
-        node: 'aggregate',
-        function: 'sum',
-        e: {node: 'field', path: ['discharges']},
-      },
-    },
+    measure:
+      count_of_drugs is count()
+      provider_count is count(provider_id)
+      total_discharges is discharges.sum()
 
-    {
-      type: 'turtle',
-      name: 'discharges_by_state',
-      pipeline: [
-        {
-          queryFields: fToQF(['provider_state', 'total_discharges']),
-          orderBy: [{dir: 'desc', field: 2}],
-          type: 'reduce',
-        },
-      ],
-    },
-    {
-      type: 'turtle',
-      name: 'discharges_by_city',
-      pipeline: [
-        {
-          queryFields: fToQF(['provider_city', 'total_discharges']),
-          orderBy: [{dir: 'desc', field: 2}],
-          type: 'reduce',
-        },
-      ],
-    },
-    {
-      type: 'turtle',
-      name: 'bigturtle_state',
-      pipeline: [
-        {
-          queryFields: fToQF([
-            'provider_state',
-            'total_discharges',
-            'discharges_by_city',
-            'discharges_by_zip',
-          ]),
-          orderBy: [{dir: 'desc', field: 1}],
-          type: 'reduce',
-        },
-      ],
-    },
-    {
-      type: 'turtle',
-      name: 'discharges_by_zip',
-      pipeline: [
-        {
-          queryFields: fToQF(['provider_zipcode', 'total_discharges']),
-          orderBy: [{dir: 'desc', field: 2}],
-          type: 'reduce',
-        },
-      ],
-    },
-    {
-      type: 'turtle',
-      name: 'turtle_city_zip',
-      pipeline: [
-        {
-          queryFields: fToQF([
-            'provider_city',
-            'total_discharges',
-            'discharges_by_zip',
-          ]),
-          orderBy: [{dir: 'desc', field: 1}],
-          type: 'reduce',
-        },
-      ],
-    },
-    {
-      type: 'turtle',
-      name: 'triple_turtle',
-      pipeline: [
-        {
-          queryFields: fToQF([
-            'provider_state',
-            'total_discharges',
-            'turtle_city_zip',
-          ]),
-          orderBy: [{dir: 'desc', field: 1}],
-          type: 'reduce',
-        },
-      ],
-    },
-    {
-      type: 'turtle',
-      name: 'rollup_by_location',
-      pipeline: [
-        {
-          queryFields: fToQF([
-            'provider_state',
-            'total_discharges',
-            {
-              type: 'turtle',
-              name: 'turtle_city_zip',
-              pipeline: [
-                {
-                  queryFields: fToQF([
-                    'provider_city',
-                    'total_discharges',
-                    {
-                      type: 'turtle',
-                      name: 'discharges_by_zip',
-                      pipeline: [
-                        {
-                          queryFields: fToQF([
-                            'provider_zipcode',
-                            'total_discharges',
-                          ]),
-                          orderBy: [{dir: 'desc', field: 2}],
-                          type: 'reduce',
-                        },
-                      ],
-                    },
-                  ]),
-                  orderBy: [{dir: 'desc', field: 1}],
-                  type: 'reduce',
-                },
-              ],
-            },
-          ]),
-          orderBy: [{dir: 'desc', field: 1}],
-          type: 'reduce',
-        },
-      ],
-    },
-  ],
-  name: 'malloydata-org.malloytest.bq_medicare_test',
-  primaryKey: 'id',
-  connection: 'bigquery',
-  type: 'table',
-  tablePath: 'malloydata-org.malloytest.bq_medicare_test',
-};
+    view: discharges_by_state is {
+      group_by: provider_state
+      aggregate: total_discharges
+      order_by: 2 desc
+    }
 
-export const medicareStateFacts: SourceDef = {
-  fields: [],
-  name: 'medicare_state_facts',
-  dialect: 'standardsql',
-  connection: 'bigquery',
-  type: 'query_source',
-  query: {
-    structRef: 'medicare_test',
-    pipeline: [
-      {
-        queryFields: fToQF([
-          'provider_state',
-          {
-            type: 'number',
-            name: 'num_providers',
-            expressionType: 'aggregate',
-            e: composeSQLExpr([
-              'COUNT(DISTINCT ',
-              {node: 'field', path: ['provider_id']},
-              ')',
-            ]),
-          },
-        ]),
-        type: 'reduce',
-      },
-    ],
-  },
-};
+    view: discharges_by_city is {
+      group_by: provider_city
+      aggregate: total_discharges
+      order_by: 2 desc
+    }
 
-// export const medicareStateFacts: StructDef = {
-//   type: 'struct',
-//   name: '(SELECT provider_state, COUNT(DISTINCT provider_id) as num_providers FROM malloytest.medicare_test GROUP BY 1)',
-//   as: 'medicare_state_facts',
-//   structRelationship: {type:'basetable'},
-//   structSource: {type:'table'},
-//   primaryKey: 'provider_state',
-//   fields: [{type:'string', name:'provider_state'}, {type:'number', name: 'num_providers', numberType: 'integer'}]
-// }
+    view: discharges_by_zip is {
+      group_by: provider_zipcode
+      aggregate: total_discharges
+      order_by: 2 desc
+    }
+
+    view: bigturtle_state is {
+      group_by: provider_state
+      aggregate: total_discharges
+      nest:
+        discharges_by_city
+        discharges_by_zip
+    }
+
+    view: turtle_city_zip is {
+      group_by: provider_city
+      aggregate: total_discharges
+      nest: discharges_by_zip
+      order_by: 1 desc
+    }
+
+    view: turtle_turtle is {
+      group_by: provider_state
+      aggregate: total_discharges
+      nest: turtle_city_zip
+      order_by: 1 desc
+    }
+
+    view: rollup_by_location is {
+      group_by: provider_state
+      aggregate: total_discharges
+      nest: turtle_city_zip is {
+        group_by: provider_city
+        aggregate: total_discharges
+        nest: discharges_by_zip is {
+          group_by: provider_zipcode
+          aggregate: total_discharges
+          order_by: 2 desc
+        }
+        order_by: 1 desc
+      }
+      order_by: 1 desc
+    }
+  }
+
+  source: medicare_state_facts is medicare_test -> {
+    group_by: provider_state
+    aggregate: num_providers is count(provider_id)
+  }
+`;
