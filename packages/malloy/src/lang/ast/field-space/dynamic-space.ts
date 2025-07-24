@@ -110,7 +110,15 @@ export abstract class DynamicSpace
         }
       }
 
-      this.sourceDef = {...this.fromSource, fields: []};
+      this.sourceDef = isOutput
+        ? {
+            type: 'query_result',
+            name: 'result',
+            dialect: this.fromSource.dialect,
+            connection: this.fromSource.connection,
+            fields: [],
+          }
+        : {...this.fromSource, fields: []};
       this.sourceDef.parameters = parameters;
       const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
@@ -127,9 +135,8 @@ export abstract class DynamicSpace
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
-      if (isOutput && fields.length === 1) {
-        this.sourceDef.primaryKey = fields[0][0];
-      }
+      let primaryKey: string | undefined = undefined;
+      let numDimensions = 0;
       const parameterSpace = this.parameterSpace();
       for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
@@ -150,6 +157,13 @@ export abstract class DynamicSpace
               ? field.fieldDef()
               : queryFieldDef;
           if (fieldDef) {
+            if (
+              model.isAtomic(fieldDef) &&
+              model.expressionIsScalar(fieldDef.expressionType)
+            ) {
+              numDimensions++;
+              primaryKey = name;
+            }
             fieldIndices.set(name, this.sourceDef.fields.length);
             const maybeOutputized: model.FieldDef = isOutput
               ? model.isAtomic(fieldDef)
@@ -181,6 +195,10 @@ export abstract class DynamicSpace
           //   throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           // }
         }
+      }
+      if (isOutput) {
+        this.sourceDef.primaryKey =
+          numDimensions === 1 ? primaryKey : undefined;
       }
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {
