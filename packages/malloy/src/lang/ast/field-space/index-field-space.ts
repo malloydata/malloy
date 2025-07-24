@@ -27,6 +27,7 @@ import type {
   PipeSegment,
   IndexFieldDef,
   FieldUsage,
+  SourceDef,
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
@@ -59,6 +60,25 @@ export class IndexFieldSpace extends QueryOperationSpace {
         );
       }
     }
+  }
+
+  structDef(): SourceDef {
+    // TODO get the connection in a more sensible way...
+    const source = this.inputSpace().structDef();
+    const connection = source.connection;
+    return {
+      type: 'query_result',
+      name: 'result',
+      dialect: this.dialectName(),
+      fields: [
+        {type: 'string', name: 'fieldName'},
+        {type: 'string', name: 'fieldPath'},
+        {type: 'string', name: 'fieldValue'},
+        {type: 'string', name: 'fieldType'},
+        {type: 'number', name: 'weight', numberType: 'integer'},
+      ],
+      connection,
+    };
   }
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
