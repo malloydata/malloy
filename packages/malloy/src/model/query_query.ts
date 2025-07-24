@@ -741,7 +741,7 @@ export class QueryQuery extends QueryField {
             sourceStruct = new QueryStruct(
               structRef,
               query.sourceArguments,
-              {struct: qs},
+              {model: this.parent.getModel()},
               qs.prepareResultOptions
             );
           }
@@ -750,7 +750,7 @@ export class QueryQuery extends QueryField {
             turtleDef,
             sourceStruct,
             stageWriter,
-            true, // isJoinedSubquery
+            qs.parent !== undefined, // isJoinedSubquery
             this.structRefToQueryStruct
           );
 
