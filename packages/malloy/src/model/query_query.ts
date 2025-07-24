@@ -44,6 +44,7 @@ import {
   isBasicArray,
   isIndexSegment,
   isBaseTable,
+  expressionIsAnalytic,
 } from './malloy_types';
 import {AndChain, indent, getDialectFieldList} from './utils';
 import type {JoinInstance} from './join_instance';
@@ -239,6 +240,26 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
+  private addDependantPath(
+    resultStruct: FieldInstanceResult,
+    context: QueryStruct,
+    path: string[],
+    uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
+    joinStack: string[]
+  ) {
+    if (path.length === 0) {
+      return;
+    }
+    const node = context.getFieldByName(path);
+    const joinableParent =
+      node instanceof QueryFieldStruct
+        ? node.queryStruct.getJoinableParent()
+        : node.parent.getJoinableParent();
+    resultStruct
+      .root()
+      .addStructToJoin(joinableParent, uniqueKeyPossibleUse, joinStack);
+  }
+
   private processDependencies(resultStruct: FieldInstanceResult) {
     // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
     const fieldUsage =
@@ -248,19 +269,40 @@ export class QueryQuery extends QueryField {
 
     for (const usage of fieldUsage) {
       if (usage.path.length === 1) continue;
+      this.findRecordAliases(this.parent, usage.path);
       const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
+      this.addDependantPath(
+        resultStruct,
+        this.parent,
+        usage.path,
+        uniqueKeyUse,
+        []
+      );
+    }
+  }
 
-      try {
-        const field = this.parent.getFieldByName(usage.path);
-        resultStruct
-          .root()
-          .addStructToJoin(field.parent.getJoinableParent(), uniqueKeyUse, []);
-      } catch {
-        throw new Error(
-          `INTERAL ERROR: Undefined field '${usage.path.join(
-            '.'
-          )}' in fieldUsage when loading query`
-        );
+  /*
+   ** Later on, when a record is referenced, the context needed to translate the
+   ** reference won't exist, so we translate them all in prepare. The better fix
+   ** involves understand more about what a "translation state" is and how
+   ** to create it at the moment when a field is referenced, but I couldn't do
+   ** that at the time I did this work. TODO come back and do that.
+   */
+  findRecordAliases(context: QueryStruct, path: string[]) {
+    for (const seg of path) {
+      const field = context.getFieldByName([seg]);
+      if (field instanceof QueryFieldStruct) {
+        const qs = field.queryStruct;
+        if (
+          qs.structDef.type === 'record' &&
+          hasExpression(qs.structDef) &&
+          qs.parent
+        ) {
+          qs.informOfAliasValue(
+            exprToSQL(this, this.rootResult, qs.parent, qs.structDef.e)
+          );
+        }
+        context = qs;
       }
     }
   }
@@ -336,6 +378,16 @@ export class QueryQuery extends QueryField {
           },
           drillExpression
         );
+
+        if (
+          hasExpression(field.fieldDef) &&
+          expressionIsAnalytic(field.fieldDef.expressionType) &&
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+          resultStruct.firstSegment.type === 'reduce'
+        ) {
+          resultStruct.root().isComplexQuery = true;
+          resultStruct.root().queryUsesPartitioning = true;
+        }
 
         if (isBasicAggregate(field)) {
           if (this.firstSegment.type === 'project') {
