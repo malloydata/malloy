@@ -336,6 +336,10 @@ export abstract class QuerySpace extends QueryOperationSpace {
     return true;
   }
 
+  // structDef() {
+  //   const fields = this.queryFieldDefs();
+  // }
+
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     let fieldUsage = emptyFieldUsage();
