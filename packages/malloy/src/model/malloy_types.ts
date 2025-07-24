@@ -1137,6 +1137,7 @@ export interface IndexSegment extends Filtered {
   sample?: Sampling;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
@@ -1156,6 +1157,7 @@ export interface QuerySegment extends Filtered, Ordered {
   queryTimezone?: string;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
 }
 
@@ -1169,6 +1171,8 @@ export interface TurtleDef extends NamedObject, Pipeline {
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
 }
+
+export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
