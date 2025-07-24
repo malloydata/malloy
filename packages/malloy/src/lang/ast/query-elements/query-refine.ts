@@ -61,10 +61,16 @@ export class QueryRefine extends QueryBase implements QueryElement {
       resultPipe
     );
 
+    const pipelineWithExpandedFieldUsage = this.expandFieldUsage(
+      compositeResolvedSourceDef ?? q.inputStruct,
+      resultPipe
+    );
+
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
+        pipeline: pipelineWithExpandedFieldUsage,
       },
       outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
       inputStruct: q.inputStruct,
