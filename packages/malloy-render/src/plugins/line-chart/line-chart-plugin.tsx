@@ -112,45 +112,102 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
         seriesStats,
 
         renderComponent: (props: RenderProps): JSXElement => {
-          if (!runtime || !vegaProps) {
-            throw new Error('Malloy Line Chart: missing Vega runtime');
-          }
-          if (!props.dataColumn.isRepeatedRecord()) {
-            throw new Error(
-              'Malloy Line Chart: data column is not a repeated record'
+          try {
+            if (!runtime || !vegaProps) {
+              throw new Error('Malloy Line Chart: missing Vega runtime');
+            }
+            if (!props.dataColumn.isRepeatedRecord()) {
+              throw new Error(
+                'Malloy Line Chart: data column is not a repeated record'
+              );
+            }
+
+            const mappedData = vegaProps.mapMalloyDataToChartData(
+              props.dataColumn
             );
+
+            return (
+              <ChartV2
+                data={props.dataColumn}
+                values={mappedData.data}
+                runtime={runtime}
+                vegaSpec={vegaProps.spec}
+                plotWidth={vegaProps.plotWidth}
+                plotHeight={vegaProps.plotHeight}
+                totalWidth={vegaProps.totalWidth}
+                totalHeight={vegaProps.totalHeight}
+                chartTag={vegaProps.chartTag}
+                getTooltipData={vegaProps.getTooltipData}
+                isDataLimited={mappedData.isDataLimited}
+                dataLimitMessage={mappedData.dataLimitMessage}
+              />
+            );
+          } catch (error) {
+            throw error;
           }
-
-          const mappedData = vegaProps.mapMalloyDataToChartData(
-            props.dataColumn
-          );
-
-          return (
-            <ChartV2
-              data={props.dataColumn}
-              values={mappedData.data}
-              runtime={runtime}
-              vegaSpec={vegaProps.spec}
-              plotWidth={vegaProps.plotWidth}
-              plotHeight={vegaProps.plotHeight}
-              totalWidth={vegaProps.totalWidth}
-              totalHeight={vegaProps.totalHeight}
-              chartTag={vegaProps.chartTag}
-              getTooltipData={vegaProps.getTooltipData}
-              isDataLimited={mappedData.isDataLimited}
-              dataLimitMessage={mappedData.dataLimitMessage}
-            />
-          );
         },
 
         processData: (field, cell): void => {
           // Process all rows to calculate series stats
-          if (!('rows' in cell)) return; // Only process RepeatedRecordCell
+          if (!('rows' in cell)) {
+            return; // Only process RepeatedRecordCell
+          }
 
           const yFieldPath = settings.yChannel.fields[0];
-          if (!yFieldPath) return;
-          const yField = field.fieldAt(yFieldPath);
-          if (!yField) return;
+          if (!yFieldPath) {
+            return;
+          }
+
+          // Helper function to get value from a row given a field path
+          const getValueFromPath = (row: any, fieldPath: string | string[]): any => {
+            // Parse field path if it's a JSON string
+            let path: string[];
+            if (typeof fieldPath === 'string') {
+              try {
+                // Try to parse as JSON array
+                const parsed = JSON.parse(fieldPath);
+                if (Array.isArray(parsed)) {
+                  path = parsed;
+                } else {
+                  path = [fieldPath];
+                }
+              } catch {
+                // If parsing fails, treat as simple field name
+                path = [fieldPath];
+              }
+            } else {
+              path = fieldPath;
+            }
+            
+            if (path.length === 1) {
+              // Simple field - direct access
+              const column = row.column(path[0]);
+              return column?.value;
+            } else {
+              // Nested field - navigate through the structure
+              // For nested fields, we need to access the nested data
+              // First, get the top-level nested field
+              const topLevelField = path[0];
+              const nestedColumn = row.column(topLevelField);
+              
+              if (!nestedColumn || !('rows' in nestedColumn)) {
+                return undefined;
+              }
+              
+              // For line charts, we'll process all rows in the nested data
+              // This is a temporary implementation - we may need to aggregate
+              // For now, just take the first row to test
+              if (nestedColumn.rows.length > 0) {
+                const firstRow = nestedColumn.rows[0];
+                const leafField = path[path.length - 1];
+                const leafColumn = firstRow.column(leafField);
+                
+                return leafColumn?.value;
+              }
+              
+              return undefined;
+            }
+          };
 
           // Handle YoY mode - create synthetic series field for years
           if (settings.mode === 'yoy') {
@@ -163,11 +220,13 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
             // Extract years from the data
             for (const row of cell.rows) {
-              const xCell = row.column(xField.name);
-              const year = new Date(xCell.value.valueOf())
-                .getFullYear()
-                .toString();
-              yearValues.add(year);
+              const xValue = getValueFromPath(row, xFieldPath);
+              if (xValue !== undefined) {
+                const year = new Date(xValue.valueOf())
+                  .getFullYear()
+                  .toString();
+                yearValues.add(year);
+              }
             }
 
             // Create synthetic series field
@@ -186,12 +245,14 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
             // Calculate series stats for YoY mode
             for (const row of cell.rows) {
-              const year = new Date(row.column(xField.name).value.valueOf())
-                .getFullYear()
-                .toString();
-              const yValue = row.column(yField.name).value;
-
-              if (typeof yValue === 'number') {
+              const xValue = getValueFromPath(row, xFieldPath);
+              const yValue = getValueFromPath(row, yFieldPath);
+              
+              if (xValue !== undefined && typeof yValue === 'number') {
+                const year = new Date(xValue.valueOf())
+                  .getFullYear()
+                  .toString();
+                
                 const stats = seriesStats.get(year) ?? {
                   sum: 0,
                   count: 0,
@@ -208,13 +269,9 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
             const seriesFieldPath = settings.seriesChannel.fields[0];
             if (!seriesFieldPath) return;
 
-            const seriesField = field.fieldAt(seriesFieldPath);
-            if (!seriesField) return;
-
             for (const row of cell.rows) {
-              const seriesValue =
-                row.column(seriesField.name).value ?? NULL_SYMBOL;
-              const yValue = row.column(yField.name).value;
+              const seriesValue = getValueFromPath(row, seriesFieldPath) ?? NULL_SYMBOL;
+              const yValue = getValueFromPath(row, yFieldPath);
 
               if (typeof yValue === 'number') {
                 const stats = seriesStats.get(seriesValue) ?? {
@@ -235,7 +292,11 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaProps = generateLineChartVegaSpecV2(metadata, pluginInstance);
+          try {
+            vegaProps = generateLineChartVegaSpecV2(metadata, pluginInstance);
+          } catch (error) {
+            throw error;
+          }
 
           // TODO: should this be passed as plugin options? createLineChartPlugin(options)?
           // but how would you supply these options to the default plugins?
