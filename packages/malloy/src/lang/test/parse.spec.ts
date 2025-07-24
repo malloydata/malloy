@@ -918,7 +918,7 @@ describe('extend and refine', () => {
   describe('nests', () => {
     test('explicit refine in nest', () => {
       expect(`source: c is a extend {
-        view: x is { select: * }
+        view: x is { group_by: astr }
       }
 
       run: c -> {
@@ -928,7 +928,7 @@ describe('extend and refine', () => {
 
     test('refine in nest', () => {
       expect(`source: c is a extend {
-        view: x is { select: * }
+        view: x is { select: group_by: astr }
       }
 
       run: c -> {
