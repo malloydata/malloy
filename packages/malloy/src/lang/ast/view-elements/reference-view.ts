@@ -23,6 +23,7 @@
 
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
+  expressionIsScalar,
   isAtomic,
   isQuerySegment,
   isRawSegment,
@@ -101,6 +102,8 @@ export class ReferenceView extends View {
         queryFields: [this.reference.refToField],
         fieldUsage: fieldDef.fieldUsage,
         outputStruct,
+        // An atomic lens results in a array segment if it is a scalar
+        isRepeated: expressionIsScalar(fieldDef.expressionType),
       };
       return {
         pipeline: [newSegment],

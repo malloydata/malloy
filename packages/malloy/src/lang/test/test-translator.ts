@@ -320,6 +320,7 @@ export class TestTranslator extends MalloyTranslator {
                   connection: 'foo',
                   dialect: 'bar',
                 },
+                isRepeated: true,
               },
             ],
           },

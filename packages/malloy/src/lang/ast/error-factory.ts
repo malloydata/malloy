@@ -96,6 +96,7 @@ export class ErrorFactory {
       type: 'reduce',
       queryFields: [],
       outputStruct: ErrorFactory.structDef,
+      isRepeated: false,
     };
   }
 
@@ -104,6 +105,7 @@ export class ErrorFactory {
       type: 'project',
       queryFields: [],
       outputStruct: ErrorFactory.structDef,
+      isRepeated: true,
     };
   }
 

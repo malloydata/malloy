@@ -365,13 +365,29 @@ export abstract class QuerySpace extends QueryOperationSpace {
       const pipeline = typeDesc.pipeline;
       const lastSegment = pipeline[pipeline.length - 1];
       const outputStruct = lastSegment?.outputStruct ?? ErrorFactory.structDef;
-      return {
-        ...outputStruct,
-        name: name,
-        type: 'record',
-        join: 'one',
-        as: undefined,
-      };
+      const isRepeated = lastSegment
+        ? model.isQuerySegment(lastSegment)
+          ? lastSegment.isRepeated
+          : true
+        : true;
+      if (isRepeated) {
+        return {
+          ...outputStruct,
+          elementTypeDef: {type: 'record_element'},
+          name: name,
+          type: 'array',
+          join: 'many',
+          as: undefined,
+        };
+      } else {
+        return {
+          ...outputStruct,
+          name: name,
+          type: 'record',
+          join: 'one',
+          as: undefined,
+        };
+      }
     } else if (model.TD.isAtomic(typeDesc)) {
       const td = model.mkFieldDef(typeDesc, name);
       return {
@@ -505,6 +521,16 @@ export abstract class QuerySpace extends QueryOperationSpace {
     throw new Error('TODO NOT POSSIBLE');
   }
 
+  protected isRepeated(): boolean {
+    const fields = this.translateQueryFields();
+    const dimensions = fields.filter(
+      f =>
+        model.TD.isAtomic(f.typeDesc) &&
+        model.expressionIsScalar(f.typeDesc.expressionType)
+    );
+    return dimensions.length > 0;
+  }
+
   getPipeSegment(
     refineFrom: model.QuerySegment | undefined
   ): model.PipeSegment {
@@ -522,6 +548,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       queryFields: this.queryFieldDefs(),
       // TODO actually update this with the new refine fields?
       outputStruct: this.structDef(),
+      isRepeated: this.isRepeated(),
     };
 
     segment.queryFields = mergeFields(

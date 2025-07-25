@@ -1166,6 +1166,7 @@ export interface QuerySegment extends Filtered, Ordered {
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
+  isRepeated: boolean;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
