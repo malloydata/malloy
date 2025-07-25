@@ -939,7 +939,7 @@ class QueryField extends QueryNode {
   ): string | undefined {
     let struct = context;
     if (structPath) {
-      struct = this.parent.root().getStructByName(structPath);
+      struct = this.parent.getStructByName(structPath);
     }
     if (struct.needsSymetricCalculation(resultSet)) {
       return struct.getDistinctKey().generateExpression(resultSet);
