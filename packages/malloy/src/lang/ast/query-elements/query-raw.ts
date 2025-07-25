@@ -54,7 +54,7 @@ export class QueryRaw extends MalloyElement implements QueryElement {
       query: {
         type: 'query',
         ...invoked,
-        pipeline: [{type: 'raw', fields: []}],
+        pipeline: [{type: 'raw', fields: [], outputStruct: structDef}],
         location: this.location,
       },
       outputStruct: structDef,

@@ -405,10 +405,12 @@ function expandReturnTypeBlueprint(
     );
   } else if ('sql_native' in blueprint) {
     return anyExprType({type: 'sql native', rawType: blueprint.sql_native});
-  } else {
+  } else if ('calculation' in blueprint) {
     return minAnalytic(
       expandTypeDescElementBlueprint(blueprint.calculation, false)
     );
+  } else {
+    throw new Error('Invalid function blueprint');
   }
 }
 
@@ -468,8 +470,10 @@ function expandParamTypeBlueprint(
     return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
   } else if ('sql_native' in blueprint) {
     return anyExprType({type: 'sql native', rawType: blueprint.sql_native});
-  } else {
+  } else if ('calculation' in blueprint) {
     return maxAnalytic(expandTypeDescElementBlueprint(blueprint.calculation));
+  } else {
+    throw new Error('Invalid function blueprint');
   }
 }
 

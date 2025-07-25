@@ -24,7 +24,6 @@
 import type {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
-import {getFinalStruct} from '../struct-utils';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {refine} from './refine-utils';
@@ -57,7 +56,7 @@ export class ViewRefine extends View {
       annotation: query.annotation,
       outputStruct:
         resultPipe.length > 0
-          ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
+          ? resultPipe[resultPipe.length - 1].outputStruct
           : ErrorFactory.structDef,
     };
   }

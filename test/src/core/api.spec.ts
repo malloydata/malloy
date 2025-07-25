@@ -39,6 +39,22 @@ if (!envDatabases.includes('duckdb')) {
   describe.skip = describe;
 }
 
+describe('basic', () => {
+  test('can get query by name from explore', async () => {
+    const model = runtime.loadModel(`
+      source: s1 is duckdb.table('malloytest.aircraft') extend {
+        view: v is {
+          where: state = 'CA'
+          group_by: state
+        }
+      }
+    `);
+    const q1 = model.loadExploreByName('s1');
+    const oneState = await q1.loadQueryByName('v').run();
+    expect(oneState.data.path(0, 'state').value).toBe('CA');
+  });
+});
+
 describe('extendModel', () => {
   test('can run query in extend section', async () => {
     const model = runtime.loadModel(`

@@ -59,6 +59,11 @@ export class ConstantFieldSpace implements FieldSpace {
   dialectObj(): undefined {
     return undefined;
   }
+
+  connectionName(): string {
+    return '~constant-space-unknown-connection~';
+  }
+
   isQueryFieldSpace(): this is QueryFieldSpace {
     return false;
   }

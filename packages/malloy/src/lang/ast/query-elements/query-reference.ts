@@ -28,7 +28,6 @@ import type {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 import type {Query} from '../../../model/malloy_types';
 import {refIsStructDef} from '../../../model/malloy_types';
-import {getFinalStruct} from '../struct-utils';
 import type {QueryElement} from '../types/query-element';
 
 /**
@@ -67,7 +66,8 @@ export class QueryReference extends MalloyElement implements QueryElement {
       );
       this.has({queryHead: queryHead});
       const inputStruct = queryHead.getSourceDef(undefined);
-      const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
+      const outputStruct =
+        query.pipeline[query.pipeline.length - 1].outputStruct;
       const unRefedQuery = isRefOk
         ? query
         : refIsStructDef(query.structRef)

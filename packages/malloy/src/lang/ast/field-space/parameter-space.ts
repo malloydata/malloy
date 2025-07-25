@@ -87,6 +87,11 @@ export class ParameterSpace implements FieldSpace {
   dialectName() {
     return '~parameter-space-unknown-dialect~';
   }
+
+  connectionName(): string {
+    return '~parameter-space-unknown-connection~';
+  }
+
   dialectObj(): Dialect | undefined {
     return undefined;
   }

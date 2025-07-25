@@ -55,9 +55,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: models->{
         group_by:
           manufacturer,
-          big is seats >=21
+          big is seats >= 21
         aggregate: model_count is count()
-      }->{
+      } -> {
         group_by: big
         aggregate: model_count is model_count.sum()
       }

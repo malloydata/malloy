@@ -35,7 +35,7 @@ function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
   // which isn't available. In retrospect the dialect shouldn't be in the type,
   // it should only be in the field, which I wil do eventually.
-  dataType: Exclude<ExpressionValueType, 'record' | 'array'>,
+  dataType: Exclude<ExpressionValueType, 'record' | 'array' | 'turtle'>,
   expressionType: ExpressionType = 'scalar',
   evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
@@ -54,7 +54,6 @@ export const dateT = mkTypeDesc('date');
 export const timestampT = mkTypeDesc('timestamp');
 export const boolT = mkTypeDesc('boolean');
 export const errorT = mkTypeDesc('error');
-export const viewT = mkTypeDesc('turtle');
 export const aggregateBoolT = mkTypeDesc('boolean', 'aggregate');
 export const anyAtomicT = [numberT, stringT, dateT, timestampT, boolT];
 

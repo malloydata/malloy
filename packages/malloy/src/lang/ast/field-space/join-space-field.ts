@@ -29,8 +29,9 @@ export class JoinSpaceField extends StructSpaceField {
   constructor(
     readonly parameterSpace: ParameterSpace,
     readonly join: Join,
-    forDialect: string
+    forDialect: string,
+    forConnection: string
   ) {
-    super(join.getStructDef(parameterSpace), forDialect);
+    super(join.getStructDef(parameterSpace), forDialect, forConnection);
   }
 }
