@@ -99,7 +99,6 @@ export type Expr =
   | CaseExpr
   | InCompareExpr
   | CompositeFieldExpr
-  | ColumnExpr
   | ErrorNode;
 
 export type BinaryOperator =
@@ -213,11 +212,6 @@ export interface SpreadExpr extends ExprE {
   node: 'spread';
   prefix: string | undefined;
   suffix: string | undefined;
-}
-
-export interface ColumnExpr extends ExprLeaf {
-  node: 'column';
-  path: string[];
 }
 
 export interface FieldnameNode extends ExprLeaf {

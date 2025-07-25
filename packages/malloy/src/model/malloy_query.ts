@@ -95,7 +95,6 @@ import type {
   Expression,
   AtomicFieldDef,
   FilterMatchExpr,
-  ColumnExpr,
 } from './malloy_types';
 import {
   expressionIsAggregate,
@@ -504,17 +503,6 @@ class QueryField extends QueryNode {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
     }
-  }
-
-  generateColumnFragment(
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    expr: ColumnExpr,
-    _state: GenerateState
-  ): string {
-    // find the structDef and return the path to the field...
-    const field = context.getFieldByName(expr.path);
-    return field.generateExpression(resultSet);
   }
 
   generateOutputFieldFragment(
@@ -1267,8 +1255,6 @@ class QueryField extends QueryNode {
     }
 
     switch (expr.node) {
-      case 'column':
-        return this.generateColumnFragment(resultSet, context, expr, state);
       case 'field':
         return this.generateFieldFragment(resultSet, context, expr, state);
       case 'parameter':
