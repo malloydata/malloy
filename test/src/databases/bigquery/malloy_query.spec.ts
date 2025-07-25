@@ -184,7 +184,7 @@ describe('BigQuery expression tests', () => {
       faa,
       `
         run: flights -> {
-          group_by: aircraft.aircraft_models.total_seats
+          aggregate: aircraft.aircraft_models.total_seats
           aggregate: total_distance is distance.sum()
         }
       `
