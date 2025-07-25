@@ -269,6 +269,7 @@ export interface CompileModelState {
   translator: MalloyTranslator;
   done: boolean;
   hasSource: boolean;
+  excludeReferences: boolean;
 }
 
 export function updateCompileModelState(
@@ -295,7 +296,8 @@ export function updateCompileModelState(
 function _newCompileModelState(
   modelURL: string,
   compilerNeeds?: Malloy.CompilerNeeds,
-  extendURL?: string
+  extendURL?: string,
+  excludeReferences = false
 ): CompileModelState {
   const translator = new MalloyTranslator(
     modelURL,
@@ -307,16 +309,23 @@ function _newCompileModelState(
     (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
   if (extendURL) {
     return {
-      extending: _newCompileModelState(extendURL, compilerNeeds),
+      extending: _newCompileModelState(
+        extendURL,
+        compilerNeeds,
+        undefined,
+        excludeReferences
+      ),
       translator,
       done: false,
       hasSource,
+      excludeReferences,
     };
   } else {
     return {
       translator,
       done: false,
       hasSource,
+      excludeReferences,
     };
   }
 }
@@ -327,7 +336,8 @@ export function newCompileModelState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
-    request.extend_model_url
+    request.extend_model_url,
+    request.exclude_references
   );
 }
 
@@ -337,7 +347,8 @@ export function newCompileSourceState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
-    request.extend_model_url
+    request.extend_model_url,
+    request.exclude_references
   );
 }
 
@@ -401,7 +412,10 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       const model = modelDefToModelInfo(result.modelDef);
       return {
         model,
-        modelDef: result.modelDef,
+        modelDef: maybeExcludeReferences(
+          result.modelDef,
+          state.excludeReferences
+        ),
         timingInfo,
       };
     } else {
@@ -422,6 +436,17 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
     const timingInfo = timer.stop();
     return {compilerNeeds, logs: result.problems, timingInfo};
   }
+}
+
+function maybeExcludeReferences(
+  modelDef: ModelDef,
+  excludeReferences: boolean
+): ModelDef {
+  if (!excludeReferences) return modelDef;
+  return {
+    ...modelDef,
+    references: undefined,
+  };
 }
 
 function wrapResponse(
@@ -452,16 +477,6 @@ function wrapResponse(
       timing_info: response.timingInfo,
     };
   }
-}
-
-function _compileModel(
-  modelURL: string,
-  compilerNeeds?: Malloy.CompilerNeeds,
-  extendURL?: string,
-  state?: CompileModelState
-): CompileResponse {
-  state ??= _newCompileModelState(modelURL, compilerNeeds, extendURL);
-  return _statedCompileModel(state);
 }
 
 export function compileModel(
@@ -545,7 +560,12 @@ export function newCompileQueryState(
     ...(needs.files ?? []),
   ];
   return {
-    ..._newCompileModelState(queryURL, needs, request.model_url),
+    ..._newCompileModelState(
+      queryURL,
+      needs,
+      request.model_url,
+      request.exclude_references
+    ),
     defaultRowLimit: request.default_row_limit,
   };
 }
