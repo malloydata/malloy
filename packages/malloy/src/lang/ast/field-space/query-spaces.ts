@@ -430,14 +430,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
             ) {
               fields.push({queryFieldDef, typeDesc});
             }
+          } else {
+            throw new Error('Expected query field to have a definition');
           }
-          // TODO I removed the error here because during calculation of the refinement space,
-          // (see creation of a QuerySpace) we add references to all the fields from
-          // the refinement, but they don't have definitions. So in the case where we
-          // don't have a field def, we "know" that that field is already in the query,
-          // and we don't need to worry about actually adding it. Previously, this was also true for
-          // project statements, where we added "*" as a field and also all the individual
-          // fields, but the individual fields didn't have field defs.
         }
       }
       fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
