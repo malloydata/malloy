@@ -5355,9 +5355,8 @@ export class QueryModel {
           outputStruct: {
             type: 'query_result',
             name: 'index',
-            // TODO
-            connection: 'foo',
-            dialect: 'bar',
+            connection: struct.connectionName,
+            dialect: struct.dialect.name,
             fields: [
               {name: 'fieldName', type: 'string'},
               {name: 'fieldPath', type: 'string'},
