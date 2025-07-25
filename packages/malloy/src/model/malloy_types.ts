@@ -924,7 +924,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onFieldUsage?: FieldUsage[];
+  fieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
