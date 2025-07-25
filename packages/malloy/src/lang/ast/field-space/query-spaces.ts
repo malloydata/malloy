@@ -38,7 +38,6 @@ import {
 } from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
 import type {LookupResult} from '../types/lookup-result';
-import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import type {SpaceEntry} from '../types/space-entry';
@@ -53,6 +52,7 @@ import {
 } from '../../../model/composite_source_utils';
 import {ErrorFactory} from '../error-factory';
 import {ReferenceField} from './reference-field';
+import {RefineFromSpaceField} from './refine-from-space-field';
 
 type TranslatedQueryField = {
   queryFieldDef: model.QueryFieldDef;
@@ -274,10 +274,8 @@ export abstract class QuerySpace extends QueryOperationSpace {
         const name = field.path[field.path.length - 1];
         this.setEntry(name, referenceField);
         this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
-      } else if (field.type !== 'turtle') {
-        // TODO can you reference fields in a turtle as fields in the output space,
-        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-        const entry = new ColumnSpaceField(field);
+      } else {
+        const entry = new RefineFromSpaceField(field);
         const name = field.as ?? field.name;
         this.setEntry(name, entry);
         this.addValidatedCompositeFieldUserFromEntry(name, entry);

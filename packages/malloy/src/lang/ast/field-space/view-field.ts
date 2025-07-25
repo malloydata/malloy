@@ -24,7 +24,6 @@
 import type {
   QueryFieldDef,
   TurtleDef,
-  TurtleTypeDef,
   TypeDesc,
 } from '../../../model/malloy_types';
 
@@ -41,16 +40,6 @@ export abstract class ViewField extends SpaceField {
 
   typeDesc(): TypeDesc {
     const fieldDef = this.fieldDef();
-    const turtleTypeDef: TurtleTypeDef = {
-      type: 'turtle',
-      pipeline: fieldDef.pipeline,
-    };
-    return {
-      ...turtleTypeDef,
-      fieldUsage: fieldDef.fieldUsage ?? [],
-      // TODO these are sorta weird for a turtle...
-      expressionType: 'scalar',
-      evalSpace: 'constant',
-    };
+    return this.turtleTypeFromTurtleDef(fieldDef);
   }
 }
