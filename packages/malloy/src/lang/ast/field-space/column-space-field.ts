@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {TypeDesc, AtomicFieldDef} from '../../../model/malloy_types';
+import type {
+  TypeDesc,
+  AtomicFieldDef,
+  QueryFieldDef,
+} from '../../../model/malloy_types';
+import type {FieldSpace} from '../types/field-space';
 
 import {SpaceField} from '../types/space-field';
 
@@ -31,6 +36,10 @@ export class ColumnSpaceField<T extends AtomicFieldDef> extends SpaceField {
   }
 
   fieldDef(): T {
+    return this.sourceFieldDef;
+  }
+
+  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
     return this.sourceFieldDef;
   }
 
