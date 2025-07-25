@@ -22,9 +22,9 @@
  */
 
 import type {PipeSegment} from '../../../model/malloy_types';
-import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {SourceFieldSpace} from './field-space';
 
 export interface OpDesc {
   segment: PipeSegment;
-  outputSpace: QueryOperationSpace;
+  outputSpace: SourceFieldSpace;
 }
