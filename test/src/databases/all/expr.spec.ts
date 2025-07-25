@@ -26,8 +26,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 function modelText(databaseName: string): string {
   return `
