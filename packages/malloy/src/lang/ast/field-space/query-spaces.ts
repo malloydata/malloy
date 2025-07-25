@@ -377,7 +377,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       name: 'query_result',
       dialect: this.dialectName(),
       // TODO need to get this in a less expensive way?
-      connection: this.inputSpace().structDef().connection,
+      connection: this.inputSpace().connectionName(),
       fields: fields.map(f =>
         this.getOutputFieldDef(f.queryFieldDef, f.typeDesc)
       ),

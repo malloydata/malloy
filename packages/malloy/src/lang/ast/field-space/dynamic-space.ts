@@ -50,7 +50,7 @@ export abstract class DynamicSpace
   protected newNotes = new Map<string, model.Annotation>();
 
   constructor(extending: SourceDef) {
-    super(structuredClone(extending), extending.dialect);
+    super(structuredClone(extending), extending.dialect, extending.connection);
     this.fromSource = extending;
     this.sourceDef = undefined;
   }

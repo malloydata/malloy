@@ -66,9 +66,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
   }
 
   structDef(): SourceDef {
-    // TODO get the connection in a more sensible way...
-    const source = this.inputSpace().structDef();
-    const connection = source.connection;
+    const connection = this.inputSpace().connectionName();
     return {
       type: 'query_result',
       name: 'result',

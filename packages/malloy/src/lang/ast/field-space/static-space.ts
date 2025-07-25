@@ -52,15 +52,21 @@ export class StaticSpace implements FieldSpace {
   readonly type = 'fieldSpace';
   private memoMap?: FieldMap;
   protected fromStruct: StructDef;
-  protected structDialect: string;
 
-  constructor(struct: StructDef, dialect_name: string) {
+  constructor(
+    struct: StructDef,
+    protected readonly structDialect: string,
+    protected readonly structConnection: string
+  ) {
     this.fromStruct = struct;
-    this.structDialect = dialect_name;
   }
 
   dialectName(): string {
     return this.structDialect;
+  }
+
+  connectionName(): string {
+    return this.structConnection;
   }
 
   dialectObj(): Dialect | undefined {
@@ -73,7 +79,11 @@ export class StaticSpace implements FieldSpace {
 
   defToSpaceField(from: FieldDef): SpaceField {
     if (isJoined(from)) {
-      return new StructSpaceField(from, this.structDialect);
+      return new StructSpaceField(
+        from,
+        this.structDialect,
+        this.structConnection
+      );
     } else if (isTurtle(from)) {
       return new IRViewField(this, from);
     }
@@ -166,7 +176,11 @@ export class StaticSpace implements FieldSpace {
           // because it is someting like "dimension: joinedArray is arrayComputation"
           // which wasn't known to be a join when the fieldspace was constructed.
           // TODO don't make one of these every time you do a lookup
-          found = new StructSpaceField(definition, this.structDialect);
+          found = new StructSpaceField(
+            definition,
+            this.structDialect,
+            this.structConnection
+          );
         }
         // cswenson review todo I don't know how to count the reference properly now
         // i tried only writing it as a join reference if there was more in the path
@@ -237,7 +251,8 @@ export class StaticSpace implements FieldSpace {
 export class StructSpaceField extends StructSpaceFieldBase {
   constructor(
     def: JoinFieldDef,
-    private forDialect: string
+    private forDialect: string,
+    private forConnection: string
   ) {
     super(def);
   }
@@ -246,7 +261,11 @@ export class StructSpaceField extends StructSpaceFieldBase {
     if (isSourceDef(this.structDef)) {
       return new StaticSourceSpace(this.structDef, 'internal');
     } else {
-      return new StaticSpace(this.structDef, this.forDialect);
+      return new StaticSpace(
+        this.structDef,
+        this.forDialect,
+        this.forConnection
+      );
     }
   }
 }
@@ -256,7 +275,7 @@ export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
     protected source: SourceDef,
     public readonly _accessProtectionLevel: AccessModifierLabel
   ) {
-    super(source, source.dialect);
+    super(source, source.dialect, source.connection);
   }
   structDef(): SourceDef {
     return this.source;

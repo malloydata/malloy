@@ -49,6 +49,7 @@ export interface FieldSpace {
   entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
   dialectName(): string;
+  connectionName(): string;
   isQueryFieldSpace(): this is QueryFieldSpace;
   accessProtectionLevel(): AccessModifierLabel;
 }
