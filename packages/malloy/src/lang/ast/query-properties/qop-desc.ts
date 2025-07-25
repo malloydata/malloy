@@ -112,7 +112,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
     const segment = build.finalize(this.refineThis);
     return {
       segment,
-      outputSpace: () => build.resultFS,
+      outputSpace: build.resultFS,
     };
   }
 }

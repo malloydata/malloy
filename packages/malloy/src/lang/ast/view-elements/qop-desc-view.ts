@@ -49,7 +49,7 @@ export class QOpDescView extends View {
     const newOperation = this.operation.getOp(fs, isNestIn);
     return {
       pipeline: [newOperation.segment],
-      outputStruct: newOperation.outputSpace().structDef(),
+      outputStruct: newOperation.outputSpace.structDef(),
     };
   }
 

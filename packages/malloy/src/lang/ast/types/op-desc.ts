@@ -26,5 +26,5 @@ import type {QueryOperationSpace} from '../field-space/query-spaces';
 
 export interface OpDesc {
   segment: PipeSegment;
-  outputSpace: () => QueryOperationSpace;
+  outputSpace: QueryOperationSpace;
 }
