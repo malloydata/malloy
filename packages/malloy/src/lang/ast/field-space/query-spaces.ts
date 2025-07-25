@@ -57,6 +57,11 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ErrorFactory} from '../error-factory';
 import {ReferenceField} from './reference-field';
 
+type TranslatedQueryField = {
+  queryFieldDef: model.QueryFieldDef;
+  typeDesc: model.TypeDesc;
+};
+
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
  * because this is the namespace of the Query which is a layer of an output and
@@ -348,7 +353,100 @@ export abstract class QuerySpace extends QueryOperationSpace {
   // }
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
-    const fields: model.QueryFieldDef[] = [];
+    const fields = this.translateQueryFields();
+    return fields.map(f => f.queryFieldDef);
+  }
+
+  protected getOutputFieldDef(
+    queryFieldDef: model.QueryFieldDef,
+    typeDesc: model.TypeDesc
+  ): model.FieldDef {
+    if (queryFieldDef.type === 'fieldref') {
+      const name = queryFieldDef.path[queryFieldDef.path.length - 1];
+      if (typeDesc.type === 'turtle') {
+        const pipeline = typeDesc.pipeline;
+        const lastSegment = pipeline[pipeline.length - 1];
+        const outputStruct =
+          lastSegment?.outputStruct ?? ErrorFactory.structDef;
+        return {
+          ...outputStruct,
+          name: name,
+          type: 'record',
+          join: 'one',
+          as: undefined,
+        };
+      } else if (model.TD.isAtomic(typeDesc)) {
+        return model.mkFieldDef(typeDesc, name);
+      } else {
+        throw new Error('Invalid type for fieldref');
+      }
+    } else {
+      if (model.isAtomic(queryFieldDef)) {
+        return {
+          ...queryFieldDef,
+          // All fields are dimensions in query output
+          expressionType: 'scalar',
+          // e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
+          // TODO column fragments
+          e: undefined,
+        };
+      } /* so it's a turtle */ else {
+        const pipeline = queryFieldDef.pipeline;
+        const lastSegment = pipeline[pipeline.length - 1];
+        const outputStruct =
+          lastSegment?.outputStruct ?? ErrorFactory.structDef;
+        return {
+          ...outputStruct,
+          name: queryFieldDef.name,
+          type: 'record',
+          join: 'one',
+          as: undefined,
+        };
+      }
+    }
+  }
+
+  // Gets the primary key field for the output struct of this query;
+  // If there is exactly one scalar field, that is the primary key
+  protected getPrimaryKey(fields: TranslatedQueryField[]) {
+    const dimensions = fields.filter(
+      f =>
+        model.TD.isAtomic(f.typeDesc) &&
+        model.expressionIsScalar(f.typeDesc.expressionType)
+    );
+    if (dimensions.length !== 1) return undefined;
+    const primaryKeyField = dimensions[0].queryFieldDef;
+    if (primaryKeyField.type === 'fieldref') {
+      return primaryKeyField.path[primaryKeyField.path.length - 1];
+    } else {
+      return primaryKeyField.as ?? primaryKeyField.name;
+    }
+  }
+
+  // This returns the OUTPUT struct of this query space
+  structDef(): model.SourceDef {
+    const fields = this.translateQueryFields();
+    const sourceDef: model.SourceDef = {
+      type: 'query_result',
+      // TODO to match the compiler, does this need to be the name of the query?
+      name: 'query_result',
+      dialect: this.dialectName(),
+      // TODO need to get this in a less expensive way?
+      connection: this.inputSpace().structDef().connection,
+      fields: fields.map(f =>
+        this.getOutputFieldDef(f.queryFieldDef, f.typeDesc)
+      ),
+      primaryKey: this.getPrimaryKey(fields),
+    };
+    return sourceDef;
+  }
+
+  translatedQueryFields: TranslatedQueryField[] | undefined;
+  protected translateQueryFields(): TranslatedQueryField[] {
+    if (this.translatedQueryFields) {
+      return this.translatedQueryFields;
+    }
+    const fields: TranslatedQueryField[] = [];
     let fieldUsage = emptyFieldUsage();
     const source = this.inputSpace().structDef();
     for (const user of this.compositeFieldUsers) {
@@ -361,11 +459,19 @@ export abstract class QuerySpace extends QueryOperationSpace {
         const {name, field} = user;
         const wildPath = this.expandedWild[name];
         if (wildPath) {
-          fields.push({type: 'fieldref', path: wildPath.path, at: wildPath.at});
-          nextFieldUsage = wildPath.entry.typeDesc().fieldUsage;
+          const typeDesc = wildPath.entry.typeDesc();
+          fields.push({
+            queryFieldDef: {
+              type: 'fieldref',
+              path: wildPath.path,
+              at: wildPath.at,
+            },
+            typeDesc,
+          });
+          nextFieldUsage = typeDesc.fieldUsage;
         } else {
-          const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
-          if (fieldQueryDef) {
+          const queryFieldDef = field.getQueryFieldDef(this.exprSpace);
+          if (queryFieldDef) {
             const typeDesc = field.typeDesc();
             nextFieldUsage = typeDesc.fieldUsage;
             // Filter out fields whose type is 'error', which means that a totally bad field
@@ -376,9 +482,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
               typeDesc &&
               typeDesc.type !== 'error' &&
               this.canContain(typeDesc) &&
-              !isEmptyNest(fieldQueryDef)
+              !isEmptyNest(queryFieldDef)
             ) {
-              fields.push(fieldQueryDef);
+              fields.push({queryFieldDef, typeDesc});
             }
           }
           // TODO I removed the error here because during calculation of the refinement space,
@@ -410,6 +516,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       }
     }
 
+    this.translatedQueryFields = fields;
     return fields;
   }
 

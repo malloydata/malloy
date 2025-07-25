@@ -98,7 +98,6 @@ export abstract class DynamicSpace
   }
 
   structDef(): model.SourceDef {
-    const isOutput = this.isQueryFieldSpace() && this.isQueryOutputSpace();
     this.complete = true;
     if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
@@ -110,15 +109,7 @@ export abstract class DynamicSpace
         }
       }
 
-      this.sourceDef = isOutput
-        ? {
-            type: 'query_result',
-            name: 'result',
-            dialect: this.fromSource.dialect,
-            connection: this.fromSource.connection,
-            fields: [],
-          }
-        : {...this.fromSource, fields: []};
+      this.sourceDef = {...this.fromSource, fields: []};
       this.sourceDef.parameters = parameters;
       const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
@@ -135,8 +126,6 @@ export abstract class DynamicSpace
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
-      let primaryKey: string | undefined = undefined;
-      let numDimensions = 0;
       const parameterSpace = this.parameterSpace();
       for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
@@ -147,47 +136,10 @@ export abstract class DynamicSpace
             field.join.fixupJoinOn(this, joinStruct);
           }
         } else {
-          // TODO this feels super icky that in order to produce the output space of the query
-          // we end up calling `getQueryFieldDef()` or `fieldDef()` a SECOND time
-          const queryFieldDef = isOutput
-            ? field.getQueryFieldDef(this.inputSpace())
-            : field.fieldDef();
-          const fieldDef =
-            queryFieldDef?.type === 'fieldref'
-              ? field.fieldDef()
-              : queryFieldDef;
+          const fieldDef = field.fieldDef();
           if (fieldDef) {
-            if (
-              model.isAtomic(fieldDef) &&
-              model.expressionIsScalar(fieldDef.expressionType)
-            ) {
-              numDimensions++;
-              primaryKey = name;
-            }
             fieldIndices.set(name, this.sourceDef.fields.length);
-            const maybeOutputized: model.FieldDef = isOutput
-              ? model.isAtomic(fieldDef)
-                ? {
-                    ...fieldDef,
-                    expressionType: 'scalar',
-                    // e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
-                    // TODO column fragments
-                    e: undefined,
-                  }
-                : model.isTurtle(fieldDef)
-                ? {
-                    ...(fieldDef.pipeline.length > 0
-                      ? fieldDef.pipeline[fieldDef.pipeline.length - 1]
-                          .outputStruct
-                      : ErrorFactory.structDef),
-                    name: fieldDef.name,
-                    type: 'record',
-                    join: 'one',
-                    as: undefined,
-                  }
-                : fieldDef
-              : fieldDef;
-            this.sourceDef.fields.push(maybeOutputized);
+            this.sourceDef.fields.push(fieldDef);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
           // out ReferenceFields and still make this check.
@@ -195,10 +147,6 @@ export abstract class DynamicSpace
           //   throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           // }
         }
-      }
-      if (isOutput) {
-        this.sourceDef.primaryKey =
-          numDimensions === 1 ? primaryKey : undefined;
       }
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {

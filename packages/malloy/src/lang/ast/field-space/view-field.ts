@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-import * as TDU from '../typedesc-utils';
+import type {
+  QueryFieldDef,
+  TurtleDef,
+  TurtleTypeDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
 import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
@@ -35,12 +39,20 @@ export abstract class ViewField extends SpaceField {
   abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
   abstract fieldDef(): TurtleDef;
 
-  typeDesc() {
+  typeDesc(): TypeDesc {
     const fieldDef = this.fieldDef();
+    const turtleTypeDef: TurtleTypeDef = {
+      type: 'turtle',
+      pipeline: fieldDef.pipeline,
+    };
     return {
-      ...TDU.viewT,
+      ...turtleTypeDef,
+      // TODO these are sorta weird for a turtle...
+      expressionType: 'scalar',
+      evalSpace: 'constant',
       fieldUsage: fieldDef.fieldUsage ?? [],
-      requiredGroupBys: fieldDef.requiredGroupBys,
+      // TODO
+      // requiresGroupBys: fieldDef.requiredGroupBys,
     };
   }
 }

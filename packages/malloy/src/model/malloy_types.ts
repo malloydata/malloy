@@ -1297,12 +1297,18 @@ export type SourceComponentInfo =
       sourceID?: string;
     };
 
+export type TurtleType = 'turtle';
+
+export type TurtleTypeDef = {
+  type: 'turtle';
+  pipeline: PipeSegment[];
+};
+
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
 // for "non-atomic" and even the AI couldn't think of the right word.
 export type NonAtomicType =
   | Exclude<JoinElementType, 'array' | 'record'>
-  | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
   | 'regular expression'
@@ -1311,8 +1317,11 @@ export interface NonAtomicTypeDef {
   type: NonAtomicType;
 }
 
-export type ExpressionValueType = AtomicFieldType | NonAtomicType;
-export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
+export type ExpressionValueType = AtomicFieldType | NonAtomicType | TurtleType;
+export type ExpressionValueTypeDef =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | TurtleTypeDef;
 export type BasicExpressionType = Exclude<
   ExpressionValueType,
   JoinElementType | 'turtle'
@@ -1358,6 +1367,7 @@ interface BasicArrayExtTypeDef<TypeExtensions> {
 type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
+  | TurtleTypeDef
   | BasicArrayExtTypeDef<TypeExtensions>
   | RecordExtTypeDef<TypeExtensions>
   | RepeatedRecordExtTypeDef<TypeExtensions>
