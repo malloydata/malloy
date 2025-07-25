@@ -1546,8 +1546,6 @@ export interface RefToField {
   annotation?: Annotation;
   at?: DocumentLocation;
   drillExpression?: Malloy.Expression | undefined;
-  // Queries produced by the translator will always have `def` set on all field refs.
-  def?: FieldDef;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
