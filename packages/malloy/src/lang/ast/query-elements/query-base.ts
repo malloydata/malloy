@@ -27,29 +27,16 @@ import {
   resolveCompositeSources,
   logCompositeError,
 } from '../../../model/composite_source_utils';
-import type {
-  AtomicFieldDef,
-  Expr,
-  QueryFieldDef,
-  RefToField,
-  TurtleDef,
-} from '../../../model/malloy_types';
 import {
-  isAtomic,
   isIndexSegment,
   isQuerySegment,
   type PipeSegment,
   type Query,
   type SourceDef,
 } from '../../../model/malloy_types';
-import {exprMap} from '../../../model/utils';
-import {ErrorFactory} from '../error-factory';
-import {StaticSourceSpace} from '../field-space/static-space';
 import {detectAndRemovePartialStages} from '../query-utils';
-import {FieldName, type FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
-import {SpaceField} from '../types/space-field';
 
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
@@ -75,137 +62,6 @@ export abstract class QueryBase extends MalloyElement {
       return resolved.sourceDef;
     }
     return undefined;
-  }
-
-  protected fullyResolveToFieldDef(
-    field: QueryFieldDef,
-    fs: FieldSpace
-  ): AtomicFieldDef | TurtleDef {
-    if (field.type === 'fieldref') {
-      const path = field.path.map(n => new FieldName(n));
-      this.has({path});
-      const lookup = fs.lookup(path, 'private', false);
-      if (lookup.found && lookup.found instanceof SpaceField) {
-        const def = lookup.found.fieldDef();
-        if (def && !isAtomic(def)) {
-          return ErrorFactory.fieldDef;
-        }
-        if (def !== undefined) {
-          return def;
-        }
-      }
-      throw new Error(
-        `Expected a definition for ${field.path.join(
-          '.'
-        )} when resolving references in query`
-      );
-    } else if (field.type === 'turtle') {
-      // TODO resolve references in the nest....
-      return field;
-    } else {
-      return {
-        ...field,
-        e: field.e
-          ? exprMap(field.e, (e: Expr) => {
-              if (e.node === 'field') {
-                const def = this.fullyResolveToFieldDef(
-                  {type: 'fieldref', path: e.path},
-                  fs
-                );
-                if (!isAtomic(def)) {
-                  throw new Error(
-                    'Non-atomic field included in expression definition'
-                  );
-                }
-                // If there is an e, return it; otherwise, return node which says "this is a column"
-                return def.e ?? {node: 'column', path: e.path};
-              }
-              return e;
-            })
-          : {node: 'column', path: [field.name]},
-      };
-    }
-  }
-
-  protected resolveReferencesInField(
-    field: RefToField,
-    fs: FieldSpace
-  ): RefToField;
-  protected resolveReferencesInField(
-    field: QueryFieldDef,
-    fs: FieldSpace
-  ): QueryFieldDef;
-  protected resolveReferencesInField(
-    field: QueryFieldDef,
-    fs: FieldSpace
-  ): QueryFieldDef {
-    const resolved = this.fullyResolveToFieldDef(field, fs);
-    if (field.type === 'fieldref') {
-      return {...field, def: resolved};
-    } else if (field.type === 'turtle') {
-      // TODO
-      return field;
-    } else {
-      return resolved;
-    }
-  }
-
-  protected resolveReferences(
-    segment: PipeSegment,
-    inputSource: SourceDef
-  ): PipeSegment {
-    const sourceExtensions = isQuerySegment(segment)
-      ? segment.extendSource ?? []
-      : [];
-    const fs = new StaticSourceSpace(
-      {
-        ...inputSource,
-        fields: [...inputSource.fields, ...sourceExtensions],
-      },
-      'public'
-    );
-    if (isIndexSegment(segment)) {
-      return {
-        ...segment,
-        indexFields: segment.indexFields.map(f =>
-          this.resolveReferencesInField(f, fs)
-        ),
-      };
-    } else if (isQuerySegment(segment)) {
-      return {
-        ...segment,
-        queryFields: segment.queryFields.map(f =>
-          this.resolveReferencesInField(f, fs)
-        ),
-      };
-    } else {
-      return segment;
-    }
-  }
-
-  protected resolvePipelineReferences(
-    pipeline: PipeSegment[],
-    inputStruct: SourceDef
-  ) {
-    const out: PipeSegment[] = [];
-    for (let i = 0; i < pipeline.length; i++) {
-      const input = i === 0 ? inputStruct : pipeline[i - 1].outputStruct;
-      const segment = pipeline[i];
-      const outSegment = this.resolveReferences(segment, input);
-      out.push(outSegment);
-    }
-    return out;
-  }
-
-  protected resolveQueryReferences(query: Query, inputStruct: SourceDef) {
-    const pipeline: PipeSegment[] = [];
-    for (let i = 0; i < query.pipeline.length; i++) {
-      const input = i === 0 ? inputStruct : query.pipeline[i - 1].outputStruct;
-      const segment = query.pipeline[i];
-      const outSegment = this.resolveReferences(segment, input);
-      pipeline.push(outSegment);
-    }
-    return {...query, pipeline};
   }
 
   query(): Query {

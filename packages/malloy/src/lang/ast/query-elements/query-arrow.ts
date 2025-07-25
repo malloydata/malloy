@@ -107,29 +107,11 @@ export class QueryArrow extends QueryBase implements QueryElement {
       }
     }
 
-    const queryWithResolvedCompositeSource = {
-      ...query,
-      compositeResolvedSourceDef,
-    };
-
-    // const pipelineWithResolvedReferences = this.resolvePipelineReferences(
-    //   pipeline,
-    //   inputStruct
-    // );
-
-    const finalPipeline = [
-      ...queryBase.pipeline,
-      // ...pipelineWithResolvedReferences,
-      ...pipeline,
-    ];
-
-    const queryWithResolvedReferences = {
-      ...queryWithResolvedCompositeSource,
-      pipeline: finalPipeline,
-    };
-
     return {
-      query: queryWithResolvedReferences,
+      query: {
+        ...query,
+        compositeResolvedSourceDef,
+      },
       outputStruct,
       inputStruct,
     };
