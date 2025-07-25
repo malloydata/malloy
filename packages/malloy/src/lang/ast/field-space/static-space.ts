@@ -150,11 +150,7 @@ export class StaticSpace implements FieldSpace {
     return ret;
   }
 
-  lookup(
-    path: FieldName[],
-    accessLevel?: AccessModifierLabel,
-    logReferences = true
-  ): LookupResult {
+  lookup(path: FieldName[], accessLevel?: AccessModifierLabel): LookupResult {
     accessLevel ??= this.accessProtectionLevel();
     const head = path[0];
     const rest = path.slice(1);
@@ -186,17 +182,15 @@ export class StaticSpace implements FieldSpace {
         // i tried only writing it as a join reference if there was more in the path
         // but that failed because lookup([JOINNAME]) is called when translating JOINNAME.AGGREGATE(...)
         // with a 1-length-path but that IS a join reference and there is a test
-        if (logReferences) {
-          head.addReference({
-            type:
-              found instanceof StructSpaceFieldBase
-                ? 'joinReference'
-                : 'fieldReference',
-            definition,
-            location: head.location,
-            text: head.refString,
-          });
-        }
+        head.addReference({
+          type:
+            found instanceof StructSpaceFieldBase
+              ? 'joinReference'
+              : 'fieldReference',
+          definition,
+          location: head.location,
+          text: head.refString,
+        });
       }
       if (definition?.accessModifier) {
         if (!accessAllowed(accessLevel, definition.accessModifier)) {
