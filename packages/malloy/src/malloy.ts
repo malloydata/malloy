@@ -1658,16 +1658,17 @@ export class Explore extends Entity implements Taggable {
         `Cannot get query by name from a struct of type ${this.structDef.type}`
       );
     }
+    const view = structRef.fields.find(f => (f.as ?? f.name) === name);
+    if (view === undefined) {
+      throw new Error(`No such view named \`${name}\``);
+    }
+    if (view.type !== 'turtle') {
+      throw new Error(`\`${name}\` is not a view`);
+    }
     const internalQuery: InternalQuery = {
       type: 'query',
       structRef,
-      pipeline: [
-        // TODO this seems wrong anyway... why is it nesting the field???
-        // {
-        //   type: 'reduce',
-        //   queryFields: [{type: 'fieldref', path: [name]}],
-        // },
-      ],
+      pipeline: view.pipeline,
     };
     return new PreparedQuery(internalQuery, this.modelDef, [], name);
   }
