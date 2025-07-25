@@ -23,7 +23,6 @@
 
 import type {
   Annotation,
-  FieldDef,
   FieldUsage,
   QueryFieldDef,
   TypeDesc,
@@ -105,12 +104,6 @@ export class ReferenceField extends SpaceField {
       }
     }
     return this.queryFieldDef;
-  }
-
-  fieldDef(): FieldDef | undefined {
-    if (this.referenceTo && this.referenceTo instanceof SpaceField) {
-      return this.referenceTo.fieldDef();
-    }
   }
 
   typeDesc(): TypeDesc {
