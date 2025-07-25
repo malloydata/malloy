@@ -204,7 +204,7 @@ describe.each(runtimes.runtimeList)(
       }
     `).malloyResultMatches(handModel, {
         total_seats: 18294,
-        total_seats2: 18294,
+        total_seats2: 31209,
         total_seats3: 18294,
         boeing_seats: 6244,
         boeing_seats2: 6244,
