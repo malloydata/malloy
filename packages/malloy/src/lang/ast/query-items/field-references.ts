@@ -156,6 +156,14 @@ export class ExpressionFieldReference extends FieldReference {
   }
 }
 
+export class RefineFromFieldReference extends FieldReference {
+  elementType = 'refineFromFieldReference';
+  // Already typechecked, because it comes from an already-compiled view
+  typecheck() {
+    return;
+  }
+}
+
 export class PartitionByFieldReference extends FieldReference {
   elementType = 'partitionByFieldReference';
   // We assume that the partition by expression will typecheck this

@@ -32,7 +32,10 @@ import {FieldName} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
-import {WildcardFieldReference} from '../query-items/field-references';
+import {
+  RefineFromFieldReference,
+  WildcardFieldReference,
+} from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
 import type {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
@@ -52,6 +55,7 @@ import {
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ErrorFactory} from '../error-factory';
+import {ReferenceField} from './reference-field';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -303,14 +307,17 @@ export abstract class QuerySpace extends QueryOperationSpace {
     }
     for (const field of refineThis.queryFields) {
       if (field.type === 'fieldref') {
-        const refTo = this.exprSpace.lookup(
+        const fieldReference = new RefineFromFieldReference(
           field.path.map(f => new FieldName(f))
         );
-        if (refTo.found) {
-          const name = field.path[field.path.length - 1];
-          this.setEntry(name, refTo.found);
-          this.addValidatedCompositeFieldUserFromEntry(name, refTo.found);
-        }
+        this.astEl.has({fieldReference});
+        const referenceField = new ReferenceField(
+          fieldReference,
+          this.exprSpace
+        );
+        const name = field.path[field.path.length - 1];
+        this.setEntry(name, referenceField);
+        this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
       } else if (field.type !== 'turtle') {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
