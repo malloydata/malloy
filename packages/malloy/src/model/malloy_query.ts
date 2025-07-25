@@ -2530,22 +2530,6 @@ class QueryQuery extends QueryField {
   }
 
   // get a field ref and expand it.
-  // expandField(f: QueryFieldDef) {
-  //   let def: FieldDef;
-  //   if (f.type === 'fieldref') {
-  //     if (f.def === undefined) {
-  //       throw new Error(
-  //         `Expected fieldref ${f.path} to be resolved in translator`
-  //       );
-  //     }
-  //     def = f.def;
-  //   } else {
-  //     def = f;
-  //   }
-  //   const field = this.parent.makeQueryField(def);
-  //   const as = field.getIdentifier();
-  //   return {as, field};
-  // }
   expandField(f: QueryFieldDef) {
     const field =
       f.type === 'fieldref'
