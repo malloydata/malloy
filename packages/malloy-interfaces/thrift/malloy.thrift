@@ -666,9 +666,14 @@ struct TimingInfo {
 // Given the URL to a model, return the StableModelDef for that model
 
 struct CompileModelRequest {
+  // Main parameters
   1: required string model_url,
   2: optional string extend_model_url,
 
+  // Options
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -684,10 +689,15 @@ struct CompileModelResponse {
 // Given the URL to a model and a name of a queryable thing, get a StableSourceDef
 
 struct CompileSourceRequest {
+  // Main parameters
   1: required string model_url,
   2: required string name,
   3: optional string extend_model_url,
 
+  // Options
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -702,10 +712,15 @@ struct CompileSourceResponse {
 // Given a StableQueryDef and the URL to a model, run it and return a StableResult
 
 struct RunQueryRequest {
+  // Main parameters
   1: required string model_url,
   2: required Query query,
-  3: optional i32 default_row_limit,
 
+  // Options
+  3: optional i32 default_row_limit,
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -721,10 +736,15 @@ struct RunQueryResponse {
 // Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
 
 struct CompileQueryRequest {
+  // Main parameters
   1: required string model_url,
   2: required Query query,
-  3: optional i32 default_row_limit,
 
+  // Options
+  3: optional i32 default_row_limit,
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -741,9 +761,14 @@ struct CompileQueryResponse {
 // Given a URL to a model and the name of a source, run the indexing query
 
 struct RunIndexQueryRequest {
+  // Main parameters
   1: required string model_url,
   2: required string source_name,
 
+  // Options
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
