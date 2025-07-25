@@ -47,10 +47,10 @@ export abstract class ViewField extends SpaceField {
     };
     return {
       ...turtleTypeDef,
+      fieldUsage: fieldDef.fieldUsage ?? [],
       // TODO these are sorta weird for a turtle...
       expressionType: 'scalar',
       evalSpace: 'constant',
-      fieldUsage: fieldDef.fieldUsage ?? [],
     };
   }
 }
