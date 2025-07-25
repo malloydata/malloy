@@ -393,6 +393,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       return {
         ...td,
         expressionType: 'scalar',
+        e: undefined,
       };
     } else {
       throw new Error('Invalid type for fieldref');
