@@ -492,15 +492,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
     const segment: model.QuerySegment = {
       type: this.segmentType,
       queryFields: this.queryFieldDefs(),
-      // TODO actually update this with the new refine fields?
       outputStruct: this.structDef(),
       isRepeated: this.isRepeated(),
     };
-
-    segment.queryFields = mergeFields(
-      refineFrom?.queryFields,
-      segment.queryFields
-    );
 
     if (refineFrom?.extendSource) {
       segment.extendSource = refineFrom.extendSource;
