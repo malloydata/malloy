@@ -66,7 +66,7 @@ export const medicareModel = `
       order_by: 1 desc
     }
 
-    view: turtle_turtle is {
+    view: triple_turtle is {
       group_by: provider_state
       aggregate: total_discharges
       nest: turtle_city_zip
