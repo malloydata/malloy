@@ -51,8 +51,6 @@ export abstract class ViewField extends SpaceField {
       expressionType: 'scalar',
       evalSpace: 'constant',
       fieldUsage: fieldDef.fieldUsage ?? [],
-      // TODO
-      // requiresGroupBys: fieldDef.requiredGroupBys,
     };
   }
 }
