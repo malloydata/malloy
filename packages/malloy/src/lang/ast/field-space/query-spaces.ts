@@ -348,10 +348,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
     return true;
   }
 
-  // structDef() {
-  //   const fields = this.queryFieldDefs();
-  // }
-
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields = this.translateQueryFields();
     return fields.map(f => f.queryFieldDef);
@@ -361,48 +357,29 @@ export abstract class QuerySpace extends QueryOperationSpace {
     queryFieldDef: model.QueryFieldDef,
     typeDesc: model.TypeDesc
   ): model.FieldDef {
-    if (queryFieldDef.type === 'fieldref') {
-      const name = queryFieldDef.path[queryFieldDef.path.length - 1];
-      if (typeDesc.type === 'turtle') {
-        const pipeline = typeDesc.pipeline;
-        const lastSegment = pipeline[pipeline.length - 1];
-        const outputStruct =
-          lastSegment?.outputStruct ?? ErrorFactory.structDef;
-        return {
-          ...outputStruct,
-          name: name,
-          type: 'record',
-          join: 'one',
-          as: undefined,
-        };
-      } else if (model.TD.isAtomic(typeDesc)) {
-        return model.mkFieldDef(typeDesc, name);
-      } else {
-        throw new Error('Invalid type for fieldref');
-      }
+    const name =
+      queryFieldDef.type === 'fieldref'
+        ? queryFieldDef.path[queryFieldDef.path.length - 1]
+        : queryFieldDef.as ?? queryFieldDef.name;
+    if (typeDesc.type === 'turtle') {
+      const pipeline = typeDesc.pipeline;
+      const lastSegment = pipeline[pipeline.length - 1];
+      const outputStruct = lastSegment?.outputStruct ?? ErrorFactory.structDef;
+      return {
+        ...outputStruct,
+        name: name,
+        type: 'record',
+        join: 'one',
+        as: undefined,
+      };
+    } else if (model.TD.isAtomic(typeDesc)) {
+      const td = model.mkFieldDef(typeDesc, name);
+      return {
+        ...td,
+        expressionType: 'scalar',
+      };
     } else {
-      if (model.isAtomic(queryFieldDef)) {
-        return {
-          ...queryFieldDef,
-          // All fields are dimensions in query output
-          expressionType: 'scalar',
-          // e: {node: 'column', path: [fieldDef.name ?? fieldDef.as]},
-          // TODO column fragments
-          e: undefined,
-        };
-      } /* so it's a turtle */ else {
-        const pipeline = queryFieldDef.pipeline;
-        const lastSegment = pipeline[pipeline.length - 1];
-        const outputStruct =
-          lastSegment?.outputStruct ?? ErrorFactory.structDef;
-        return {
-          ...outputStruct,
-          name: queryFieldDef.name,
-          type: 'record',
-          join: 'one',
-          as: undefined,
-        };
-      }
+      throw new Error('Invalid type for fieldref');
     }
   }
 
