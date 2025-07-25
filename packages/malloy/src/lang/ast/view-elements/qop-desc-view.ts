@@ -78,13 +78,7 @@ export class QOpDescView extends View {
     }
     if (pipeline.length === 1) {
       this.operation.refineFrom(pipeline[0]);
-      const segment = this.getOp(
-        inputFS,
-        isNestIn,
-        this.operation,
-        pipeline[0]
-      );
-      return [segment];
+      return [this.getOp(inputFS, isNestIn, this.operation, pipeline[0])];
     }
     const headRefinements = new QOpDesc([]);
     const tailRefinements = new QOpDesc([]);
