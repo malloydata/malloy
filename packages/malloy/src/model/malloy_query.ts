@@ -39,7 +39,6 @@ import type {
   Filtered,
   FunctionOverloadDef,
   FunctionParameterDef,
-  IndexFieldDef,
   IndexSegment,
   JoinRelationship,
   ModelDef,
