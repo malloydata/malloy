@@ -77,4 +77,8 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
   accessProtectionLevel(): AccessModifierLabel {
     return this._accessProtectionLevel;
   }
+
+  isQueryOutputSpace() {
+    return false;
+  }
 }

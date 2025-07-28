@@ -23,6 +23,7 @@
 
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
+  expressionIsScalar,
   isAtomic,
   isQuerySegment,
   isRawSegment,
@@ -33,7 +34,6 @@ import {ErrorFactory} from '../error-factory';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {attachDrillPaths} from '../query-properties/drill';
-import {getFinalStruct} from '../struct-utils';
 import type {SourceFieldSpace} from '../types/field-space';
 import type {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
@@ -90,17 +90,20 @@ export class ReferenceView extends View {
       throw new Error('Expected field to have definition');
     }
     if (isAtomic(fieldDef)) {
-      const newSegment: PipeSegment = {
-        type: 'reduce',
-        queryFields: [this.reference.refToField],
-        fieldUsage: fieldDef.fieldUsage,
-      };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
         ...sourceBase(fs.structDef()),
         type: 'query_result',
         name,
         fields: [fieldDef],
+      };
+      const newSegment: PipeSegment = {
+        type: 'reduce',
+        queryFields: [this.reference.refToField],
+        fieldUsage: fieldDef.fieldUsage,
+        outputStruct,
+        // An atomic lens results in a array segment if it is a scalar
+        isRepeated: expressionIsScalar(fieldDef.expressionType),
       };
       return {
         pipeline: [newSegment],
@@ -135,11 +138,7 @@ export class ReferenceView extends View {
         pipeline,
         name: fieldDef.name,
         annotation: fieldDef.annotation,
-        outputStruct: getFinalStruct(
-          this.reference,
-          fs.structDef(),
-          fieldDef.pipeline
-        ),
+        outputStruct: pipeline[pipeline.length - 1].outputStruct,
       };
     } else {
       if (forRefinement) {

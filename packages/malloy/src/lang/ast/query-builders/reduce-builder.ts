@@ -114,6 +114,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       if (!this.limit && from.limit) {
         to.limit = from.limit;
       }
+      to.isRepeated ||= from.isRepeated;
     }
 
     if (this.order) {

@@ -48,6 +48,7 @@ export interface FieldSpace {
   entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
   dialectName(): string;
+  connectionName(): string;
   isQueryFieldSpace(): this is QueryFieldSpace;
   accessProtectionLevel(): AccessModifierLabel;
 }
@@ -60,6 +61,7 @@ export interface SourceFieldSpace extends FieldSpace {
 export interface QueryFieldSpace extends SourceFieldSpace {
   outputSpace(): QueryOperationSpace;
   inputSpace(): SourceFieldSpace;
+  isQueryOutputSpace(): boolean;
 }
 
 export class FieldName extends MalloyElement {
