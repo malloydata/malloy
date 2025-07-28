@@ -77,6 +77,7 @@ export type Expr =
   | FieldnameNode
   | SourceReferenceNode
   | ParameterNode
+  | ColumnNode
   | NowNode
   | MeasureTimeExpr
   | TimeExtractExpr
@@ -227,6 +228,11 @@ export interface SourceReferenceNode extends ExprLeaf {
 
 export interface ParameterNode extends ExprLeaf {
   node: 'parameter';
+  path: string[];
+}
+
+export interface ColumnNode extends ExprLeaf {
+  node: 'column';
   path: string[];
 }
 
@@ -1546,6 +1552,7 @@ export interface RefToField {
   annotation?: Annotation;
   at?: DocumentLocation;
   drillExpression?: Malloy.Expression | undefined;
+  e?: Expr;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

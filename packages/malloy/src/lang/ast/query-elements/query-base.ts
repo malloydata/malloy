@@ -27,16 +27,30 @@ import {
   resolveCompositeSources,
   logCompositeError,
 } from '../../../model/composite_source_utils';
+import type {
+  AtomicFieldDef,
+  Expr,
+  QueryFieldDef,
+  RefToField,
+  TurtleDef,
+} from '../../../model/malloy_types';
 import {
+  isAtomic,
   isIndexSegment,
+  isJoined,
   isQuerySegment,
   type PipeSegment,
   type Query,
   type SourceDef,
 } from '../../../model/malloy_types';
+import {exprMapDeep} from '../../../model/utils';
+import {ErrorFactory} from '../error-factory';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {detectAndRemovePartialStages} from '../query-utils';
+import {FieldName, type FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
+import {SpaceField} from '../types/space-field';
 
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
@@ -62,6 +76,157 @@ export abstract class QueryBase extends MalloyElement {
       return resolved.sourceDef;
     }
     return undefined;
+  }
+
+  protected fullyResolveToFieldDef(
+    field: QueryFieldDef,
+    fs: FieldSpace,
+    joinPath: string[] = []
+  ): AtomicFieldDef | TurtleDef {
+    if (field.type === 'fieldref') {
+      const path = [...joinPath, ...field.path].map(n => new FieldName(n));
+      this.has({path});
+      const lookup = fs.lookup(path, 'private', false);
+      if (lookup.found && lookup.found instanceof SpaceField) {
+        const def = lookup.found.fieldDef();
+        if (def && !isAtomic(def)) {
+          return ErrorFactory.atomicFieldDef;
+        }
+        if (def !== undefined) {
+          if (def.e) {
+            return this.fullyResolveToFieldDef(def, fs, [
+              ...joinPath,
+              ...field.path.slice(0, -1),
+            ]);
+          } else {
+            return {
+              ...def,
+              e: {node: 'column', path: [...joinPath, ...field.path]},
+            };
+          }
+        }
+      }
+      throw new Error(
+        `Expected a definition for ${field.path.join(
+          '.'
+        )} when resolving references in query`
+      );
+    } else if (field.type === 'turtle') {
+      // TODO resolve references in the nest....
+      return field;
+    } else if (isJoined(field)) {
+      return field;
+    } else {
+      const mapExpr = (e: Expr) => {
+        if (e.node === 'field') {
+          const def = this.fullyResolveToFieldDef(
+            {type: 'fieldref', path: e.path},
+            fs,
+            joinPath
+          );
+          if (!isAtomic(def)) {
+            throw new Error(
+              'Non-atomic field included in expression definition'
+            );
+          }
+          // If there is an e, return it; otherwise, return node which says "this is a column"
+          if (def.e === undefined) {
+            throw new Error('Expected e to be defined now');
+          }
+          return def.e;
+        } else if (e.node === 'aggregate' || e.node === 'function_call') {
+          const structPath = [...joinPath, ...(e.structPath ?? [])];
+          return {
+            ...e,
+            structPath: structPath.length > 0 ? structPath : undefined,
+          };
+        }
+        return e;
+      };
+      return {
+        ...field,
+        e: field.e
+          ? exprMapDeep(field.e, mapExpr)
+          : {node: 'column', path: [...joinPath, field.name]},
+      };
+    }
+  }
+
+  protected resolveReferencesInField(
+    field: RefToField,
+    fs: FieldSpace
+  ): RefToField;
+  protected resolveReferencesInField(
+    field: QueryFieldDef,
+    fs: FieldSpace
+  ): QueryFieldDef;
+  protected resolveReferencesInField(
+    field: QueryFieldDef,
+    fs: FieldSpace
+  ): QueryFieldDef {
+    const resolved = this.fullyResolveToFieldDef(field, fs);
+    return resolved;
+  }
+
+  protected resolveReferences(
+    segment: PipeSegment,
+    inputSource: SourceDef
+  ): PipeSegment {
+    const sourceExtensions = isQuerySegment(segment)
+      ? segment.extendSource ?? []
+      : [];
+    const fs = new StaticSourceSpace(
+      {
+        ...inputSource,
+        fields: [...inputSource.fields, ...sourceExtensions],
+      },
+      'public'
+    );
+    if (isIndexSegment(segment)) {
+      return {
+        ...segment,
+        indexFields: segment.indexFields.map(f =>
+          this.resolveReferencesInField(f, fs)
+        ),
+      };
+    } else if (isQuerySegment(segment)) {
+      return {
+        ...segment,
+        queryFields: segment.queryFields.map(f =>
+          this.resolveReferencesInField(f, fs)
+        ),
+      };
+    } else {
+      return segment;
+    }
+  }
+
+  protected resolvePipelineReferences(
+    pipeline: PipeSegment[],
+    inputStruct: SourceDef
+  ) {
+    const out: PipeSegment[] = [];
+    for (let i = 0; i < pipeline.length; i++) {
+      const input = i === 0 ? inputStruct : pipeline[i - 1].outputStruct;
+      const segment = pipeline[i];
+      const outSegment = this.resolveReferences(segment, input);
+      // const outSegment = isQuerySegment(segment)
+      //   ? this.resolveReferences(segment, input)
+      //   : segment;
+      out.push(outSegment);
+    }
+    return out;
+  }
+
+  protected resolveQueryReferences(query: Query, inputStruct: SourceDef) {
+    const pipeline: PipeSegment[] = [];
+    for (let i = 0; i < query.pipeline.length; i++) {
+      const input = i === 0 ? inputStruct : query.pipeline[i - 1].outputStruct;
+      const segment = query.pipeline[i];
+      const outSegment = this.resolveReferences(segment, input);
+      pipeline.push(outSegment);
+    }
+    return {...query, pipeline};
   }
 
   query(): Query {
