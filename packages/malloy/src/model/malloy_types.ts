@@ -1152,12 +1152,16 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
  *   3) Each join path ending in an assymmetric aggregate
  *   4) Each join path ending in an analytic funtion
  */
+
 export interface FieldUsage {
   path: string[];
   at?: DocumentLocation;
-  isCount?: boolean;
-  isAnalytic?: boolean;
-  isAsymmetric?: boolean;
+  funThing?: {
+    name: string;
+    isAnalytic?: boolean;
+    isAggregate?: boolean;
+    isAsymmetric?: boolean;
+  };
 }
 
 export interface QuerySegment extends Filtered, Ordered {

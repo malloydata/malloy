@@ -845,20 +845,23 @@ function checkForFieldUsage(
   }
   let found = false;
   const refKey = pathToKey(ref.path);
-  let needCount = ref.isCount || false;
-  let needAnalytic = ref.isAnalytic || false;
-  let needAsymmetric = ref.isAsymmetric || false;
+  let needFunc = ref.funThing?.name;
+  let needAnalytic = ref.funThing?.isAnalytic || false;
+  let needAsymmetric = ref.funThing?.isAsymmetric || false;
+  let needAggregate = ref.funThing?.isAggregate || false;
   for (const fu of ps.expandedFieldUsage || []) {
     if (pathToKey(fu.path) !== refKey) continue;
     found = true;
-    if (fu.isAnalytic) needAnalytic = false;
-    if (fu.isCount) needCount = false;
-    if (fu.isAsymmetric) needAsymmetric = false;
+    if (needAnalytic && fu.funThing?.isAnalytic) needAnalytic = false;
+    if (needFunc && fu.funThing?.name === needFunc) needFunc = undefined;
+    if (needAsymmetric && fu.funThing?.isAsymmetric) needAsymmetric = false;
+    if (needAggregate && fu.funThing?.isAggregate) needAggregate = false;
   }
   if (found) {
     const missing: string[] = [];
+    if (needFunc) missing.push(`${needFunc}()`);
     if (needAnalytic) missing.push('isAnalytic');
-    if (needCount) missing.push('isCount');
+    if (needAggregate) missing.push('isAggregate');
     if (needAsymmetric) missing.push('isAsymmetric');
     if (missing.length > 0) {
       return [
@@ -925,7 +928,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage({path: [], isCount: true}, mq);
+    const [found, message] = checkForFieldUsage(
+      {path: [], funThing: {name: 'count', isAggregate: true}},
+      mq
+    );
     expect(found, message).toBeTruthy();
   });
   test('source count reflected in field usage', () => {
@@ -934,7 +940,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage({path: [], isCount: true}, mq);
+    const [found, message] = checkForFieldUsage(
+      {path: [], funThing: {name: 'count', isAggregate: true}},
+      mq
+    );
     expect(found, message).toBeTruthy();
   });
   test('count with path reflected in field usage', () => {
@@ -944,7 +953,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: ['b'], isCount: true},
+      {path: ['b'], funThing: {name: 'count', isAggregate: true}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -956,7 +965,10 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], isAsymmetric: true},
+      {
+        path: [],
+        funThing: {name: 'avg', isAsymmetric: true, isAggregate: true},
+      },
       mq
     );
     expect(found, message).toBeTruthy();
@@ -968,7 +980,10 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: ['b'], isAsymmetric: true},
+      {
+        path: ['b'],
+        funThing: {name: 'sum', isAggregate: true, isAsymmetric: true},
+      },
       mq
     );
     expect(found, message).toBeTruthy();
@@ -981,7 +996,10 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], isAsymmetric: true},
+      {
+        path: [],
+        funThing: {name: 'string_agg', isAggregate: true, isAsymmetric: true},
+      },
       mq
     );
     expect(found, message).toBeTruthy();
@@ -993,7 +1011,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], isAnalytic: true},
+      {path: [], funThing: {name: 'lag', isAnalytic: true}},
       mq
     );
     expect(found, message).toBeTruthy();

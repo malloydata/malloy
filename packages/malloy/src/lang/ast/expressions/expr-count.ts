@@ -68,7 +68,7 @@ export class ExprCount extends ExprAggregateFunction {
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',
-      fieldUsage: [{path: ret.structPath || [], isCount: true}],
+      fieldUsage: [{path: ret.structPath || [], funThing: {name: 'count'}}],
     };
   }
 }

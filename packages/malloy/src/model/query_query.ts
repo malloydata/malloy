@@ -268,35 +268,81 @@ export class QueryQuery extends QueryField {
         : [];
 
     for (const usage of fieldUsage) {
-      if (usage.isAnalytic) {
-        resultStruct.root().queryUsesPartitioning = true;
-
-        // BigQuery-specific handling
-        if (
-          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
-          resultStruct.firstSegment.type === 'reduce'
-        ) {
-          resultStruct.root().isComplexQuery = true;
+      if (usage.funThing) {
+        if (usage.funThing.isAnalytic) {
           resultStruct.root().queryUsesPartitioning = true;
+
+          // BigQuery-specific handling
+          if (
+            this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+            resultStruct.firstSegment.type === 'reduce'
+          ) {
+            // force the use of a lateral_join_bag
+            resultStruct.root().isComplexQuery = true;
+            resultStruct.root().queryUsesPartitioning = true;
+          }
         }
+        if (usage.funThing.name === 'count') {
+          if (usage.path.length === 0) {
+            resultStruct.addStructToJoin(this.parent, 'count', []);
+          } else {
+            this.addDependantPath(
+              resultStruct,
+              this.parent,
+              usage.path,
+              'count',
+              []
+            );
+          }
+        } else {
+          // not saur ehow to do this right and i keep not liking how theo code looks
+          // i am thinking ancient cruft around UniqueKeyPossibleUses that maybe
+          // could be simplified could solve a lot of this doscomfort, but
+          // it is 4PM and I need to start close the lid
+          const afu = usage.funThing.isAsymmetric
+            ? 'generic_asymmetric_aggregate'
+            : undefined;
+          if (usage.path.length > 0) {
+            throw new Error('DID NOT EXPECT STRUCT PATH FOR ANALYTIC FUNCTION');
+            // this.addDependantPath(
+            //   resultStruct,
+            //   this.parent,
+            //   usage.path,
+            //   afu,
+            //   []
+            // );
+          } else if (usage.funThing.isAsymmetric) {
+            resultStruct.addStructToJoin(this.parent, afu, []);
+          }
+          // still need to read _orig ... i am sneaking up on duplicating the logic ... missing asymmetry
+          if (usage.funThing.isAggregate) {
+            const n = usage.funThing.name;
+            const u: UniqueKeyPossibleUse =
+              n === 'sum' || n === 'avg' ? n : 'generic_asymmetric_aggregate';
+            if (usage.path.length === 0) {
+              resultStruct.addStructToJoin(this.parent, u, []);
+            } else {
+              this.addDependantPath(
+                resultStruct,
+                this.parent,
+                usage.path,
+                u,
+                []
+              );
+            }
+          }
+        }
+      } else {
+        this.findRecordAliases(this.parent, usage.path);
+        const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
+        this.addDependantPath(
+          resultStruct,
+          this.parent,
+          usage.path,
+          uniqueKeyUse,
+          []
+        );
       }
-      // TODO check to make sure there is a field usage for the structPath
-      if (usage.isCount) {
-        resultStruct.addStructToJoin(this.parent, 'count', []);
-      }
-      if (usage.isAsymmetric && usage.path.length === 0) {
-        resultStruct.addStructToJoin(this.parent, 'avg', []);
-      }
-      if (usage.path.length === 1) continue;
-      this.findRecordAliases(this.parent, usage.path);
-      const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
-      this.addDependantPath(
-        resultStruct,
-        this.parent,
-        usage.path,
-        uniqueKeyUse,
-        []
-      );
     }
   }
 
