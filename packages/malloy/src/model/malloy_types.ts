@@ -1144,9 +1144,20 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
+/**
+ * The compiler needs to know a number of things which are all tracked here.
+ *
+ *   1) Each field that is referenced.
+ *   2) Each join path ending in a count
+ *   3) Each join path ending in an assymmetric aggregate
+ *   4) Each join path ending in an analytic funtion
+ */
 export interface FieldUsage {
   path: string[];
   at?: DocumentLocation;
+  isCount?: boolean;
+  isAnalytic?: boolean;
+  isAsymmetric?: boolean;
 }
 
 export interface QuerySegment extends Filtered, Ordered {

@@ -186,8 +186,15 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       if (structPath && structPath.length > 0) {
         f.structPath = structPath;
       }
+      const returnExpr = this.returns(exprVal);
+      if (!this.isSymmetricFunction()) {
+        returnExpr.fieldUsage.push({
+          path: structPath || [],
+          isAsymmetric: true,
+        });
+      }
       return {
-        ...this.returns(exprVal),
+        ...returnExpr,
         expressionType: 'aggregate',
         value: f,
         evalSpace: 'output',

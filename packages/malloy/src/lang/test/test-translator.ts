@@ -648,7 +648,7 @@ export function getSelectOneStruct(sqlBlock: SQLSourceRequest): {
       type: 'sql_select',
       name: key,
       dialect: 'standardsql',
-      connection: 'bigquery',
+      connection: '_db_',
       selectStr: sqlBlock.selectStr,
       fields: [{type: 'number', name: 'one'}],
     },

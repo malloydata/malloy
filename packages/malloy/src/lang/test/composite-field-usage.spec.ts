@@ -7,7 +7,7 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
-import type {PipeSegment} from '../../model';
+import type {FieldUsage, PipeSegment, Query} from '../../model';
 import {isIndexSegment, isQuerySegment} from '../../model';
 
 describe('composite sources', () => {
@@ -816,5 +816,186 @@ describe('composite sources', () => {
         run: foo -> { group_by: y, time.day }
       `).toTranslate();
     });
+  });
+});
+
+function pathToKey(path: string[]): string {
+  return path.map(el => `${el.length}-${el}`).join(':');
+}
+
+/**
+ * Instead of a custom matcher, new test pattern I thought I would try out.
+ * A field usage might be spread out among multiple records, so this looks
+ * through all matching records.
+ * @param ref The expected field usage
+ * @param query Look in the first segment of this query for usages
+ * @returns [bool,msg] if false, will explain what was wrong
+ */
+function checkForFieldUsage(
+  ref: FieldUsage,
+  query: Query | undefined
+): [boolean, string] {
+  if (!query) {
+    return [false, 'Query not found'];
+  }
+  const ps = query.pipeline[0];
+  const pathStr = ref.path.length > 0 ? ref.path.join('.') : '[]';
+  if (!isQuerySegment(ps)) {
+    return [false, 'Pipeline did not contain a query segment'];
+  }
+  let found = false;
+  const refKey = pathToKey(ref.path);
+  let needCount = ref.isCount || false;
+  let needAnalytic = ref.isAnalytic || false;
+  let needAsymmetric = ref.isAsymmetric || false;
+  for (const fu of ps.expandedFieldUsage || []) {
+    if (pathToKey(fu.path) !== refKey) continue;
+    found = true;
+    if (fu.isAnalytic) needAnalytic = false;
+    if (fu.isCount) needCount = false;
+    if (fu.isAsymmetric) needAsymmetric = false;
+  }
+  if (found) {
+    const missing: string[] = [];
+    if (needAnalytic) missing.push('isAnalytic');
+    if (needCount) missing.push('isCount');
+    if (needAsymmetric) missing.push('isAsymmetric');
+    if (missing.length > 0) {
+      return [
+        false,
+        `Missing properties for path ${pathStr}: ${missing.join(',')}`,
+      ];
+    }
+    return [true, `Found usage reference to path ${pathStr}`];
+  }
+  return [false, `Did not find usage reference to path ${pathStr}`];
+}
+
+describe('field usage with compiler extensions', () => {
+  test('filters on source are reflected in usage', () => {
+    const mTest = model`
+      run: a extend { where: ai = 1} -> { select: astr }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    expect(found, message).toBeTruthy();
+  });
+  test('filters on segment are reflected in usage', () => {
+    const mTest = model`
+      run: a -> { where: ai = 1; select: astr }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    expect(found, message).toBeTruthy();
+  });
+  test('on expressions in joins reflected in field usage', () => {
+    const mTest = model`
+      source: bintoa is a extend { join_one: b on ai = b.ai }
+      query: uses_b is bintoa -> { select: b.astr }
+      query: ignore_b is bintoa -> { select: astr }
+    `;
+    expect(mTest).toTranslate();
+    let mq = mTest.translator.getQuery('uses_b');
+    let [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    expect(found, message).toBeTruthy();
+    mq = mTest.translator.getQuery('ignore_b');
+    [found, message] = checkForFieldUsage({path: ['b', 'ai']}, mq);
+    expect(found, message).toBeFalsy();
+  });
+  test('filters on joins reflected in field usage', () => {
+    const mTest = model`
+      source: bone is b extend { where: ai = 1 }
+      source: bintoa is a extend { join_one: b is bone on b.astr = astr }
+      query: uses_b is bintoa -> { select: b.af }
+      query: ignore_b is bintoa -> { select: af }
+    `;
+    expect(mTest).toTranslate();
+    let mq = mTest.translator.getQuery('uses_b');
+    let [found, message] = checkForFieldUsage({path: ['b', 'ai']}, mq);
+    expect(found, message).toBeTruthy();
+    mq = mTest.translator.getQuery('ignore_b');
+    [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    expect(found, message).toBeFalsy();
+  });
+  test('count with no path reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: acnt is count() }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage({path: [], isCount: true}, mq);
+    expect(found, message).toBeTruthy();
+  });
+  test('source count reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: acnt is source.count() }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage({path: [], isCount: true}, mq);
+    expect(found, message).toBeTruthy();
+  });
+  test('count with path reflected in field usage', () => {
+    const mTest = model`
+      run: ab -> { group_by: astr; aggregate: bcnt is b.count() }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      {path: ['b'], isCount: true},
+      mq
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric internal with no path reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: avf_f is avg(af) }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      {path: [], isAsymmetric: true},
+      mq
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric internal with path reflected in field usage', () => {
+    const mTest = model`
+      run: ab -> { group_by: astr; aggregate: allbf is b.sum(af) }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      {path: ['b'], isAsymmetric: true},
+      mq
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric custom function reflected in field usage', () => {
+    // non-distinct string_add is asymmetric
+    const mTest = model`
+      run: a -> { group_by: ai; aggregate: custom_a is string_agg(astr, ',') }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      {path: [], isAsymmetric: true},
+      mq
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('analytic function call reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: ai; calculate: lag_i is lag(ai) }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      {path: [], isAnalytic: true},
+      mq
+    );
+    expect(found, message).toBeTruthy();
   });
 });

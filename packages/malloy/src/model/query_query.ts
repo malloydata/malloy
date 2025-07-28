@@ -268,6 +268,25 @@ export class QueryQuery extends QueryField {
         : [];
 
     for (const usage of fieldUsage) {
+      if (usage.isAnalytic) {
+        resultStruct.root().queryUsesPartitioning = true;
+
+        // BigQuery-specific handling
+        if (
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+          resultStruct.firstSegment.type === 'reduce'
+        ) {
+          resultStruct.root().isComplexQuery = true;
+          resultStruct.root().queryUsesPartitioning = true;
+        }
+      }
+      // TODO check to make sure there is a field usage for the structPath
+      if (usage.isCount) {
+        resultStruct.addStructToJoin(this.parent, 'count', []);
+      }
+      if (usage.isAsymmetric && usage.path.length === 0) {
+        resultStruct.addStructToJoin(this.parent, 'avg', []);
+      }
       if (usage.path.length === 1) continue;
       this.findRecordAliases(this.parent, usage.path);
       const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
