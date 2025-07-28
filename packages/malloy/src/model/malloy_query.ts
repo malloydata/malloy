@@ -95,7 +95,6 @@ import type {
   Expression,
   AtomicFieldDef,
   FilterMatchExpr,
-  ColumnExpr,
 } from './malloy_types';
 import {
   expressionIsAggregate,
@@ -504,17 +503,6 @@ class QueryField extends QueryNode {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
     }
-  }
-
-  generateColumnFragment(
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    expr: ColumnExpr,
-    _state: GenerateState
-  ): string {
-    // find the structDef and return the path to the field...
-    const field = context.getFieldByName(expr.path);
-    return field.generateExpression(resultSet);
   }
 
   generateOutputFieldFragment(
@@ -939,7 +927,7 @@ class QueryField extends QueryNode {
   ): string | undefined {
     let struct = context;
     if (structPath) {
-      struct = this.parent.root().getStructByName(structPath);
+      struct = this.parent.getStructByName(structPath);
     }
     if (struct.needsSymetricCalculation(resultSet)) {
       return struct.getDistinctKey().generateExpression(resultSet);
@@ -1267,8 +1255,6 @@ class QueryField extends QueryNode {
     }
 
     switch (expr.node) {
-      case 'column':
-        return this.generateColumnFragment(resultSet, context, expr, state);
       case 'field':
         return this.generateFieldFragment(resultSet, context, expr, state);
       case 'parameter':
@@ -2544,22 +2530,6 @@ class QueryQuery extends QueryField {
   }
 
   // get a field ref and expand it.
-  // expandField(f: QueryFieldDef) {
-  //   let def: FieldDef;
-  //   if (f.type === 'fieldref') {
-  //     if (f.def === undefined) {
-  //       throw new Error(
-  //         `Expected fieldref ${f.path} to be resolved in translator`
-  //       );
-  //     }
-  //     def = f.def;
-  //   } else {
-  //     def = f;
-  //   }
-  //   const field = this.parent.makeQueryField(def);
-  //   const as = field.getIdentifier();
-  //   return {as, field};
-  // }
   expandField(f: QueryFieldDef) {
     const field =
       f.type === 'fieldref'
@@ -5385,9 +5355,8 @@ export class QueryModel {
           outputStruct: {
             type: 'query_result',
             name: 'index',
-            // TODO
-            connection: 'foo',
-            dialect: 'bar',
+            connection: struct.connectionName,
+            dialect: struct.dialect.name,
             fields: [
               {name: 'fieldName', type: 'string'},
               {name: 'fieldPath', type: 'string'},

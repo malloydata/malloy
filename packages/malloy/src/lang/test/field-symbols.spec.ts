@@ -25,7 +25,7 @@ import type * as model from '../../model/malloy_types';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ColumnSpaceField} from '../ast/field-space/column-space-field';
 import {FieldName} from '../ast/types/field-space';
-// import {IRViewField} from '../ast/field-space/ir-view-field';
+import {IRViewField} from '../ast/field-space/ir-view-field';
 import {DefinedParameter} from '../ast/types/space-param';
 
 /*
@@ -173,23 +173,25 @@ describe('structdef comprehension', () => {
     expect(oField).toEqual(field);
   });
 
-  // test('import query stage field', () => {
-  //   const field: model.TurtleDef = {
-  //     name: 't',
-  //     type: 'turtle',
-  //     pipeline: [
-  //       {
-  //         type: 'reduce',
-  //         queryFields: [{type: 'fieldref', path: ['a']}],
-  //       },
-  //     ],
-  //   };
-  //   const struct = mkStructDef(field);
-  //   const space = new StaticSourceSpace(struct, 'public');
-  //   expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(IRViewField);
-  //   const oField = space.structDef().fields[0];
-  //   expect(oField).toEqual(field);
-  // });
+  test('import query stage field', () => {
+    const field: model.TurtleDef = {
+      name: 't',
+      type: 'turtle',
+      pipeline: [
+        {
+          type: 'reduce',
+          queryFields: [{type: 'fieldref', path: ['a']}],
+          outputStruct: mkStructDef({name: 'a', type: 'string'}),
+          isRepeated: true,
+        },
+      ],
+    };
+    const struct = mkStructDef(field);
+    const space = new StaticSourceSpace(struct, 'public');
+    expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(IRViewField);
+    const oField = space.structDef().fields[0];
+    expect(oField).toEqual(field);
+  });
 
   test('import struct with parameters', () => {
     const struct = mkStructDef({name: 'f', type: 'string'});

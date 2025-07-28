@@ -38,7 +38,9 @@ export class RenderFieldMetadata {
           kind: 'array_type',
           element_type: {
             kind: 'record_type',
-            fields: result.schema.fields.filter(f => f.kind === 'dimension'),
+            fields: result.schema.fields.filter(
+              f => f.kind === 'dimension' || f.kind === 'calculate'
+            ),
           },
         },
         annotations: result.annotations,

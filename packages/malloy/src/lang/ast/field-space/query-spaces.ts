@@ -38,7 +38,6 @@ import {
 } from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
 import type {LookupResult} from '../types/lookup-result';
-import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import type {SpaceEntry} from '../types/space-entry';
@@ -48,14 +47,12 @@ import type {
   MessageParameterType,
 } from '../../parse-log';
 import {
-  fieldUsageJoinPaths,
   emptyFieldUsage,
-  joinedFieldUsage,
   mergeFieldUsage,
 } from '../../../model/composite_source_utils';
-import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ErrorFactory} from '../error-factory';
 import {ReferenceField} from './reference-field';
+import {RefineFromSpaceField} from './refine-from-space-field';
 
 type TranslatedQueryField = {
   queryFieldDef: model.QueryFieldDef;
@@ -85,12 +82,11 @@ export abstract class QueryOperationSpace
     satisfied: boolean;
   }[] = [];
   compositeFieldUsers: (
-    | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
+    | {type: 'filter'; filter: model.FilterCondition}
     | {
         type: 'field';
         name: string;
         field: SpaceField;
-        logTo: MalloyElement | undefined;
       }
   )[] = [];
 
@@ -231,66 +227,21 @@ export abstract class QueryOperationSpace
         type: 'field',
         name,
         field: entry,
-        logTo: undefined,
       });
     }
   }
 
-  private getJoinOnFieldUsage(joinPath: string[]): model.FieldUsage[] {
-    const reference = joinPath.map(n => new FieldName(n));
-    this.astEl.has({reference});
-    const lookup = this.exprSpace.lookup(reference, 'private');
-    // Should always be found...
-    if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return joinedFieldUsage(
-        joinPath.slice(0, -1),
-        lookup.found.fieldDef().onFieldUsage ?? emptyFieldUsage()
-      );
-    }
-    throw new Error('Unexpected join lookup was not found or not a struct');
-  }
-
-  protected getFieldUsageIncludingJoinOns(
-    fieldUsage: model.FieldUsage[]
-  ): model.FieldUsage[] {
-    let fieldUsageIncludingJoinOns = fieldUsage;
-    const joinPaths = fieldUsageJoinPaths(fieldUsage);
-    for (const joinPath of joinPaths) {
-      fieldUsageIncludingJoinOns = mergeFieldUsage(
-        this.getJoinOnFieldUsage(joinPath),
-        fieldUsageIncludingJoinOns
-      );
-    }
-    return fieldUsageIncludingJoinOns;
-  }
-
-  public addFieldUserFromFilter(
-    filter: model.FilterCondition,
-    logTo: MalloyElement
-  ) {
+  public addFieldUserFromFilter(filter: model.FilterCondition) {
     if (filter.fieldUsage !== undefined) {
-      this.compositeFieldUsers.push({type: 'filter', filter, logTo});
+      this.compositeFieldUsers.push({type: 'filter', filter});
     }
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
     if (entry instanceof SpaceField) {
-      this.compositeFieldUsers.push({type: 'field', name, field: entry, logTo});
+      this.compositeFieldUsers.push({type: 'field', name, field: entry});
     }
     super.newEntry(name, logTo, entry);
-  }
-
-  protected applyNextFieldUsage(
-    source: model.SourceDef,
-    fieldUsage: model.FieldUsage[],
-    nextFieldUsage: model.FieldUsage[] | undefined,
-    _logTo: MalloyElement | undefined
-  ) {
-    if (nextFieldUsage) {
-      const newFieldUsage = this.getFieldUsageIncludingJoinOns(nextFieldUsage);
-      fieldUsage = mergeFieldUsage(fieldUsage, newFieldUsage) ?? [];
-    }
-    return fieldUsage;
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
@@ -323,10 +274,8 @@ export abstract class QuerySpace extends QueryOperationSpace {
         const name = field.path[field.path.length - 1];
         this.setEntry(name, referenceField);
         this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
-      } else if (field.type !== 'turtle') {
-        // TODO can you reference fields in a turtle as fields in the output space,
-        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-        const entry = new ColumnSpaceField(field);
+      } else {
+        const entry = new RefineFromSpaceField(field);
         const name = field.as ?? field.name;
         this.setEntry(name, entry);
         this.addValidatedCompositeFieldUserFromEntry(name, entry);
@@ -426,7 +375,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       name: 'query_result',
       dialect: this.dialectName(),
       // TODO need to get this in a less expensive way?
-      connection: this.inputSpace().structDef().connection,
+      connection: this.inputSpace().connectionName(),
       fields: fields.map(f =>
         this.getOutputFieldDef(f.queryFieldDef, f.typeDesc)
       ),
@@ -442,7 +391,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
     }
     const fields: TranslatedQueryField[] = [];
     let fieldUsage = emptyFieldUsage();
-    const source = this.inputSpace().structDef();
     for (const user of this.compositeFieldUsers) {
       let nextFieldUsage: model.FieldUsage[] | undefined = undefined;
       if (user.type === 'filter') {
@@ -480,22 +428,12 @@ export abstract class QuerySpace extends QueryOperationSpace {
             ) {
               fields.push({queryFieldDef, typeDesc});
             }
+          } else {
+            throw new Error('Expected query field to have a definition');
           }
-          // TODO I removed the error here because during calculation of the refinement space,
-          // (see creation of a QuerySpace) we add references to all the fields from
-          // the refinement, but they don't have definitions. So in the case where we
-          // don't have a field def, we "know" that that field is already in the query,
-          // and we don't need to worry about actually adding it. Previously, this was also true for
-          // project statements, where we added "*" as a field and also all the individual
-          // fields, but the individual fields didn't have field defs.
         }
       }
-      fieldUsage = this.applyNextFieldUsage(
-        source,
-        fieldUsage,
-        nextFieldUsage,
-        user.logTo
-      );
+      fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
     }
     this._fieldUsage = fieldUsage;
 
@@ -547,15 +485,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
     const segment: model.QuerySegment = {
       type: this.segmentType,
       queryFields: this.queryFieldDefs(),
-      // TODO actually update this with the new refine fields?
       outputStruct: this.structDef(),
       isRepeated: this.isRepeated(),
     };
-
-    segment.queryFields = mergeFields(
-      refineFrom?.queryFields,
-      segment.queryFields
-    );
 
     if (refineFrom?.extendSource) {
       segment.extendSource = refineFrom.extendSource;

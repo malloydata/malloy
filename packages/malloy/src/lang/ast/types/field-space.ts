@@ -42,13 +42,13 @@ export interface FieldSpace {
   emptyStructDef(): StructDef;
   lookup(
     symbol: FieldName[],
-    accessLevel?: AccessModifierLabel | undefined,
-    logReferences?: boolean
+    accessLevel?: AccessModifierLabel | undefined
   ): LookupResult;
   entry(symbol: string): SpaceEntry | undefined;
   entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
   dialectName(): string;
+  connectionName(): string;
   isQueryFieldSpace(): this is QueryFieldSpace;
   accessProtectionLevel(): AccessModifierLabel;
 }

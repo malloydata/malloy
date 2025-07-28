@@ -312,13 +312,15 @@ export class TestTranslator extends MalloyTranslator {
                   {type: 'fieldref', path: ['astr']},
                   {type: 'fieldref', path: ['acount']},
                 ],
-                // TODO
                 outputStruct: {
                   type: 'query_result',
                   name: 'result',
-                  fields: [],
-                  connection: 'foo',
-                  dialect: 'bar',
+                  fields: [
+                    {type: 'string', name: 'astr'},
+                    {type: 'string', name: 'acount'},
+                  ],
+                  connection: 'test',
+                  dialect: 'standardsql',
                 },
                 isRepeated: true,
               },

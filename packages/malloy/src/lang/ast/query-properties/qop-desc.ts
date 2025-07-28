@@ -34,6 +34,7 @@ import type {QueryProperty} from '../types/query-property';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {modernizeTermsForUserText} from '../../utils';
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -58,7 +59,11 @@ export class QOpDesc extends ListOf<QueryProperty> {
           if (guessType !== el.forceQueryClass) {
             el.logError(
               `illegal-${guessType}-operation`,
-              `Not legal in ${guessType} query`
+              `Use of ${modernizeTermsForUserText(
+                el.forceQueryClass
+              )} is not allowed in a ${modernizeTermsForUserText(
+                guessType
+              )} query`
             );
           }
         } else {
@@ -107,7 +112,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
     const segment = build.finalize(this.refineThis);
     return {
       segment,
-      outputSpace: () => build.resultFS,
+      outputSpace: build.resultFS,
     };
   }
 }

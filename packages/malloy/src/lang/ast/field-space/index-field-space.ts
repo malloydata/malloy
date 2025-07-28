@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyFieldUsage} from '../../../model/composite_source_utils';
+import {
+  emptyFieldUsage,
+  mergeFieldUsage,
+} from '../../../model/composite_source_utils';
 import type {
   IndexSegment,
   PipeSegment,
@@ -63,9 +66,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
   }
 
   structDef(): SourceDef {
-    // TODO get the connection in a more sensible way...
-    const source = this.inputSpace().structDef();
-    const connection = source.connection;
+    const connection = this.inputSpace().connectionName();
     return {
       type: 'query_result',
       name: 'result',
@@ -91,11 +92,9 @@ export class IndexFieldSpace extends QueryOperationSpace {
     }
     let fieldUsage = emptyFieldUsage();
     const indexFields: IndexFieldDef[] = [];
-    const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
         let nextFieldUsage: FieldUsage[] | undefined = undefined;
-        let logTo: MalloyElement | undefined = undefined;
         const wild = this.expandedWild[name];
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
@@ -109,15 +108,9 @@ export class IndexFieldSpace extends QueryOperationSpace {
           } else {
             indexFields.push(fieldRef.refToField);
             nextFieldUsage = check.found.typeDesc().fieldUsage;
-            logTo = fieldRef;
           }
         }
-        fieldUsage = this.applyNextFieldUsage(
-          source,
-          fieldUsage,
-          nextFieldUsage,
-          logTo
-        );
+        fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
       }
     }
     this._fieldUsage = fieldUsage;

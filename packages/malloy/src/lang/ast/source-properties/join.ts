@@ -63,7 +63,12 @@ export abstract class Join
     fs.newEntry(
       this.name.refString,
       this,
-      new JoinSpaceField(fs.parameterSpace(), this, fs.dialectName())
+      new JoinSpaceField(
+        fs.parameterSpace(),
+        this,
+        fs.dialectName(),
+        fs.connectionName()
+      )
     );
   }
 
@@ -136,7 +141,7 @@ export class KeyJoin extends Join {
               right: exprX.value,
             },
           };
-          inStruct.onFieldUsage = exprX.fieldUsage;
+          inStruct.fieldUsage = exprX.fieldUsage;
           return;
         } else {
           this.logError(
@@ -193,7 +198,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.onFieldUsage = exprX.fieldUsage;
+    inStruct.fieldUsage = exprX.fieldUsage;
   }
 
   getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {
