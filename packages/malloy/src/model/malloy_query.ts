@@ -95,6 +95,7 @@ import type {
   Expression,
   AtomicFieldDef,
   FilterMatchExpr,
+  ColumnNode,
 } from './malloy_types';
 import {
   expressionIsAggregate,
@@ -474,6 +475,17 @@ class QueryField extends QueryNode {
 
   getFullOutputName() {
     return this.parent.getFullOutputName() + this.getIdentifier();
+  }
+
+  generateColumnFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: ColumnNode,
+    _state: GenerateState
+  ): string {
+    // TODO the whole point is to NOT do this...
+    const field = context.getFieldByName(expr.path);
+    return field.generateExpression(resultSet);
   }
 
   generateFieldFragment(
@@ -1255,8 +1267,14 @@ class QueryField extends QueryNode {
     }
 
     switch (expr.node) {
+      case 'column':
+        return this.generateColumnFragment(resultSet, context, expr, state);
       case 'field':
         return this.generateFieldFragment(resultSet, context, expr, state);
+      // TODO want to do this ultimately, but can't because joins are currently resolved in the compiler
+      // throw new Error(
+      //   `Expected translator to resolve field references: got \`${expr.path}\``
+      // );
       case 'parameter':
         return this.generateParameterFragment(resultSet, context, expr, state);
       case 'filteredExpr':
@@ -2637,7 +2655,7 @@ class QueryQuery extends QueryField {
           }
         }
       }
-      if (expr.node === 'field') {
+      if (expr.node === 'field' || expr.node === 'column') {
         this.findRecordAliases(context, expr.path);
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {

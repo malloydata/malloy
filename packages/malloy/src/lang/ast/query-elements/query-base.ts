@@ -37,12 +37,13 @@ import type {
 import {
   isAtomic,
   isIndexSegment,
+  isJoined,
   isQuerySegment,
   type PipeSegment,
   type Query,
   type SourceDef,
 } from '../../../model/malloy_types';
-import {exprMap} from '../../../model/utils';
+import {exprMapDeep} from '../../../model/utils';
 import {ErrorFactory} from '../error-factory';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {detectAndRemovePartialStages} from '../query-utils';
@@ -79,19 +80,31 @@ export abstract class QueryBase extends MalloyElement {
 
   protected fullyResolveToFieldDef(
     field: QueryFieldDef,
-    fs: FieldSpace
+    fs: FieldSpace,
+    joinPath: string[] = []
   ): AtomicFieldDef | TurtleDef {
     if (field.type === 'fieldref') {
-      const path = field.path.map(n => new FieldName(n));
+      const path = [...joinPath, ...field.path].map(n => new FieldName(n));
       this.has({path});
       const lookup = fs.lookup(path, 'private', false);
       if (lookup.found && lookup.found instanceof SpaceField) {
         const def = lookup.found.fieldDef();
         if (def && !isAtomic(def)) {
-          return ErrorFactory.fieldDef;
+          return ErrorFactory.atomicFieldDef;
         }
         if (def !== undefined) {
-          return def;
+          if (def.e) {
+            return this.fullyResolveToFieldDef(
+              def,
+              fs,
+              field.path.slice(0, -1)
+            );
+          } else {
+            return {
+              ...def,
+              e: {node: 'column', path: [...joinPath, ...field.path]},
+            };
+          }
         }
       }
       throw new Error(
@@ -102,27 +115,40 @@ export abstract class QueryBase extends MalloyElement {
     } else if (field.type === 'turtle') {
       // TODO resolve references in the nest....
       return field;
+    } else if (isJoined(field)) {
+      return field;
     } else {
+      const mapExpr = (e: Expr) => {
+        if (e.node === 'field') {
+          const def = this.fullyResolveToFieldDef(
+            {type: 'fieldref', path: e.path},
+            fs,
+            joinPath
+          );
+          if (!isAtomic(def)) {
+            throw new Error(
+              'Non-atomic field included in expression definition'
+            );
+          }
+          // If there is an e, return it; otherwise, return node which says "this is a column"
+          if (def.e === undefined) {
+            throw new Error('Expected e to be defined now');
+          }
+          return def.e;
+        } else if (e.node === 'aggregate' || e.node === 'function_call') {
+          const structPath = [...joinPath, ...(e.structPath ?? [])];
+          return {
+            structPath: structPath.length > 0 ? structPath : undefined,
+            ...e,
+          };
+        }
+        return e;
+      };
       return {
         ...field,
         e: field.e
-          ? exprMap(field.e, (e: Expr) => {
-              if (e.node === 'field') {
-                const def = this.fullyResolveToFieldDef(
-                  {type: 'fieldref', path: e.path},
-                  fs
-                );
-                if (!isAtomic(def)) {
-                  throw new Error(
-                    'Non-atomic field included in expression definition'
-                  );
-                }
-                // If there is an e, return it; otherwise, return node which says "this is a column"
-                return def.e ?? {node: 'column', path: e.path};
-              }
-              return e;
-            })
-          : {node: 'column', path: [field.name]},
+          ? exprMapDeep(field.e, mapExpr)
+          : {node: 'column', path: [...joinPath, field.name]},
       };
     }
   }
@@ -140,14 +166,7 @@ export abstract class QueryBase extends MalloyElement {
     fs: FieldSpace
   ): QueryFieldDef {
     const resolved = this.fullyResolveToFieldDef(field, fs);
-    if (field.type === 'fieldref') {
-      return {...field, def: resolved};
-    } else if (field.type === 'turtle') {
-      // TODO
-      return field;
-    } else {
-      return resolved;
-    }
+    return resolved;
   }
 
   protected resolveReferences(

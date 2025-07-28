@@ -149,25 +149,40 @@ export function* exprWalk(
   }
 }
 
-export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
+function _exprMap(
+  eNode: Expr,
+  mapFunc: (e: Expr) => Expr,
+  options: {deep: boolean}
+): Expr {
   let mapExpr = {...eNode};
+  const innerMap = (e: Expr) =>
+    options.deep ? _exprMap(e, mapFunc, options) : mapFunc(e);
   if (exprHasKids(eNode)) {
     const parentNode: ExprWithKids = {...eNode};
     parentNode.kids = {};
     for (const [name, kidEnt] of Object.entries(eNode.kids)) {
       if (Array.isArray(kidEnt)) {
-        parentNode.kids[name] = kidEnt.map(kidEl => mapFunc(kidEl));
+        parentNode.kids[name] = kidEnt.map(innerMap);
       } else if (kidEnt !== null) {
-        parentNode.kids[name] = mapFunc(kidEnt);
+        parentNode.kids[name] = innerMap(kidEnt);
       }
     }
     mapExpr = parentNode as Expr;
   }
   if (exprHasE(mapExpr)) {
-    mapExpr.e = mapFunc(mapExpr.e);
+    mapExpr.e = innerMap(mapExpr.e);
   }
   return mapFunc(mapExpr);
 }
+
+export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
+  return _exprMap(eNode, mapFunc, {deep: false});
+}
+
+export function exprMapDeep(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
+  return _exprMap(eNode, mapFunc, {deep: true});
+}
+
 export type SQLExprElement = string | Expr;
 
 /**

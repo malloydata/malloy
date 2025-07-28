@@ -48,7 +48,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    let inputStruct: StructDef;
+    let viewInput: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
     if (this.source instanceof Source) {
@@ -63,15 +63,15 @@ export class QueryArrow extends QueryBase implements QueryElement {
         pipeline: [],
         location: this.location,
       };
-      inputStruct = refIsStructDef(invoked.structRef)
+      viewInput = refIsStructDef(invoked.structRef)
         ? invoked.structRef
         : this.source.getSourceDef(undefined);
-      fieldSpace = new StaticSourceSpace(inputStruct, 'public');
+      fieldSpace = new StaticSourceSpace(viewInput, 'public');
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
       queryBase = lhsQuery.query;
-      inputStruct = lhsQuery.outputStruct;
+      viewInput = lhsQuery.outputStruct;
       fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
     }
     const {pipeline, annotation, outputStruct, name} =
@@ -86,12 +86,12 @@ export class QueryArrow extends QueryBase implements QueryElement {
 
     const compositeResolvedSourceDef =
       query.compositeResolvedSourceDef ??
-      this.resolveCompositeSource(inputStruct, pipeline);
+      this.resolveCompositeSource(viewInput, pipeline);
 
     const segment = query.pipeline[0];
     if (segment !== undefined) {
       const unsatisfiedGroupBys = checkRequiredGroupBys(
-        compositeResolvedSourceDef ?? inputStruct,
+        compositeResolvedSourceDef ?? viewInput,
         segment
       );
       for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
@@ -112,15 +112,16 @@ export class QueryArrow extends QueryBase implements QueryElement {
       compositeResolvedSourceDef,
     };
 
-    // const pipelineWithResolvedReferences = this.resolvePipelineReferences(
-    //   pipeline,
-    //   inputStruct
-    // );
+    const pipelineWithResolvedReferences = this.resolvePipelineReferences(
+      pipeline,
+      this.source instanceof Source
+        ? compositeResolvedSourceDef ?? viewInput
+        : viewInput
+    );
 
     const finalPipeline = [
       ...queryBase.pipeline,
-      // ...pipelineWithResolvedReferences,
-      ...pipeline,
+      ...pipelineWithResolvedReferences,
     ];
 
     const queryWithResolvedReferences = {
@@ -131,7 +132,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     return {
       query: queryWithResolvedReferences,
       outputStruct,
-      inputStruct,
+      inputStruct: viewInput,
     };
   }
 }
