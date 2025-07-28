@@ -4180,9 +4180,14 @@ class QueryQueryIndexStage extends QueryQuery {
     this.fieldDef = fieldDef;
   }
 
-  expandField(f: IndexFieldDef) {
-    const as = f.path.join('.');
-    const field = this.parent.getQueryFieldByName(f.path);
+  expandField(f: QueryFieldDef) {
+    // TODO this is sorta odd because according to the types, an index stage is supposed to only
+    // have references, but now we're throwing defs into it....
+    const field =
+      f.type === 'fieldref'
+        ? this.parent.getQueryFieldReference(f)
+        : this.parent.makeQueryField(f);
+    const as = field.getIdentifier();
     return {as, field};
   }
 

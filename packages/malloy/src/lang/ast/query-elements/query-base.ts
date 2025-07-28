@@ -210,6 +210,9 @@ export abstract class QueryBase extends MalloyElement {
       const input = i === 0 ? inputStruct : pipeline[i - 1].outputStruct;
       const segment = pipeline[i];
       const outSegment = this.resolveReferences(segment, input);
+      // const outSegment = isQuerySegment(segment)
+      //   ? this.resolveReferences(segment, input)
+      //   : segment;
       out.push(outSegment);
     }
     return out;
