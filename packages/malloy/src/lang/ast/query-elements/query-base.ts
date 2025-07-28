@@ -94,11 +94,10 @@ export abstract class QueryBase extends MalloyElement {
         }
         if (def !== undefined) {
           if (def.e) {
-            return this.fullyResolveToFieldDef(
-              def,
-              fs,
-              field.path.slice(0, -1)
-            );
+            return this.fullyResolveToFieldDef(def, fs, [
+              ...joinPath,
+              ...field.path.slice(0, -1),
+            ]);
           } else {
             return {
               ...def,
@@ -138,8 +137,8 @@ export abstract class QueryBase extends MalloyElement {
         } else if (e.node === 'aggregate' || e.node === 'function_call') {
           const structPath = [...joinPath, ...(e.structPath ?? [])];
           return {
-            structPath: structPath.length > 0 ? structPath : undefined,
             ...e,
+            structPath: structPath.length > 0 ? structPath : undefined,
           };
         }
         return e;
