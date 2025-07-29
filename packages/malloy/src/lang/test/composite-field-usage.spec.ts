@@ -955,7 +955,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
+      {path: ['b'], uniqueKeyRequirement: {isCount: true}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -992,7 +992,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], analyticFunctionUse: true},
+      {path: [], uniqueKeyRequirement: {isCount: false}},
       mq
     );
     expect(found, message).toBeTruthy();
