@@ -19,7 +19,6 @@ import type {
   AtomicFieldDef,
   BasicAtomicDef,
   FilterCondition,
-  AggregateFunctionType,
   Parameter,
   RefToField,
   StructDef,
@@ -45,28 +44,7 @@ import type {Dialect, FieldReferenceType} from '../dialect';
 import {getDialect} from '../dialect';
 import {exprMap} from './utils';
 
-export type UniqueKeyPossibleUse =
-  | AggregateFunctionType
-  | 'generic_asymmetric_aggregate';
-
-export class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
-  add_use(k: UniqueKeyPossibleUse | undefined) {
-    if (k !== undefined) {
-      return this.add(k);
-    }
-  }
-
-  hasAsymetricFunctions(): boolean {
-    return (
-      this.has('sum') ||
-      this.has('avg') ||
-      this.has('count') ||
-      this.has('generic_asymmetric_aggregate')
-    );
-  }
-}
-
-export abstract class QueryNode {
+abstract class QueryNode {
   readonly referenceId: string;
   constructor(referenceId?: string) {
     this.referenceId = referenceId ?? uuidv4();
@@ -90,10 +68,6 @@ export class QueryField extends QueryNode {
 
   getIdentifier() {
     return getIdentifier(this.fieldDef);
-  }
-
-  uniqueKeyPossibleUse(): UniqueKeyPossibleUse | undefined {
-    return undefined;
   }
 
   getJoinableParent(): QueryStruct {

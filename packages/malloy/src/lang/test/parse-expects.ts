@@ -310,7 +310,13 @@ expect.extend({
       return badRefs;
     }
     const actual = bx.generated().fieldUsage;
-    const actualPaths = actual.map(u => u.path);
+    const actualPaths = actual
+      .filter(
+        u =>
+          u.analyticFunctionUse === undefined &&
+          u.uniqueKeyRequirement === undefined
+      )
+      .map(u => u.path);
     const pass = this.equals(actualPaths, paths);
     const msg = pass
       ? `Matched: ${actual}`

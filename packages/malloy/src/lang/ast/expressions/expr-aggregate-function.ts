@@ -187,12 +187,12 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         f.structPath = structPath;
       }
       const returnExpr = this.returns(exprVal);
-      // if (!this.isSymmetricFunction()) {
-      //   returnExpr.fieldUsage.push({
-      //     path: structPath || [],
-      //     isAsymmetric: true,
-      //   });
-      // }
+      if (!this.isSymmetricFunction()) {
+        returnExpr.fieldUsage.push({
+          path: structPath || [],
+          uniqueKeyRequirement: {isCount: false},
+        });
+      }
       return {
         ...returnExpr,
         expressionType: 'aggregate',

@@ -68,7 +68,11 @@ describe('composite sources', () => {
   describe('expanded field usage', () => {
     function segmentExpandedFieldUsage(segment: PipeSegment) {
       return isQuerySegment(segment) || isIndexSegment(segment)
-        ? segment.expandedFieldUsage
+        ? segment.expandedFieldUsage?.filter(
+            u =>
+              u.analyticFunctionUse === undefined &&
+              u.uniqueKeyRequirement === undefined
+          )
         : undefined;
     }
     test('direct field reference', () => {
@@ -845,24 +849,22 @@ function checkForFieldUsage(
   }
   let found = false;
   const refKey = pathToKey(ref.path);
-  let needFunc = ref.funThing?.name;
-  let needAnalytic = ref.funThing?.isAnalytic || false;
-  let needAsymmetric = ref.funThing?.isAsymmetric || false;
-  let needAggregate = ref.funThing?.isAggregate || false;
+  let needAnalytic = ref.analyticFunctionUse || false;
+  let needCount = ref.uniqueKeyRequirement?.isCount || false;
+  let needAsymmetric = ref.uniqueKeyRequirement?.isCount === false;
   for (const fu of ps.expandedFieldUsage || []) {
     if (pathToKey(fu.path) !== refKey) continue;
     found = true;
-    if (needAnalytic && fu.funThing?.isAnalytic) needAnalytic = false;
-    if (needFunc && fu.funThing?.name === needFunc) needFunc = undefined;
-    if (needAsymmetric && fu.funThing?.isAsymmetric) needAsymmetric = false;
-    if (needAggregate && fu.funThing?.isAggregate) needAggregate = false;
+    if (needAnalytic && fu.analyticFunctionUse) needAnalytic = false;
+    if (needAsymmetric && fu.uniqueKeyRequirement?.isCount === false)
+      needAsymmetric = false;
+    if (needCount && fu?.uniqueKeyRequirement?.isCount) needCount = false;
   }
   if (found) {
     const missing: string[] = [];
-    if (needFunc) missing.push(`${needFunc}()`);
-    if (needAnalytic) missing.push('isAnalytic');
-    if (needAggregate) missing.push('isAggregate');
-    if (needAsymmetric) missing.push('isAsymmetric');
+    if (needAnalytic) missing.push('analytic');
+    if (needCount) missing.push('count');
+    if (needAsymmetric) missing.push('asymmetric');
     if (missing.length > 0) {
       return [
         false,
@@ -929,7 +931,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], funThing: {name: 'count', isAggregate: true}},
+      {path: [], uniqueKeyRequirement: {isCount: true}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -941,7 +943,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], funThing: {name: 'count', isAggregate: true}},
+      {path: [], uniqueKeyRequirement: {isCount: true}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -953,7 +955,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: ['b'], funThing: {name: 'count', isAggregate: true}},
+      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -965,10 +967,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {
-        path: [],
-        funThing: {name: 'avg', isAsymmetric: true, isAggregate: true},
-      },
+      {path: [], uniqueKeyRequirement: {isCount: false}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -980,10 +979,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {
-        path: ['b'],
-        funThing: {name: 'sum', isAggregate: true, isAsymmetric: true},
-      },
+      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -996,10 +992,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {
-        path: [],
-        funThing: {name: 'string_agg', isAggregate: true, isAsymmetric: true},
-      },
+      {path: [], analyticFunctionUse: true},
       mq
     );
     expect(found, message).toBeTruthy();
@@ -1011,7 +1004,7 @@ describe('field usage with compiler extensions', () => {
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
-      {path: [], funThing: {name: 'lag', isAnalytic: true}},
+      {path: [], analyticFunctionUse: true},
       mq
     );
     expect(found, message).toBeTruthy();

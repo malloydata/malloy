@@ -28,14 +28,13 @@ import type {
   OrderBy,
   Expression,
   TurtleDefPlusFilters,
+  UniqueKeyRequirement,
 } from './malloy_types';
 import {
   isRawSegment,
   isSourceDef,
   isQuerySegment,
   hasExpression,
-  expressionIsAggregate,
-  isAsymmetricExpr,
   isAtomic,
   expressionIsCalculation,
   expressionIsScalar,
@@ -58,7 +57,6 @@ import {
   QueryFieldBoolean,
   QueryFieldStruct,
   QueryField,
-  type UniqueKeyPossibleUse,
 } from './query_node';
 import {StageWriter} from './stage_writer';
 import type {FieldInstance} from './field_instance';
@@ -244,8 +242,7 @@ export class QueryQuery extends QueryField {
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     path: string[],
-    uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
-    joinStack: string[]
+    uniqueKeyRequirement: UniqueKeyRequirement
   ) {
     if (path.length === 0) {
       return;
@@ -255,12 +252,10 @@ export class QueryQuery extends QueryField {
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    resultStruct
-      .root()
-      .addStructToJoin(joinableParent, uniqueKeyPossibleUse, joinStack);
+    resultStruct.root().addStructToJoin(joinableParent, uniqueKeyRequirement);
   }
 
-  private processDependencies(resultStruct: FieldInstanceResult) {
+  private dependenciesFromFieldUsage(resultStruct: FieldInstanceResult) {
     // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
     const fieldUsage =
       'expandedFieldUsage' in this.firstSegment
@@ -268,80 +263,33 @@ export class QueryQuery extends QueryField {
         : [];
 
     for (const usage of fieldUsage) {
-      if (usage.funThing) {
-        if (usage.funThing.isAnalytic) {
-          resultStruct.root().queryUsesPartitioning = true;
+      if (usage.analyticFunctionUse) {
+        resultStruct.root().queryUsesPartitioning = true;
 
-          // BigQuery-specific handling
-          if (
-            this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
-            resultStruct.firstSegment.type === 'reduce'
-          ) {
-            // force the use of a lateral_join_bag
-            resultStruct.root().isComplexQuery = true;
-            resultStruct.root().queryUsesPartitioning = true;
-          }
+        // BigQuery-specific handling
+        if (
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
+          resultStruct.firstSegment.type === 'reduce'
+        ) {
+          // force the use of a lateral_join_bag
+          resultStruct.root().isComplexQuery = true;
+          resultStruct.root().queryUsesPartitioning = true;
         }
-        if (usage.funThing.name === 'count') {
-          if (usage.path.length === 0) {
-            resultStruct.addStructToJoin(this.parent, 'count', []);
-          } else {
-            this.addDependantPath(
-              resultStruct,
-              this.parent,
-              usage.path,
-              'count',
-              []
-            );
-          }
+      }
+      if (usage.uniqueKeyRequirement) {
+        if (usage.path.length === 0) {
+          resultStruct.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
-          // not saur ehow to do this right and i keep not liking how theo code looks
-          // i am thinking ancient cruft around UniqueKeyPossibleUses that maybe
-          // could be simplified could solve a lot of this doscomfort, but
-          // it is 4PM and I need to start close the lid
-          const afu = usage.funThing.isAsymmetric
-            ? 'generic_asymmetric_aggregate'
-            : undefined;
-          if (usage.path.length > 0) {
-            throw new Error('DID NOT EXPECT STRUCT PATH FOR ANALYTIC FUNCTION');
-            // this.addDependantPath(
-            //   resultStruct,
-            //   this.parent,
-            //   usage.path,
-            //   afu,
-            //   []
-            // );
-          } else if (usage.funThing.isAsymmetric) {
-            resultStruct.addStructToJoin(this.parent, afu, []);
-          }
-          // still need to read _orig ... i am sneaking up on duplicating the logic ... missing asymmetry
-          if (usage.funThing.isAggregate) {
-            const n = usage.funThing.name;
-            const u: UniqueKeyPossibleUse =
-              n === 'sum' || n === 'avg' ? n : 'generic_asymmetric_aggregate';
-            if (usage.path.length === 0) {
-              resultStruct.addStructToJoin(this.parent, u, []);
-            } else {
-              this.addDependantPath(
-                resultStruct,
-                this.parent,
-                usage.path,
-                u,
-                []
-              );
-            }
-          }
+          this.addDependantPath(
+            resultStruct,
+            this.parent,
+            usage.path,
+            usage.uniqueKeyRequirement
+          );
         }
       } else {
         this.findRecordAliases(this.parent, usage.path);
-        const uniqueKeyUse = this.getUniqueKeyUseForPath(usage.path);
-        this.addDependantPath(
-          resultStruct,
-          this.parent,
-          usage.path,
-          uniqueKeyUse,
-          []
-        );
+        this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
       }
     }
   }
@@ -370,35 +318,6 @@ export class QueryQuery extends QueryField {
         context = qs;
       }
     }
-  }
-
-  private getUniqueKeyUseForPath(
-    path: string[]
-  ): UniqueKeyPossibleUse | undefined {
-    try {
-      const field = this.parent.getFieldByName(path);
-
-      if (
-        hasExpression(field.fieldDef) &&
-        expressionIsAggregate(field.fieldDef.expressionType)
-      ) {
-        const expr = field.fieldDef.e;
-        if (expr?.node === 'aggregate' && isAsymmetricExpr(expr)) {
-          return expr.function;
-        }
-
-        if (expr?.node === 'function_call') {
-          const isSymmetric = expr.overload.isSymmetric ?? false;
-          if (!isSymmetric) {
-            return 'generic_asymmetric_aggregate';
-          }
-        }
-      }
-    } catch {
-      // Field not found
-    }
-
-    return undefined;
   }
 
   getSegmentFields(resultStruct: FieldInstanceResult): SegmentFieldDef[] {
@@ -515,13 +434,10 @@ export class QueryQuery extends QueryField {
       this.expandFields(this.rootResult);
 
       // Process all dependencies from translator's fieldUsage
-      this.processDependencies(this.rootResult);
+      this.dependenciesFromFieldUsage(this.rootResult);
 
       // Add the root base join to the joins map
-      this.rootResult.addStructToJoin(this.parent, undefined, []);
-
-      // Find and add joins for all fields in the result
-      this.rootResult.findJoins();
+      this.rootResult.addStructToJoin(this.parent, undefined);
 
       // Handle always joins
       this.addAlwaysJoins(this.rootResult);
@@ -540,7 +456,7 @@ export class QueryQuery extends QueryField {
       for (const joinName of alwaysJoins) {
         const qs = this.parent.getChildByName(joinName);
         if (qs instanceof QueryFieldStruct) {
-          rootResult.addStructToJoin(qs.queryStruct, undefined, []);
+          rootResult.addStructToJoin(qs.queryStruct, undefined);
         }
       }
     }

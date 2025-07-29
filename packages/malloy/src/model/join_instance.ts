@@ -4,15 +4,15 @@
  */
 
 import type {QueryStruct} from './query_node';
-import {QueryFieldBoolean, UniqueKeyUse} from './query_node';
+import {QueryFieldBoolean} from './query_node';
 import {getDialectFieldList} from './utils';
-import type {JoinRelationship} from './malloy_types';
+import type {JoinRelationship, UniqueKeyRequirement} from './malloy_types';
 
 import {isSourceDef, isJoined} from './malloy_types';
 import type {DialectFieldList} from '../dialect';
 
 export class JoinInstance {
-  uniqueKeyPossibleUses: UniqueKeyUse = new UniqueKeyUse();
+  uniqueKeyRequirement?: UniqueKeyRequirement;
   makeUniqueKey = false;
   leafiest = false;
   joinFilterConditions?: QueryFieldBoolean[];

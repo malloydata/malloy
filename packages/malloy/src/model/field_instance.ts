@@ -5,7 +5,13 @@
 
 import type {FieldReferenceType, QueryInfo} from '../dialect';
 import type {QueryStruct} from './query_node';
-import type {Expr, OrderBy, PipeSegment, TurtleDef} from './malloy_types';
+import type {
+  Expr,
+  OrderBy,
+  PipeSegment,
+  TurtleDef,
+  UniqueKeyRequirement,
+} from './malloy_types';
 import {
   isIndexSegment,
   isRawSegment,
@@ -13,6 +19,7 @@ import {
   expressionIsAnalytic,
   hasExpression,
   isAtomic,
+  mergeUniqueKeyRequirement,
 } from './malloy_types';
 import {AndChain} from './utils';
 import {JoinInstance} from './join_instance';
@@ -22,7 +29,6 @@ import {
   isScalarField,
   QueryFieldStruct,
   type QueryField,
-  type UniqueKeyPossibleUse,
 } from './query_node';
 import {caseGroup} from './expression_utils';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -463,19 +469,16 @@ export class FieldInstanceResult implements FieldInstance {
 
   addStructToJoin(
     qs: QueryStruct,
-    uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
-    joinStack: string[]
+    uniqueKeyRequirement: UniqueKeyRequirement
   ): void {
     const name = qs.getIdentifier();
 
-    // we're already chasing the dependency for this join.
-    if (joinStack.indexOf(name) !== -1) {
-      return;
-    }
-
-    let join: JoinInstance | undefined;
-    if ((join = this.root().joins.get(name))) {
-      join.uniqueKeyPossibleUses.add_use(uniqueKeyPossibleUse);
+    let join = this.root().joins.get(name);
+    if (join) {
+      join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
+        join.uniqueKeyRequirement,
+        uniqueKeyRequirement
+      );
       return;
     }
 
@@ -484,32 +487,18 @@ export class FieldInstanceResult implements FieldInstance {
     const parentStruct = qs.parent?.getJoinableParent();
     if (parentStruct) {
       // add dependant expressions first...
-      this.addStructToJoin(parentStruct, undefined, joinStack);
+      this.addStructToJoin(parentStruct, undefined);
       parent = this.root().joins.get(parentStruct.getIdentifier());
     }
-
-    // Note: ON expression dependencies are now handled by the translator's fieldUsage
 
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
-    join.uniqueKeyPossibleUses.add_use(uniqueKeyPossibleUse);
-  }
-
-  findJoins() {
-    for (const dim of this.fields()) {
-      if (!(dim.f instanceof QueryFieldStruct)) {
-        this.addStructToJoin(
-          dim.f.getJoinableParent(),
-          dim.f.uniqueKeyPossibleUse(),
-          []
-        );
-      }
-    }
-    for (const s of this.structs()) {
-      s.findJoins();
-    }
+    join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
+      join.uniqueKeyRequirement,
+      uniqueKeyRequirement
+    );
   }
 
   root(): FieldInstanceResultRoot {
@@ -672,9 +661,9 @@ export class FieldInstanceResultRoot extends FieldInstanceResult {
         // we have a leafiest count() joined subtree
         (join.leafiest &&
           join.parent !== undefined &&
-          join.uniqueKeyPossibleUses.has('count')) ||
+          join.uniqueKeyRequirement?.isCount) ||
         // or not leafiest and we use an asymetric function
-        (!join.leafiest && join.uniqueKeyPossibleUses.hasAsymetricFunctions())
+        (!join.leafiest && join.uniqueKeyRequirement)
       ) {
         let j: JoinInstance | undefined = join;
         while (j) {

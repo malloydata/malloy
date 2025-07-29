@@ -39,6 +39,7 @@ import type {
   RecordFunctionParameterTypeDef,
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
+  FieldUsage,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -302,9 +303,6 @@ export class ExprFunc extends ExpressionDef {
     };
     let funcCall: Expr = frag;
     const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
-    const isAggregate = expressionIsAggregate(
-      overload.returnType.expressionType
-    );
     const isAsymmetric = !overload.isSymmetric;
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
@@ -445,11 +443,13 @@ export class ExprFunc extends ExpressionDef {
         ? maxEvalSpace
         : 'output';
     const fieldUsage = mergeFieldUsage(...argExprs.map(e => e.fieldUsage));
-    if (isAsymmetric || isAggregate || isAnalytic) {
-      fieldUsage.push({
+    if (isAsymmetric || isAnalytic) {
+      const funcUsage: FieldUsage = {
         path: structPath || [],
-        funThing: {name: func.name, isAnalytic, isAggregate, isAsymmetric},
-      });
+        uniqueKeyRequirement: {isCount: false},
+      };
+      if (isAnalytic) funcUsage.analyticFunctionUse = true;
+      fieldUsage.push(funcUsage);
     }
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though

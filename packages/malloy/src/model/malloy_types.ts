@@ -1156,12 +1156,8 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface FieldUsage {
   path: string[];
   at?: DocumentLocation;
-  funThing?: {
-    name: string;
-    isAnalytic?: boolean;
-    isAggregate?: boolean;
-    isAsymmetric?: boolean;
-  };
+  uniqueKeyRequirement?: UniqueKeyRequirement;
+  analyticFunctionUse?: boolean;
 }
 
 export interface QuerySegment extends Filtered, Ordered {
@@ -1813,5 +1809,29 @@ export const TD = {
     return x.type === y.type;
   },
 };
+
+/**
+ * Aggregate functions carry this meta data. Used to determine if
+ * a function requires the existence of a unique key. This used
+ * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
+ *
+ * The three states are:
+ *
+ * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
+ * 2. {isCount: true} - this is a COUNT aggregate
+ * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
+ */
+export type UniqueKeyRequirement = undefined | {isCount: boolean};
+
+export function mergeUniqueKeyRequirement(
+  existing: UniqueKeyRequirement,
+  newInfo: UniqueKeyRequirement
+): UniqueKeyRequirement {
+  if (!existing) return newInfo;
+  if (!newInfo) return existing;
+  return {
+    isCount: existing.isCount || newInfo.isCount,
+  };
+}
 
 // clang-format on
