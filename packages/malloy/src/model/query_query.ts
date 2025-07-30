@@ -430,14 +430,19 @@ export class QueryQuery extends QueryField {
 
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
+      // Add the root base join to the joins map
+      this.rootResult.addStructToJoin(this.parent, undefined);
+
       // Expand fields (just adds them to result, no dependency tracking)
       this.expandFields(this.rootResult);
 
+      // I think dependenciesFromFieldUsage makes this redundant
+      // mtoy TODO maybe re-write this as a test to see if any of the
+      // joins this would add are missing, and call it after dependenciesFromFieldUsage
+      // this.findJoins(this.rootResult);
+
       // Process all dependencies from translator's fieldUsage
       this.dependenciesFromFieldUsage(this.rootResult);
-
-      // Add the root base join to the joins map
-      this.rootResult.addStructToJoin(this.parent, undefined);
 
       // Handle always joins
       this.addAlwaysJoins(this.rootResult);
@@ -446,6 +451,18 @@ export class QueryQuery extends QueryField {
       this.rootResult.calculateSymmetricAggregates();
 
       this.prepared = true;
+    }
+  }
+
+  private findJoins(resultStruct: FieldInstanceResult): void {
+    for (const dim of resultStruct.fields()) {
+      if (!(dim.f instanceof QueryFieldStruct)) {
+        resultStruct.addStructToJoin(dim.f.getJoinableParent(), undefined);
+      }
+    }
+
+    for (const s of resultStruct.structs()) {
+      this.findJoins(s);
     }
   }
 

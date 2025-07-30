@@ -1009,4 +1009,9 @@ describe('field usage with compiler extensions', () => {
     );
     expect(found, message).toBeTruthy();
   });
+  // mtoy TODO noticed this, maybe check for complete usage in above tests, not just the one usage
+  // it's probably benign, but not knowing why it happens is a concern
+  test.todo(
+    "aircraft_models.stddev(aircrat_models.seats) doesn't generate a path: [] field usage"
+  );
 });

@@ -855,9 +855,7 @@ function getDistinctKeySQL(
   resultSet: FieldInstanceResult
 ): string {
   const distinctKeyField = struct.getDistinctKey();
-  const distinctKeyName = distinctKeyField.fieldDef.name; // '__distinct_key'
-  const keyFieldInstance = resultSet.getField(distinctKeyName);
-  return keyFieldInstance.generateExpression();
+  return generateDistinctKeySQL(distinctKeyField, resultSet);
 }
 
 export function generateDistinctKeyIfNecessary(
