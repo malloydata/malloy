@@ -442,14 +442,15 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    const fieldUsage = mergeFieldUsage(...argExprs.map(e => e.fieldUsage));
+    // dUsage = mergeFieldUsage(...argExprs.map(e => e.fieldUsage));
+    const usages = argExprs.map(e => e.fieldUsage);
     if (isAsymmetric || isAnalytic) {
       const funcUsage: FieldUsage = {
         path: structPath || [],
         uniqueKeyRequirement: {isCount: false},
       };
       if (isAnalytic) funcUsage.analyticFunctionUse = true;
-      fieldUsage.push(funcUsage);
+      usages.push([funcUsage]);
     }
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
@@ -459,7 +460,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage,
+      fieldUsage: mergeFieldUsage(...usages),
     };
   }
 }
