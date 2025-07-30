@@ -151,7 +151,7 @@ function _resolveCompositeSources(
         source.fields
       );
       for (const usage of compositeUsageInThisSource) {
-        if (!fieldNames.has(usage.path[0])) {
+        if (usage.path.length > 0 && !fieldNames.has(usage.path[0])) {
           fail({
             type: 'missing-field',
             field: usage,
@@ -330,6 +330,7 @@ function _expandFieldUsage(
   const missingFields: FieldUsage[] = [];
   for (let i = 0; i < allFieldPathsReferenced.length; i++) {
     const reference = allFieldPathsReferenced[i];
+    if (reference.path.length === 0) continue;
     const referenceJoinPath = reference.path.slice(0, -1);
     // Look up this referenced field; if it is a composite field, then add it to the list
     // of composite fields found;
@@ -380,7 +381,7 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
     joinUsage: {},
   };
   for (const usage of fieldUsage) {
-    if (usage.path.length === 1) {
+    if (usage.path.length <= 1) {
       categorized.sourceUsage.push(usage);
     } else {
       const joinName = usage.path[0];
@@ -868,7 +869,7 @@ function getSingleValueFilterFields(filter: Expr): string[][] {
 function isSingleValueFilterNode(e: Expr): string[] | undefined {
   if (e.node === 'filterMatch') {
     if (e.kids.expr.node === 'field') {
-      const result = compileFilterExpression(e.dataType, e.kids.filterExpr);
+      const result = translateFilterExpression(e.dataType, e.kids.filterExpr);
 
       if (!result) return [];
       if (
@@ -930,6 +931,7 @@ function expandRefs(
   const joinPathsProcessed: string[][] = [];
   const missingFields: FieldUsage[] = [];
   for (let i = 0; i < references.length; i++) {
+    if (references[i].path.length === 0) continue;
     const field = references[i];
     let def: FieldDef;
     try {
@@ -1238,7 +1240,7 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
   }
 }
 
-export function compileFilterExpression(
+function translateFilterExpression(
   ft: string,
   fexpr: Expr
 ):
