@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   DocumentLocation,
   DocumentPosition,
@@ -84,6 +85,7 @@ import {annotationToTag} from '../annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';
+import {StableQueryToAST} from './stable-query-to-ast';
 
 export type StepResponses =
   | DataRequestResponse
@@ -299,7 +301,10 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     for (const child of that.childTranslators.values()) {
-      if (that.root.pretranslatedModels.get(child.sourceURL)) {
+      if (
+        that.root.pretranslatedModels.get(child.sourceURL) ||
+        that.root.stableQueries.get(child.sourceURL)
+      ) {
         continue;
       }
       const kidNeeds = child.importsAndTablesStep.step(child);
@@ -321,6 +326,33 @@ class ASTStep implements TranslationStep {
     const stepTimer = new Timer('ast_step');
     if (this.response) {
       return this.response;
+    }
+
+    const stableQuery = that.root.stableQueries.get(that.sourceURL);
+    if (stableQuery !== undefined) {
+      const gen = new StableQueryToAST(
+        stableQuery,
+        that.importBaseURL ?? that.sourceURL,
+        that.root.logger,
+        that.compilerFlags
+      );
+      const {ast, compilerFlags, timingInfo} = gen.run();
+      ast.setTranslator(that);
+      stepTimer.contribute([timingInfo]);
+      that.compilerFlags = compilerFlags;
+
+      if (that.root.logger.hasErrors()) {
+        this.response = that.fatalResponse();
+        return this.response;
+      }
+
+      this.response = {
+        // these problems will by definition all be warnings
+        ...that.problemResponse(),
+        ast,
+        final: true,
+      };
+      return {...this.response, timingInfo: stepTimer.stop()};
     }
 
     const mustResolve = this.importStep.step(that);
@@ -1011,6 +1043,7 @@ export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
   pretranslatedModels = new Map<string, ModelDef>();
+  stableQueries = new Map<string, Malloy.Query>();
   sqlQueryZone = new Zone<SQLSourceDef>();
   logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
@@ -1034,6 +1067,9 @@ export class MalloyTranslator extends MalloyTranslation {
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
     for (const url in dd.translations) {
       this.pretranslatedModels.set(url, dd.translations[url]);
+    }
+    for (const url in dd.queries) {
+      this.stableQueries.set(url, dd.queries[url]);
     }
   }
 
@@ -1062,13 +1098,21 @@ export interface URLData {
 export interface ModelData {
   translations: ZoneData<ModelDef>;
 }
+export interface StableQueryData {
+  queries: ZoneData<Malloy.Query>;
+}
 export interface SchemaData {
   tables: ZoneData<SourceDef>;
 }
 export interface SQLSources {
   compileSQL: ZoneData<SQLSourceDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLSources, ModelData {
+export interface UpdateData
+  extends URLData,
+    SchemaData,
+    SQLSources,
+    ModelData,
+    StableQueryData {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;

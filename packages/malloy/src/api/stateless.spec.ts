@@ -1463,18 +1463,9 @@ LIMIT 101
             duration_ms: expect.any(Number),
           },
           {
-            name: 'parse_malloy',
-            duration_ms: expect.any(Number),
-          },
-          {
             name: 'generate_ast',
             duration_ms: expect.any(Number),
-            detailed_timing: [
-              {
-                name: 'parse_compiler_flags',
-                duration_ms: expect.any(Number),
-              },
-            ],
+            detailed_timing: [],
           },
           {
             name: 'compile_malloy',

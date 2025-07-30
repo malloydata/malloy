@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {LogMessage} from '../lang';
 import {MalloyTranslator} from '../lang';
 import type {ParseUpdate} from '../lang/parse-malloy';
@@ -147,6 +147,7 @@ function compilerNeedsToUpdate(
     tables: {},
     compileSQL: {},
     translations: {},
+    queries: {},
   };
   if (compilerNeeds) {
     for (const file of compilerNeeds.files ?? []) {
@@ -176,6 +177,11 @@ function compilerNeedsToUpdate(
       if (translation.compiled_model_json) {
         const modelDef = JSON.parse(translation.compiled_model_json);
         update.translations![translation.url] = modelDef;
+      }
+    }
+    for (const query of compilerNeeds.queries ?? []) {
+      if (query.query) {
+        update.queries![query.url] = query.query;
       }
     }
   }
@@ -281,15 +287,22 @@ export function updateCompileModelState(
       performUpdate(state.extending, update);
     }
     if (!state.hasSource) {
-      state.hasSource =
-        (needs?.files?.some(f => f.url === state.translator.sourceURL) ??
-          false) ||
-        (needs?.translations?.some(f => f.url === state.translator.sourceURL) ??
-          false);
+      state.hasSource = hasSourceFor(needs, state.translator.sourceURL);
     }
   }
   const update = compilerNeedsToUpdate(needs);
   performUpdate(state, update);
+}
+
+function hasSourceFor(
+  needs: Malloy.CompilerNeeds | undefined,
+  url: string
+): boolean {
+  return (
+    (needs?.files?.some(f => f.url === url) ?? false) ||
+    (needs?.translations?.some(t => t.url === url) ?? false) ||
+    (needs?.queries?.some(t => t.url === url) ?? false)
+  );
 }
 
 function _newCompileModelState(
@@ -302,9 +315,7 @@ function _newCompileModelState(
     null,
     compilerNeedsToUpdate(compilerNeeds)
   );
-  const hasSource =
-    (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
-    (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
+  const hasSource = hasSourceFor(compilerNeeds, modelURL);
   if (extendURL) {
     return {
       extending: _newCompileModelState(extendURL, compilerNeeds),
@@ -532,17 +543,16 @@ export interface CompileQueryState extends CompileModelState {
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
 ): CompileQueryState {
-  const queryMalloy = Malloy.queryToMalloy(request.query);
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
   const queryURL = 'internal://query.malloy';
-  needs.files = [
+  needs.queries = [
     {
       url: queryURL,
-      contents: queryMalloy,
+      query: request.query,
     },
-    ...(needs.files ?? []),
+    ...(needs.queries ?? []),
   ];
   return {
     ..._newCompileModelState(queryURL, needs, request.model_url),

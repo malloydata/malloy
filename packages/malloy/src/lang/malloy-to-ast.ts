@@ -55,6 +55,7 @@ import type {
   DocumentRange,
   Note,
   ParameterTypeDef,
+  TimestampUnit,
 } from '../model/malloy_types';
 import {
   isCastType,
@@ -328,19 +329,17 @@ export class MalloyToAST
    */
   protected parseTime(
     pcx: ParserRuleContext,
-    parse: (s: string) => ast.ExpressionDef | undefined
+    unit: TimestampUnit | undefined
   ): ast.ExpressionDef {
-    let def = parse(pcx.text);
-    if (!def) {
+    const {result, error} = ast.TimeLiteral.parseTime(pcx.text, unit);
+    if (error) {
       this.contextError(
         pcx,
         'failed-to-parse-time-literal',
         'Time data parse error'
       );
-      // return a value node so the parse can continue
-      def = new ast.LiteralTimestamp({text: pcx.text});
     }
-    return this.astAt(def, pcx);
+    return this.astAt(result, pcx);
   }
 
   /**
@@ -1749,31 +1748,31 @@ export class MalloyToAST
   }
 
   visitLiteralTimestamp(pcx: parse.LiteralTimestampContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralTimestamp.parse);
+    return this.parseTime(pcx, undefined);
   }
 
   visitLiteralHour(pcx: parse.LiteralHourContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralHour.parse);
+    return this.parseTime(pcx, 'hour');
   }
 
   visitLiteralDay(pcx: parse.LiteralDayContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralDay.parse);
+    return this.parseTime(pcx, 'day');
   }
 
   visitLiteralWeek(pcx: parse.LiteralWeekContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralWeek.parse);
+    return this.parseTime(pcx, 'week');
   }
 
   visitLiteralMonth(pcx: parse.LiteralMonthContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralMonth.parse);
+    return this.parseTime(pcx, 'month');
   }
 
   visitLiteralQuarter(pcx: parse.LiteralQuarterContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralQuarter.parse);
+    return this.parseTime(pcx, 'quarter');
   }
 
   visitLiteralYear(pcx: parse.LiteralYearContext): ast.ExpressionDef {
-    return this.parseTime(pcx, ast.LiteralYear.parse);
+    return this.parseTime(pcx, 'year');
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
