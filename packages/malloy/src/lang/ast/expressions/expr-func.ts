@@ -145,7 +145,6 @@ export class ExprFunc extends ExpressionDef {
     }
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
-    const sourceUsage: FieldUsage[] = [];
     if (this.isRaw) {
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       argExprsWithoutImplicit.forEach((expr, i) => {
@@ -181,7 +180,6 @@ export class ExprFunc extends ExpressionDef {
       if (sourceFoot) {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.type)) {
-          sourceUsage.push({path: this.source.path, at: this.source.location});
           implicitExpr = {
             ...TDU.atomicDef(footType),
             expressionType: footType.expressionType,
@@ -191,7 +189,7 @@ export class ExprFunc extends ExpressionDef {
               at: this.source.location,
             },
             evalSpace: footType.evalSpace,
-            fieldUsage: footType.fieldUsage,
+            fieldUsage: [{path: this.source.path, at: this.source.location}],
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -319,6 +317,7 @@ export class ExprFunc extends ExpressionDef {
         }
       }
       if (overload.supportsOrderBy || isAnalytic) {
+        // mtoy TODO HERE need to get the field usage from the order by
         const allowExpression = overload.supportsOrderBy !== 'only_default';
         const allObs = props.orderBys.flatMap(orderBy =>
           isAnalytic
@@ -444,15 +443,12 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    const usages = argExprs.map(e => e.fieldUsage);
-    usages.push(sourceUsage);
+    const fieldUsage = mergeFieldUsage(...argExprs.map(ae => ae.fieldUsage));
     if (isAsymmetric || isAnalytic) {
-      const funcUsage: FieldUsage = {
-        path: structPath || [],
-        uniqueKeyRequirement: {isCount: false},
-      };
+      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
       if (isAnalytic) funcUsage.analyticFunctionUse = true;
-      usages.push([funcUsage]);
+      fieldUsage.push(funcUsage);
     }
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
@@ -462,7 +458,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage: mergeFieldUsage(...usages),
+      fieldUsage,
     };
   }
 }

@@ -288,7 +288,7 @@ export class QueryQuery extends QueryField {
             usage.uniqueKeyRequirement
           );
         }
-      } else if (usage.path.length > 1) {
+      } else {
         this.findRecordAliases(this.parent, usage.path);
         this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
       }

@@ -61,7 +61,7 @@ describe('composite sources', () => {
 
     test('join use in method-style aggregate', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.ai.sum()`).hasFieldUsage([['ai'], ['x', 'ai']]);
+      expect(mexpr`x.ai.sum()`).hasFieldUsage([['x', 'ai']]);
     });
   });
 
