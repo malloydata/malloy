@@ -927,7 +927,7 @@ class QueryField extends QueryNode {
   ): string | undefined {
     let struct = context;
     if (structPath) {
-      struct = this.parent.root().getStructByName(structPath);
+      struct = this.parent.getStructByName(structPath);
     }
     if (struct.needsSymetricCalculation(resultSet)) {
       return struct.getDistinctKey().generateExpression(resultSet);
@@ -5352,6 +5352,19 @@ export class QueryModel {
           type: 'index',
           indexFields: indexStar,
           sample: struct.dialect.defaultSampling,
+          outputStruct: {
+            type: 'query_result',
+            name: 'index',
+            connection: struct.connectionName,
+            dialect: struct.dialect.name,
+            fields: [
+              {name: 'fieldName', type: 'string'},
+              {name: 'fieldPath', type: 'string'},
+              {name: 'fieldType', type: 'string'},
+              {name: 'weight', type: 'number'},
+              {name: 'fieldValue', type: 'string'},
+            ],
+          },
         },
       ],
     };

@@ -32,10 +32,12 @@ import {FieldName} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
-import {WildcardFieldReference} from '../query-items/field-references';
+import {
+  RefineFromFieldReference,
+  WildcardFieldReference,
+} from '../query-items/field-references';
 import {RefinedSpace} from './refined-space';
 import type {LookupResult} from '../types/lookup-result';
-import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import type {SpaceEntry} from '../types/space-entry';
@@ -48,6 +50,14 @@ import {
   emptyFieldUsage,
   mergeFieldUsage,
 } from '../../../model/composite_source_utils';
+import {ErrorFactory} from '../error-factory';
+import {ReferenceField} from './reference-field';
+import {RefineFromSpaceField} from './refine-from-space-field';
+
+type TranslatedQueryField = {
+  queryFieldDef: model.QueryFieldDef;
+  typeDesc: model.TypeDesc;
+};
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -130,6 +140,10 @@ export abstract class QueryOperationSpace
 
   outputSpace(): QueryOperationSpace {
     return this;
+  }
+
+  isQueryOutputSpace() {
+    return true;
   }
 
   protected addWild(wild: WildcardFieldReference): void {
@@ -229,6 +243,10 @@ export abstract class QueryOperationSpace
     }
     super.newEntry(name, logTo, entry);
   }
+
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return true;
+  }
 }
 
 // Project and Reduce or "QuerySegments" are built from a QuerySpace
@@ -245,18 +263,19 @@ export abstract class QuerySpace extends QueryOperationSpace {
     }
     for (const field of refineThis.queryFields) {
       if (field.type === 'fieldref') {
-        const refTo = this.exprSpace.lookup(
+        const fieldReference = new RefineFromFieldReference(
           field.path.map(f => new FieldName(f))
         );
-        if (refTo.found) {
-          const name = field.path[field.path.length - 1];
-          this.setEntry(name, refTo.found);
-          this.addValidatedCompositeFieldUserFromEntry(name, refTo.found);
-        }
-      } else if (field.type !== 'turtle') {
-        // TODO can you reference fields in a turtle as fields in the output space,
-        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-        const entry = new ColumnSpaceField(field);
+        this.astEl.has({fieldReference});
+        const referenceField = new ReferenceField(
+          fieldReference,
+          this.exprSpace
+        );
+        const name = field.path[field.path.length - 1];
+        this.setEntry(name, referenceField);
+        this.addValidatedCompositeFieldUserFromEntry(name, referenceField);
+      } else {
+        const entry = new RefineFromSpaceField(field);
         const name = field.as ?? field.name;
         this.setEntry(name, entry);
         this.addValidatedCompositeFieldUserFromEntry(name, entry);
@@ -279,7 +298,98 @@ export abstract class QuerySpace extends QueryOperationSpace {
   }
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
-    const fields: model.QueryFieldDef[] = [];
+    const fields = this.translateQueryFields();
+    return fields.map(f => f.queryFieldDef);
+  }
+
+  protected getOutputFieldDef(
+    queryFieldDef: model.QueryFieldDef,
+    typeDesc: model.TypeDesc
+  ): model.FieldDef {
+    const name =
+      queryFieldDef.type === 'fieldref'
+        ? queryFieldDef.path[queryFieldDef.path.length - 1]
+        : queryFieldDef.as ?? queryFieldDef.name;
+    if (typeDesc.type === 'turtle') {
+      const pipeline = typeDesc.pipeline;
+      const lastSegment = pipeline[pipeline.length - 1];
+      const outputStruct = lastSegment?.outputStruct ?? ErrorFactory.structDef;
+      const isRepeated = lastSegment
+        ? model.isQuerySegment(lastSegment)
+          ? lastSegment.isRepeated
+          : true
+        : true;
+      if (isRepeated) {
+        return {
+          ...outputStruct,
+          elementTypeDef: {type: 'record_element'},
+          name: name,
+          type: 'array',
+          join: 'many',
+          as: undefined,
+        };
+      } else {
+        return {
+          ...outputStruct,
+          name: name,
+          type: 'record',
+          join: 'one',
+          as: undefined,
+        };
+      }
+    } else if (model.TD.isAtomic(typeDesc)) {
+      const td = model.mkFieldDef(typeDesc, name);
+      return {
+        ...td,
+        expressionType: 'scalar',
+        e: undefined,
+      };
+    } else {
+      throw new Error('Invalid type for fieldref');
+    }
+  }
+
+  // Gets the primary key field for the output struct of this query;
+  // If there is exactly one scalar field, that is the primary key
+  protected getPrimaryKey(fields: TranslatedQueryField[]) {
+    const dimensions = fields.filter(
+      f =>
+        model.TD.isAtomic(f.typeDesc) &&
+        model.expressionIsScalar(f.typeDesc.expressionType)
+    );
+    if (dimensions.length !== 1) return undefined;
+    const primaryKeyField = dimensions[0].queryFieldDef;
+    if (primaryKeyField.type === 'fieldref') {
+      return primaryKeyField.path[primaryKeyField.path.length - 1];
+    } else {
+      return primaryKeyField.as ?? primaryKeyField.name;
+    }
+  }
+
+  // This returns the OUTPUT struct of this query space
+  structDef(): model.SourceDef {
+    const fields = this.translateQueryFields();
+    const sourceDef: model.SourceDef = {
+      type: 'query_result',
+      // TODO to match the compiler, does this need to be the name of the query?
+      name: 'query_result',
+      dialect: this.dialectName(),
+      // TODO need to get this in a less expensive way?
+      connection: this.inputSpace().connectionName(),
+      fields: fields.map(f =>
+        this.getOutputFieldDef(f.queryFieldDef, f.typeDesc)
+      ),
+      primaryKey: this.getPrimaryKey(fields),
+    };
+    return sourceDef;
+  }
+
+  translatedQueryFields: TranslatedQueryField[] | undefined;
+  protected translateQueryFields(): TranslatedQueryField[] {
+    if (this.translatedQueryFields) {
+      return this.translatedQueryFields;
+    }
+    const fields: TranslatedQueryField[] = [];
     let fieldUsage = emptyFieldUsage();
     for (const user of this.compositeFieldUsers) {
       let nextFieldUsage: model.FieldUsage[] | undefined = undefined;
@@ -291,11 +401,19 @@ export abstract class QuerySpace extends QueryOperationSpace {
         const {name, field} = user;
         const wildPath = this.expandedWild[name];
         if (wildPath) {
-          fields.push({type: 'fieldref', path: wildPath.path, at: wildPath.at});
-          nextFieldUsage = wildPath.entry.typeDesc().fieldUsage;
+          const typeDesc = wildPath.entry.typeDesc();
+          fields.push({
+            queryFieldDef: {
+              type: 'fieldref',
+              path: wildPath.path,
+              at: wildPath.at,
+            },
+            typeDesc,
+          });
+          nextFieldUsage = typeDesc.fieldUsage;
         } else {
-          const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
-          if (fieldQueryDef) {
+          const queryFieldDef = field.getQueryFieldDef(this.exprSpace);
+          if (queryFieldDef) {
             const typeDesc = field.typeDesc();
             nextFieldUsage = typeDesc.fieldUsage;
             // Filter out fields whose type is 'error', which means that a totally bad field
@@ -306,18 +424,13 @@ export abstract class QuerySpace extends QueryOperationSpace {
               typeDesc &&
               typeDesc.type !== 'error' &&
               this.canContain(typeDesc) &&
-              !isEmptyNest(fieldQueryDef)
+              !isEmptyNest(queryFieldDef)
             ) {
-              fields.push(fieldQueryDef);
+              fields.push({queryFieldDef, typeDesc});
             }
+          } else {
+            throw new Error('Expected query field to have a definition');
           }
-          // TODO I removed the error here because during calculation of the refinement space,
-          // (see creation of a QuerySpace) we add references to all the fields from
-          // the refinement, but they don't have definitions. So in the case where we
-          // don't have a field def, we "know" that that field is already in the query,
-          // and we don't need to worry about actually adding it. Previously, this was also true for
-          // project statements, where we added "*" as a field and also all the individual
-          // fields, but the individual fields didn't have field defs.
         }
       }
       fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
@@ -335,6 +448,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       }
     }
 
+    this.translatedQueryFields = fields;
     return fields;
   }
 
@@ -346,6 +460,16 @@ export abstract class QuerySpace extends QueryOperationSpace {
     throw new Error('TODO NOT POSSIBLE');
   }
 
+  protected isRepeated(): boolean {
+    const fields = this.translateQueryFields();
+    const dimensions = fields.filter(
+      f =>
+        model.TD.isAtomic(f.typeDesc) &&
+        model.expressionIsScalar(f.typeDesc.expressionType)
+    );
+    return dimensions.length > 0;
+  }
+
   getPipeSegment(
     refineFrom: model.QuerySegment | undefined
   ): model.PipeSegment {
@@ -355,18 +479,15 @@ export abstract class QuerySpace extends QueryOperationSpace {
         'unexpected-index-segment',
         'internal error generating index segment from non index query'
       );
-      return {type: 'reduce', queryFields: []};
+      return ErrorFactory.reduceSegment;
     }
 
     const segment: model.QuerySegment = {
       type: this.segmentType,
       queryFields: this.queryFieldDefs(),
+      outputStruct: this.structDef(),
+      isRepeated: this.isRepeated(),
     };
-
-    segment.queryFields = mergeFields(
-      refineFrom?.queryFields,
-      segment.queryFields
-    );
 
     if (refineFrom?.extendSource) {
       segment.extendSource = refineFrom.extendSource;
@@ -397,10 +518,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
       return {...result, isOutputField: true};
     }
     return this.exprSpace.lookup(path);
-  }
-
-  isQueryFieldSpace(): this is QueryFieldSpace {
-    return true;
   }
 }
 

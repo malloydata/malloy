@@ -181,6 +181,8 @@ describe('structdef comprehension', () => {
         {
           type: 'reduce',
           queryFields: [{type: 'fieldref', path: ['a']}],
+          outputStruct: mkStructDef({name: 'a', type: 'string'}),
+          isRepeated: true,
         },
       ],
     };

@@ -676,7 +676,7 @@ export interface HasExpression {
 export function hasExpression<T extends FieldDef>(
   f: T
 ): f is T & Expression & HasExpression {
-  return 'e' in f;
+  return 'e' in f && f.e !== undefined;
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';
@@ -1121,6 +1121,7 @@ export interface RawSegment extends Filtered {
   type: 'raw';
   fields: never[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
@@ -1138,6 +1139,7 @@ export interface IndexSegment extends Filtered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -1157,6 +1159,8 @@ export interface QuerySegment extends Filtered, Ordered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
+  isRepeated: boolean;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
@@ -1288,12 +1292,18 @@ export type SourceComponentInfo =
       sourceID?: string;
     };
 
+export type TurtleType = 'turtle';
+
+export type TurtleTypeDef = {
+  type: 'turtle';
+  pipeline: PipeSegment[];
+};
+
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
 // for "non-atomic" and even the AI couldn't think of the right word.
 export type NonAtomicType =
   | Exclude<JoinElementType, 'array' | 'record'>
-  | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
   | 'regular expression'
@@ -1302,8 +1312,11 @@ export interface NonAtomicTypeDef {
   type: NonAtomicType;
 }
 
-export type ExpressionValueType = AtomicFieldType | NonAtomicType;
-export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
+export type ExpressionValueType = AtomicFieldType | NonAtomicType | TurtleType;
+export type ExpressionValueTypeDef =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | TurtleTypeDef;
 export type BasicExpressionType = Exclude<
   ExpressionValueType,
   JoinElementType | 'turtle'
@@ -1349,6 +1362,7 @@ interface BasicArrayExtTypeDef<TypeExtensions> {
 type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
+  | TurtleTypeDef
   | BasicArrayExtTypeDef<TypeExtensions>
   | RecordExtTypeDef<TypeExtensions>
   | RepeatedRecordExtTypeDef<TypeExtensions>
