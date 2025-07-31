@@ -1158,6 +1158,7 @@ export interface FieldUsage {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
+  ungroupReference?: {refType: 'all' | 'exclude'; fields: string[] | undefined};
 }
 
 export interface QuerySegment extends Filtered, Ordered {

@@ -275,6 +275,7 @@ export class QueryQuery extends QueryField {
           resultStruct.root().isComplexQuery = true;
           resultStruct.root().queryUsesPartitioning = true;
         }
+        continue;
       }
       if (usage.uniqueKeyRequirement) {
         if (usage.path.length === 0) {
@@ -288,7 +289,47 @@ export class QueryQuery extends QueryField {
             usage.uniqueKeyRequirement
           );
         }
-      } else if (usage.path.length > 1) {
+        continue;
+      }
+      if (usage.ungroupReference) {
+        // I don't think I need the .root here ???
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().queryUsesPartitioning = true;
+
+        let destResult = resultStruct;
+        for (const p of usage.path) {
+          const nextStruct = resultStruct.getField(p);
+          if (nextStruct instanceof FieldInstanceResult) {
+            destResult = nextStruct;
+            continue;
+          }
+          throw new Error(
+            `Ungroup path reference ${usage.path.join(
+              '.'
+            )} hit a leaf field '${p}'`
+          );
+        }
+        destResult.resultUsesUngrouped = true;
+        if (
+          usage.ungroupReference.fields &&
+          usage.ungroupReference.fields.length > 0
+        ) {
+          const key =
+            usage.ungroupReference.fields
+              .sort()
+              .map(s => `${s.length}:${s}`)
+              .join(',') + '/${usage.ungroupReference.refType}';
+          if (destResult.ungroupedSets.get(key) === undefined) {
+            destResult.ungroupedSets.set(key, {
+              type: usage.ungroupReference.refType,
+              fields: usage.ungroupReference.fields,
+              groupSet: -1,
+            });
+          }
+        }
+        continue;
+      }
+      if (usage.path.length > 1) {
         this.findRecordAliases(this.parent, usage.path);
         this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
       }
