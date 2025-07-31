@@ -40,6 +40,7 @@ import type {
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
   FieldUsage,
+  FunctionOrderBy as ModelFunctionOrderBy,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -304,6 +305,7 @@ export class ExprFunc extends ExpressionDef {
     let funcCall: Expr = frag;
     const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
     const isAsymmetric = !overload.isSymmetric;
+    const orderByUsage: FieldUsage[] = [];
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
@@ -317,14 +319,18 @@ export class ExprFunc extends ExpressionDef {
         }
       }
       if (overload.supportsOrderBy || isAnalytic) {
-        // mtoy TODO HERE need to get the field usage from the order by
         const allowExpression = overload.supportsOrderBy !== 'only_default';
-        const allObs = props.orderBys.flatMap(orderBy =>
-          isAnalytic
-            ? orderBy.getAnalyticOrderBy(fs)
-            : orderBy.getAggregateOrderBy(fs, allowExpression)
-        );
-        frag.kids.orderBy = allObs;
+        const allOrderBy: ModelFunctionOrderBy[] = [];
+        for (const ordering of props.orderBys) {
+          const {orderBy, fieldUsage} = isAnalytic
+            ? ordering.getAnalyticOrderBy(fs)
+            : ordering.getAggregateOrderBy(fs, allowExpression);
+          if (fieldUsage) {
+            orderByUsage.push(...fieldUsage);
+          }
+          allOrderBy.push(...orderBy);
+        }
+        frag.kids.orderBy = allOrderBy;
       } else {
         props.orderBys[0].logError(
           'function-does-not-support-order-by',
@@ -443,7 +449,10 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    let fieldUsage = mergeFieldUsage(...argExprs.map(ae => ae.fieldUsage));
+    let fieldUsage = mergeFieldUsage(
+      ...argExprs.map(ae => ae.fieldUsage),
+      orderByUsage
+    );
     if (isAsymmetric || isAnalytic) {
       fieldUsage ||= [];
       const funcUsage: FieldUsage = {path: structPath || [], at: this.location};

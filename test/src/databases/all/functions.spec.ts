@@ -486,18 +486,19 @@ expressionModels.forEach((x, databaseName) => {
 
     it(`works using unary minus in calculate block - ${databaseName}`, async () => {
       await expect(`
-          run: state_facts -> {
-            group_by: first_letter is substr(state, 1, 1)
-            aggregate: states_with_first_letter_ish is round(count() / 2) * 2
-            calculate:
-              r is rank()
-              neg_r is -r
-          }`).malloyResultMatches(expressionModel, [
+        run: state_facts -> {
+          group_by: first_letter is substr(state, 1, 1)
+          aggregate: states_with_first_letter_ish is round(count() / 2) * 2
+          calculate:
+            r is rank()
+            neg_r is -r
+      }`).matchesRows(
+        expressionModel,
         {neg_r: -1},
         {neg_r: -1},
         {neg_r: -3},
-        {neg_r: -3},
-      ]);
+        {neg_r: -3}
+      );
     });
 
     it(`properly isolated nested calculations - ${databaseName}`, async () => {
