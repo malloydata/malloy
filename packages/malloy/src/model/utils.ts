@@ -225,3 +225,17 @@ export function getDialectFieldList(structDef: StructDef): DialectFieldList {
   }
   return dialectFieldList;
 }
+
+/**
+ * A little extra paranoia to save us from fields which contain the special
+ * characters used to build the grouping key.
+ */
+export function groupingKey(node: string, fields: string[]): string {
+  return (
+    node +
+    `/${fields
+      .sort()
+      .map(f => `${f.length}:${f}`)
+      .join(',')}`
+  );
+}

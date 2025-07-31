@@ -45,7 +45,7 @@ import {
   isBaseTable,
   expressionIsAnalytic,
 } from './malloy_types';
-import {AndChain, indent, getDialectFieldList} from './utils';
+import {AndChain, indent, getDialectFieldList, groupingKey} from './utils';
 import type {JoinInstance} from './join_instance';
 import {
   QueryStruct,
@@ -314,11 +314,10 @@ export class QueryQuery extends QueryField {
           usage.ungroupReference.fields &&
           usage.ungroupReference.fields.length > 0
         ) {
-          const key =
+          const key = groupingKey(
+            usage.ungroupReference.refType,
             usage.ungroupReference.fields
-              .sort()
-              .map(s => `${s.length}:${s}`)
-              .join(',') + '/${usage.ungroupReference.refType}';
+          );
           if (destResult.ungroupedSets.get(key) === undefined) {
             destResult.ungroupedSets.set(key, {
               type: usage.ungroupReference.refType,

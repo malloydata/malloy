@@ -47,7 +47,7 @@ import {
 } from './field_instance';
 import {FilterCompilers} from './filter_compilers';
 import type {SQLExprElement} from './utils';
-import {exprMap, composeSQLExpr, range, AndChain} from './utils';
+import {exprMap, composeSQLExpr, range, AndChain, groupingKey} from './utils';
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
 import {caseGroup, GenerateState} from './expression_utils';
@@ -822,7 +822,7 @@ export function generateUngroupedFragment(
   let ungroupSet: UngroupSet | undefined;
 
   if (expr.fields && expr.fields.length > 0) {
-    const key = expr.fields.sort().join('|') + expr.node;
+    const key = groupingKey(expr.node, expr.fields);
     ungroupSet = resultSet.ungroupedSets.get(key);
     if (ungroupSet === undefined) {
       throw new Error(`Internal Error, cannot find groupset with key ${key}`);
