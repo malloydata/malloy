@@ -142,17 +142,21 @@ export class StableQueryToAST {
       case 'boolean_literal':
         return new AST.Boolean(value.boolean_value ? 'true' : 'false');
       case 'date_literal': {
+        const value_with_timezone =
+          value.date_value + (value.timezone ? `[${value.timezone}]` : '');
         // TODO log error if there is one
         const {result} = AST.TimeLiteral.parseTime(
-          value.date_value,
+          value_with_timezone,
           value.granularity
         );
         return result;
       }
       case 'timestamp_literal': {
+        const value_with_timezone =
+          value.timestamp_value + (value.timezone ? `[${value.timezone}]` : '');
         // TODO log error if there is one
         const {result} = AST.TimeLiteral.parseTime(
-          value.timestamp_value,
+          value_with_timezone,
           value.granularity
         );
         return result;
@@ -190,15 +194,44 @@ export class StableQueryToAST {
           this.viewDefinitionToASTView(view.base),
           this.viewDefinitionToASTView(view.refinement)
         );
-      case 'segment':
-        return new AST.QOpDescView(
-          new AST.QOpDesc(
-            view.operations.map(o => this.segmentOperationToASTQueryProperty(o))
-          )
-        );
+      case 'segment': {
+        const astOperations: AST.QueryProperty[] = [];
+        for (let i = 0; i < view.operations.length; i++) {
+          const operation = view.operations[i];
+          const likeOperations = [operation];
+          while (i < view.operations.length - 1) {
+            const nextOperation = view.operations[i + 1];
+            if (nextOperation.kind === operation.kind) {
+              likeOperations.push(nextOperation);
+              i++;
+            } else {
+              break;
+            }
+          }
+          astOperations.push(
+            ...this.likeOperationsToASTQueryProperty(likeOperations)
+          );
+        }
+        return new AST.QOpDescView(new AST.QOpDesc(astOperations));
+      }
       case 'view_reference':
         return new AST.ReferenceView(
           this.makeReference(view, AST.ViewOrScalarFieldReference)
+        );
+    }
+  }
+
+  private likeOperationsToASTQueryProperty(operations: Malloy.ViewOperation[]) {
+    switch (operations[0].kind) {
+      case 'order_by':
+        return [
+          this.orderByOperationsToASTQueryProperty(
+            operations as Malloy.OrderBy[]
+          ),
+        ];
+      default:
+        return operations.map(op =>
+          this.segmentOperationToASTQueryProperty(op)
         );
     }
   }
@@ -256,23 +289,29 @@ export class StableQueryToAST {
         );
       }
       case 'order_by': {
-        if (
-          operation.field_reference.path &&
-          operation.field_reference.path.length > 0
-        ) {
-          this.astError(
-            'invalid-order-by',
-            'Order by field references must not have a path'
-          );
-        }
-        return new AST.Ordering([
-          new AST.OrderBy(
-            new AST.FieldName(operation.field_reference.name),
-            operation.direction
-          ),
-        ]);
+        return this.orderByOperationsToASTQueryProperty([operation]);
       }
     }
+  }
+
+  private orderByOperationsToASTQueryProperty(operations: Malloy.OrderBy[]) {
+    const orderBys = operations.map(operation => {
+      if (
+        operation.field_reference.path &&
+        operation.field_reference.path.length > 0
+      ) {
+        this.astError(
+          'invalid-order-by',
+          'Order by field references must not have a path'
+        );
+      }
+      return new AST.OrderBy(
+        new AST.FieldName(operation.field_reference.name),
+        operation.direction
+      );
+    });
+
+    return new AST.Ordering(orderBys);
   }
 
   private makeQueryItem(
@@ -377,7 +416,7 @@ export class StableQueryToAST {
           [
             this.makeFieldReferenceExpression(expression.field_reference),
             // TODO the thrift type for preceding should not be optional...
-            this.makeLiteralNumber(expression.rows_preceding ?? 1),
+            this.makeLiteralNumber(expression.rows_preceding ?? 0),
             ...(expression.rows_following === undefined
               ? []
               : [this.makeLiteralNumber(expression.rows_following)]),

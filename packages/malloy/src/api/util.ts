@@ -361,6 +361,8 @@ export function dataToSimplifiedJSON(
         dataToSimplifiedJSON(value, type.element_type)
       );
     }
+    case 'string_cell':
+      return data.string_value;
     case 'boolean_cell':
       return data.boolean_value;
     case 'date_cell':

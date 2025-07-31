@@ -76,7 +76,10 @@ function wrap(
 }
 
 function escapeString(str: string): {contents: string; quoteCharacter: string} {
-  return {contents: str, quoteCharacter: '"'}; // TODO
+  if (str.includes('"')) {
+    return {contents: str.replace(/'/g, "\\'"), quoteCharacter: "'"};
+  }
+  return {contents: str.replace(/"/g, '\\"'), quoteCharacter: '"'};
 }
 
 function join(fragments: Fragment[], separator: string): Fragment[] {

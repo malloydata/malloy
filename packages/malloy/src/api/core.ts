@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type * as Malloy from '@malloydata/malloy-interfaces';
+import * as Malloy from '@malloydata/malloy-interfaces';
 import type {LogMessage} from '../lang';
 import {MalloyTranslator} from '../lang';
 import type {ParseUpdate} from '../lang/parse-malloy';
@@ -26,6 +26,10 @@ import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 import {DEFAULT_LOG_RANGE, mapLogs, nodeToLiteralValue} from './util';
 import {Timer} from '../timing';
+
+export type RunQueryRequest = Malloy.RunQueryRequest & {
+  internal_options?: {serialize_and_parse?: boolean};
+};
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -263,7 +267,7 @@ export type CompileResponse =
     };
 
 export function compileQuery(
-  request: Malloy.CompileQueryRequest,
+  request: RunQueryRequest,
   state?: CompileQueryState
 ): Malloy.CompileQueryResponse {
   state ??= newCompileQueryState(request);
@@ -541,19 +545,30 @@ export interface CompileQueryState extends CompileModelState {
 }
 
 export function newCompileQueryState(
-  request: Malloy.CompileQueryRequest
+  request: RunQueryRequest
 ): CompileQueryState {
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
   const queryURL = 'internal://query.malloy';
-  needs.queries = [
-    {
-      url: queryURL,
-      query: request.query,
-    },
-    ...(needs.queries ?? []),
-  ];
+  if (request.internal_options?.serialize_and_parse) {
+    needs.files = [
+      {
+        url: queryURL,
+        contents: Malloy.queryToMalloy(request.query),
+      },
+      ...(needs.files ?? []),
+    ];
+  } else {
+    needs.queries = [
+      {
+        url: queryURL,
+        query: request.query,
+      },
+      ...(needs.queries ?? []),
+    ];
+  }
+
   return {
     ..._newCompileModelState(queryURL, needs, request.model_url),
     defaultRowLimit: request.default_row_limit,
