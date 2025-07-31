@@ -1161,6 +1161,14 @@ export interface FieldUsage {
   ungroupReference?: {refType: 'all' | 'exclude'; fields: string[] | undefined};
 }
 
+export function bareFieldUsage(fu: FieldUsage): boolean {
+  return (
+    fu.uniqueKeyRequirement === undefined &&
+    fu.ungroupReference === undefined &&
+    fu.analyticFunctionUse === undefined
+  );
+}
+
 export interface QuerySegment extends Filtered, Ordered {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];

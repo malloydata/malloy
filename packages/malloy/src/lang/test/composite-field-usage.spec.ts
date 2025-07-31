@@ -8,7 +8,7 @@
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
 import type {FieldUsage, PipeSegment, Query} from '../../model';
-import {isIndexSegment, isQuerySegment} from '../../model';
+import {bareFieldUsage, isIndexSegment, isQuerySegment} from '../../model';
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -68,11 +68,7 @@ describe('composite sources', () => {
   describe('expanded field usage', () => {
     function segmentExpandedFieldUsage(segment: PipeSegment) {
       return isQuerySegment(segment) || isIndexSegment(segment)
-        ? segment.expandedFieldUsage?.filter(
-            u =>
-              u.analyticFunctionUse === undefined &&
-              u.uniqueKeyRequirement === undefined
-          )
+        ? segment.expandedFieldUsage?.filter(u => bareFieldUsage(u))
         : undefined;
     }
     test('direct field reference', () => {

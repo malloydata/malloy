@@ -23,7 +23,12 @@
  */
 
 import type {MalloyTranslator, TranslateResponse} from '..';
-import type {DocumentLocation, DocumentRange, Expr} from '../../model';
+import {
+  bareFieldUsage,
+  type DocumentLocation,
+  type DocumentRange,
+  type Expr,
+} from '../../model';
 import {exprToStr} from './expr-to-str';
 import type {MarkedSource} from './test-translator';
 import {BetaExpression, pretty, TestTranslator} from './test-translator';
@@ -310,13 +315,7 @@ expect.extend({
       return badRefs;
     }
     const actual = bx.generated().fieldUsage;
-    const actualPaths = actual
-      .filter(
-        u =>
-          u.analyticFunctionUse === undefined &&
-          u.uniqueKeyRequirement === undefined
-      )
-      .map(u => u.path);
+    const actualPaths = actual.filter(u => bareFieldUsage(u)).map(u => u.path);
     const pass = this.equals(actualPaths, paths);
     const msg = pass
       ? `Matched: ${actual}`
