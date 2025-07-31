@@ -137,7 +137,12 @@ export function MalloyRenderInner(props: {
   // If size in fill mode, easiest thing would be to just recalculate entire thing
   // This is expensive but we can optimize later to make size responsive
   const rootCell = createMemo(() => {
-    return getDataTree(props.result, props.renderFieldMetadata);
+    try {
+      const tree = getDataTree(props.result, props.renderFieldMetadata);
+      return tree;
+    } catch (error) {
+      throw error;
+    }
   });
 
   const metadata = createMemo(() => {
@@ -181,8 +186,15 @@ export function MalloyRenderInner(props: {
   };
 
   const tags = () => {
-    const modelTag = rootCell().field.modelTag;
-    const resultTag = rootCell().field.tag;
+    const cell = rootCell();
+    if (!cell) {
+      throw new Error('Root cell is undefined');
+    }
+    if (!cell.field) {
+      throw new Error('Root cell field is undefined');
+    }
+    const modelTag = cell.field.modelTag;
+    const resultTag = cell.field.tag;
     const modelTheme = modelTag.tag('theme');
     const localTheme = resultTag.tag('theme');
     return {

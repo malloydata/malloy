@@ -8,6 +8,7 @@
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel, YChannel, SeriesChannel} from '@/component/types';
 import type {NestField} from '@/data_tree';
+import {Field} from '@/data_tree';
 import {walkFields, deepMerge} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
@@ -189,7 +190,10 @@ export function getLineChartSettings(
   };
 
   function getField(ref: string) {
-    return explore.pathTo(explore.fieldAt([ref]));
+    // Support dot notation for nested fields (e.g., "field1.field2")
+    const path = ref.split('.');
+    // explore.pathTo returns a JSON stringified array path
+    return explore.pathTo(explore.fieldAt(path));
   }
 
   // Parse top level tags
@@ -248,13 +252,68 @@ export function getLineChartSettings(
 
   const measures = explore.fields.filter(f => f.wasCalculation());
 
-  // If still no x or y, attempt to pick the best choice
+  // Check for nested data structure for automatic detection FIRST
+  // This should take precedence over flat data detection
+  if (xChannel.fields.length === 0 || yChannel.fields.length === 0 || seriesChannel.fields.length === 0) {
+    
+    // Find nested fields (RepeatedRecordField) that are not tagged with "tooltip"
+    const nestedFields = explore.fields.filter((f): f is NestField => {
+      return Field.isNestField(f) && !f.tag.has('tooltip');
+    });
+    
+
+    // If there's exactly one nested field, use it for automatic detection
+    if (nestedFields.length === 1) {
+      const nestedField = nestedFields[0];
+      
+      // TypeScript already knows nestedField is a NestField because of the filter above,
+      // but we need to help it understand this
+      
+      // Get dimensions and measures from the nested field
+      const nestedDimensions = nestedField.fields.filter(
+        f => f.isBasic() && f.wasDimension()
+      );
+      const nestedMeasures = nestedField.fields.filter(f => f.wasCalculation());
+      
+
+      // If we still need series and have outer dimensions, use one
+      if (seriesChannel.fields.length === 0 && dimensions.length > 0) {
+        seriesChannel.fields.push(explore.pathTo(dimensions[0]));
+      }
+
+      // If we still need x and have nested dimensions, use the first one
+      if (xChannel.fields.length === 0 && nestedDimensions.length > 0) {
+        // Pick date/time field first if it exists
+        const nestedDateTime = nestedDimensions.find(f => f.isTime());
+        if (nestedDateTime) {
+          const xPath = explore.pathTo(nestedField.fieldAt([nestedDateTime.name]));
+          xChannel.fields.push(xPath);
+        } else {
+          const xPath = explore.pathTo(nestedField.fieldAt([nestedDimensions[0].name]));
+          xChannel.fields.push(xPath);
+        }
+      }
+
+      // If we still need y and have nested measures, use the first numeric one
+      if (yChannel.fields.length === 0 && nestedMeasures.length > 0) {
+        const nestedNumber = nestedMeasures.find(f => f.isNumber());
+        if (nestedNumber) {
+          const yPath = explore.pathTo(nestedField.fieldAt([nestedNumber.name]));
+          yChannel.fields.push(yPath);
+        }
+      }
+    }
+  }
+
+  // If still no x or y after nested detection, attempt to pick the best choice from flat data
   if (xChannel.fields.length === 0) {
     // Pick date/time field first if it exists
     const dateTimeField = explore.fields.find(
       f => f.wasDimension() && f.isTime()
     );
-    if (dateTimeField) xChannel.fields.push(explore.pathTo(dateTimeField));
+    if (dateTimeField) {
+      xChannel.fields.push(explore.pathTo(dateTimeField));
+    }
     // Pick first dimension field for x
     else if (dimensions.length > 0) {
       xChannel.fields.push(explore.pathTo(dimensions[0]));
@@ -278,20 +337,26 @@ export function getLineChartSettings(
     }
   }
 
-  if (dimensions.length > 2) {
+  // Validation - need to check if we have valid x/y fields now, not just dimensions/measures
+  if (xChannel.fields.length === 0) {
     throw new Error(
-      'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+      'Malloy Line Chart: No x-axis field found. A line chart must have at least 1 dimension for the x axis.'
     );
   }
-  if (dimensions.length === 0) {
+  if (yChannel.fields.length === 0) {
     throw new Error(
-      'Malloy Line Chart: No dimensions found. A line chart must have at least 1 dimension for the x axis.'
+      'Malloy Line Chart: No y-axis field found. A line chart must have at least 1 measure for the y axis.'
     );
   }
-  if (measures.length === 0) {
-    throw new Error(
-      'Malloy Line Chart: No measures found. A line chart must have at least 1 measure for the y axis.'
-    );
+  
+  // For flat data, enforce the original constraints
+  const hasNestedData = explore.fields.some(f => Field.isNestField(f));
+  if (!hasNestedData) {
+    if (dimensions.length > 2) {
+      throw new Error(
+        'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
+      );
+    }
   }
 
   // Validate year-over-year mode requirements
@@ -342,6 +407,7 @@ export function getLineChartSettings(
       );
     }
   }
+
 
   return {
     xChannel,
