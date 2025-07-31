@@ -268,11 +268,7 @@ ORDER BY 1 asc NULLS LAST
               ],
             },
             {name: 'parse_compiler_flags'},
-            {name: 'parse_malloy'},
-            {
-              name: 'generate_ast',
-              detailed_timing: [{name: 'parse_compiler_flags'}],
-            },
+            {name: 'generate_ast'},
             {name: 'compile_malloy'},
             {name: 'generate_sql'},
             {name: 'lookup_connection'},

@@ -625,12 +625,18 @@ struct Translation {
   2: optional string compiled_model_json,
 }
 
+struct QueryFile {
+  1: required string url,
+  2: optional Query query,
+}
+
 struct CompilerNeeds {
   1: optional list<SQLTable> table_schemas,
   2: optional list<SQLQuery> sql_schemas,
   3: optional list<File> files,
   4: optional list<Connection> connections,
   5: optional list<Translation> translations,
+  6: optional list<QueryFile> queries,
 }
 
 struct DocumentPosition {

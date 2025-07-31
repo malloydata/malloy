@@ -93,6 +93,47 @@ export abstract class TimeLiteral extends ExpressionDef {
     }
   }
 
+  /**
+   * Parse a time string into an AST TimeLiteral, if the string fails
+   * the parse, return a LiteralTimestamp and indicate that there was an error
+   */
+  public static parseTime(
+    text: string,
+    unit: TimestampUnit | undefined
+  ): {result: TimeLiteral; error: boolean} {
+    let parse: (s: string) => TimeLiteral | undefined;
+    switch (unit) {
+      case undefined:
+      case 'second':
+      case 'minute':
+        parse = LiteralTimestamp.parse;
+        break;
+      case 'day':
+        parse = LiteralDay.parse;
+        break;
+      case 'week':
+        parse = LiteralWeek.parse;
+        break;
+      case 'month':
+        parse = LiteralMonth.parse;
+        break;
+      case 'year':
+        parse = LiteralYear.parse;
+        break;
+      case 'hour':
+        parse = LiteralHour.parse;
+        break;
+      case 'quarter':
+        parse = LiteralQuarter.parse;
+        break;
+    }
+    const def = parse(text);
+    if (!def) {
+      return {result: new LiteralTimestamp({text}), error: true};
+    }
+    return {result: def, error: false};
+  }
+
   protected makeLiteral(
     val: string,
     typ: TemporalFieldType,

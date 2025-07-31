@@ -200,8 +200,8 @@ export async function compileQuery(
   }
 }
 
-export async function runQuery(
-  request: Malloy.CompileQueryRequest,
+export async function _runQueryInternal(
+  request: Core.RunQueryRequest,
   fetchers: CompilerNeedFetch<Connection>
 ): Promise<Malloy.CompileQueryResponse> {
   const timer = new Timer('run_query');
@@ -259,4 +259,11 @@ export async function runQuery(
       timing_info: timer.stop(),
     };
   }
+}
+
+export async function runQuery(
+  request: Malloy.CompileQueryRequest,
+  fetchers: CompilerNeedFetch<Connection>
+): Promise<Malloy.CompileQueryResponse> {
+  return _runQueryInternal(request, fetchers);
 }

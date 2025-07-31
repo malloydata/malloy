@@ -34,6 +34,7 @@ import type {GranularResult} from '../types/granular-result';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {ExprIdReference} from './expr-id-reference';
 
 /**
  * GranularTime is a moment in time which ALSO has a "granularity"
@@ -52,6 +53,13 @@ export class ExprGranularTime extends ExpressionDef {
     readonly truncate: boolean
   ) {
     super({expr: expr});
+  }
+
+  // TODO actuallly use this in malloy-to-ast
+  defaultFieldName(): string | undefined {
+    if (this.expr instanceof ExprIdReference) {
+      return this.expr.fieldReference.nameString;
+    }
   }
 
   granular(): boolean {
