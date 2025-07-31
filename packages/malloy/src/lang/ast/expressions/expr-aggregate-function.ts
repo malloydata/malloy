@@ -26,6 +26,7 @@ import type {
   FieldDef,
   AggregateExpr,
   Expr,
+  FieldUsage,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -77,6 +78,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     let exprVal = this.expr?.getExpression(inputFS);
     let structPath = this.source?.path;
     let sourceRelationship: JoinPathElement[] = [];
+    let pathUsage: FieldUsage | undefined = undefined;
     if (this.source) {
       const result = this.source.getField(inputFS);
       if (result.found) {
@@ -85,6 +87,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (!(sourceFoot instanceof StructSpaceField)) {
           if (isAtomicFieldType(footType.type)) {
+            pathUsage = {path: this.source.path, at: this.source.location};
             expr = this.source;
             exprVal = {
               ...TDU.atomicDef(footType),
@@ -187,6 +190,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         f.structPath = structPath;
       }
       const returnExpr = this.returns(exprVal);
+      if (pathUsage) returnExpr.fieldUsage.push(pathUsage);
       if (!this.isSymmetricFunction()) {
         returnExpr.fieldUsage.push({
           path: structPath || [],

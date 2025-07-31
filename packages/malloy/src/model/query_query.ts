@@ -280,6 +280,7 @@ export class QueryQuery extends QueryField {
         if (usage.path.length === 0) {
           resultStruct.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
+          this.findRecordAliases(this.parent, usage.path);
           this.addDependantPath(
             resultStruct,
             this.parent,
@@ -287,7 +288,7 @@ export class QueryQuery extends QueryField {
             usage.uniqueKeyRequirement
           );
         }
-      } else {
+      } else if (usage.path.length > 1) {
         this.findRecordAliases(this.parent, usage.path);
         this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
       }
@@ -297,7 +298,7 @@ export class QueryQuery extends QueryField {
   /*
    ** Later on, when a record is referenced, the context needed to translate the
    ** reference won't exist, so we translate them all in prepare. The better fix
-   ** involves understand more about what a "translation state" is and how
+   ** involves understanding more about what a "translation state" is and how
    ** to create it at the moment when a field is referenced, but I couldn't do
    ** that at the time I did this work. TODO come back and do that.
    */

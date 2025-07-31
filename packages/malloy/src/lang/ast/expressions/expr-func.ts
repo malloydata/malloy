@@ -145,6 +145,7 @@ export class ExprFunc extends ExpressionDef {
     }
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
+    const sourceUsage: FieldUsage[] = [];
     if (this.isRaw) {
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       argExprsWithoutImplicit.forEach((expr, i) => {
@@ -180,6 +181,7 @@ export class ExprFunc extends ExpressionDef {
       if (sourceFoot) {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.type)) {
+          sourceUsage.push({path: this.source.path, at: this.source.location});
           implicitExpr = {
             ...TDU.atomicDef(footType),
             expressionType: footType.expressionType,
@@ -442,8 +444,8 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    // dUsage = mergeFieldUsage(...argExprs.map(e => e.fieldUsage));
     const usages = argExprs.map(e => e.fieldUsage);
+    usages.push(sourceUsage);
     if (isAsymmetric || isAnalytic) {
       const funcUsage: FieldUsage = {
         path: structPath || [],

@@ -61,7 +61,7 @@ describe('composite sources', () => {
 
     test('join use in method-style aggregate', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.ai.sum()`).hasFieldUsage([['ai']]);
+      expect(mexpr`x.ai.sum()`).hasFieldUsage([['ai'], ['x', 'ai']]);
     });
   });
 
@@ -831,49 +831,56 @@ function pathToKey(path: string[]): string {
  * Instead of a custom matcher, new test pattern I thought I would try out.
  * A field usage might be spread out among multiple records, so this looks
  * through all matching records.
- * @param ref The expected field usage
  * @param query Look in the first segment of this query for usages
+ * @param refs One or more expected field usages
  * @returns [bool,msg] if false, will explain what was wrong
  */
 function checkForFieldUsage(
-  ref: FieldUsage,
-  query: Query | undefined
+  query: Query | undefined,
+  ...refs: FieldUsage[]
 ): [boolean, string] {
   if (!query) {
     return [false, 'Query not found'];
   }
   const ps = query.pipeline[0];
-  const pathStr = ref.path.length > 0 ? ref.path.join('.') : '[]';
   if (!isQuerySegment(ps)) {
     return [false, 'Pipeline did not contain a query segment'];
   }
-  let found = false;
-  const refKey = pathToKey(ref.path);
-  let needAnalytic = ref.analyticFunctionUse || false;
-  let needCount = ref.uniqueKeyRequirement?.isCount || false;
-  let needAsymmetric = ref.uniqueKeyRequirement?.isCount === false;
-  for (const fu of ps.expandedFieldUsage || []) {
-    if (pathToKey(fu.path) !== refKey) continue;
-    found = true;
-    if (needAnalytic && fu.analyticFunctionUse) needAnalytic = false;
-    if (needAsymmetric && fu.uniqueKeyRequirement?.isCount === false)
-      needAsymmetric = false;
-    if (needCount && fu?.uniqueKeyRequirement?.isCount) needCount = false;
-  }
-  if (found) {
-    const missing: string[] = [];
-    if (needAnalytic) missing.push('analytic');
-    if (needCount) missing.push('count');
-    if (needAsymmetric) missing.push('asymmetric');
-    if (missing.length > 0) {
-      return [
-        false,
-        `Missing properties for path ${pathStr}: ${missing.join(',')}`,
-      ];
+  const usages = ps.expandedFieldUsage || [];
+  const errors: string[] = [];
+  for (const ref of refs) {
+    const pathStr = ref.path.length > 0 ? ref.path.join('.') : '[]';
+    let found = false;
+    const refKey = pathToKey(ref.path);
+    let needAnalytic = ref.analyticFunctionUse || false;
+    let needCount = ref.uniqueKeyRequirement?.isCount || false;
+    let needAsymmetric = ref.uniqueKeyRequirement?.isCount === false;
+    for (const fu of usages) {
+      if (pathToKey(fu.path) !== refKey) continue;
+      found = true;
+      if (needAnalytic && fu.analyticFunctionUse) needAnalytic = false;
+      if (needAsymmetric && fu.uniqueKeyRequirement?.isCount === false)
+        needAsymmetric = false;
+      if (needCount && fu?.uniqueKeyRequirement?.isCount) needCount = false;
     }
-    return [true, `Found usage reference to path ${pathStr}`];
+    if (!found) {
+      errors.push(`Did not find usage reference to path ${pathStr}`);
+    } else {
+      const missing: string[] = [];
+      if (needAnalytic) missing.push('analytic');
+      if (needCount) missing.push('count');
+      if (needAsymmetric) missing.push('asymmetric');
+      if (missing.length > 0) {
+        errors.push(
+          `Missing properties for path ${pathStr}: ${missing.join(',')}`
+        );
+      }
+    }
   }
-  return [false, `Did not find usage reference to path ${pathStr}`];
+  if (errors.length > 0) {
+    return [false, errors.join('\n')];
+  }
+  return [true, 'Found all usage references'];
 }
 
 describe('field usage with compiler extensions', () => {
@@ -883,7 +890,7 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    const [found, message] = checkForFieldUsage(mq, {path: ['ai']});
     expect(found, message).toBeTruthy();
   });
   test('filters on segment are reflected in usage', () => {
@@ -892,7 +899,7 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    const [found, message] = checkForFieldUsage(mq, {path: ['ai']});
     expect(found, message).toBeTruthy();
   });
   test('on expressions in joins reflected in field usage', () => {
@@ -903,10 +910,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     let mq = mTest.translator.getQuery('uses_b');
-    let [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    let [found, message] = checkForFieldUsage(mq, {path: ['ai']});
     expect(found, message).toBeTruthy();
     mq = mTest.translator.getQuery('ignore_b');
-    [found, message] = checkForFieldUsage({path: ['b', 'ai']}, mq);
+    [found, message] = checkForFieldUsage(mq, {path: ['b', 'ai']});
     expect(found, message).toBeFalsy();
   });
   test('filters on joins reflected in field usage', () => {
@@ -918,10 +925,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     let mq = mTest.translator.getQuery('uses_b');
-    let [found, message] = checkForFieldUsage({path: ['b', 'ai']}, mq);
+    let [found, message] = checkForFieldUsage(mq, {path: ['b', 'ai']});
     expect(found, message).toBeTruthy();
     mq = mTest.translator.getQuery('ignore_b');
-    [found, message] = checkForFieldUsage({path: ['ai']}, mq);
+    [found, message] = checkForFieldUsage(mq, {path: ['ai']});
     expect(found, message).toBeFalsy();
   });
   test('count with no path reflected in field usage', () => {
@@ -930,10 +937,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage(
-      {path: [], uniqueKeyRequirement: {isCount: true}},
-      mq
-    );
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
     expect(found, message).toBeTruthy();
   });
   test('source count reflected in field usage', () => {
@@ -942,10 +949,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage(
-      {path: [], uniqueKeyRequirement: {isCount: true}},
-      mq
-    );
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
     expect(found, message).toBeTruthy();
   });
   test('count with path reflected in field usage', () => {
@@ -954,10 +961,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage(
-      {path: ['b'], uniqueKeyRequirement: {isCount: true}},
-      mq
-    );
+    const [found, message] = checkForFieldUsage(mq, {
+      path: ['b'],
+      uniqueKeyRequirement: {isCount: true},
+    });
     expect(found, message).toBeTruthy();
   });
   test('asymmetric internal with no path reflected in field usage', () => {
@@ -966,21 +973,33 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: false},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric internal with dotted value reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: i_info is ai.avg() };
+    `;
+    expect(mTest).toTranslate();
     const [found, message] = checkForFieldUsage(
+      mTest.translator.getQuery(0),
       {path: [], uniqueKeyRequirement: {isCount: false}},
-      mq
+      {path: ['ai']}
     );
     expect(found, message).toBeTruthy();
   });
-  test('asymmetric internal with path reflected in field usage', () => {
+  test('asymmetric internal with join path to value reflected in field usage', () => {
     const mTest = model`
-      run: ab -> { group_by: astr; aggregate: allbf is b.sum(af) }
+      run: ab -> { group_by: astr; aggregate: i_info is b.ai.avg() };
     `;
     expect(mTest).toTranslate();
-    const mq = mTest.translator.getQuery(0);
     const [found, message] = checkForFieldUsage(
+      mTest.translator.getQuery(0),
       {path: ['b'], uniqueKeyRequirement: {isCount: false}},
-      mq
+      {path: ['b', 'ai']}
     );
     expect(found, message).toBeTruthy();
   });
@@ -991,9 +1010,21 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: false},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('pathed dialect asymmetric on value generates value usage and unique usage', () => {
+    const mTest = model`
+      run: ab -> { group_by: astr; aggregate: i_info is b.ai.stddev() };
+    `;
+    expect(mTest).toTranslate();
     const [found, message] = checkForFieldUsage(
-      {path: [], uniqueKeyRequirement: {isCount: false}},
-      mq
+      mTest.translator.getQuery(0),
+      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
+      {path: ['b', 'ai']}
     );
     expect(found, message).toBeTruthy();
   });
@@ -1003,15 +1034,10 @@ describe('field usage with compiler extensions', () => {
     `;
     expect(mTest).toTranslate();
     const mq = mTest.translator.getQuery(0);
-    const [found, message] = checkForFieldUsage(
-      {path: [], analyticFunctionUse: true},
-      mq
-    );
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      analyticFunctionUse: true,
+    });
     expect(found, message).toBeTruthy();
   });
-  // mtoy TODO noticed this, maybe check for complete usage in above tests, not just the one usage
-  // it's probably benign, but not knowing why it happens is a concern
-  test.todo(
-    "aircraft_models.stddev(aircrat_models.seats) doesn't generate a path: [] field usage"
-  );
 });
