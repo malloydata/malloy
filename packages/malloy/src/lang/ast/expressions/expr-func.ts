@@ -443,8 +443,9 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    const fieldUsage = mergeFieldUsage(...argExprs.map(ae => ae.fieldUsage));
+    let fieldUsage = mergeFieldUsage(...argExprs.map(ae => ae.fieldUsage));
     if (isAsymmetric || isAnalytic) {
+      fieldUsage ||= [];
       const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
       if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
       if (isAnalytic) funcUsage.analyticFunctionUse = true;

@@ -26,7 +26,6 @@ import type {
   FieldDef,
   AggregateExpr,
   Expr,
-  FieldUsage,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -189,6 +188,9 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       }
       const returnExpr = this.returns(exprVal);
       if (!this.isSymmetricFunction()) {
+        if (returnExpr.fieldUsage === undefined) {
+          returnExpr.fieldUsage = [];
+        }
         returnExpr.fieldUsage.push({
           path: structPath || [],
           uniqueKeyRequirement: {isCount: false},
