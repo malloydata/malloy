@@ -347,3 +347,50 @@ export function mapLogs(
     url: log.at?.url ?? defaultURL,
   }));
 }
+
+export function dataToSimplifiedJSON(
+  data: Malloy.Data | Malloy.Cell,
+  type: Malloy.AtomicType
+): unknown {
+  switch (data.kind) {
+    case 'array_cell': {
+      if (type.kind !== 'array_type') {
+        throw new Error('Invalid array type');
+      }
+      return data.array_value.map(value =>
+        dataToSimplifiedJSON(value, type.element_type)
+      );
+    }
+    case 'boolean_cell':
+      return data.boolean_value;
+    case 'date_cell':
+      return data.date_value;
+    case 'timestamp_cell':
+      return data.timestamp_value;
+    case 'json_cell':
+      return JSON.parse(data.json_value);
+    case 'number_cell':
+      return data.number_value;
+    case 'record_cell': {
+      const result = {};
+      if (type.kind !== 'record_type') {
+        throw new Error('Invalid record type');
+      }
+      for (let i = 0; i < type.fields.length; i++) {
+        const field = type.fields[i];
+        result[field.name] = dataToSimplifiedJSON(
+          data.record_value[i],
+          field.type
+        );
+      }
+      return result;
+    }
+    case 'sql_native_cell': {
+      try {
+        return JSON.parse(data.sql_native_value);
+      } catch (e) {
+        return data.sql_native_value;
+      }
+    }
+  }
+}
