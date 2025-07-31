@@ -70,11 +70,14 @@ function modelText(databaseName: string): string {
 function extractData(result: Malloy.RunQueryResponse): unknown {
   expect(result.logs).toBeUndefined();
   expect(result).toMatchObject({result: {data: {}}});
+  const fields = result.result!.schema.fields.filter(
+    f => f.kind === 'dimension'
+  ) as Malloy.DimensionInfo[];
   const data = API.util.dataToSimplifiedJSON(result.result!.data!, {
     kind: 'array_type',
     element_type: {
       kind: 'record_type',
-      fields: result.result!.schema.fields.filter(f => f.kind === 'dimension'),
+      fields,
     },
   });
   return data;
