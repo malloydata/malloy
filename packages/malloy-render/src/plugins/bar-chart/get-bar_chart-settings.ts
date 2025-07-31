@@ -41,6 +41,21 @@ export function getBarChartSettings(
     vizTag.text('size') === 'spark' || normalizedTag.text('size') === 'spark';
   const hideReferences = isSpark;
 
+  // Parse size property
+  let size: BarChartSettings['size'] = defaultBarChartSettings.size;
+  if (vizTag.has('size')) {
+    const sizeText = vizTag.text('size');
+    if (sizeText && ['xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(sizeText)) {
+      size = sizeText as 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+    }
+  } else if (vizTag.has('size', 'width') && vizTag.has('size', 'height')) {
+    const width = vizTag.numeric('size', 'width');
+    const height = vizTag.numeric('size', 'height');
+    if (width !== undefined && height !== undefined) {
+      size = {width: width, height: height};
+    }
+  }
+
   // X-axis independence
   let xIndependent: boolean | 'auto' =
     defaultBarChartSettings.xChannel.independent;
@@ -255,5 +270,6 @@ export function getBarChartSettings(
     interactive,
     hideReferences,
     disableEmbedded,
+    size,
   };
 }
