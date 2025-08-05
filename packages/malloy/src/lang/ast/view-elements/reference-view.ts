@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
   isAtomic,
@@ -93,7 +94,9 @@ export class ReferenceView extends View {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
-        fieldUsage: fieldDef.fieldUsage,
+        fieldUsage: mergeFieldUsage(fieldDef.fieldUsage, [
+          {path: this.reference.refToField.path, at: this.reference.location},
+        ]),
       };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
