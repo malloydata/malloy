@@ -189,11 +189,13 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+      const [correct, orNot] = checkForFieldUsage(
+        query,
         {path: ['b', 'astr']},
         {path: ['b', 'ai']},
-        {path: ['ai']},
-      ]);
+        {path: ['ai']}
+      );
+      expect(correct, orNot).toBeTruthy();
     });
 
     test('two-step resolution of dimension', () => {
@@ -234,10 +236,12 @@ describe('composite sources', () => {
       `;
       expect(m).toTranslate();
       const query = m.translator.modelDef.queryList[0];
-      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+      const [correct, orNot] = checkForFieldUsage(
+        query,
         {path: ['b', 'astr']},
-        {path: ['b', 'ai']},
-      ]);
+        {path: ['b', 'ai']}
+      );
+      expect(correct, orNot).toBeTruthy();
     });
 
     test('expansion respects selected composite', () => {
@@ -630,7 +634,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `b.three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `b.two` and `b.three` (fields required in source: `b.one`, `b.three`, and `b.two`)'
+          'This operation uses field `b.three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `b.two` and `b.three` (fields required in source: `b.two`, `b.one`, and `b.three`)'
         )
       );
     });

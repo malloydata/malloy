@@ -316,7 +316,13 @@ expect.extend({
     }
     const actual = bx.generated().fieldUsage;
     const actualPaths = actual.filter(u => bareFieldUsage(u)).map(u => u.path);
-    const pass = this.equals(actualPaths, paths);
+    // there is no guarantee of the order of field usage data, so we sort the two lists
+    // so i need to compare sorted versions of the two lists... we can sort on path.join('.)
+    // maybe make a lambda for that and pass it to sort
+    const pass = this.equals(
+      actualPaths.sort((a, b) => a.join('.').localeCompare(b.join('.'))),
+      paths.sort((a, b) => a.join('.').localeCompare(b.join('.')))
+    );
     const msg = pass
       ? `Matched: ${actual}`
       : this.utils.diff(paths, actualPaths);
