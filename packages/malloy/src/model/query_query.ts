@@ -247,6 +247,32 @@ export class QueryQuery extends QueryField {
     if (path.length === 0) {
       return;
     }
+
+    // Loop through path segments, ensuring each join exists
+    let currentContext = context;
+    for (const segment of path.slice(0, -1)) {
+      // Try to get the field at this path segment
+      let segmentField: QueryField;
+      try {
+        segmentField = currentContext.getFieldByName([segment]);
+      } catch {
+        // Field doesn't exist, need to add the join
+        // This is where we'd need to figure out how to create the missing join
+        // Maybe we need more context about what join we're trying to add?
+        throw new Error(
+          `Cannot find join '${segment}' in ${path.join('.')} to add to query`
+        );
+      }
+      if (segmentField instanceof QueryFieldStruct) {
+        // Ensure this join is added to the result
+        resultStruct
+          .root()
+          .addStructToJoin(segmentField.queryStruct, undefined);
+        currentContext = segmentField.queryStruct;
+      }
+    }
+
+    // Now handle the full path for the final dependency
     const node = context.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
@@ -292,8 +318,8 @@ export class QueryQuery extends QueryField {
         continue;
       }
       if (usage.path.length > 1) {
-        this.findRecordAliases(this.parent, usage.path);
         this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
+        this.findRecordAliases(this.parent, usage.path);
       }
     }
 

@@ -41,6 +41,7 @@ import {
   isTurtle,
 } from './malloy_types';
 import {isNotUndefined} from '../lang/utils';
+import {pathToKey} from './utils';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -327,17 +328,34 @@ export function expandFieldUsage(
   };
 }
 
+enum UsageGroup {
+  Joins = 0,
+  Input = 1,
+  Expanded = 2,
+}
+
 function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
 ): {result: FieldUsage[]; missingFields: FieldUsage[]} {
-  const allFieldPathsReferenced = [...fieldUsage];
-  const joinPathsProcessed: string[][] = [];
+  const seen = new Map<string, {usage: FieldUsage; group: UsageGroup}>();
+  const joinPathsProcessed = new Set<string>();
   const missingFields: FieldUsage[] = [];
-  for (let i = 0; i < allFieldPathsReferenced.length; i++) {
-    const reference = allFieldPathsReferenced[i];
+  const toProcess: FieldUsage[] = [];
+
+  // Initialize: mark original inputs and add them to processing queue
+  for (const usage of fieldUsage) {
+    const seenKey = pathToKey('field', usage.path);
+    seen.set(seenKey, {usage, group: UsageGroup.Input});
+    toProcess.push(usage);
+  }
+
+  // Process the expanding queue
+  for (let i = 0; i < toProcess.length; i++) {
+    const reference = toProcess[i];
     if (reference.path.length === 0) continue;
     const referenceJoinPath = reference.path.slice(0, -1);
+
     // Look up this referenced field; if it is a composite field, then add it to the list
     // of composite fields found;
     // if it has composite usage, add those usages to the list of fields to look up next
@@ -349,31 +367,48 @@ function _expandFieldUsage(
       missingFields.push(reference);
       continue;
     }
+
     if (isAtomic(def)) {
       const fieldUsage = def.fieldUsage ?? [];
-      allFieldPathsReferenced.push(
-        ...fieldUsageAt(
-          joinedFieldUsage(referenceJoinPath, fieldUsage),
-          reference.at
-        ).filter(
-          u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
-        )
-      );
+      for (const usage of fieldUsageAt(
+        joinedFieldUsage(referenceJoinPath, fieldUsage),
+        reference.at
+      )) {
+        const key = pathToKey('field', usage.path);
+        if (!seen.has(key)) {
+          seen.set(key, {usage, group: UsageGroup.Expanded});
+          toProcess.push(usage);
+        }
+      }
     }
+
     if (reference.path.length > 1) {
-      if (!joinPathsProcessed.some(p => pathEq(p, referenceJoinPath))) {
-        joinPathsProcessed.push(referenceJoinPath);
+      const referenceJoinKey = pathToKey('join', referenceJoinPath);
+      if (!joinPathsProcessed.has(referenceJoinKey)) {
+        joinPathsProcessed.add(referenceJoinKey);
         const join = lookup(referenceJoinPath, fields);
         const joinFieldUsage = getJoinFieldUsage(join, referenceJoinPath);
-        allFieldPathsReferenced.push(
-          ...fieldUsageAt(joinFieldUsage, reference.at).filter(
-            u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
-          )
-        );
+        for (const usage of fieldUsageAt(joinFieldUsage, reference.at)) {
+          const key = pathToKey('field', usage.path);
+          if (!seen.has(key)) {
+            seen.set(key, {usage, group: UsageGroup.Joins});
+            toProcess.push(usage);
+          }
+        }
       }
     }
   }
-  return {result: allFieldPathsReferenced, missingFields};
+
+  // Build result by filtering seen values by group
+  const ret = [...seen.values()];
+
+  const result: FieldUsage[] = [
+    ...ret.filter(e => e.group === UsageGroup.Joins).map(e => e.usage),
+    ...ret.filter(e => e.group === UsageGroup.Input).map(e => e.usage),
+    ...ret.filter(e => e.group === UsageGroup.Expanded).map(e => e.usage),
+  ];
+
+  return {result, missingFields};
 }
 
 interface CategorizedFieldUsage {

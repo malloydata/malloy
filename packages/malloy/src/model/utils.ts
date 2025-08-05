@@ -230,12 +230,11 @@ export function getDialectFieldList(structDef: StructDef): DialectFieldList {
  * A little extra paranoia to save us from fields which contain the special
  * characters used to build the grouping key.
  */
+export function pathToKey(node: string, fields: string[]): string {
+  return node + `/${fields.map(f => `${f.length}:${f}`).join(',')}`;
+}
+
 export function groupingKey(node: string, fields: string[]): string {
-  return (
-    node +
-    `/${fields
-      .sort()
-      .map(f => `${f.length}:${f}`)
-      .join(',')}`
-  );
+  const sortedFields = [...fields].sort();
+  return pathToKey(node, sortedFields);
 }
