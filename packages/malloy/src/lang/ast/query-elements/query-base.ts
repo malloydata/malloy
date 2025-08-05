@@ -46,18 +46,30 @@ export abstract class QueryBase extends MalloyElement {
     inputSource: SourceDef,
     pipeline: PipeSegment[]
   ): PipeSegment[] {
-    return pipeline.map((segment, index) => {
-      const stageInput = index === 0 ? inputSource : ErrorFactory.structDef;
+    const ret: PipeSegment[] = [];
+    let stageInput = inputSource;
+    for (const segment of pipeline) {
+      // mtoy todo ... refine block might contain joins, not sure
+      // if we need to handle that at the root, but definitely
+      // need to handle it in the segments after the first,
+      // so that each segment can have a join resolution tree
       const {expandedFieldUsage, ungroupings} = expandFieldUsage(
         segment,
         stageInput
       );
-      return {
+      // mtoy todo ... walk the refined input join list
+      // and for any join trees, write them to the expandedFieldUsage
+      // roots first
+      const newSegment = {
         ...segment,
         expandedFieldUsage,
         expandedUngroupings: ungroupings,
       };
-    });
+      ret.push(newSegment);
+      // mtoy todo get the output struct of this segment
+      stageInput = ErrorFactory.structDef;
+    }
+    return ret;
   }
 
   protected resolveCompositeSource(

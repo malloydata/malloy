@@ -238,7 +238,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: flight_count is count()
         limit: 5
       }
-    `).malloyResultMatches(joinModel, [{}, {}, {}, {}, {}]);
+    `).malloyResultMatches(runtime, [{}, {}, {}, {}, {}]);
   });
 
   it('join issue440', async () => {
