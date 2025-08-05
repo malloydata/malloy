@@ -291,46 +291,61 @@ export class QueryQuery extends QueryField {
         }
         continue;
       }
-      if (usage.ungroupReference) {
-        // I don't think I need the .root here ???
-        resultStruct.root().isComplexQuery = true;
-        resultStruct.root().queryUsesPartitioning = true;
-
-        let destResult = resultStruct;
-        for (const p of usage.path) {
-          const nextStruct = resultStruct.getField(p);
-          if (nextStruct instanceof FieldInstanceResult) {
-            destResult = nextStruct;
-            continue;
-          }
-          throw new Error(
-            `Ungroup path reference ${usage.path.join(
-              '.'
-            )} hit a leaf field '${p}'`
-          );
-        }
-        destResult.resultUsesUngrouped = true;
-        if (
-          usage.ungroupReference.fields &&
-          usage.ungroupReference.fields.length > 0
-        ) {
-          const key = groupingKey(
-            usage.ungroupReference.refType,
-            usage.ungroupReference.fields
-          );
-          if (destResult.ungroupedSets.get(key) === undefined) {
-            destResult.ungroupedSets.set(key, {
-              type: usage.ungroupReference.refType,
-              fields: usage.ungroupReference.fields,
-              groupSet: -1,
-            });
-          }
-        }
-        continue;
-      }
       if (usage.path.length > 1) {
         this.findRecordAliases(this.parent, usage.path);
         this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
+      }
+    }
+
+    const expandedUngroupings =
+      'expandedUngroupings' in this.firstSegment
+        ? this.firstSegment.expandedUngroupings || []
+        : [];
+
+    for (const ungrouping of expandedUngroupings) {
+      resultStruct.root().isComplexQuery = true;
+      resultStruct.root().queryUsesPartitioning = true;
+
+      // Navigate to correct result struct using ungrouping's path
+      let destResult = resultStruct;
+      for (const pathSegment of ungrouping.path) {
+        const nextStruct = destResult.allFields.get(pathSegment);
+        if (!(nextStruct instanceof FieldInstanceResult)) {
+          throw new Error(
+            `Ungroup path ${ungrouping.path.join(
+              '.'
+            )} segment '${pathSegment}' is not a nested query`
+          );
+        }
+        destResult = nextStruct;
+      }
+
+      destResult.resultUsesUngrouped = true;
+
+      if (ungrouping.refFields && ungrouping.refFields.length > 0) {
+        const refType = ungrouping.exclude ? 'exclude' : 'all';
+        const key = groupingKey(refType, ungrouping.refFields);
+        if (destResult.ungroupedSets.get(key) === undefined) {
+          destResult.ungroupedSets.set(key, {
+            type: refType,
+            fields: ungrouping.refFields,
+            groupSet: -1,
+          });
+        }
+      }
+
+      destResult.resultUsesUngrouped = true;
+
+      if (ungrouping.refFields && ungrouping.refFields.length > 0) {
+        const refType = ungrouping.exclude ? 'exclude' : 'all';
+        const key = groupingKey(refType, ungrouping.refFields);
+        if (destResult.ungroupedSets.get(key) === undefined) {
+          destResult.ungroupedSets.set(key, {
+            type: refType,
+            fields: ungrouping.refFields,
+            groupSet: -1,
+          });
+        }
       }
     }
   }

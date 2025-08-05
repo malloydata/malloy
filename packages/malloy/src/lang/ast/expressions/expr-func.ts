@@ -41,6 +41,7 @@ import type {
   RecordTypeDef,
   FieldUsage,
   FunctionOrderBy as ModelFunctionOrderBy,
+  AggregateUngrouping,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -453,6 +454,10 @@ export class ExprFunc extends ExpressionDef {
       ...argExprs.map(ae => ae.fieldUsage),
       orderByUsage
     );
+    const ungroupings = argExprs.reduce(
+      (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
+      []
+    );
     if (isAsymmetric || isAnalytic) {
       fieldUsage ||= [];
       const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
@@ -469,6 +474,7 @@ export class ExprFunc extends ExpressionDef {
       value: funcCall,
       evalSpace,
       fieldUsage,
+      ungroupings,
     };
   }
 }

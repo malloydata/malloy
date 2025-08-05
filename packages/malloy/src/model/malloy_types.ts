@@ -1138,6 +1138,7 @@ export interface IndexSegment extends Filtered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
   referencedAt?: DocumentLocation;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
@@ -1158,13 +1159,11 @@ export interface FieldUsage {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
-  ungroupReference?: {refType: 'all' | 'exclude'; fields: string[] | undefined};
 }
 
 export function bareFieldUsage(fu: FieldUsage): boolean {
   return (
     fu.uniqueKeyRequirement === undefined &&
-    fu.ungroupReference === undefined &&
     fu.analyticFunctionUse === undefined
   );
 }
@@ -1178,6 +1177,7 @@ export interface QuerySegment extends Filtered, Ordered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
   referencedAt?: DocumentLocation;
 }
 
@@ -1343,6 +1343,9 @@ export interface AggregateUngrouping {
   ungroupedFields: string[][] | '*';
   fieldUsage: FieldUsage[];
   requiresGroupBy?: RequiredGroupBy[];
+  exclude: boolean;
+  path: string[];
+  refFields?: string[];
 }
 
 export type TypeInfo = {

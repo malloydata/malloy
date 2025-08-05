@@ -308,7 +308,7 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
 export function expandFieldUsage(
   segment: PipeSegment,
   source: SourceDef
-): FieldUsage[] {
+): {expandedFieldUsage: FieldUsage[]; ungroupings: AggregateUngrouping[]} {
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
@@ -318,7 +318,13 @@ export function expandFieldUsage(
       getFieldUsageFromFilterList(source),
       segmentFieldUsage(segment)
     ) ?? [];
-  return _expandFieldUsage(fieldUsage, fields).result;
+  const expanded = _expandFieldUsage(fieldUsage, fields);
+  const nestLevels = extractNestLevels(segment);
+  const expandedNests = expandRefs(nestLevels, fields);
+  return {
+    expandedFieldUsage: expanded.result,
+    ungroupings: expandedNests.result.ungroupings,
+  };
 }
 
 function _expandFieldUsage(
@@ -799,6 +805,7 @@ function joinedUngroupings(
     ...u,
     fieldUsage: joinedFieldUsage(joinPath, u.fieldUsage),
     requiresGroupBy: joinedRequiredGroupBys(joinPath, u.requiresGroupBy),
+    path: joinPath, // Set the path to the join path
   }));
 }
 
@@ -825,7 +832,21 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         fieldsReferenced.push(usage);
       } else if (field.type === 'turtle') {
         const head = field.pipeline[0];
-        nested.push(nestLevelsAt(extractNestLevels(head), head.referencedAt));
+        const nestedLevels = extractNestLevels(head);
+        const adjustedUngroupings = nestedLevels.ungroupings.map(u => ({
+          ...u,
+          path: [field.name, ...u.path],
+        }));
+
+        nested.push(
+          nestLevelsAt(
+            {
+              ...nestedLevels,
+              ungroupings: adjustedUngroupings,
+            },
+            head.referencedAt
+          )
+        );
       } else {
         const fieldUsage = field.fieldUsage ?? [];
         fieldsReferenced.push(...fieldUsage);
@@ -918,6 +939,7 @@ interface ExpandedNestLevels {
   unsatisfiableGroupBys: RequiredGroupBy[];
   nested: ExpandedNestLevels[];
   singleValueFilters: string[][];
+  ungroupings: AggregateUngrouping[];
 }
 
 function expandRefs(
@@ -943,6 +965,16 @@ function expandRefs(
     const joinPath = field.path.slice(0, -1);
     if (isTurtle(def)) {
       const head = def.pipeline[0];
+      const nestedLevels = extractNestLevels(head);
+      // Update paths for ungroupings in nested turtle
+      const adjustedLevels = {
+        ...nestedLevels,
+        ungroupings: nestedLevels.ungroupings.map(u => ({
+          ...u,
+          path: field.path, // This IS the correct path to the turtle field
+        })),
+      };
+      newNests.push(adjustedLevels);
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
       if (def.requiresGroupBy) {
@@ -1012,6 +1044,7 @@ function expandRefs(
     missingFields.push(...(expanded.missingFields ?? []));
     nested.push(expanded.result);
     unsatisfiableGroupBys.push(...expanded.result.unsatisfiableGroupBys);
+    allUngroupings.push(...expanded.result.ungroupings);
   }
   return {
     result: {
@@ -1020,6 +1053,7 @@ function expandRefs(
       unsatisfiableGroupBys,
       nested,
       singleValueFilters: nests.singleValueFilters,
+      ungroupings: allUngroupings,
     },
     missingFields: missingFields.length > 0 ? missingFields : undefined,
   };

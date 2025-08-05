@@ -47,13 +47,15 @@ export abstract class QueryBase extends MalloyElement {
     pipeline: PipeSegment[]
   ): PipeSegment[] {
     return pipeline.map((segment, index) => {
-      // Theoretically for `index > 0`, this should be the output struct of the prior stage,
-      // but because field references in prior stages can only refer to definitions from `extend:`
-      // statements, we can just use an empty struct here.
       const stageInput = index === 0 ? inputSource : ErrorFactory.structDef;
+      const {expandedFieldUsage, ungroupings} = expandFieldUsage(
+        segment,
+        stageInput
+      );
       return {
         ...segment,
-        expandedFieldUsage: expandFieldUsage(segment, stageInput),
+        expandedFieldUsage,
+        expandedUngroupings: ungroupings,
       };
     });
   }

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
 import type {UngroupNode} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -102,12 +101,7 @@ export class ExprUngroup extends ExpressionDef {
         }
         ungroup.fields = dstFields;
       }
-      const fieldUsage = mergeFieldUsage(exprVal.fieldUsage, [
-        {
-          path: [],
-          ungroupReference: {refType: this.control, fields: ungroup.fields},
-        },
-      ]);
+      const fieldUsage = exprVal.fieldUsage;
       return {
         ...TDU.atomicDef(exprVal),
         expressionType: 'ungrouped_aggregate',
@@ -119,6 +113,9 @@ export class ExprUngroup extends ExpressionDef {
             requiresGroupBy: exprVal.requiresGroupBy ?? [],
             fieldUsage: fieldUsage ?? [],
             ungroupedFields: isExclude ? ungroupFields ?? [] : '*',
+            path: [],
+            exclude: isExclude,
+            refFields: ungroup.fields,
           },
         ],
       };
