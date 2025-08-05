@@ -425,6 +425,9 @@ export class ExprFunc extends ExpressionDef {
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: part.path});
             } else {
+              argExprs[0].fieldUsage = mergeFieldUsage(argExprs[0].fieldUsage, [
+                {path: part.path, at: this.args[0].location},
+              ]);
               expr.push({
                 node: 'field',
                 // TODO when we have namespaces, this will need to be replaced with the resolved path
