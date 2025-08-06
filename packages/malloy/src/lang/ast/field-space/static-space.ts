@@ -165,7 +165,9 @@ export class StaticSpace implements FieldSpace {
       };
     }
     if (found instanceof SpaceField) {
-      const definition = found.fieldDef();
+      const definition = this.isQueryFieldSpace()
+        ? found.getQueryFieldDef(this)
+        : found.fieldDef();
       if (definition) {
         if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
           // We have looked up a field which is a join, but not a StructSpaceField
@@ -187,12 +189,13 @@ export class StaticSpace implements FieldSpace {
             found instanceof StructSpaceFieldBase
               ? 'joinReference'
               : 'fieldReference',
-          definition,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          definition: definition as any,
           location: head.location,
           text: head.refString,
         });
       }
-      if (definition?.accessModifier) {
+      if (definition?.type !== 'fieldref' && definition?.accessModifier) {
         if (!accessAllowed(accessLevel, definition.accessModifier)) {
           return {
             error: {

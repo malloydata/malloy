@@ -850,6 +850,22 @@ describe('query:', () => {
       expect(q).toBeDefined();
       expect(q[0]).toMatchObject({name: 'ats', type: 'timestamp'});
     });
+    test('can order by a date grouped by timeframe', () => {
+      expect(`
+        run: a -> {
+          group_by: ats.day
+          order_by: ats
+        }
+      `).toTranslate();
+    });
+    test('use date trunc in calculate', () => {
+      expect(`
+        run: a -> {
+          group_by: ats.day
+          calculate: lats is lag(ats)
+        }
+      `).toTranslate();
+    });
     test('aggregate multiple', () => {
       expect(`
         run: a->{
