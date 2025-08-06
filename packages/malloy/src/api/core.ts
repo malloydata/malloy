@@ -547,7 +547,12 @@ export interface CompileQueryState extends CompileModelState {
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
 ): CompileQueryState {
-  const queryMalloy = Malloy.queryToMalloy(request.query);
+  const queryMalloy =
+    request.query_malloy ??
+    (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+  if (queryMalloy === undefined) {
+    throw new Error('Expected either query or query_malloy');
+  }
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
