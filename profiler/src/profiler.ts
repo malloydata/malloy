@@ -94,6 +94,10 @@ function compileQueryStable(serializedCompileQueryRequest: string): string {
 async function main() {
   const fs = require('fs');
   const filePath = process.argv[2];
+  if (filePath === undefined) {
+    console.log('Missing file path');
+    return;
+  }
   const fileContent = fs.readFileSync(filePath, 'utf8');
   console.log(`REQUEST ${fileContent.substring(0, 100)}`);
 

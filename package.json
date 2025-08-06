@@ -20,7 +20,8 @@
       "packages/malloy-malloy-sql",
       "packages/malloy-render",
       "packages/malloy-syntax-highlight",
-      "test"
+      "test",
+      "profiler"
     ]
   },
   "files": [
