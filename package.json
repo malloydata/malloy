@@ -55,6 +55,7 @@
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
+    "profile": "ts-node scripts/profiler",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
     "ping-db": "ts-node ./test/bin/ping_db.ts"
@@ -98,5 +99,8 @@
     "unified": "^10.1.2",
     "uuid": "^8.3.2",
     "yargs": "^17.7.2"
+  },
+  "dependencies": {
+    "clinic": "^13.0.0"
   }
 }
