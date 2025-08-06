@@ -37,6 +37,7 @@
     "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "profile": "ts-node profiler",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
