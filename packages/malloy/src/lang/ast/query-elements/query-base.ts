@@ -51,9 +51,17 @@ import {exprMapDeep} from '../../../model/utils';
 import {ErrorFactory} from '../error-factory';
 import {ColumnSpaceField} from '../field-space/column-space-field';
 import {IRViewField} from '../field-space/ir-view-field';
-import {StaticSourceSpace, StructSpaceField} from '../field-space/static-space';
+import {
+  StaticSourceSpace,
+  StaticSpace,
+  StructSpaceField,
+} from '../field-space/static-space';
 import {detectAndRemovePartialStages} from '../query-utils';
-import type {QueryFieldSpace, SourceFieldSpace} from '../types/field-space';
+import type {
+  FieldSpace,
+  QueryFieldSpace,
+  SourceFieldSpace,
+} from '../types/field-space';
 import {FieldName} from '../types/field-space';
 import type {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
@@ -63,15 +71,25 @@ import {SpaceField} from '../types/space-field';
 
 class ExtendedFieldSpace implements SourceFieldSpace {
   readonly type = 'fieldSpace';
-  private readonly extendMap: Map<string, SpaceEntry | undefined> = new Map();
-  private readonly extensionsByName: Map<string, FieldDef> = new Map();
+  private readonly extensionSpace: FieldSpace;
   constructor(
     readonly realFS: SourceFieldSpace,
     readonly sourceExtensions: FieldDef[]
   ) {
-    for (const field of sourceExtensions) {
-      this.extensionsByName.set(field.as ?? field.name, field);
-    }
+    const dialect = this.realFS.dialectName();
+    const connection = this.realFS.connectionName();
+    this.extensionSpace = new StaticSpace(
+      {
+        // TODO not actually a query_result...
+        type: 'query_result',
+        fields: sourceExtensions,
+        name: 'extension',
+        connection,
+        dialect,
+      },
+      dialect,
+      connection
+    );
   }
 
   defToSpaceField(from: FieldDef): SpaceField {
@@ -100,33 +118,23 @@ class ExtendedFieldSpace implements SourceFieldSpace {
   }
 
   entry(name: string): SpaceEntry | undefined {
-    if (this.extensionsByName.has(name)) {
-      const entry = this.extendMap.get(name);
-      if (entry === undefined) {
-        const field = this.extensionsByName.get(name)!;
-        const spaceField = this.defToSpaceField(field);
-        this.extendMap.set(name, spaceField);
-        return spaceField;
-      } else {
-        return entry;
-      }
-    }
-    return this.realFS.entry(name);
+    return this.extensionSpace.entry(name) ?? this.realFS.entry(name);
   }
 
-  lookup(symbol: FieldName[]): LookupResult {
-    if (symbol.length === 1) {
-      const entry = this.entry(symbol[0].refString);
-      if (entry !== undefined) {
-        return {
-          found: entry,
-          isOutputField: false,
-          joinPath: [],
-          error: undefined,
-        };
-      }
+  lookup(
+    symbol: FieldName[],
+    accessLevel?: AccessModifierLabel | undefined,
+    logReferences?: boolean
+  ): LookupResult {
+    const extensionResult = this.extensionSpace.lookup(
+      symbol,
+      accessLevel,
+      logReferences
+    );
+    if (extensionResult.found) {
+      return extensionResult;
     }
-    return this.realFS.lookup(symbol);
+    return this.realFS.lookup(symbol, accessLevel, logReferences);
   }
 
   entries(): [string, SpaceEntry][] {

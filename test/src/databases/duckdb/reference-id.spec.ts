@@ -46,8 +46,7 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
         actual
       );
       const bOne = referenceId(result.data.path(0, 'b', 0, 'one').field);
-      expect(bOne).not.toBe(undefined);
-      expect(bOne).not.toBe(actual);
+      expect(bOne).toBe(undefined);
       expect(referenceId(result.data.path(0, 'c', 0, 'one').field)).toBe(
         actual
       );
@@ -121,8 +120,7 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
       expect(actual).not.toBeUndefined();
       expect(referenceId(result.data.path(0, 'a', 'c').field)).toBe(actual);
       const bC = referenceId(result.data.path(0, 'b', 'c').field);
-      expect(bC).not.toBe(undefined);
-      expect(bC).not.toBe(actual);
+      expect(bC).toBe(undefined);
       expect(referenceId(result.data.path(0, 'd', 'c').field)).toBe(actual);
     });
 
@@ -153,8 +151,7 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
         actual
       );
       const bTwo = referenceId(result.data.path(0, 'b', 0, 'two').field);
-      expect(bTwo).not.toBe(undefined);
-      expect(bTwo).not.toBe(actual);
+      expect(bTwo).toBe(undefined);
       expect(referenceId(result.data.path(0, 'c', 0, 'two').field)).toBe(
         actual
       );
