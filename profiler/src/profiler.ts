@@ -19,7 +19,7 @@ type CompileQueryResponseWithSessionId = CompileQueryResponse & {
 
 function compileQueryStableInternalObjRequest(
   parsedRequest: CompileQueryRequestWithSessionId
-): CompileQueryResponse {
+): {response: CompileQueryResponse; time: number} {
   const sessionId = parsedRequest.session_id;
   delete parsedRequest.session_id;
   const request = convertFromThrift(
@@ -36,7 +36,6 @@ function compileQueryStableInternalObjRequest(
   });
   const end = Date.now();
   const took = end - now;
-  console.log(`TOOK: ${took}ms`);
 
   const {session_id, ...spreadedResponse} = response;
   const withNestResponse = convertToThrift(
@@ -46,19 +45,23 @@ function compileQueryStableInternalObjRequest(
   // TODO: Remove when session id is part of the response thrift.
   (withNestResponse as CompileQueryResponseWithSessionId).session_id =
     session_id;
-  return withNestResponse;
+  return {response: withNestResponse, time: took};
 }
 
-function compileQueryStableInternal(
-  serializedCompileQueryRequest: string
-): string {
+function compileQueryStableInternal(serializedCompileQueryRequest: string): {
+  response: string;
+  time: number;
+} {
   const parsedRequest = JSON.parse(serializedCompileQueryRequest);
-  const withNestResponse = compileQueryStableInternalObjRequest(parsedRequest);
-  return JSON.stringify(withNestResponse);
+  const {response, time} = compileQueryStableInternalObjRequest(parsedRequest);
+  return {response: JSON.stringify(response), time};
 }
 
 // Compile Query.
-function compileQueryStable(serializedCompileQueryRequest: string): string {
+export function compileQueryStable(serializedCompileQueryRequest: string): {
+  response: string;
+  time: number | undefined;
+} {
   try {
     return compileQueryStableInternal(serializedCompileQueryRequest);
   } catch (e) {
@@ -87,25 +90,11 @@ function compileQueryStable(serializedCompileQueryRequest: string): string {
       ],
     };
 
-    return JSON.stringify(convertToThrift(response, 'CompileQueryResponse'));
+    return {
+      response: JSON.stringify(
+        convertToThrift(response, 'CompileQueryResponse')
+      ),
+      time: undefined,
+    };
   }
 }
-
-async function main() {
-  const fs = require('fs');
-  const filePath = process.argv[2];
-  if (filePath === undefined) {
-    console.log('Missing file path');
-    return;
-  }
-  const fileContent = fs.readFileSync(filePath, 'utf8');
-  console.log(`REQUEST ${fileContent.substring(0, 100)}`);
-
-  const response = compileQueryStable(fileContent);
-
-  console.log(`RESPONSE ${response.substring(0, 100)}`);
-  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  await wait(1000);
-}
-
-main();
