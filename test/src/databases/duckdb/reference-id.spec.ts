@@ -53,6 +53,50 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
       );
     });
 
+    it('is correct for nested view and direct reference', async () => {
+      const query = `
+        run: duckdb.sql("SELECT 1 as one") extend {
+          view: a is {
+            group_by: one
+          }
+        } -> {
+          group_by: one
+          nest: a
+        }
+      `;
+
+      const result = await runtime.loadQuery(query).run();
+      const actual = referenceId(result.data.path(0, 'one').field);
+      expect(actual).not.toBeUndefined();
+      expect(referenceId(result.data.path(0, 'a', 0, 'one').field)).toBe(
+        actual
+      );
+    });
+
+    // This doesn't work because view references don't exist any more; if you have a view
+    // reference, it expands into its definition
+    it.skip('is correct for nest at different levels', async () => {
+      const query = `
+        run: duckdb.sql("SELECT 1 as one") extend {
+          view: a is {
+            group_by: one
+          }
+        } -> {
+          group_by: one
+          nest: a
+          nest: b is {
+            group_by: two is 2
+            nest: a
+          }
+        }
+      `;
+
+      const result = await runtime.loadQuery(query).run();
+      const actual = referenceId(result.data.path(0, 'a').field);
+      expect(actual).not.toBeUndefined();
+      expect(referenceId(result.data.path(0, 'b', 0, 'a').field)).toBe(actual);
+    });
+
     it('is correct for measures', async () => {
       const query = `
         run: duckdb.sql("SELECT 1 as one") extend {
@@ -116,7 +160,30 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
       );
     });
 
-    it.skip('is unequal for different nest/extend blocks', async () => {
+    it('is correct when nest has extend block', async () => {
+      const query = `
+        run: duckdb.sql("SELECT 1 as one") -> {
+          extend: {
+            dimension: two is 2
+          }
+          group_by: two
+          nest: a is {
+            extend: {
+              dimension: three is 3
+            }
+            group_by: two
+          }
+        }
+      `;
+
+      const result = await runtime.loadQuery(query).run();
+      const actual = referenceId(result.data.path(0, 'two').field);
+      expect(actual).not.toBeUndefined();
+      const aTwo = referenceId(result.data.path(0, 'a', 0, 'two').field);
+      expect(aTwo).toBe(actual);
+    });
+
+    it('is unequal for different nest/extend blocks', async () => {
       const query = `
         run: duckdb.sql("SELECT 1 as one") -> {
           nest: a is {
@@ -137,7 +204,7 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
       const result = await runtime.loadQuery(query).run();
       const actual = referenceId(result.data.path(0, 'a', 0, 'three').field);
       expect(actual).not.toBeUndefined();
-      expect(referenceId(result.data.path(0, 'b', 0, 'three').field)).toBe(
+      expect(referenceId(result.data.path(0, 'b', 0, 'three').field)).not.toBe(
         actual
       );
     });

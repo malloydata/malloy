@@ -739,6 +739,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
   drillExpression?: Malloy.Expression | undefined;
+  referenceId?: string;
 }
 
 // this field definition represents something in the database.
@@ -926,6 +927,7 @@ export interface JoinBase {
   onExpression?: Expr;
   fieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  referenceId?: string;
 }
 
 export type Joinable =
@@ -1178,6 +1180,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
+  referenceId?: string;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {

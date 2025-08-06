@@ -22,7 +22,6 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {v4 as uuidv4} from 'uuid';
 import type {
   QueryInfo,
   Dialect,
@@ -419,10 +418,7 @@ class GenerateState {
 }
 
 abstract class QueryNode {
-  readonly referenceId: string;
-  constructor(referenceId?: string) {
-    this.referenceId = referenceId ?? uuidv4();
-  }
+  constructor(readonly referenceId?: string) {}
   abstract getIdentifier(): string;
   getChildByName(_name: string): QueryField | undefined {
     return undefined;
@@ -433,8 +429,8 @@ class QueryField extends QueryNode {
   fieldDef: FieldDef;
   parent: QueryStruct;
 
-  constructor(fieldDef: FieldDef, parent: QueryStruct, referenceId?: string) {
-    super(referenceId);
+  constructor(fieldDef: FieldDef, parent: QueryStruct) {
+    super(fieldDef.referenceId);
     this.fieldDef = fieldDef;
     this.parent = parent;
     this.fieldDef = fieldDef;
@@ -1600,8 +1596,8 @@ type QueryBasicField = QueryAtomicField<BasicAtomicDef>;
 abstract class QueryAtomicField<T extends AtomicFieldDef> extends QueryField {
   fieldDef: T;
 
-  constructor(fieldDef: T, parent: QueryStruct, refId?: string) {
-    super(fieldDef, parent, refId);
+  constructor(fieldDef: T, parent: QueryStruct) {
+    super(fieldDef, parent);
     this.fieldDef = fieldDef; // wish I didn't have to do this
   }
 
@@ -4503,10 +4499,9 @@ class QueryFieldStruct extends QueryField {
     jfd: JoinFieldDef,
     sourceArguments: Record<string, Argument> | undefined,
     parent: QueryStruct,
-    prepareResultOptions: PrepareResultOptions,
-    referenceId?: string
+    prepareResultOptions: PrepareResultOptions
   ) {
-    super(jfd, parent, referenceId);
+    super(jfd, parent);
     this.fieldDef = jfd;
     this.queryStruct = new QueryStruct(
       jfd,
@@ -4905,7 +4900,7 @@ class QueryStruct {
   }
 
   /** makes a new queryable field object from a fieldDef */
-  makeQueryField(field: FieldDef, referenceId?: string): QueryField {
+  makeQueryField(field: FieldDef): QueryField {
     switch (field.type) {
       case 'array':
       case 'record':
@@ -4920,19 +4915,19 @@ class QueryStruct {
           this.prepareResultOptions
         );
       case 'string':
-        return new QueryFieldString(field, this, referenceId);
+        return new QueryFieldString(field, this);
       case 'date':
-        return new QueryFieldDate(field, this, referenceId);
+        return new QueryFieldDate(field, this);
       case 'timestamp':
-        return new QueryFieldTimestamp(field, this, referenceId);
+        return new QueryFieldTimestamp(field, this);
       case 'number':
-        return new QueryFieldNumber(field, this, referenceId);
+        return new QueryFieldNumber(field, this);
       case 'boolean':
-        return new QueryFieldBoolean(field, this, referenceId);
+        return new QueryFieldBoolean(field, this);
       case 'json':
-        return new QueryFieldJSON(field, this, referenceId);
+        return new QueryFieldJSON(field, this);
       case 'sql native':
-        return new QueryFieldUnsupported(field, this, referenceId);
+        return new QueryFieldUnsupported(field, this);
       case 'turtle':
         return QueryQuery.makeQuery(field, this, undefined, false);
       default:
@@ -5046,16 +5041,10 @@ class QueryStruct {
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryFieldStruct) {
         const newDef = {...field.fieldDef, annotation, drillExpression};
-        return new QueryFieldStruct(
-          newDef,
-          undefined,
-          field.parent,
-          {},
-          field.referenceId
-        );
+        return new QueryFieldStruct(newDef, undefined, field.parent, {});
       } else {
         const newDef = {...field.fieldDef, annotation, drillExpression};
-        return field.parent.makeQueryField(newDef, field.referenceId);
+        return field.parent.makeQueryField(newDef);
       }
     }
     return field;
