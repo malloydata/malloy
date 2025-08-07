@@ -77,6 +77,7 @@ export type Expr =
   | FieldnameNode
   | SourceReferenceNode
   | ParameterNode
+  | ColumnNode
   | NowNode
   | MeasureTimeExpr
   | TimeExtractExpr
@@ -227,6 +228,11 @@ export interface SourceReferenceNode extends ExprLeaf {
 
 export interface ParameterNode extends ExprLeaf {
   node: 'parameter';
+  path: string[];
+}
+
+export interface ColumnNode extends ExprLeaf {
+  node: 'column';
   path: string[];
 }
 
@@ -733,6 +739,7 @@ export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   requiresGroupBy?: RequiredGroupBy[];
   ungroupings?: AggregateUngrouping[];
   drillExpression?: Malloy.Expression | undefined;
+  referenceId?: string;
 }
 
 // this field definition represents something in the database.
@@ -920,6 +927,7 @@ export interface JoinBase {
   onExpression?: Expr;
   fieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  referenceId?: string;
 }
 
 export type Joinable =
@@ -1172,6 +1180,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
+  referenceId?: string;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1546,6 +1555,7 @@ export interface RefToField {
   annotation?: Annotation;
   at?: DocumentLocation;
   drillExpression?: Malloy.Expression | undefined;
+  e?: Expr;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 

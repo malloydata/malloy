@@ -35,6 +35,7 @@ import type {
   ReduceSegment,
   StructDef,
   JoinFieldDef,
+  AtomicFieldDef,
 } from '../../model/malloy_types';
 
 const ERR_NAME = '~malformed~';
@@ -74,6 +75,13 @@ export class ErrorFactory {
 
   static didCreate(s: StructDef | JoinFieldDef): boolean {
     return s.type === 'table' && 'errorFactory' in s;
+  }
+
+  static get atomicFieldDef(): AtomicFieldDef {
+    return {
+      type: 'error',
+      name: 'error',
+    };
   }
 
   static get query(): Query {
