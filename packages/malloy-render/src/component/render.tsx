@@ -47,6 +47,7 @@ export type MalloyRenderProps = {
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
   renderFieldMetadata: RenderFieldMetadata;
+  useVegaInterpreter?: boolean;
 };
 
 const ConfigContext = createContext<{
@@ -113,6 +114,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             scrollEl={props.scrollEl}
             vegaConfigOverride={props.vegaConfigOverride}
             renderFieldMetadata={props.renderFieldMetadata}
+            useVegaInterpreter={props.useVegaInterpreter}
           />
         </ConfigContext.Provider>
       </Show>
@@ -127,6 +129,7 @@ export function MalloyRenderInner(props: {
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
   renderFieldMetadata: RenderFieldMetadata;
+  useVegaInterpreter?: boolean;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -149,6 +152,7 @@ export function MalloyRenderInner(props: {
         width: parentSize().width - CHART_SIZE_BUFFER,
         height: parentSize().height - CHART_SIZE_BUFFER,
       },
+      useVegaInterpreter: props.useVegaInterpreter,
     });
     props.renderFieldMetadata?.getAllFields().forEach(field => {
       const plugins =
@@ -161,6 +165,7 @@ export function MalloyRenderInner(props: {
             width: parentSize().width - CHART_SIZE_BUFFER,
             height: parentSize().height - CHART_SIZE_BUFFER,
           },
+          useVegaInterpreter: props.useVegaInterpreter,
         });
       });
     });

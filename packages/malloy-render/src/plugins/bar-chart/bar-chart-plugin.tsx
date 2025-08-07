@@ -21,6 +21,7 @@ import {
 import {generateBarChartVegaSpecV2} from '@/plugins/bar-chart/generate-bar_chart-vega-spec';
 import {type VegaChartProps} from '@/component/types';
 import {type Config, parse, type Runtime} from 'vega';
+import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {baseVegaConfig} from '@/component/vega/base-vega-config';
 import {NULL_SYMBOL} from '@/util';
@@ -82,6 +83,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
       const seriesStats = new Map<string, SeriesStats>();
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
+      let useVegaInterpreter: boolean | undefined;
 
       const settings = getBarChartSettings(field);
       const hasMultipleSeriesFields = settings.seriesChannel.fields.length > 1;
@@ -121,6 +123,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
               getTooltipData={vegaProps.getTooltipData}
               isDataLimited={mappedData.isDataLimited}
               dataLimitMessage={mappedData.dataLimitMessage}
+              useVegaInterpreter={useVegaInterpreter}
             />
           );
         },
@@ -194,6 +197,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
           options: GetResultMetadataOptions
         ): void => {
           vegaProps = generateBarChartVegaSpecV2(metadata, pluginInstance);
+          useVegaInterpreter = options.useVegaInterpreter;
 
           const vegaConfigOverride =
             options.getVegaConfigOverride?.('bar_chart') ?? {};
@@ -215,7 +219,11 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
                 maybeAxisYLabelFont ?? maybeAxisLabelFont;
           }
 
-          runtime = parse(vegaProps.spec, vegaConfig);
+          // Use vega-interpreter if specified
+          const parseOptions = options.useVegaInterpreter
+            ? {ast: true}
+            : undefined;
+          runtime = parse(vegaProps.spec, vegaConfig, parseOptions);
         },
 
         getMetadata: (): BarChartPluginMetadata => ({
