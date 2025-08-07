@@ -91,6 +91,7 @@ export function MalloyRender(props: MalloyRenderProps) {
   return (
     <ErrorBoundary
       fallback={errorProps => {
+        console.log('ErrorBoundary caught error:', errorProps);
         const message = () => errorProps.error?.message ?? errorProps;
         props?.onError?.(errorProps.error);
         return <ErrorMessage message={message()} />;
