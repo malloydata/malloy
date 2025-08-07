@@ -514,6 +514,14 @@ describe('query:', () => {
           order_by: c
         }`).toTranslate();
       });
+      test('can order by a date grouped by timeframe', () => {
+        expect(`
+          run: a -> {
+            group_by: ats.day
+            order_by: ats
+          }
+        `).toTranslate();
+      });
     });
   });
   describe('function typechecking', () => {
