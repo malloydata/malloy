@@ -522,7 +522,7 @@ export class Document extends MalloyElement implements NameSpace {
         this.annotation.inherits = extendingModelDef.annotation;
       }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
-        const entry = structuredClone(orig);
+        const entry = {...orig};
         if (
           isSourceDef(entry) ||
           entry.type === 'query' ||
@@ -598,7 +598,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
-        const newEntry = structuredClone(entryDef);
+        const newEntry = {...entryDef};
         if (newEntry.modelAnnotation === undefined && def.annotation) {
           newEntry.modelAnnotation = def.annotation;
         }

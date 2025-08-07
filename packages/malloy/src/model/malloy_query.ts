@@ -5082,15 +5082,17 @@ class QueryStruct {
   applyStructFiltersToTurtleDef(
     turtleDef: TurtleDef | TurtleDefPlus
   ): TurtleDef {
-    let pipeline = turtleDef.pipeline;
+    const pipeline = [...turtleDef.pipeline];
     const annotation = turtleDef.annotation;
 
     const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
-    pipeline = structuredClone(pipeline);
-    pipeline[0].filterList = addedFilters.concat(
-      pipeline[0].filterList || [],
-      isSourceDef(this.structDef) ? this.structDef.filterList || [] : []
-    );
+    pipeline[0] = {
+      ...pipeline[0],
+      filterList: addedFilters.concat(
+        pipeline[0].filterList || [],
+        isSourceDef(this.structDef) ? this.structDef.filterList || [] : []
+      ),
+    };
 
     const flatTurtleDef: TurtleDef = {
       type: 'turtle',

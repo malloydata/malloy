@@ -567,10 +567,16 @@ export function newCompileQueryState(
   };
   const queryURL = 'internal://query.malloy';
   if (request.internal_options?.serialize_and_parse) {
+    const queryMalloy =
+      request.query_malloy ??
+      (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+    if (queryMalloy === undefined) {
+      throw new Error('Expected either query or query_malloy');
+    }
     needs.files = [
       {
         url: queryURL,
-        contents: Malloy.queryToMalloy(request.query),
+        contents: queryMalloy,
       },
       ...(needs.files ?? []),
     ];

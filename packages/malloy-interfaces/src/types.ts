@@ -268,7 +268,12 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'query': {
         'type': 'Query',
-        'optional': false,
+        'optional': true,
+        'array': false,
+      },
+      'query_malloy': {
+        'type': 'string',
+        'optional': true,
         'array': false,
       },
       'default_row_limit': {
@@ -1388,7 +1393,12 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'query': {
         'type': 'Query',
-        'optional': false,
+        'optional': true,
+        'array': false,
+      },
+      'query_malloy': {
+        'type': 'string',
+        'optional': true,
         'array': false,
       },
       'default_row_limit': {
@@ -1940,7 +1950,8 @@ export type CompileModelResponse = {
 
 export type CompileQueryRequest = {
   model_url: string;
-  query: Query;
+  query?: Query;
+  query_malloy?: string;
   default_row_limit?: number;
   exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
@@ -2478,7 +2489,8 @@ export type RunIndexQueryResponse = {
 
 export type RunQueryRequest = {
   model_url: string;
-  query: Query;
+  query?: Query;
+  query_malloy?: string;
   default_row_limit?: number;
   exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;

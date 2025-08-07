@@ -26,6 +26,8 @@ vscode-extension/**/tsconfig.tsbuildinfo
 vscode-extension/**/package-lock.json
 vscode-extension/**/.eslintcache
 test/dist
+profiler/dist
+profiler/.clinic
 
 # misc
 .DS_Store

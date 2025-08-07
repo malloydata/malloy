@@ -720,7 +720,8 @@ struct CompileSourceResponse {
 struct RunQueryRequest {
   // Main parameters
   1: required string model_url,
-  2: required Query query,
+  2: optional Query query,
+  5: optional string query_malloy,
 
   // Options
   3: optional i32 default_row_limit,
@@ -744,7 +745,8 @@ struct RunQueryResponse {
 struct CompileQueryRequest {
   // Main parameters
   1: required string model_url,
-  2: required Query query,
+  2: optional Query query,
+  5: optional string query_malloy,
 
   // Options
   3: optional i32 default_row_limit,

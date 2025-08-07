@@ -629,6 +629,51 @@ ORDER BY 1 asc NULLS LAST
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile query from query string', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: 'run: flights -> { group_by: carrier }',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileQueryResponse = {
+        result: {
+          connection_name: 'connection',
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
     test('compile query with default row limit added', () => {
       const result = compileQuery({
         model_url: 'file://test.malloy',
