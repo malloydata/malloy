@@ -344,7 +344,6 @@ type MessageParameterTypes = {
   'project': string;
   'top-by': string;
   'anonymous-query': string;
-  'anonymous-nest': string;
   'count-expression-with-locality': string;
   'invalid-symmetric-aggregate': string;
   'invalid-asymmetric-aggregate': string;
@@ -420,6 +419,10 @@ type MessageParameterTypes = {
   'grouped-by-not-found': string;
   'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
+  // Stable Query only.
+  'anonymous-nest': string;
+  'invalid-order-by': string;
+  'anonymous-query-field': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

@@ -29,6 +29,7 @@
     "@malloydata/malloy": "0.0.300",
     "@malloydata/malloy-tag": "0.0.300",
     "@malloydata/render": "0.0.300",
+    "@malloydata/malloy-interfaces": "0.0.300",
     "events": "^3.3.0",
     "jsdom": "^22.1.0",
     "luxon": "^2.4.0",

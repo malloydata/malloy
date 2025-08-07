@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import type * as Malloy from './types';
 import {maybeQuoteIdentifier} from './util';
 
@@ -69,7 +76,10 @@ function wrap(
 }
 
 function escapeString(str: string): {contents: string; quoteCharacter: string} {
-  return {contents: str, quoteCharacter: '"'}; // TODO
+  if (str.includes('"')) {
+    return {contents: str.replace(/'/g, "\\'"), quoteCharacter: "'"};
+  }
+  return {contents: str.replace(/"/g, '\\"'), quoteCharacter: '"'};
 }
 
 function join(fragments: Fragment[], separator: string): Fragment[] {

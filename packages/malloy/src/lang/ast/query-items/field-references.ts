@@ -49,9 +49,9 @@ import {
   typecheckProject,
 } from './typecheck_utils';
 
-export type FieldReferenceConstructor = new (
-  names: FieldName[]
-) => FieldReference;
+export type FieldReferenceConstructor<
+  T extends FieldReference = FieldReference,
+> = new (names: FieldName[]) => T;
 
 export abstract class FieldReference
   extends ListOf<FieldName>

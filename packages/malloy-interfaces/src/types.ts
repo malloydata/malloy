@@ -415,6 +415,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'array': true,
         'optional': true,
       },
+      'queries': {
+        'type': 'QueryFile',
+        'array': true,
+        'optional': true,
+      },
     },
   },
   'Connection': {
@@ -1146,6 +1151,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'arrow': 'QueryArrow',
       'query_reference': 'Reference',
       'refinement': 'QueryRefinement',
+    },
+  },
+  'QueryFile': {
+    'type': 'struct',
+    'name': 'QueryFile',
+    'fields': {
+      'url': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'query': {
+        'type': 'Query',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'QueryInfo': {
@@ -1966,6 +1987,7 @@ export type CompilerNeeds = {
   files?: Array<File>;
   connections?: Array<Connection>;
   translations?: Array<Translation>;
+  queries?: Array<QueryFile>;
 };
 
 export type Connection = {
@@ -2400,6 +2422,11 @@ export type QueryDefinitionWithQueryReference = {
 export type QueryDefinitionWithRefinement = {
   kind: 'refinement';
 } & QueryRefinement;
+
+export type QueryFile = {
+  url: string;
+  query?: Query;
+};
 
 export type QueryInfo = {
   name: string;
