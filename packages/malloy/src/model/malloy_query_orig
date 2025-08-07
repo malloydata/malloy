@@ -927,7 +927,7 @@ class QueryField extends QueryNode {
   ): string | undefined {
     let struct = context;
     if (structPath) {
-      struct = this.parent.root().getStructByName(structPath);
+      struct = this.parent.getStructByName(structPath);
     }
     if (struct.needsSymetricCalculation(resultSet)) {
       return struct.getDistinctKey().generateExpression(resultSet);
@@ -5082,15 +5082,17 @@ class QueryStruct {
   applyStructFiltersToTurtleDef(
     turtleDef: TurtleDef | TurtleDefPlus
   ): TurtleDef {
-    let pipeline = turtleDef.pipeline;
+    const pipeline = [...turtleDef.pipeline];
     const annotation = turtleDef.annotation;
 
     const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
-    pipeline = structuredClone(pipeline);
-    pipeline[0].filterList = addedFilters.concat(
-      pipeline[0].filterList || [],
-      isSourceDef(this.structDef) ? this.structDef.filterList || [] : []
-    );
+    pipeline[0] = {
+      ...pipeline[0],
+      filterList: addedFilters.concat(
+        pipeline[0].filterList || [],
+        isSourceDef(this.structDef) ? this.structDef.filterList || [] : []
+      ),
+    };
 
     const flatTurtleDef: TurtleDef = {
       type: 'turtle',
@@ -5352,6 +5354,19 @@ export class QueryModel {
           type: 'index',
           indexFields: indexStar,
           sample: struct.dialect.defaultSampling,
+          outputStruct: {
+            type: 'query_result',
+            name: 'index',
+            connection: struct.connectionName,
+            dialect: struct.dialect.name,
+            fields: [
+              {name: 'fieldName', type: 'string'},
+              {name: 'fieldPath', type: 'string'},
+              {name: 'fieldType', type: 'string'},
+              {name: 'weight', type: 'number'},
+              {name: 'fieldValue', type: 'string'},
+            ],
+          },
         },
       ],
     };

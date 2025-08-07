@@ -269,6 +269,7 @@ export interface CompileModelState {
   translator: MalloyTranslator;
   done: boolean;
   hasSource: boolean;
+  excludeReferences: boolean;
 }
 
 export function updateCompileModelState(
@@ -295,28 +296,35 @@ export function updateCompileModelState(
 function _newCompileModelState(
   modelURL: string,
   compilerNeeds?: Malloy.CompilerNeeds,
-  extendURL?: string
+  parseUpdate?: ParseUpdate | undefined,
+  extendURL?: string,
+  excludeReferences = false
 ): CompileModelState {
-  const translator = new MalloyTranslator(
-    modelURL,
-    null,
-    compilerNeedsToUpdate(compilerNeeds)
-  );
+  parseUpdate ??= compilerNeedsToUpdate(compilerNeeds);
+  const translator = new MalloyTranslator(modelURL, null, parseUpdate);
   const hasSource =
     (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
     (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
   if (extendURL) {
     return {
-      extending: _newCompileModelState(extendURL, compilerNeeds),
+      extending: _newCompileModelState(
+        extendURL,
+        compilerNeeds,
+        parseUpdate,
+        undefined,
+        excludeReferences
+      ),
       translator,
       done: false,
       hasSource,
+      excludeReferences,
     };
   } else {
     return {
       translator,
       done: false,
       hasSource,
+      excludeReferences,
     };
   }
 }
@@ -327,7 +335,9 @@ export function newCompileModelState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
-    request.extend_model_url
+    undefined,
+    request.extend_model_url,
+    request.exclude_references
   );
 }
 
@@ -337,7 +347,9 @@ export function newCompileSourceState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
-    request.extend_model_url
+    undefined,
+    request.extend_model_url,
+    request.exclude_references
   );
 }
 
@@ -401,7 +413,10 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       const model = modelDefToModelInfo(result.modelDef);
       return {
         model,
-        modelDef: result.modelDef,
+        modelDef: maybeExcludeReferences(
+          result.modelDef,
+          state.excludeReferences
+        ),
         timingInfo,
       };
     } else {
@@ -422,6 +437,17 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
     const timingInfo = timer.stop();
     return {compilerNeeds, logs: result.problems, timingInfo};
   }
+}
+
+function maybeExcludeReferences(
+  modelDef: ModelDef,
+  excludeReferences: boolean
+): ModelDef {
+  if (!excludeReferences) return modelDef;
+  return {
+    ...modelDef,
+    references: undefined,
+  };
 }
 
 function wrapResponse(
@@ -452,16 +478,6 @@ function wrapResponse(
       timing_info: response.timingInfo,
     };
   }
-}
-
-function _compileModel(
-  modelURL: string,
-  compilerNeeds?: Malloy.CompilerNeeds,
-  extendURL?: string,
-  state?: CompileModelState
-): CompileResponse {
-  state ??= _newCompileModelState(modelURL, compilerNeeds, extendURL);
-  return _statedCompileModel(state);
 }
 
 export function compileModel(
@@ -532,7 +548,12 @@ export interface CompileQueryState extends CompileModelState {
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
 ): CompileQueryState {
-  const queryMalloy = Malloy.queryToMalloy(request.query);
+  const queryMalloy =
+    request.query_malloy ??
+    (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+  if (queryMalloy === undefined) {
+    throw new Error('Expected either query or query_malloy');
+  }
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
@@ -545,7 +566,13 @@ export function newCompileQueryState(
     ...(needs.files ?? []),
   ];
   return {
-    ..._newCompileModelState(queryURL, needs, request.model_url),
+    ..._newCompileModelState(
+      queryURL,
+      needs,
+      undefined,
+      request.model_url,
+      request.exclude_references
+    ),
     defaultRowLimit: request.default_row_limit,
   };
 }

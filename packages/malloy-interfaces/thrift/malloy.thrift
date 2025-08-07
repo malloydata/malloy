@@ -95,6 +95,7 @@ union FieldInfo {
   2: required MeasureInfo measure,
   3: required JoinInfo join,
   4: required ViewInfo view,
+  5: required CalculateInfo calculate,
 }
 
 // TODO should these just be "AtomicField" with a "fieldtype"
@@ -138,6 +139,12 @@ struct ViewInfo {
   // "openable view"
   4: optional View definition,
   // Possibly need `filterList` depending on how we do drills
+}
+
+struct CalculateInfo {
+  1: required string name,
+  2: required AtomicType type,
+  3: optional list<Annotation> annotations,
 }
 
 struct View {
@@ -265,6 +272,7 @@ union ViewOperation {
   6: required Nest nest,
   7: required FilterOperation having,
   8: required DrillOperation drill,
+  9: required CalculateOperation calculate,
 }
 
 struct GroupBy {
@@ -308,6 +316,11 @@ struct FilterOperation {
 
 struct DrillOperation {
   1: required Filter filter,
+}
+
+struct CalculateOperation {
+  1: required string name,
+  2: required Field field,
 }
 
 union Filter {
@@ -452,6 +465,7 @@ union Expression {
   2: required TimeTruncationFieldReference time_truncation,
   3: required FilteredField filtered_field,
   4: required LiteralValueExpression literal_value,
+  5: required MovingAverage moving_average
 }
 
 struct TimeTruncationFieldReference {
@@ -462,6 +476,13 @@ struct TimeTruncationFieldReference {
 struct FilteredField {
   1: required Reference field_reference,
   2: required list<FilterOperation> where,
+}
+
+struct MovingAverage {
+  1: required Reference field_reference,
+  2: optional i32 rows_preceding,
+  3: optional i32 rows_following,
+  4: optional list<Reference> partition_fields,
 }
 
 struct StringCell {
@@ -645,9 +666,14 @@ struct TimingInfo {
 // Given the URL to a model, return the StableModelDef for that model
 
 struct CompileModelRequest {
+  // Main parameters
   1: required string model_url,
   2: optional string extend_model_url,
 
+  // Options
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -663,10 +689,15 @@ struct CompileModelResponse {
 // Given the URL to a model and a name of a queryable thing, get a StableSourceDef
 
 struct CompileSourceRequest {
+  // Main parameters
   1: required string model_url,
   2: required string name,
   3: optional string extend_model_url,
 
+  // Options
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -681,10 +712,16 @@ struct CompileSourceResponse {
 // Given a StableQueryDef and the URL to a model, run it and return a StableResult
 
 struct RunQueryRequest {
+  // Main parameters
   1: required string model_url,
-  2: required Query query,
-  3: optional i32 default_row_limit,
+  2: optional Query query,
+  5: optional string query_malloy,
 
+  // Options
+  3: optional i32 default_row_limit,
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -700,10 +737,16 @@ struct RunQueryResponse {
 // Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
 
 struct CompileQueryRequest {
+  // Main parameters
   1: required string model_url,
-  2: required Query query,
-  3: optional i32 default_row_limit,
+  2: optional Query query,
+  5: optional string query_malloy,
 
+  // Options
+  3: optional i32 default_row_limit,
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -720,9 +763,14 @@ struct CompileQueryResponse {
 // Given a URL to a model and the name of a source, run the indexing query
 
 struct RunIndexQueryRequest {
+  // Main parameters
   1: required string model_url,
   2: required string source_name,
 
+  // Options
+  4: optional bool exclude_references,
+
+  // Response to compiler needs
   9: optional CompilerNeeds compiler_needs,
 }
 

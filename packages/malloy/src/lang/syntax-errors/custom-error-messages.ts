@@ -169,12 +169,20 @@ export const checkCustomErrorMessage = (
       }
 
       const errReplace = (s: string) => {
-        const rs = s
+        let rs = s
           .replace('${currentToken}', currentToken.text || '')
           .replace('${offendingSymbol}', offendingSymbol?.text || '');
         try {
           const previousToken = parser.inputStream.LT(-1);
-          return rs.replace('${previousToken}', previousToken.text || '');
+          rs = rs.replace('${previousToken}', previousToken.text || '');
+
+          const offendingSymbolIndex = offendingSymbol?.tokenIndex;
+          if (offendingSymbolIndex && offendingSymbolIndex > 0) {
+            const previousSymbol = parser.inputStream.get(
+              offendingSymbolIndex - 1
+            );
+            rs = rs.replace('${previousSymbol}', previousSymbol.text || '');
+          }
         } catch (ex) {
           // This shouldn't ever occur, but if it does, just leave the untokenized message.
         }

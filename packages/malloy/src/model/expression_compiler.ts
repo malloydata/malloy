@@ -866,7 +866,7 @@ export function generateDistinctKeyIfNecessary(
 ): string | undefined {
   let struct = context;
   if (structPath) {
-    struct = field.parent.root().getStructByName(structPath);
+    struct = field.parent.getStructByName(structPath);
   }
   if (needsSymetricCalculation(struct, resultSet)) {
     return getDistinctKeySQL(struct, resultSet);
@@ -968,7 +968,7 @@ export function generateCountFragment(
 
   let struct = context;
   if (expr.structPath) {
-    struct = field.parent.root().getStructByName(expr.structPath);
+    struct = field.parent.getStructByName(expr.structPath);
   }
   const joinName = struct.getJoinableParent().getIdentifier();
   const join = resultSet.root().joins.get(joinName);

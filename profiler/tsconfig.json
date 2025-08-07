@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.packages.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "solid-js"
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../packages/malloy-interfaces"
+    },
+    {
+      "path": "../packages/malloy"
+    },
+  ]
+}

@@ -72,6 +72,18 @@ function escapeString(str: string): {contents: string; quoteCharacter: string} {
   return {contents: str, quoteCharacter: '"'}; // TODO
 }
 
+function join(fragments: Fragment[], separator: string): Fragment[] {
+  const result: Fragment[] = [];
+  for (let i = 0; i < fragments.length; i++) {
+    const fragment = fragments[i];
+    result.push(fragment);
+    if (i < fragments.length - 1) {
+      result.push(separator);
+    }
+  }
+  return result;
+}
+
 function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
   switch (literal.kind) {
     case 'filter_expression_literal':
@@ -303,9 +315,15 @@ function groupedOperationsToFragments(
 ): Fragment[] {
   switch (operations[0].kind) {
     case 'aggregate':
-      return aggregateToFragments(operations as Malloy.Aggregate[]);
+      return fieldOperationToFragments(
+        operations as Malloy.Aggregate[],
+        'aggregate'
+      );
     case 'group_by':
-      return groupByToFragments(operations as Malloy.GroupBy[]);
+      return fieldOperationToFragments(
+        operations as Malloy.Aggregate[],
+        'group_by'
+      );
     case 'order_by':
       return orderByToFragments(operations as Malloy.OrderBy[]);
     case 'nest':
@@ -318,6 +336,11 @@ function groupedOperationsToFragments(
       return havingToFragments(operations as Malloy.FilterOperation[]);
     case 'drill':
       return drillToFragments(operations as Malloy.DrillOperation[]);
+    case 'calculate':
+      return fieldOperationToFragments(
+        operations as Malloy.Aggregate[],
+        'calculate'
+      );
   }
 }
 
@@ -379,11 +402,51 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
       ];
     case 'literal_value':
       return literalToFragments(expression.literal_value);
+    case 'moving_average': {
+      const fragments = [
+        'avg_moving',
+        ...wrap(
+          '(',
+          [
+            ...referenceToFragments(expression.field_reference),
+            expression.rows_preceding !== undefined
+              ? `, ${expression.rows_preceding}`
+              : ', 0',
+            expression.rows_following !== undefined
+              ? `, ${expression.rows_following}`
+              : '',
+          ],
+          ')',
+          {spaces: false}
+        ),
+      ];
+
+      if (expression.partition_fields?.length) {
+        fragments.push(
+          ...wrap(
+            ' {',
+            [
+              'partition_by',
+              ': ',
+              ...join(
+                expression.partition_fields.flatMap(partitionField =>
+                  referenceToFragments(partitionField)
+                ),
+                ', '
+              ),
+            ],
+            '}'
+          )
+        );
+      }
+
+      return fragments;
+    }
   }
 }
 
-function groupByOrAggregateItemToFragments(
-  item: Malloy.GroupBy | Malloy.Aggregate,
+function fieldItemToFragments(
+  item: Malloy.GroupBy | Malloy.Aggregate | Malloy.CalculateOperation,
   hideAnnotations = false
 ): Fragment[] {
   const fragments: Fragment[] = [];
@@ -398,31 +461,22 @@ function groupByOrAggregateItemToFragments(
   return fragments;
 }
 
-function groupByToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
+function fieldOperationToFragments(
+  operation:
+    | Malloy.GroupBy[]
+    | Malloy.Aggregate[]
+    | Malloy.CalculateOperation[],
+  label: string
+): Fragment[] {
   const fragments: Fragment[] = [];
-  const hoistAnnotations = groupBy.length === 1;
+  const hoistAnnotations = operation.length === 1;
   if (hoistAnnotations) {
-    fragments.push(...annotationsToFragments(groupBy[0].field.annotations));
+    fragments.push(...annotationsToFragments(operation[0].field.annotations));
   }
   fragments.push(
     ...formatBlock(
-      'group_by',
-      groupBy.map(i => groupByOrAggregateItemToFragments(i, hoistAnnotations))
-    )
-  );
-  return fragments;
-}
-
-function aggregateToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
-  const fragments: Fragment[] = [];
-  const hoistAnnotations = groupBy.length === 1;
-  if (hoistAnnotations) {
-    fragments.push(...annotationsToFragments(groupBy[0].field.annotations));
-  }
-  fragments.push(
-    ...formatBlock(
-      'aggregate',
-      groupBy.map(i => groupByOrAggregateItemToFragments(i, hoistAnnotations))
+      label,
+      operation.map(i => fieldItemToFragments(i, hoistAnnotations))
     )
   );
   return fragments;

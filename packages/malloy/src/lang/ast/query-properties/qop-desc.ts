@@ -30,12 +30,11 @@ import type {SourceFieldSpace} from '../types/field-space';
 import type {MalloyElement} from '../types/malloy-element';
 import {ListOf} from '../types/malloy-element';
 import type {OpDesc} from '../types/op-desc';
-import {opOutputStruct} from '../struct-utils';
 import type {QueryProperty} from '../types/query-property';
-import {StaticSourceSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {modernizeTermsForUserText} from '../../utils';
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -60,7 +59,11 @@ export class QOpDesc extends ListOf<QueryProperty> {
           if (guessType !== el.forceQueryClass) {
             el.logError(
               `illegal-${guessType}-operation`,
-              `Not legal in ${guessType} query`
+              `Use of ${modernizeTermsForUserText(
+                el.forceQueryClass
+              )} is not allowed in a ${modernizeTermsForUserText(
+                guessType
+              )} query`
             );
           }
         } else {
@@ -109,14 +112,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
     const segment = build.finalize(this.refineThis);
     return {
       segment,
-      outputSpace: () =>
-        // TODO someday we'd like to get rid of the call to opOutputStruct here.
-        // If the `build.resultFS` is correct, then we should be able to just use that
-        // in a more direct way.
-        new StaticSourceSpace(
-          opOutputStruct(this, inputFS.structDef(), segment),
-          'public'
-        ),
+      outputSpace: build.resultFS,
     };
   }
 }

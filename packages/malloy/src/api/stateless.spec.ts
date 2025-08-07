@@ -68,6 +68,46 @@ describe('api', () => {
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile model exclude references', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        exclude_references: true,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: flights is connection.table('flights') extend {
+                  view: by_carrier is {
+                    group_by: carrier
+                    aggregate: flight_count is count()
+                  }
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      expect(result.translations?.length).toBe(1);
+      const modelDef = JSON.parse(result.translations![0].compiled_model_json!);
+      expect(modelDef.references).toBe(undefined);
+    });
     test('compile model with model extension', () => {
       const result = compileModel({
         model_url: 'file://test.malloy',
@@ -576,6 +616,51 @@ FROM flights as base
 GROUP BY 1
 ORDER BY 1 asc NULLS LAST
 `,
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test('compile query from query string', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: 'run: flights -> { group_by: carrier }',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileQueryResponse = {
+        result: {
+          connection_name: 'connection',
           schema: {
             fields: [
               {

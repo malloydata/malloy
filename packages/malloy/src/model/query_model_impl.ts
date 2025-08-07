@@ -287,6 +287,19 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
           type: 'index',
           indexFields: indexStar,
           sample: d.defaultSampling,
+          outputStruct: {
+            type: 'query_result',
+            name: 'index',
+            connection: struct.connectionName,
+            dialect: struct.dialect.name,
+            fields: [
+              {name: 'fieldName', type: 'string'},
+              {name: 'fieldPath', type: 'string'},
+              {name: 'fieldType', type: 'string'},
+              {name: 'weight', type: 'number'},
+              {name: 'fieldValue', type: 'string'},
+            ],
+          },
         },
       ],
     };

@@ -201,9 +201,9 @@ export async function compileQuery(
 }
 
 export async function runQuery(
-  request: Malloy.CompileQueryRequest,
+  request: Malloy.RunQueryRequest,
   fetchers: CompilerNeedFetch<Connection>
-): Promise<Malloy.CompileQueryResponse> {
+): Promise<Malloy.RunQueryResponse> {
   const timer = new Timer('run_query');
   const compiled = await compileQuery(request, fetchers);
   timer.incorporate(compiled.timing_info);
