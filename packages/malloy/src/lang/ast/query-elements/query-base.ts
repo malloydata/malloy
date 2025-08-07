@@ -53,7 +53,7 @@ export abstract class QueryBase extends MalloyElement {
       // if we need to handle that at the root, but definitely
       // need to handle it in the segments after the first,
       // so that each segment can have a join resolution tree
-      const {expandedFieldUsage, ungroupings} = expandFieldUsage(
+      const {expandedFieldUsage, activeJoins, ungroupings} = expandFieldUsage(
         segment,
         stageInput
       );
@@ -63,6 +63,7 @@ export abstract class QueryBase extends MalloyElement {
       const newSegment = {
         ...segment,
         expandedFieldUsage,
+        activeJoins,
         expandedUngroupings: ungroupings,
       };
       ret.push(newSegment);

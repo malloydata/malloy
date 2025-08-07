@@ -1129,7 +1129,24 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
 export type IndexFieldDef = RefToField;
 export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
-export interface IndexSegment extends Filtered {
+/**
+ * The compiler needs to know a number of things computed for a query
+ * and stored here.
+ *
+ *   0) An ordered list list of active joins
+ *   1) Each field that is referenced, even indirectly
+ *   2) Each join path ending in a count
+ *   3) Each join path ending in an assymmetric aggregate
+ *   4) Each join path ending in an analytic funtion
+ */
+
+interface SegmentUsageSummary {
+  activeJoins?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
+}
+
+export interface IndexSegment extends Filtered, SegmentUsageSummary {
   type: 'index';
   indexFields: IndexFieldDef[];
   limit?: number;
@@ -1137,23 +1154,11 @@ export interface IndexSegment extends Filtered {
   sample?: Sampling;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
-  expandedFieldUsage?: FieldUsage[];
-  expandedUngroupings?: AggregateUngrouping[];
   referencedAt?: DocumentLocation;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
-
-/**
- * The compiler needs to know a number of things which are all tracked here.
- *
- *   1) Each field that is referenced.
- *   2) Each join path ending in a count
- *   3) Each join path ending in an assymmetric aggregate
- *   4) Each join path ending in an analytic funtion
- *   5) Some entries are just names of active joins
- */
 
 export interface FieldUsage {
   path: string[];
@@ -1170,7 +1175,7 @@ export function bareFieldUsage(fu: FieldUsage): boolean {
   );
 }
 
-export interface QuerySegment extends Filtered, Ordered {
+export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
@@ -1178,8 +1183,6 @@ export interface QuerySegment extends Filtered, Ordered {
   queryTimezone?: string;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
-  expandedFieldUsage?: FieldUsage[];
-  expandedUngroupings?: AggregateUngrouping[];
   referencedAt?: DocumentLocation;
 }
 

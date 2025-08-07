@@ -309,7 +309,11 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
 export function expandFieldUsage(
   segment: PipeSegment,
   source: SourceDef
-): {expandedFieldUsage: FieldUsage[]; ungroupings: AggregateUngrouping[]} {
+): {
+  expandedFieldUsage: FieldUsage[];
+  activeJoins: FieldUsage[];
+  ungroupings: AggregateUngrouping[];
+} {
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
@@ -324,6 +328,7 @@ export function expandFieldUsage(
   const expandedNests = expandRefs(nestLevels, fields);
   return {
     expandedFieldUsage: expanded.result,
+    activeJoins: expanded.activeJoins,
     ungroupings: expandedNests.result.ungroupings,
   };
 }
@@ -386,7 +391,11 @@ function findActiveJoins(
 function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
-): {result: FieldUsage[]; missingFields: FieldUsage[]} {
+): {
+  result: FieldUsage[];
+  missingFields: FieldUsage[];
+  activeJoins: FieldUsage[];
+} {
   const seen: Record<string, FieldUsage> = {};
   const missingFields: FieldUsage[] = [];
   const toProcess: FieldUsage[] = [];
@@ -461,11 +470,11 @@ function _expandFieldUsage(
     }
   }
 
-  // now make a FieldUsage array of the paths in the dependency graph in a sorted order
-  // then we want to make the result include these fields before the other usages
-
-  const result = [...findActiveJoins(joinDependencies), ...Object.values(seen)];
-  return {result, missingFields};
+  return {
+    result: Object.values(seen),
+    missingFields,
+    activeJoins: findActiveJoins(joinDependencies),
+  };
 }
 
 interface CategorizedFieldUsage {

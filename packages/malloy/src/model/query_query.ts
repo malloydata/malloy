@@ -290,16 +290,22 @@ export class QueryQuery extends QueryField {
 
   private dependenciesFromFieldUsage(resultStruct: FieldInstanceResult) {
     // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
-    const fieldUsage =
-      'expandedFieldUsage' in this.firstSegment
-        ? this.firstSegment.expandedFieldUsage || []
-        : [];
+    if (
+      this.firstSegment.type === 'raw' ||
+      this.firstSegment.type === 'partial'
+    ) {
+      throw new Error('QueryQuery attempt to load a raw or partial segment');
+    }
 
-    for (const usage of fieldUsage) {
-      if (usage.activateJoin) {
-        this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
-        continue;
-      }
+    for (const joinUsage of this.firstSegment.activeJoins || []) {
+      this.addDependantPath(
+        resultStruct,
+        this.parent,
+        joinUsage.path,
+        undefined
+      );
+    }
+    for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
         resultStruct.root().queryUsesPartitioning = true;
 
