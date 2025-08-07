@@ -42,7 +42,9 @@ import {
   isIndexSegment,
   isJoined,
   isQuerySegment,
+  isTemporalType,
   isTurtle,
+  mkTemporal,
   type PipeSegment,
   type Query,
   type SourceDef,
@@ -231,10 +233,21 @@ export abstract class QueryBase extends MalloyElement {
               referenceId,
             };
           } else {
+            const columnNode: Expr = {
+              node: 'column',
+              path: [...joinPath, ...field.path],
+            };
+            if (isTemporalType(def.type)) {
+              return {
+                ...def,
+                referenceId,
+                e: mkTemporal(columnNode, def.type),
+              };
+            }
             return {
               ...def,
               referenceId,
-              e: {node: 'column', path: [...joinPath, ...field.path]},
+              e: columnNode,
             };
           }
         }
@@ -283,11 +296,12 @@ export abstract class QueryBase extends MalloyElement {
         }
         return e;
       };
+      const newE: Expr = field.e
+        ? exprMapDeep(field.e, mapExpr)
+        : {node: 'column', path: [...joinPath, field.name]};
       return {
         ...field,
-        e: field.e
-          ? exprMapDeep(field.e, mapExpr)
-          : {node: 'column', path: [...joinPath, field.name]},
+        e: isTemporalType(field.type) ? mkTemporal(newE, field.type) : newE,
       };
     }
   }
