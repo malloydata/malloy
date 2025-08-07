@@ -71,7 +71,9 @@ export function VegaChart(props: VegaChartProps) {
     const viewOptions = props.useVegaInterpreter
       ? {expr: expressionInterpreter}
       : {};
-    const nextView = new View(props.runtime, viewOptions).initialize(el).renderer('svg');
+    const nextView = new View(props.runtime, viewOptions)
+      .initialize(el)
+      .renderer('svg');
 
     // This signal is needed before running the view for the first time
     setSignalIfExists(nextView, 'malloyExplore', props.explore);
