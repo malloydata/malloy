@@ -39,6 +39,7 @@ import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
+import {Tag} from '@malloydata/malloy-tag';
 
 type LineDataRecord = {
   x: string | number;
@@ -113,19 +114,103 @@ export function generateLineChartVegaSpecV2(
   if (!xFieldPath) throw new Error('Malloy Line Chart: Missing x field');
   if (!yFieldPath) throw new Error('Malloy Line Chart: Missing y field');
 
-  const xField = explore.fieldAt(xFieldPath);
-  const xIsDateorTime = xField.isTime();
-  const xIsBoolean = xField.isBoolean();
-  const hasNullXValues = xField.valueSet.has(NULL_SYMBOL);
+  // Parse field paths to check if they're nested
+  const xPathArray = JSON.parse(xFieldPath);
+  const yPathArray = JSON.parse(yFieldPath);
+  const seriesPathArray = seriesFieldPath ? JSON.parse(seriesFieldPath) : null;
+  
+  const isNestedX = xPathArray.length > 1;
+  const isNestedY = yPathArray.length > 1;
+  
+  // For nested fields, we need to resolve them differently
+  let xField;
+  let yField;
+  let seriesField;
+  
+  if (isNestedX) {
+    // For nested x field, we can't get the field metadata until we're in the data
+    // For now, create a placeholder with safe defaults
+    xField = {
+      isTime: () => false, // Will be determined from actual data
+      isBoolean: () => false,
+      isDate: () => false,
+      valueSet: new Set(),
+      name: xPathArray[xPathArray.length - 1],
+      referenceId: xFieldPath,
+      timeframe: undefined,
+      minValue: undefined,
+      maxValue: undefined,
+      // Add additional required Field interface methods
+      isBasic: () => true,
+      isNumber: () => false,
+      isString: () => true,
+      isNest: () => false,
+      hasDataType: () => true,
+      type: () => 'string',
+      tag: new Tag({})
+    } as unknown as Field;
+  } else {
+    xField = explore.fieldAt(xFieldPath);
+  }
+  
+  if (isNestedY) {
+    // For nested y field, create a placeholder with required Field interface methods
+    yField = {
+      name: yPathArray[yPathArray.length - 1],
+      referenceId: yFieldPath,
+      minNumber: undefined,
+      maxNumber: undefined,
+      // Add required Field interface methods
+      isTime: () => false,
+      isDate: () => false,
+      isBasic: () => true,
+      isNumber: () => true,  // Assume y values are numeric for line charts
+      isString: () => false,
+      isBoolean: () => false,
+      isNest: () => false,
+      hasDataType: () => true,
+      type: () => 'number',
+      tag: new Tag({})
+    } as unknown as Field;
+  } else {
+    yField = explore.fieldAt(yFieldPath);
+  }
+  
+  if (seriesFieldPath) {
+    if (seriesPathArray && seriesPathArray.length > 1) {
+      // Nested series field
+      seriesField = {
+        name: seriesPathArray[seriesPathArray.length - 1],
+        referenceId: seriesFieldPath,
+        valueSet: new Set(), // Will be populated from data
+        // Add required Field interface methods
+        isTime: () => false,
+        isDate: () => false,
+        isBasic: () => true,
+        isNumber: () => false,
+        isString: () => true,
+        isBoolean: () => false,
+        isNest: () => false,
+        hasDataType: () => true,
+        type: () => 'string',
+        tag: new Tag({})
+      } as unknown as Field;
+    } else {
+      seriesField = explore.fieldAt(seriesFieldPath);
+    }
+  } else {
+    seriesField = null;
+  }
+
+  const xIsDateorTime = !isNestedX && xField.isTime && xField.isTime();
+  const xIsBoolean = !isNestedX && xField.isBoolean && xField.isBoolean();
+  const hasNullXValues = !isNestedX && xField.valueSet && xField.valueSet.has(NULL_SYMBOL);
   const hasNullTimeValues = xIsDateorTime && hasNullXValues;
   const xScaling = (dataAccessor: string) => {
     return hasNullTimeValues
       ? `datum.isNull ? scale('null_x_scale', ${dataAccessor}) : scale('xscale', ${dataAccessor})`
       : `scale('xscale', ${dataAccessor})`;
   };
-
-  const yField = explore.fieldAt(yFieldPath);
-  let seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
 
   // Use synthetic series field for YoY mode
   if (settings.mode === 'yoy' && plugin.syntheticSeriesField) {
@@ -171,11 +256,15 @@ export function generateLineChartVegaSpecV2(
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
-    const field = explore.fieldAt(name);
-    const min = field.minNumber;
-    if (min !== undefined) yMin = Math.min(yMin, min);
-    const max = field.maxNumber;
-    if (max !== undefined) yMax = Math.max(yMax, max);
+    try {
+      const field = explore.fieldAt(name);
+      const min = field.minNumber;
+      if (min !== undefined) yMin = Math.min(yMin, min);
+      const max = field.maxNumber;
+      if (max !== undefined) yMax = Math.max(yMax, max);
+    } catch (e) {
+      // For nested fields, we can't get min/max at spec generation time
+    }
   }
 
   const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
@@ -201,7 +290,7 @@ export function generateLineChartVegaSpecV2(
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedX = xField.valueSet.size <= 20;
+  const autoSharedX = !isNestedX && xField.valueSet && xField.valueSet.size <= 20;
   const forceSharedX = settings.xChannel.independent === false;
   const forceIndependentX =
     settings.xChannel.independent === true && !forceSharedX;
@@ -209,7 +298,7 @@ export function generateLineChartVegaSpecV2(
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedSeries = seriesField && seriesField.valueSet.size <= 20;
+  const autoSharedSeries = seriesField && seriesField.valueSet && seriesField.valueSet.size <= 20;
   const forceSharedSeries = settings.seriesChannel.independent === false;
   const forceIndependentSeries =
     settings.seriesChannel.independent === true && !forceSharedSeries;
@@ -517,7 +606,11 @@ export function generateLineChartVegaSpecV2(
   };
 
   // For measure series, unpivot the measures into the series column
-  if (isMeasureSeries) {
+  // Skip this transform if data is already processed for nested measure series
+  const isNestedData = (xFieldPath && JSON.parse(xFieldPath).length > 1) ||
+                       (yFieldPath && JSON.parse(yFieldPath).length > 1);
+  
+  if (isMeasureSeries && !isNestedData) {
     // Pull the series values from the source record, then remap the names to remove __values
     valuesData.transform!.push({
       type: 'fold',
@@ -734,7 +827,7 @@ export function generateLineChartVegaSpecV2(
           settings.mode === 'yoy'
             ? // For YoY mode, calculate domain from actual data
               {data: 'values', field: 'x'}
-            : shouldShareXDomain
+            : shouldShareXDomain && !isNestedX
             ? xIsDateorTime
               ? [Number(xField.minValue), Number(xField.maxValue)]
               : xIsBoolean
@@ -916,13 +1009,140 @@ export function generateLineChartVegaSpecV2(
   }
 
   const mapMalloyDataToChartData: MalloyDataToChartDataHandler = data => {
+    // Check if we're dealing with nested data
+    const isNestedData = 
+      (xFieldPath && JSON.parse(xFieldPath).length > 1) ||
+      (yFieldPath && JSON.parse(yFieldPath).length > 1);
+    
+    
+    // If we have nested data, we need to flatten it
+    if (isNestedData && data.rows.length > 0) {
+      // Determine which field contains the nested data
+      const xPathArray = xFieldPath ? JSON.parse(xFieldPath) : [];
+      const yPathArray = yFieldPath ? JSON.parse(yFieldPath) : [];
+      
+      
+      // Find the common nested field name
+      const nestedFieldName = xPathArray.length > 1 ? xPathArray[0] : 
+                              yPathArray.length > 1 ? yPathArray[0] : null;
+      
+      
+      if (nestedFieldName) {
+        // Flatten the nested data
+        const flattenedRows: any[] = [];
+        const localSeriesSet = new Set<string | number | boolean>();
+        
+        
+        data.rows.forEach(outerRow => {
+          const nestedCell = outerRow.column(nestedFieldName);
+          
+          
+          if (nestedCell.isRepeatedRecord()) {
+            // Get the series value from the outer row
+            const seriesValue = seriesField ? (
+              // For non-nested series, get from outer row
+              seriesPathArray && seriesPathArray.length === 1 ? 
+                outerRow.column(seriesField.name).value : 
+                null // For nested series, we'll get it from inner rows
+            ) : null;
+            
+            // Check series limit
+            if (seriesValue !== null && seriesValue !== undefined) {
+              if (seriesSet && (explore.isRoot() || shouldShareSeriesDomain)) {
+                if (!seriesSet.has(seriesValue)) return; // Skip if not in allowed series
+              } else if (localSeriesSet.size >= maxSeries && !localSeriesSet.has(seriesValue)) {
+                return; // Skip if we've reached max series
+              }
+              localSeriesSet.add(seriesValue);
+            }
+            
+            // Process each nested row
+            nestedCell.rows.forEach((innerRow, index) => {
+              // Extract x value from the nested row
+              const xFieldName = xPathArray.length > 1 ? xPathArray[xPathArray.length - 1] : xField.name;
+              const xCell = innerRow.column(xFieldName);
+              
+              // Handle time values for x-axis
+              const xValue = xCell.isTime() && xCell.value ? xCell.value.valueOf() : xCell.value;
+              
+              // Handle multiple y fields (measure series)
+              if (isMeasureSeries) {
+                // Create one row per y field
+                settings.yChannel.fields.forEach(yPath => {
+                  const yPathArray = JSON.parse(yPath);
+                  const yFieldName = yPathArray.length > 1 ? yPathArray[yPathArray.length - 1] : explore.fieldAt(yPath).name;
+                  const yValue = innerRow.column(yFieldName).value;
+                  
+                  if (yValue !== null && yValue !== undefined) {
+                    flattenedRows.push({
+                      ...outerRow.allCellValues(),
+                      __values: {
+                        ...outerRow.allCellValues(),
+                        [yFieldName]: yValue
+                      },
+                      __row: outerRow,
+                      __nestedIndex: index,
+                      x: xValue ?? NULL_SYMBOL,
+                      y: yValue,
+                      series: yFieldName // For measure series, field name is the series
+                    });
+                  }
+                });
+              } else {
+                // Single y field
+                const yFieldName = yPathArray.length > 1 ? yPathArray[yPathArray.length - 1] : yField.name;
+                const yValue = innerRow.column(yFieldName).value;
+                
+                // Get series value (might be from inner row if nested)
+                let actualSeriesValue = seriesValue;
+                if (seriesFieldPath && seriesPathArray && seriesPathArray.length > 1) {
+                  // Nested series field - get from inner row
+                  const seriesFieldName = seriesPathArray[seriesPathArray.length - 1];
+                  actualSeriesValue = innerRow.column(seriesFieldName).value;
+                }
+                
+                // Create a flattened row
+                flattenedRows.push({
+                  ...outerRow.allCellValues(),
+                  __row: outerRow,
+                  __nestedIndex: index,
+                  x: xValue ?? NULL_SYMBOL,
+                  y: yValue,
+                  series: actualSeriesValue ?? NULL_SYMBOL
+                });
+              }
+            });
+          }
+        });
+        
+        // Process the flattened data similar to the original logic
+        const mappedData = flattenedRows
+          .filter(row => row.y !== null && row.y !== undefined)
+          .slice(0, MAX_DATA_POINTS);
+        
+        
+        return {
+          data: mappedData,
+          isDataLimited: flattenedRows.length > mappedData.length,
+          dataLimitMessage:
+            seriesField && data.rows.length > maxSeries
+              ? `Showing ${maxSeries.toLocaleString()} of ${data.rows.length.toLocaleString()} series`
+              : ''
+        };
+      }
+    }
+    
+    // Original logic for flat data
     const getXValue = (row: RecordCell) => {
-      const cell = row.column(xField.name);
+      // For flat data, use the field name
+      const fieldName = isNestedX ? xPathArray[0] : xField.name;
+      const cell = row.column(fieldName);
       return cell.isTime() ? cell.value.valueOf() : cell.value;
     };
 
     const getYoYTransformedData = (row: RecordCell) => {
-      const cell = row.column(xField.name);
+      const fieldName = isNestedX ? xPathArray[0] : xField.name;
+      const cell = row.column(fieldName);
       if (!cell.isTime() || !cell.value) return null;
 
       const date = new Date(cell.value.valueOf());
@@ -991,7 +1211,8 @@ export function generateLineChartVegaSpecV2(
         const yoyData = getYoYTransformedData(row);
         if (!yoyData) return; // Skip rows with invalid dates
 
-        const isMissingY = row.column(yField.name).value === null;
+        const yFieldName = isNestedY ? yPathArray[0] : yField.name;
+        const isMissingY = row.column(yFieldName).value === null;
         if (isMissingY) return; // Skip rows with missing y values
 
         // For YoY mode, manage year series separately
@@ -1016,22 +1237,24 @@ export function generateLineChartVegaSpecV2(
           __values: row.allCellValues(),
           __row: row,
           x: yoyData.normalizedX,
-          y: row.column(yField.name).value,
+          y: row.column(yFieldName).value,
           series: yoyData.year, // Year becomes the series
         });
         return;
       }
 
       // Normal mode processing
-      let seriesVal = seriesField
-        ? row.column(seriesField.name).value ?? NULL_SYMBOL
-        : yField.name;
+      const yFieldName = isNestedY ? yPathArray[0] : yField.name;
+      const seriesFieldName = seriesField ? (seriesPathArray && seriesPathArray.length > 1 ? seriesPathArray[0] : seriesField.name) : null;
+      let seriesVal = seriesFieldName
+        ? row.column(seriesFieldName).value ?? NULL_SYMBOL
+        : yFieldName;
       // Limit # of series
       if (skipSeries(seriesVal)) {
         return;
       }
       // Filter out missing metric values
-      const isMissingY = row.column(yField.name).value === null;
+      const isMissingY = row.column(yFieldName).value === null;
       if (isMissingY) {
         return;
       }
@@ -1044,7 +1267,7 @@ export function generateLineChartVegaSpecV2(
         __values: row.allCellValues(),
         __row: row,
         x: getXValue(row) ?? NULL_SYMBOL,
-        y: row.column(yField.name).value,
+        y: row.column(yFieldName).value,
         series: seriesVal,
       });
     });

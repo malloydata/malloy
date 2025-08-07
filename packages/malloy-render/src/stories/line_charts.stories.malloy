@@ -470,6 +470,94 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       aggregate: `Sales $` is sum(`Sales $`)
       order_by: m
     }
+
+  --   #(story)
+  -- # viz=line
+  -- view: nested_line_basic is {
+  --   -- Outer dimension becomes series
+  --   group_by: department
+  --   -- Nested data becomes x/y
+  --   nest: monthly_sales is {
+  --     -- x
+  --     group_by: `month` is date_of_sale.month
+  --     -- y
+  --     aggregate: total_sales
+  --     limit: 12
+  --   }
+  --   limit: 5
+  -- }
+
+  #(story)
+  # viz=line { series=department x='monthly_sales.dcId' y='monthly_sales.total_sales' }
+  view: nested_line_explicit_paths is {
+    group_by: department
+    nest: monthly_sales is {
+      group_by: dcId
+      aggregate: total_sales
+      limit: 12
+      order_by: dcId
+    }
+    limit: 5
+  }
+
+  -- #(story)
+  -- # viz=line
+  -- view: nested_line_auto_detect is {
+  --   -- This should auto-detect: brand as series, dcId as x, Sales $ as y
+  --   group_by: brand
+  --   nest: by_distribution_center is {
+  --     group_by: dcId
+  --     aggregate: `Sales $`
+  --     order_by: dcId
+  --   }
+  --   limit: 10
+  -- }
+
+  -- #(story)
+  -- # viz=line
+  -- view: nested_line_with_tooltip is {
+  --   -- Department becomes series
+  --   group_by: department
+  --   -- Main nested data for line chart
+  --   nest: sales_trend is {
+  --     -- x
+  --     group_by: `quarter` is date_of_sale.quarter
+  --     -- y
+  --     aggregate: avg_sale is retail_price.avg()
+  --     limit: 8
+  --   }
+  --   -- This nested field should be excluded from auto-detection due to tooltip tag
+  --   # tooltip
+  --   nest: category_breakdown is {
+  --     group_by: category
+  --     aggregate: total_sales
+  --     limit: 5
+  --   }
+  --   limit: 3
+  -- }
+
+  -- #(story)
+  -- view: nested_line_comparison is {
+  --   group_by: title is 'Flat vs Nested Line Charts'
+  --   -- Traditional flat line chart
+  --   # viz=line
+  --   nest: flat_approach is {
+  --     group_by: dcId, department
+  --     aggregate: `Sales $`
+  --     limit: 50
+  --   }
+  --   -- Nested approach - same data, pre-grouped
+  --   # viz=line
+  --   nest: nested_approach is {
+  --     group_by: department
+  --     nest: by_dc is {
+  --       group_by: dcId
+  --       aggregate: `Sales $`
+  --       order_by: dcId
+  --     }
+  --     limit: 5
+  --   }
+  -- }
 }
 
 source: missing_data is duckdb.table("static/data/missing_data.csv") extend {
@@ -614,5 +702,7 @@ source: random_data_nulls is duckdb.sql("""
     }
     }
   }
+
+
 
 run: products -> { group_by: distribution_center_id}
