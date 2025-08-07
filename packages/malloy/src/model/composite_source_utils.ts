@@ -388,6 +388,15 @@ function findActiveJoins(
   return sorted;
 }
 
+/**
+ * Given a list of field usage requests, expand to include all the join on and join filter expressions
+ * needed to be able to reference those fields.
+ *
+ * @returns An object containing:
+ * - `result`: The expanded field usage, including usages from necessary joins
+ * - `missingFields`: References to fields which could not be resolved
+ * - `activeJoins`: Topologically sorted list of joins needed to resolve these uses
+ */
 function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
@@ -399,7 +408,7 @@ function _expandFieldUsage(
   const seen: Record<string, FieldUsage> = {};
   const missingFields: FieldUsage[] = [];
   const toProcess: FieldUsage[] = [];
-  const joinDependencies: Record<string, JoinDependency> = {};
+  const activeJoinGraph: Record<string, JoinDependency> = {};
 
   // Initialize: mark original inputs and add them to processing queue
   for (const usage of fieldUsage) {
@@ -413,9 +422,8 @@ function _expandFieldUsage(
   for (let i = 0; i < toProcess.length; i++) {
     const reference = toProcess[i];
     if (reference.path.length === 0) continue;
-    const referenceJoinPath = reference.path.slice(0, -1);
 
-    let def = inNamespace(reference.path, fieldNameSpace);
+    const def = inNamespace(reference.path, fieldNameSpace);
     if (!def) {
       missingFields.push(reference);
       continue;
@@ -423,10 +431,8 @@ function _expandFieldUsage(
 
     if (isAtomic(def)) {
       const fieldUsage = def.fieldUsage ?? [];
-      for (const usage of fieldUsageAt(
-        joinedFieldUsage(referenceJoinPath, fieldUsage),
-        reference.at
-      )) {
+      // Add the atomic field's dependencies to the queue
+      for (const usage of joinedFieldUsage([], fieldUsage)) {
         const key = pathToKey('field', usage.path);
         if (!seen[key]) {
           seen[key] = usage;
@@ -435,34 +441,35 @@ function _expandFieldUsage(
       }
     }
 
-    // For paths of length 2 and greater we need to record the dependencies for every
-    // join referenced in this path
+    // Now handle join dependencies for all joins in the path
     for (let joinLen = 1; joinLen < reference.path.length; joinLen++) {
       const joinPath = reference.path.slice(0, joinLen);
-      def = inNamespace(joinPath, fieldNameSpace);
-      if (!def) break;
+      const joinDef = inNamespace(joinPath, fieldNameSpace);
+      if (!joinDef) break;
 
       const joinKey = pathToKey('join', joinPath);
-      const thisDep = getJoin(joinDependencies, joinKey, joinPath);
-      if (isJoined(def) && !thisDep.checked) {
-        thisDep.checked = true;
-        const joinFieldUsage = getJoinFieldUsage(def, joinPath);
+      const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
 
-        for (const usage of fieldUsageAt(joinFieldUsage, reference.at)) {
+      if (isJoined(joinDef) && !thisDep.checked) {
+        thisDep.checked = true;
+        const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
+
+        // Add join's field dependencies to the queue
+        for (const usage of joinFieldUsage) {
           const key = pathToKey('field', usage.path);
           if (!seen[key]) {
             seen[key] = usage;
             toProcess.push(usage);
           }
-          // now find the joins references in the usage which are not this join ...
+
+          // Track join-to-join dependencies
           const isInternalReference =
             usage.path.length === joinPath.length + 1 &&
             pathBegins(usage.path, joinPath);
           if (!isInternalReference && usage.path.length > 1) {
-            const thisDep = getJoin(joinDependencies, joinKey, joinPath);
             const dependencyPath = usage.path.slice(0, -1);
             const dependencyKey = pathToKey('join', dependencyPath);
-            getJoin(joinDependencies, dependencyKey, dependencyPath);
+            getJoin(activeJoinGraph, dependencyKey, dependencyPath);
             thisDep.dependsOn.add(dependencyKey);
           }
         }
@@ -473,7 +480,7 @@ function _expandFieldUsage(
   return {
     result: Object.values(seen),
     missingFields,
-    activeJoins: findActiveJoins(joinDependencies),
+    activeJoins: findActiveJoins(activeJoinGraph),
   };
 }
 
