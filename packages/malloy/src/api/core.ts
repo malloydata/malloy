@@ -313,20 +313,19 @@ function hasSourceFor(
 function _newCompileModelState(
   modelURL: string,
   compilerNeeds?: Malloy.CompilerNeeds,
+  parseUpdate?: ParseUpdate | undefined,
   extendURL?: string,
   excludeReferences = false
 ): CompileModelState {
-  const translator = new MalloyTranslator(
-    modelURL,
-    null,
-    compilerNeedsToUpdate(compilerNeeds)
-  );
+  parseUpdate ??= compilerNeedsToUpdate(compilerNeeds);
+  const translator = new MalloyTranslator(modelURL, null, parseUpdate);
   const hasSource = hasSourceFor(compilerNeeds, modelURL);
   if (extendURL) {
     return {
       extending: _newCompileModelState(
         extendURL,
         compilerNeeds,
+        parseUpdate,
         undefined,
         excludeReferences
       ),
@@ -351,6 +350,7 @@ export function newCompileModelState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
+    undefined,
     request.extend_model_url,
     request.exclude_references
   );
@@ -362,6 +362,7 @@ export function newCompileSourceState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
+    undefined,
     request.extend_model_url,
     request.exclude_references
   );
@@ -597,6 +598,7 @@ export function newCompileQueryState(
     ..._newCompileModelState(
       queryURL,
       needs,
+      undefined,
       request.model_url,
       request.exclude_references
     ),

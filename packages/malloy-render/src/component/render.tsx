@@ -92,7 +92,7 @@ export function MalloyRender(props: MalloyRenderProps) {
     <ErrorBoundary
       fallback={errorProps => {
         const message = () => errorProps.error?.message ?? errorProps;
-        props?.onError?.(errorProps.error);
+        props?.onError?.(errorProps);
         return <ErrorMessage message={message()} />;
       }}
     >
