@@ -39,6 +39,7 @@ export type GetResultMetadataOptions = {
   renderFieldMetadata: RenderFieldMetadata;
   getVegaConfigOverride?: VegaConfigHandler;
   parentSize: {width: number; height: number};
+  useVegaInterpreter?: boolean;
 };
 
 export interface FieldVegaInfo {

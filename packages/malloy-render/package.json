@@ -39,6 +39,7 @@
     "ssf": "^0.11.2",
     "us-atlas": "^3.0.0",
     "vega": "^5.21.0",
+    "vega-interpreter": "^2.0.0",
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
