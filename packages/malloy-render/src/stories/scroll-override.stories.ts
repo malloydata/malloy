@@ -5,7 +5,7 @@ import {MalloyRenderer} from '../api/malloy-renderer';
 
 const meta: Meta = {
   title: 'Malloy Next/Scroll Override Test',
-  render: ({view}, context) => {
+  render: context => {
     const mainContainer = document.createElement('div');
 
     const scrollContainer = document.createElement('div');
