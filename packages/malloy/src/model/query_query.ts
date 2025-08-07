@@ -114,6 +114,9 @@ export class QueryQuery extends QueryField {
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
   isJoinedSubquery: boolean; // this query is a joined subquery.
+  // circularity breaker, we pass a lambda in to look up struct names, so
+  // query_query doesn't have to include query_model because query_model
+  // needs to include query_query. don't love this solution
   protected structRefToQueryStruct: (name: string) => QueryStruct | undefined;
 
   constructor(
@@ -293,6 +296,10 @@ export class QueryQuery extends QueryField {
         : [];
 
     for (const usage of fieldUsage) {
+      if (usage.activateJoin) {
+        this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
+        continue;
+      }
       if (usage.analyticFunctionUse) {
         resultStruct.root().queryUsesPartitioning = true;
 
@@ -322,7 +329,6 @@ export class QueryQuery extends QueryField {
         continue;
       }
       if (usage.path.length > 1) {
-        this.addDependantPath(resultStruct, this.parent, usage.path, undefined);
         this.findRecordAliases(this.parent, usage.path);
       }
     }

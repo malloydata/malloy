@@ -1152,6 +1152,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
  *   2) Each join path ending in a count
  *   3) Each join path ending in an assymmetric aggregate
  *   4) Each join path ending in an analytic funtion
+ *   5) Some entries are just names of active joins
  */
 
 export interface FieldUsage {
@@ -1159,6 +1160,7 @@ export interface FieldUsage {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
+  activateJoin?: boolean;
 }
 
 export function bareFieldUsage(fu: FieldUsage): boolean {

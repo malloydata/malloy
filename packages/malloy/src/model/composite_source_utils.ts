@@ -328,42 +328,86 @@ export function expandFieldUsage(
   };
 }
 
-enum UsageGroup {
-  Joins = 0,
-  Input = 1,
-  Expanded = 2,
+interface JoinDependency {
+  path: string[];
+  dependsOn: Set<string>;
+  checked?: boolean;
+}
+
+function getJoin(
+  jdMap: Record<string, JoinDependency>,
+  joinKey: string,
+  joinPath: string[]
+): JoinDependency {
+  if (!jdMap[joinKey]) {
+    jdMap[joinKey] = {path: joinPath, dependsOn: new Set()};
+  }
+  return jdMap[joinKey];
+}
+
+function findActiveJoins(
+  dependencies: Record<string, JoinDependency>
+): FieldUsage[] {
+  const sorted: FieldUsage[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  const visit = (key: string) => {
+    if (visited.has(key)) return;
+    if (visiting.has(key)) {
+      throw new Error(`Circular join dependency detected involving ${key}`);
+    }
+
+    visiting.add(key);
+    const dep = dependencies[key];
+    if (dep) {
+      // Visit all dependencies first (depth-first)
+      for (const depKey of dep.dependsOn) {
+        visit(depKey);
+      }
+    }
+    visiting.delete(key);
+    visited.add(key);
+
+    // Add this join's path to the sorted list after its dependencies
+    if (dep) {
+      sorted.push({path: dep.path, activateJoin: true});
+    }
+  };
+
+  // Visit all joins in the dependency graph
+  for (const key of Object.keys(dependencies)) {
+    visit(key);
+  }
+
+  return sorted;
 }
 
 function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
 ): {result: FieldUsage[]; missingFields: FieldUsage[]} {
-  const seen = new Map<string, {usage: FieldUsage; group: UsageGroup}>();
-  const joinPathsProcessed = new Set<string>();
+  const seen: Record<string, FieldUsage> = {};
   const missingFields: FieldUsage[] = [];
   const toProcess: FieldUsage[] = [];
+  const joinDependencies: Record<string, JoinDependency> = {};
 
   // Initialize: mark original inputs and add them to processing queue
   for (const usage of fieldUsage) {
     const seenKey = pathToKey('field', usage.path);
-    seen.set(seenKey, {usage, group: UsageGroup.Input});
+    seen[seenKey] = usage;
     toProcess.push(usage);
   }
 
   // Process the expanding queue
+  const fieldNameSpace = buildNamespace(fields);
   for (let i = 0; i < toProcess.length; i++) {
     const reference = toProcess[i];
     if (reference.path.length === 0) continue;
     const referenceJoinPath = reference.path.slice(0, -1);
 
-    // Look up this referenced field; if it is a composite field, then add it to the list
-    // of composite fields found;
-    // if it has composite usage, add those usages to the list of fields to look up next
-    // if it doesn't exist, then this source won't work.
-    let def: FieldDef;
-    try {
-      def = lookup(reference.path, fields);
-    } catch {
+    let def = inNamespace(reference.path, fieldNameSpace);
+    if (!def) {
       missingFields.push(reference);
       continue;
     }
@@ -375,39 +419,52 @@ function _expandFieldUsage(
         reference.at
       )) {
         const key = pathToKey('field', usage.path);
-        if (!seen.has(key)) {
-          seen.set(key, {usage, group: UsageGroup.Expanded});
+        if (!seen[key]) {
+          seen[key] = usage;
           toProcess.push(usage);
         }
       }
     }
 
-    if (reference.path.length > 1) {
-      const referenceJoinKey = pathToKey('join', referenceJoinPath);
-      if (!joinPathsProcessed.has(referenceJoinKey)) {
-        joinPathsProcessed.add(referenceJoinKey);
-        const join = lookup(referenceJoinPath, fields);
-        const joinFieldUsage = getJoinFieldUsage(join, referenceJoinPath);
+    // For paths of length 2 and greater we need to record the dependencies for every
+    // join referenced in this path
+    for (let joinLen = 1; joinLen < reference.path.length; joinLen++) {
+      const joinPath = reference.path.slice(0, joinLen);
+      def = inNamespace(joinPath, fieldNameSpace);
+      if (!def) break;
+
+      const joinKey = pathToKey('join', joinPath);
+      const thisDep = getJoin(joinDependencies, joinKey, joinPath);
+      if (isJoined(def) && !thisDep.checked) {
+        thisDep.checked = true;
+        const joinFieldUsage = getJoinFieldUsage(def, joinPath);
+
         for (const usage of fieldUsageAt(joinFieldUsage, reference.at)) {
           const key = pathToKey('field', usage.path);
-          if (!seen.has(key)) {
-            seen.set(key, {usage, group: UsageGroup.Joins});
+          if (!seen[key]) {
+            seen[key] = usage;
             toProcess.push(usage);
+          }
+          // now find the joins references in the usage which are not this join ...
+          const isInternalReference =
+            usage.path.length === joinPath.length + 1 &&
+            pathBegins(usage.path, joinPath);
+          if (!isInternalReference && usage.path.length > 1) {
+            const thisDep = getJoin(joinDependencies, joinKey, joinPath);
+            const dependencyPath = usage.path.slice(0, -1);
+            const dependencyKey = pathToKey('join', dependencyPath);
+            getJoin(joinDependencies, dependencyKey, dependencyPath);
+            thisDep.dependsOn.add(dependencyKey);
           }
         }
       }
     }
   }
 
-  // Build result by filtering seen values by group
-  const ret = [...seen.values()];
+  // now make a FieldUsage array of the paths in the dependency graph in a sorted order
+  // then we want to make the result include these fields before the other usages
 
-  const result: FieldUsage[] = [
-    ...ret.filter(e => e.group === UsageGroup.Joins).map(e => e.usage),
-    ...ret.filter(e => e.group === UsageGroup.Input).map(e => e.usage),
-    ...ret.filter(e => e.group === UsageGroup.Expanded).map(e => e.usage),
-  ];
-
+  const result = [...findActiveJoins(joinDependencies), ...Object.values(seen)];
   return {result, missingFields};
 }
 
@@ -1162,6 +1219,48 @@ export function pathEq(a: string[], b: string[]) {
 
 export function pathBegins(path: string[], prefix: string[]) {
   return path.length >= prefix.length && prefix.every((s, i) => path[i] === s);
+}
+
+type Namespace = {
+  fields: Record<string, FieldDef>;
+  nested: Record<string, Namespace>;
+};
+
+function buildNamespace(fields: FieldDef[]): Namespace {
+  const namespace: Namespace = {
+    fields: {},
+    nested: {},
+  };
+
+  for (const field of fields) {
+    const name = field.as ?? field.name;
+    namespace.fields[name] = field;
+
+    // If it's a join with nested fields, recursively build its hierarchy
+    if (isJoined(field) && field.fields) {
+      namespace.nested[name] = buildNamespace(field.fields);
+    }
+  }
+
+  return namespace;
+}
+
+function inNamespace(path: string[], space: Namespace): FieldDef | undefined {
+  const head = path[0];
+  const def = space.fields[head];
+
+  if (def === undefined) return def;
+
+  if (path.length === 1) {
+    return def;
+  }
+
+  const nested = space.nested[head];
+  if (!nested) {
+    return undefined;
+  }
+
+  return inNamespace(path.slice(1), nested);
 }
 
 function lookup(field: string[], fields: FieldDef[]): FieldDef {

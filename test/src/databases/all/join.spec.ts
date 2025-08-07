@@ -63,6 +63,26 @@ afterAll(async () => {
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const joinModel = runtime.loadModel(modelText(databaseName));
 
+  it('the transitive join field usage test', async () => {
+    const id = runtime.dialect.sqlMaybeQuoteIdentifier('id');
+    const root_id = runtime.dialect.sqlMaybeQuoteIdentifier('root_id');
+    const branch_id = runtime.dialect.sqlMaybeQuoteIdentifier('branch_id');
+    const joinModel = `
+      source: root is ${databaseName}.sql("""select 1 as ${id} """)
+      source: branch is ${databaseName}.sql("""select 1 as ${id}, 1 as ${root_id} """)
+      source: leaf is ${databaseName}.sql("""select 1 as ${id}, 1 as ${branch_id}, 'yellow' as color""")
+      source: things is ${databaseName}.sql("""select 1 as ${root_id}, 1 as ${id} """) extend {
+        join_many: root on root.id = root_id
+        join_many: branch on branch.root_id = root.id
+        join_many: leaf on leaf.branch_id = branch.id
+      }
+      run: things -> {
+        group_by: leaf.color
+      }
+    `;
+    await expect(joinModel).malloyResultMatches(runtime, {});
+  });
+
   it('model source refine join', async () => {
     await expect(`
       source: a2 is aircraft extend {
@@ -223,8 +243,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  // not sure how to solve this one yet, just check for > 4 rows
-  it('All joins at the same level', async () => {
+  it('activates parent join when fields in leaf join are referenced', async () => {
     await expect(`
       source: flights is ${databaseName}.table('malloytest.flights') extend {
         join_one: aircraft is ${databaseName}.table('malloytest.aircraft')
@@ -241,11 +260,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(runtime, [{}, {}, {}, {}, {}]);
   });
 
+  // I don't know what join issue 440 was, there was a change of repos and that
+  // is no longer recorded anywhere. I suspect it was the indirect reference to
+  // the leaf join field. In a world where the join tree is built from fieldUsage
+  // that automatically works, but what is a problem is inferring the join tree
+  // from the ordering of usages. Inverting the "on" comparison in this test
+  // caused it to fail when the previous one passed.
   it('join issue440', async () => {
     await expect(`
-      source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models')
-
       source: aircraft is ${databaseName}.table('malloytest.aircraft')
+      source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models')
 
       source: flights is ${databaseName}.table('malloytest.flights') extend {
         join_one: aircraft on aircraft.tail_num = tail_num
@@ -253,10 +277,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
 
       run: flights-> {
-        group_by: testingtwo is aircraft_models.model
-        limit: 5
+        group_by: testtwo is aircraft_models.seats
+        limit: 1
       }
-    `).malloyResultMatches(runtime, [{}, {}, {}, {}, {}]);
+    `).malloyResultMatches(runtime, [{}]);
   });
 
   it('join issue1092', async () => {
