@@ -566,7 +566,10 @@ export function newCompileQueryState(
     ...(request.compiler_needs ?? {}),
   };
   const queryURL = 'internal://query.malloy';
-  if (request.internal_options?.serialize_and_parse) {
+  if (
+    request.internal_options?.serialize_and_parse ||
+    request.query === undefined
+  ) {
     const queryMalloy =
       request.query_malloy ??
       (request.query ? Malloy.queryToMalloy(request.query) : undefined);
