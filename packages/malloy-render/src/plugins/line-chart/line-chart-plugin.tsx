@@ -94,6 +94,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
       let useVegaInterpreter: boolean | undefined;
+      let vegaConfig: Config | undefined;
 
       try {
         settings = getLineChartSettings(
@@ -238,7 +239,6 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaProps = generateLineChartVegaSpecV2(metadata, pluginInstance);
           useVegaInterpreter = options.useVegaInterpreter;
 
           // TODO: should this be passed as plugin options? createLineChartPlugin(options)?
@@ -246,9 +246,15 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           const vegaConfigOverride =
             options.getVegaConfigOverride?.('line_chart') ?? {};
 
-          const vegaConfig: Config = mergeVegaConfigs(
+          vegaConfig = mergeVegaConfigs(
             baseVegaConfig(),
             options.getVegaConfigOverride?.('line_chart') ?? {}
+          );
+
+          vegaProps = generateLineChartVegaSpecV2(
+            metadata,
+            pluginInstance,
+            vegaConfig
           );
 
           const maybeAxisYLabelFont =
@@ -281,6 +287,15 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
         getDefaultSettings: () => defaultLineChartSettings,
         settingsToTag: (settings: Record<string, unknown>) => {
           return lineChartSettingsToTag(settings as LineChartSettings);
+        },
+
+        getStyleOverrides: (): Record<string, string> => {
+          if (vegaConfig?.background) {
+            return {
+              '--malloy-render--background': vegaConfig.background as string,
+            };
+          }
+          return {};
         },
 
         getTopNSeries: (maxSeries: number) => {

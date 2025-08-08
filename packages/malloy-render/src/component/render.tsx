@@ -154,6 +154,9 @@ export function MalloyRenderInner(props: {
       },
       useVegaInterpreter: props.useVegaInterpreter,
     });
+
+    // Collect style overrides from plugins
+    const styleOverrides: Record<string, string> = {};
     props.renderFieldMetadata?.getAllFields().forEach(field => {
       const plugins =
         props.renderFieldMetadata?.getPluginsForField(field.key) ?? [];
@@ -167,8 +170,16 @@ export function MalloyRenderInner(props: {
           },
           useVegaInterpreter: props.useVegaInterpreter,
         });
+
+        // Collect style overrides from plugin
+        if (plugin.getStyleOverrides) {
+          Object.assign(styleOverrides, plugin.getStyleOverrides());
+        }
       });
     });
+
+    resultMetadata.styleOverrides = styleOverrides;
+
     return resultMetadata;
   });
 
@@ -198,7 +209,13 @@ export function MalloyRenderInner(props: {
     };
   };
 
-  const style = () => generateThemeStyle(tags().modelTheme, tags().localTheme);
+  const style = () => {
+    const baseStyles = generateThemeStyle(tags().modelTheme, tags().localTheme);
+    const overrideStyles = Object.entries(metadata().styleOverrides)
+      .map(([key, value]) => `${key}: ${value};`)
+      .join('\n');
+    return baseStyles + overrideStyles;
+  };
 
   const rendering = () => {
     const data = rootCell();
@@ -315,6 +332,7 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     modelTheme
   );
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
+  const background = getThemeValue('background', localTheme, modelTheme);
 
   const css = `
     --malloy-render--table-row-height: ${tableRowHeight};
@@ -329,6 +347,7 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     --malloy-render--table-gutter-size: ${tableGutterSize};
     --malloy-render--table-pinned-background: ${tablePinnedBackground};
     --malloy-render--table-pinned-border: ${tablePinnedBorder};
+    --malloy-render--background: ${background};
 
 `;
   return css;

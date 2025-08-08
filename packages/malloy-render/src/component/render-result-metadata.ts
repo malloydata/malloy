@@ -56,6 +56,7 @@ export interface RenderMetadata {
   renderAs: string;
   sizingStrategy: 'fill' | 'fixed';
   renderFieldMetadata: RenderFieldMetadata;
+  styleOverrides: Record<string, string>;
 }
 
 export function getResultMetadata(
@@ -85,6 +86,7 @@ export function getResultMetadata(
         ? 'fixed'
         : chartSizingStrategy ?? rootSizingStrategy,
     renderFieldMetadata: options.renderFieldMetadata,
+    styleOverrides: {},
   };
 
   return metadata;
