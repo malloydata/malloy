@@ -84,6 +84,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
       let runtime: Runtime | undefined;
       let vegaProps: VegaChartProps | undefined;
       let useVegaInterpreter: boolean | undefined;
+      let vegaConfig: Config | undefined;
 
       const settings = getBarChartSettings(field);
       const hasMultipleSeriesFields = settings.seriesChannel.fields.length > 1;
@@ -196,15 +197,20 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
           metadata: RenderMetadata,
           options: GetResultMetadataOptions
         ): void => {
-          vegaProps = generateBarChartVegaSpecV2(metadata, pluginInstance);
           useVegaInterpreter = options.useVegaInterpreter;
 
           const vegaConfigOverride =
             options.getVegaConfigOverride?.('bar_chart') ?? {};
 
-          const vegaConfig: Config = mergeVegaConfigs(
+          vegaConfig = mergeVegaConfigs(
             baseVegaConfig(),
             options.getVegaConfigOverride?.('bar_chart') ?? {}
+          );
+
+          vegaProps = generateBarChartVegaSpecV2(
+            metadata,
+            pluginInstance,
+            vegaConfig
           );
 
           const maybeAxisYLabelFont =
@@ -237,6 +243,15 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
         getDefaultSettings: () => defaultBarChartSettings,
         settingsToTag: (settings: Record<string, unknown>) => {
           return barChartSettingsToTag(settings as BarChartSettings);
+        },
+
+        getStyleOverrides: (): Record<string, string> => {
+          if (vegaConfig?.background) {
+            return {
+              '--malloy-render--background': vegaConfig.background as string,
+            };
+          }
+          return {};
         },
 
         getTopNSeries: (maxSeries: number) => {

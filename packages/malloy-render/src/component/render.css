@@ -11,11 +11,13 @@
   --malloy-theme--table-pinned-background: #f5fafc;
   --malloy-theme--table-pinned-border: 1px solid #daedf3;
   --malloy-theme--font-family: Inter, system-ui, sans-serif;
+  --malloy-theme--background: white;
 
   font-family: var(--malloy-render--font-family);
   font-size: var(--malloy-render--table-font-size);
   height: 100%;
   width: 100%;
+  background-color: var(--malloy-render--background);
 }
 
 @supports (font-variation-settings: normal) {

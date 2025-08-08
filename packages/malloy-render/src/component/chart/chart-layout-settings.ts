@@ -22,9 +22,9 @@
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {AlignValue, TextBaselineValue} from 'vega';
+import type {AlignValue, TextBaselineValue, Config} from 'vega';
 import {scale, locale} from 'vega';
-import {getTextWidthDOM} from '@/component/util';
+import {getTextWidthDOM, getTextHeightDOM} from '@/component/util';
 import {renderNumericField} from '@/component/render-numeric-field';
 import type {Field, NestField} from '@/data_tree';
 import type {RenderMetadata} from '@/component/render-result-metadata';
@@ -39,6 +39,98 @@ type XAxisSettings = {
   hidden: boolean;
 };
 
+interface FontSettings {
+  fontFamily: string;
+  fontSize: string;
+  fontWeight?: string;
+}
+
+function getAxisFontSettings(vegaConfig?: Config): {
+  xLabel: FontSettings;
+  yLabel: FontSettings;
+  xTitle: FontSettings;
+  yTitle: FontSettings;
+} {
+  const defaultLabelFont = {
+    fontFamily: 'Inter, sans-serif',
+    fontSize: '10px',
+  };
+
+  const defaultTitleFont = {
+    fontFamily: 'Inter, sans-serif',
+    fontSize: '10px',
+    fontWeight: '500',
+  };
+
+  if (!vegaConfig) {
+    return {
+      xLabel: defaultLabelFont,
+      yLabel: defaultLabelFont,
+      xTitle: defaultTitleFont,
+      yTitle: defaultTitleFont,
+    };
+  }
+
+  // Extract label font settings with proper fallback chain
+  const xLabelFontWeight =
+    vegaConfig.axisX?.labelFontWeight || vegaConfig.axis?.labelFontWeight;
+  const yLabelFontWeight =
+    vegaConfig.axisY?.labelFontWeight || vegaConfig.axis?.labelFontWeight;
+
+  const xLabelFont: FontSettings = {
+    fontFamily: (vegaConfig.axisX?.labelFont ||
+      vegaConfig.axis?.labelFont ||
+      'Inter, sans-serif') as string,
+    fontSize: `${
+      vegaConfig.axisX?.labelFontSize || vegaConfig.axis?.labelFontSize || 10
+    }px`,
+    ...(xLabelFontWeight && {fontWeight: String(xLabelFontWeight)}),
+  };
+
+  const yLabelFont: FontSettings = {
+    fontFamily: (vegaConfig.axisY?.labelFont ||
+      vegaConfig.axis?.labelFont ||
+      'Inter, sans-serif') as string,
+    fontSize: `${
+      vegaConfig.axisY?.labelFontSize || vegaConfig.axis?.labelFontSize || 10
+    }px`,
+    ...(yLabelFontWeight && {fontWeight: String(yLabelFontWeight)}),
+  };
+
+  // Extract title font settings with proper fallback chain
+  const xTitleFontWeight =
+    vegaConfig.axisX?.titleFontWeight || vegaConfig.axis?.titleFontWeight;
+  const yTitleFontWeight =
+    vegaConfig.axisY?.titleFontWeight || vegaConfig.axis?.titleFontWeight;
+
+  const xTitleFont: FontSettings = {
+    fontFamily: (vegaConfig.axisX?.titleFont ||
+      vegaConfig.axis?.titleFont ||
+      'Inter, sans-serif') as string,
+    fontSize: `${
+      vegaConfig.axisX?.titleFontSize || vegaConfig.axis?.titleFontSize || 10
+    }px`,
+    ...(xTitleFontWeight && {fontWeight: String(xTitleFontWeight)}),
+  };
+
+  const yTitleFont: FontSettings = {
+    fontFamily: (vegaConfig.axisY?.titleFont ||
+      vegaConfig.axis?.titleFont ||
+      'Inter, sans-serif') as string,
+    fontSize: `${
+      vegaConfig.axisY?.titleFontSize || vegaConfig.axis?.titleFontSize || 10
+    }px`,
+    ...(yTitleFontWeight && {fontWeight: String(yTitleFontWeight)}),
+  };
+
+  return {
+    xLabel: xLabelFont,
+    yLabel: yLabelFont,
+    xTitle: xTitleFont,
+    yTitle: yTitleFont,
+  };
+}
+
 export function getXAxisSettings({
   maxString,
   chartHeight,
@@ -46,6 +138,7 @@ export function getXAxisSettings({
   xField,
   parentField,
   parentTag,
+  vegaConfig,
 }: {
   maxString: string;
   chartHeight: number;
@@ -53,6 +146,7 @@ export function getXAxisSettings({
   xField: Field;
   parentField: NestField;
   parentTag: Tag;
+  vegaConfig?: Config;
 }): XAxisSettings {
   let xAxisHeight = 0;
   let labelAngle = -90;
@@ -61,26 +155,22 @@ export function getXAxisSettings({
   let labelLimit = 0;
   const xTitleSize = 20;
 
-  // TODO use vega config styles
-  const maxStringSize =
-    getTextWidthDOM(maxString, {
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '10px',
-      width: 'fit-content',
-      opacity: '0',
-      fontVariantNumeric: 'tabular-nums',
-      position: 'absolute',
-    }) + 4;
+  // Get font settings from vega config
+  const fontSettings = getAxisFontSettings(vegaConfig);
+  const xFontStyles = {
+    fontFamily: fontSettings.xLabel.fontFamily,
+    fontSize: fontSettings.xLabel.fontSize,
+    ...(fontSettings.xLabel.fontWeight && {
+      fontWeight: fontSettings.xLabel.fontWeight,
+    }),
+    width: 'fit-content',
+    opacity: '0',
+    fontVariantNumeric: 'tabular-nums',
+    position: 'absolute',
+  };
 
-  const ellipsesSize =
-    getTextWidthDOM('...', {
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '10px',
-      width: 'fit-content',
-      opacity: '0',
-      fontVariantNumeric: 'tabular-nums',
-      position: 'absolute',
-    }) + 4;
+  const maxStringSize = getTextWidthDOM(maxString, xFontStyles) + 4;
+  const ellipsesSize = getTextWidthDOM('...', xFontStyles) + 4;
 
   const X_AXIS_THRESHOLD = 0.35;
   const xAxisBottomPadding = 12;
@@ -139,6 +229,7 @@ export type ChartLayoutSettings = {
     tickCount?: number;
     hidden: boolean;
     yTitleSize: number;
+    titlePadding: number;
   };
   yScale: {
     domain: number[];
@@ -181,6 +272,7 @@ export function getChartLayoutSettings(
     getXMinMax?: () => [number, number];
     getYMinMax?: () => [number, number];
     independentY?: boolean;
+    vegaConfig?: Config;
   }
 ): ChartLayoutSettings {
   // TODO: improve logic for field extraction
@@ -218,6 +310,7 @@ export function getChartLayoutSettings(
 
   let yAxisWidth = 0;
   let yTitleSize = 0;
+  let yTitleOffset = 10; // Default value
   const hasYAxis = presetSize !== 'spark';
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
@@ -241,28 +334,57 @@ export function getChartLayoutSettings(
     const formattedMax = yField.isBasic()
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
-    yTitleSize = 31; // Estimate for now, can be dynamic later
-    const yLabelOffset = 5;
+
+    // Get font settings from vega config
+    const fontSettings = getAxisFontSettings(options.vegaConfig);
+    const yLabelFontStyles = {
+      fontFamily: fontSettings.yLabel.fontFamily,
+      fontSize: fontSettings.yLabel.fontSize,
+      ...(fontSettings.yLabel.fontWeight && {
+        fontWeight: fontSettings.yLabel.fontWeight,
+      }),
+      width: 'fit-content',
+      opacity: '0',
+      fontVariantNumeric: 'tabular-nums',
+      position: 'absolute',
+    };
+
+    const yTitleFontStyles = {
+      fontFamily: fontSettings.yTitle.fontFamily,
+      fontSize: fontSettings.yTitle.fontSize,
+      ...(fontSettings.yTitle.fontWeight && {
+        fontWeight: fontSettings.yTitle.fontWeight,
+      }),
+      width: 'fit-content',
+      opacity: '0',
+      position: 'absolute',
+    };
+
+    // Measure the height of title text with capital letters to get accurate vertical spacing
+    yTitleSize = getTextHeightDOM(
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
+      yTitleFontStyles
+    );
+
+    // Calculate dynamic Y title offset
+    // First check if title offset is specified in Vega config
+    const configTitleOffset = options.vegaConfig?.title?.offset;
+
+    if (configTitleOffset !== undefined) {
+      // Use the configured value
+      yTitleOffset = Number(configTitleOffset);
+    } else {
+      // Use the title size as the offset
+      yTitleOffset = yTitleSize;
+    }
+
+    const yPadding = 4;
     yAxisWidth =
       Math.max(
-        getTextWidthDOM(formattedMin, {
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '10px',
-          width: 'fit-content',
-          opacity: '0',
-          fontVariantNumeric: 'tabular-nums',
-          position: 'absolute',
-        }) + 4,
-        getTextWidthDOM(formattedMax, {
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '10px',
-          width: 'fit-content',
-          opacity: '0',
-          fontVariantNumeric: 'tabular-nums',
-          position: 'absolute',
-        }) + 4
+        getTextWidthDOM(formattedMin, yLabelFontStyles) + yPadding,
+        getTextWidthDOM(formattedMax, yLabelFontStyles) + yPadding
       ) +
-      yLabelOffset +
+      yTitleOffset * 2 + // Equal spacing on both sides of title
       yTitleSize;
 
     // Check whether we need to adjust axis values manually
@@ -287,6 +409,7 @@ export function getChartLayoutSettings(
     xField,
     parentField: field,
     parentTag: tag,
+    vegaConfig: options.vegaConfig,
   });
 
   const isSpark = tag.text('size') === 'spark';
@@ -315,6 +438,7 @@ export function getChartLayoutSettings(
       tickCount: yTickCount,
       hidden: isSpark,
       yTitleSize,
+      titlePadding: yTitleOffset,
     },
     yScale: {
       domain: options.independentY ? null : yDomain,
