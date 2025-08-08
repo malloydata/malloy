@@ -172,6 +172,7 @@ export class MalloyViz {
       modalElement: this.options.modalElement,
       scrollEl: this.options.scrollEl,
       renderFieldMetadata: this.metadata,
+      useVegaInterpreter: this.options.useVegaInterpreter,
     };
 
     // Render the SolidJS component to the target element

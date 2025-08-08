@@ -24,11 +24,13 @@ import type {
   PipeSegment,
   SourceDef,
   Expr,
-  StructDef,
   AggregateUngrouping,
   RequiredGroupBy,
   DocumentLocation,
   Annotation,
+  PartitionCompositeDesc,
+  FilterCondition,
+  StructDef,
 } from './malloy_types';
 import {
   expressionIsScalar,
@@ -42,6 +44,7 @@ import {
 } from './malloy_types';
 import {isNotUndefined} from '../lang/utils';
 import {pathToKey} from './utils';
+import {annotationToTag} from '../annotation';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -164,14 +167,17 @@ function _resolveCompositeSources(
         abort();
         continue overSources;
       }
-      if (inputSource.type === 'composite') {
+      if (
+        inputSource.type === 'composite' ||
+        inputSource.partitionComposite !== undefined
+      ) {
         const resolveInner = _resolveCompositeSources(
           path,
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
           compositeUsageInThisSource,
-          inputSource.sources
+          inputSource.type === 'composite' ? inputSource.sources : undefined
         );
         if ('error' in resolveInner) {
           // Third point where we abort; if a nested composite failed; we don't call abort() because we want to unnest the failures from
@@ -262,6 +268,31 @@ function _resolveCompositeSources(
         },
       };
     }
+  } else if (source.partitionComposite !== undefined) {
+    anyComposites = true;
+    const expanded = expandFieldUsage(fieldUsage, rootFields).result;
+    // TODO possibly abort if expanded has missing fields...
+    const expandedCategorized = categorizeFieldUsage(expanded);
+    const {partitionFilter, issues} = getPartitionCompositeFilter(
+      source.partitionComposite,
+      expandedCategorized.sourceUsage
+    );
+    if (issues !== undefined) {
+      return {
+        error: {
+          code: 'no_suitable_composite_source_input',
+          data: {
+            failures: issues.map(iss => ({source, issues: iss})),
+            usage: expanded,
+            path,
+          },
+        },
+      };
+    }
+    base = {
+      ...source,
+      filterList: [...(source.filterList ?? []), partitionFilter],
+    };
   }
 
   if (!joinsProcessed) {
@@ -509,6 +540,130 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
     }
   }
   return categorized;
+}
+
+function getPartitionCompositePartition(
+  partitionComposite: PartitionCompositeDesc,
+  fieldUsage: FieldUsage[]
+):
+  | {partitionId: string; issues: undefined}
+  | {issues: CompositeIssue[][]; partitionId: undefined} {
+  const issues: CompositeIssue[][] = [];
+  const compositeFieldsUsed = fieldUsage.filter(u =>
+    partitionComposite.compositeFields.some(
+      f => u.path.length === 1 && u.path[0] === f
+    )
+  );
+  for (const partition of partitionComposite.partitions) {
+    const missingFields = compositeFieldsUsed.filter(
+      u => u.path.length !== 1 || !partition.fields.includes(u.path[0])
+    );
+    if (missingFields.length === 0) {
+      return {partitionId: partition.id, issues: undefined};
+    }
+    issues.push(missingFields.map(f => ({type: 'missing-field', field: f})));
+  }
+  return {
+    partitionId: undefined,
+    issues,
+  };
+}
+
+function getPartitionCompositeFilter(
+  partitionComposite: PartitionCompositeDesc,
+  fieldUsage: FieldUsage[]
+):
+  | {partitionFilter: FilterCondition; issues: undefined}
+  | {issues: CompositeIssue[][]; partitionFilter: undefined} {
+  const {partitionId, issues} = getPartitionCompositePartition(
+    partitionComposite,
+    fieldUsage
+  );
+  if (issues !== undefined) return {issues, partitionFilter: undefined};
+  const partitionFilter: FilterCondition = {
+    node: 'filterCondition',
+    code: '',
+    expressionType: 'scalar',
+    e: {
+      node: '=',
+      kids: {
+        left: {
+          node: 'field',
+          // TODO validate field exists
+          path: [partitionComposite.partitionField],
+        },
+        right: {
+          node: 'stringLiteral',
+          literal: partitionId,
+        },
+      },
+    },
+  };
+  return {partitionFilter, issues: undefined};
+}
+
+export function getPartitionCompositeDesc(
+  annotation: Annotation | undefined,
+  structDef: StructDef,
+  logTo: MalloyElement
+): PartitionCompositeDesc | undefined {
+  if (annotation === undefined) return undefined;
+  const compilerFlags = annotationToTag(annotation, {prefix: /^#!\s*/}).tag;
+  const partitionCompositeTag = compilerFlags.tag(
+    'experimental',
+    'partition_composite'
+  );
+  if (partitionCompositeTag === undefined) return undefined;
+  if (structDef.type === 'composite') {
+    logTo.logError(
+      'invalid-partition-composite',
+      'Source is already composite; cannot apply partition composite'
+    );
+    return undefined;
+  }
+  const partitionField = partitionCompositeTag.text('partition_field');
+  const partitionsTag = partitionCompositeTag.tag('partitions');
+  if (partitionField === undefined) {
+    logTo.logError(
+      'invalid-partition-composite',
+      'Partition composite must specify `partition_field`'
+    );
+    return undefined;
+  }
+  if (partitionsTag === undefined) {
+    logTo.logError(
+      'invalid-partition-composite',
+      'Partition composite must specify `partitions`'
+    );
+    return undefined;
+  }
+  const partitions: {id: string; fields: string[]}[] = [];
+  const allFields = new Set<string>();
+  const ids = Object.keys(partitionsTag.getProperties());
+  for (const id of ids) {
+    const partitionTag = partitionsTag.tag(id);
+    if (partitionTag === undefined) {
+      logTo.logError(
+        'invalid-partition-composite',
+        `Invalid partition specification for \`${id}\`; must be a tag with property \\fields\``
+      );
+      return undefined;
+    }
+    const fields = Object.keys(partitionsTag.getProperties());
+    allFields.forEach(f => allFields.add(f));
+    partitions.push({id, fields});
+  }
+  for (const field of [partitionField, ...allFields]) {
+    const def = structDef.fields.find(f => (f.as ?? f.name) === field);
+    if (def === undefined) {
+      logTo.logError(
+        'invalid-partition-composite',
+        `Composite partition field \`${field}\` not present in source`
+      );
+    }
+  }
+  const compositeFields = structDef.fields.map(f => f.as ?? f.name);
+  return {partitionField, partitions, compositeFields};
 }
 
 function composeAnnotations(
@@ -1332,10 +1487,12 @@ function sortIssuesByReferenceLocation(issues: CompositeIssue[]) {
   });
 }
 
-export function hasCompositesAnywhere(source: StructDef): boolean {
-  if (source.type === 'composite') return true;
+export function hasCompositesAnywhere(source: SourceDef): boolean {
+  if (source.type === 'composite' || source.partitionComposite !== undefined) {
+    return true;
+  }
   for (const field of source.fields) {
-    if (isJoined(field) && hasCompositesAnywhere(field)) {
+    if (isJoined(field) && isSourceDef(field) && hasCompositesAnywhere(field)) {
       return true;
     }
   }

@@ -29,6 +29,7 @@ import type {
   Signal,
   Spec,
   View,
+  Config,
 } from 'vega';
 import {
   renderNumericField,
@@ -114,7 +115,8 @@ function getLimitedData({
 
 export function generateBarChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: BarChartPluginInstance
+  plugin: BarChartPluginInstance,
+  vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -211,6 +213,7 @@ export function generateBarChartVegaSpecV2(
     chartType: 'bar',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent') || isLimitingSeries,
+    vegaConfig,
   });
 
   // Data limits

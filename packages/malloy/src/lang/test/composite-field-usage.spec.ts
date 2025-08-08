@@ -821,6 +821,75 @@ describe('composite sources', () => {
       `).toTranslate();
     });
   });
+  describe('partition composites', () => {
+    test('basic okay', () => {
+      expect(`
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        source: a_partition is a
+      `).toTranslate();
+    });
+    test('can use field from extension not mentioned in partition spec', () => {
+      expect(`
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        source: a_partition is a
+
+        source: a_partition_ext is a_partition extend {
+          measure: ai_sum is ai.sum()
+        }
+
+        run: a_partition_ext -> { aggregate: ${'ai_sum'} }
+      `).toTranslate();
+    });
+    test('weird field names', () => {
+      expect(`
+        #! experimental { partition_composite { partition_field=astr partitions={"colon::foo"={"colon::foo"} "plus+"={"plus+"} "Weird Name"={"Weird Name"} source={source} dollarbill$={dollarbill$}} } }
+        source: a_partition is a extend {
+          dimension: \`Weird Name\` is 1
+          dimension: \`source\` is 1
+          dimension: \`dollarbill$\` is 1
+          dimension: \`plus+\` is 1
+          dimension: \`colon::foo\` is 1
+        }
+      `).toTranslate();
+    });
+    test('missing partition field', () => {
+      expect(`
+        #! experimental { partition_composite { partitions={ai={ai}} } }
+        source: a_partition is a
+      `).toLog(
+        errorMessage('Partition composite must specify `partition_field`')
+      );
+    });
+    test('missing partitions', () => {
+      expect(`
+        #! experimental { partition_composite { partition_field=astr } }
+        source: a_partition is a
+      `).toLog(errorMessage('Partition composite must specify `partitions`'));
+    });
+    test('already composite', () => {
+      expect(`
+        ##! experimental.composite_sources
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        source: a_partition is compose(a, a)
+      `).toLog(
+        errorMessage(
+          'Source is already composite; cannot apply partition composite'
+        )
+      );
+    });
+    test('cannot resolve partition composite', () => {
+      expect(`
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        source: a_partition is a
+
+        run: a_partition -> { group_by: ${'af'} }
+      `).toLog(
+        errorMessage(
+          'This operation uses field `af`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `af` (fields required in source: `af`)'
+        )
+      );
+    });
+  });
 });
 
 function pathToKey(path: string[]): string {

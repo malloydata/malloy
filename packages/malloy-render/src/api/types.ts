@@ -27,4 +27,5 @@ export interface MalloyRendererOptions {
   onError?: (error: Error) => void;
   plugins?: RenderPluginFactory[];
   pluginOptions?: Record<string, unknown>;
+  useVegaInterpreter?: boolean;
 }
