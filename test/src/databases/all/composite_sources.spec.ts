@@ -592,7 +592,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
         source: comp is compose(
           part_comp,
-          ${databaseName}.sql('SELECT 10 AS ${id('c')})
+          ${databaseName}.sql('SELECT 10 AS ${id('c')}')
         )
 
         run: comp -> {
