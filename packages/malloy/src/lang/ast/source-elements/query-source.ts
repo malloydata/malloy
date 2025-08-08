@@ -50,10 +50,6 @@ export class QuerySource extends Source {
       query: comp.query,
       arguments: comp.query.sourceArguments,
     };
-    // mtoy todo review with chris, i don't think we forward usage info
-    for (const f of queryStruct.fields) {
-      delete f.fieldUsage;
-    }
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return {
       ...queryStruct,
