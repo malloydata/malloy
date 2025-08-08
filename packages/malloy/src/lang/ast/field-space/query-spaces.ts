@@ -310,6 +310,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       queryFieldDef.type === 'fieldref'
         ? queryFieldDef.path[queryFieldDef.path.length - 1]
         : queryFieldDef.as ?? queryFieldDef.name;
+    let ret: model.FieldDef;
     if (typeDesc.type === 'turtle') {
       const pipeline = typeDesc.pipeline;
       const lastSegment = pipeline[pipeline.length - 1];
@@ -320,7 +321,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
           : true
         : true;
       if (isRepeated) {
-        return {
+        ret = {
           ...outputStruct,
           elementTypeDef: {type: 'record_element'},
           name: name,
@@ -329,7 +330,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
           as: undefined,
         };
       } else {
-        return {
+        ret = {
           ...outputStruct,
           name: name,
           type: 'record',
@@ -338,15 +339,17 @@ export abstract class QuerySpace extends QueryOperationSpace {
         };
       }
     } else if (model.TD.isAtomic(typeDesc)) {
-      const td = model.mkFieldDef(typeDesc, name);
-      return {
-        ...td,
-        expressionType: 'scalar',
-        e: undefined,
-      };
+      ret = {...model.mkFieldDef(typeDesc, name), expressionType: 'scalar'};
+      delete ret.e;
     } else {
       throw new Error('Invalid type for fieldref');
     }
+    ret.location = this.astEl.location;
+    delete ret.fieldUsage;
+    delete ret.requiresGroupBy;
+    delete ret.ungroupings;
+    for (const del of ['evalSpace', 'drillExpression']) delete ret[del];
+    return ret;
   }
 
   // Gets the primary key field for the output struct of this query;

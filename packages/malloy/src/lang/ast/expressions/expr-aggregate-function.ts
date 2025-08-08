@@ -98,7 +98,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                       at: this.source.location,
                     },
               evalSpace: footType.evalSpace,
-              fieldUsage: footType.fieldUsage,
+              fieldUsage: [{path: this.source.path, at: this.source.location}],
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
@@ -186,8 +186,18 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       if (structPath && structPath.length > 0) {
         f.structPath = structPath;
       }
+      const returnExpr = this.returns(exprVal);
+      if (!this.isSymmetricFunction()) {
+        if (returnExpr.fieldUsage === undefined) {
+          returnExpr.fieldUsage = [];
+        }
+        returnExpr.fieldUsage.push({
+          path: structPath || [],
+          uniqueKeyRequirement: {isCount: false},
+        });
+      }
       return {
-        ...this.returns(exprVal),
+        ...returnExpr,
         expressionType: 'aggregate',
         value: f,
         evalSpace: 'output',

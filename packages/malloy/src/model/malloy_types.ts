@@ -1130,7 +1130,24 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
 export type IndexFieldDef = RefToField;
 export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
-export interface IndexSegment extends Filtered {
+/**
+ * The compiler needs to know a number of things computed for a query
+ * and stored here.
+ *
+ *   0) An ordered list list of active joins
+ *   1) Each field that is referenced, even indirectly
+ *   2) Each join path ending in a count
+ *   3) Each join path ending in an assymmetric aggregate
+ *   4) Each join path ending in an analytic funtion
+ */
+
+interface SegmentUsageSummary {
+  activeJoins?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
+}
+
+export interface IndexSegment extends Filtered, SegmentUsageSummary {
   type: 'index';
   indexFields: IndexFieldDef[];
   limit?: number;
@@ -1148,9 +1165,18 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface FieldUsage {
   path: string[];
   at?: DocumentLocation;
+  uniqueKeyRequirement?: UniqueKeyRequirement;
+  analyticFunctionUse?: boolean;
 }
 
-export interface QuerySegment extends Filtered, Ordered {
+export function bareFieldUsage(fu: FieldUsage): boolean {
+  return (
+    fu.uniqueKeyRequirement === undefined &&
+    fu.analyticFunctionUse === undefined
+  );
+}
+
+export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
@@ -1173,6 +1199,8 @@ export interface TurtleDef extends NamedObject, Pipeline {
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
 }
+
+export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
@@ -1339,6 +1367,9 @@ export interface AggregateUngrouping {
   ungroupedFields: string[][] | '*';
   fieldUsage: FieldUsage[];
   requiresGroupBy?: RequiredGroupBy[];
+  exclude: boolean;
+  path: string[];
+  refFields?: string[];
 }
 
 export type TypeInfo = {
@@ -1815,5 +1846,29 @@ export const TD = {
     return x.type === y.type;
   },
 };
+
+/**
+ * Aggregate functions carry this meta data. Used to determine if
+ * a function requires the existence of a unique key. This used
+ * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
+ *
+ * The three states are:
+ *
+ * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
+ * 2. {isCount: true} - this is a COUNT aggregate
+ * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
+ */
+export type UniqueKeyRequirement = undefined | {isCount: boolean};
+
+export function mergeUniqueKeyRequirement(
+  existing: UniqueKeyRequirement,
+  newInfo: UniqueKeyRequirement
+): UniqueKeyRequirement {
+  if (!existing) return newInfo;
+  if (!newInfo) return existing;
+  return {
+    isCount: existing.isCount || newInfo.isCount,
+  };
+}
 
 // clang-format on

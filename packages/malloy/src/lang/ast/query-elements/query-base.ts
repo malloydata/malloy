@@ -23,9 +23,9 @@
 
 import {
   hasCompositesAnywhere,
-  emptyFieldUsage,
   resolveCompositeSources,
   logCompositeError,
+  expandFieldUsage,
 } from '../../../model/composite_source_utils';
 import {
   isIndexSegment,
@@ -34,12 +34,44 @@ import {
   type Query,
   type SourceDef,
 } from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
+
+  protected expandFieldUsage(
+    inputSource: SourceDef,
+    pipeline: PipeSegment[]
+  ): PipeSegment[] {
+    const ret: PipeSegment[] = [];
+    let stageInput = inputSource;
+    for (const segment of pipeline) {
+      // mtoy todo ... refine block might contain joins, not sure
+      // if we need to handle that at the root, but definitely
+      // need to handle it in the segments after the first,
+      // so that each segment can have a join resolution tree
+      const {expandedFieldUsage, activeJoins, ungroupings} = expandFieldUsage(
+        segment,
+        stageInput
+      );
+      // mtoy todo ... walk the refined input join list
+      // and for any join trees, write them to the expandedFieldUsage
+      // roots first
+      const newSegment = {
+        ...segment,
+        expandedFieldUsage,
+        activeJoins,
+        expandedUngroupings: ungroupings,
+      };
+      ret.push(newSegment);
+      // mtoy todo get the output struct of this segment
+      stageInput = ErrorFactory.structDef;
+    }
+    return ret;
+  }
 
   protected resolveCompositeSource(
     inputSource: SourceDef,
@@ -54,8 +86,7 @@ export abstract class QueryBase extends MalloyElement {
       (isQuerySegment(stage1) || isIndexSegment(stage1)) &&
       hasCompositesAnywhere(inputSource)
     ) {
-      const fieldUsage = stage1.fieldUsage ?? emptyFieldUsage();
-      const resolved = resolveCompositeSources(inputSource, stage1, fieldUsage);
+      const resolved = resolveCompositeSources(inputSource, stage1);
       if (resolved.error) {
         logCompositeError(resolved.error, this);
       }

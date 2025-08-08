@@ -101,17 +101,21 @@ export class ExprUngroup extends ExpressionDef {
         }
         ungroup.fields = dstFields;
       }
+      const fieldUsage = exprVal.fieldUsage;
       return {
         ...TDU.atomicDef(exprVal),
         expressionType: 'ungrouped_aggregate',
         value: ungroup,
         evalSpace: 'output',
-        fieldUsage: exprVal.fieldUsage,
+        fieldUsage,
         ungroupings: [
           {
             requiresGroupBy: exprVal.requiresGroupBy ?? [],
-            fieldUsage: exprVal.fieldUsage ?? [],
+            fieldUsage: fieldUsage ?? [],
             ungroupedFields: isExclude ? ungroupFields ?? [] : '*',
+            path: [],
+            exclude: isExclude,
+            refFields: ungroup.fields,
           },
         ],
       };

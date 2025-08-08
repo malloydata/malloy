@@ -39,6 +39,9 @@ import type {
   RecordFunctionParameterTypeDef,
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
+  FieldUsage,
+  FunctionOrderBy as ModelFunctionOrderBy,
+  AggregateUngrouping,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -188,7 +191,7 @@ export class ExprFunc extends ExpressionDef {
               at: this.source.location,
             },
             evalSpace: footType.evalSpace,
-            fieldUsage: footType.fieldUsage,
+            fieldUsage: [{path: this.source.path, at: this.source.location}],
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -301,13 +304,13 @@ export class ExprFunc extends ExpressionDef {
       structPath,
     };
     let funcCall: Expr = frag;
+    const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
+    const isAsymmetric = !overload.isSymmetric;
+    const orderByUsage: FieldUsage[] = [];
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
     if (props?.orderBys && props.orderBys.length > 0) {
-      const isAnalytic = expressionIsAnalytic(
-        overload.returnType.expressionType
-      );
       if (!isAnalytic) {
         if (!this.inExperiment('aggregate_order_by', true)) {
           props.orderBys[0].logError(
@@ -318,12 +321,17 @@ export class ExprFunc extends ExpressionDef {
       }
       if (overload.supportsOrderBy || isAnalytic) {
         const allowExpression = overload.supportsOrderBy !== 'only_default';
-        const allObs = props.orderBys.flatMap(orderBy =>
-          isAnalytic
-            ? orderBy.getAnalyticOrderBy(fs)
-            : orderBy.getAggregateOrderBy(fs, allowExpression)
-        );
-        frag.kids.orderBy = allObs;
+        const allOrderBy: ModelFunctionOrderBy[] = [];
+        for (const ordering of props.orderBys) {
+          const {orderBy, fieldUsage} = isAnalytic
+            ? ordering.getAnalyticOrderBy(fs)
+            : ordering.getAggregateOrderBy(fs, allowExpression);
+          if (fieldUsage) {
+            orderByUsage.push(...fieldUsage);
+          }
+          allOrderBy.push(...orderBy);
+        }
+        frag.kids.orderBy = allOrderBy;
       } else {
         props.orderBys[0].logError(
           'function-does-not-support-order-by',
@@ -417,6 +425,9 @@ export class ExprFunc extends ExpressionDef {
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: part.path});
             } else {
+              argExprs[0].fieldUsage = mergeFieldUsage(argExprs[0].fieldUsage, [
+                {path: part.path, at: this.args[0].location},
+              ]);
               expr.push({
                 node: 'field',
                 // TODO when we have namespaces, this will need to be replaced with the resolved path
@@ -442,6 +453,21 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
+    let fieldUsage = mergeFieldUsage(
+      ...argExprs.map(ae => ae.fieldUsage),
+      orderByUsage
+    );
+    const ungroupings = argExprs.reduce(
+      (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
+      []
+    );
+    if (isAsymmetric || isAnalytic) {
+      fieldUsage ||= [];
+      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
+      if (isAnalytic) funcUsage.analyticFunctionUse = true;
+      fieldUsage.push(funcUsage);
+    }
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
@@ -450,7 +476,8 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage: mergeFieldUsage(...argExprs.map(e => e.fieldUsage)),
+      fieldUsage,
+      ungroupings,
     };
   }
 }

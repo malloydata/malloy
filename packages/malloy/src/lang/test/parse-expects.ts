@@ -23,7 +23,12 @@
  */
 
 import type {MalloyTranslator, TranslateResponse} from '..';
-import type {DocumentLocation, DocumentRange, Expr} from '../../model';
+import {
+  bareFieldUsage,
+  type DocumentLocation,
+  type DocumentRange,
+  type Expr,
+} from '../../model';
 import {exprToStr} from './expr-to-str';
 import type {MarkedSource} from './test-translator';
 import {BetaExpression, pretty, TestTranslator} from './test-translator';
@@ -310,8 +315,14 @@ expect.extend({
       return badRefs;
     }
     const actual = bx.generated().fieldUsage;
-    const actualPaths = actual.map(u => u.path);
-    const pass = this.equals(actualPaths, paths);
+    const actualPaths = actual.filter(u => bareFieldUsage(u)).map(u => u.path);
+    // there is no guarantee of the order of field usage data, so we sort the two lists
+    // so i need to compare sorted versions of the two lists... we can sort on path.join('.)
+    // maybe make a lambda for that and pass it to sort
+    const pass = this.equals(
+      actualPaths.sort((a, b) => a.join('.').localeCompare(b.join('.'))),
+      paths.sort((a, b) => a.join('.').localeCompare(b.join('.')))
+    );
     const msg = pass
       ? `Matched: ${actual}`
       : this.utils.diff(paths, actualPaths);
