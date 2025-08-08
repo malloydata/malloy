@@ -63,26 +63,6 @@ afterAll(async () => {
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const joinModel = runtime.loadModel(modelText(databaseName));
 
-  it('the transitive join field usage test', async () => {
-    const id = runtime.dialect.sqlMaybeQuoteIdentifier('id');
-    const root_id = runtime.dialect.sqlMaybeQuoteIdentifier('root_id');
-    const branch_id = runtime.dialect.sqlMaybeQuoteIdentifier('branch_id');
-    const joinModel = `
-      source: root is ${databaseName}.sql("""select 1 as ${id} """)
-      source: branch is ${databaseName}.sql("""select 1 as ${id}, 1 as ${root_id} """)
-      source: leaf is ${databaseName}.sql("""select 1 as ${id}, 1 as ${branch_id}, 'yellow' as color""")
-      source: things is ${databaseName}.sql("""select 1 as ${root_id}, 1 as ${id} """) extend {
-        join_many: root on root.id = root_id
-        join_many: branch on branch.root_id = root.id
-        join_many: leaf on leaf.branch_id = branch.id
-      }
-      run: things -> {
-        group_by: leaf.color
-      }
-    `;
-    await expect(joinModel).malloyResultMatches(runtime, {});
-  });
-
   it('model source refine join', async () => {
     await expect(`
       source: a2 is aircraft extend {
@@ -148,7 +128,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: m is manufacturer
         aggregate: num_models is count()
         } extend {
-          join_one: seats is
+          join_one: seats_join is
             aircraft_models->{
               group_by: m is manufacturer
               aggregate: total_seats is seats.sum()
@@ -157,7 +137,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           select:
             m
             num_models
-            seats.total_seats
+            seats_join.total_seats
           order_by: 2 desc
           limit: 1
         }

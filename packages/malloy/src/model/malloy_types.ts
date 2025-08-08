@@ -1167,7 +1167,6 @@ export interface FieldUsage {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
-  activateJoin?: boolean;
 }
 
 export function bareFieldUsage(fu: FieldUsage): boolean {

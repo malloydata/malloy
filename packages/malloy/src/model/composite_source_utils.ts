@@ -376,7 +376,7 @@ function findActiveJoins(
 
     // Add this join's path to the sorted list after its dependencies
     if (dep) {
-      sorted.push({path: dep.path, activateJoin: true});
+      sorted.push({path: dep.path});
     }
   };
 
@@ -432,7 +432,8 @@ function _expandFieldUsage(
     if (isAtomic(def)) {
       const fieldUsage = def.fieldUsage ?? [];
       // Add the atomic field's dependencies to the queue
-      for (const usage of joinedFieldUsage([], fieldUsage)) {
+      const refPath = reference.path.slice(0, -1);
+      for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
         const key = pathToKey('field', usage.path);
         if (!seen[key]) {
           seen[key] = usage;
@@ -441,7 +442,7 @@ function _expandFieldUsage(
       }
     }
 
-    // Now handle join dependencies for all joins in the path
+    // For paths through joins, additionaly track join relationships
     for (let joinLen = 1; joinLen < reference.path.length; joinLen++) {
       const joinPath = reference.path.slice(0, joinLen);
       const joinDef = inNamespace(joinPath, fieldNameSpace);

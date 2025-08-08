@@ -401,7 +401,12 @@ export class QueryQuery extends QueryField {
    */
   findRecordAliases(context: QueryStruct, path: string[]) {
     for (const seg of path) {
-      const field = context.getFieldByName([seg]);
+      const field = context.getChildByName(seg);
+      if (!field) {
+        throw new Error(
+          'findRecordAliases: field not found: ' + path.join('.')
+        );
+      }
       if (field instanceof QueryFieldStruct) {
         const qs = field.queryStruct;
         if (
