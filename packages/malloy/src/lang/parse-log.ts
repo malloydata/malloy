@@ -420,6 +420,7 @@ type MessageParameterTypes = {
   'grouped-by-not-found': string;
   'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
+  'invalid-partition-composite': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
