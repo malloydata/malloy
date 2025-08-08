@@ -1040,4 +1040,68 @@ describe('field usage with compiler extensions', () => {
     });
     expect(found, message).toBeTruthy();
   });
+  it('transitive joins activated, in order', async () => {
+    const joinModel = model`
+        source: root is a extend { dimension: id is 1 }
+        source: branch is a extend { dimension: id is 1, root_id is 1}
+        source: leaf is a extend { dimension: id is 1, branch_id is 1, color is astr}
+        source: things is a extend {
+          join_many: root on root.id = ai
+          join_many: branch on branch.root_id = root.id
+          join_many: leaf on leaf.branch_id = branch.id
+        }
+        run: things -> { group_by: leaf.color }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const segment = mq!.pipeline[0];
+    if (isQuerySegment(segment)) {
+      expect(segment.activeJoins).toEqual([
+        {path: ['root']},
+        {path: ['branch']},
+        {path: ['leaf']},
+      ]);
+    }
+  });
+  it('generateds activation for nested join', async () => {
+    const joinModel = model`
+        source: person0 is a extend {
+          dimension: brother_id is 1, parent_id is 1, id is 1, name is astr
+        }
+        source: person1 is person0 extend {
+          join_many: brothers is person0 on brothers.id = brother_id
+        }
+        source: person is person1 extend {
+          join_many: parents is person1 on parents.id = parent_id
+          dimension: uncle_name is parents.brothers.name
+        }
+        run: person -> { group_by: uncle_name }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const segment = mq!.pipeline[0];
+    if (isQuerySegment(segment)) {
+      expect(segment.activeJoins).toEqual([
+        {path: ['parents']},
+        {path: ['parents', 'brothers']},
+      ]);
+    }
+  });
+  it('with joins generate both references', async () => {
+    const joinModel = model`
+      source: hasKey is a extend { primary_key: ai }
+      source: withJoin is a extend { join_one: b is hasKey with ai }
+      run: withJoin -> { select: b.astr }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      mq,
+      {path: ['ai']},
+      {path: ['b', 'ai']}
+    );
+    expect(found, message).toBeTruthy();
+  });
 });
