@@ -559,11 +559,13 @@ describe('composite sources', () => {
     });
     test('weird field names', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{id="Weird Name" fields=["Weird Name"]}, {id=source fields=[source]}, {id=dollarbill$ fields=[dollarbill$]}] } }
+        #! experimental { partition_composite { partition_field=astr partitions=[{id="colon::foo" fields=["colon::foo"]},{id="plus+" fields=["plus+"]}, {id="Weird Name" fields=["Weird Name"]}, {id=source fields=[source]}, {id=dollarbill$ fields=[dollarbill$]}] } }
         source: a_partition is a extend {
           dimension: \`Weird Name\` is 1
           dimension: \`source\` is 1
           dimension: \`dollarbill$\` is 1
+          dimension: \`plus+\` is 1
+          dimension: \`colon::foo\` is 1
         }
       `).toTranslate();
     });
