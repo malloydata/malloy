@@ -360,7 +360,7 @@ function findActiveJoins(
   const visit = (key: string) => {
     if (visited.has(key)) return;
     if (visiting.has(key)) {
-      throw new Error(`Circular join dependency detected involving ${key}`);
+      return;
     }
 
     visiting.add(key);
