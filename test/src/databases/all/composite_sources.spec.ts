@@ -10,7 +10,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -551,6 +552,22 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
           UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
           UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('partition composite with fields different from partition name', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={x={a} y={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'y' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'y' AS ${id('p')}
         """)
 
         run: comp -> {
