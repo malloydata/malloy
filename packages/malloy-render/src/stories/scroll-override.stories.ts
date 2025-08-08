@@ -33,8 +33,8 @@ const meta: Meta = {
       scrollEl: scrollContainer,
     });
 
-    if (context.loaded && context.loaded['result']) {
-      viz.setResult(context.loaded['result']);
+    if (context['loaded'] && context['loaded']['result']) {
+      viz.setResult(context['loaded']['result']);
 
       const metadata = viz.getMetadata();
       console.log('Render metadata:', metadata);
