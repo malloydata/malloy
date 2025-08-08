@@ -48,6 +48,18 @@ export function getTextWidthDOM(text: string, styles: Record<string, string>) {
   return rect.width;
 }
 
+export function getTextHeightDOM(text: string, styles: Record<string, string>) {
+  const measureDiv = document.createElement('div');
+  measureDiv.innerHTML = text;
+  for (const [key, value] of Object.entries(styles)) {
+    measureDiv.style[key] = value;
+  }
+  document.body.appendChild(measureDiv);
+  const rect = measureDiv.getBoundingClientRect();
+  document.body.removeChild(measureDiv);
+  return rect.height;
+}
+
 export function clamp(s: number, e: number, v: number) {
   return Math.max(s, Math.min(e, v));
 }

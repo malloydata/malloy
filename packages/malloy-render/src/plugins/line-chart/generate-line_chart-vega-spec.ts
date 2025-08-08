@@ -16,6 +16,7 @@ import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
 import type {
   Axis,
+  Config,
   Data,
   GroupMark,
   Item,
@@ -89,7 +90,8 @@ export interface LineChartSettings {
 
 export function generateLineChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: LineChartPluginInstance
+  plugin: LineChartPluginInstance,
+  vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -198,6 +200,7 @@ export function generateLineChartVegaSpecV2(
     getYMinMax: () => [yDomainMin, yDomainMax],
     // TODO: whats the use case for auto setting this with limited series? why does limiting series mean it should be independent? do we need an "auto" setting? like SeriesIndependence setting has?
     independentY: settings.yChannel.independent || isLimitingSeries,
+    vegaConfig,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -240,6 +243,7 @@ export function generateLineChartVegaSpecV2(
         fieldRef: yRef,
         brushMeasureRangeSourceId,
         axisSettings: chartSettings.yAxis,
+        vegaConfig,
       })
     : null;
 
@@ -724,7 +728,10 @@ export function generateLineChartVegaSpecV2(
       resize: true,
       contains: 'padding',
     },
-    padding: chartSettings.padding,
+    padding: {
+      ...chartSettings.padding,
+      bottom: chartSettings.xAxis.hidden ? 0 : chartSettings.xAxis.height,
+    },
     data: [valuesData, nonNullXValues, xValuesAggregated],
     scales: [
       {
