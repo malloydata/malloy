@@ -541,4 +541,64 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> { group_by: x }
     `).malloyResultMatches(runtime, {x: 'b1'});
   });
+  describe('partition composites', () => {
+    test('partition composite basic', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=partition partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 as a, 0 as b, 'a' as partition
+          UNION ALL SELECT 20 as a, 0 as b, 'a' as partition
+          UNION ALL SELECT 0  as a, 1 as b, 'b' as partition
+          UNION ALL SELECT 0  as a, 2 as b, 'b' as partition
+        """)
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('extended partition composite', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=partition partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 as a, 0 as b, 'a' as partition
+          UNION ALL SELECT 20 as a, 0 as b, 'a' as partition
+          UNION ALL SELECT 0  as a, 1 as b, 'b' as partition
+          UNION ALL SELECT 0  as a, 2 as b, 'b' as partition
+        """)
+
+        source: comp_ext is comp extend {
+          measure: a_avg is a.avg()
+        }
+
+        run: comp_ext -> {
+          aggregate: a_avg
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('partition composite nested in composite', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        #! experimental { partition_composite { partition_field=partition partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
+        source: part_comp is ${databaseName}.sql("""
+                    SELECT 10 as a, 0 as b, 'a' as partition
+          UNION ALL SELECT 20 as a, 0 as b, 'a' as partition
+          UNION ALL SELECT 0  as a, 1 as b, 'b' as partition
+          UNION ALL SELECT 0  as a, 2 as b, 'b' as partition
+        """)
+
+        source: comp is compose(
+          part_comp,
+          ${databaseName}.sql("SELECT 10 as c")
+        )
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+  });
 });
