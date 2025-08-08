@@ -557,6 +557,16 @@ describe('composite sources', () => {
         run: a_partition_ext -> { aggregate: ${'ai_sum'} }
       `).toTranslate();
     });
+    test('weird field names', () => {
+      expect(`
+        #! experimental { partition_composite { partition_field=astr partitions=[{id="Weird Name" fields=["Weird Name"]}, {id=source fields=[source]}, {id=dollarbill$ fields=[dollarbill$]}] } }
+        source: a_partition is a extend {
+          dimension: \`Weird Name\` is 1
+          dimension: \`source\` is 1
+          dimension: \`dollarbill$\` is 1
+        }
+      `).toTranslate();
+    });
     test('missing partition field', () => {
       expect(`
         #! experimental { partition_composite { partitions=[{id=ai fields=[ai]}] } }

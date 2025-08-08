@@ -544,12 +544,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   describe('partition composites', () => {
     test('partition composite basic', async () => {
       await expect(`
-        #! experimental { partition_composite { partition_field=partition partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
+        #! experimental { partition_composite { partition_field=partn partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
         source: comp is ${databaseName}.sql("""
-                    SELECT 10 as a, 0 as b, 'a' as partition
-          UNION ALL SELECT 20 as a, 0 as b, 'a' as partition
-          UNION ALL SELECT 0  as a, 1 as b, 'b' as partition
-          UNION ALL SELECT 0  as a, 2 as b, 'b' as partition
+                    SELECT 10 as a, 0 as b, 'a' as partn
+          UNION ALL SELECT 20 as a, 0 as b, 'a' as partn
+          UNION ALL SELECT 0  as a, 1 as b, 'b' as partn
+          UNION ALL SELECT 0  as a, 2 as b, 'b' as partn
         """)
 
         run: comp -> {
@@ -560,12 +560,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('extended partition composite', async () => {
       await expect(`
-        #! experimental { partition_composite { partition_field=partition partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
+        #! experimental { partition_composite { partition_field=partn partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
         source: comp is ${databaseName}.sql("""
-                    SELECT 10 as a, 0 as b, 'a' as partition
-          UNION ALL SELECT 20 as a, 0 as b, 'a' as partition
-          UNION ALL SELECT 0  as a, 1 as b, 'b' as partition
-          UNION ALL SELECT 0  as a, 2 as b, 'b' as partition
+                    SELECT 10 as a, 0 as b, 'a' as partn
+          UNION ALL SELECT 20 as a, 0 as b, 'a' as partn
+          UNION ALL SELECT 0  as a, 1 as b, 'b' as partn
+          UNION ALL SELECT 0  as a, 2 as b, 'b' as partn
         """)
 
         source: comp_ext is comp extend {
@@ -581,12 +581,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test('partition composite nested in composite', async () => {
       await expect(`
         ##! experimental.composite_sources
-        #! experimental { partition_composite { partition_field=partition partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
+        #! experimental { partition_composite { partition_field=partn partitions=[{id=a fields=[a]}, {id=b fields=[b]}] } }
         source: part_comp is ${databaseName}.sql("""
-                    SELECT 10 as a, 0 as b, 'a' as partition
-          UNION ALL SELECT 20 as a, 0 as b, 'a' as partition
-          UNION ALL SELECT 0  as a, 1 as b, 'b' as partition
-          UNION ALL SELECT 0  as a, 2 as b, 'b' as partition
+                    SELECT 10 as a, 0 as b, 'a' as partn
+          UNION ALL SELECT 20 as a, 0 as b, 'a' as partn
+          UNION ALL SELECT 0  as a, 1 as b, 'b' as partn
+          UNION ALL SELECT 0  as a, 2 as b, 'b' as partn
         """)
 
         source: comp is compose(
