@@ -541,13 +541,13 @@ describe('composite sources', () => {
   describe('partition composites', () => {
     test('basic okay', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{id=ai fields=[ai]}] } }
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
         source: a_partition is a
       `).toTranslate();
     });
     test('can use field from extension not mentioned in partition spec', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{id=ai fields=[ai]}] } }
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
         source: a_partition is a
 
         source: a_partition_ext is a_partition extend {
@@ -559,7 +559,7 @@ describe('composite sources', () => {
     });
     test('weird field names', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{id="colon::foo" fields=["colon::foo"]},{id="plus+" fields=["plus+"]}, {id="Weird Name" fields=["Weird Name"]}, {id=source fields=[source]}, {id=dollarbill$ fields=[dollarbill$]}] } }
+        #! experimental { partition_composite { partition_field=astr partitions={"colon::foo"={"colon::foo"} "plus+"={"plus+"} "Weird Name"={"Weird Name"} source={source} dollarbill$={dollarbill$}} } }
         source: a_partition is a extend {
           dimension: \`Weird Name\` is 1
           dimension: \`source\` is 1
@@ -571,7 +571,7 @@ describe('composite sources', () => {
     });
     test('missing partition field', () => {
       expect(`
-        #! experimental { partition_composite { partitions=[{id=ai fields=[ai]}] } }
+        #! experimental { partition_composite { partitions={ai={ai}} } }
         source: a_partition is a
       `).toLog(
         errorMessage('Partition composite must specify `partition_field`')
@@ -583,30 +583,10 @@ describe('composite sources', () => {
         source: a_partition is a
       `).toLog(errorMessage('Partition composite must specify `partitions`'));
     });
-    test('missing partition id', () => {
-      expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{fields=[ai]}] }
-        source: a_partition is a
-      `).toLog(
-        errorMessage(
-          'Must specify `id` for each partition of a partition composite'
-        )
-      );
-    });
-    test('missing partition fields', () => {
-      expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{id=ai}] }
-        source: a_partition is a
-      `).toLog(
-        errorMessage(
-          'Must specify `fields` array for each partition of a partition composite'
-        )
-      );
-    });
-    test('missing partition fields', () => {
+    test('already composite', () => {
       expect(`
         ##! experimental.composite_sources
-        #! experimental { partition_composite { partition_field=astr partitions=[{id=ai fields=[ai]}] } }
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
         source: a_partition is compose(a, a)
       `).toLog(
         errorMessage(
@@ -616,7 +596,7 @@ describe('composite sources', () => {
     });
     test('cannot resolve partition composite', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions=[{id=ai fields=[ai]}] } }
+        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
         source: a_partition is a
 
         run: a_partition -> { group_by: ${'af'} }

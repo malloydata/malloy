@@ -489,7 +489,7 @@ export function getPartitionCompositeDesc(
     return undefined;
   }
   const partitionField = partitionCompositeTag.text('partition_field');
-  const partitionTags = partitionCompositeTag.array('partitions');
+  const partitionsTag = partitionCompositeTag.tag('partitions');
   if (partitionField === undefined) {
     logTo.logError(
       'invalid-partition-composite',
@@ -497,7 +497,7 @@ export function getPartitionCompositeDesc(
     );
     return undefined;
   }
-  if (partitionTags === undefined) {
+  if (partitionsTag === undefined) {
     logTo.logError(
       'invalid-partition-composite',
       'Partition composite must specify `partitions`'
@@ -506,23 +506,17 @@ export function getPartitionCompositeDesc(
   }
   const partitions: {id: string; fields: string[]}[] = [];
   const allFields = new Set<string>();
-  for (const partitionTag of partitionTags) {
-    const id = partitionTag.text('id');
-    const fields = partitionTag.textArray('fields');
-    if (id === undefined) {
+  const ids = Object.keys(partitionsTag.getProperties());
+  for (const id of ids) {
+    const partitionTag = partitionsTag.tag(id);
+    if (partitionTag === undefined) {
       logTo.logError(
         'invalid-partition-composite',
-        'Must specify `id` for each partition of a partition composite'
+        `Invalid partition specification for \`${id}\`; must be a tag with property \\fields\``
       );
       return undefined;
     }
-    if (fields === undefined) {
-      logTo.logError(
-        'invalid-partition-composite',
-        'Must specify `fields` array for each partition of a partition composite'
-      );
-      return undefined;
-    }
+    const fields = Object.keys(partitionsTag.getProperties());
     allFields.forEach(f => allFields.add(f));
     partitions.push({id, fields});
   }
