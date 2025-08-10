@@ -270,7 +270,7 @@ function _resolveCompositeSources(
     }
   } else if (source.partitionComposite !== undefined) {
     anyComposites = true;
-    const expanded = expandFieldUsage(fieldUsage, rootFields).result;
+    const expanded = _expandFieldUsage(fieldUsage, rootFields).result;
     // TODO possibly abort if expanded has missing fields...
     const expandedCategorized = categorizeFieldUsage(expanded);
     const {partitionFilter, issues} = getPartitionCompositeFilter(
