@@ -344,7 +344,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     } else {
       throw new Error('Invalid type for fieldref');
     }
-    ret.location = this.astEl.location;
+    ret.location = ret.location ?? this.astEl.location;
     delete ret.fieldUsage;
     delete ret.requiresGroupBy;
     delete ret.ungroupings;

@@ -1023,7 +1023,7 @@ function nestLevelsAt(nests: NestLevels, at?: DocumentLocation): NestLevels {
   return {
     fieldsReferencedDirectly: fieldUsageAt(nests.fieldsReferencedDirectly, at),
     nested: nests.nested.map(n => nestLevelsAt(n, at)),
-    fieldsReferenced: fieldUsageAt(nests.fieldsReferencedDirectly, at),
+    fieldsReferenced: fieldUsageAt(nests.fieldsReferenced, at),
     ungroupings: ungroupingsAt(nests.ungroupings, at),
     requiredGroupBys: requiredGroupBysAt(nests.requiredGroupBys, at) ?? [],
     singleValueFilters: nests.singleValueFilters,
