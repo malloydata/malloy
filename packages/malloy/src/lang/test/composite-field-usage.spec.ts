@@ -1173,4 +1173,126 @@ describe('field usage with compiler extensions', () => {
     );
     expect(found, message).toBeTruthy();
   });
+  it('nested query unique key requirements propagate to parent', async () => {
+    const nestedModel = model`
+      run: a -> {
+        group_by: ai
+        nest: by_ASTR is {
+          group_by: astr_upper is upper(astr)
+          nest: by_astr is {
+            group_by: astr
+            aggregate: str_count is astr.count()
+          }
+        }
+      }
+    `;
+    expect(nestedModel).toTranslate();
+    const mq = nestedModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  it('unique key requirement preserved when path referenced before usage', () => {
+    const m = model`
+    source: data is a extend {
+      dimension: items is [
+        {name is 'A', value is 1},
+        {name is 'B', value is 2}
+      ]
+      measure: item_count is items.count()
+    }
+
+    run: data -> {
+      group_by: items.name
+      aggregate: item_count
+    }
+  `;
+
+    expect(m).toTranslate();
+    const query = m.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(query, {
+      path: ['items'],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  it('index with array wildcard generates correct field usage', () => {
+    const m = model`
+    source: ga_data is a extend {
+      dimension: hits is [
+        {page is {pageTitle is 'Home'}, dataSource is 'web'},
+        {page is {pageTitle is 'About'}, dataSource is 'app'}
+      ]
+      dimension: totals is {revenue is 100}
+    }
+
+    run: ga_data -> {
+      index: hits.*, totals.*
+    }
+  `;
+
+    expect(m).toTranslate();
+    const query = m.translator.getQuery(0);
+    expect(query).toBeDefined();
+
+    const segment = query!.pipeline[0];
+    if (isIndexSegment(segment)) {
+      const hasHitsInActiveJoins = segment.activeJoins?.some(
+        usage => usage.path.length === 1 && usage.path[0] === 'hits'
+      );
+      expect(hasHitsInActiveJoins).toBeTruthy();
+    }
+  });
+
+  test('nested turtle with multi-stage pipeline expands all stage dependencies', () => {
+    const mTest = model`
+    run: a -> {
+      group_by: ai
+      nest: by_elevation is {
+        aggregate: bin_size is (max(af) - min(af)) / 30
+        nest: data is {
+          group_by: af
+          aggregate: row_count is count()
+        }
+      } -> {
+        group_by: elevation is floor(data.af / bin_size) * bin_size + bin_size / 2
+        aggregate: total_count is data.row_count.sum()
+      }
+    }
+  `;
+
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+
+    const firstSegment = mq!.pipeline[0];
+    if (isQuerySegment(firstSegment)) {
+      const byElevationField = firstSegment.queryFields.find(
+        f =>
+          f.type === 'turtle' &&
+          (f.as === 'by_elevation' || f.name === 'by_elevation')
+      );
+
+      expect(byElevationField).toBeDefined();
+
+      if (
+        byElevationField?.type === 'turtle' &&
+        byElevationField.pipeline.length > 1
+      ) {
+        const secondStage = byElevationField.pipeline[1];
+
+        if (secondStage.type !== 'raw') {
+          expect(secondStage.expandedFieldUsage).toBeDefined();
+
+          const hasDataInActiveJoins = secondStage.activeJoins?.some(
+            usage => usage.path.length === 1 && usage.path[0] === 'data'
+          );
+
+          expect(hasDataInActiveJoins).toBeTruthy();
+        }
+      }
+    }
+  });
 });

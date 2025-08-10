@@ -27,6 +27,7 @@ import {
   logCompositeError,
   expandFieldUsage,
 } from '../../../model/composite_source_utils';
+import type {QueryFieldDef} from '../../../model/malloy_types';
 import {
   isIndexSegment,
   isQuerySegment,
@@ -48,28 +49,47 @@ export abstract class QueryBase extends MalloyElement {
   ): PipeSegment[] {
     const ret: PipeSegment[] = [];
     let stageInput = inputSource;
+
     for (const segment of pipeline) {
-      // mtoy todo ... refine block might contain joins, not sure
-      // if we need to handle that at the root, but definitely
-      // need to handle it in the segments after the first,
-      // so that each segment can have a join resolution tree
+      // Expand field usage for this segment
       const {expandedFieldUsage, activeJoins, ungroupings} = expandFieldUsage(
         segment,
         stageInput
       );
-      // mtoy todo ... walk the refined input join list
-      // and for any join trees, write them to the expandedFieldUsage
-      // roots first
-      const newSegment = {
-        ...segment,
-        expandedFieldUsage,
-        activeJoins,
-        expandedUngroupings: ungroupings,
-      };
+
+      // Create the new segment with expanded field usage
+      let newSegment: PipeSegment =
+        segment.type === 'raw'
+          ? segment
+          : {
+              ...segment,
+              expandedFieldUsage,
+              activeJoins,
+              expandedUngroupings: ungroupings,
+            };
+
+      // If this is a query segment, check for turtle fields that need their
+      // later stages expanded (first stage is already handled by extractNestLevels)
+      if (isQuerySegment(newSegment)) {
+        newSegment = {
+          ...newSegment,
+          queryFields: newSegment.queryFields.map(field =>
+            expandTurtleField(field)
+          ),
+        };
+      }
+
       ret.push(newSegment);
-      // mtoy todo get the output struct of this segment
-      stageInput = ErrorFactory.structDef;
+
+      // Get the output struct for the next stage
+      if ('outputStruct' in segment && segment.outputStruct) {
+        stageInput = segment.outputStruct;
+      } else {
+        // Fallback - this should be improved to compute the actual output
+        stageInput = ErrorFactory.structDef;
+      }
     }
+
     return ret;
   }
 
@@ -103,4 +123,64 @@ export abstract class QueryBase extends MalloyElement {
       pipeline: detectAndRemovePartialStages(query.pipeline, this),
     };
   }
+}
+
+/**
+ * Do field usage expansion in pipline segments after the first. The
+ * first segment's field usage is merged in the query's.
+ */
+function expandTurtleField(field: QueryFieldDef): QueryFieldDef {
+  // Only process turtle fields with multi-stage pipelines
+  if (
+    field.type !== 'turtle' ||
+    !field.pipeline ||
+    field.pipeline.length <= 1
+  ) {
+    return field;
+  }
+
+  // Expand stages 2+ of the pipeline
+  const expandedPipeline = field.pipeline.map((stage, index) => {
+    // Stage 0 is already handled by extractNestLevels
+    if (index === 0) return stage;
+
+    // For stages 1+, expand field usage using previous stage's output
+    const prevStage = field.pipeline[index - 1];
+    if (!prevStage.outputStruct) {
+      // mtoy todo should throw maybe?
+      return stage;
+    }
+
+    const {expandedFieldUsage, activeJoins, ungroupings} = expandFieldUsage(
+      stage,
+      prevStage.outputStruct
+    );
+
+    let expandedStage: PipeSegment =
+      stage.type === 'raw'
+        ? stage
+        : {
+            ...stage,
+            expandedFieldUsage,
+            activeJoins,
+            expandedUngroupings: ungroupings,
+          };
+
+    // Recursively handle any nested turtles in this stage
+    if (isQuerySegment(expandedStage)) {
+      expandedStage = {
+        ...expandedStage,
+        queryFields: expandedStage.queryFields.map(nestedField =>
+          expandTurtleField(nestedField)
+        ),
+      };
+    }
+
+    return expandedStage;
+  });
+
+  return {
+    ...field,
+    pipeline: expandedPipeline,
+  };
 }

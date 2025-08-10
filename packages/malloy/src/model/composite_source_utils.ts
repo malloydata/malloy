@@ -357,8 +357,11 @@ export function expandFieldUsage(
   const expanded = _expandFieldUsage(fieldUsage, fields);
   const nestLevels = extractNestLevels(segment);
   const expandedNests = expandRefs(nestLevels, fields);
+  const inputUniqueKeyReqs = nestLevels.fieldsReferenced.filter(
+    usage => usage.path.length === 0 && usage.uniqueKeyRequirement
+  );
   return {
-    expandedFieldUsage: expanded.result,
+    expandedFieldUsage: [...inputUniqueKeyReqs, ...expanded.result],
     activeJoins: expanded.activeJoins,
     ungroupings: expandedNests.result.ungroupings,
   };
@@ -469,6 +472,12 @@ function _expandFieldUsage(
         if (!seen[key]) {
           seen[key] = usage;
           toProcess.push(usage);
+        } else if (usage.uniqueKeyRequirement) {
+          seen[key].uniqueKeyRequirement = {
+            isCount:
+              usage.uniqueKeyRequirement.isCount ??
+              seen[key].uniqueKeyRequirement?.isCount,
+          };
         }
       }
     }
@@ -1097,6 +1106,31 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
       } else if (field.type === 'turtle') {
         const head = field.pipeline[0];
         const nestedLevels = extractNestLevels(head);
+
+        // Check if the nested query has ANY unique key requirements
+        let hasNestedUniqueKeyReqs = nestedLevels.fieldsReferenced.some(
+          usage => usage.uniqueKeyRequirement
+        );
+
+        // Also check the head segment's fieldUsage directly
+        if (isQuerySegment(head) && head.fieldUsage) {
+          const hasDirectUniqueKeyReqs = head.fieldUsage.some(
+            usage => usage.uniqueKeyRequirement
+          );
+          if (hasDirectUniqueKeyReqs) {
+            hasNestedUniqueKeyReqs = true;
+          }
+        }
+
+        // If the nested query has any unique key requirements, parent needs unique input
+        if (hasNestedUniqueKeyReqs) {
+          fieldsReferenced.push({
+            path: [],
+            uniqueKeyRequirement: {isCount: true},
+            at: head.referencedAt,
+          });
+        }
+
         const adjustedUngroupings = nestedLevels.ungroupings.map(u => ({
           ...u,
           path: [field.name, ...u.path],
