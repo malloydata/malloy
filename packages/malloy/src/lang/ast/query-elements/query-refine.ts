@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {ParameterSpace} from '../field-space/parameter-space';
 import {StaticSourceSpace} from '../field-space/static-space';
 import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
@@ -42,8 +43,11 @@ export class QueryRefine extends QueryBase implements QueryElement {
     super({base, refinement});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
-    const q = this.base.queryComp(isRefOk);
+  queryComp(
+    isRefOk: boolean,
+    parameterSpace: ParameterSpace | undefined
+  ): QueryComp {
+    const q = this.base.queryComp(isRefOk, parameterSpace);
     const inputFS = new StaticSourceSpace(q.inputStruct, 'public');
     const pipeline = this.refinement.refine(
       inputFS,
