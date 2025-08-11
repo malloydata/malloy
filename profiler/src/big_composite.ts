@@ -123,10 +123,11 @@ source: cube_ext_5 is cube
         },
       ],
     },
-    // exclude_references: true,
+    exclude_references: true,
   });
 
   const compileQueryRequest: Malloy.CompileQueryRequest = {
+    exclude_references: true,
     model_url: fileName,
     query: {
       definition: {
