@@ -43,6 +43,7 @@ import {
 import {
   sqlFullChildReference,
   type FieldInstanceResult,
+  type FieldInstanceField,
   type UngroupSet,
 } from './field_instance';
 import {FilterCompilers} from './filter_compilers';
@@ -477,7 +478,7 @@ function generateAnalyticFragment(
   if (!funcOrdering && dialectOverload.needsWindowOrderBy) {
     // calculate the ordering.
     const obSQL: string[] = [];
-    let orderingField;
+    let orderingField: {name: string; fif: FieldInstanceField} | undefined;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
       resultStruct.calculateDefaultOrderBy();
@@ -490,23 +491,29 @@ function generateAnalyticFragment(
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
-      const exprType = orderingField.fif.f.fieldDef.expressionType;
-      // TODO today we do not support ordering by analytic functions at all, so this works
-      // but eventually we will, and this check will just want to ensure that the order field
-      // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
-      if (expressionIsAnalytic(exprType)) {
-        continue;
+      if ('expressionType' in orderingField.fif.f.fieldDef) {
+        const exprType = orderingField.fif.f.fieldDef['expressionType'];
+        // TODO today we do not support ordering by analytic functions at all, so this works
+        // but eventually we will, and this check will just want to ensure that the order field
+        // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
+        if (expressionIsAnalytic(exprType)) {
+          continue;
+        }
       }
       if (resultStruct.firstSegment.type === 'reduce') {
         const orderSQL = orderingField.fif.getAnalyticalSQL(false);
         // const orderSQL = this.generateDimFragment(resultSet, context, arg, state)
         obSQL.push(` ${orderSQL} ${ordering.dir || 'ASC'}`);
       } else if (resultStruct.firstSegment.type === 'project') {
-        obSQL.push(
-          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
-            ordering.dir || 'ASC'
-          }`
-        );
+        // Verify that the field's parent result structure matches what we expect
+        if (orderingField.fif.parent !== resultStruct) {
+          throw new Error(
+            `Field instance parent mismatch: field '${orderingField.name}' has parent from different result structure. ` +
+              'This likely means the field is from a previous pipeline stage and needs special handling.'
+          );
+        }
+        const orderSQL = orderingField.fif.generateExpression();
+        obSQL.push(` ${orderSQL} ${ordering.dir || 'ASC'}`);
       }
     }
 
