@@ -1181,6 +1181,12 @@ interface StructDefBase extends HasLocation, NamedObject {
   fields: FieldDef[];
 }
 
+export interface PartitionCompositeDesc {
+  partitionField: string;
+  partitions: {id: string; fields: string[]}[];
+  compositeFields: string[];
+}
+
 interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   arguments?: Record<string, Argument>;
   parameters?: Record<string, Parameter>;
@@ -1188,6 +1194,7 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   connection: string;
   primaryKey?: PrimaryKeyRef;
   dialect: string;
+  partitionComposite?: PartitionCompositeDesc;
 }
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;

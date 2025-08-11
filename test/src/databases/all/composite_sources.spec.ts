@@ -43,6 +43,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> multistage
     `).malloyResultMatches(runtime, {foo: 1});
   });
+  it('SQL function contributes to field usage', async () => {
+    await expect(`
+      ##! experimental {composite_sources sql_functions}
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        dimension: foo_copy is sql_number('\${foo}')
+      }
+      run: x -> { group_by: foo_copy }
+    `).malloyResultMatches(runtime, {foo_copy: 1});
+  });
   describe('composited joins', () => {
     it('basic composited join', async () => {
       await expect(`
@@ -275,7 +285,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ),
         state_facts extend { dimension: foo is 1.3, bar is 2.3, baz is 3.3 }
       )
-      // even though the first composite has all the fields foo, bar, baz; it is impossible
+      // even though the first composite hAS all the fields foo, bar, baz; it is impossible
       // to resolve it using the first composite, because you can't have both bar and baz
       // so the second input source is used instead
       run: x -> { group_by: foo, bar, baz }
@@ -540,5 +550,101 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       )
       run: x -> { group_by: x }
     `).malloyResultMatches(runtime, {x: 'b1'});
+  });
+  describe('partition composites', () => {
+    const id = (n: string) => (databaseName === 'snowflake' ? `"${n}"` : n);
+    test('partition composite basic', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('sql function contributes to partition composite selection', async () => {
+      await expect(`
+        ##! experimental.sql_functions
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          // a partition comes first, so it would be selected if there was no field usage
+          group_by: b_copy is sql_number('\${b}')
+          limit: 1
+          order_by: b_copy asc
+        }
+      `).malloyResultMatches(runtime, {b_copy: 1});
+    });
+    test('partition composite with fields different from partition name', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={x={a} y={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'y' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'y' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('extended partition composite', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        source: comp_ext is comp extend {
+          measure: a_avg is a.avg()
+        }
+
+        run: comp_ext -> {
+          aggregate: a_avg
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('partition composite nested in composite', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: part_comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        source: comp is compose(
+          part_comp,
+          ${databaseName}.sql('SELECT 10 AS ${id('c')}')
+        )
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
   });
 });
