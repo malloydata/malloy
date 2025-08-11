@@ -21,9 +21,9 @@
     "time": "ts-node src/timer.ts"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.304",
-    "@malloydata/malloy-interfaces": "0.0.304",
+    "@malloydata/malloy": "0.0.305",
+    "@malloydata/malloy-interfaces": "0.0.305",
     "clinic": "^13.0.0"
   },
-  "version": "0.0.304"
+  "version": "0.0.305"
 }
