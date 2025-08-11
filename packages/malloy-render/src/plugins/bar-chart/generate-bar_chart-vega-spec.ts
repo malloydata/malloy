@@ -241,6 +241,7 @@ export function generateBarChartVegaSpecV2(
     xField,
     parentField: explore,
     parentTag: tag,
+    vegaConfig,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -280,6 +281,7 @@ export function generateBarChartVegaSpecV2(
         fieldRef: yRef,
         brushMeasureRangeSourceId,
         axisSettings: chartSettings.yAxis,
+        vegaConfig,
       })
     : null;
 
@@ -661,7 +663,10 @@ export function generateBarChartVegaSpecV2(
       contains: 'padding',
     },
     data: [valuesData],
-    padding: {...chartSettings.padding},
+    padding: {
+      ...chartSettings.padding,
+      bottom: xAxisSettings.hidden ? 0 : xAxisSettings.height,
+    },
     scales: [
       {
         name: 'xscale',
@@ -714,7 +719,6 @@ export function generateBarChartVegaSpecV2(
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
-        titleY: xAxisSettings.height,
         encode: {
           labels: {
             enter: {

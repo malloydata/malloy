@@ -243,6 +243,7 @@ export function generateLineChartVegaSpecV2(
         fieldRef: yRef,
         brushMeasureRangeSourceId,
         axisSettings: chartSettings.yAxis,
+        vegaConfig,
       })
     : null;
 
@@ -727,7 +728,10 @@ export function generateLineChartVegaSpecV2(
       resize: true,
       contains: 'padding',
     },
-    padding: chartSettings.padding,
+    padding: {
+      ...chartSettings.padding,
+      bottom: chartSettings.xAxis.hidden ? 0 : chartSettings.xAxis.height,
+    },
     data: [valuesData, nonNullXValues, xValuesAggregated],
     scales: [
       {
