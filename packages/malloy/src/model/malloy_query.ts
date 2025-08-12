@@ -3569,10 +3569,13 @@ class QueryQuery extends QueryField {
         [],
         (_result: FieldInstanceResult) => true
       )) {
-        hasResultsWithChildren ||= result.childGroups.length > 1;
-        hasAnyLimits ||=
+        const hasLimit =
           result.firstSegment.type === 'reduce' &&
           result.firstSegment.limit !== undefined;
+        hasResultsWithChildren ||=
+          result.childGroups.length > 1 && (hasLimit || result.hasHaving);
+        hasAnyLimits ||= hasLimit;
+
         // find all the parent dimension names.
         const dimensions: string[] = [];
         let r: FieldInstanceResult | undefined = result;
