@@ -3680,7 +3680,7 @@ class QueryQuery extends QueryField {
       }
       let simpleLimits = '1=1';
       if (limitSimpleFilters.length > 0) {
-        simpleLimits = ` NOT (${limitSimpleFilters.join('\n AND')})`;
+        simpleLimits = ` NOT (${limitSimpleFilters.join('\n OR ')})`;
       }
       if (hasAnyLimits && !hasResultsWithChildren) {
         lastStageName = stageWriter.addStage(
