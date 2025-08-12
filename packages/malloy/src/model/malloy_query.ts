@@ -3632,16 +3632,15 @@ class QueryQuery extends QueryField {
             // partition for a row number is the parent if it exists.
             let p = '';
             if (result.parent && partitionSQL[result.parent.groupSet]) {
-              p = partitionSQL[result.parent.groupSet];
+              p = partitionSQL[result.parent.groupSet] + ', group_set';
+            } else {
+              p = 'PARTITION BY group_set';
             }
 
             // if this has nested data and a having, we want to partion by the 'having' so we don't count
             // deleted rows.
             if (result.hasHaving) {
-              if (p === '') {
-                p = 'PARTITION BY ';
-              }
-              p = p + `__delete__${result.groupSet}`;
+              p = p + `, __delete__${result.groupSet}`;
             }
             limitExpressions.push(
               `CASE WHEN GROUP_SET=${result.groupSet} THEN
