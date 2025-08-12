@@ -458,7 +458,8 @@ export class ExprFunc extends ExpressionDef {
         : 'output';
     let fieldUsage = mergeFieldUsage(
       ...argExprs.map(ae => ae.fieldUsage),
-      orderByUsage
+      orderByUsage,
+      sqlFunctionFieldUsage
     );
     const ungroupings = argExprs.reduce(
       (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
@@ -479,11 +480,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage: mergeFieldUsage(
-        ...argExprs.map(e => e.fieldUsage),
-        orderByUsage,
-        sqlFunctionFieldUsage
-      ),
+      fieldUsage,
       ungroupings,
     };
   }
