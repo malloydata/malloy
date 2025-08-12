@@ -374,6 +374,7 @@ export class ExprFunc extends ExpressionDef {
       }
       frag.partitionBy = partitionByFields;
     }
+    const sqlFunctionFieldUsage: FieldUsage[] = [];
     if (
       [
         'sql_number',
@@ -416,12 +417,14 @@ export class ExprFunc extends ExpressionDef {
                 `Invalid interpolation: ${result.error.message}`
               );
             }
-            if (result.found.typeDesc().type === 'filter expression') {
+            const typeDesc = result.found.typeDesc();
+            if (typeDesc.type === 'filter expression') {
               return this.loggedErrorExpr(
                 'filter-expression-error',
                 'Filter expressions cannot be used in sql_ functions'
               );
             }
+            sqlFunctionFieldUsage.push(...(typeDesc.fieldUsage ?? []));
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: part.path});
             } else {
@@ -476,7 +479,11 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage,
+      fieldUsage: mergeFieldUsage(
+        ...argExprs.map(e => e.fieldUsage),
+        orderByUsage,
+        sqlFunctionFieldUsage
+      ),
       ungroupings,
     };
   }

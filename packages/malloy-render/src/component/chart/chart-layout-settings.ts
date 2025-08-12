@@ -22,7 +22,12 @@
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {AlignValue, TextBaselineValue, Config} from 'vega';
+import type {
+  AlignValue,
+  TextBaselineValue,
+  Config,
+  FontWeightValue,
+} from 'vega';
 import {scale, locale} from 'vega';
 import {getTextWidthDOM, getTextHeightDOM} from '@/component/util';
 import {renderNumericField} from '@/component/render-numeric-field';
@@ -34,9 +39,14 @@ type XAxisSettings = {
   labelAlign?: AlignValue;
   labelBaseline?: TextBaselineValue;
   labelLimit: number;
+  minExtent: number;
+  maxExtent: number;
   height: number;
   titleSize: number;
+  titleBaseline: TextBaselineValue;
+  titleY: number;
   hidden: boolean;
+  labelPadding: number;
 };
 
 interface FontSettings {
@@ -151,13 +161,14 @@ export function getXAxisSettings({
   let xAxisHeight = 0;
   let labelAngle = -90;
   let labelAlign: AlignValue | undefined = 'right';
-  let labelBaseline: TextBaselineValue | undefined = 'middle';
   let labelLimit = 0;
-  const xTitleSize = 20;
+  let xTitleSize = 12;
+  let xTitleOffset = 16;
+  let xLabelPadding = 6;
 
   // Get font settings from vega config
   const fontSettings = getAxisFontSettings(vegaConfig);
-  const xFontStyles = {
+  const xLabelFontStyles = {
     fontFamily: fontSettings.xLabel.fontFamily,
     fontSize: fontSettings.xLabel.fontSize,
     ...(fontSettings.xLabel.fontWeight && {
@@ -169,20 +180,57 @@ export function getXAxisSettings({
     position: 'absolute',
   };
 
-  const maxStringSize = getTextWidthDOM(maxString, xFontStyles) + 4;
-  const ellipsesSize = getTextWidthDOM('...', xFontStyles) + 4;
+  const xTitleFontStyles = {
+    fontFamily: fontSettings.xTitle.fontFamily,
+    fontSize: fontSettings.xTitle.fontSize,
+    ...(fontSettings.xTitle.fontWeight && {
+      fontWeight: fontSettings.xTitle.fontWeight,
+    }),
+    width: 'fit-content',
+    opacity: '0',
+    position: 'absolute',
+  };
+
+  // Measure X title size dynamically
+  xTitleSize = getTextHeightDOM(
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
+    xTitleFontStyles
+  );
+
+  // Calculate dynamic X title offset with fallback chain
+  const axisXTitlePadding = vegaConfig?.axisX?.titlePadding;
+  const axisTitlePadding = vegaConfig?.axis?.titlePadding;
+  const configTitleOffset = vegaConfig?.title?.offset;
+
+  if (axisXTitlePadding !== undefined) {
+    xTitleOffset = Number(axisXTitlePadding);
+  } else if (axisTitlePadding !== undefined) {
+    xTitleOffset = Number(axisTitlePadding);
+  } else if (configTitleOffset !== undefined) {
+    xTitleOffset = Number(configTitleOffset);
+  }
+
+  // Calculate dynamic X label padding with fallback chain
+  const axisXLabelPadding = vegaConfig?.axisX?.labelPadding;
+  const axisLabelPadding = vegaConfig?.axis?.labelPadding;
+  if (axisXLabelPadding !== undefined) {
+    xLabelPadding = Number(axisXLabelPadding);
+  } else if (axisLabelPadding !== undefined) {
+    xLabelPadding = Number(axisLabelPadding);
+  }
+
+  const maxStringSize = getTextWidthDOM(maxString, xLabelFontStyles);
+  const ellipsesSize = getTextWidthDOM('...', xLabelFontStyles);
 
   const X_AXIS_THRESHOLD = 0.35;
-  const xAxisBottomPadding = 12;
-  const plotHeight =
-    chartHeight - xAxisBottomPadding - xTitleSize - ellipsesSize;
+  const plotHeight = chartHeight - 2 * xTitleOffset - xTitleSize - ellipsesSize;
 
-  xAxisHeight =
-    Math.min(maxStringSize, X_AXIS_THRESHOLD * plotHeight) + xAxisBottomPadding;
-  labelLimit = xAxisHeight;
-  if (xAxisHeight < maxStringSize) {
-    xAxisHeight += ellipsesSize;
+  let labelHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * plotHeight);
+  labelLimit = labelHeight;
+  if (labelHeight < maxStringSize) {
+    labelHeight += ellipsesSize;
   }
+  xAxisHeight = labelHeight + xTitleOffset * 2 + xTitleSize + xLabelPadding;
 
   // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
   const uniqueValuesCt = xField.valueSet.size;
@@ -197,17 +245,28 @@ export function getXAxisSettings({
     // Remove label limit; our vega specs should use labelOverlap setting to hide overlapping labels
     labelLimit = 0;
     labelAlign = undefined;
-    labelBaseline = 'top';
-    xAxisHeight = 28;
+
+    const horizontalLabelHeight = getTextHeightDOM(
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZgy',
+      xLabelFontStyles
+    );
+    xAxisHeight = horizontalLabelHeight + xTitleOffset * 2 + xTitleSize;
   }
+
+  const titleArea = xAxisHeight - (xLabelPadding + labelLimit);
 
   return {
     labelAngle,
     labelLimit,
-    labelBaseline,
+    labelPadding: xLabelPadding,
+    minExtent: labelLimit,
+    maxExtent: labelLimit,
+    labelBaseline: 'top',
     labelAlign,
     height: xAxisHeight,
     titleSize: xTitleSize,
+    titleBaseline: 'middle',
+    titleY: xAxisHeight - titleArea / 2,
     hidden: parentTag.text('size') === 'spark',
   };
 }
@@ -222,14 +281,21 @@ export type ChartLayoutSettings = {
     labelLimit: number;
     height: number;
     titleSize: number;
+    titleY: number;
     hidden: boolean;
   };
   yAxis: {
     width: number;
+    minExtent: number;
+    maxExtent: number;
     tickCount?: number;
     hidden: boolean;
     yTitleSize: number;
+    labelPadding: number;
     titlePadding: number;
+    titleFont: string;
+    titleFontSize: number;
+    titleFontWeight?: FontWeightValue;
   };
   yScale: {
     domain: number[];
@@ -311,9 +377,13 @@ export function getChartLayoutSettings(
   let yAxisWidth = 0;
   let yTitleSize = 0;
   let yTitleOffset = 10; // Default value
+  let yLabelPadding = 6;
+  let maxYLabelWidth = 0;
   const hasYAxis = presetSize !== 'spark';
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
+
+  const fontSettings = getAxisFontSettings(options.vegaConfig);
   const [minVal, maxVal] = options?.getYMinMax?.() ?? [
     yField.minNumber!,
     yField.maxNumber!,
@@ -335,8 +405,6 @@ export function getChartLayoutSettings(
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
 
-    // Get font settings from vega config
-    const fontSettings = getAxisFontSettings(options.vegaConfig);
     const yLabelFontStyles = {
       fontFamily: fontSettings.yLabel.fontFamily,
       fontSize: fontSettings.yLabel.fontSize,
@@ -366,26 +434,40 @@ export function getChartLayoutSettings(
       yTitleFontStyles
     );
 
-    // Calculate dynamic Y title offset
-    // First check if title offset is specified in Vega config
+    const axisYTitlePadding = options.vegaConfig?.axisY?.titlePadding;
+    const axisTitlePadding = options.vegaConfig?.axis?.titlePadding;
     const configTitleOffset = options.vegaConfig?.title?.offset;
 
-    if (configTitleOffset !== undefined) {
-      // Use the configured value
+    if (axisYTitlePadding !== undefined) {
+      yTitleOffset = Number(axisYTitlePadding);
+    } else if (axisTitlePadding !== undefined) {
+      yTitleOffset = Number(axisTitlePadding);
+    } else if (configTitleOffset !== undefined) {
       yTitleOffset = Number(configTitleOffset);
     } else {
-      // Use the title size as the offset
+      // Default title offset
       yTitleOffset = yTitleSize;
     }
 
-    const yPadding = 4;
-    yAxisWidth =
-      Math.max(
-        getTextWidthDOM(formattedMin, yLabelFontStyles) + yPadding,
-        getTextWidthDOM(formattedMax, yLabelFontStyles) + yPadding
-      ) +
-      yTitleOffset * 2 + // Equal spacing on both sides of title
-      yTitleSize;
+    // Repeat this logic for labelPadding, but only check axisY and axis (not title)
+
+    const axisYLabelPadding = options.vegaConfig?.axisY?.labelPadding;
+    const axisLabelPadding = options.vegaConfig?.axis?.labelPadding;
+
+    if (axisYLabelPadding !== undefined) {
+      yLabelPadding = Number(axisYLabelPadding);
+    } else if (axisLabelPadding !== undefined) {
+      yLabelPadding = Number(axisLabelPadding);
+    } else {
+      // Default label padding
+      yLabelPadding = 6;
+    }
+
+    maxYLabelWidth = Math.max(
+      getTextWidthDOM(formattedMin, yLabelFontStyles),
+      getTextWidthDOM(formattedMax, yLabelFontStyles)
+    );
+    yAxisWidth = maxYLabelWidth + 2 * yTitleOffset + yTitleSize + yLabelPadding;
 
     // Check whether we need to adjust axis values manually
     const noOfTicks = Math.ceil(chartHeight / 40);
@@ -419,7 +501,7 @@ export function getChartLayoutSettings(
     : {
         top: topPadding + 1,
         left: yAxisWidth,
-        bottom: xAxisSettings.height + xAxisSettings.titleSize,
+        bottom: xAxisSettings.height,
         right: 8,
       };
 
@@ -435,10 +517,18 @@ export function getChartLayoutSettings(
     xAxis: xAxisSettings,
     yAxis: {
       width: yAxisWidth,
+      minExtent: maxYLabelWidth,
+      maxExtent: maxYLabelWidth,
       tickCount: yTickCount,
       hidden: isSpark,
       yTitleSize,
       titlePadding: yTitleOffset,
+      labelPadding: yLabelPadding,
+      titleFont: fontSettings.yTitle.fontFamily,
+      titleFontSize: parseInt(fontSettings.yTitle.fontSize),
+      ...(fontSettings.yTitle.fontWeight && {
+        titleFontWeight: fontSettings.yTitle.fontWeight as FontWeightValue,
+      }),
     },
     yScale: {
       domain: options.independentY ? null : yDomain,

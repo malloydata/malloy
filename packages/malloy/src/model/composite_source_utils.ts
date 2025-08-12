@@ -658,7 +658,7 @@ export function getPartitionCompositeDesc(
       );
       return undefined;
     }
-    const fields = Object.keys(partitionsTag.getProperties());
+    const fields = Object.keys(partitionTag.getProperties());
     allFields.forEach(f => allFields.add(f));
     partitions.push({id, fields});
   }

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Axis, GroupMark, RectMark} from 'vega';
+import type {Axis, Config, GroupMark, RectMark} from 'vega';
 import type {ChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {grayMedium} from './base-vega-config';
 
@@ -19,6 +19,7 @@ type MeasureAxisOptions = {
   brushMeasureRangeSourceId: string;
   showBrushes?: boolean;
   axisSettings: ChartLayoutSettings['yAxis'];
+  vegaConfig?: Config;
 };
 
 export function createMeasureAxis({
@@ -29,16 +30,23 @@ export function createMeasureAxis({
   fieldPath,
   showBrushes = true,
   axisSettings,
+  vegaConfig,
 }: MeasureAxisOptions) {
   const axis: Axis = {
     orient: 'left',
     scale: 'yscale',
     title: title,
-    ...axisSettings,
     tickCount: {'signal': `${tickCount}`},
+
     labelLimit: labelLimit,
     labelOverlap: true,
     labelSeparation: 8,
+    ...axisSettings,
+    // Only set defaults if not provided in axisSettings
+    ...(axisSettings.minExtent === undefined && {minExtent: labelLimit}),
+    ...(axisSettings.maxExtent === undefined && {maxExtent: labelLimit}),
+    titleX: -axisSettings.width + axisSettings.titlePadding,
+    titleBaseline: 'top',
     encode: {
       labels: {
         enter: {
@@ -76,6 +84,7 @@ export function createMeasureAxis({
     type,
     fieldPath,
     axisSettings,
+    vegaConfig,
   });
   const axisOverlayMark = createAxisOverlay({type, axisSettings});
   // TODO: For now, don't do range brushes as there are some issues to work through
@@ -150,6 +159,7 @@ type AxisReferenceLineOptions = {
     width: number;
     yTitleSize: number;
   };
+  vegaConfig?: Config;
 };
 
 function createAxisReferenceLines(options: AxisReferenceLineOptions) {
@@ -162,6 +172,8 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 
   const yPositionSignalWithOffset = (offset = 0) =>
     `brushMeasureIn !== null ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
+
+  const backgroundColor = (options.vegaConfig?.background as string) || 'white';
 
   const referenceLines: GroupMark = {
     name: 'y_reference_line_group',
@@ -176,21 +188,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
               value: startingXPosition - 2,
             },
             x2: {value: 0},
-            fill: {
-              value: {
-                'x1': 1,
-                'y1': 0,
-                'x2': 1,
-                'y2': 1,
-                'gradient': 'linear',
-                'stops': [
-                  {offset: 0, color: 'rgba(255,255,255,0)'},
-                  {offset: 0.275, color: 'white'},
-                  {offset: 0.7, color: 'white'},
-                  {offset: 1, color: 'rgba(255,255,255,0)'},
-                ],
-              },
-            },
+            fill: {value: backgroundColor},
             height: {value: 40},
           },
           update: {
@@ -236,8 +234,8 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             dy: {value: -4},
             align: {value: 'left'},
             baseline: {value: 'alphabetic'},
-            fill: {value: 'white'},
-            stroke: {value: 'white'},
+            fill: {value: backgroundColor},
+            stroke: {value: backgroundColor},
             strokeWidth: {value: 3},
             fontSize: {value: 10},
             fontWeight: {value: 'normal'},
