@@ -153,16 +153,12 @@ export class StandardSQLDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: string | undefined,
-    limit: number | undefined
+    _limit: number | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += ` LIMIT ${limit}`;
-    }
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy} ${tail})`;
+    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

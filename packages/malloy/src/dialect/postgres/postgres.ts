@@ -142,14 +142,10 @@ export class PostgresDialect extends PostgresBase {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: string | undefined,
-    limit: number | undefined
+    _limit: number | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
     const fields = this.mapFields(fieldList);
-    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
+    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet})),'[]'::JSONB)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
