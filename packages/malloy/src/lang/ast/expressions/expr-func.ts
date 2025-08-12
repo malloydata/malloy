@@ -456,22 +456,24 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    let fieldUsage = mergeFieldUsage(
+    const aggregateFunctionUsage: FieldUsage[] = [];
+    if (isAsymmetric || isAnalytic) {
+      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
+      if (isAnalytic) funcUsage.analyticFunctionUse = true;
+      aggregateFunctionUsage.push(funcUsage);
+    }
+    const fieldUsage = mergeFieldUsage(
       ...argExprs.map(ae => ae.fieldUsage),
       orderByUsage,
-      sqlFunctionFieldUsage
+      sqlFunctionFieldUsage,
+      aggregateFunctionUsage
     );
     const ungroupings = argExprs.reduce(
       (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
       []
     );
-    if (isAsymmetric || isAnalytic) {
-      fieldUsage ||= [];
-      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
-      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
-      if (isAnalytic) funcUsage.analyticFunctionUse = true;
-      fieldUsage.push(funcUsage);
-    }
+
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
