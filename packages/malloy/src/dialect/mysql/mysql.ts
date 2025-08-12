@@ -180,9 +180,9 @@ export class MySQLDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: string | undefined,
-    limit: number | undefined
+    _limit: number | undefined
   ): string {
-    const separator = limit ? ',xrmmex' : ',';
+    const separator = ','; // limit ? ',xrmmex' : ',';
     let gc = `GROUP_CONCAT(
       IF(group_set=${groupSet},
         JSON_OBJECT(${this.mapFields(fieldList)})
@@ -191,10 +191,11 @@ export class MySQLDialect extends Dialect {
       ${orderBy}
       SEPARATOR '${separator}'
     )`;
-    if (limit) {
-      gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
-      gc = `REPLACE(${gc},'${separator}',',')`;
-    }
+    // handled elsewhere
+    // if (limit) {
+    //   gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
+    //   gc = `REPLACE(${gc},'${separator}',',')`;
+    // }
     gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
