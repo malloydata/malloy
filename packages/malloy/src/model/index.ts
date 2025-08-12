@@ -58,6 +58,8 @@ QueryStruct.registerTurtleFieldMaker((field, parent) =>
 // circular dependency problem which might have a better fix in the future.
 export {QueryField, QueryStruct, QueryQuery, QueryModelImpl as QueryModel};
 
-export {getResultStructDefForQuery} from './query_model_impl';
+export {
+  getResultStructDefForQuery,
+  getResultStructDefForView,
+} from './query_model_impl';
 export {indent, composeSQLExpr} from './utils';
-export {Segment, getResultStructDefForView} from './segment';

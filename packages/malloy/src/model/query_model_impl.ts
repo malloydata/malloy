@@ -15,6 +15,7 @@ import type {
   CompiledQuery,
   RefToField,
   TurtleDefPlusFilters,
+  TurtleDef,
 } from './malloy_types';
 import {isSourceDef, getIdentifier, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
@@ -362,4 +363,26 @@ export function getResultStructDefForQuery(
   const queryModel = makeQueryModel(model);
   const compiled = queryModel.compileQuery(query, undefined, true);
   return compiled.structs[compiled.structs.length - 1];
+}
+
+export function getResultStructDefForView(
+  source: SourceDef,
+  view: TurtleDef
+): SourceDef {
+  const qs = new QueryStruct(
+    source,
+    undefined,
+    {
+      model: makeQueryModel(undefined),
+    },
+    {}
+  );
+  const queryQueryQuery = QueryQuery.makeQuery(
+    view,
+    qs,
+    new StageWriter(true, undefined), // stage write indicates we want to get a result.
+    false,
+    () => undefined
+  );
+  return queryQueryQuery.getResultStructDef();
 }
