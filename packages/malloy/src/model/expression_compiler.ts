@@ -48,10 +48,17 @@ import {
 } from './field_instance';
 import {FilterCompilers} from './filter_compilers';
 import type {SQLExprElement} from './utils';
-import {exprMap, composeSQLExpr, range, AndChain, groupingKey} from './utils';
+import {
+  exprMap,
+  composeSQLExpr,
+  range,
+  AndChain,
+  groupingKey,
+  GenerateState,
+  caseGroup,
+} from './utils';
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
-import {caseGroup, GenerateState} from './expression_utils';
 import type {Dialect} from '../dialect';
 
 const NUMERIC_DECIMAL_PRECISION = 9;

@@ -21,7 +21,7 @@ import {
   isAtomic,
   mergeUniqueKeyRequirement,
 } from './malloy_types';
-import {AndChain} from './utils';
+import {AndChain, caseGroup, type GenerateState} from './utils';
 import {JoinInstance} from './join_instance';
 import {
   isBasicAggregate,
@@ -30,9 +30,7 @@ import {
   QueryFieldStruct,
   type QueryField,
 } from './query_node';
-import {caseGroup} from './expression_utils';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import type {GenerateState} from './expression_utils';
 
 type InstanceFieldUsage =
   | {

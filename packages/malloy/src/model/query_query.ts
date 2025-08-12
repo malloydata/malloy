@@ -5,7 +5,6 @@
 
 import type {DialectFieldList} from '../dialect';
 import {exprToSQL} from './expression_compiler';
-import {caseGroup} from './expression_utils';
 import type {
   TurtleDef,
   IndexFieldDef,
@@ -45,7 +44,13 @@ import {
   isBaseTable,
   expressionIsAnalytic,
 } from './malloy_types';
-import {AndChain, indent, getDialectFieldList, groupingKey} from './utils';
+import {
+  AndChain,
+  indent,
+  getDialectFieldList,
+  groupingKey,
+  caseGroup,
+} from './utils';
 import type {JoinInstance} from './join_instance';
 import {
   QueryStruct,
