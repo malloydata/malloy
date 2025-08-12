@@ -1,0 +1,92 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  #(story)
+  view: full_products_table is {
+    select: *
+    limit: 100
+    order_by: id desc
+  }
+
+  #(story)
+  view: small_products_table is {
+    select: *
+    limit: 2
+    order_by: id desc
+  }
+
+  #(story)
+  view: simple_nested_table is {
+    group_by: category
+    aggregate:
+      avg_retail is retail_price.avg()
+      total_cost is cost.sum()
+      product_count is count()
+    limit: 10
+    nest:
+      by_brand is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          total_cost is cost.sum()
+        limit: 15
+      }
+      by_department is {
+        group_by: department
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        limit: 15
+      }
+  }
+
+  #(story)
+  view: deeply_nested_table is {
+    group_by: category
+    aggregate:
+      avg_retail is retail_price.avg()
+      total_products is count()
+    limit: 5
+    nest:
+      by_department is {
+        group_by: department
+        aggregate:
+          avg_retail is retail_price.avg()
+          product_count is count()
+        nest:
+          by_brand is {
+            group_by: brand
+            aggregate:
+              avg_retail is retail_price.avg()
+              total_cost is cost.sum()
+            limit: 10
+          }
+          top_products is {
+            select: name, retail_price, cost
+            order_by: retail_price desc
+            limit: 5
+          }
+        limit: 8
+      }
+  }
+
+  #(story)
+  view: wide_table is {
+    select:
+      id,
+      sku,
+      name,
+      brand,
+      category,
+      department,
+      retail_price,
+      cost,
+      margin is retail_price - cost,
+      margin_percent is (retail_price - cost) / nullif(retail_price, 0) * 100,
+      # column {width=200}
+      description is concat('Product: ', name, ' | Brand: ', brand, ' | Category: ', category, ' | Department: ', department),
+      # column {width=300}
+      long_text is 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
+    limit: 50
+    order_by: retail_price desc
+  }
+}

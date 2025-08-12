@@ -8,6 +8,7 @@
 import {createEffect, createSignal, on, untrack} from 'solid-js';
 import type {EventListenerHandler, SignalListenerHandler, Runtime} from 'vega';
 import {View} from 'vega';
+import {expressionInterpreter} from 'vega-interpreter';
 import './vega-expr-addons';
 import {addSignalListenerIfExists, setSignalIfExists} from './vega-utils';
 import type {RepeatedRecordField} from '../../data_tree';
@@ -20,6 +21,7 @@ type VegaChartProps = {
   onView?: (view: View) => void;
   onViewInterface?: (viewInterface: ViewInterface) => void;
   runtime: Runtime;
+  useVegaInterpreter?: boolean;
 };
 
 export type ViewInterface = {
@@ -66,7 +68,12 @@ export function VegaChart(props: VegaChartProps) {
     const _view = untrack(() => view());
     if (_view) _view.finalize();
 
-    const nextView = new View(props.runtime).initialize(el).renderer('svg');
+    const viewOptions = props.useVegaInterpreter
+      ? {expr: expressionInterpreter}
+      : {};
+    const nextView = new View(props.runtime, viewOptions)
+      .initialize(el)
+      .renderer('svg');
 
     // This signal is needed before running the view for the first time
     setSignalIfExists(nextView, 'malloyExplore', props.explore);

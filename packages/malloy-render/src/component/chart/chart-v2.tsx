@@ -50,6 +50,7 @@ export type ChartV2Props = {
   // Debugging properties
   devMode?: boolean;
   onView?: (view: View) => void;
+  useVegaInterpreter?: boolean;
 };
 
 export function ChartV2(props: ChartV2Props) {
@@ -235,6 +236,7 @@ export function ChartV2Inner(props: ChartV2Props) {
           onMouseOver={mouseOverHandler}
           onViewInterface={setViewInterface}
           runtime={props.runtime}
+          useVegaInterpreter={props.useVegaInterpreter}
         />
       </div>
       <Tooltip show={showTooltip()}>

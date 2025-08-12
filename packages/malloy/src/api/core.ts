@@ -296,14 +296,12 @@ export function updateCompileModelState(
 function _newCompileModelState(
   modelURL: string,
   compilerNeeds?: Malloy.CompilerNeeds,
+  parseUpdate?: ParseUpdate | undefined,
   extendURL?: string,
   excludeReferences = false
 ): CompileModelState {
-  const translator = new MalloyTranslator(
-    modelURL,
-    null,
-    compilerNeedsToUpdate(compilerNeeds)
-  );
+  parseUpdate ??= compilerNeedsToUpdate(compilerNeeds);
+  const translator = new MalloyTranslator(modelURL, null, parseUpdate);
   const hasSource =
     (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
     (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
@@ -312,6 +310,7 @@ function _newCompileModelState(
       extending: _newCompileModelState(
         extendURL,
         compilerNeeds,
+        parseUpdate,
         undefined,
         excludeReferences
       ),
@@ -336,6 +335,7 @@ export function newCompileModelState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
+    undefined,
     request.extend_model_url,
     request.exclude_references
   );
@@ -347,6 +347,7 @@ export function newCompileSourceState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
+    undefined,
     request.extend_model_url,
     request.exclude_references
   );
@@ -547,7 +548,12 @@ export interface CompileQueryState extends CompileModelState {
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
 ): CompileQueryState {
-  const queryMalloy = Malloy.queryToMalloy(request.query);
+  const queryMalloy =
+    request.query_malloy ??
+    (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+  if (queryMalloy === undefined) {
+    throw new Error('Expected either query or query_malloy');
+  }
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
@@ -563,6 +569,7 @@ export function newCompileQueryState(
     ..._newCompileModelState(
       queryURL,
       needs,
+      undefined,
       request.model_url,
       request.exclude_references
     ),
