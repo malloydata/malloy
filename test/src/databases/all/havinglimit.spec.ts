@@ -111,5 +111,50 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         },
       ]);
     });
+
+    test('limit 2 stage second with nest with having', async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        select: *
+      } -> {
+        group_by: popular_name
+        aggregate: c is count()
+        having: c % 2 = 1
+        limit: 3
+        nest: one is {
+          group_by: state
+          limit: 2
+        }
+      }
+      `).malloyResultMatches(runtime, [
+        {popular_name: 'Sophia', one: [{'state': 'AK'}, {}]},
+        {},
+        {},
+      ]);
+    });
+
+    test('limit index 2 stage', async () => {
+      await expect(`
+      //# test.debug
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        index: *
+      } -> {
+        group_by: fieldName
+        aggregate: cardinality is count(fieldValue)
+        limit: 2
+        nest: values is {
+          group_by: fieldValue
+          aggregate: weight is weight.sum()
+          limit: 3
+        }
+      }
+      `).malloyResultMatches(runtime, [
+        {fieldName: 'state', values: [{}, {}, {}]},
+        {
+          fieldName: 'popular_name',
+          values: [{fieldValue: 'Isabella', weight: 24}, {}, {}],
+        },
+      ]);
+    });
   });
 });
