@@ -35,6 +35,7 @@ import type {
 import {
   expressionIsScalar,
   isAtomic,
+  isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
@@ -98,7 +99,7 @@ function _resolveCompositeSources(
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
   const expandedForError = onlyCompositeUsage(
-    expandFieldUsage(fieldUsage, rootFields).result,
+    _expandFieldUsage(fieldUsage, rootFields).result,
     source.fields
   );
   if (source.type === 'composite') {
@@ -127,11 +128,11 @@ function _resolveCompositeSources(
       }
 
       const fieldUsageWithWheres =
-        mergeFieldUsage(fieldUsage, getFieldUsageFromFilterList(inputSource)) ??
+        mergeFieldUsage(getFieldUsageFromFilterList(inputSource), fieldUsage) ??
         [];
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
+      const expanded = _expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -294,7 +295,7 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const expanded = expandFieldUsage(
+    const expanded = _expandFieldUsage(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
@@ -335,7 +336,23 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
   });
 }
 
-function expandFieldUsage(
+export function expandFieldUsage(
+  segment: PipeSegment,
+  source: SourceDef
+): FieldUsage[] {
+  const sourceExtensions = isQuerySegment(segment)
+    ? segment.extendSource ?? []
+    : [];
+  const fields = mergeFields(source.fields, sourceExtensions);
+  const fieldUsage =
+    mergeFieldUsage(
+      getFieldUsageFromFilterList(source),
+      segmentFieldUsage(segment)
+    ) ?? [];
+  return _expandFieldUsage(fieldUsage, fields).result;
+}
+
+function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
 ): {result: FieldUsage[]; missingFields: FieldUsage[]} {
@@ -698,24 +715,32 @@ export interface NarrowedCompositeFieldResolution {
   joined: NarrowedCompositeFieldResolutionByJoinName;
 }
 
+function segmentFieldUsage(segment: PipeSegment): FieldUsage[] {
+  return (
+    (isQuerySegment(segment) || isIndexSegment(segment)
+      ? segment.fieldUsage
+      : undefined) ?? emptyFieldUsage()
+  );
+}
+
 function getFieldUsageFromFilterList(source: SourceDef) {
   return (source.filterList ?? []).flatMap(filter => filter.fieldUsage ?? []);
 }
 
 export function resolveCompositeSources(
   source: SourceDef,
-  segment: PipeSegment,
-  fieldUsage: FieldUsage[]
+  segment: PipeSegment
 ):
   | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
+  const fieldUsage = segmentFieldUsage(segment);
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
   const nestLevels = extractNestLevels(segment);
   const fields = mergeFields(source.fields, sourceExtensions);
   const fieldUsageWithWheres =
-    mergeFieldUsage(fieldUsage, getFieldUsageFromFilterList(source)) ?? [];
+    mergeFieldUsage(getFieldUsageFromFilterList(source), fieldUsage) ?? [];
   const result = _resolveCompositeSources(
     [],
     source,
@@ -1156,14 +1181,14 @@ function expandRefs(
 function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage[] {
   return (
     mergeFieldUsage(
-      // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
-      // already rooted at the parent
-      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? []),
       // For `fieldUsage` from join `where`s, we need the path including the join name
       joinedFieldUsage(
         joinPath,
         isSourceDef(join) ? getFieldUsageFromFilterList(join) : []
-      )
+      ),
+      // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
+      // already rooted at the parent
+      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? [])
     ) ?? []
   );
 }

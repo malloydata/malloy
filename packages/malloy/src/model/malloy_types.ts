@@ -1138,6 +1138,7 @@ export interface IndexSegment extends Filtered {
   sample?: Sampling;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
 }
@@ -1158,6 +1159,7 @@ export interface QuerySegment extends Filtered, Ordered {
   queryTimezone?: string;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
   outputStruct: SourceDef;
   isRepeated: boolean;

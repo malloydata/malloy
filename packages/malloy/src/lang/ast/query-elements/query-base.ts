@@ -23,9 +23,9 @@
 
 import {
   hasCompositesAnywhere,
-  emptyFieldUsage,
   resolveCompositeSources,
   logCompositeError,
+  expandFieldUsage,
 } from '../../../model/composite_source_utils';
 import {
   isIndexSegment,
@@ -34,12 +34,29 @@ import {
   type Query,
   type SourceDef,
 } from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
+
+  protected expandFieldUsage(
+    inputSource: SourceDef,
+    pipeline: PipeSegment[]
+  ): PipeSegment[] {
+    return pipeline.map((segment, index) => {
+      // Theoretically for `index > 0`, this should be the output struct of the prior stage,
+      // but because field references in prior stages can only refer to definitions from `extend:`
+      // statements, we can just use an empty struct here.
+      const stageInput = index === 0 ? inputSource : ErrorFactory.structDef;
+      return {
+        ...segment,
+        expandedFieldUsage: expandFieldUsage(segment, stageInput),
+      };
+    });
+  }
 
   protected resolveCompositeSource(
     inputSource: SourceDef,
@@ -54,8 +71,7 @@ export abstract class QueryBase extends MalloyElement {
       (isQuerySegment(stage1) || isIndexSegment(stage1)) &&
       hasCompositesAnywhere(inputSource)
     ) {
-      const fieldUsage = stage1.fieldUsage ?? emptyFieldUsage();
-      const resolved = resolveCompositeSources(inputSource, stage1, fieldUsage);
+      const resolved = resolveCompositeSources(inputSource, stage1);
       if (resolved.error) {
         logCompositeError(resolved.error, this);
       }
