@@ -1131,8 +1131,10 @@ export type IndexFieldDef = RefToField;
 export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
 /**
- * The compiler needs to know a number of things computed for a query
- * and stored here.
+ * The compiler needs to know a number of things computed for a query.
+ * We've modified the fieldUsage code from composite sources to collect
+ * the information needed by the compiler and a query is processed
+ * as a final step to append this information.
  *
  *   0) An ordered list list of active joins
  *   1) Each field that is referenced, even indirectly
