@@ -124,16 +124,16 @@ export class DuckDBDialect extends PostgresBase {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: string | undefined,
-    limit: number | undefined
+    _limit: number | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
+    // let tail = '';
+    // if (limit !== undefined) {
+    //   tail += `[1:${limit}]`;
+    // }
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
-    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail},[])`;
+    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet}),[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
