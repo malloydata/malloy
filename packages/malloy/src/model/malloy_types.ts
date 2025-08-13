@@ -1143,7 +1143,7 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
  *   4) Each join path ending in an analytic funtion
  */
 
-interface SegmentUsageSummary {
+export interface SegmentUsageSummary {
   activeJoins?: FieldUsage[];
   expandedFieldUsage?: FieldUsage[];
   expandedUngroupings?: AggregateUngrouping[];

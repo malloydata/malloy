@@ -9,7 +9,7 @@ import {
   mergeFieldUsage,
   pathBegins,
   pathEq,
-} from '../../composite_source_utils';
+} from '../../composite-source-utils';
 import type {
   AtomicFieldDef,
   Expr,

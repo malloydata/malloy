@@ -38,7 +38,7 @@ import {ExpressionDef} from '../types/expression-def';
 import type {FieldPropStatement} from '../types/field-prop-statement';
 import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
-import {mergeFieldUsage} from '../../composite_source_utils';
+import {mergeFieldUsage} from '../../composite-source-utils';
 import {GroupedBy} from './grouped_by';
 
 export class ExprProps extends ExpressionDef {

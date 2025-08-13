@@ -46,7 +46,7 @@ import {ErrorFactory} from '../error-factory';
 import type {ParameterSpace} from '../field-space/parameter-space';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
-import {mergeFieldUsage} from '../../composite_source_utils';
+import {mergeFieldUsage} from '../../composite-source-utils';
 
 export abstract class Join
   extends MalloyElement

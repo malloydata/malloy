@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {mergeFieldUsage} from '../../composite_source_utils';
+import {mergeFieldUsage} from '../../composite-source-utils';
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
   expressionIsScalar,

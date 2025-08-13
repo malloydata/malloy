@@ -34,7 +34,7 @@ import type {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {ExprIdReference} from './expr-id-reference';
-import {mergeFieldUsage} from '../../composite_source_utils';
+import {mergeFieldUsage} from '../../composite-source-utils';
 
 type FieldUsageSummary = FieldUsage[] | undefined;
 

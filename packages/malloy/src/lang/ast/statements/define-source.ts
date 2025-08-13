@@ -29,7 +29,7 @@ import {MalloyElement, DocStatementList} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 import type {SourceQueryElement} from '../source-query-elements/source-query-element';
-import {getPartitionCompositeDesc} from '../../composite_source_utils';
+import {getPartitionCompositeDesc} from '../../composite-source-utils';
 
 export class DefineSource
   extends MalloyElement

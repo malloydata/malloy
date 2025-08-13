@@ -25,9 +25,8 @@ import {
   hasCompositesAnywhere,
   resolveCompositeSources,
   logCompositeError,
-  expandFieldUsage,
-} from '../../composite_source_utils';
-import type {QueryFieldDef} from '../../../model/malloy_types';
+  getExpandedSegment,
+} from '../../composite-source-utils';
 import {
   isIndexSegment,
   isQuerySegment,
@@ -51,43 +50,21 @@ export abstract class QueryBase extends MalloyElement {
     let stageInput = inputSource;
 
     for (const segment of pipeline) {
-      // Expand field usage for this segment
-      const {expandedFieldUsage, activeJoins, ungroupings} = expandFieldUsage(
+      const {usage, segment: expandedSegment} = getExpandedSegment(
         segment,
         stageInput
       );
 
-      // Create the new segment with expanded field usage
-      let newSegment: PipeSegment =
-        segment.type === 'raw'
-          ? segment
-          : {
-              ...segment,
-              expandedFieldUsage,
-              activeJoins,
-              expandedUngroupings: ungroupings,
-            };
-
-      // If this is a query segment, check for turtle fields that need their
-      // later stages expanded (first stage is already handled by extractNestLevels)
-      if (isQuerySegment(newSegment)) {
-        newSegment = {
-          ...newSegment,
-          queryFields: newSegment.queryFields.map(field =>
-            expandTurtleField(field)
-          ),
-        };
-      }
+      // Add the usage summary to the segment
+      const newSegment: PipeSegment =
+        expandedSegment.type === 'raw'
+          ? expandedSegment
+          : {...expandedSegment, ...usage};
 
       ret.push(newSegment);
 
       // Get the output struct for the next stage
-      if ('outputStruct' in segment && segment.outputStruct) {
-        stageInput = segment.outputStruct;
-      } else {
-        // Fallback - this should be improved to compute the actual output
-        stageInput = ErrorFactory.structDef;
-      }
+      stageInput = newSegment.outputStruct || ErrorFactory.structDef;
     }
 
     return ret;
@@ -123,64 +100,4 @@ export abstract class QueryBase extends MalloyElement {
       pipeline: detectAndRemovePartialStages(query.pipeline, this),
     };
   }
-}
-
-/**
- * Do field usage expansion in pipline segments after the first. The
- * first segment's field usage is merged in the query's.
- */
-function expandTurtleField(field: QueryFieldDef): QueryFieldDef {
-  // Only process turtle fields with multi-stage pipelines
-  if (
-    field.type !== 'turtle' ||
-    !field.pipeline ||
-    field.pipeline.length <= 1
-  ) {
-    return field;
-  }
-
-  // Expand stages 2+ of the pipeline
-  const expandedPipeline = field.pipeline.map((stage, index) => {
-    // Stage 0 is already handled by extractNestLevels
-    if (index === 0) return stage;
-
-    // For stages 1+, expand field usage using previous stage's output
-    const prevStage = field.pipeline[index - 1];
-    if (!prevStage.outputStruct) {
-      // mtoy todo should throw maybe?
-      return stage;
-    }
-
-    const {expandedFieldUsage, activeJoins, ungroupings} = expandFieldUsage(
-      stage,
-      prevStage.outputStruct
-    );
-
-    let expandedStage: PipeSegment =
-      stage.type === 'raw'
-        ? stage
-        : {
-            ...stage,
-            expandedFieldUsage,
-            activeJoins,
-            expandedUngroupings: ungroupings,
-          };
-
-    // Recursively handle any nested turtles in this stage
-    if (isQuerySegment(expandedStage)) {
-      expandedStage = {
-        ...expandedStage,
-        queryFields: expandedStage.queryFields.map(nestedField =>
-          expandTurtleField(nestedField)
-        ),
-      };
-    }
-
-    return expandedStage;
-  });
-
-  return {
-    ...field,
-    pipeline: expandedPipeline,
-  };
 }

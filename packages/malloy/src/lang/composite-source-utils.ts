@@ -31,6 +31,7 @@ import type {
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
+  SegmentUsageSummary,
 } from '../model/malloy_types';
 import {
   expressionIsScalar,
@@ -337,30 +338,88 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
   });
 }
 
-export function expandFieldUsage(
+export function getExpandedSegment(
   segment: PipeSegment,
-  source: SourceDef
+  inputSource: SourceDef
 ): {
-  expandedFieldUsage: FieldUsage[];
-  activeJoins: FieldUsage[];
-  ungroupings: AggregateUngrouping[];
+  usage: SegmentUsageSummary;
+  segment: PipeSegment;
 } {
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
-  const fields = mergeFields(source.fields, sourceExtensions);
-  const fieldUsage =
-    mergeFieldUsage(
-      getFieldUsageFromFilterList(source),
-      segmentFieldUsage(segment)
-    ) ?? [];
-  const expanded = _expandFieldUsage(fieldUsage, fields);
-  const nestLevels = extractNestLevels(segment);
-  const expandedNests = expandRefs(nestLevels, fields);
+  const fields = mergeFields(inputSource.fields, sourceExtensions);
+
+  // Only collect ungroupings during the walk
+  const collectedUngroupings: AggregateUngrouping[] = [];
+  let updatedSegment = segment;
+
+  if (isQuerySegment(segment)) {
+    // Single walk through query fields
+    const updatedQueryFields = segment.queryFields.map(field => {
+      if (field.type === 'fieldref') {
+        // Just return it - field usage already in segment.fieldUsage
+        return field;
+      } else if (field.type === 'turtle') {
+        if (field.pipeline.length === 0) return field;
+        // Process entire turtle pipeline
+        const updatedPipeline: PipeSegment[] = [];
+        let turtleInput = inputSource; // First stage sees parent's input
+
+        for (const stage of field.pipeline) {
+          const {usage, segment: expandedStage} = getExpandedSegment(
+            stage,
+            turtleInput
+          );
+          const processedStage =
+            expandedStage.type === 'raw'
+              ? expandedStage
+              : {...expandedStage, ...usage};
+          updatedPipeline.push(processedStage);
+
+          // Collect ungroupings from turtle with adjusted paths
+          if (usage.expandedUngroupings) {
+            const adjusted = usage.expandedUngroupings.map(u => ({
+              ...u,
+              path: [field.name, ...u.path],
+            }));
+            collectedUngroupings.push(...adjusted);
+          }
+
+          turtleInput = processedStage.outputStruct;
+        }
+        return {...field, pipeline: updatedPipeline};
+      } else {
+        // Regular fields - only collect ungroupings
+        collectedUngroupings.push(...(field.ungroupings || []));
+        return field;
+      }
+    });
+
+    updatedSegment = {...segment, queryFields: updatedQueryFields};
+  }
+
+  // Use segment.fieldUsage directly plus filter usage from source
+  const allFieldUsage = mergeFieldUsage(
+    getFieldUsageFromFilterList(inputSource),
+    isQuerySegment(segment) || isIndexSegment(segment)
+      ? segment.fieldUsage
+      : undefined
+  );
+
+  // Expand field usage and collect ungroupings from expansion
+  const expanded = _expandFieldUsage(allFieldUsage || [], fields);
+
+  // Merge ungroupings from direct collection and field expansion
+  const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
+
   return {
-    expandedFieldUsage: expanded.result,
-    activeJoins: expanded.activeJoins,
-    ungroupings: expandedNests.result.ungroupings,
+    usage: {
+      expandedFieldUsage: expanded.result,
+      activeJoins: expanded.activeJoins,
+      expandedUngroupings: allUngroupings,
+    },
+    segment: updatedSegment,
   };
 }
 
@@ -435,11 +494,13 @@ function _expandFieldUsage(
   result: FieldUsage[];
   missingFields: FieldUsage[];
   activeJoins: FieldUsage[];
+  ungroupings: AggregateUngrouping[];
 } {
   const seen: Record<string, FieldUsage> = {};
   const missingFields: FieldUsage[] = [];
   const toProcess: FieldUsage[] = [];
   const activeJoinGraph: Record<string, JoinDependency> = {};
+  const ungroupings: AggregateUngrouping[] = [];
 
   // Initialize: mark original inputs and add them to processing queue
   for (const usage of fieldUsage) {
@@ -476,6 +537,10 @@ function _expandFieldUsage(
               seen[key].uniqueKeyRequirement?.isCount,
           };
         }
+      }
+
+      if (def.ungroupings) {
+        ungroupings.push(...joinedUngroupings(refPath, def.ungroupings));
       }
     }
 
@@ -519,6 +584,7 @@ function _expandFieldUsage(
     result: Object.values(seen),
     missingFields,
     activeJoins: findActiveJoins(activeJoinGraph),
+    ungroupings,
   };
 }
 
