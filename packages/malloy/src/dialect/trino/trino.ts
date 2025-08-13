@@ -170,8 +170,7 @@ export class TrinoDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    _limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);

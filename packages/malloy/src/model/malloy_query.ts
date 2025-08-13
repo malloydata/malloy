@@ -1789,6 +1789,18 @@ class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
+  // Gets a limit if it has one.
+  getLimit() {
+    if (
+      this.firstSegment.type === 'reduce' ||
+      this.firstSegment.type === 'project'
+    ) {
+      return this.firstSegment.limit;
+    } else {
+      return undefined;
+    }
+  }
+
   /**
    * Information about the query containing this result set. Invented
    * to pass on timezone information, but maybe more things will
@@ -3558,9 +3570,7 @@ class QueryQuery extends QueryField {
     const resultsWithHavingOrLimit = this.rootResult.selectStructs(
       [],
       (result: FieldInstanceResult) =>
-        result.hasHaving ||
-        (result.firstSegment.type === 'reduce' &&
-          result.firstSegment.limit !== undefined)
+        result.hasHaving || result.getLimit() !== undefined
     );
 
     if (resultsWithHavingOrLimit.length > 0) {
@@ -3569,9 +3579,7 @@ class QueryQuery extends QueryField {
         [],
         (_result: FieldInstanceResult) => true
       )) {
-        const hasLimit =
-          result.firstSegment.type === 'reduce' &&
-          result.firstSegment.limit !== undefined;
+        const hasLimit = result.getLimit() !== undefined;
         hasResultsWithChildren ||=
           result.childGroups.length > 1 && (hasLimit || result.hasHaving);
         hasAnyLimits ||= hasLimit;
@@ -3601,12 +3609,10 @@ class QueryQuery extends QueryField {
       }
 
       for (const result of resultsWithHavingOrLimit) {
+        const limit = result.getLimit();
         // if we have a limit
-        if (
-          result.firstSegment.type === 'reduce' &&
-          result.firstSegment.limit !== undefined
-        ) {
-          limitValues[result.groupSet] = result.firstSegment.limit;
+        if (limit) {
+          limitValues[result.groupSet] = limit;
           const obSQL: string[] = [];
           let orderingField;
           const orderByDef =
@@ -4052,9 +4058,6 @@ class QueryQuery extends QueryField {
   ): string {
     // let fieldsSQL: string[] = [];
     let orderBy = '';
-    const limit = isRawSegment(resultStruct.firstSegment)
-      ? undefined
-      : resultStruct.firstSegment.limit;
 
     // calculate the ordering.
     const obSQL: string[] = [];
@@ -4112,8 +4115,7 @@ class QueryQuery extends QueryField {
       ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,
-        orderBy,
-        limit
+        orderBy
       );
     }
 

@@ -123,13 +123,8 @@ export class DuckDBDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    _limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    // let tail = '';
-    // if (limit !== undefined) {
-    //   tail += `[1:${limit}]`;
-    // }
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');

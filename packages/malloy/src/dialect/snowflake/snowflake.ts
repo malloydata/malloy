@@ -153,8 +153,7 @@ export class SnowflakeDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    _limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy ? ` WITHIN GROUP (${orderBy})` : '';

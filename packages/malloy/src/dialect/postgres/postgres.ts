@@ -141,8 +141,7 @@ export class PostgresDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    _limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const fields = this.mapFields(fieldList);
     return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))),'[]'::JSONB)`;

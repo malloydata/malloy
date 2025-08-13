@@ -152,8 +152,7 @@ export class StandardSQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    _limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
