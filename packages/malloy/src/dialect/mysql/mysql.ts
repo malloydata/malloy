@@ -179,10 +179,9 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    const separator = limit ? ',xrmmex' : ',';
+    const separator = ',';
     let gc = `GROUP_CONCAT(
       IF(group_set=${groupSet},
         JSON_OBJECT(${this.mapFields(fieldList)})
@@ -191,10 +190,6 @@ export class MySQLDialect extends Dialect {
       ${orderBy}
       SEPARATOR '${separator}'
     )`;
-    if (limit) {
-      gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
-      gc = `REPLACE(${gc},'${separator}',',')`;
-    }
     gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
