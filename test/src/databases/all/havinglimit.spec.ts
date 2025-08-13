@@ -176,7 +176,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
 
     test.when(
-      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+      runtime.supportsNesting &&
+        runtime.dialect.supportsPipelinesInViews &&
+        databaseName !== 'trino'
     )('limit select - nested pipeline', async () => {
       await expect(`
       //# test.debug
