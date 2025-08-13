@@ -390,15 +390,10 @@ export function getExpandedSegment(
     updatedSegment = {...segment, queryFields: updatedQueryFields};
   }
 
-  // Use segment.fieldUsage directly plus filter usage from source
   const allFieldUsage = mergeFieldUsage(
     getFieldUsageFromFilterList(inputSource),
-    isQuerySegment(segment) || isIndexSegment(segment)
-      ? segment.fieldUsage
-      : undefined
+    segment.fieldUsage
   );
-
-  // Expand field usage and collect ungroupings from expansion
   const expanded = _expandFieldUsage(allFieldUsage || [], fields);
 
   // Merge ungroupings from direct collection and field expansion
