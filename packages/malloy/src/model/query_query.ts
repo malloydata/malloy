@@ -544,11 +544,6 @@ export class QueryQuery extends QueryField {
       // Expand fields (just adds them to result, no dependency tracking)
       this.expandFields(this.rootResult);
 
-      // I think dependenciesFromFieldUsage makes this redundant
-      // mtoy TODO maybe re-write this as a test to see if any of the
-      // joins this would add are missing, and call it after dependenciesFromFieldUsage
-      // this.findJoins(this.rootResult);
-
       // Process all dependencies from translator's fieldUsage
       this.dependenciesFromFieldUsage(this.rootResult);
 
