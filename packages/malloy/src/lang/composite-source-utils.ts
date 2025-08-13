@@ -341,13 +341,12 @@ export function getExpandedSegment(
   segment: PipeSegment,
   inputSource: SourceDef
 ): PipeSegment {
+  if (segment.type === 'raw') return segment;
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
   const fields = mergeFields(inputSource.fields, sourceExtensions);
-  if (segment.type === 'raw') return segment;
 
-  // Only collect ungroupings during the walk
   const collectedUngroupings: AggregateUngrouping[] = [];
   let updatedSegment = segment;
 
