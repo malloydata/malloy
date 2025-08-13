@@ -1190,7 +1190,7 @@ describe('field usage with compiler extensions', () => {
     const mq = nestedModel.translator.getQuery(0);
     expect(mq).toBeDefined();
     const [found, message] = checkForFieldUsage(mq, {
-      path: [],
+      path: ['astr'],
       uniqueKeyRequirement: {isCount: true},
     });
     expect(found, message).toBeTruthy();
