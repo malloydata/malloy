@@ -366,10 +366,10 @@ export function getExpandedSegment(
           const processedStage = getExpandedSegment(stage, turtleInput);
           updatedPipeline.push(processedStage);
 
-          if (stage.type === 'raw') continue;
+          if (processedStage.type === 'raw') continue;
           // Collect ungroupings from turtle with adjusted paths
-          if (stage.expandedUngroupings) {
-            const adjusted = stage.expandedUngroupings.map(u => ({
+          if (processedStage.expandedUngroupings) {
+            const adjusted = processedStage.expandedUngroupings.map(u => ({
               ...u,
               path: [field.name, ...u.path],
             }));

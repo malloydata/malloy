@@ -1356,20 +1356,52 @@ export class QueryQuery extends QueryField {
     return wheres.sql('where');
   }
 
-  // iterate over the nested queries looking for Havings (and someday limits).
-  //  if you find any, generate a new stage(s) to perform these functions.
+  // iterate over the nested queries looking for Havings and Limits
+  //
+  // Think of the result graph as a tree.
+  //
+  // Havings in leaves have already been removed in the stage0 queries we are only concerned with
+  //. having in nodes with children
+  //
+  //  First step is to generate the partition and order by code for each of the relevent groupsets
+  //
+  //  Next we compute rows that are over the order by limit.  Nodes with children are additionally
+  //    partitioned by having.
+  //
+  // Scan the parent for children.  If there are any nodes that need to be deleted, note them.
+  //
+  // Finally remove any node either over the limit or part of a parent's having.
+  //
   generateSQLHavingLimit(
     stageWriter: StageWriter,
     lastStageName: string
   ): string {
-    const fields: string[] = [];
-    const resultsWithHaving = this.rootResult.selectStructs(
+    const havingFields: string[] = [];
+    const limitExpressions: string[] = [];
+    const limitValues: number[] = [];
+    const limitComplexClauses: string[] = [];
+    const limitSimpleFilters: string[] = [];
+    const partitionSQL: string[] = [];
+    let hasAnyLimits = false;
+    let hasResultsWithChildren = false;
+
+    const resultsWithHavingOrLimit = this.rootResult.selectStructs(
       [],
-      (result: FieldInstanceResult) => result.hasHaving
+      (result: FieldInstanceResult) =>
+        result.hasHaving || result.getLimit() !== undefined
     );
 
-    if (resultsWithHaving.length > 0) {
-      for (const result of resultsWithHaving) {
+    if (resultsWithHavingOrLimit.length > 0) {
+      // loop through an generate the partitions
+      for (const result of this.rootResult.selectStructs(
+        [],
+        (_result: FieldInstanceResult) => true
+      )) {
+        const hasLimit = result.getLimit() !== undefined;
+        hasResultsWithChildren ||=
+          result.childGroups.length > 1 && (hasLimit || result.hasHaving);
+        hasAnyLimits ||= hasLimit;
+
         // find all the parent dimension names.
         const dimensions: string[] = [];
         let r: FieldInstanceResult | undefined = result;
@@ -1386,35 +1418,137 @@ export class QueryQuery extends QueryField {
 
         let partition = '';
         if (dimensions.length > 0) {
-          partition = 'partition by ';
+          partition = 'PARTITION BY ';
           partition += dimensions
             .map(this.parent.dialect.castToString)
             .join(',');
         }
-        fields.push(
-          `MAX(CASE WHEN group_set IN (${result.childGroups.join(
-            ','
-          )}) THEN __delete__${
-            result.groupSet
-          } END) OVER(${partition}) as __shaving__${result.groupSet}`
-        );
+        partitionSQL[result.groupSet] = partition;
+      }
+
+      for (const result of resultsWithHavingOrLimit) {
+        const limit = result.getLimit();
+        // if we have a limit
+        if (limit) {
+          limitValues[result.groupSet] = limit;
+          const obSQL: string[] = [];
+          let orderingField;
+          const orderByDef =
+            (result.firstSegment as QuerySegment).orderBy ||
+            result.calculateDefaultOrderBy();
+          for (const ordering of orderByDef) {
+            if (typeof ordering.field === 'string') {
+              orderingField = {
+                name: ordering.field,
+                fif: result.getField(ordering.field),
+              };
+            } else {
+              orderingField = result.getFieldByNumber(ordering.field);
+            }
+            obSQL.push(
+              ' ' +
+                this.parent.dialect.sqlMaybeQuoteIdentifier(
+                  `${orderingField.name}__${result.groupSet}`
+                ) +
+                ` ${ordering.dir || 'ASC'}`
+            );
+
+            // partition for a row number is the parent if it exists.
+            let p = '';
+            if (result.parent && partitionSQL[result.parent.groupSet]) {
+              p = partitionSQL[result.parent.groupSet] + ', group_set';
+            } else {
+              p = 'PARTITION BY group_set';
+            }
+
+            // if this has nested data and a having, we want to partion by the 'having' so we don't count
+            // deleted rows.
+            if (result.hasHaving) {
+              p = p + `, __delete__${result.groupSet}`;
+            }
+            limitExpressions.push(
+              `CASE WHEN GROUP_SET=${result.groupSet} THEN
+                 ROW_NUMBER() OVER (${p} ORDER BY ${obSQL.join(
+                   ','
+                 )}) END  as __row_number__${result.groupSet}`
+            );
+
+            // if the group set is a leaf, we can write a simple where clause.
+            const filterClause = `(GROUP_SET = ${
+              result.groupSet
+            } AND __row_number__${result.groupSet} > ${
+              limitValues[result.groupSet]
+            })`;
+            if (result.childGroups.length === 1) {
+              limitSimpleFilters.push(filterClause);
+            } else {
+              // its a complex
+              limitComplexClauses[
+                result.groupSet
+              ] = `CASE WHEN ${filterClause} THEN 1 ELSE 0 END`;
+            }
+          }
+        }
       }
     }
-    if (resultsWithHaving.length > 0) {
-      lastStageName = stageWriter.addStage(
-        `SELECT\n  *,\n  ${fields.join(',\n  ')} \nFROM ${lastStageName}`
-      );
-      const havings = new AndChain();
-      for (const result of resultsWithHaving) {
-        havings.add(
-          `group_set IN (${result.childGroups.join(',')}) AND __shaving__${
-            result.groupSet
-          }=1`
+    // generate over_limit flag
+    if (resultsWithHavingOrLimit.length > 0) {
+      if (limitExpressions.length > 0) {
+        if (hasAnyLimits) {
+          lastStageName = stageWriter.addStage(
+            `SELECT\n  *,\n ${limitExpressions.join(
+              ',\n'
+            )} \nFROM ${lastStageName}\n`
+          );
+        }
+      }
+      let simpleLimits = '1=1';
+      if (limitSimpleFilters.length > 0) {
+        simpleLimits = ` NOT (${limitSimpleFilters.join('\n OR ')})`;
+      }
+      if (hasAnyLimits && !hasResultsWithChildren) {
+        lastStageName = stageWriter.addStage(
+          `SELECT * FROM ${lastStageName}\n WHERE ${simpleLimits}\n`
+        );
+      } else if (hasResultsWithChildren) {
+        // we may or my not have any limits
+        const havings = new AndChain();
+        for (const result of resultsWithHavingOrLimit) {
+          const testKey: string[] = [];
+          // parent group
+          if (result.hasHaving && result.childGroups.length > 1) {
+            testKey.push(`__delete__${result.groupSet}`);
+          }
+          // limit
+          if (limitComplexClauses[result.groupSet]) {
+            testKey.push(limitComplexClauses[result.groupSet]);
+          }
+
+          if (testKey.length > 0 && result.childGroups.length > 1) {
+            havingFields.push(
+              `MAX(CASE WHEN group_set IN (${result.childGroups.join(
+                ','
+              )}) THEN ${testKey.join(' + ')}
+               END) OVER(${partitionSQL[result.groupSet]}) as __shaving__${
+                 result.groupSet
+               }`
+            );
+            havings.add(
+              `group_set IN (${result.childGroups.join(',')}) AND __shaving__${
+                result.groupSet
+              } > 0`
+            );
+          }
+        }
+        lastStageName = stageWriter.addStage(
+          `SELECT\n  *,\n  ${havingFields.join(
+            ',\n  '
+          )} \nFROM ${lastStageName} WHERE ${simpleLimits}\n`
+        );
+        lastStageName = stageWriter.addStage(
+          `SELECT *\nFROM ${lastStageName}\nWHERE NOT (${havings.sqlOr()})\n`
         );
       }
-      lastStageName = stageWriter.addStage(
-        `SELECT *\nFROM ${lastStageName}\nWHERE NOT (${havings.sqlOr()})`
-      );
     }
     return lastStageName;
   }
@@ -1742,9 +1876,6 @@ export class QueryQuery extends QueryField {
   ): string {
     // let fieldsSQL: string[] = [];
     let orderBy = '';
-    const limit = isRawSegment(resultStruct.firstSegment)
-      ? undefined
-      : resultStruct.firstSegment.limit;
 
     // calculate the ordering.
     const obSQL: string[] = [];
@@ -1800,8 +1931,7 @@ export class QueryQuery extends QueryField {
       ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,
-        orderBy,
-        limit
+        orderBy
       );
     }
 

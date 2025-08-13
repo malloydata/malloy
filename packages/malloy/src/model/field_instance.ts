@@ -231,6 +231,18 @@ export class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
+  // Gets a limit if it has one.
+  getLimit() {
+    if (
+      this.firstSegment.type === 'reduce' ||
+      this.firstSegment.type === 'project'
+    ) {
+      return this.firstSegment.limit;
+    } else {
+      return undefined;
+    }
+  }
+
   /**
    * Information about the query containing this result set. Invented
    * to pass on timezone information, but maybe more things will
