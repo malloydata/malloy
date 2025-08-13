@@ -156,5 +156,44 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         },
       ]);
     });
+    test('limit select - in pipeline', async () => {
+      await expect(`
+      //# test.debug
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: popular_name
+        aggregate: c is count()
+        having: c % 2 = 1
+        limit: 100
+        nest: one is {
+          group_by: state
+          limit: 2
+        }
+      } -> {
+        select: popular_name
+        limit: 2
+      }
+      `).malloyResultMatches(runtime, [{}, {}]);
+    });
+
+    test.when(
+      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+    )('limit select - nested pipeline', async () => {
+      await expect(`
+      //# test.debug
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: popular_name
+        aggregate: c is count()
+        having: c % 2 = 1
+        limit: 1
+        nest: one is {
+          group_by: state
+          limit: 20
+        } -> {
+          select: state
+          limit: 2
+        }
+      }
+      `).malloyResultMatches(runtime, [{one: [{}, {}]}]);
+    });
   });
 });
