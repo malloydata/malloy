@@ -31,7 +31,6 @@ import type {
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
-  SegmentUsageSummary,
 } from '../model/malloy_types';
 import {
   expressionIsScalar,
@@ -341,14 +340,12 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
 export function getExpandedSegment(
   segment: PipeSegment,
   inputSource: SourceDef
-): {
-  usage: SegmentUsageSummary;
-  segment: PipeSegment;
-} {
+): PipeSegment {
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
   const fields = mergeFields(inputSource.fields, sourceExtensions);
+  if (segment.type === 'raw') return segment;
 
   // Only collect ungroupings during the walk
   const collectedUngroupings: AggregateUngrouping[] = [];
@@ -367,19 +364,13 @@ export function getExpandedSegment(
         let turtleInput = inputSource; // First stage sees parent's input
 
         for (const stage of field.pipeline) {
-          const {usage, segment: expandedStage} = getExpandedSegment(
-            stage,
-            turtleInput
-          );
-          const processedStage =
-            expandedStage.type === 'raw'
-              ? expandedStage
-              : {...expandedStage, ...usage};
+          const processedStage = getExpandedSegment(stage, turtleInput);
           updatedPipeline.push(processedStage);
 
+          if (stage.type === 'raw') continue;
           // Collect ungroupings from turtle with adjusted paths
-          if (usage.expandedUngroupings) {
-            const adjusted = usage.expandedUngroupings.map(u => ({
+          if (stage.expandedUngroupings) {
+            const adjusted = stage.expandedUngroupings.map(u => ({
               ...u,
               path: [field.name, ...u.path],
             }));
@@ -414,12 +405,10 @@ export function getExpandedSegment(
   const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
 
   return {
-    usage: {
-      expandedFieldUsage: expanded.result,
-      activeJoins: expanded.activeJoins,
-      expandedUngroupings: allUngroupings,
-    },
-    segment: updatedSegment,
+    ...updatedSegment,
+    expandedFieldUsage: expanded.result,
+    activeJoins: expanded.activeJoins,
+    expandedUngroupings: allUngroupings,
   };
 }
 

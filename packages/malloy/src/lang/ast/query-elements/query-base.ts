@@ -50,19 +50,8 @@ export abstract class QueryBase extends MalloyElement {
     let stageInput = inputSource;
 
     for (const segment of pipeline) {
-      const {usage, segment: expandedSegment} = getExpandedSegment(
-        segment,
-        stageInput
-      );
-
-      // Add the usage summary to the segment
-      const newSegment: PipeSegment =
-        expandedSegment.type === 'raw'
-          ? expandedSegment
-          : {...expandedSegment, ...usage};
-
+      const newSegment = getExpandedSegment(segment, stageInput);
       ret.push(newSegment);
-
       // Get the output struct for the next stage
       stageInput = newSegment.outputStruct || ErrorFactory.structDef;
     }
