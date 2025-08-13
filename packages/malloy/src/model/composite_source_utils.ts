@@ -357,11 +357,8 @@ export function expandFieldUsage(
   const expanded = _expandFieldUsage(fieldUsage, fields);
   const nestLevels = extractNestLevels(segment);
   const expandedNests = expandRefs(nestLevels, fields);
-  const inputUniqueKeyReqs = nestLevels.fieldsReferenced.filter(
-    usage => usage.path.length === 0 && usage.uniqueKeyRequirement
-  );
   return {
-    expandedFieldUsage: [...inputUniqueKeyReqs, ...expanded.result],
+    expandedFieldUsage: expanded.result,
     activeJoins: expanded.activeJoins,
     ungroupings: expandedNests.result.ungroupings,
   };
