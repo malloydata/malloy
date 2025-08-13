@@ -72,7 +72,7 @@ import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../composite_source_utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {

@@ -24,7 +24,7 @@
 import {
   emptyFieldUsage,
   mergeFieldUsage,
-} from '../../../model/composite_source_utils';
+} from '../../composite_source_utils';
 import type {
   IndexSegment,
   PipeSegment,

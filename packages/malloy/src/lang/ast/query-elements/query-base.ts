@@ -26,7 +26,7 @@ import {
   resolveCompositeSources,
   logCompositeError,
   expandFieldUsage,
-} from '../../../model/composite_source_utils';
+} from '../../composite_source_utils';
 import type {QueryFieldDef} from '../../../model/malloy_types';
 import {
   isIndexSegment,

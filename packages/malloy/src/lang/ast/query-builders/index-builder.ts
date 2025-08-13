@@ -44,7 +44,7 @@ import type {MalloyElement} from '../types/malloy-element';
 import {
   emptyFieldUsage,
   mergeFieldUsage,
-} from '../../../model/composite_source_utils';
+} from '../../composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];

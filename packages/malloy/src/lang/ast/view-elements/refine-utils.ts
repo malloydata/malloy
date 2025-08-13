@@ -23,7 +23,7 @@
 
 import type {PipeSegment, QueryFieldDef} from '../../../model';
 import {isQuerySegment, isRawSegment} from '../../../model';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../composite_source_utils';
 import {nameFromDef} from '../../field-utils';
 import type {MalloyElement} from '../types/malloy-element';
 

@@ -30,7 +30,7 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
-import {checkRequiredGroupBys} from '../../../model/composite_source_utils';
+import {checkRequiredGroupBys} from '../../composite_source_utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.

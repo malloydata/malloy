@@ -49,7 +49,7 @@ import type {
 import {
   emptyFieldUsage,
   mergeFieldUsage,
-} from '../../../model/composite_source_utils';
+} from '../../composite_source_utils';
 import {ErrorFactory} from '../error-factory';
 import {ReferenceField} from './reference-field';
 import {RefineFromSpaceField} from './refine-from-space-field';

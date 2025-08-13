@@ -17,7 +17,7 @@ import {
   StringFilterExpression,
   TemporalFilterExpression,
 } from '@malloydata/malloy-filter';
-import type {MalloyElement} from '../lang/ast';
+import type {MalloyElement} from './ast';
 import type {
   FieldUsage,
   FieldDef,
@@ -31,7 +31,7 @@ import type {
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
-} from './malloy_types';
+} from '../model/malloy_types';
 import {
   expressionIsScalar,
   isAtomic,
@@ -41,9 +41,9 @@ import {
   isQuerySegment,
   isSourceDef,
   isTurtle,
-} from './malloy_types';
-import {isNotUndefined} from '../lang/utils';
-import {pathToKey} from './utils';
+} from '../model/malloy_types';
+import {isNotUndefined} from './utils';
+import {pathToKey} from '../model/utils';
 import {annotationToTag} from '../annotation';
 
 type CompositeCouldNotFindFieldError = {
