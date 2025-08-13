@@ -41,10 +41,7 @@ import type {QueryBuilder} from '../types/query-builder';
 import type {QueryInputSpace} from '../field-space/query-input-space';
 import type {QueryOperationSpace} from '../field-space/query-spaces';
 import type {MalloyElement} from '../types/malloy-element';
-import {
-  emptyFieldUsage,
-  mergeFieldUsage,
-} from '../../composite_source_utils';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];

@@ -21,10 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  emptyFieldUsage,
-  mergeFieldUsage,
-} from '../../composite_source_utils';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite_source_utils';
 import type {
   IndexSegment,
   PipeSegment,
