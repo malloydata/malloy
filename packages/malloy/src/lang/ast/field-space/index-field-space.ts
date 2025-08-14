@@ -106,7 +106,6 @@ export class IndexFieldSpace extends QueryOperationSpace {
           } else {
             indexFields.push(fieldRef.refToField);
             nextFieldUsage = check.found.typeDesc().fieldUsage;
-            fieldUsage.push({path: fieldRef.path});
           }
         }
         fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
