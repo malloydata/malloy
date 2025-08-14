@@ -795,7 +795,25 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
     const {type, fields} = atd;
     return {type, fields, join: 'one', name};
   }
-  return {...atd, name};
+  const ret = {name, type: atd.type};
+  switch (atd.type) {
+    case 'sql native':
+      return {...ret, rawType: atd.rawType};
+      return ret;
+    case 'number': {
+      const numberType = atd.numberType;
+      return numberType ? {...ret, numberType} : ret;
+    }
+    case 'date': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'date', timeframe} : ret;
+    }
+    case 'timestamp': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'timestamp', timeframe} : ret;
+    }
+  }
+  return ret;
 }
 
 export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {

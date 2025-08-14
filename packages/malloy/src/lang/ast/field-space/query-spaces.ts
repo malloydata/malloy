@@ -337,15 +337,10 @@ export abstract class QuerySpace extends QueryOperationSpace {
       }
     } else if (model.TD.isAtomic(typeDesc)) {
       ret = {...model.mkFieldDef(typeDesc, name), expressionType: 'scalar'};
-      delete ret.e;
     } else {
       throw new Error('Invalid type for fieldref');
     }
     ret.location = ret.location ?? this.astEl.location;
-    delete ret.fieldUsage;
-    delete ret.requiresGroupBy;
-    delete ret.ungroupings;
-    for (const del of ['evalSpace', 'drillExpression']) delete ret[del];
     return ret;
   }
 
