@@ -783,6 +783,12 @@ export interface BasicArrayDef
   join: 'many';
 }
 
+/**
+ * Create a clean FieldDef from a TypeDef descendent
+ * @param atd Usually a TypeDesc
+ * @param name
+ * @returns Field with `name` and no type meta data
+ */
 export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
   if (isBasicArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name);
@@ -799,7 +805,6 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
   switch (atd.type) {
     case 'sql native':
       return {...ret, rawType: atd.rawType};
-      return ret;
     case 'number': {
       const numberType = atd.numberType;
       return numberType ? {...ret, numberType} : ret;

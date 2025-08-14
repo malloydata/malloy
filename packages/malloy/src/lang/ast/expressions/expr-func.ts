@@ -424,10 +424,13 @@ export class ExprFunc extends ExpressionDef {
                 'Filter expressions cannot be used in sql_ functions'
               );
             }
-            sqlFunctionFieldUsage.push(...(typeDesc.fieldUsage ?? []));
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: part.path});
             } else {
+              sqlFunctionFieldUsage.push({
+                path: part.path,
+                at: this.args[0].location,
+              });
               expr.push({
                 node: 'field',
                 // TODO when we have namespaces, this will need to be replaced with the resolved path
