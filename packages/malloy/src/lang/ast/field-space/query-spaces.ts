@@ -46,10 +46,7 @@ import type {
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
-import {
-  emptyFieldUsage,
-  mergeFieldUsage,
-} from '../../../model/composite_source_utils';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
 import {ErrorFactory} from '../error-factory';
 import {ReferenceField} from './reference-field';
 import {RefineFromSpaceField} from './refine-from-space-field';
@@ -306,10 +303,17 @@ export abstract class QuerySpace extends QueryOperationSpace {
     queryFieldDef: model.QueryFieldDef,
     typeDesc: model.TypeDesc
   ): model.FieldDef {
-    const name =
-      queryFieldDef.type === 'fieldref'
-        ? queryFieldDef.path[queryFieldDef.path.length - 1]
-        : queryFieldDef.as ?? queryFieldDef.name;
+    let location: model.DocumentLocation | undefined = undefined;
+    let name: string;
+
+    if (queryFieldDef.type === 'fieldref') {
+      name = queryFieldDef.path[queryFieldDef.path.length - 1];
+      location = queryFieldDef.at;
+    } else {
+      name = queryFieldDef.as ?? queryFieldDef.name;
+      location = queryFieldDef.location;
+    }
+    let ret: model.FieldDef;
     if (typeDesc.type === 'turtle') {
       const pipeline = typeDesc.pipeline;
       const lastSegment = pipeline[pipeline.length - 1];
@@ -320,7 +324,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
           : true
         : true;
       if (isRepeated) {
-        return {
+        ret = {
           ...outputStruct,
           elementTypeDef: {type: 'record_element'},
           name: name,
@@ -329,7 +333,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
           as: undefined,
         };
       } else {
-        return {
+        ret = {
           ...outputStruct,
           name: name,
           type: 'record',
@@ -338,15 +342,16 @@ export abstract class QuerySpace extends QueryOperationSpace {
         };
       }
     } else if (model.TD.isAtomic(typeDesc)) {
-      const td = model.mkFieldDef(typeDesc, name);
-      return {
-        ...td,
+      ret = {
+        ...model.mkFieldDef(typeDesc, name),
         expressionType: 'scalar',
-        e: undefined,
+        location,
       };
     } else {
       throw new Error('Invalid type for fieldref');
     }
+    ret.location = ret.location ?? this.astEl.location;
+    return ret;
   }
 
   // Gets the primary key field for the output struct of this query;

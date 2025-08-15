@@ -22,5 +22,44 @@
  */
 
 export * from './malloy_types';
-export {Segment, QueryModel} from './malloy_query';
+
+import type {ModelRootInterface} from './query_node';
+import {QueryField, QueryStruct} from './query_node';
+import {exprToSQL} from './expression_compiler';
+import {QueryQuery} from './query_query';
+import {FieldInstanceField} from './field_instance';
+import {QueryModelImpl} from './query_model_impl';
+
+// We have a circular dependency issue, and this is the minimal
+// dependency injection needed to get around it. Ideally, we would
+// like to avoid this, and I think a thoughtful pass through
+// FieldInstance and QueryField might eliminate the need for this.
+function getLookupFun(
+  mri: ModelRootInterface
+): (name: string) => QueryStruct | undefined {
+  if (mri instanceof QueryModelImpl) {
+    return (name: string) => mri.structs.get(name);
+  }
+  return () => undefined;
+}
+
+FieldInstanceField.registerExpressionCompiler(exprToSQL);
+QueryStruct.registerTurtleFieldMaker((field, parent) =>
+  QueryQuery.makeQuery(
+    field,
+    parent,
+    undefined,
+    false,
+    getLookupFun(parent.getModel())
+  )
+);
+
+// Note the internal vs. external naming of QueryModel, this is another
+// circular dependency problem which might have a better fix in the future.
+export {QueryField, QueryStruct, QueryQuery, QueryModelImpl as QueryModel};
+
+export {
+  getResultStructDefForQuery,
+  getResultStructDefForView,
+} from './query_model_impl';
 export {indent, composeSQLExpr} from './utils';

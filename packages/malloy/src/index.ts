@@ -124,7 +124,6 @@ export type {
 export {
   isSourceDef,
   // Used in Composer Demo
-  Segment,
   isBasicAtomic,
   isJoined,
   isJoinedSource,

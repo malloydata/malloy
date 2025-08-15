@@ -21,10 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  emptyFieldUsage,
-  mergeFieldUsage,
-} from '../../../model/composite_source_utils';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
 import type {
   IndexSegment,
   PipeSegment,
@@ -98,6 +95,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         const wild = this.expandedWild[name];
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
+          fieldUsage.push({path: wild.path});
           nextFieldUsage = wild.entry.typeDesc().fieldUsage;
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
@@ -108,6 +106,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
           } else {
             indexFields.push(fieldRef.refToField);
             nextFieldUsage = check.found.typeDesc().fieldUsage;
+            fieldUsage.push({path: fieldRef.path});
           }
         }
         fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];

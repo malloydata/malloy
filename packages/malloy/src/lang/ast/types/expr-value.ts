@@ -30,7 +30,7 @@ import type {
   TimestampUnit,
 } from '../../../model';
 import {maxOfExpressionTypes, mergeEvalSpaces} from '../../../model';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../composite-source-utils';
 import type {ExprResult} from './expr-result';
 import type {TimeResult} from './time-result';
 
