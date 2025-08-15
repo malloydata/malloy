@@ -303,10 +303,16 @@ export abstract class QuerySpace extends QueryOperationSpace {
     queryFieldDef: model.QueryFieldDef,
     typeDesc: model.TypeDesc
   ): model.FieldDef {
-    const name =
-      queryFieldDef.type === 'fieldref'
-        ? queryFieldDef.path[queryFieldDef.path.length - 1]
-        : queryFieldDef.as ?? queryFieldDef.name;
+    let location: model.DocumentLocation | undefined = undefined;
+    let name: string;
+
+    if (queryFieldDef.type === 'fieldref') {
+      name = queryFieldDef.path[queryFieldDef.path.length - 1];
+      location = queryFieldDef.at;
+    } else {
+      name = queryFieldDef.as ?? queryFieldDef.name;
+      location = queryFieldDef.location;
+    }
     let ret: model.FieldDef;
     if (typeDesc.type === 'turtle') {
       const pipeline = typeDesc.pipeline;
@@ -336,7 +342,11 @@ export abstract class QuerySpace extends QueryOperationSpace {
         };
       }
     } else if (model.TD.isAtomic(typeDesc)) {
-      ret = {...model.mkFieldDef(typeDesc, name), expressionType: 'scalar'};
+      ret = {
+        ...model.mkFieldDef(typeDesc, name),
+        expressionType: 'scalar',
+        location,
+      };
     } else {
       throw new Error('Invalid type for fieldref');
     }
