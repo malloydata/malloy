@@ -58,3 +58,9 @@ There is a loading of a Query, where Query is node in QueryTree ... and then the
 to do that.
 
 Also there are naming problems which would be cleaned up, once the QueryCompiler node tree was coplete.
+
+# Merge conflicts with malloy_query.ts
+
+If you are trying to merge a branch which has changes to malloy_query.ts, you need to find the code which was changed
+in whatever file it moved to, and apply the fix manually. I have had pretty good luck asking an LLM to help me to this,
+it is likely the LLM can do it for you.
