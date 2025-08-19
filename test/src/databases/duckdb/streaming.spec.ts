@@ -22,7 +22,7 @@
  */
 
 import type {WriteStream} from '@malloydata/malloy';
-import {CSVWriter} from '@malloydata/malloy';
+import {CSVWriter, JSONWriter} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import {RuntimeList} from '../../runtimes';
 
@@ -40,7 +40,7 @@ class StringAccumulator implements WriteStream {
 
 const runtimes = ['duckdb'];
 
-const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
+const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 
 function modelText(databaseName: string) {
   return `source: airports is ${databaseName}.table('test/data/duckdb/airports.parquet') extend {
@@ -101,15 +101,17 @@ describe('Streaming tests', () => {
   });
 
   runtimes.runtimeMap.forEach((runtime, databaseName) => {
-    it(`stream nested results to CSV - ${databaseName}`, async () => {
-      const stream = runtime
-        .loadModel(modelText(databaseName))
-        .loadQuery('run: airports -> airports_by_region')
-        .runStream();
-      const accummulator = new StringAccumulator();
-      const csvWriter = new CSVWriter(accummulator);
-      await csvWriter.process(stream);
-      const expectedCsv = `faa_region,by_state,,,,by_facility_type,,airport_count
+    describe('csv', () => {
+      it(`stream nested results - ${databaseName}`, async () => {
+        const stream = runtime
+          .loadModel(modelText(databaseName))
+          .loadQuery('run: airports -> airports_by_region')
+          .runStream();
+        const accumulator = new StringAccumulator();
+        const csvWriter = new CSVWriter(accumulator);
+        await csvWriter.process(stream);
+        const expectedCsv = `\
+faa_region,by_state,,,,by_facility_type,,airport_count
 AGL,state,airport_count,by_county,,facility_type,airport_count,4437
 ,IL,890,county,airport_count,AIRPORT,3443,
 ,,,COOK,51,HELIPORT,826,
@@ -125,25 +127,172 @@ ASW,state,airport_count,by_county,,facility_type,airport_count,3268
 ,,,PLAQUEMINES,31,,,
 ,,,VERMILION,29,,,
 `;
-      expect(accummulator.accumulatedValue).toBe(expectedCsv);
-    });
+        expect(accumulator.accumulatedValue).toBe(expectedCsv);
+      });
 
-    it(`stream simple results to CSV - ${databaseName}`, async () => {
-      const stream = runtime
-        .loadModel(modelText(databaseName))
-        .loadQuery('run: airports -> higher_elevation')
-        .runStream();
-      const accummulator = new StringAccumulator();
-      const csvWriter = new CSVWriter(accummulator);
-      await csvWriter.process(stream);
-      const expectedCsv = `faa_region,airport_count,avg_elevation
+      it(`stream simple results - ${databaseName}`, async () => {
+        const stream = runtime
+          .loadModel(modelText(databaseName))
+          .loadQuery('run: airports -> higher_elevation')
+          .runStream();
+        const accumulator = new StringAccumulator();
+        const csvWriter = new CSVWriter(accumulator);
+        await csvWriter.process(stream);
+        const expectedCsv = `\
+faa_region,airport_count,avg_elevation
 ANM,2102,3284.3910561370126
 AWP,1503,1667.0991350632069
 ACE,1579,1339.0139328689045
 ASW,3268,1007.2873317013464
 AGL,4437,983.4800540906018
 `;
-      expect(accummulator.accumulatedValue).toBe(expectedCsv);
+        expect(accumulator.accumulatedValue).toBe(expectedCsv);
+      });
+    });
+
+    describe('json', () => {
+      it(`stream nested results - ${databaseName}`, async () => {
+        const stream = runtime
+          .loadModel(modelText(databaseName))
+          .loadQuery('run: airports -> airports_by_region')
+          .runStream();
+        const accumulator = new StringAccumulator();
+        const jsonWriter = new JSONWriter(accumulator);
+        await jsonWriter.process(stream);
+        const expectedJson = `\
+[
+  {
+    "faa_region": "AGL",
+    "by_state": [
+      {
+        "state": "IL",
+        "airport_count": 890,
+        "by_county": [
+          {
+            "county": "COOK",
+            "airport_count": 51
+          },
+          {
+            "county": "LA SALLE",
+            "airport_count": 39
+          }
+        ]
+      },
+      {
+        "state": "OH",
+        "airport_count": 749,
+        "by_county": [
+          {
+            "county": "FRANKLIN",
+            "airport_count": 27
+          },
+          {
+            "county": "CUYAHOGA",
+            "airport_count": 27
+          }
+        ]
+      }
+    ],
+    "by_facility_type": [
+      {
+        "facility_type": "AIRPORT",
+        "airport_count": 3443
+      },
+      {
+        "facility_type": "HELIPORT",
+        "airport_count": 826
+      }
+    ],
+    "airport_count": 4437
+  },
+  {
+    "faa_region": "ASW",
+    "by_state": [
+      {
+        "state": "TX",
+        "airport_count": 1845,
+        "by_county": [
+          {
+            "county": "HARRIS",
+            "airport_count": 135
+          },
+          {
+            "county": "TARRANT",
+            "airport_count": 63
+          }
+        ]
+      },
+      {
+        "state": "LA",
+        "airport_count": 500,
+        "by_county": [
+          {
+            "county": "PLAQUEMINES",
+            "airport_count": 31
+          },
+          {
+            "county": "VERMILION",
+            "airport_count": 29
+          }
+        ]
+      }
+    ],
+    "by_facility_type": [
+      {
+        "facility_type": "AIRPORT",
+        "airport_count": 2341
+      },
+      {
+        "facility_type": "HELIPORT",
+        "airport_count": 861
+      }
+    ],
+    "airport_count": 3268
+  }
+]
+`;
+        expect(accumulator.accumulatedValue).toBe(expectedJson);
+      });
+
+      it(`stream simple results - ${databaseName}`, async () => {
+        const stream = runtime
+          .loadModel(modelText(databaseName))
+          .loadQuery('run: airports -> higher_elevation')
+          .runStream();
+        const accumulator = new StringAccumulator();
+        const jsonWriter = new JSONWriter(accumulator);
+        await jsonWriter.process(stream);
+        const expectedJson = `\
+[
+  {
+    "faa_region": "ANM",
+    "airport_count": 2102,
+    "avg_elevation": 3284.3910561370126
+  },
+  {
+    "faa_region": "AWP",
+    "airport_count": 1503,
+    "avg_elevation": 1667.0991350632069
+  },
+  {
+    "faa_region": "ACE",
+    "airport_count": 1579,
+    "avg_elevation": 1339.0139328689045
+  },
+  {
+    "faa_region": "ASW",
+    "airport_count": 3268,
+    "avg_elevation": 1007.2873317013464
+  },
+  {
+    "faa_region": "AGL",
+    "airport_count": 4437,
+    "avg_elevation": 983.4800540906018
+  }
+]
+`;
+        expect(accumulator.accumulatedValue).toBe(expectedJson);
+      });
     });
   });
 });

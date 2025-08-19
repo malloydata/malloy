@@ -39,6 +39,7 @@ export type GetResultMetadataOptions = {
   renderFieldMetadata: RenderFieldMetadata;
   getVegaConfigOverride?: VegaConfigHandler;
   parentSize: {width: number; height: number};
+  useVegaInterpreter?: boolean;
 };
 
 export interface FieldVegaInfo {
@@ -55,6 +56,7 @@ export interface RenderMetadata {
   renderAs: string;
   sizingStrategy: 'fill' | 'fixed';
   renderFieldMetadata: RenderFieldMetadata;
+  styleOverrides: Record<string, string>;
 }
 
 export function getResultMetadata(
@@ -84,6 +86,7 @@ export function getResultMetadata(
         ? 'fixed'
         : chartSizingStrategy ?? rootSizingStrategy,
     renderFieldMetadata: options.renderFieldMetadata,
+    styleOverrides: {},
   };
 
   return metadata;

@@ -24,10 +24,10 @@
 import type {Dialect} from '../../../dialect';
 import {
   hasCompositesAnywhere,
-  emptyFieldUsage,
   resolveCompositeSources,
   logCompositeError,
-} from '../../../model/composite_source_utils';
+  getExpandedSegment,
+} from '../../composite-source-utils';
 import type {
   AccessModifierLabel,
   AtomicFieldDef,
@@ -181,6 +181,23 @@ class ExtendedFieldSpace implements SourceFieldSpace {
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
 
+  protected expandFieldUsage(
+    inputSource: SourceDef,
+    pipeline: PipeSegment[]
+  ): PipeSegment[] {
+    const ret: PipeSegment[] = [];
+    let stageInput = inputSource;
+
+    for (const segment of pipeline) {
+      const newSegment = getExpandedSegment(segment, stageInput);
+      ret.push(newSegment);
+      // Get the output struct for the next stage
+      stageInput = newSegment.outputStruct || ErrorFactory.structDef;
+    }
+
+    return ret;
+  }
+
   protected resolveCompositeSource(
     inputSource: SourceDef,
     pipeline: PipeSegment[]
@@ -194,8 +211,7 @@ export abstract class QueryBase extends MalloyElement {
       (isQuerySegment(stage1) || isIndexSegment(stage1)) &&
       hasCompositesAnywhere(inputSource)
     ) {
-      const fieldUsage = stage1.fieldUsage ?? emptyFieldUsage();
-      const resolved = resolveCompositeSources(inputSource, stage1, fieldUsage);
+      const resolved = resolveCompositeSources(inputSource, stage1);
       if (resolved.error) {
         logCompositeError(resolved.error, this);
       }

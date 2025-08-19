@@ -514,6 +514,30 @@ describe('query:', () => {
           order_by: c
         }`).toTranslate();
       });
+      test('can order by a date grouped by timeframe', () => {
+        expect(`
+          run: a -> {
+            group_by: ats.day
+            order_by: ats
+          }
+        `).toTranslate();
+      });
+      test('use a calculate on a self-named group_by', () => {
+        expect(`
+        run: a -> {
+          group_by: ai is round(ai)
+          calculate: lats is lag(ai)
+        }
+      `).toTranslate();
+      });
+      test('use a having on a self-named aggregate', () => {
+        expect(`
+        run: a -> {
+          aggregate: ai is round(ai.sum())
+          having: ai > 0
+        }
+      `).toTranslate();
+      });
     });
   });
   describe('function typechecking', () => {

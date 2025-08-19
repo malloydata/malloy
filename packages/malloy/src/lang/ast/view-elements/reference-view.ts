@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {mergeFieldUsage} from '../../composite-source-utils';
 import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
   expressionIsScalar,
@@ -100,7 +101,9 @@ export class ReferenceView extends View {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
-        fieldUsage: fieldDef.fieldUsage,
+        fieldUsage: mergeFieldUsage(fieldDef.fieldUsage, [
+          {path: this.reference.refToField.path, at: this.reference.location},
+        ]),
         outputStruct,
         // An atomic lens results in a array segment if it is a scalar
         isRepeated: expressionIsScalar(fieldDef.expressionType),

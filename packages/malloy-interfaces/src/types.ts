@@ -214,6 +214,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
+      'exclude_references': {
+        'type': 'boolean',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -263,11 +268,21 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'query': {
         'type': 'Query',
-        'optional': false,
+        'optional': true,
+        'array': false,
+      },
+      'query_malloy': {
+        'type': 'string',
+        'optional': true,
         'array': false,
       },
       'default_row_limit': {
         'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -330,6 +345,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'extend_model_url': {
         'type': 'string',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -1308,6 +1328,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'exclude_references': {
+        'type': 'boolean',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -1347,11 +1372,21 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'query': {
         'type': 'Query',
-        'optional': false,
+        'optional': true,
+        'array': false,
+      },
+      'query_malloy': {
+        'type': 'string',
+        'optional': true,
         'array': false,
       },
       'default_row_limit': {
         'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -1880,6 +1915,7 @@ export type CellWithSQLNativeCell = {kind: 'sql_native_cell'} & SQLNativeCell;
 export type CompileModelRequest = {
   model_url: string;
   extend_model_url?: string;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -1893,8 +1929,10 @@ export type CompileModelResponse = {
 
 export type CompileQueryRequest = {
   model_url: string;
-  query: Query;
+  query?: Query;
+  query_malloy?: string;
   default_row_limit?: number;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -1911,6 +1949,7 @@ export type CompileSourceRequest = {
   model_url: string;
   name: string;
   extend_model_url?: string;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -2411,6 +2450,7 @@ export type Result = {
 export type RunIndexQueryRequest = {
   model_url: string;
   source_name: string;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -2422,8 +2462,10 @@ export type RunIndexQueryResponse = {
 
 export type RunQueryRequest = {
   model_url: string;
-  query: Query;
+  query?: Query;
+  query_malloy?: string;
   default_row_limit?: number;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 

@@ -30,7 +30,7 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
-import {checkRequiredGroupBys} from '../../../model/composite_source_utils';
+import {checkRequiredGroupBys} from '../../composite-source-utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -107,30 +107,30 @@ export class QueryArrow extends QueryBase implements QueryElement {
       }
     }
 
-    const queryWithResolvedCompositeSource = {
-      ...query,
-      compositeResolvedSourceDef,
-    };
+    const pipelineSource =
+      this.source instanceof Source
+        ? compositeResolvedSourceDef ?? viewInput
+        : viewInput;
 
     const pipelineWithResolvedReferences = this.resolvePipelineReferences(
       pipeline,
-      this.source instanceof Source
-        ? compositeResolvedSourceDef ?? viewInput
-        : viewInput
+      pipelineSource
     );
 
-    const finalPipeline = [
+    const pipelineWithExpandedFieldUsage = [
+      // The base query (if it exists) will already have its `expandedFieldUsage` computed
       ...queryBase.pipeline,
-      ...pipelineWithResolvedReferences,
+      ...this.expandFieldUsage(pipelineSource, pipelineWithResolvedReferences),
     ];
 
-    const queryWithResolvedReferences = {
-      ...queryWithResolvedCompositeSource,
-      pipeline: finalPipeline,
+    const finalQuery = {
+      ...query,
+      compositeResolvedSourceDef,
+      pipeline: pipelineWithExpandedFieldUsage,
     };
 
     return {
-      query: queryWithResolvedReferences,
+      query: finalQuery,
       outputStruct,
       inputStruct: viewInput,
     };

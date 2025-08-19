@@ -22,8 +22,19 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import type {Expr, ExprWithKids, GenericSQLExpr} from './malloy_types';
-import {exprHasE, exprHasKids} from './malloy_types';
+import type {
+  Expr,
+  ExprWithKids,
+  GenericSQLExpr,
+  StructDef,
+} from './malloy_types';
+import {
+  exprHasE,
+  exprHasKids,
+  fieldIsIntrinsic,
+  getIdentifier,
+} from './malloy_types';
+import type {DialectFieldList} from '../dialect';
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -214,4 +225,73 @@ export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
     }
   }
   return ret;
+}
+
+export function getDialectFieldList(structDef: StructDef): DialectFieldList {
+  const dialectFieldList: DialectFieldList = [];
+
+  for (const f of structDef.fields.filter(fieldIsIntrinsic)) {
+    dialectFieldList.push({
+      typeDef: f,
+      sqlExpression: getIdentifier(f),
+      rawName: getIdentifier(f),
+      sqlOutputName: getIdentifier(f),
+    });
+  }
+  return dialectFieldList;
+}
+
+/**
+ * A little extra paranoia to save us from fields which contain the special
+ * characters used to build the grouping key.
+ */
+export function pathToKey(node: string, fields: string[]): string {
+  return node + `/${fields.map(f => `${f.length}:${f}`).join(',')}`;
+}
+
+export function groupingKey(node: string, fields: string[]): string {
+  const sortedFields = [...fields].sort();
+  return pathToKey(node, sortedFields);
+}
+
+export function caseGroup(groupSets: number[], s: string): string {
+  if (groupSets.length === 0) {
+    return s;
+  } else {
+    const exp =
+      groupSets.length === 1
+        ? `=${groupSets[0]}`
+        : ` IN (${groupSets.join(',')})`;
+    return `CASE WHEN group_set${exp} THEN\n  ${s}\n  END`;
+  }
+}
+
+export class GenerateState {
+  whereSQL?: string;
+  applyValue?: string;
+  totalGroupSet = -1;
+
+  withWhere(s?: string): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = s;
+    newState.applyValue = this.applyValue;
+    newState.totalGroupSet = this.totalGroupSet;
+    return newState;
+  }
+
+  withApply(s: string): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = s;
+    newState.totalGroupSet = this.totalGroupSet;
+    return newState;
+  }
+
+  withTotal(groupSet: number): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = this.applyValue;
+    newState.totalGroupSet = groupSet;
+    return newState;
+  }
 }

@@ -60,3 +60,18 @@
   grid-row: 2;
   overflow: hidden;
 }
+
+.malloy-chart .y_reference_lines_backdrop {
+  -webkit-mask-image: linear-gradient(
+    transparent 0%,
+    black 27.7%,
+    black 70%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    transparent 0%,
+    black 27.7%,
+    black 70%,
+    transparent 100%
+  );
+}

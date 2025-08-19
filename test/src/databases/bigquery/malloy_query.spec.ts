@@ -529,7 +529,7 @@ describe('airport_tests', () => {
     run: airports -> {
       group_by: county
       nest: stuff is {
-        select: elevation
+        group_by: elevation
         order_by: 1 desc
         limit: 10
       }

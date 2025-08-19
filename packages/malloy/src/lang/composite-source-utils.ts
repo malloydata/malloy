@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import type {
@@ -17,29 +17,34 @@ import {
   StringFilterExpression,
   TemporalFilterExpression,
 } from '@malloydata/malloy-filter';
-import type {MalloyElement} from '../lang/ast';
+import type {MalloyElement} from './ast';
 import type {
   FieldUsage,
   FieldDef,
   PipeSegment,
   SourceDef,
   Expr,
-  StructDef,
   AggregateUngrouping,
   RequiredGroupBy,
   DocumentLocation,
   Annotation,
-} from './malloy_types';
+  PartitionCompositeDesc,
+  FilterCondition,
+  StructDef,
+} from '../model/malloy_types';
 import {
   expressionIsScalar,
   isAtomic,
+  isIndexSegment,
   isJoinable,
   isJoined,
   isQuerySegment,
   isSourceDef,
   isTurtle,
-} from './malloy_types';
-import {isNotUndefined} from '../lang/utils';
+} from '../model/malloy_types';
+import {isNotUndefined} from './utils';
+import {pathToKey} from '../model/utils';
+import {annotationToTag} from '../annotation';
 
 type CompositeCouldNotFindFieldError = {
   code: 'could_not_find_field';
@@ -95,7 +100,7 @@ function _resolveCompositeSources(
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
   const expandedForError = onlyCompositeUsage(
-    expandFieldUsage(fieldUsage, rootFields).result,
+    _expandFieldUsage(fieldUsage, rootFields).result,
     source.fields
   );
   if (source.type === 'composite') {
@@ -124,11 +129,11 @@ function _resolveCompositeSources(
       }
 
       const fieldUsageWithWheres =
-        mergeFieldUsage(fieldUsage, getFieldUsageFromFilterList(inputSource)) ??
+        mergeFieldUsage(getFieldUsageFromFilterList(inputSource), fieldUsage) ??
         [];
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
+      const expanded = _expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -150,7 +155,7 @@ function _resolveCompositeSources(
         source.fields
       );
       for (const usage of compositeUsageInThisSource) {
-        if (!fieldNames.has(usage.path[0])) {
+        if (usage.path.length > 0 && !fieldNames.has(usage.path[0])) {
           fail({
             type: 'missing-field',
             field: usage,
@@ -162,14 +167,17 @@ function _resolveCompositeSources(
         abort();
         continue overSources;
       }
-      if (inputSource.type === 'composite') {
+      if (
+        inputSource.type === 'composite' ||
+        inputSource.partitionComposite !== undefined
+      ) {
         const resolveInner = _resolveCompositeSources(
           path,
           inputSource,
           genRootFields(rootFields, path, fieldsForLookup, false),
           nests,
           compositeUsageInThisSource,
-          inputSource.sources
+          inputSource.type === 'composite' ? inputSource.sources : undefined
         );
         if ('error' in resolveInner) {
           // Third point where we abort; if a nested composite failed; we don't call abort() because we want to unnest the failures from
@@ -260,10 +268,35 @@ function _resolveCompositeSources(
         },
       };
     }
+  } else if (source.partitionComposite !== undefined) {
+    anyComposites = true;
+    const expanded = _expandFieldUsage(fieldUsage, rootFields).result;
+    // TODO possibly abort if expanded has missing fields...
+    const expandedCategorized = categorizeFieldUsage(expanded);
+    const {partitionFilter, issues} = getPartitionCompositeFilter(
+      source.partitionComposite,
+      expandedCategorized.sourceUsage
+    );
+    if (issues !== undefined) {
+      return {
+        error: {
+          code: 'no_suitable_composite_source_input',
+          data: {
+            failures: issues.map(iss => ({source, issues: iss})),
+            usage: expanded,
+            path,
+          },
+        },
+      };
+    }
+    base = {
+      ...source,
+      filterList: [...(source.filterList ?? []), partitionFilter],
+    };
   }
 
   if (!joinsProcessed) {
-    const expanded = expandFieldUsage(
+    const expanded = _expandFieldUsage(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
@@ -304,52 +337,238 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
   });
 }
 
-function expandFieldUsage(
+export function getExpandedSegment(
+  segment: PipeSegment,
+  inputSource: SourceDef
+): PipeSegment {
+  if (segment.type === 'raw') return segment;
+  const sourceExtensions = isQuerySegment(segment)
+    ? segment.extendSource ?? []
+    : [];
+  const fields = mergeFields(inputSource.fields, sourceExtensions);
+
+  const collectedUngroupings: AggregateUngrouping[] = [];
+  let updatedSegment = segment;
+
+  if (isQuerySegment(segment)) {
+    // Single walk through query fields
+    const updatedQueryFields = segment.queryFields.map(field => {
+      if (field.type === 'fieldref') {
+        // Just return it - field usage already in segment.fieldUsage
+        return field;
+      } else if (field.type === 'turtle') {
+        if (field.pipeline.length === 0) return field;
+        // Process entire turtle pipeline
+        const updatedPipeline: PipeSegment[] = [];
+        let turtleInput = inputSource; // First stage sees parent's input
+
+        for (const stage of field.pipeline) {
+          const processedStage = getExpandedSegment(stage, turtleInput);
+          updatedPipeline.push(processedStage);
+
+          if (processedStage.type === 'raw') continue;
+          // Collect ungroupings from turtle with adjusted paths
+          if (processedStage.expandedUngroupings) {
+            const adjusted = processedStage.expandedUngroupings.map(u => ({
+              ...u,
+              path: [field.name, ...u.path],
+            }));
+            collectedUngroupings.push(...adjusted);
+          }
+
+          turtleInput = processedStage.outputStruct;
+        }
+        return {...field, pipeline: updatedPipeline};
+      } else {
+        // Regular fields - only collect ungroupings
+        collectedUngroupings.push(...(field.ungroupings || []));
+        return field;
+      }
+    });
+
+    updatedSegment = {...segment, queryFields: updatedQueryFields};
+  }
+
+  const allFieldUsage = mergeFieldUsage(
+    getFieldUsageFromFilterList(inputSource),
+    segment.fieldUsage
+  );
+  const expanded = _expandFieldUsage(allFieldUsage || [], fields);
+
+  // Merge ungroupings from direct collection and field expansion
+  const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
+
+  return {
+    ...updatedSegment,
+    expandedFieldUsage: expanded.result,
+    activeJoins: expanded.activeJoins,
+    expandedUngroupings: allUngroupings,
+  };
+}
+
+interface JoinDependency {
+  path: string[];
+  dependsOn: Set<string>;
+  checked?: boolean;
+}
+
+function getJoin(
+  jdMap: Record<string, JoinDependency>,
+  joinKey: string,
+  joinPath: string[]
+): JoinDependency {
+  if (!jdMap[joinKey]) {
+    jdMap[joinKey] = {path: joinPath, dependsOn: new Set()};
+  }
+  return jdMap[joinKey];
+}
+
+function findActiveJoins(
+  dependencies: Record<string, JoinDependency>
+): FieldUsage[] {
+  const sorted: FieldUsage[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  const visit = (key: string) => {
+    if (visited.has(key)) return;
+    if (visiting.has(key)) {
+      return;
+    }
+
+    visiting.add(key);
+    const dep = dependencies[key];
+    if (dep) {
+      // Visit all dependencies first (depth-first)
+      for (const depKey of dep.dependsOn) {
+        visit(depKey);
+      }
+    }
+    visiting.delete(key);
+    visited.add(key);
+
+    // Add this join's path to the sorted list after its dependencies
+    if (dep) {
+      sorted.push({path: dep.path});
+    }
+  };
+
+  // Visit all joins in the dependency graph
+  for (const key of Object.keys(dependencies)) {
+    visit(key);
+  }
+
+  return sorted;
+}
+
+/**
+ * Given a list of field usage requests, expand to include all the join on and join filter expressions
+ * needed to be able to reference those fields.
+ *
+ * @returns An object containing:
+ * - `result`: The expanded field usage, including usages from necessary joins
+ * - `missingFields`: References to fields which could not be resolved
+ * - `activeJoins`: Topologically sorted list of joins needed to resolve these uses
+ */
+function _expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
-): {result: FieldUsage[]; missingFields: FieldUsage[]} {
-  const allFieldPathsReferenced = [...fieldUsage];
-  const joinPathsProcessed: string[][] = [];
+): {
+  result: FieldUsage[];
+  missingFields: FieldUsage[];
+  activeJoins: FieldUsage[];
+  ungroupings: AggregateUngrouping[];
+} {
+  const seen: Record<string, FieldUsage> = {};
   const missingFields: FieldUsage[] = [];
-  for (let i = 0; i < allFieldPathsReferenced.length; i++) {
-    const reference = allFieldPathsReferenced[i];
-    const referenceJoinPath = reference.path.slice(0, -1);
-    // Look up this referenced field; if it is a composite field, then add it to the list
-    // of composite fields found;
-    // if it has composite usage, add those usages to the list of fields to look up next
-    // if it doesn't exist, then this source won't work.
-    let def: FieldDef;
-    try {
-      def = lookup(reference.path, fields);
-    } catch {
+  const toProcess: FieldUsage[] = [];
+  const activeJoinGraph: Record<string, JoinDependency> = {};
+  const ungroupings: AggregateUngrouping[] = [];
+
+  // Initialize: mark original inputs and add them to processing queue
+  for (const usage of fieldUsage) {
+    const seenKey = pathToKey('field', usage.path);
+    seen[seenKey] = usage;
+    toProcess.push(usage);
+  }
+
+  // Process the expanding queue
+  const fieldNameSpace = buildNamespace(fields);
+  for (let i = 0; i < toProcess.length; i++) {
+    const reference = toProcess[i];
+    if (reference.path.length === 0) continue;
+
+    const def = inNamespace(reference.path, fieldNameSpace);
+    if (!def) {
       missingFields.push(reference);
       continue;
     }
+
     if (isAtomic(def)) {
       const fieldUsage = def.fieldUsage ?? [];
-      allFieldPathsReferenced.push(
-        ...fieldUsageAt(
-          joinedFieldUsage(referenceJoinPath, fieldUsage),
-          reference.at
-        ).filter(
-          u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
-        )
-      );
+      // Add the atomic field's dependencies to the queue
+      const refPath = reference.path.slice(0, -1);
+      for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
+        const key = pathToKey('field', usage.path);
+        if (!seen[key]) {
+          seen[key] = usage;
+          toProcess.push(usage);
+        } else if (usage.uniqueKeyRequirement) {
+          seen[key].uniqueKeyRequirement = {
+            isCount:
+              usage.uniqueKeyRequirement.isCount ??
+              seen[key].uniqueKeyRequirement?.isCount,
+          };
+        }
+      }
+
+      if (def.ungroupings) {
+        ungroupings.push(...joinedUngroupings(refPath, def.ungroupings));
+      }
     }
-    if (reference.path.length > 1) {
-      if (!joinPathsProcessed.some(p => pathEq(p, referenceJoinPath))) {
-        joinPathsProcessed.push(referenceJoinPath);
-        const join = lookup(referenceJoinPath, fields);
-        const joinFieldUsage = getJoinFieldUsage(join, referenceJoinPath);
-        allFieldPathsReferenced.push(
-          ...fieldUsageAt(joinFieldUsage, reference.at).filter(
-            u1 => !allFieldPathsReferenced.some(u2 => pathEq(u1.path, u2.path))
-          )
-        );
+
+    // For paths through joins, additionaly track join relationships
+    for (let joinLen = 1; joinLen < reference.path.length; joinLen++) {
+      const joinPath = reference.path.slice(0, joinLen);
+      const joinDef = inNamespace(joinPath, fieldNameSpace);
+      if (!joinDef) break;
+
+      const joinKey = pathToKey('join', joinPath);
+      const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
+
+      if (isJoined(joinDef) && !thisDep.checked) {
+        thisDep.checked = true;
+        const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
+
+        // Add join's field dependencies to the queue
+        for (const usage of joinFieldUsage) {
+          const key = pathToKey('field', usage.path);
+          if (!seen[key]) {
+            seen[key] = usage;
+            toProcess.push(usage);
+          }
+
+          // Track join-to-join dependencies
+          const isInternalReference =
+            usage.path.length === joinPath.length + 1 &&
+            pathBegins(usage.path, joinPath);
+          if (!isInternalReference && usage.path.length > 1) {
+            const dependencyPath = usage.path.slice(0, -1);
+            const dependencyKey = pathToKey('join', dependencyPath);
+            getJoin(activeJoinGraph, dependencyKey, dependencyPath);
+            thisDep.dependsOn.add(dependencyKey);
+          }
+        }
       }
     }
   }
-  return {result: allFieldPathsReferenced, missingFields};
+
+  return {
+    result: Object.values(seen),
+    missingFields,
+    activeJoins: findActiveJoins(activeJoinGraph),
+    ungroupings,
+  };
 }
 
 interface CategorizedFieldUsage {
@@ -363,7 +582,7 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
     joinUsage: {},
   };
   for (const usage of fieldUsage) {
-    if (usage.path.length === 1) {
+    if (usage.path.length <= 1) {
       categorized.sourceUsage.push(usage);
     } else {
       const joinName = usage.path[0];
@@ -376,6 +595,130 @@ function categorizeFieldUsage(fieldUsage: FieldUsage[]): CategorizedFieldUsage {
     }
   }
   return categorized;
+}
+
+function getPartitionCompositePartition(
+  partitionComposite: PartitionCompositeDesc,
+  fieldUsage: FieldUsage[]
+):
+  | {partitionId: string; issues: undefined}
+  | {issues: CompositeIssue[][]; partitionId: undefined} {
+  const issues: CompositeIssue[][] = [];
+  const compositeFieldsUsed = fieldUsage.filter(u =>
+    partitionComposite.compositeFields.some(
+      f => u.path.length === 1 && u.path[0] === f
+    )
+  );
+  for (const partition of partitionComposite.partitions) {
+    const missingFields = compositeFieldsUsed.filter(
+      u => u.path.length !== 1 || !partition.fields.includes(u.path[0])
+    );
+    if (missingFields.length === 0) {
+      return {partitionId: partition.id, issues: undefined};
+    }
+    issues.push(missingFields.map(f => ({type: 'missing-field', field: f})));
+  }
+  return {
+    partitionId: undefined,
+    issues,
+  };
+}
+
+function getPartitionCompositeFilter(
+  partitionComposite: PartitionCompositeDesc,
+  fieldUsage: FieldUsage[]
+):
+  | {partitionFilter: FilterCondition; issues: undefined}
+  | {issues: CompositeIssue[][]; partitionFilter: undefined} {
+  const {partitionId, issues} = getPartitionCompositePartition(
+    partitionComposite,
+    fieldUsage
+  );
+  if (issues !== undefined) return {issues, partitionFilter: undefined};
+  const partitionFilter: FilterCondition = {
+    node: 'filterCondition',
+    code: '',
+    expressionType: 'scalar',
+    e: {
+      node: '=',
+      kids: {
+        left: {
+          node: 'field',
+          // TODO validate field exists
+          path: [partitionComposite.partitionField],
+        },
+        right: {
+          node: 'stringLiteral',
+          literal: partitionId,
+        },
+      },
+    },
+  };
+  return {partitionFilter, issues: undefined};
+}
+
+export function getPartitionCompositeDesc(
+  annotation: Annotation | undefined,
+  structDef: StructDef,
+  logTo: MalloyElement
+): PartitionCompositeDesc | undefined {
+  if (annotation === undefined) return undefined;
+  const compilerFlags = annotationToTag(annotation, {prefix: /^#!\s*/}).tag;
+  const partitionCompositeTag = compilerFlags.tag(
+    'experimental',
+    'partition_composite'
+  );
+  if (partitionCompositeTag === undefined) return undefined;
+  if (structDef.type === 'composite') {
+    logTo.logError(
+      'invalid-partition-composite',
+      'Source is already composite; cannot apply partition composite'
+    );
+    return undefined;
+  }
+  const partitionField = partitionCompositeTag.text('partition_field');
+  const partitionsTag = partitionCompositeTag.tag('partitions');
+  if (partitionField === undefined) {
+    logTo.logError(
+      'invalid-partition-composite',
+      'Partition composite must specify `partition_field`'
+    );
+    return undefined;
+  }
+  if (partitionsTag === undefined) {
+    logTo.logError(
+      'invalid-partition-composite',
+      'Partition composite must specify `partitions`'
+    );
+    return undefined;
+  }
+  const partitions: {id: string; fields: string[]}[] = [];
+  const allFields = new Set<string>();
+  const ids = Object.keys(partitionsTag.getProperties());
+  for (const id of ids) {
+    const partitionTag = partitionsTag.tag(id);
+    if (partitionTag === undefined) {
+      logTo.logError(
+        'invalid-partition-composite',
+        `Invalid partition specification for \`${id}\`; must be a tag with property \\fields\``
+      );
+      return undefined;
+    }
+    const fields = Object.keys(partitionTag.getProperties());
+    allFields.forEach(f => allFields.add(f));
+    partitions.push({id, fields});
+  }
+  for (const field of [partitionField, ...allFields]) {
+    const def = structDef.fields.find(f => (f.as ?? f.name) === field);
+    if (def === undefined) {
+      logTo.logError(
+        'invalid-partition-composite',
+        `Composite partition field \`${field}\` not present in source`
+      );
+    }
+  }
+  const compositeFields = structDef.fields.map(f => f.as ?? f.name);
+  return {partitionField, partitions, compositeFields};
 }
 
 function composeAnnotations(
@@ -543,24 +886,32 @@ export interface NarrowedCompositeFieldResolution {
   joined: NarrowedCompositeFieldResolutionByJoinName;
 }
 
+function segmentFieldUsage(segment: PipeSegment): FieldUsage[] {
+  return (
+    (isQuerySegment(segment) || isIndexSegment(segment)
+      ? segment.fieldUsage
+      : undefined) ?? emptyFieldUsage()
+  );
+}
+
 function getFieldUsageFromFilterList(source: SourceDef) {
   return (source.filterList ?? []).flatMap(filter => filter.fieldUsage ?? []);
 }
 
 export function resolveCompositeSources(
   source: SourceDef,
-  segment: PipeSegment,
-  fieldUsage: FieldUsage[]
+  segment: PipeSegment
 ):
   | {sourceDef: SourceDef | undefined; error: undefined}
   | {error: CompositeError; sourceDef: undefined} {
+  const fieldUsage = segmentFieldUsage(segment);
   const sourceExtensions = isQuerySegment(segment)
     ? segment.extendSource ?? []
     : [];
   const nestLevels = extractNestLevels(segment);
   const fields = mergeFields(source.fields, sourceExtensions);
   const fieldUsageWithWheres =
-    mergeFieldUsage(fieldUsage, getFieldUsageFromFilterList(source)) ?? [];
+    mergeFieldUsage(getFieldUsageFromFilterList(source), fieldUsage) ?? [];
   const result = _resolveCompositeSources(
     [],
     source,
@@ -718,7 +1069,7 @@ function nestLevelsAt(nests: NestLevels, at?: DocumentLocation): NestLevels {
   return {
     fieldsReferencedDirectly: fieldUsageAt(nests.fieldsReferencedDirectly, at),
     nested: nests.nested.map(n => nestLevelsAt(n, at)),
-    fieldsReferenced: fieldUsageAt(nests.fieldsReferencedDirectly, at),
+    fieldsReferenced: fieldUsageAt(nests.fieldsReferenced, at),
     ungroupings: ungroupingsAt(nests.ungroupings, at),
     requiredGroupBys: requiredGroupBysAt(nests.requiredGroupBys, at) ?? [],
     singleValueFilters: nests.singleValueFilters,
@@ -773,6 +1124,7 @@ function joinedUngroupings(
     ...u,
     fieldUsage: joinedFieldUsage(joinPath, u.fieldUsage),
     requiresGroupBy: joinedRequiredGroupBys(joinPath, u.requiresGroupBy),
+    path: joinPath, // Set the path to the join path
   }));
 }
 
@@ -799,7 +1151,46 @@ function extractNestLevels(segment: PipeSegment): NestLevels {
         fieldsReferenced.push(usage);
       } else if (field.type === 'turtle') {
         const head = field.pipeline[0];
-        nested.push(nestLevelsAt(extractNestLevels(head), head.referencedAt));
+        const nestedLevels = extractNestLevels(head);
+
+        // Check if the nested query has ANY unique key requirements
+        let hasNestedUniqueKeyReqs = nestedLevels.fieldsReferenced.some(
+          usage => usage.uniqueKeyRequirement
+        );
+
+        // Also check the head segment's fieldUsage directly
+        if (isQuerySegment(head) && head.fieldUsage) {
+          const hasDirectUniqueKeyReqs = head.fieldUsage.some(
+            usage => usage.uniqueKeyRequirement
+          );
+          if (hasDirectUniqueKeyReqs) {
+            hasNestedUniqueKeyReqs = true;
+          }
+        }
+
+        // If the nested query has any unique key requirements, parent needs unique input
+        if (hasNestedUniqueKeyReqs) {
+          fieldsReferenced.push({
+            path: [],
+            uniqueKeyRequirement: {isCount: true},
+            at: head.referencedAt,
+          });
+        }
+
+        const adjustedUngroupings = nestedLevels.ungroupings.map(u => ({
+          ...u,
+          path: [field.name, ...u.path],
+        }));
+
+        nested.push(
+          nestLevelsAt(
+            {
+              ...nestedLevels,
+              ungroupings: adjustedUngroupings,
+            },
+            head.referencedAt
+          )
+        );
       } else {
         const fieldUsage = field.fieldUsage ?? [];
         fieldsReferenced.push(...fieldUsage);
@@ -843,7 +1234,7 @@ function getSingleValueFilterFields(filter: Expr): string[][] {
 function isSingleValueFilterNode(e: Expr): string[] | undefined {
   if (e.node === 'filterMatch') {
     if (e.kids.expr.node === 'field') {
-      const result = compileFilterExpression(e.dataType, e.kids.filterExpr);
+      const result = translateFilterExpression(e.dataType, e.kids.filterExpr);
 
       if (!result) return [];
       if (
@@ -892,6 +1283,7 @@ interface ExpandedNestLevels {
   unsatisfiableGroupBys: RequiredGroupBy[];
   nested: ExpandedNestLevels[];
   singleValueFilters: string[][];
+  ungroupings: AggregateUngrouping[];
 }
 
 function expandRefs(
@@ -905,6 +1297,7 @@ function expandRefs(
   const joinPathsProcessed: string[][] = [];
   const missingFields: FieldUsage[] = [];
   for (let i = 0; i < references.length; i++) {
+    if (references[i].path.length === 0) continue;
     const field = references[i];
     let def: FieldDef;
     try {
@@ -916,6 +1309,16 @@ function expandRefs(
     const joinPath = field.path.slice(0, -1);
     if (isTurtle(def)) {
       const head = def.pipeline[0];
+      const nestedLevels = extractNestLevels(head);
+      // Update paths for ungroupings in nested turtle
+      const adjustedLevels = {
+        ...nestedLevels,
+        ungroupings: nestedLevels.ungroupings.map(u => ({
+          ...u,
+          path: field.path, // This IS the correct path to the turtle field
+        })),
+      };
+      newNests.push(adjustedLevels);
       newNests.push(extractNestLevels(head));
     } else if (isAtomic(def)) {
       if (def.requiresGroupBy) {
@@ -985,6 +1388,7 @@ function expandRefs(
     missingFields.push(...(expanded.missingFields ?? []));
     nested.push(expanded.result);
     unsatisfiableGroupBys.push(...expanded.result.unsatisfiableGroupBys);
+    allUngroupings.push(...expanded.result.ungroupings);
   }
   return {
     result: {
@@ -993,6 +1397,7 @@ function expandRefs(
       unsatisfiableGroupBys,
       nested,
       singleValueFilters: nests.singleValueFilters,
+      ungroupings: allUngroupings,
     },
     missingFields: missingFields.length > 0 ? missingFields : undefined,
   };
@@ -1001,14 +1406,14 @@ function expandRefs(
 function getJoinFieldUsage(join: FieldDef, joinPath: string[]): FieldUsage[] {
   return (
     mergeFieldUsage(
-      // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
-      // already rooted at the parent
-      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? []),
       // For `fieldUsage` from join `where`s, we need the path including the join name
       joinedFieldUsage(
         joinPath,
         isSourceDef(join) ? getFieldUsageFromFilterList(join) : []
-      )
+      ),
+      // For `fieldUsage` from join `on`, we need the path excluding the join name, since it's
+      // already rooted at the parent
+      joinedFieldUsage(joinPath.slice(0, -1), join.fieldUsage ?? [])
     ) ?? []
   );
 }
@@ -1068,6 +1473,48 @@ export function pathBegins(path: string[], prefix: string[]) {
   return path.length >= prefix.length && prefix.every((s, i) => path[i] === s);
 }
 
+type Namespace = {
+  fields: Record<string, FieldDef>;
+  nested: Record<string, Namespace>;
+};
+
+function buildNamespace(fields: FieldDef[]): Namespace {
+  const namespace: Namespace = {
+    fields: {},
+    nested: {},
+  };
+
+  for (const field of fields) {
+    const name = field.as ?? field.name;
+    namespace.fields[name] = field;
+
+    // If it's a join with nested fields, recursively build its hierarchy
+    if (isJoined(field) && field.fields) {
+      namespace.nested[name] = buildNamespace(field.fields);
+    }
+  }
+
+  return namespace;
+}
+
+function inNamespace(path: string[], space: Namespace): FieldDef | undefined {
+  const head = path[0];
+  const def = space.fields[head];
+
+  if (def === undefined) return def;
+
+  if (path.length === 1) {
+    return def;
+  }
+
+  const nested = space.nested[head];
+  if (!nested) {
+    return undefined;
+  }
+
+  return inNamespace(path.slice(1), nested);
+}
+
 function lookup(field: string[], fields: FieldDef[]): FieldDef {
   const [head, ...rest] = field;
   const def = fields.find(f => (f.as ?? f.name) === head);
@@ -1120,10 +1567,12 @@ function sortIssuesByReferenceLocation(issues: CompositeIssue[]) {
   });
 }
 
-export function hasCompositesAnywhere(source: StructDef): boolean {
-  if (source.type === 'composite') return true;
+export function hasCompositesAnywhere(source: SourceDef): boolean {
+  if (source.type === 'composite' || source.partitionComposite !== undefined) {
+    return true;
+  }
   for (const field of source.fields) {
-    if (isJoined(field) && hasCompositesAnywhere(field)) {
+    if (isJoined(field) && isSourceDef(field) && hasCompositesAnywhere(field)) {
       return true;
     }
   }
@@ -1213,7 +1662,7 @@ export function logCompositeError(error: CompositeError, logTo: MalloyElement) {
   }
 }
 
-export function compileFilterExpression(
+function translateFilterExpression(
   ft: string,
   fexpr: Expr
 ):

@@ -49,12 +49,12 @@ const Cell = (props: {
     const width = layout.fieldLayout(props.field).width;
     const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
+    if (width) {
+      style.width = `${width}px`;
+      style['min-width'] = `${width}px`;
+      style['max-width'] = `${width}px;`;
+    }
     if (!props.isHeader) {
-      if (width) {
-        style.width = `${width}px`;
-        style['min-width'] = `${width}px`;
-        style['max-width'] = `${width}px;`;
-      }
       if (height) {
         style.height = `${height}px`;
       }
