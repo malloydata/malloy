@@ -25,7 +25,6 @@ import type {
   FilteredExpr,
   UngroupNode,
   ParameterNode,
-  SpreadExpr,
   AggregateExpr,
   SourceReferenceNode,
   CaseExpr,
@@ -189,7 +188,9 @@ export function exprToSQL(
     case 'function_call':
       return generateFunctionCallExpression(resultSet, context, expr, state);
     case 'spread':
-      throw new Error('Internal Error: Spread should have been expanded by expandFunctionCall');
+      throw new Error(
+        "Internal Error: expandFunctionCall() failed to process node: 'spread'"
+      );
     case 'source-reference':
       return generateSourceReference(resultSet, context, expr);
     case '+':
@@ -956,7 +957,6 @@ export function generateCountFragment(
     return `${func}${thing})`;
   }
 }
-
 
 export function generateSourceReference(
   resultSet: FieldInstanceResult,
