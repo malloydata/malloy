@@ -25,7 +25,6 @@ import type {
   FilteredExpr,
   UngroupNode,
   ParameterNode,
-  SpreadExpr,
   AggregateExpr,
   SourceReferenceNode,
   CaseExpr,
@@ -90,15 +89,14 @@ function sqlSumDistinct(
  * This function was extracted from QueryField.exprToSQL to break circular dependencies.
  */
 export function exprToSQL(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   exprToTranslate: Expr,
   state: GenerateState = new GenerateState()
 ): string {
   // Wrap non leaf sub expressions in parenthesis
-  const subExpr = function (qf: QueryField, e: Expr) {
-    const sql = exprToSQL(qf, resultSet, context, e, state);
+  const subExpr = function (e: Expr) {
+    const sql = exprToSQL(resultSet, context, e, state);
     if (exprHasKids(e)) {
       return `(${sql})`;
     }
@@ -113,7 +111,7 @@ export function exprToSQL(
   let expr = exprToTranslate;
   if (exprHasE(exprToTranslate)) {
     expr = {...exprToTranslate};
-    const eSql = subExpr(field, expr.e);
+    const eSql = subExpr(expr.e);
     expr.e = {...expr.e, sql: eSql};
   } else if (exprHasKids(exprToTranslate)) {
     expr = {...exprToTranslate};
@@ -122,10 +120,10 @@ export function exprToSQL(
       if (kidExpr === null) continue;
       if (Array.isArray(kidExpr)) {
         expr.kids[name] = kidExpr.map(e => {
-          return {...e, sql: subExpr(field, e)};
+          return {...e, sql: subExpr(e)};
         });
       } else {
-        expr.kids[name] = {...oldKids[name], sql: subExpr(field, kidExpr)};
+        expr.kids[name] = {...oldKids[name], sql: subExpr(kidExpr)};
       }
     }
   }
@@ -134,39 +132,39 @@ export function exprToSQL(
    * Give the dialect a chance to translate this node
    */
   const qi = resultSet.getQueryInfo();
-  const dialectSQL = field.parent.dialect.exprToSQL(qi, expr);
+  const dialectSQL = context.dialect.exprToSQL(qi, expr);
   if (dialectSQL) {
     return dialectSQL;
   }
 
   switch (expr.node) {
     case 'field':
-      return generateFieldFragment(field, resultSet, context, expr, state);
+      return generateFieldFragment(resultSet, context, expr, state);
     case 'parameter':
-      return generateParameterFragment(field, resultSet, context, expr, state);
+      return generateParameterFragment(resultSet, context, expr, state);
     case 'filteredExpr':
-      return generateFilterFragment(field, resultSet, context, expr, state);
+      return generateFilterFragment(resultSet, context, expr, state);
     case 'all':
     case 'exclude':
-      return generateUngroupedFragment(field, resultSet, context, expr, state);
+      return generateUngroupedFragment(resultSet, context, expr, state);
     case 'genericSQLExpr':
       return Array.from(
-        stringsFromSQLExpression(field, resultSet, context, expr, state)
+        stringsFromSQLExpression(resultSet, context, expr, state)
       ).join('');
     case 'aggregate': {
       let agg = '';
       if (expr.function === 'sum') {
-        agg = generateSumFragment(field, resultSet, context, expr, state);
+        agg = generateSumFragment(resultSet, context, expr, state);
       } else if (expr.function === 'avg') {
-        agg = generateAvgFragment(field, resultSet, context, expr, state);
+        agg = generateAvgFragment(resultSet, context, expr, state);
       } else if (expr.function === 'count') {
-        agg = generateCountFragment(field, resultSet, context, expr, state);
+        agg = generateCountFragment(resultSet, context, expr, state);
       } else if (
         expr.function === 'min' ||
         expr.function === 'max' ||
         expr.function === 'distinct'
       ) {
-        agg = generateSymmetricFragment(field, resultSet, context, expr, state);
+        agg = generateSymmetricFragment(resultSet, context, expr, state);
       } else {
         throw new Error(
           `Internal Error: Unknown aggregate function ${expr.function}`
@@ -186,25 +184,15 @@ export function exprToSQL(
         'Internal Error: Function parameter fragment remaining during SQL generation'
       );
     case 'outputField':
-      return generateOutputFieldFragment(
-        field,
-        resultSet,
-        context,
-        expr,
-        state
-      );
+      return generateOutputFieldFragment(resultSet, context, expr, state);
     case 'function_call':
-      return generateFunctionCallExpression(
-        field,
-        resultSet,
-        context,
-        expr,
-        state
-      );
+      return generateFunctionCallExpression(resultSet, context, expr, state);
     case 'spread':
-      return generateSpread(field, resultSet, context, expr, state);
+      throw new Error(
+        "Internal Error: expandFunctionCall() failed to process node: 'spread'"
+      );
     case 'source-reference':
-      return generateSourceReference(field, resultSet, context, expr);
+      return generateSourceReference(resultSet, context, expr);
     case '+':
     case '-':
     case '*':
@@ -235,7 +223,7 @@ export function exprToSQL(
       const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
       const compare =
         expr.kids.right.node === 'stringLiteral'
-          ? field.parent.dialect.sqlLike(
+          ? context.dialect.sqlLike(
               likeIt,
               expr.kids.left.sql ?? '',
               expr.kids.right.literal
@@ -260,7 +248,7 @@ export function exprToSQL(
     case 'null':
       return 'NULL';
     case 'case':
-      return generateCaseSQL(field, expr);
+      return generateCaseSQL(expr);
     case '':
       return '';
     case 'filterCondition':
@@ -278,7 +266,7 @@ export function exprToSQL(
     case 'compositeField':
       return '{COMPOSITE_FIELD}';
     case 'filterMatch':
-      return generateAppliedFilter(field, context, expr);
+      return generateAppliedFilter(context, expr);
     case 'filterLiteral':
       return 'INTERNAL ERROR FILTER EXPRESSION VALUE SHOULD NOT BE USED';
     default:
@@ -291,7 +279,6 @@ export function exprToSQL(
 }
 
 function generateAppliedFilter(
-  field: QueryField,
   context: QueryStruct,
   filterMatchExpr: FilterMatchExpr
 ): string {
@@ -428,7 +415,6 @@ function getParamForArgIndex(params: FunctionParameterDef[], argIndex: number) {
 }
 
 function generateAsymmetricStringAggExpression(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   value: Expr,
@@ -443,12 +429,12 @@ function generateAsymmetricStringAggExpression(
       `Function \`string_agg\` does not support fanning out with an order by in ${dialectName}`
     );
   }
-  const valueSQL = generateDimFragment(field, resultSet, context, value, state);
+  const valueSQL = generateDimFragment(resultSet, context, value, state);
   const separatorSQL = separator
-    ? generateDimFragment(field, resultSet, context, separator, state)
+    ? generateDimFragment(resultSet, context, separator, state)
     : '';
 
-  return field.parent.dialect.sqlStringAggDistinct(
+  return context.dialect.sqlStringAggDistinct(
     distinctKey,
     valueSQL,
     separatorSQL
@@ -456,7 +442,6 @@ function generateAsymmetricStringAggExpression(
 }
 
 function generateAnalyticFragment(
-  field: QueryField,
   dialect: string,
   resultStruct: FieldInstanceResult,
   context: QueryStruct,
@@ -469,7 +454,6 @@ function generateAnalyticFragment(
 ): string {
   const isComplex = resultStruct.root().isComplexQuery;
   const partitionFields = getAnalyticPartitions(
-    field,
     resultStruct,
     partitionByFields
   );
@@ -525,7 +509,7 @@ function generateAnalyticFragment(
     }
 
     if (obSQL.length > 0) {
-      orderBy = ' ' + field.parent.dialect.sqlOrderBy(obSQL, 'analytical');
+      orderBy = ' ' + context.dialect.sqlOrderBy(obSQL, 'analytical');
     }
   }
 
@@ -552,7 +536,7 @@ function generateAnalyticFragment(
     between = `ROWS BETWEEN ${preceding} PRECEDING AND ${following} FOLLOWING`;
   }
 
-  const funcSQL = exprToSQL(field, resultStruct, context, expr, state);
+  const funcSQL = exprToSQL(resultStruct, context, expr, state);
 
   let retExpr = `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
   if (isComplex) {
@@ -562,7 +546,6 @@ function generateAnalyticFragment(
 }
 
 export function generateFunctionCallExpression(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   frag: FunctionCallNode,
@@ -574,7 +557,7 @@ export function generateFunctionCallExpression(
   const distinctKey =
     expressionIsAggregate(overload.returnType.expressionType) &&
     !isSymmetric &&
-    generateDistinctKeyIfNecessary(field, resultSet, context, frag.structPath);
+    generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
   const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
   if (
     frag.name === 'string_agg' &&
@@ -583,7 +566,6 @@ export function generateFunctionCallExpression(
     context.dialect.name !== 'snowflake'
   ) {
     return generateAsymmetricStringAggExpression(
-      field,
       resultSet,
       context,
       args[0],
@@ -601,7 +583,7 @@ export function generateFunctionCallExpression(
       );
     }
     const argsExpressions = args.map(arg => {
-      return generateDimFragment(field, resultSet, context, arg, state);
+      return generateDimFragment(resultSet, context, arg, state);
     });
     const orderBys = frag.kids.orderBy ?? [];
     const orderByExpressions = orderBys.map(ob => {
@@ -609,7 +591,7 @@ export function generateFunctionCallExpression(
         overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
       const expr =
         ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
-      return generateDimFragment(field, resultSet, context, expr, state);
+      return generateDimFragment(resultSet, context, expr, state);
     });
     return context.dialect.sqlAggDistinct(
       distinctKey,
@@ -634,7 +616,6 @@ export function generateFunctionCallExpression(
             return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
           });
         const orderBySQL = getFunctionOrderBy(
-          field,
           resultSet,
           context,
           state,
@@ -649,7 +630,7 @@ export function generateFunctionCallExpression(
           orderBySQL,
           aggregateLimit
         );
-        return exprToSQL(field, resultSet, context, funcCall, state);
+        return exprToSQL(resultSet, context, funcCall, state);
       }
     );
   } else {
@@ -671,13 +652,12 @@ export function generateFunctionCallExpression(
           return param.allowedTypes.every(t => isLiteral(t.evalSpace))
             ? arg
             : composeSQLExpr([
-                generateDimFragment(field, resultSet, context, arg, state),
+                generateDimFragment(resultSet, context, arg, state),
               ]);
         })
       : args;
     const orderBySql = frag.kids.orderBy
       ? getFunctionOrderBy(
-          field,
           resultSet,
           context,
           state,
@@ -699,7 +679,6 @@ export function generateFunctionCallExpression(
         return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
       });
       return generateAnalyticFragment(
-        field,
         context.dialect.name,
         resultSet,
         context,
@@ -711,12 +690,11 @@ export function generateFunctionCallExpression(
         orderBySql
       );
     }
-    return exprToSQL(field, resultSet, context, funcCall, state);
+    return exprToSQL(resultSet, context, funcCall, state);
   }
 }
 
 export function generateFieldFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: FieldnameNode,
@@ -726,7 +704,6 @@ export function generateFieldFragment(
   const fieldRef = context.getFieldByName(expr.path);
   if (hasExpression(fieldRef.fieldDef)) {
     const ret = exprToSQL(
-      field,
       resultSet,
       fieldRef.parent,
       fieldRef.fieldDef.e,
@@ -760,7 +737,6 @@ export function generateFieldFragment(
 }
 
 export function generateOutputFieldFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   _context: QueryStruct,
   frag: OutputFieldNode,
@@ -770,7 +746,6 @@ export function generateOutputFieldFragment(
 }
 
 export function generateParameterFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: ParameterNode,
@@ -780,13 +755,12 @@ export function generateParameterFragment(
   context.eventStream?.emit('source-argument-compiled', {name});
   const argument = context.arguments()[name];
   if (argument.value) {
-    return exprToSQL(field, resultSet, context, argument.value, state);
+    return exprToSQL(resultSet, context, argument.value, state);
   }
   throw new Error(`Can't generate SQL, no value for ${expr.path}`);
 }
 
 export function generateFilterFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: FilteredExpr,
@@ -794,12 +768,9 @@ export function generateFilterFragment(
 ): string {
   const allWhere = new AndChain(state.whereSQL);
   for (const cond of expr.kids.filterList) {
-    allWhere.add(
-      exprToSQL(field, resultSet, context, cond.e, state.withWhere())
-    );
+    allWhere.add(exprToSQL(resultSet, context, cond.e, state.withWhere()));
   }
   return exprToSQL(
-    field,
     resultSet,
     context,
     expr.kids.e,
@@ -808,13 +779,12 @@ export function generateFilterFragment(
 }
 
 export function generateDimFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: Expr,
   state: GenerateState
 ): string {
-  let dim = exprToSQL(field, resultSet, context, expr, state);
+  let dim = exprToSQL(resultSet, context, expr, state);
   if (state.whereSQL) {
     dim = `CASE WHEN ${state.whereSQL} THEN ${dim} END`;
   }
@@ -822,7 +792,6 @@ export function generateDimFragment(
 }
 
 export function generateUngroupedFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: UngroupNode,
@@ -847,7 +816,6 @@ export function generateUngroupedFragment(
   }
 
   const s = exprToSQL(
-    field,
     resultSet,
     context,
     expr.e,
@@ -873,14 +841,13 @@ function getDistinctKeySQL(
 }
 
 export function generateDistinctKeyIfNecessary(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   structPath: string[] | undefined
 ): string | undefined {
   let struct = context;
   if (structPath) {
-    struct = field.parent.getStructByName(structPath);
+    struct = context.getStructByName(structPath);
   }
   if (needsSymetricCalculation(struct, resultSet)) {
     return getDistinctKeySQL(struct, resultSet);
@@ -890,25 +857,23 @@ export function generateDistinctKeyIfNecessary(
 }
 
 export function generateSumFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: AggregateExpr,
   state: GenerateState
 ): string {
-  const dimSQL = generateDimFragment(field, resultSet, context, expr.e, state);
+  const dimSQL = generateDimFragment(resultSet, context, expr.e, state);
   const distinctKeySQL = generateDistinctKeyIfNecessary(
-    field,
     resultSet,
     context,
     expr.structPath
   );
   let ret;
   if (distinctKeySQL) {
-    if (field.parent.dialect.supportsSumDistinctFunction) {
-      ret = field.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
+    if (context.dialect.supportsSumDistinctFunction) {
+      ret = context.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
     } else {
-      ret = sqlSumDistinct(field.parent.dialect, dimSQL, distinctKeySQL);
+      ret = sqlSumDistinct(context.dialect, dimSQL, distinctKeySQL);
     }
   } else {
     ret = `SUM(${dimSQL})`;
@@ -917,28 +882,25 @@ export function generateSumFragment(
 }
 
 export function generateSymmetricFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: AggregateExpr,
   state: GenerateState
 ): string {
-  const dimSQL = generateDimFragment(field, resultSet, context, expr.e, state);
+  const dimSQL = generateDimFragment(resultSet, context, expr.e, state);
   const f =
     expr.function === 'distinct' ? 'count(distinct ' : expr.function + '(';
   return `${f}${dimSQL})`;
 }
 
 export function generateAvgFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: AggregateExpr,
   state: GenerateState
 ): string {
-  const dimSQL = generateDimFragment(field, resultSet, context, expr.e, state);
+  const dimSQL = generateDimFragment(resultSet, context, expr.e, state);
   const distinctKeySQL = generateDistinctKeyIfNecessary(
-    field,
     resultSet,
     context,
     expr.structPath
@@ -950,18 +912,14 @@ export function generateAvgFragment(
     }
     let sumDistinctSQL;
     let avgDistinctSQL;
-    if (field.parent.dialect.supportsSumDistinctFunction) {
-      avgDistinctSQL = field.parent.dialect.sqlSumDistinct(
+    if (context.dialect.supportsSumDistinctFunction) {
+      avgDistinctSQL = context.dialect.sqlSumDistinct(
         distinctKeySQL,
         dimSQL,
         'AVG'
       );
     } else {
-      sumDistinctSQL = sqlSumDistinct(
-        field.parent.dialect,
-        dimSQL,
-        distinctKeySQL
-      );
+      sumDistinctSQL = sqlSumDistinct(context.dialect, dimSQL, distinctKeySQL);
       avgDistinctSQL = `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${dimSQL} IS NOT NULL THEN ${countDistinctKeySQL} END),0)`;
     }
     return avgDistinctSQL;
@@ -971,7 +929,6 @@ export function generateAvgFragment(
 }
 
 export function generateCountFragment(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: AggregateExpr,
@@ -982,7 +939,7 @@ export function generateCountFragment(
 
   let struct = context;
   if (expr.structPath) {
-    struct = field.parent.getStructByName(expr.structPath);
+    struct = context.getStructByName(expr.structPath);
   }
   const joinName = struct.getJoinableParent().getIdentifier();
   const join = resultSet.root().joins.get(joinName);
@@ -1001,20 +958,7 @@ export function generateCountFragment(
   }
 }
 
-export function generateSpread(
-  field: QueryField,
-  _resultSet: FieldInstanceResult,
-  _context: QueryStruct,
-  _frag: SpreadExpr,
-  _state: GenerateState
-): string {
-  throw new Error(
-    `Unexpanded spread encountered during SQL generation for ${field.getIdentifier()}`
-  );
-}
-
 export function generateSourceReference(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   expr: SourceReferenceNode
@@ -1026,7 +970,7 @@ export function generateSourceReference(
   }
 }
 
-export function generateCaseSQL(field: QueryField, pf: CaseExpr): string {
+export function generateCaseSQL(pf: CaseExpr): string {
   const caseStmt = ['CASE'];
   if (pf.kids.caseValue !== undefined) {
     caseStmt.push(`${pf.kids.caseValue.sql}`);
@@ -1044,7 +988,6 @@ export function generateCaseSQL(field: QueryField, pf: CaseExpr): string {
 }
 
 export function getFunctionOrderBy(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   state: GenerateState,
@@ -1061,13 +1004,7 @@ export function getFunctionOrderBy(
           overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
         const expr =
           ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
-        const osql = generateDimFragment(
-          field,
-          resultSet,
-          context,
-          expr,
-          state
-        );
+        const osql = generateDimFragment(resultSet, context, expr, state);
         const dirsql =
           ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
         return `${osql}${dirsql}`;
@@ -1077,7 +1014,6 @@ export function getFunctionOrderBy(
 }
 
 export function getAnalyticPartitions(
-  field: QueryField,
   resultStruct: FieldInstanceResult,
   extraPartitionFields?: string[]
 ): string[] {
@@ -1098,7 +1034,6 @@ export function getAnalyticPartitions(
 }
 
 export function* stringsFromSQLExpression(
-  field: QueryField,
   resultSet: FieldInstanceResult,
   context: QueryStruct,
   e: GenericSQLExpr,
@@ -1113,7 +1048,7 @@ export function* stringsFromSQLExpression(
     yield str;
     const expr = subExprList.shift();
     if (expr) {
-      yield exprToSQL(field, resultSet, context, expr, state);
+      yield exprToSQL(resultSet, context, expr, state);
     }
   }
 }
@@ -1130,7 +1065,6 @@ function generateDistinctKeySQL(
     const pk = parent.getPrimaryKeyField(fieldRef.fieldDef);
     // Recursively generate the primary key SQL
     return generateFieldFragment(
-      fieldRef, // Use fieldRef as the field parameter
       resultSet,
       parent,
       {node: 'field', path: [pk.getIdentifier()]},
@@ -1141,7 +1075,6 @@ function generateDistinctKeySQL(
     let parentKeySQL = '';
     if (parentDistinctKey && parent.parent) {
       parentKeySQL = generateFieldFragment(
-        fieldRef, // Use fieldRef as the field parameter
         resultSet,
         parent.parent,
         {node: 'field', path: ['__distinct_key']},
