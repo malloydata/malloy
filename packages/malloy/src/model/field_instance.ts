@@ -58,7 +58,6 @@ export class FieldInstanceField implements FieldInstance {
 
   // Breaking circularity with query_field requires registratrion
   static exprCompiler?: (
-    field: QueryField,
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: Expr,
@@ -67,7 +66,6 @@ export class FieldInstanceField implements FieldInstance {
 
   static registerExpressionCompiler(
     compiler: (
-      field: QueryField,
       resultSet: FieldInstanceResult,
       context: QueryStruct,
       expr: Expr,
@@ -107,7 +105,6 @@ export class FieldInstanceField implements FieldInstance {
     // Normal field expression generation
     if (hasExpression(this.f.fieldDef)) {
       return FieldInstanceField.exprCompiler(
-        this.f,
         this.parent,
         this.f.parent,
         this.f.fieldDef.e
@@ -131,7 +128,6 @@ export class FieldInstanceField implements FieldInstance {
           );
         }
         const aliasValue = FieldInstanceField.exprCompiler(
-          this.f,
           this.parent,
           ancestor.parent,
           ancestor.structDef.e
@@ -707,7 +703,6 @@ export function sqlFullChildReference(
       );
     }
     parentRef = FieldInstanceField.exprCompiler(
-      expand.field,
       expand.result,
       struct.parent,
       struct.structDef.e
