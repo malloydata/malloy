@@ -1,6 +1,6 @@
-import {DuckDBDialect} from '../dialect';
-import {constantExprToSQL} from '../model/constant_expression_compiler';
-import type {Expr, Parameter} from '../model/malloy_types';
+import {DuckDBDialect} from '../../dialect';
+import {constantExprToSQL} from '../constant_expression_compiler';
+import type {Expr, Parameter} from '../malloy_types';
 
 describe('Constant Expression Compiler', () => {
   const dialect = new DuckDBDialect();
