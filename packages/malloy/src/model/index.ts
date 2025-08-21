@@ -63,3 +63,4 @@ export {
   getResultStructDefForView,
 } from './query_model_impl';
 export {indent, composeSQLExpr} from './utils';
+export {constantExprToSQL} from './constant_expression_compiler';
