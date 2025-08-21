@@ -144,6 +144,19 @@ export function getSourceInfo(code: string): SourceInfo {
   return info;
 }
 
+/**
+ * Rewrites text that is going to be presented to end users to avoid
+ * using terminology that is deprecated or changed.
+ *
+ * @param text raw text that is being used internally in Malloy
+ */
+export function modernizeTermsForUserText(text: string): string {
+  if (text === 'project') {
+    return 'select';
+  }
+  return text;
+}
+
 export interface ParseInfo {
   root: ParseTree;
   tokenStream: CommonTokenStream;

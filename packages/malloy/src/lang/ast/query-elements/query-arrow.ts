@@ -30,7 +30,7 @@ import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import type {View} from '../view-elements/view';
-import {checkRequiredGroupBys} from '../../../model/composite_source_utils';
+import {checkRequiredGroupBys} from '../../composite-source-utils';
 import type {ParameterSpace} from '../field-space/parameter-space';
 
 /**
@@ -78,19 +78,23 @@ export class QueryArrow extends QueryBase implements QueryElement {
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
     }
-    const {pipeline, annotation, outputStruct, name} =
-      this.view.pipelineComp(fieldSpace);
+    const {
+      pipeline: rhsPipeline,
+      annotation,
+      outputStruct,
+      name,
+    } = this.view.pipelineComp(fieldSpace);
 
     const query = {
       ...queryBase,
       name,
       annotation,
-      pipeline: [...queryBase.pipeline, ...pipeline],
+      pipeline: [...queryBase.pipeline, ...rhsPipeline],
     };
 
     const compositeResolvedSourceDef =
       query.compositeResolvedSourceDef ??
-      this.resolveCompositeSource(inputStruct, pipeline);
+      this.resolveCompositeSource(inputStruct, rhsPipeline);
 
     const segment = query.pipeline[0];
     if (segment !== undefined) {
@@ -111,10 +115,24 @@ export class QueryArrow extends QueryBase implements QueryElement {
       }
     }
 
+    const pipelineWithExpandedFieldUsage = [
+      // The base query (if it exists) will already have its `expandedFieldUsage` computed
+      ...queryBase.pipeline,
+      ...this.expandFieldUsage(
+        this.source instanceof Source
+          ? // If `source ->` then use the composite resolved struct,
+            compositeResolvedSourceDef ?? inputStruct
+          : // Otherwise just use the `inputStruct`
+            inputStruct,
+        rhsPipeline
+      ),
+    ];
+
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
+        pipeline: pipelineWithExpandedFieldUsage,
       },
       outputStruct,
       inputStruct,

@@ -27,7 +27,7 @@ interface SessionInfoForCompileQuery {
   type: 'compile_query';
   modelURL: string;
   queryString: string;
-  query: Malloy.Query;
+  query?: Malloy.Query;
 }
 
 type SessionInfo =
@@ -300,7 +300,12 @@ class SessionManager {
     request: Malloy.CompileQueryRequest,
     options?: OptionsBase
   ): Malloy.CompileQueryResponse & {session_id: string} {
-    const queryString = Malloy.queryToMalloy(request.query);
+    const queryString =
+      request.query_malloy ??
+      (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+    if (queryString === undefined) {
+      throw new Error('Expected query_malloy or query');
+    }
     const sessionInfo: SessionInfoForCompileQuery = {
       type: 'compile_query',
       modelURL: request.model_url,

@@ -224,14 +224,7 @@ export class DuckDBConnection extends DuckDBCommon {
           if (err) {
             reject(err);
           } else {
-            rows = JSON.parse(
-              JSON.stringify(rows, (_key, value) => {
-                if (typeof value === 'bigint') {
-                  return Number(value);
-                }
-                return value;
-              })
-            );
+            rows = processBigInts(rows);
             resolve({
               rows,
               totalRows: rows.length,
@@ -271,7 +264,7 @@ export class DuckDBConnection extends DuckDBCommon {
         break;
       }
       index++;
-      yield row;
+      yield processBigInts(row);
     }
   }
 
@@ -291,4 +284,15 @@ export class DuckDBConnection extends DuckDBCommon {
       }
     }
   }
+}
+
+function processBigInts(data: unknown) {
+  return JSON.parse(
+    JSON.stringify(data, (_key, value) => {
+      if (typeof value === 'bigint') {
+        return Number(value);
+      }
+      return value;
+    })
+  );
 }

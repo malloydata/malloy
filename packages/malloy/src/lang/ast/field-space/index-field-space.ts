@@ -21,14 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyFieldUsage} from '../../../model/composite_source_utils';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
 import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
   FieldUsage,
+  SourceDef,
 } from '../../../model/malloy_types';
 import {expressionIsScalar, TD} from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
 import {
   FieldReference,
   IndexFieldReference,
@@ -60,24 +62,40 @@ export class IndexFieldSpace extends QueryOperationSpace {
     }
   }
 
+  structDef(): SourceDef {
+    const connection = this.inputSpace().connectionName();
+    return {
+      type: 'query_result',
+      name: 'result',
+      dialect: this.dialectName(),
+      fields: [
+        {type: 'string', name: 'fieldName'},
+        {type: 'string', name: 'fieldPath'},
+        {type: 'string', name: 'fieldValue'},
+        {type: 'string', name: 'fieldType'},
+        {type: 'number', name: 'weight', numberType: 'integer'},
+      ],
+      connection,
+    };
+  }
+
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
       this.logError(
         'refinement-of-index-segment',
         'index query operations cannot be refined'
       );
-      return {type: 'index', indexFields: []};
+      return ErrorFactory.indexSegment;
     }
     let fieldUsage = emptyFieldUsage();
     const indexFields: IndexFieldDef[] = [];
-    const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
         let nextFieldUsage: FieldUsage[] | undefined = undefined;
-        let logTo: MalloyElement | undefined = undefined;
         const wild = this.expandedWild[name];
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
+          fieldUsage.push({path: wild.path});
           nextFieldUsage = wild.entry.typeDesc().fieldUsage;
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
@@ -88,19 +106,15 @@ export class IndexFieldSpace extends QueryOperationSpace {
           } else {
             indexFields.push(fieldRef.refToField);
             nextFieldUsage = check.found.typeDesc().fieldUsage;
-            logTo = fieldRef;
+            fieldUsage.push({path: fieldRef.path});
           }
         }
-        fieldUsage = this.applyNextFieldUsage(
-          source,
-          fieldUsage,
-          nextFieldUsage,
-          logTo
-        );
+        fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
       }
     }
     this._fieldUsage = fieldUsage;
-    return {type: 'index', indexFields};
+    const outputStruct = this.structDef();
+    return {type: 'index', indexFields, outputStruct};
   }
 
   addRefineFromFields(_refineThis: never) {}

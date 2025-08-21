@@ -29,6 +29,7 @@ import type {
   Signal,
   Spec,
   View,
+  Config,
 } from 'vega';
 import {
   renderNumericField,
@@ -114,7 +115,8 @@ function getLimitedData({
 
 export function generateBarChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: BarChartPluginInstance
+  plugin: BarChartPluginInstance,
+  vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -211,6 +213,7 @@ export function generateBarChartVegaSpecV2(
     chartType: 'bar',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent') || isLimitingSeries,
+    vegaConfig,
   });
 
   // Data limits
@@ -238,6 +241,7 @@ export function generateBarChartVegaSpecV2(
     xField,
     parentField: explore,
     parentTag: tag,
+    vegaConfig,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -277,6 +281,7 @@ export function generateBarChartVegaSpecV2(
         fieldRef: yRef,
         brushMeasureRangeSourceId,
         axisSettings: chartSettings.yAxis,
+        vegaConfig,
       })
     : null;
 
@@ -658,7 +663,10 @@ export function generateBarChartVegaSpecV2(
       contains: 'padding',
     },
     data: [valuesData],
-    padding: {...chartSettings.padding},
+    padding: {
+      ...chartSettings.padding,
+      bottom: xAxisSettings.hidden ? 0 : xAxisSettings.height,
+    },
     scales: [
       {
         name: 'xscale',
@@ -711,7 +719,6 @@ export function generateBarChartVegaSpecV2(
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
-        titleY: xAxisSettings.height,
         encode: {
           labels: {
             enter: {

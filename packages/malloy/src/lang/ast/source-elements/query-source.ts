@@ -49,6 +49,7 @@ export class QuerySource extends Source {
       name: `QuerySource-${uuidv4()}`,
       type: 'query_source',
       query: comp.query,
+      arguments: comp.query.sourceArguments,
     };
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return {

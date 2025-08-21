@@ -69,4 +69,8 @@ export class PassthroughSpace implements FieldSpace {
   accessProtectionLevel(): AccessModifierLabel {
     return this.realFS.accessProtectionLevel();
   }
+
+  connectionName(): string {
+    return this.realFS.connectionName();
+  }
 }

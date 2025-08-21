@@ -55,10 +55,17 @@ export abstract class FieldBase {
 
   constructor(
     public readonly field: Malloy.DimensionInfo,
-    public readonly parent: Field | undefined
+    public readonly parent: Field | undefined,
+    /**
+     * Performance optimization: Skip metadata tag parsing for synthetic fields.
+     * Used when creating internal RecordField instances that don't need metadata.
+     */
+    skipTagParsing = false
   ) {
     this.tag = renderTagFromAnnotations(this.field.annotations);
-    this.metadataTag = tagFor(this.field, '#(malloy) ');
+    this.metadataTag = skipTagParsing
+      ? this.tag
+      : tagFor(this.field, '#(malloy) ');
     this.path = parent ? [...parent.path, field.name] : [];
   }
 

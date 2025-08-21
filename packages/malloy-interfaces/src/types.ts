@@ -147,6 +147,43 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'name': 'BooleanType',
     'fields': {},
   },
+  'CalculateInfo': {
+    'type': 'struct',
+    'name': 'CalculateInfo',
+    'fields': {
+      'name': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'type': {
+        'type': 'AtomicType',
+        'optional': false,
+        'array': false,
+      },
+      'annotations': {
+        'type': 'Annotation',
+        'array': true,
+        'optional': true,
+      },
+    },
+  },
+  'CalculateOperation': {
+    'type': 'struct',
+    'name': 'CalculateOperation',
+    'fields': {
+      'name': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'field': {
+        'type': 'Field',
+        'optional': false,
+        'array': false,
+      },
+    },
+  },
   'Cell': {
     'type': 'union',
     'name': 'Cell',
@@ -174,6 +211,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'extend_model_url': {
         'type': 'string',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -226,11 +268,21 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'query': {
         'type': 'Query',
-        'optional': false,
+        'optional': true,
+        'array': false,
+      },
+      'query_malloy': {
+        'type': 'string',
+        'optional': true,
         'array': false,
       },
       'default_row_limit': {
         'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -293,6 +345,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'extend_model_url': {
         'type': 'string',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -510,6 +567,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'time_truncation': 'TimeTruncationFieldReference',
       'filtered_field': 'FilteredField',
       'literal_value': 'LiteralValueExpression',
+      'moving_average': 'MovingAverage',
     },
   },
   'Field': {
@@ -536,6 +594,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'measure': 'MeasureInfo',
       'join': 'JoinInfo',
       'view': 'ViewInfo',
+      'calculate': 'CalculateInfo',
     },
   },
   'File': {
@@ -851,6 +910,32 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'type': 'AnonymousQueryInfo',
         'array': true,
         'optional': false,
+      },
+    },
+  },
+  'MovingAverage': {
+    'type': 'struct',
+    'name': 'MovingAverage',
+    'fields': {
+      'field_reference': {
+        'type': 'Reference',
+        'optional': false,
+        'array': false,
+      },
+      'rows_preceding': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'rows_following': {
+        'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'partition_fields': {
+        'type': 'Reference',
+        'array': true,
+        'optional': true,
       },
     },
   },
@@ -1243,6 +1328,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'exclude_references': {
+        'type': 'boolean',
+        'optional': true,
+        'array': false,
+      },
       'compiler_needs': {
         'type': 'CompilerNeeds',
         'optional': true,
@@ -1282,11 +1372,21 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
       'query': {
         'type': 'Query',
-        'optional': false,
+        'optional': true,
+        'array': false,
+      },
+      'query_malloy': {
+        'type': 'string',
+        'optional': true,
         'array': false,
       },
       'default_row_limit': {
         'type': 'number',
+        'optional': true,
+        'array': false,
+      },
+      'exclude_references': {
+        'type': 'boolean',
         'optional': true,
         'array': false,
       },
@@ -1646,6 +1746,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'nest': 'Nest',
       'having': 'FilterOperation',
       'drill': 'DrillOperation',
+      'calculate': 'CalculateOperation',
     },
   },
   'ViewRefinement': {
@@ -1756,6 +1857,17 @@ export type BooleanLiteral = {
 
 export type BooleanType = {};
 
+export type CalculateInfo = {
+  name: string;
+  type: AtomicType;
+  annotations?: Array<Annotation>;
+};
+
+export type CalculateOperation = {
+  name: string;
+  field: Field;
+};
+
 export type CellType =
   | 'string_cell'
   | 'boolean_cell'
@@ -1803,6 +1915,7 @@ export type CellWithSQLNativeCell = {kind: 'sql_native_cell'} & SQLNativeCell;
 export type CompileModelRequest = {
   model_url: string;
   extend_model_url?: string;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -1816,8 +1929,10 @@ export type CompileModelResponse = {
 
 export type CompileQueryRequest = {
   model_url: string;
-  query: Query;
+  query?: Query;
+  query_malloy?: string;
   default_row_limit?: number;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -1834,6 +1949,7 @@ export type CompileSourceRequest = {
   model_url: string;
   name: string;
   extend_model_url?: string;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -1905,13 +2021,15 @@ export type ExpressionType =
   | 'field_reference'
   | 'time_truncation'
   | 'filtered_field'
-  | 'literal_value';
+  | 'literal_value'
+  | 'moving_average';
 
 export type Expression =
   | ExpressionWithFieldReference
   | ExpressionWithTimeTruncation
   | ExpressionWithFilteredField
-  | ExpressionWithLiteralValue;
+  | ExpressionWithLiteralValue
+  | ExpressionWithMovingAverage;
 
 export type ExpressionWithFieldReference = {
   kind: 'field_reference';
@@ -1929,18 +2047,28 @@ export type ExpressionWithLiteralValue = {
   kind: 'literal_value';
 } & LiteralValueExpression;
 
+export type ExpressionWithMovingAverage = {
+  kind: 'moving_average';
+} & MovingAverage;
+
 export type Field = {
   expression: Expression;
   annotations?: Array<Annotation>;
 };
 
-export type FieldInfoType = 'dimension' | 'measure' | 'join' | 'view';
+export type FieldInfoType =
+  | 'dimension'
+  | 'measure'
+  | 'join'
+  | 'view'
+  | 'calculate';
 
 export type FieldInfo =
   | FieldInfoWithDimension
   | FieldInfoWithMeasure
   | FieldInfoWithJoin
-  | FieldInfoWithView;
+  | FieldInfoWithView
+  | FieldInfoWithCalculate;
 
 export type FieldInfoWithDimension = {kind: 'dimension'} & DimensionInfo;
 
@@ -1949,6 +2077,8 @@ export type FieldInfoWithMeasure = {kind: 'measure'} & MeasureInfo;
 export type FieldInfoWithJoin = {kind: 'join'} & JoinInfo;
 
 export type FieldInfoWithView = {kind: 'view'} & ViewInfo;
+
+export type FieldInfoWithCalculate = {kind: 'calculate'} & CalculateInfo;
 
 export type File = {
   url: string;
@@ -2125,6 +2255,13 @@ export type ModelInfo = {
   entries: Array<ModelEntryValue>;
   annotations?: Array<Annotation>;
   anonymous_queries: Array<AnonymousQueryInfo>;
+};
+
+export type MovingAverage = {
+  field_reference: Reference;
+  rows_preceding?: number;
+  rows_following?: number;
+  partition_fields?: Array<Reference>;
 };
 
 export type Nest = {
@@ -2313,6 +2450,7 @@ export type Result = {
 export type RunIndexQueryRequest = {
   model_url: string;
   source_name: string;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -2324,8 +2462,10 @@ export type RunIndexQueryResponse = {
 
 export type RunQueryRequest = {
   model_url: string;
-  query: Query;
+  query?: Query;
+  query_malloy?: string;
   default_row_limit?: number;
+  exclude_references?: boolean;
   compiler_needs?: CompilerNeeds;
 };
 
@@ -2467,7 +2607,8 @@ export type ViewOperationType =
   | 'where'
   | 'nest'
   | 'having'
-  | 'drill';
+  | 'drill'
+  | 'calculate';
 
 export type ViewOperation =
   | ViewOperationWithGroupBy
@@ -2477,7 +2618,8 @@ export type ViewOperation =
   | ViewOperationWithWhere
   | ViewOperationWithNest
   | ViewOperationWithHaving
-  | ViewOperationWithDrill;
+  | ViewOperationWithDrill
+  | ViewOperationWithCalculate;
 
 export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
 
@@ -2494,6 +2636,10 @@ export type ViewOperationWithNest = {kind: 'nest'} & Nest;
 export type ViewOperationWithHaving = {kind: 'having'} & FilterOperation;
 
 export type ViewOperationWithDrill = {kind: 'drill'} & DrillOperation;
+
+export type ViewOperationWithCalculate = {
+  kind: 'calculate';
+} & CalculateOperation;
 
 export type ViewRefinement = {
   base: ViewDefinition;

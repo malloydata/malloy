@@ -676,7 +676,7 @@ export interface HasExpression {
 export function hasExpression<T extends FieldDef>(
   f: T
 ): f is T & Expression & HasExpression {
-  return 'e' in f;
+  return 'e' in f && f.e !== undefined;
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';
@@ -783,6 +783,12 @@ export interface BasicArrayDef
   join: 'many';
 }
 
+/**
+ * Create a clean FieldDef from a TypeDef descendent
+ * @param atd Usually a TypeDesc
+ * @param name
+ * @returns Field with `name` and no type meta data
+ */
 export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
   if (isBasicArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name);
@@ -795,7 +801,24 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
     const {type, fields} = atd;
     return {type, fields, join: 'one', name};
   }
-  return {...atd, name};
+  const ret = {name, type: atd.type};
+  switch (atd.type) {
+    case 'sql native':
+      return {...ret, rawType: atd.rawType};
+    case 'number': {
+      const numberType = atd.numberType;
+      return numberType ? {...ret, numberType} : ret;
+    }
+    case 'date': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'date', timeframe} : ret;
+    }
+    case 'timestamp': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'timestamp', timeframe} : ret;
+    }
+  }
+  return ret;
 }
 
 export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {
@@ -918,7 +941,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onFieldUsage?: FieldUsage[];
+  fieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1121,6 +1144,7 @@ export interface RawSegment extends Filtered {
   type: 'raw';
   fields: never[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
@@ -1129,7 +1153,26 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
 export type IndexFieldDef = RefToField;
 export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
-export interface IndexSegment extends Filtered {
+/**
+ * The compiler needs to know a number of things computed for a query.
+ * We've modified the fieldUsage code from composite sources to collect
+ * the information needed by the compiler and a query is processed
+ * as a final step to append this information.
+ *
+ *   0) An ordered list list of active joins
+ *   1) Each field that is referenced, even indirectly
+ *   2) Each join path ending in a count
+ *   3) Each join path ending in an assymmetric aggregate
+ *   4) Each join path ending in an analytic funtion
+ */
+
+export interface SegmentUsageSummary {
+  activeJoins?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
+}
+
+export interface IndexSegment extends Filtered, SegmentUsageSummary {
   type: 'index';
   indexFields: IndexFieldDef[];
   limit?: number;
@@ -1138,6 +1181,7 @@ export interface IndexSegment extends Filtered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -1146,9 +1190,18 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface FieldUsage {
   path: string[];
   at?: DocumentLocation;
+  uniqueKeyRequirement?: UniqueKeyRequirement;
+  analyticFunctionUse?: boolean;
 }
 
-export interface QuerySegment extends Filtered, Ordered {
+export function bareFieldUsage(fu: FieldUsage): boolean {
+  return (
+    fu.uniqueKeyRequirement === undefined &&
+    fu.analyticFunctionUse === undefined
+  );
+}
+
+export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
@@ -1157,6 +1210,8 @@ export interface QuerySegment extends Filtered, Ordered {
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
+  isRepeated: boolean;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
@@ -1170,11 +1225,19 @@ export interface TurtleDef extends NamedObject, Pipeline {
   requiredGroupBys?: string[][];
 }
 
+export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
+
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
+}
+
+export interface PartitionCompositeDesc {
+  partitionField: string;
+  partitions: {id: string; fields: string[]}[];
+  compositeFields: string[];
 }
 
 interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
@@ -1184,6 +1247,7 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   connection: string;
   primaryKey?: PrimaryKeyRef;
   dialect: string;
+  partitionComposite?: PartitionCompositeDesc;
 }
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;
@@ -1290,12 +1354,18 @@ export type SourceComponentInfo =
       sourceID?: string;
     };
 
+export type TurtleType = 'turtle';
+
+export type TurtleTypeDef = {
+  type: 'turtle';
+  pipeline: PipeSegment[];
+};
+
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
 // for "non-atomic" and even the AI couldn't think of the right word.
 export type NonAtomicType =
   | Exclude<JoinElementType, 'array' | 'record'>
-  | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
   | 'regular expression'
@@ -1304,8 +1374,11 @@ export interface NonAtomicTypeDef {
   type: NonAtomicType;
 }
 
-export type ExpressionValueType = AtomicFieldType | NonAtomicType;
-export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
+export type ExpressionValueType = AtomicFieldType | NonAtomicType | TurtleType;
+export type ExpressionValueTypeDef =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | TurtleTypeDef;
 export type BasicExpressionType = Exclude<
   ExpressionValueType,
   JoinElementType | 'turtle'
@@ -1321,6 +1394,9 @@ export interface AggregateUngrouping {
   ungroupedFields: string[][] | '*';
   fieldUsage: FieldUsage[];
   requiresGroupBy?: RequiredGroupBy[];
+  exclude: boolean;
+  path: string[];
+  refFields?: string[];
 }
 
 export type TypeInfo = {
@@ -1351,6 +1427,7 @@ interface BasicArrayExtTypeDef<TypeExtensions> {
 type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
+  | TurtleTypeDef
   | BasicArrayExtTypeDef<TypeExtensions>
   | RecordExtTypeDef<TypeExtensions>
   | RepeatedRecordExtTypeDef<TypeExtensions>
@@ -1796,5 +1873,29 @@ export const TD = {
     return x.type === y.type;
   },
 };
+
+/**
+ * Aggregate functions carry this meta data. Used to determine if
+ * a function requires the existence of a unique key. This used
+ * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
+ *
+ * The three states are:
+ *
+ * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
+ * 2. {isCount: true} - this is a COUNT aggregate
+ * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
+ */
+export type UniqueKeyRequirement = undefined | {isCount: boolean};
+
+export function mergeUniqueKeyRequirement(
+  existing: UniqueKeyRequirement,
+  newInfo: UniqueKeyRequirement
+): UniqueKeyRequirement {
+  if (!existing) return newInfo;
+  if (!newInfo) return existing;
+  return {
+    isCount: existing.isCount || newInfo.isCount,
+  };
+}
 
 // clang-format on

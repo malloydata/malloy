@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Model} from '../malloy';
+import {Model} from '../../malloy';
 import type {
   TableSourceDef,
   SQLSourceDef,
@@ -13,7 +13,7 @@ import type {
   CompositeSourceDef,
   ModelDef,
   SourceDef,
-} from '.';
+} from '../malloy_types';
 
 // Helper function to create a Model instance with a specific explore
 function createModelWithExplore(exploreDef: SourceDef): Model {
@@ -278,7 +278,8 @@ describe('Explore.getSourceComponents', () => {
   test('should return source info for query source explore', () => {
     // Create a model with a query source explore
     // We need to mock the PreparedQuery behavior for this test
-    const originalPreparedQuery = jest.requireActual('../malloy').PreparedQuery;
+    const originalPreparedQuery =
+      jest.requireActual('../../malloy').PreparedQuery;
     jest
       .spyOn(originalPreparedQuery.prototype, 'getPreparedResult')
       .mockReturnValue({

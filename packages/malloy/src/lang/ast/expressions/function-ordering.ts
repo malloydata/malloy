@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {FunctionOrderBy as ModelFunctionOrderBy} from '../../../model/malloy_types';
+import type {
+  FieldUsage,
+  FunctionOrderBy as ModelFunctionOrderBy,
+} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionIsScalar,
@@ -31,6 +34,9 @@ import type {ExpressionDef} from '../types/expression-def';
 import type {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {ExprIdReference} from './expr-id-reference';
+import {mergeFieldUsage} from '../../composite-source-utils';
+
+type FieldUsageSummary = FieldUsage[] | undefined;
 
 export class FunctionOrderBy extends MalloyElement {
   elementType = 'orderBy';
@@ -42,15 +48,27 @@ export class FunctionOrderBy extends MalloyElement {
     if (field) this.has({field});
   }
 
-  getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
+  computeAnalyticOrderBy(fs: FieldSpace): {
+    modelFunctionOrderBy: ModelFunctionOrderBy;
+    fieldUsage: FieldUsageSummary;
+  } {
+    let fieldUsage: FieldUsageSummary = undefined;
     if (!this.field) {
       this.logError(
         'analytic-order-by-missing-field',
         'analytic `order_by` must specify an aggregate expression or output field reference'
       );
-      return {node: 'functionOrderBy', e: {node: 'error'}, dir: this.dir};
+      return {
+        modelFunctionOrderBy: {
+          node: 'functionOrderBy',
+          e: {node: 'error'},
+          dir: this.dir,
+        },
+        fieldUsage,
+      };
     }
     const expr = this.field.getExpression(fs);
+    fieldUsage = expr.fieldUsage;
     if (expressionIsAggregate(expr.expressionType)) {
       // Aggregates are okay
     } else if (expressionIsScalar(expr.expressionType)) {
@@ -69,15 +87,28 @@ export class FunctionOrderBy extends MalloyElement {
         'analytic `order_by` must be scalar or aggregate'
       );
     }
-    return {node: 'functionOrderBy', e: expr.value, dir: this.dir};
+    return {
+      modelFunctionOrderBy: {
+        node: 'functionOrderBy',
+        e: expr.value,
+        dir: this.dir,
+      },
+      fieldUsage,
+    };
   }
 
-  getAggregateOrderBy(
+  computeAggregateOrderByWithUsage(
     fs: FieldSpace,
     allowExpression: boolean
-  ): ModelFunctionOrderBy {
+  ): {
+    modelFunctionOrderBy: ModelFunctionOrderBy;
+    fieldUsage: FieldUsageSummary;
+  } {
+    let fieldUsage: FieldUsageSummary = undefined;
+    const dir = this.dir || 'asc';
     if (this.field) {
       const expr = this.field.getExpression(fs);
+      fieldUsage = expr.fieldUsage;
       if (!expressionIsScalar(expr.expressionType)) {
         this.field.logError(
           'aggregate-order-by-not-scalar',
@@ -90,7 +121,14 @@ export class FunctionOrderBy extends MalloyElement {
           '`order_by` must be only `asc` or `desc` with no expression'
         );
       }
-      return {node: 'functionOrderBy', e: expr.value, dir: this.dir};
+      return {
+        modelFunctionOrderBy: {
+          node: 'functionOrderBy',
+          e: expr.value,
+          dir,
+        },
+        fieldUsage,
+      };
     } else {
       if (this.dir === undefined) {
         // This error should technically never happen because it can't parse this way
@@ -98,9 +136,14 @@ export class FunctionOrderBy extends MalloyElement {
           'aggregate-order-by-without-field-or-direction',
           'field or order direction must be specified'
         );
-        return {node: 'functionDefaultOrderBy', dir: 'asc'};
       }
-      return {node: 'functionDefaultOrderBy', dir: this.dir};
+      return {
+        modelFunctionOrderBy: {
+          node: 'functionDefaultOrderBy',
+          dir,
+        },
+        fieldUsage,
+      };
     }
   }
 }
@@ -112,14 +155,40 @@ export class FunctionOrdering extends ListOf<FunctionOrderBy> {
     super(list);
   }
 
-  getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy[] {
-    return this.list.map(el => el.getAnalyticOrderBy(fs));
+  getAnalyticOrderBy(fs: FieldSpace): {
+    orderBy: ModelFunctionOrderBy[];
+    fieldUsage: FieldUsageSummary;
+  } {
+    const ret: ModelFunctionOrderBy[] = [];
+    const fieldUsage: FieldUsageSummary[] = [];
+    for (const ob of this.list) {
+      const computed = ob.computeAnalyticOrderBy(fs);
+      ret.push(computed.modelFunctionOrderBy);
+      fieldUsage.push(computed.fieldUsage);
+    }
+    return {
+      orderBy: ret,
+      fieldUsage: mergeFieldUsage(...fieldUsage),
+    };
   }
 
   getAggregateOrderBy(
     fs: FieldSpace,
     allowExpression: boolean
-  ): ModelFunctionOrderBy[] {
-    return this.list.map(el => el.getAggregateOrderBy(fs, allowExpression));
+  ): {
+    orderBy: ModelFunctionOrderBy[];
+    fieldUsage: FieldUsageSummary;
+  } {
+    const ret: ModelFunctionOrderBy[] = [];
+    const fieldUsage: FieldUsageSummary[] = [];
+    for (const ob of this.list) {
+      const computed = ob.computeAggregateOrderByWithUsage(fs, allowExpression);
+      ret.push(computed.modelFunctionOrderBy);
+      fieldUsage.push(computed.fieldUsage);
+    }
+    return {
+      orderBy: ret,
+      fieldUsage: mergeFieldUsage(...fieldUsage),
+    };
   }
 }

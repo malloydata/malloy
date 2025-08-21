@@ -31,6 +31,7 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
     metadata: RenderMetadata,
     options: GetResultMetadataOptions
   ): void;
+  getStyleOverrides?(): Record<string, string>;
 }
 
 export interface SolidJSRenderPluginInstance<TMetadata = unknown>

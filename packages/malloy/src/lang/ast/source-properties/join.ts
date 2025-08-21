@@ -46,6 +46,7 @@ import {ErrorFactory} from '../error-factory';
 import type {ParameterSpace} from '../field-space/parameter-space';
 import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {LegalRefinementStage} from '../types/query-property-interface';
+import {mergeFieldUsage} from '../../composite-source-utils';
 
 export abstract class Join
   extends MalloyElement
@@ -63,7 +64,12 @@ export abstract class Join
     fs.newEntry(
       this.name.refString,
       this,
-      new JoinSpaceField(fs.parameterSpace(), this, fs.dialectName())
+      new JoinSpaceField(
+        fs.parameterSpace(),
+        this,
+        fs.dialectName(),
+        fs.connectionName()
+      )
     );
   }
 
@@ -124,19 +130,22 @@ export class KeyJoin extends Join {
       );
       if (pkey) {
         if (pkey.type === exprX.type) {
+          const keyPath = [this.name.refString, inStruct.primaryKey];
           inStruct.join = 'one';
           inStruct.onExpression = {
             node: '=',
             kids: {
               left: {
                 node: 'field',
-                path: [this.name.refString, inStruct.primaryKey],
+                path: keyPath,
                 at: this.keyExpr.location,
               },
               right: exprX.value,
             },
           };
-          inStruct.onFieldUsage = exprX.fieldUsage;
+          inStruct.fieldUsage = mergeFieldUsage(exprX.fieldUsage, [
+            {path: keyPath},
+          ]);
           return;
         } else {
           this.logError(
@@ -193,7 +202,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.onFieldUsage = exprX.fieldUsage;
+    inStruct.fieldUsage = exprX.fieldUsage;
   }
 
   getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {

@@ -170,16 +170,11 @@ export class TrinoDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
-    let ret = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
-    if (limit !== undefined) {
-      ret = `SLICE(${ret}, 1, ${limit})`;
-    }
-    return ret;
+    return `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

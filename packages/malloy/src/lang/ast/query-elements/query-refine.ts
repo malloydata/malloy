@@ -23,7 +23,6 @@
 
 import type {ParameterSpace} from '../field-space/parameter-space';
 import {StaticSourceSpace} from '../field-space/static-space';
-import {getFinalStruct} from '../struct-utils';
 import type {QueryComp} from '../types/query-comp';
 import type {QueryElement} from '../types/query-element';
 import type {View} from '../view-elements/view';
@@ -50,27 +49,34 @@ export class QueryRefine extends QueryBase implements QueryElement {
   ): QueryComp {
     const q = this.base.queryComp(isRefOk, parameterSpace);
     const inputFS = new StaticSourceSpace(q.inputStruct, 'public');
-    const resultPipe = this.refinement.refine(
+    const pipeline = this.refinement.refine(
       inputFS,
       q.query.pipeline,
       undefined
     );
     const query = {
       ...q.query,
-      pipeline: resultPipe,
+      pipeline,
     };
 
     const compositeResolvedSourceDef = this.resolveCompositeSource(
       q.inputStruct,
-      resultPipe
+      pipeline
+    );
+
+    const pipelineWithExpandedFieldUsage = this.expandFieldUsage(
+      compositeResolvedSourceDef ?? q.inputStruct,
+      pipeline
     );
 
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
+        pipeline: pipelineWithExpandedFieldUsage,
       },
-      outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
+      // TODO bleh
+      outputStruct: pipeline[pipeline.length - 1].outputStruct,
       inputStruct: q.inputStruct,
     };
   }
