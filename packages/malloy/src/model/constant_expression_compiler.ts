@@ -20,12 +20,6 @@ import {FieldInstanceResultRoot} from './field_instance';
 import type {JoinInstance} from './join_instance';
 
 /**
- * Result type for constant expression compilation.
- * Either contains the compiled SQL or an error message.
- */
-export type ConstantExpressionResult = {sql: string} | {error: string};
-
-/**
  * Custom error class for constant expression compilation errors.
  * Used to distinguish expected errors from unexpected ones.
  */
@@ -166,9 +160,13 @@ class ConstantQueryStruct extends QueryStruct {
   }
 }
 
+type ConstantExpressionResult =
+  | {sql: string; error?: undefined}
+  | {sql?: undefined; error: string};
+
 /**
  * Compiles an IR expression containing only constants and parameters to SQL.
- * This is useful for expressions that don't reference source fields or structs.
+ * This is useful for expressions that don't reference source fields.
  *
  * @param expr The expression to compile (should contain only literals, parameters, and operations on them)
  * @param dialect The SQL dialect to use for generation

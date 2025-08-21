@@ -13,7 +13,7 @@ import type {
   CompositeSourceDef,
   ModelDef,
   SourceDef,
-} from '.';
+} from '../model';
 
 // Helper function to create a Model instance with a specific explore
 function createModelWithExplore(exploreDef: SourceDef): Model {
