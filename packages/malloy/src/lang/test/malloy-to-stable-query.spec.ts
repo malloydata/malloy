@@ -224,6 +224,33 @@ describe('Malloy to Stable Query', () => {
         logs: [],
       });
     });
+    test('filter parameter is passed properly', () => {
+      idempotent('run: a(p is f`foo`) -> by_carrier', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+              parameters: [
+                {
+                  name: 'p',
+                  value: {
+                    kind: 'filter_expression_literal',
+                    filter_expression_value: 'foo',
+                  },
+                },
+              ],
+            },
+            view: {
+              kind: 'view_reference',
+              name: 'by_carrier',
+            },
+          },
+        },
+        logs: [],
+      });
+    });
   });
   describe('drill', () => {
     test('drill clauses with all the literal types, as well as a filter string comparison', () => {
