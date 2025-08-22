@@ -901,6 +901,17 @@ export class MalloyToQuery
       return {kind: 'number_literal', number_value: n};
     } else if (literalCx instanceof parse.ExprNULLContext) {
       return {kind: 'null_literal'};
+    } else if (literalCx instanceof parse.FilterString_stubContext) {
+      const filterContext = literalCx.getChild(0);
+      if (filterContext instanceof parse.FilterStringContext) {
+        const filterString = this.getFilterString(filterContext);
+        if (filterString) {
+          return {
+            kind: 'filter_expression_literal',
+            filter_expression_value: filterString,
+          };
+        }
+      }
     }
     return null;
   }
