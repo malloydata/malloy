@@ -39,7 +39,7 @@ export function compileSQLInterpolation(
     if (isSegmentSQL(segment)) {
       selectStr += segment.sql;
       parenAlready = segment.sql.match(/\(\s*$/) !== null;
-    } else {
+    } else if (typeof segment === 'string') {
       // TODO catch exceptions and throw errors ...
       if (!queryModel) {
         if (!partialModel) {
@@ -58,6 +58,8 @@ export function compileSQLInterpolation(
       ).sql;
       selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
       parenAlready = false;
+    } else {
+
     }
   }
   return {
