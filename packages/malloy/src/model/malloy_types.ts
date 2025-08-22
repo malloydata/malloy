@@ -1181,6 +1181,7 @@ export interface SegmentUsageSummary {
 }
 
 export interface IndexSegment extends Filtered, SegmentUsageSummary {
+  definitions?: Record<string, Expr>;
   type: 'index';
   indexFields: IndexFieldDef[];
   limit?: number;
@@ -1210,6 +1211,7 @@ export function bareFieldUsage(fu: FieldUsage): boolean {
 }
 
 export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
+  definitions?: Record<string, Expr>;
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];

@@ -112,15 +112,10 @@ export class QueryArrow extends QueryBase implements QueryElement {
         ? compositeResolvedSourceDef ?? viewInput
         : viewInput;
 
-    const pipelineWithResolvedReferences = this.resolvePipelineReferences(
-      pipeline,
-      pipelineSource
-    );
-
     const pipelineWithExpandedFieldUsage = [
       // The base query (if it exists) will already have its `expandedFieldUsage` computed
       ...queryBase.pipeline,
-      ...this.expandFieldUsage(pipelineSource, pipelineWithResolvedReferences),
+      ...this.expandFieldUsage(pipelineSource, pipeline),
     ];
 
     const finalQuery = {
