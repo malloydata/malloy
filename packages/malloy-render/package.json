@@ -3,7 +3,7 @@
   "version": "0.0.307",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
-  "types": "dist/index.d.ts",
+  "types": "dist/module/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
