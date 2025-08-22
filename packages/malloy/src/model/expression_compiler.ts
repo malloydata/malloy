@@ -28,6 +28,7 @@ import type {
   AggregateExpr,
   SourceReferenceNode,
   CaseExpr,
+  ColumnNode,
 } from './malloy_types';
 import type {
   FilterParserResponse,
@@ -138,6 +139,8 @@ export function exprToSQL(
   }
 
   switch (expr.node) {
+    case 'column':
+      return generateColumnFragment(field, resultSet, context, expr, state);
     case 'field':
       return generateFieldFragment(resultSet, context, expr, state);
     case 'parameter':
@@ -692,6 +695,27 @@ export function generateFunctionCallExpression(
     }
     return exprToSQL(resultSet, context, funcCall, state);
   }
+}
+
+export function generateColumnFragment(
+  _field: QueryField,
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  expr: ColumnNode,
+  _state: GenerateState
+): string {
+  // TODO the whole point is to NOT do this...
+  const fieldRef = context.getFieldByName(expr.path);
+  return sqlFullChildReference(
+    fieldRef.parent,
+    fieldRef.fieldDef.name,
+    fieldRef.parent.structDef.type === 'record'
+      ? {
+          result: resultSet,
+          field: fieldRef,
+        }
+      : undefined
+  );
 }
 
 export function generateFieldFragment(
