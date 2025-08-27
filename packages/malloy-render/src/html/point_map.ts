@@ -33,7 +33,9 @@ import type {Cell, CellBase, Field} from '../data_tree';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Cell): string | number {
-    if (data.isNumber() || data.isString()) {
+    if (data.isNumber()) {
+      return Number(data.value);
+    } else if (data.isString()) {
       return data.value;
     } else if (data.isTime()) {
       return timeToString(

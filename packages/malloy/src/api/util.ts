@@ -133,7 +133,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       }
       return {kind: 'boolean_cell', boolean_value: value};
     } else if (field.type.kind === 'number_type') {
-      if (typeof value !== 'number') {
+      if (typeof value !== 'number' && typeof value !== 'bigint') {
         throw new Error(`Invalid number ${value}`);
       }
       return {kind: 'number_cell', number_value: value};

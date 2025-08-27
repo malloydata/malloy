@@ -103,7 +103,12 @@ function getLimitedData({
   const barLimitTag = chartTag.numeric('x', 'limit');
   const barLimit =
     barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
-  const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit);
+  const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit).map(v => {
+    if (typeof v === 'bigint') {
+      return Number(v);
+    }
+    return v;
+  });
 
   return {
     seriesValuesToPlot,
@@ -192,9 +197,9 @@ export function generateBarChartVegaSpecV2(
   for (const name of settings.yChannel.fields) {
     const field = explore.fieldAt(name);
     const min = field.minNumber;
-    if (min !== undefined) yMin = Math.min(yMin, min);
+    if (min !== undefined) yMin = Math.min(yMin, Number(min));
     const max = field.maxNumber;
-    if (max !== undefined) yMax = Math.max(yMax, max);
+    if (max !== undefined) yMax = Math.max(yMax, Number(max));
   }
 
   // Final axis domain, with 0 boundary so bars always start at 0

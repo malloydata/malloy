@@ -84,7 +84,12 @@ function getLimitedData({
     chartTag.numeric('series', 'limit') ??
     Math.min(maxSeries, seriesField?.valueSet.size ?? 1);
   const seriesValuesToPlot = seriesField
-    ? [...seriesField.valueSet.values()].slice(0, seriesLimit)
+    ? [...seriesField.valueSet.values()].slice(0, seriesLimit).map(v => {
+        if (typeof v === 'bigint') {
+          return Number(v);
+        }
+        return v;
+    })
     : [];
 
   const refinedMaxSizePerBar =
@@ -98,7 +103,12 @@ function getLimitedData({
   const barLimitTag = chartTag.numeric('x', 'limit');
   const barLimit =
     barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
-  const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit);
+  const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit).map(v => {
+    if (typeof v === 'bigint') {
+      return Number(v);
+    }
+    return v;
+  });
 
   return {
     seriesValuesToPlot,
@@ -180,9 +190,9 @@ export function generateBarChartVegaSpec(
   for (const name of settings.yChannel.fields) {
     const field = explore.fieldAt(name);
     const min = field.minNumber;
-    if (min !== undefined) yMin = Math.min(yMin, min);
+    if (min !== undefined) yMin = Math.min(yMin, Number(min));
     const max = field.maxNumber;
-    if (max !== undefined) yMax = Math.max(yMax, max);
+    if (max !== undefined) yMax = Math.max(yMax, Number(max));
   }
 
   // Final axis domain, with 0 boundary so bars always start at 0
@@ -711,7 +721,12 @@ export function generateBarChartVegaSpec(
         type: 'band',
         domain:
           isDimensionalSeries && seriesField && shouldShareSeriesDomain
-            ? [...seriesField!.valueSet]
+            ? [...seriesField!.valueSet]?.map(v => {
+                if (typeof v === 'bigint') {
+                  return Number(v);
+                }
+                return v;
+              })
             : {data: 'values', field: 'series'},
         range: {
           signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,

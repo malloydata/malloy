@@ -64,19 +64,19 @@ export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
         // Do nothing.
         break;
       case DataVolumeUnit.Kilobytes:
-        data_volume = data_volume / HTMLDataVolumeRenderer.kbMultiplier;
+        data_volume = Number(data_volume) / HTMLDataVolumeRenderer.kbMultiplier;
         unit = 'KB';
         break;
       case DataVolumeUnit.Megabytes:
-        data_volume = data_volume / HTMLDataVolumeRenderer.mbMultiplier;
+        data_volume = Number(data_volume) / HTMLDataVolumeRenderer.mbMultiplier;
         unit = 'MB';
         break;
       case DataVolumeUnit.Gigabytes:
-        data_volume = data_volume / HTMLDataVolumeRenderer.gbMultiplier;
+        data_volume = Number(data_volume) / HTMLDataVolumeRenderer.gbMultiplier;
         unit = 'GB';
         break;
       case DataVolumeUnit.Terabytes:
-        data_volume = data_volume / HTMLDataVolumeRenderer.tbMultiplier;
+        data_volume = Number(data_volume) / HTMLDataVolumeRenderer.tbMultiplier;
         unit = 'TB';
         break;
     }

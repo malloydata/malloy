@@ -40,4 +40,10 @@ source: logos is duckdb.table("static/data/logos.csv") extend {
     group_by: brand
     nest: list_detail_renderers
   }
+
+  #(story)
+  # list_detail
+  view: with_bigint_id is {
+    select: id, brand, logo
+  }
 };

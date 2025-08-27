@@ -49,7 +49,7 @@ export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
     throw new Error('Invalid field type for bar chart.');
   }
 
-  getDataValue(data: Cell): Date | string | number | null {
+  getDataValue(data: Cell): Date | string | number | bigint | null {
     if (data.isNull()) {
       return null;
     } else if (data.isTime()) {

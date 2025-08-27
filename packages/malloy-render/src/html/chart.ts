@@ -30,7 +30,7 @@ import {normalizeToTimezone} from '../html/utils';
 import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
 import type {Cell, Field, RecordCell} from '../data_tree';
 
-type MappedRow = {[p: string]: string | number | Date | undefined | null};
+type MappedRow = {[p: string]: string | number | bigint | Date | undefined | null};
 
 export abstract class HTMLChartRenderer implements Renderer {
   size: string;
@@ -39,14 +39,12 @@ export abstract class HTMLChartRenderer implements Renderer {
     field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal';
 
-  abstract getDataValue(data: Cell): Date | string | number | null | undefined;
+  abstract getDataValue(data: Cell): Date | string | number | bigint | null | undefined;
 
   mapData(data: RecordCell[]): MappedRow[] {
     const mappedRows: MappedRow[] = [];
     for (const row of data) {
-      const mappedRow: {
-        [p: string]: string | number | Date | undefined | null;
-      } = {};
+      const mappedRow: MappedRow = {};
       for (const f of row.field.fields) {
         let dataValue = this.getDataValue(row.column(f.name));
         if (dataValue instanceof Date) {

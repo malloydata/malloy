@@ -100,7 +100,7 @@ export function getRangeSize(range: [number, number]) {
 }
 
 export function formatTimeUnit(
-  value: number,
+  value: number | bigint,
   unit: DurationUnit,
   options: {numFormat?: string; terse?: boolean} = {}
 ) {
@@ -139,7 +139,7 @@ const multiplierMap = new Map<DurationUnit, number>([
 
 export function getText(
   field: Field,
-  value: number,
+  value: number | bigint,
   options: {
     durationUnit?: string;
   }
@@ -153,7 +153,7 @@ export function getText(
   const terse = tag.has('duration', 'terse');
 
   let currentDuration = value;
-  let currentUnitValue = 0;
+  let currentUnitValue: number | bigint = 0;
   let durationParts: string[] = [];
   let foundUnit = false;
 
@@ -166,8 +166,14 @@ export function getText(
       continue;
     }
 
-    currentUnitValue = currentDuration % multiplier;
-    currentDuration = Math.floor((currentDuration /= multiplier));
+    if (typeof currentDuration === 'bigint') {
+      currentUnitValue = currentDuration % BigInt(multiplier);
+      currentDuration = currentDuration /= BigInt(multiplier);
+    } else {
+      currentUnitValue = currentDuration % multiplier;
+      currentDuration = Math.floor((currentDuration /= multiplier));
+    }
+    
 
     if (currentUnitValue > 0) {
       durationParts = [

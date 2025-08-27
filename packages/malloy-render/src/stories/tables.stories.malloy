@@ -287,3 +287,11 @@ source: drilling is duckdb.sql("SELECT 1 as one") -> {
     order_by: one
   }
 }
+
+source: logos is duckdb.table("static/data/logos.csv") extend {
+  #(story)
+  # table
+  view: with_bigint_id is {
+    select: id, brand, logo
+  }
+}

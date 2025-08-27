@@ -175,9 +175,9 @@ export function generateLineChartVegaSpecV2(
   for (const name of settings.yChannel.fields) {
     const field = explore.fieldAt(name);
     const min = field.minNumber;
-    if (min !== undefined) yMin = Math.min(yMin, min);
+    if (min !== undefined) yMin = Math.min(yMin, Number(min));
     const max = field.maxNumber;
-    if (max !== undefined) yMax = Math.max(yMax, max);
+    if (max !== undefined) yMax = Math.max(yMax, Number(max));
   }
 
   const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
@@ -746,7 +746,7 @@ export function generateLineChartVegaSpecV2(
               ? [Number(xField.minValue), Number(xField.maxValue)]
               : xIsBoolean
               ? [true, false]
-              : [...xField.valueSet]
+              : [...xField.valueSet].map(v => (typeof v === 'bigint' ? Number(v) : v))
             : {data: 'values', field: 'x'},
         range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,

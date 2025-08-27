@@ -12,8 +12,8 @@ import {FieldBase} from './base';
 import {renderDateTimeField} from '../../component/render-numeric-field';
 
 export class NumberField extends FieldBase {
-  public min: number | undefined = undefined;
-  public max: number | undefined = undefined;
+  public min: number | bigint | undefined = undefined;
+  public max: number | bigint | undefined = undefined;
   private _maxString: string | undefined = undefined;
   constructor(
     public readonly field: NumberFieldInfo,
@@ -22,7 +22,7 @@ export class NumberField extends FieldBase {
     super(field, parent);
   }
 
-  registerValue(value: number) {
+  registerValue(value: number | bigint) {
     this.valueSet.add(value);
     if (this.max === undefined || value > this.max) {
       this.max = value;
