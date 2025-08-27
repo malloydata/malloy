@@ -5,7 +5,7 @@ import type {Cell} from './cells';
 export type DrillEntry =
   | {
       field: Field;
-      value: string | number | boolean | Date | null;
+      value: string | number | bigint | boolean | Date | null;
     }
   | {where: string};
 

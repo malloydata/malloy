@@ -2274,7 +2274,7 @@ export type NullCell = {};
 export type NullLiteral = {};
 
 export type NumberCell = {
-  number_value: number;
+  number_value: number | bigint;
 };
 
 export type NumberLiteral = {
