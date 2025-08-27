@@ -173,7 +173,6 @@ export function getText(
       currentUnitValue = currentDuration % multiplier;
       currentDuration = Math.floor((currentDuration /= multiplier));
     }
-    
 
     if (currentUnitValue > 0) {
       durationParts = [

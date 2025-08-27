@@ -746,7 +746,9 @@ export function generateLineChartVegaSpecV2(
               ? [Number(xField.minValue), Number(xField.maxValue)]
               : xIsBoolean
               ? [true, false]
-              : [...xField.valueSet].map(v => (typeof v === 'bigint' ? Number(v) : v))
+              : [...xField.valueSet].map(v =>
+                  typeof v === 'bigint' ? Number(v) : v
+                )
             : {data: 'values', field: 'x'},
         range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,

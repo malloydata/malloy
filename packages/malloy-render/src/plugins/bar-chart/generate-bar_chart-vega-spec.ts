@@ -103,12 +103,14 @@ function getLimitedData({
   const barLimitTag = chartTag.numeric('x', 'limit');
   const barLimit =
     barLimitTag ?? Math.floor(chartSettings.plotWidth / maxSizePerXGroup);
-  const barValuesToPlot = [...xField.valueSet.values()].slice(0, barLimit).map(v => {
-    if (typeof v === 'bigint') {
-      return Number(v);
-    }
-    return v;
-  });
+  const barValuesToPlot = [...xField.valueSet.values()]
+    .slice(0, barLimit)
+    .map(v => {
+      if (typeof v === 'bigint') {
+        return Number(v);
+      }
+      return v;
+    });
 
   return {
     seriesValuesToPlot,
