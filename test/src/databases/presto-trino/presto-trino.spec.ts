@@ -28,6 +28,19 @@ describe.each(runtimes.runtimeList)(
       ).malloyResultMatches(runtime, {n: 1});
     });
 
+    // ok here is the integer hierarchy
+    // JS Number 0 .. Number.MAX_SAFE_INTEGER ( approx 10^16 )
+    // Presto BIGINT 0 ... 2^63-1 ( roughly 10^19)
+    // Presto DECIMAL(N, 0) 10^30
+    // JS BigInt, 10^memory size
+    test('mtoy big number test', async () => {
+      const n = runtime.dialect.sqlMaybeQuoteIdentifier('n');
+      const bign = BigInt('1234567891234567');
+      await expect(
+        `run: ${databaseName}.sql("""SELECT ${bign} as ${n}, typeof(${bign}) as ntype""")`
+      ).malloyResultMatches(runtime, {n: bign, ntype: 'bigint'});
+    });
+
     describe('HLL Window Functions', () => {
       it.when(presto)(
         `hll_accumulate_moving function - ${databaseName}`,

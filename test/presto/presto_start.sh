@@ -14,8 +14,10 @@ bigquery.credentials-key=$BQ_CREDENTIALS_KEY
 EOF
 
 # run docker
+echo Starting Docker
 docker run -p ${PRESTO_PORT:-8080}:8080 -d -v ./.tmp/bigquery-pesto.properties:/opt/presto-server/etc/catalog/bigquery.properties --name presto-malloy prestodb/presto:0.287
 
+echo -n "Waiting for Presto to start..."
 # wait for server to start
 counter=0
 while ! docker logs presto-malloy 2>&1 | grep -q "SERVER STARTED"
@@ -31,6 +33,8 @@ do
     exit 1
     break
   fi
+  echo -n .
 done
 
+echo ""
 echo "Presto running on port 8080"

@@ -184,9 +184,11 @@ expect.extend({
       }
     }
     let matchRow = 0;
+    const toVal = x =>
+      typeof x === 'bigint' ? x.toString() : JSON.stringify(x);
     for (const expected of allRows) {
       for (const [name, value] of Object.entries(expected)) {
-        const pExpect = JSON.stringify(value);
+        const pExpect = toVal(value);
         const row = allRows.length > 1 ? `[${matchRow}]` : '';
         const expected = `Expected ${row}{${name}: ${pExpect}}`;
         try {
@@ -206,7 +208,7 @@ expect.extend({
             resultPath.push(nestParse[pathCursor + 1]);
           }
           const got = result.data.path(...resultPath).value;
-          const pGot = JSON.stringify(got);
+          const pGot = toVal(got);
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
