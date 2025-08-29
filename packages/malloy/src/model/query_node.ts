@@ -275,7 +275,16 @@ export class QueryStruct {
   pathAliasMap: Map<string, string>;
   dialect: Dialect;
   connectionName: string;
-  recordAlias?: string;
+  /**
+   * For fields which are a record, but the value is an expression
+   * we capture the context needed to generate the expression in
+   * QueryQuery.expandFields. Later in the compilation if a
+   * reference passes through this struct, this will call
+   * the expression compiler with the correct context
+   * to compute the record value.
+   */
+  computeRecordExpression?: () => string;
+  recordValue?: string;
 
   constructor(
     public structDef: StructDef,
@@ -332,10 +341,6 @@ export class QueryStruct {
       return this.parent.findFirstDialect();
     }
     throw new Error('Cannot create QueryStruct from record with model parent');
-  }
-
-  informOfAliasValue(av: string): void {
-    this.recordAlias = av;
   }
 
   maybeEmitParameterizedSourceUsage() {
@@ -502,8 +507,11 @@ export class QueryStruct {
     // will have joins and thus be in the namespace. We can't compute it here
     // because we don't have access to the Query to call exprToSQL.
     if (this.structDef.type === 'record' && hasExpression(this.structDef)) {
-      if (this.recordAlias) {
-        return this.recordAlias;
+      if (this.computeRecordExpression) {
+        if (!this.recordValue) {
+          this.recordValue = this.computeRecordExpression();
+        }
+        return this.recordValue;
       }
       throw new Error('INTERNAL ERROR, record field alias not pre-computed');
     }
