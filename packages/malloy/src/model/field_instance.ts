@@ -111,31 +111,6 @@ export class FieldInstanceField implements FieldInstance {
       );
     }
 
-    // Walk the tree and compute record aliases if needed
-    for (
-      let ancestor: QueryStruct | undefined = this.f.parent;
-      ancestor !== undefined;
-      ancestor = ancestor.parent
-    ) {
-      if (
-        ancestor.structDef.type === 'record' &&
-        hasExpression(ancestor.structDef) &&
-        ancestor.recordAlias === undefined
-      ) {
-        if (!ancestor.parent) {
-          throw new Error(
-            'Inconceivable record ancestor with expression but no parent'
-          );
-        }
-        const aliasValue = FieldInstanceField.exprCompiler(
-          this.parent,
-          ancestor.parent,
-          ancestor.structDef.e
-        );
-        ancestor.informOfAliasValue(aliasValue);
-      }
-    }
-
     return sqlFullChildReference(
       this.f.parent,
       this.f.fieldDef.name,

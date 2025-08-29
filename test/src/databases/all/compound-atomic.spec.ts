@@ -441,6 +441,20 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {x: 'Mark'});
       });
+      test('record in join references join fields', async () => {
+        const id = quote('id');
+        const x = quote('x');
+        const y = quote('y');
+        await expect(`
+          source: joined_data is ${conName}.sql("""
+            SELECT 1 as ${id}, 10 as ${x}, 20 as ${y}
+          """) extend { dimension: rec is {xysum is x + y} }
+          source: base is ${conName}.sql("""SELECT 1 as ${id} """) extend {
+            join_one: jd is joined_data on jd.id = id
+          }
+          run: base -> { select: result is jd.rec.xysum }
+        `).malloyResultMatches(runtime, {result: 30});
+      });
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {

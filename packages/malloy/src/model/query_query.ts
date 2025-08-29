@@ -329,7 +329,6 @@ export class QueryQuery extends QueryField {
         if (usage.path.length === 0) {
           resultStruct.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
-          this.findRecordAliases(this.parent, usage.path);
           this.addDependantPath(
             resultStruct,
             this.parent,
@@ -338,9 +337,6 @@ export class QueryQuery extends QueryField {
           );
         }
         continue;
-      }
-      if (usage.path.length > 1) {
-        this.findRecordAliases(this.parent, usage.path);
       }
     }
 
@@ -393,37 +389,6 @@ export class QueryQuery extends QueryField {
             groupSet: -1,
           });
         }
-      }
-    }
-  }
-
-  /*
-   ** Later on, when a record is referenced, the context needed to translate the
-   ** reference won't exist, so we translate them all in prepare. The better fix
-   ** involves understanding more about what a "translation state" is and how
-   ** to create it at the moment when a field is referenced, but I couldn't do
-   ** that at the time I did this work. TODO come back and do that.
-   */
-  findRecordAliases(context: QueryStruct, path: string[]) {
-    for (const seg of path) {
-      const field = context.getChildByName(seg);
-      if (!field) {
-        throw new Error(
-          'findRecordAliases: field not found: ' + path.join('.')
-        );
-      }
-      if (field instanceof QueryFieldStruct) {
-        const qs = field.queryStruct;
-        if (
-          qs.structDef.type === 'record' &&
-          hasExpression(qs.structDef) &&
-          qs.parent
-        ) {
-          qs.informOfAliasValue(
-            exprToSQL(this.rootResult, qs.parent, qs.structDef.e)
-          );
-        }
-        context = qs;
       }
     }
   }
@@ -503,6 +468,36 @@ export class QueryQuery extends QueryField {
     }
   }
 
+  /**
+   * Recursively walks the input QueryStruct tree and sets up lazy expression
+   * compilation for all records with computed expressions, so that records with
+   * expression values have the correct context for evaluating them if needed.
+   *
+   * @param resultStruct - The FieldInstanceResult containing compilation context
+   * @param source - The QueryStruct to traverse (initially the query's parent/input)
+   */
+  expandSource(resultStruct: FieldInstanceResult, source: QueryStruct) {
+    for (const field of source.nameMap.values()) {
+      if (field instanceof QueryFieldStruct) {
+        const qs = field.queryStruct;
+
+        // Set up closure if this is a record with expression
+        if (
+          qs.structDef.type === 'record' &&
+          hasExpression(qs.structDef) &&
+          qs.parent
+        ) {
+          const parent = qs.parent;
+          const e = qs.structDef.e;
+          qs.computeRecordExpression = () => exprToSQL(resultStruct, parent, e);
+        }
+
+        // Recurse into this structure
+        this.expandSource(resultStruct, qs);
+      }
+    }
+  }
+
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
     which: 'where' | 'having'
@@ -532,6 +527,7 @@ export class QueryQuery extends QueryField {
 
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
+      this.expandSource(this.rootResult, this.parent);
       // Add the root base join to the joins map
       this.rootResult.addStructToJoin(this.parent, undefined);
 
