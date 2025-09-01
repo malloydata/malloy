@@ -15,7 +15,7 @@ import {
   TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
   RegexMatchExpr,
@@ -45,7 +45,7 @@ const extractionMap: Record<string, string> = {
   'day_of_year': 'doy',
 };
 
-const databricksToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const databricksToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'string': {type: 'string'},
@@ -105,7 +105,7 @@ export class DatabricksDialect extends Dialect {
       .map(
         f =>
           `\n  ${f.sqlExpression}${
-            f.type === 'number' ? `::${this.defaultNumberType}` : ''
+            f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
           } as ${f.sqlOutputName}`
       )
       .join(', ');
@@ -124,7 +124,6 @@ export class DatabricksDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: string | undefined,
-    limit: number | undefined
   ): string {
     let fields = this.mapFields(fieldList);
 
@@ -168,9 +167,6 @@ export class DatabricksDialect extends Dialect {
         }
         result = `ARRAY_SORT(${result}, ${lambda})`;
 
-        if (limit !== undefined) {
-          result = `SLICE(${result}, 1, ${limit})`;
-        }
         return result;
       }
     }
@@ -178,9 +174,6 @@ export class DatabricksDialect extends Dialect {
     // If no valid orderBy, proceed with original logic
     const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END)`;
     let result = `COALESCE(${aggClause}, ARRAY())`;
-    if (limit !== undefined) {
-      result = `SLICE(${result}, 1, ${limit})`;
-    }
     return result;
   }
 
@@ -457,7 +450,7 @@ export class DatabricksDialect extends Dialect {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

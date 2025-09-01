@@ -31,7 +31,7 @@ import {
   TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
-  LeafAtomicTypeDef,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
   TimeLiteralNode,
@@ -66,7 +66,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const redshiftToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const redshiftToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'smallint': {type: 'number', numberType: 'integer'},
   'integer': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
@@ -151,7 +151,7 @@ export class RedshiftDialect extends PostgresBase {
       .map(
         f =>
           `\n  ${f.sqlExpression}${
-            f.type === 'number' ? `::${this.defaultNumberType}` : ''
+            f.typeDef.type === 'number' ? `::${this.defaultNumberType}` : ''
           } as ${f.sqlOutputName}`
         //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
       )
@@ -162,12 +162,8 @@ export class RedshiftDialect extends PostgresBase {
     groupSet: number,
     fieldList: DialectFieldList,
     orderBy: string | undefined,
-    limit: number | undefined
   ): string {
     let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
     const fields = this.mapFields(fieldList);
     return `JSON_PARSE(LISTAGG(CASE WHEN group_set=${groupSet} THEN JSON_SERIALIZE(OBJECT(${fieldList
       .map(f => `'${f.rawName}', ${f.sqlExpression}`)
@@ -477,7 +473,7 @@ export class RedshiftDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (
