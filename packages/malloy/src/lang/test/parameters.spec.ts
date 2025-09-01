@@ -696,4 +696,56 @@ describe('parameters', () => {
       run: foo_ext -> { select: param_value }
     `).toTranslate();
   });
+  test('can declare and use a filter expression type as a parameter type', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(goodNumbers::filter<number>) is ab extend { where: ai ~ goodNumbers }
+      source: single_digits is ab_new(goodNumbers is f'>=0 and <= 9')
+    `).toTranslate();
+  });
+  test('filter expression parameters must have types with default values', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(goodNumbers is f'[25 to 50]') is ab
+    `).toLog(
+      errorMessage(
+        "Filter expression parameters must have expicit filter type, for example 'goodNumbers::filter<string>'"
+      )
+    );
+  });
+  test('filter expression param used in sql function', () => {
+    expect(`
+      ##! experimental { parameters sql_functions }
+      source: abx(param::filter<string> is f'x') is ab extend {
+        dimension: param_plus_one is sql_number("\${param} + 1")
+      }
+    `).toLog(
+      errorMessage('Filter expressions cannot be used in sql_ functions')
+    );
+  });
+  test('filter expression parameters are syntax checked', () => {
+    expect(`
+      ##! experimental { parameters sql_functions }
+      source: abx(param::filter<number>) is ab extend { where: ai ~ param }
+      source: ab7 is abx(param is f'dog%')
+    `).toLog(errorMessage(/Filter syntax error:/));
+  });
+  test('pass through filter expression parameters', () => {
+    expect(`
+      ##! experimental.parameters
+      source: a1(p1::filter<number> is f'1') is a extend { where: ai ~ p1 }
+      source: a2(p2::filter<number> is f'2') is a1(p1 is p2)
+    `).toTranslate();
+  });
+  test('parameters check mismatch on forwarded filter expressions', () => {
+    expect(`
+      ##! experimental.parameters
+      source: a1(p1::filter<number> is f'1') is a extend { where: ai ~ p1 }
+      source: a2(p2::filter<string> is f'2') is a1(p1 is p2)
+    `).toLog(
+      errorMessage(
+        'Parameter types filter<number> and filter<string> do not match'
+      )
+    );
+  });
 });

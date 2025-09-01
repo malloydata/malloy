@@ -21,62 +21,64 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataArray,
-  Explore,
-  Field,
-  Result,
-  Tag,
-  isSourceDef,
-} from '@malloydata/malloy';
-import {DataStyles, RenderDef, StyleDefaults} from './data_styles';
-import {ChildRenderers, Renderer} from './renderer';
-import {RendererOptions} from './renderer_types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {DataStyles, RenderDef, StyleDefaults} from './data_styles';
+import type {ChildRenderers, Renderer} from './renderer';
+import type {RendererOptions} from './renderer_types';
 import {HTMLJSONRenderer} from './json';
-import {HTMLDashboardRenderer} from './dashboard';
-import {HTMLListDetailRenderer} from './list_detail';
 import {HTMLTableRenderer} from './table';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from './main_renderer_factory';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
+import {getDataTree} from '../data_tree';
+import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListRenderer} from './list';
+import {HTMLListDetailRenderer} from './list_detail';
+import {tagFromAnnotations} from '../util';
+import {MalloyRenderer} from '@/api/malloy-renderer';
+import type {MalloyViz} from '@/api/malloy-viz';
 
 export class HTMLView {
+  private lastRenderedElement: HTMLElement | null = null;
+  private lastViz: MalloyViz | null = null;
+
   constructor(private document: Document) {}
 
-  async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
-    const isNextRenderer = !result.modelTag.has('renderer_legacy');
-    if (isNextRenderer) {
-      const hasNextRenderer =
-        !!this.document.defaultView?.customElements.get('malloy-render');
-      if (hasNextRenderer) {
-        const el = this.document.createElement('malloy-render');
-        el.result = result;
-        const nextRendererOptions = options.nextRendererOptions ?? {};
-        for (const [key, val] of Object.entries(nextRendererOptions)) {
-          el[key] = val;
-        }
-        return el;
-      } else {
-        // eslint-disable-next-line no-console
-        console.warn(
-          'Tried to use the new Malloy renderer, but the malloy-render component was not found. Falling back to the legacy renderer.'
-        );
-      }
+  async render(
+    malloyResult: Malloy.Result,
+    options: RendererOptions
+  ): Promise<HTMLElement> {
+    const modelTag = tagFromAnnotations(malloyResult.model_annotations, '## ');
+    const useLegacyRenderer =
+      modelTag.has('renderer_legacy') || options.useLegacy === true;
+    if (!useLegacyRenderer) {
+      const renderer = new MalloyRenderer();
+      const nextRendererOptions = options.nextRendererOptions ?? {};
+      const viz = renderer.createViz(nextRendererOptions);
+      viz.setResult(malloyResult);
+      const el = this.document.createElement('div');
+      viz.render(el);
+      this.lastRenderedElement = el;
+      this.lastViz = viz;
+      return el;
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'Tried to use the new Malloy renderer, but the malloy-render component was not found. Falling back to the legacy renderer.'
+      );
     }
-
-    const table = result.data;
+    const rootCell = getDataTree(malloyResult);
     const renderer = makeRenderer(
-      table.field,
+      rootCell.field,
       this.document,
       options,
       {
         size: 'large',
       },
-      isSourceDef(table.field.structDef)
-        ? table.field.structDef.queryTimezone
-        : undefined,
-      result.tagParse().tag
+      rootCell.field.queryTimezone,
+      rootCell.field.tag
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -85,24 +87,47 @@ export class HTMLView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(table);
+      const el = await renderer.render(rootCell);
+      this.lastRenderedElement = el;
+      this.lastViz = null;
+      return el;
     } catch (error) {
       if (error instanceof Error) {
-        return createErrorElement(this.document, error);
+        const errorEl = createErrorElement(this.document, error);
+        this.lastRenderedElement = errorEl;
+        this.lastViz = null;
+        return errorEl;
       } else {
-        return createErrorElement(
+        const errorEl = createErrorElement(
           this.document,
           'Internal error - Exception not an Error object.'
         );
+        this.lastRenderedElement = errorEl;
+        this.lastViz = null;
+        return errorEl;
       }
     }
+  }
+
+  async getHTML(): Promise<string> {
+    if (!this.lastRenderedElement) {
+      throw new Error('No element has been rendered yet');
+    }
+
+    // If we have a MalloyViz instance, use its getHTML method
+    if (this.lastViz) {
+      return this.lastViz.getHTML();
+    }
+
+    // Otherwise use the legacy renderer's innerHTML
+    return this.lastRenderedElement.innerHTML;
   }
 }
 
 export class JSONView {
   constructor(private document: Document) {}
 
-  async render(table: DataArray): Promise<HTMLElement> {
+  async render(table: Cell): Promise<HTMLElement> {
     const renderer = new HTMLJSONRenderer(this.document);
     try {
       return await renderer.render(table);
@@ -138,15 +163,8 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   'sparkline_bar': 'sparkline',
 };
 
-function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
-  let renderer = dataStyles[field.name];
-  if (!renderer) {
-    for (const sourceClass of field.sourceClasses) {
-      if (!renderer) {
-        renderer = dataStyles[sourceClass];
-      }
-    }
-  }
+function getRendererOptions(field: Field, dataStyles: DataStyles) {
+  const renderer = dataStyles[field.name];
 
   const {name} = field;
   for (const suffix in suffixMap) {
@@ -180,8 +198,8 @@ function updateOrCreateRenderer(
   return renderer!;
 }
 
-function isContainer(field: Field | Explore): Explore {
-  if (field.isExplore()) {
+function isContainer(field: Field): RecordOrRepeatedRecordField {
+  if (field.isRecordOrRepeatedRecord()) {
     return field;
   } else {
     throw new Error(
@@ -191,7 +209,7 @@ function isContainer(field: Field | Explore): Explore {
 }
 
 export function makeRenderer(
-  field: Explore | Field,
+  field: Field,
   document: Document,
   options: RendererOptions,
   styleDefaults: StyleDefaults,
@@ -245,8 +263,7 @@ export function makeRenderer(
   } else if (
     renderDef?.renderer === 'table' ||
     tagged.has('table') ||
-    !field.hasParentExplore() ||
-    field.isExploreField()
+    field.isRecordOrRepeatedRecord()
   ) {
     return makeContainerRenderer(
       HTMLTableRenderer,
@@ -267,20 +284,20 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
     tagged: Tag
   ) => Type,
   document: Document,
-  explore: Explore,
+  explore: RecordOrRepeatedRecordField,
   options: RendererOptions,
   tagged: Tag
 ): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options, tagged);
   const result: ChildRenderers = {};
-  explore.allFields.forEach((field: Field) => {
+  explore.fields.forEach((field: Field) => {
     result[field.name] = makeRenderer(
       field,
       document,
       options,
       c.defaultStylesForChildren,
-      explore.queryTimezone,
-      field.tagParse().tag
+      field.root().queryTimezone,
+      field.tag
     );
   });
   c.childRenderers = result;

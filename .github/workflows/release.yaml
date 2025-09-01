@@ -1,4 +1,5 @@
 name: npmjs.com Release
+permissions: {}
 
 on: [workflow_dispatch]
 
@@ -7,16 +8,16 @@ jobs:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-motherduck:
-    uses: './.github/workflows/db-motherduck.yaml'
-    secrets:
-      MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
+  db-duckdb:
+    uses: './.github/workflows/db-duckdb.yaml'
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-snowflake:
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+  db-publisher:
+    uses: './.github/workflows/db-publisher.yaml'
   main:
     uses: './.github/workflows/main.yaml'
     secrets:
@@ -25,7 +26,8 @@ jobs:
   npm-release:
     needs:
       - db-bigquery
-      - db-motherduck
+      - db-duckdb
+      - db-publisher
       - db-postgres
       - db-snowflake
       - main
@@ -37,7 +39,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - name: npm install, build, and publish
         run: |
           # Configure git user
@@ -45,6 +47,7 @@ jobs:
           git config --global user.name "Malloy CI Bot"
           # Build
           npm --no-audit --no-fund ci --loglevel error
+          npm run build
           # Publish
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
@@ -59,12 +62,14 @@ jobs:
           git tag v$VERSION
           git push origin v$VERSION
           # Bump version
-          npx lerna version patch --yes --no-push --no-git-tag-version
+          npx lerna version patch --exact --yes --no-push --no-git-tag-version
+          # Fix up package-lock.json
+          npm install
           npm run generate-version-file --workspace=packages/malloy
           VERSION=$(jq -r .version ./lerna.json)
           echo Updating to $VERSION
           # Push new version to github
-          git commit -sam "Version $VERSION-dev"
+          git commit -sam "Version $VERSION-dev [skip ci]"
           git push origin $BRANCH_NAME
         env:
           CI: true

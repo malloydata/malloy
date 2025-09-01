@@ -21,31 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  CompositeFieldUsage,
+import type {
+  FieldUsage,
   FilterCondition,
   PipeSegment,
   Sampling,
-  isIndexSegment,
-  isPartialSegment,
 } from '../../../model/malloy_types';
+import {isIndexSegment, isPartialSegment} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, SourceFieldSpace} from '../types/field-space';
+import type {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {Index} from '../query-properties/indexing';
 import {Limit} from '../query-properties/limit';
 import {SampleProperty} from '../query-properties/sampling';
 import {IndexFieldSpace} from '../field-space/index-field-space';
-import {QueryProperty} from '../types/query-property';
-import {QueryBuilder} from '../types/query-builder';
-import {QueryInputSpace} from '../field-space/query-input-space';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {MalloyElement} from '../types/malloy-element';
-import {
-  emptyCompositeFieldUsage,
-  mergeCompositeFieldUsage,
-} from '../../../model/composite_source_utils';
+import type {QueryProperty} from '../types/query-property';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {MalloyElement} from '../types/malloy-element';
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];
@@ -55,6 +51,7 @@ export class IndexBuilder implements QueryBuilder {
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
   alwaysJoins: string[] = [];
+  requiredGroupBys: string[] = [];
   readonly type = 'index';
 
   constructor(
@@ -99,8 +96,8 @@ export class IndexBuilder implements QueryBuilder {
     }
   }
 
-  get compositeFieldUsage(): CompositeFieldUsage {
-    return this.resultFS.compositeFieldUsage;
+  get fieldUsage(): FieldUsage[] {
+    return this.resultFS.fieldUsage;
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
@@ -143,14 +140,11 @@ export class IndexBuilder implements QueryBuilder {
       indexSegment.alwaysJoins = [...this.alwaysJoins];
     }
 
-    const fromCompositeFieldUsage =
+    const fromFieldUsage =
       from && from.type === 'index'
-        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
-        : emptyCompositeFieldUsage();
-    indexSegment.compositeFieldUsage = mergeCompositeFieldUsage(
-      fromCompositeFieldUsage,
-      this.compositeFieldUsage
-    );
+        ? from.fieldUsage ?? emptyFieldUsage()
+        : emptyFieldUsage();
+    indexSegment.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
 
     return indexSegment;
   }

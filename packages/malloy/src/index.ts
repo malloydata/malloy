@@ -74,7 +74,6 @@ export type {
   Expr,
   // Needed for drills in render
   FilterCondition,
-  SQLSentence,
   // Used in Composer
   Argument,
   Parameter,
@@ -88,7 +87,9 @@ export type {
   ModelDef,
   Query,
   QueryResult,
+  QueryResultDef,
   QueryRunStats,
+  QueryScalar,
   NamedQuery,
   NamedModelObject,
   ExpressionType,
@@ -104,8 +105,8 @@ export type {
   DocumentPosition,
   Sampling,
   Annotation,
-  LeafAtomicTypeDef,
-  LeafAtomicDef,
+  BasicAtomicTypeDef,
+  BasicAtomicDef,
   AtomicTypeDef,
   AtomicFieldDef,
   ArrayDef,
@@ -116,20 +117,21 @@ export type {
   RepeatedRecordDef,
   // Used in array/record tests
   RecordLiteralNode,
+  StringLiteralNode,
   ArrayLiteralNode,
+  SourceComponentInfo,
 } from './model';
 export {
   isSourceDef,
   // Used in Composer Demo
-  Segment,
-  isLeafAtomic,
+  isBasicAtomic,
   isJoined,
   isJoinedSource,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
   isRepeatedRecord,
-  isScalarArray,
+  isBasicArray,
   mkArrayDef,
   mkFieldDef,
   expressionIsAggregate,
@@ -139,8 +141,11 @@ export {
   expressionIsUngroupedAggregate,
   indent,
   composeSQLExpr,
+  isTimestampUnit,
+  isDateUnit,
 } from './model';
 export {
+  malloyToQuery,
   // Needed for tests only
   MalloyTranslator,
 } from './lang';
@@ -187,6 +192,7 @@ export type {
   DocumentTablePath,
   DocumentSymbol,
   ResultJSON,
+  PreparedResultJSON,
   PreparedResultMaterializer,
   ExploreMaterializer,
   WriteStream,
@@ -223,4 +229,13 @@ export type {
   StreamingConnection,
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
-export {type TagParse, Tag, type TagDict} from './tags';
+export {
+  modelDefToModelInfo,
+  sourceDefToSourceInfo,
+  writeMalloyObjectToTag,
+  extractMalloyObjectFromTag,
+} from './to_stable';
+export * as API from './api';
+export type {SQLSourceRequest} from './lang/translate-response';
+export {sqlKey} from './model/sql_block';
+export {annotationToTag, annotationToTaglines} from './annotation';

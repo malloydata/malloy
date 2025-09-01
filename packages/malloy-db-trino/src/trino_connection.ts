@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
@@ -31,29 +31,31 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  TrinoDialect,
   StructDef,
   TableSourceDef,
   SQLSourceDef,
   AtomicTypeDef,
-  mkFieldDef,
-  isScalarArray,
   RecordTypeDef,
   Dialect,
   FieldDef,
+  TestableConnection,
+  SQLSourceRequest,
+} from '@malloydata/malloy';
+import {
+  TrinoDialect,
+  mkFieldDef,
+  isBasicArray,
   TinyParser,
   isRepeatedRecord,
-  TestableConnection,
+  sqlKey,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {
-  PrestoClient,
-  PrestoClientConfig,
-  PrestoQuery,
-} from '@prestodb/presto-js-client';
+import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
+import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
+import type {ConnectionOptions} from 'trino-client';
 import {Trino, BasicAuth} from 'trino-client';
 
 export interface TrinoManagerOptions {
@@ -73,6 +75,9 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
+  extraConfig?: Partial<
+    Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>
+  >;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
@@ -80,8 +85,7 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    limit: number | undefined,
-    abortSignal?: AbortSignal
+    options: RunSQLOptions
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -110,13 +114,11 @@ class PrestoRunner implements BaseRunner {
     }
     this.client = new PrestoClient(prestoClientConfig);
   }
-  async runSQL(
-    sql: string,
-    limit: number | undefined,
-    _abortSignal?: AbortSignal
-  ) {
+  async runSQL(sql: string, options: RunSQLOptions = {}) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
+    const q = options.rowLimit
+      ? `SELECT * FROM(${sql}) LIMIT ${options.rowLimit}`
+      : sql;
     let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
@@ -140,17 +142,14 @@ class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     this.client = Trino.create({
+      ...config.extraConfig,
       catalog: config.catalog,
       server: config.server,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(
-    sql: string,
-    limit: number | undefined,
-    _abortSignal?: AbortSignal
-  ) {
+  async runSQL(sql: string, options: RunSQLOptions = {}) {
     const result = await this.client.query(sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -163,10 +162,13 @@ class TrinoRunner implements BaseRunner {
     const columns = queryResult.value.columns;
 
     const outputRows: unknown[][] = [];
-    while (queryResult !== null && (!limit || outputRows.length < limit)) {
+    while (
+      queryResult !== null &&
+      (!options.rowLimit || outputRows.length < options.rowLimit)
+    ) {
       const rows = queryResult.value.data ?? [];
       for (const row of rows) {
-        if (!limit || outputRows.length < limit) {
+        if (!options.rowLimit || outputRows.length < options.rowLimit) {
           outputRows.push(row as unknown[]);
         }
       }
@@ -271,11 +273,7 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const r = await this.client.runSQL(
-      sqlCommand,
-      options.rowLimit,
-      options.abortSignal
-    );
+    const r = await this.client.runSQL(sqlCommand, options);
 
     if (r.error) {
       throw new Error(r.error);
@@ -308,7 +306,7 @@ export abstract class TrinoPrestoConnection
       return this.convertRow(colSchema.fields, rawRow);
     } else if (isRepeatedRecord(colSchema)) {
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
-    } else if (isScalarArray(colSchema)) {
+    } else if (isBasicArray(colSchema)) {
       const elType = colSchema.elementTypeDef;
       let theArray = this.unpackArray([], rawRow);
       if (elType.type === 'array') {
@@ -355,8 +353,14 @@ export abstract class TrinoPrestoConnection
     return structDef;
   }
 
-  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
-    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+  async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     await this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
     return structDef;
   }
@@ -367,7 +371,7 @@ export abstract class TrinoPrestoConnection
   ): Promise<void>;
 
   protected async executeAndWait(sqlBlock: string): Promise<void> {
-    await this.client.runSQL(sqlBlock, undefined);
+    await this.client.runSQL(sqlBlock, {});
     // TODO: make sure failure is handled correctly.
     //while (!(await result.next()).done);
   }
@@ -392,7 +396,7 @@ export abstract class TrinoPrestoConnection
     element: string
   ): Promise<StructDef> {
     try {
-      const queryResult = await this.client.runSQL(sqlBlock, undefined);
+      const queryResult = await this.client.runSQL(sqlBlock, {});
 
       if (queryResult.error) {
         // TODO: handle.
@@ -665,6 +669,12 @@ class TrinoPrestoSchemaParser extends TinyParser {
             fields: elType.fields,
           }
         : {type: 'array', elementTypeDef: elType};
+    } else if (typToken.text === 'map' && this.next('(')) {
+      const _keyType = this.typeDef();
+      this.next(',');
+      const _valType = this.typeDef();
+      this.next(')');
+      return {type: 'sql native'};
     } else if (typToken.type === 'id') {
       const sqlType = typToken.text.toLowerCase();
       if (sqlType === 'varchar') {

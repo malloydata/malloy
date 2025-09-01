@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   Connection,
   MalloyQueryData,
   PersistSQLResults,
@@ -14,12 +14,13 @@ import {
   RunSQLOptions,
   StreamingConnection,
   StructDef,
-  MySQLDialect,
   QueryOptionsReader,
   QueryData,
   SQLSourceDef,
   TableSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
+import {MySQLDialect, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {randomUUID, createHash} from 'crypto';
 import * as MYSQL from 'mysql2/promise';
@@ -171,10 +172,13 @@ export class MySQLConnection
     return structDef;
   }
 
-  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
-    const structDef: StructDef = {
+  async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
       ...sqlRef,
-      name: sqlRef.name,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
     };
 
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');

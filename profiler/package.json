@@ -1,0 +1,29 @@
+{
+  "name": "@malloydata/malloy-profiler",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../jest.config.js",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "profile": "npx clinic flame -- node dist/profile.js",
+    "time": "ts-node src/timer.ts"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "0.0.309",
+    "@malloydata/malloy-interfaces": "0.0.309",
+    "clinic": "^13.0.0"
+  },
+  "version": "0.0.309"
+}

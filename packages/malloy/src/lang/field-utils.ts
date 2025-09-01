@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, QueryFieldDef} from '../model/malloy_types';
+import type {FieldDef, QueryFieldDef} from '../model/malloy_types';
 
 type NamedFieldThing = FieldDef | QueryFieldDef;
 

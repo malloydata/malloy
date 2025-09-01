@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ParameterFieldReference} from '../query-items/field-references';
+import type {ParameterFieldReference} from '../query-items/field-references';
 
-import {ExpressionDef} from '../types/expression-def';
+import type {ExpressionDef} from '../types/expression-def';
 import {MalloyElement} from '../types/malloy-element';
 
 interface ArgInit {

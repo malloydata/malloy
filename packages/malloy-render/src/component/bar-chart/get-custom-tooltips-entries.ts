@@ -5,55 +5,43 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Explore} from '@malloydata/malloy';
-import {
-  ChartTooltipEntry,
-  MalloyVegaDataRecord,
-  RenderResultMetadata,
-} from '../types';
-import {applyRenderer} from '../apply-renderer';
+import type {ChartTooltipEntry, MalloyVegaDataRecord} from '@/component/types';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
+import type {NestField} from '@/data_tree';
 
 type CustomTooltipGetterOptions = {
-  explore: Explore;
+  explore: NestField;
   records: MalloyVegaDataRecord[];
-  metadata: RenderResultMetadata;
 };
 
 export function getCustomTooltipEntries({
   explore,
   records,
-  metadata,
 }: CustomTooltipGetterOptions) {
-  const customTooltipFields = explore.allFields.filter(f =>
-    f.tagParse().tag.has('tooltip')
-  );
+  const customTooltipFields = explore.fields.filter(f => f.tag.has('tooltip'));
   const customEntries: ChartTooltipEntry['entries'] = [];
   customTooltipFields.forEach(f => {
-    if (f.isAtomicField() || f.isExploreField()) {
-      records.forEach(rec => {
-        customEntries.push({
-          label: f.name,
-          value: () =>
-            applyRenderer({
-              field: f,
-              dataColumn: rec.__source.__malloyDataRecord.cell(f.name),
-              resultMetadata: metadata,
-              tag: f.tagParse().tag,
-              customProps: {
-                table: {
-                  shouldFillWidth: true,
-                  disableVirtualization: true,
-                  rowLimit: 20,
-                },
+    records.forEach(rec => {
+      customEntries.push({
+        label: f.name,
+        value: () =>
+          applyRenderer({
+            dataColumn: rec.__row.column(f.name),
+            tag: f.tag,
+            customProps: {
+              table: {
+                shouldFillWidth: true,
+                disableVirtualization: true,
+                rowLimit: 20,
               },
-            }).renderValue,
-          highlight: false,
-          color: '',
-          entryType: f.isExploreField() ? 'block' : 'list-item',
-          ignoreHighlightState: true,
-        });
+            },
+          }).renderValue,
+        highlight: false,
+        color: '',
+        entryType: f.isNest() ? 'block' : 'list-item',
+        ignoreHighlightState: true,
       });
-    }
+    });
   });
   return customEntries;
 }

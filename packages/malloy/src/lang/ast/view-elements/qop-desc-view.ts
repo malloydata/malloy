@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, isRawSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {PipeSegment} from '../../../model/malloy_types';
+import {isRawSegment} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
-import {getFinalStruct} from '../struct-utils';
-import {SourceFieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {View} from './view';
 
@@ -49,7 +49,7 @@ export class QOpDescView extends View {
     const newOperation = this.operation.getOp(fs, isNestIn);
     return {
       pipeline: [newOperation.segment],
-      outputStruct: newOperation.outputSpace().structDef(),
+      outputStruct: newOperation.outputSpace.structDef(),
     };
   }
 
@@ -115,13 +115,18 @@ export class QOpDescView extends View {
     if (tailRefinements.notEmpty()) {
       const last = pipeline.length - 1;
       this.has({tailRefinements});
-      const finalIn = getFinalStruct(
-        this,
-        inputFS.structDef(),
-        pipeline.slice(-1)
-      );
-      pipeline[last] = this.getOp(
-        new StaticSourceSpace(finalIn),
+      // The changes above should not be allowed to change the input struct
+      // for the final segment meaningfully, so we can continue to use the existing
+      // second-to-last struct
+      const finalIn =
+        pipeline.length > 1
+          ? new StaticSourceSpace(
+              pipeline[pipeline.length - 2].outputStruct,
+              'public'
+            )
+          : inputFS;
+      pipeline[pipeline.length - 1] = this.getOp(
+        finalIn,
         undefined,
         tailRefinements,
         pipeline[last]

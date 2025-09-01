@@ -21,16 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  compositeFieldUsageIsPlural,
-  formatCompositeFieldUsages,
-} from '../model/composite_source_utils';
-import {
-  CompositeFieldUsage,
+import type {
   DocumentLocation,
   ExpressionValueType,
 } from '../model/malloy_types';
-import {EventStream} from '../runtime_types';
+import type {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
@@ -113,6 +108,7 @@ type MessageParameterTypes = {
   'pick-missing-value': {};
   'pick-illegal-partial': {};
   'pick-when-must-be-boolean': {whenType: ExpressionValueType};
+  'pick-non-atomic-type': string;
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -199,11 +195,9 @@ type MessageParameterTypes = {
   'field-list-edit-not-found': string;
   'unexpected-element-type': string;
   'field-not-found': string;
+  'composite-field-type-mismatch': string;
   'invalid-composite-source-input': string;
-  'invalid-composite-field-usage': {
-    newUsage: CompositeFieldUsage;
-    allUsage: CompositeFieldUsage;
-  };
+  'could-not-resolve-composite-source': string;
   'empty-composite-source': string;
   'unnecessary-composite-source': string;
   'composite-source-atomic-fields-only': string;
@@ -368,6 +362,7 @@ type MessageParameterTypes = {
   'illegal-record-property-type': string;
   'record-literal-needs-keys': string;
   'not-yet-implemented': string;
+  'cannot-rename-join-field': string;
   'sql-case': string;
   'case-then-type-does-not-match': {
     thenType: ExpressionValueType;
@@ -384,6 +379,7 @@ type MessageParameterTypes = {
   };
   'or-choices-only': string;
   'sql-in': string;
+  'except-star-and-list': string;
   'dialect-cast-unsafe-only': string;
   'field-not-accessible': string;
   'cannot-expand-access': string;
@@ -395,6 +391,7 @@ type MessageParameterTypes = {
   'include-after-exclude': string;
   'duplicate-include': string;
   'exclude-after-include': string;
+  'exclude-after-exclude': string;
   'cannot-rename-non-field': string;
   'array-values-incompatible': string;
   'invalid-resolved-type-for-array': string;
@@ -402,6 +399,28 @@ type MessageParameterTypes = {
   'cannot-tag-include-except': string;
   'unsupported-path-in-include': string;
   'wildcard-include-rename': string;
+  'literal-string-newline': string;
+  'filter-expression-type': string;
+  'filter-expression-error': string;
+  'invalid-malloy-query-document': string;
+  'analytic-in-drill': string;
+  'aggregate-in-drill': string;
+  'illegal-drill': string;
+  'drill-not-equality': string;
+  'drill-lhs-not-id': string;
+  'drill-rhs-not-literal': string;
+  'invalid-drill-reference': string;
+  'drill-view-reference-not-found': string;
+  'drill-view-reference-not-field': string;
+  'drill-view-reference-not-view': string;
+  'drill-incompatible-segment': string;
+  'drill-nest-not-found': string;
+  'drill-field-not-found': string;
+  'drill-field-reference-not-field': string;
+  'grouped-by-not-found': string;
+  'non-scalar-grouped-by': string;
+  'missing-required-group-by': string;
+  'invalid-partition-composite': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -450,12 +469,6 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case when expression must be boolean, not ${e.whenType}`,
   'case-when-type-does-not-match': e =>
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
-  'invalid-composite-field-usage': e => {
-    const formattedNewCompositeUsage = formatCompositeFieldUsages(e.newUsage);
-    const formattedAllCompositeUsage = formatCompositeFieldUsages(e.allUsage);
-    const pluralUse = compositeFieldUsageIsPlural(e.newUsage) ? 's' : '';
-    return `This operation uses composite field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedAllCompositeUsage}`;
-  },
 };
 
 export type MessageCode = keyof MessageParameterTypes;

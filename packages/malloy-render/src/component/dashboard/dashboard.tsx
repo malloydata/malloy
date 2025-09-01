@@ -5,19 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import {createMemo, For, Show} from 'solid-js';
-import {applyRenderer} from '../apply-renderer';
-import {useResultContext} from '../result-context';
-import {RenderResultMetadata} from '../types';
-import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
+import {For, Show} from 'solid-js';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
+import type {Virtualizer} from '@tanstack/solid-virtual';
+import {createVirtualizer} from '@tanstack/solid-virtual';
+import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './dashboard.css?raw';
 import {useConfig} from '../render';
-import dashboardCss from './dashboard.css?raw';
 
 function DashboardItem(props: {
   field: Field;
-  row: DataRecord;
-  resultMetadata: RenderResultMetadata;
+  row: RecordCell;
   maxTableHeight: number | null;
   isMeasure?: boolean;
 }) {
@@ -31,11 +30,11 @@ function DashboardItem(props: {
     // If no max height is set, then don't virtualize
     else return false;
   };
+  const cell = props.row.column(props.field.name);
+  const tag = props.field.tag;
   const rendering = applyRenderer({
-    field: props.field,
-    dataColumn: props.row.cell(props.field),
-    tag: props.field.tagParse().tag,
-    resultMetadata: props.resultMetadata,
+    dataColumn: cell,
+    tag,
     customProps: {
       table: {
         disableVirtualization: !shouldVirtualizeTable(),
@@ -51,8 +50,8 @@ function DashboardItem(props: {
           typeof rendering.renderValue !== 'function'
             ? rendering.renderValue
             : null,
-        value: props.row.cell(props.field).value,
-        fieldPath: props.field.fieldPath,
+        value: cell.value,
+        fieldPath: props.field.path,
         isHeader: false,
         event: evt,
         type: 'dashboard-item',
@@ -63,7 +62,7 @@ function DashboardItem(props: {
   if (rendering.renderAs === 'table' && props.maxTableHeight)
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
-  const customLabel = props.field.tagParse().tag.text('label');
+  const customLabel = tag.text('label');
   const title = customLabel ?? props.field.name;
 
   return (
@@ -85,9 +84,14 @@ function DashboardItem(props: {
   );
 }
 
-export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
-  const field = () => props.data.field;
-  const dashboardTag = field().tagParse().tag.tag('dashboard');
+export function Dashboard(props: {
+  data: RecordOrRepeatedRecordCell;
+  scrollEl?: HTMLElement;
+}) {
+  MalloyViz.addStylesheet(styles);
+  const field = props.data.field;
+  const tag = field.tag;
+  const dashboardTag = tag.tag('dashboard');
   let maxTableHeight: number | null = 361;
   const maxTableHeightTag = dashboardTag?.tag('table', 'max_height');
   if (maxTableHeightTag?.text() === 'none') maxTableHeight = null;
@@ -95,21 +99,19 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
     maxTableHeight = maxTableHeightTag!.numeric()!;
 
   const dimensions = () =>
-    field().allFields.filter(f => {
-      const isHidden = f.tagParse().tag.has('hidden');
-      return !isHidden && f.isAtomicField() && f.sourceWasDimension();
+    field.fields.filter(f => {
+      return !f.isHidden() && f.isBasic() && f.wasDimension();
     });
 
   const nonDimensions = () => {
     const measureFields: Field[] = [];
     const otherFields: Field[] = [];
 
-    for (const f of field().allFields) {
-      if (f.tagParse().tag.has('hidden')) continue;
-      if (f.isAtomicField() && f.sourceWasMeasureLike()) {
+    for (const f of field.fields) {
+      if (f.isHidden()) continue;
+      if (f.isBasic() && f.wasCalculation()) {
         measureFields.push(f);
-      } else if (!f.isAtomicField() || !f.sourceWasDimension())
-        otherFields.push(f);
+      } else if (!f.isBasic() || !f.wasDimension()) otherFields.push(f);
     }
     return [...measureFields, ...otherFields];
   };
@@ -117,8 +119,7 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
   const nonDimensionsGrouped = () => {
     const group: Field[][] = [[]];
     for (const f of nonDimensions()) {
-      const {tag} = f.tagParse();
-      if (tag.has('break')) {
+      if (f.tag.has('break')) {
         group.push([]);
       }
       const lastGroup = group.at(-1)!;
@@ -127,14 +128,6 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
     return group;
   };
 
-  const data = createMemo(() => {
-    const data: DataRecord[] = [];
-    for (const row of props.data) {
-      data.push(row);
-    }
-    return data;
-  });
-
   let scrollEl!: HTMLElement;
   if (props.scrollEl) scrollEl = props.scrollEl;
   const shouldVirtualize = () =>
@@ -142,17 +135,12 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
   let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
   if (shouldVirtualize()) {
     virtualizer = createVirtualizer({
-      count: data().length,
+      count: props.data.rows.length,
       getScrollElement: () => scrollEl,
       estimateSize: () => 192,
     });
   }
   const items = virtualizer?.getVirtualItems();
-
-  const resultMetadata = useResultContext();
-
-  const config = useConfig();
-  config.addCSSToShadowRoot(dashboardCss);
 
   return (
     <div
@@ -194,10 +182,10 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                             <div class="dashboard-dimension-value">
                               {
                                 applyRenderer({
-                                  field: d,
-                                  dataColumn: data()[virtualRow.index].cell(d),
-                                  tag: d.tagParse().tag,
-                                  resultMetadata,
+                                  dataColumn: props.data.rows[
+                                    virtualRow.index
+                                  ].column(d.name),
+                                  tag: d.tag,
                                 }).renderValue
                               }
                             </div>
@@ -214,12 +202,8 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                           {field => (
                             <DashboardItem
                               field={field}
-                              row={data()[virtualRow.index]}
-                              resultMetadata={resultMetadata}
-                              isMeasure={
-                                field.isAtomicField() &&
-                                field.sourceWasMeasureLike()
-                              }
+                              row={props.data.rows[virtualRow.index]}
+                              isMeasure={field.wasCalculation()}
                               maxTableHeight={maxTableHeight}
                             />
                           )}
@@ -234,7 +218,7 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
         </div>
       </Show>
       <Show when={!shouldVirtualize()}>
-        <For each={data()}>
+        <For each={props.data.rows}>
           {row => (
             <div class="dashboard-row">
               <div class="dashboard-row-header">
@@ -246,10 +230,8 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                         <div class="dashboard-dimension-value">
                           {
                             applyRenderer({
-                              field: d,
-                              dataColumn: row.cell(d),
-                              tag: d.tagParse().tag,
-                              resultMetadata,
+                              dataColumn: row.column(d.name),
+                              tag: d.tag,
                             }).renderValue
                           }
                         </div>
@@ -267,11 +249,7 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                         <DashboardItem
                           field={field}
                           row={row}
-                          resultMetadata={resultMetadata}
-                          isMeasure={
-                            field.isAtomicField() &&
-                            field.sourceWasMeasureLike()
-                          }
+                          isMeasure={field.wasCalculation()}
                           maxTableHeight={maxTableHeight}
                         />
                       )}

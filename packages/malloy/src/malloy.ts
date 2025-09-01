@@ -21,20 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RunSQLOptions} from './run_sql_options';
-import {
+import type {RunSQLOptions} from './run_sql_options';
+import type {
   DocumentCompletion as DocumentCompletionDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
   LogMessage,
-  MalloyTranslator,
 } from './lang';
-import {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
-import {
+import {MalloyTranslator} from './lang';
+import type {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
+import type {
   CompiledQuery,
   DocumentLocation,
   DocumentReference,
   BooleanFieldDef,
-  fieldIsIntrinsic,
   JSONFieldDef,
   NumberFieldDef,
   StringFieldDef,
@@ -45,33 +44,38 @@ import {
   NamedQuery,
   QueryData,
   QueryDataRow,
-  QueryModel,
   QueryResult,
   SearchIndexResult,
   SearchValueMapResult,
   StructDef,
   TurtleDef,
-  expressionIsCalculation,
-  isSegmentSQL,
   NativeUnsupportedFieldDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
   NamedModelObject,
   QueryValue,
-  SQLSentence,
   SQLSourceDef,
   AtomicFieldDef,
   DateFieldDef,
   TimestampFieldDef,
-  isAtomicFieldType,
   SourceDef,
-  isSourceDef,
   QueryToMaterialize,
-  isJoined,
   DependencyTree,
+  Argument,
+  QuerySourceDef,
+  TableSourceDef,
+  SourceComponentInfo,
 } from './model';
 import {
+  fieldIsIntrinsic,
+  QueryModel,
+  expressionIsCalculation,
+  isAtomicFieldType,
+  isSourceDef,
+  isJoined,
+} from './model';
+import type {
   EventStream,
   InvalidationKey,
   ModelString,
@@ -80,18 +84,33 @@ import {
   QueryURL,
   URLReader,
 } from './runtime_types';
-import {
+import type {
   Connection,
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
 } from './connection/types';
 import {DateTime} from 'luxon';
-import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
-import {Dialect, getDialect} from './dialect';
-import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Dialect} from './dialect';
+import {getDialect} from './dialect';
+import type {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 import {MALLOY_VERSION} from './version';
 import {v5 as uuidv5} from 'uuid';
+import type {MalloyTagParse, TagParseSpec} from './annotation';
+import {
+  addModelScope,
+  annotationToTag,
+  annotationToTaglines,
+} from './annotation';
+import {sqlKey} from './model/sql_block';
+import {locationContainsPosition} from './lang/utils';
+import {ReferenceList} from './lang/reference-list';
+
+export interface Taggable {
+  tagParse: (spec?: TagParseSpec) => MalloyTagParse;
+  getTaglines: (prefix?: RegExp) => string[];
+}
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,6 +123,14 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
+type ComponentSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
+function isSourceComponent(source: StructDef): source is ComponentSourceDef {
+  return (
+    source.type === 'table' ||
+    source.type === 'sql_select' ||
+    source.type === 'query_source'
+  );
+}
 const MALLOY_INTERNAL_URL = 'internal://internal.malloy';
 
 export interface ParseOptions {
@@ -265,15 +292,12 @@ export class Malloy {
     refreshSchemaCache,
     noThrowOnError,
     eventStream,
-    replaceMaterializedReferences,
-    materializedTablePrefix,
     importBaseURL,
     cacheManager,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     model?: Model;
-    replaceMaterializedReferences?: boolean;
     cacheManager?: CacheManager;
   } & Compilable &
     CompileOptions &
@@ -309,7 +333,6 @@ export class Malloy {
           cached.modelDef,
           [], // TODO when using a model from cache, should we also store the problems??
           [url.toString(), ...flatDeps(cached.modelDef.dependencies)]
-          // TODO maybe implement referenceAt and importAt by re-translating the model?
         );
       }
     }
@@ -354,14 +377,10 @@ export class Malloy {
               invalidationKeys,
             });
           }
-          return new Model(
-            result.modelDef,
-            result.problems || [],
-            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
-            (position: ModelDocumentPosition) =>
-              translator.referenceAt(position),
-            (position: ModelDocumentPosition) => translator.importAt(position)
-          );
+          return new Model(result.modelDef, result.problems || [], [
+            ...(model?.fromSources ?? []),
+            ...(result.fromSources ?? []),
+          ]);
         } else if (noThrowOnError) {
           const emptyModel = {
             name: 'modelDidNotCompile',
@@ -371,14 +390,10 @@ export class Malloy {
             queryList: [],
           };
           const modelFromCompile = model?._modelDef || emptyModel;
-          return new Model(
-            modelFromCompile,
-            result.problems || [],
-            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
-            (position: ModelDocumentPosition) =>
-              translator.referenceAt(position),
-            (position: ModelDocumentPosition) => translator.importAt(position)
-          );
+          return new Model(modelFromCompile, result.problems || [], [
+            ...(model?.fromSources ?? []),
+            ...(result.fromSources ?? []),
+          ]);
         } else {
           const errors = result.problems || [];
           const errText = translator.prettyErrors();
@@ -482,35 +497,30 @@ export class Malloy {
           // Unlike other requests, these do not come in batches
           const toCompile = result.compileSQL;
           const connectionName = toCompile.connection;
+          const key = sqlKey(toCompile.connection, toCompile.selectStr);
           try {
             const conn = await connections.lookupConnection(connectionName);
-            const expanded = Malloy.compileSQLBlock(
-              conn.dialectName,
-              result.partialModel,
-              toCompile,
-              {
-                replaceMaterializedReferences,
-                materializedTablePrefix,
-                eventStream,
-              }
-            );
-            const resolved = await conn.fetchSchemaForSQLStruct(expanded, {
+            const resolved = await conn.fetchSchemaForSQLStruct(toCompile, {
               refreshTimestamp,
               modelAnnotation,
             });
             if (resolved.error) {
               translator.update({
-                errors: {compileSQL: {[expanded.name]: resolved.error}},
+                errors: {
+                  compileSQL: {
+                    [key]: resolved.error,
+                  },
+                },
               });
             }
             if (resolved.structDef) {
               translator.update({
-                compileSQL: {[expanded.name]: resolved.structDef},
+                compileSQL: {[key]: resolved.structDef},
               });
             }
           } catch (error) {
             const errors: {[name: string]: string} = {};
-            errors[toCompile.name] = error.toString();
+            errors[key] = error.toString();
             translator.update({errors: {compileSQL: errors}});
           }
         }
@@ -537,52 +547,6 @@ export class Malloy {
       }
     }
     return ret;
-  }
-
-  static compileSQLBlock(
-    dialect: string,
-    partialModel: ModelDef | undefined,
-    toCompile: SQLSentence,
-    options?: CompileQueryOptions
-  ): SQLSourceDef {
-    let queryModel: QueryModel | undefined = undefined;
-    let selectStr = '';
-    let parenAlready = false;
-    for (const segment of toCompile.select) {
-      if (isSegmentSQL(segment)) {
-        selectStr += segment.sql;
-        parenAlready = segment.sql.match(/\(\s*$/) !== null;
-      } else {
-        // TODO catch exceptions and throw errors ...
-        if (!queryModel) {
-          if (!partialModel) {
-            throw new Error(
-              'Internal error: Partial model missing when compiling SQL block'
-            );
-          }
-          queryModel = new QueryModel(partialModel, options?.eventStream);
-        }
-        const compiledSql = queryModel.compileQuery(
-          segment,
-          {
-            ...options,
-            defaultRowLimit: undefined,
-          },
-          false
-        ).sql;
-        selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
-        parenAlready = false;
-      }
-    }
-    const {name, connection} = toCompile;
-    return {
-      type: 'sql_select',
-      name,
-      connection,
-      dialect,
-      selectStr,
-      fields: [],
-    };
   }
 
   /**
@@ -820,32 +784,25 @@ export class MalloyError extends Error {
  * A compiled Malloy document.
  */
 export class Model implements Taggable {
-  _referenceAt: (
-    location: ModelDocumentPosition
-  ) => DocumentReference | undefined;
-  _importAt: (location: ModelDocumentPosition) => ImportLocation | undefined;
+  private readonly references: ReferenceList;
 
   constructor(
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
-    readonly fromSources: string[],
-    referenceAt: (
-      location: ModelDocumentPosition
-    ) => DocumentReference | undefined = () => undefined,
-    importAt: (
-      location: ModelDocumentPosition
-    ) => ImportLocation | undefined = () => undefined
+    readonly fromSources: string[]
   ) {
-    this._referenceAt = referenceAt;
-    this._importAt = importAt;
+    this.references = new ReferenceList(
+      fromSources[0] ?? '',
+      modelDef.references ?? []
+    );
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    return Tag.annotationToTag(this.modelDef.annotation, spec);
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this.modelDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.modelDef.annotation, prefix);
+    return annotationToTaglines(this.modelDef.annotation, prefix);
   }
 
   /**
@@ -858,7 +815,7 @@ export class Model implements Taggable {
   public getReference(
     position: ModelDocumentPosition
   ): DocumentReference | undefined {
-    return this._referenceAt(position);
+    return this.references.find(position);
   }
 
   /**
@@ -871,7 +828,9 @@ export class Model implements Taggable {
   public getImport(
     position: ModelDocumentPosition
   ): ImportLocation | undefined {
-    return this._importAt(position);
+    return this.modelDef.imports?.find(i =>
+      locationContainsPosition(i.location, position)
+    );
   }
 
   /**
@@ -941,7 +900,7 @@ export class Model implements Taggable {
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
-    if (isSourceDef(struct)) {
+    if (struct && isSourceDef(struct)) {
       return new Explore(struct);
     }
     throw new Error("'name' is not an explore");
@@ -999,13 +958,13 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    const modelScope = Tag.annotationToTag(this._modelDef.annotation).tag;
-    spec = Tag.addModelScope(spec, modelScope);
-    return Tag.annotationToTag(this._query.annotation, spec);
+    const modelScope = annotationToTag(this._modelDef.annotation).tag;
+    spec = addModelScope(spec, modelScope);
+    return annotationToTag(this._query.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this._query.annotation, prefix);
+    return annotationToTaglines(this._query.annotation, prefix);
   }
 
   /**
@@ -1342,14 +1301,14 @@ export class PreparedResult implements Taggable {
     return new PreparedResult(query, modelDef);
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    const modelScope = Tag.annotationToTag(this.modelDef.annotation).tag;
-    spec = Tag.addModelScope(spec, modelScope);
-    return Tag.annotationToTag(this.inner.annotation, spec);
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    const modelScope = annotationToTag(this.modelDef.annotation).tag;
+    spec = addModelScope(spec, modelScope);
+    return annotationToTag(this.inner.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.inner.annotation, prefix);
+    return annotationToTaglines(this.inner.annotation, prefix);
   }
 
   get annotation(): Annotation | undefined {
@@ -1361,7 +1320,7 @@ export class PreparedResult implements Taggable {
   }
 
   get modelTag(): Tag {
-    return Tag.annotationToTag(this.modelDef.annotation).tag;
+    return annotationToTag(this.modelDef.annotation).tag;
   }
 
   /**
@@ -1420,20 +1379,20 @@ export class PreparedResult implements Taggable {
     }
   }
 
-  public get sourceExplore(): Explore {
+  public get sourceExplore(): Explore | undefined {
     const name = this.inner.sourceExplore;
     const explore = this.modelDef.contents[name];
-    if (explore === undefined) {
-      throw new Error('Malformed query result.');
-    }
-    if (isSourceDef(explore)) {
+    if (explore && isSourceDef(explore)) {
       return new Explore(explore);
     }
-    throw new Error(`'${name} is not an explore`);
   }
 
   public get _sourceExploreName(): string {
     return this.inner.sourceExplore;
+  }
+
+  public get _sourceArguments(): Record<string, Argument> | undefined {
+    return this.inner.sourceArguments;
   }
 
   public get _sourceFilters(): FilterCondition[] {
@@ -1669,17 +1628,17 @@ export class Explore extends Entity implements Taggable {
     return false;
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    return Tag.annotationToTag(this._structDef.annotation, spec);
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this._structDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp): string[] {
-    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
+    return annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
-    this.parsedModelTag ||= Tag.annotationToTag(
+    this.parsedModelTag ||= annotationToTag(
       this._structDef.modelAnnotation
     ).tag;
     return this.parsedModelTag;
@@ -1699,15 +1658,17 @@ export class Explore extends Entity implements Taggable {
         `Cannot get query by name from a struct of type ${this.structDef.type}`
       );
     }
+    const view = structRef.fields.find(f => (f.as ?? f.name) === name);
+    if (view === undefined) {
+      throw new Error(`No such view named \`${name}\``);
+    }
+    if (view.type !== 'turtle') {
+      throw new Error(`\`${name}\` is not a view`);
+    }
     const internalQuery: InternalQuery = {
       type: 'query',
       structRef,
-      pipeline: [
-        {
-          type: 'reduce',
-          queryFields: [{type: 'fieldref', path: [name]}],
-        },
-      ],
+      pipeline: view.pipeline,
     };
     return new PreparedQuery(internalQuery, this.modelDef, [], name);
   }
@@ -1903,6 +1864,102 @@ export class Explore extends Entity implements Taggable {
   public get location(): DocumentLocation | undefined {
     return this.structDef.location;
   }
+
+  private collectSourceComponents(structDef: StructDef): SourceComponentInfo[] {
+    const sources: SourceComponentInfo[] = [];
+
+    if (structDef.type === 'composite') {
+      for (const source of structDef.sources) {
+        sources.push(...this.collectSourceComponents(source));
+      }
+      return sources;
+    }
+    if (isSourceComponent(structDef)) {
+      if (structDef.type === 'table') {
+        // Generate componentID based on connection and table name
+
+        sources.push({
+          type: 'table',
+          tableName: structDef.tablePath,
+          componentID: `${structDef.connection}:${structDef.tablePath}`,
+          sourceID: `${structDef.connection}:${structDef.tablePath}`,
+        });
+      } else if (structDef.type === 'sql_select') {
+        sources.push({
+          type: 'sql',
+          selectStatement: structDef.selectStr,
+          componentID: `${structDef.connection}:${structDef.selectStr}`,
+          sourceID: `${structDef.connection}:${structDef.selectStr}`,
+        });
+      } else if (structDef.type === 'query_source') {
+        // For QuerySourceDef, we need to extract the SQL from the query
+        // We need to create a PreparedQuery from the query, then get a PreparedResult
+        // to access the SQL
+        let sql: string;
+        try {
+          // Create a PreparedQuery from the query in the QuerySourceDef
+          const preparedQuery = new PreparedQuery(
+            structDef.query,
+            this.modelDef,
+            []
+          );
+
+          // Get the PreparedResult which contains the SQL
+          const preparedResult = preparedQuery.getPreparedResult();
+
+          // Extract the SQL
+          sql = preparedResult.sql;
+        } catch (error) {
+          // If we can't compile the query, use a placeholder
+          sql = `-- Could not compile SQL for query ${
+            structDef.query.name || 'unnamed query'
+          }: ${error instanceof Error ? error.message : String(error)}`;
+        }
+
+        // Generate componentID based on connection and SQL
+        const componentID = `${structDef.connection}:${sql}`;
+
+        sources.push({
+          type: 'sql',
+          selectStatement: sql,
+          componentID: componentID,
+          sourceID: componentID,
+        });
+      }
+    } else {
+      return [];
+    }
+
+    // Process all fields to find joins
+    for (const field of structDef.fields) {
+      if (isJoined(field)) {
+        sources.push(...this.collectSourceComponents(field));
+      }
+    }
+    return sources;
+  }
+
+  /**
+   * THIS IS A HIGHLY EXPERIMENTAL API AND MAY VANISH OR CHANGE WITHOUT NOTICE
+   */
+  public getSourceComponents(): SourceComponentInfo[] {
+    const uniqueSources: Record<string, SourceComponentInfo> = {};
+    if (isSourceDef(this.structDef)) {
+      const allSources = this.collectSourceComponents(this.structDef);
+
+      // Deduplicate sources using componentID as the key
+      for (const source of allSources) {
+        if (source.componentID) {
+          uniqueSources[source.componentID] = source;
+        } else if (source.sourceID) {
+          uniqueSources[source.sourceID] = source;
+        }
+      }
+    }
+
+    // Return the deduplicated sources as an array
+    return Object.values(uniqueSources);
+  }
 }
 
 export enum AtomicFieldType {
@@ -1959,12 +2016,12 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    spec = Tag.addModelScope(spec, this.parent.modelTag);
-    return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
+    spec = addModelScope(spec, this.parent.modelTag);
+    return annotationToTag(this.fieldTypeDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.fieldTypeDef.annotation, prefix);
+    return annotationToTaglines(this.fieldTypeDef.annotation, prefix);
   }
 
   public isIntrinsic(): boolean {
@@ -2258,12 +2315,12 @@ export class QueryField extends Query implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    spec = Tag.addModelScope(spec, this.parent.modelTag);
-    return Tag.annotationToTag(this.turtleDef.annotation, spec);
+    spec = addModelScope(spec, this.parent.modelTag);
+    return annotationToTag(this.turtleDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.turtleDef.annotation, prefix);
+    return annotationToTaglines(this.turtleDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
@@ -2332,8 +2389,8 @@ export class ExploreField extends Explore {
   }
 
   override tagParse(spec?: TagParseSpec) {
-    spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
-    return Tag.annotationToTag(this._structDef.annotation, spec);
+    spec = addModelScope(spec, this._parentExplore.modelTag);
+    return annotationToTag(this._structDef.annotation, spec);
   }
 
   public isQueryField(): this is QueryField {
@@ -2914,7 +2971,7 @@ export class ModelMaterializer extends FluentState<Model> {
           group_by: fieldName
           aggregate: cardinality is count(fieldValue)
           nest: values is {
-            select: fieldValue, weight
+            group_by: fieldValue, weight
             order_by: weight desc
             limit: ${limit}
           }

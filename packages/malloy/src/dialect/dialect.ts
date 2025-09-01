@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   Sampling,
   AtomicTypeDef,
@@ -34,34 +34,20 @@ import {
   TimeLiteralNode,
   RecordLiteralNode,
   ArrayLiteralNode,
-  LeafAtomicTypeDef,
-  isRawCast,
-  isLeafAtomic,
+  BasicAtomicTypeDef,
   OrderBy,
 } from '../model/malloy_types';
-import {DialectFunctionOverloadDef} from './functions';
-
-type DialectFieldTypes = string | 'struct';
+import {isRawCast, isBasicAtomic} from '../model/malloy_types';
+import type {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {
-  type: DialectFieldTypes;
+  typeDef: AtomicTypeDef;
   sqlExpression: string;
   rawName: string;
   sqlOutputName: string;
 }
-
-export interface DialectFieldTypeStruct extends DialectField {
-  type: 'struct';
-  nestedStruct: DialectFieldList;
-  isArray: boolean;
-}
-
-export function isDialectFieldStruct(
-  d: DialectField
-): d is DialectFieldTypeStruct {
-  return d.type === 'struct';
-}
 export type DialectFieldList = DialectField[];
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -109,7 +95,9 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type OrderByClauseType = 'output_name' | 'ordinal';
+export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
+export type OrderByRequest = 'query' | 'turtle' | 'analytical';
+export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
 export abstract class Dialect {
   abstract name: string;
@@ -178,8 +166,10 @@ export abstract class Dialect {
   // An array or record will reveal type of contents on schema read
   compoundObjectInSchema = true;
 
-  // No true boolean type, e.g. true=1 and false=0, set this to true
-  booleanAsNumbers = false;
+  booleanType: BooleanTypeSupport = 'supported';
+
+  // Like characters are escaped with ESCAPE clause
+  likeEscape = true;
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
@@ -202,8 +192,7 @@ export abstract class Dialect {
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string;
 
   abstract sqlAnyValueTurtle(
@@ -292,11 +281,11 @@ export abstract class Dialect {
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
   abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
+  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
+
   abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
   abstract sqlLiteralString(literal: string): string;
   abstract sqlLiteralRegexp(literal: string): string;
-
-  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
   abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
   abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
 
@@ -377,7 +366,12 @@ export abstract class Dialect {
     return tableSQL;
   }
 
-  sqlOrderBy(orderTerms: string[]): string {
+  /**
+   * MySQL is NULLs first, all other dialects have a way to make NULLs last.
+   * isBaseOrdering is a hack to allow the MySQL dialect to partially implement
+   * NULLs last, but should go away once MySQL fully implements NULLs last.
+   */
+  sqlOrderBy(orderTerms: string[], _orderFor?: OrderByRequest): string {
     return `ORDER BY ${orderTerms.join(',')}`;
   }
 
@@ -407,7 +401,7 @@ export abstract class Dialect {
     )`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef;
+  abstract sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef;
   abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
@@ -419,13 +413,13 @@ export abstract class Dialect {
    */
   sqlCastPrep(cast: TypecastExpr): {
     op: string;
-    srcTypeDef: LeafAtomicTypeDef | undefined;
-    dstTypeDef: LeafAtomicTypeDef | undefined;
+    srcTypeDef: BasicAtomicTypeDef | undefined;
+    dstTypeDef: BasicAtomicTypeDef | undefined;
     dstSQLType: string;
   } {
     let srcTypeDef = cast.srcType || cast.e.typeDef;
     const src = srcTypeDef?.type || 'unknown';
-    if (srcTypeDef && !isLeafAtomic(srcTypeDef)) {
+    if (srcTypeDef && !isBasicAtomic(srcTypeDef)) {
       srcTypeDef = undefined;
     }
     if (isRawCast(cast)) {
@@ -442,5 +436,61 @@ export abstract class Dialect {
       dstTypeDef: cast.dstType,
       dstSQLType: this.malloyTypeToSQLType(cast.dstType),
     };
+  }
+
+  /**
+   * Write a LIKE expression. Malloy like strings are escaped with \\% and \\_
+   * but some SQL dialects use an ESCAPE clause.
+   */
+  sqlLike(likeOp: 'LIKE' | 'NOT LIKE', left: string, likeStr: string): string {
+    let escaped = '';
+    let escapeActive = false;
+    let escapeClause = false;
+    for (const c of likeStr) {
+      if (c === '\\' && !escapeActive) {
+        escapeActive = true;
+      } else if (this.likeEscape && c === '^') {
+        escaped += '^^';
+        escapeActive = false;
+        escapeClause = true;
+      } else {
+        if (escapeActive) {
+          if (this.likeEscape) {
+            if (c === '%' || c === '_') {
+              escaped += '^';
+              escapeClause = true;
+            }
+          } else {
+            if (c === '%' || c === '_' || c === '\\') {
+              escaped += '\\';
+            }
+          }
+        }
+        escaped += c;
+        escapeActive = false;
+      }
+    }
+    const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
+    return escapeClause ? `${compare} ESCAPE '^'` : compare;
+  }
+
+  /**
+   * SQL to generate to get a boolean value for a boolean expression
+   */
+  sqlBoolean(bv: boolean): string {
+    if (this.booleanType === 'none') {
+      return bv ? '(1=1)' : '(1-0)';
+    }
+    return bv ? 'true' : 'false';
+  }
+
+  /**
+   * What a boolean value looks like in a query result
+   */
+  resultBoolean(bv: boolean) {
+    if (this.booleanType !== 'supported') {
+      return bv ? 1 : 0;
+    }
+    return bv ? true : false;
   }
 }

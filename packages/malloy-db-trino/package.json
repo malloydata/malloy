@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-trino",
-  "version": "0.0.236",
+  "version": "0.0.309",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,7 @@
     "url": "git+https://github.com/malloydata/malloy.git"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.236",
+    "@malloydata/malloy": "0.0.309",
     "@prestodb/presto-js-client": "^1.0.0",
     "gaxios": "^4.2.0",
     "trino-client": "^0.2.2"

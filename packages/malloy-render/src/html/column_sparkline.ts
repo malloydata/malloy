@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field} from '@malloydata/malloy';
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {HTMLBarChartRenderer} from './bar_chart';
 import {RendererFactory} from './renderer_factory';
-import {ColumnSparkLineRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {ColumnSparkLineRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -40,8 +40,11 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.allFields;
+  override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
+      throw new Error('Column sparkline renderer requires a nested field');
+    }
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -98,7 +101,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       config: {
         view: {
@@ -119,7 +122,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
 export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkLineRenderOptions> {
   public static readonly instance = new ColumnSparkLineRendererFactory();
 
-  isValidMatch(field: Field | Explore): boolean {
+  isValidMatch(field: Field): boolean {
     return field.name.endsWith('_column');
   }
 
@@ -127,7 +130,7 @@ export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkL
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: ColumnSparkLineRenderOptions,
     timezone?: string
   ): Renderer {

@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
-import {
+import type {
   LineChartRenderOptions,
   ScatterChartRenderOptions,
   StyleDefaults,
 } from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {
@@ -40,27 +40,18 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getDataType(
     field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
-        return 'temporal';
-      } else if (field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
+    if (field.isTime()) {
+      return 'temporal';
+    } else if (field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for scatter chart.');
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
-    if (data.isNull()) {
-      return null;
-    } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
-    ) {
+  getDataValue(data: Cell): Date | string | number | null {
+    if (data.isNull() || data.isTime() || data.isString() || data.isNumber()) {
       return data.value;
     } else {
       throw new Error('Invalid field type for scatter chart.');
@@ -75,7 +66,7 @@ export class ScatterChartRendererFactory extends RendererFactory<ScatterChartRen
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: LineChartRenderOptions,
     timezone?: string
   ): Renderer {

@@ -21,12 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CaseExpr} from '../../../model/malloy_types';
+import type {CaseExpr} from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 
 interface Choice {
@@ -114,6 +115,12 @@ export class Pick extends ExpressionDef {
         });
       }
     }
+    if (definedReturnType.type === 'filter expression') {
+      return this.loggedErrorExpr(
+        'filter-expression-error',
+        'Pick statments cannot have filter expression values'
+      );
+    }
     caseValue.kids.caseElse = defaultVal.value;
     return computedExprValue({
       dataType: definedReturnType,
@@ -183,6 +190,12 @@ export class Pick extends ExpressionDef {
         elseType: defVal.type,
         returnType: definedReturnType.type,
       });
+    }
+    if (definedReturnType.type === 'filter expression') {
+      return this.loggedErrorExpr(
+        'filter-expression-error',
+        'Pick statments cannot have filter expression values'
+      );
     }
     pick.kids.caseElse = defVal.value;
     return computedExprValue({

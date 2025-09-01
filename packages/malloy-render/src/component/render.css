@@ -1,4 +1,4 @@
-:host {
+.malloy-render {
   --malloy-theme--table-row-height: 28px;
   --malloy-theme--table-font-size: 12px;
   --malloy-theme--table-header-color: #5d626b;
@@ -11,13 +11,17 @@
   --malloy-theme--table-pinned-background: #f5fafc;
   --malloy-theme--table-pinned-border: 1px solid #daedf3;
   --malloy-theme--font-family: Inter, system-ui, sans-serif;
+  --malloy-theme--background: white;
 
   font-family: var(--malloy-render--font-family);
   font-size: var(--malloy-render--table-font-size);
+  height: 100%;
+  width: 100%;
+  background-color: var(--malloy-render--background);
 }
 
 @supports (font-variation-settings: normal) {
-  :host {
+  .malloy-render {
     font-family:
       InterVariable,
       Inter,

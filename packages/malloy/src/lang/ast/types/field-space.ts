@@ -21,12 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
-import {SourceDef, StructDef} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {LookupResult} from './lookup-result';
+import type {Dialect} from '../../../dialect/dialect';
+import type {
+  AccessModifierLabel,
+  SourceDef,
+  StructDef,
+} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
-import {SpaceEntry} from './space-entry';
+import type {SpaceEntry} from './space-entry';
 
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
@@ -36,13 +40,17 @@ export interface FieldSpace {
   type: 'fieldSpace';
   structDef(): StructDef;
   emptyStructDef(): StructDef;
-  lookup(symbol: FieldName[]): LookupResult;
+  lookup(
+    symbol: FieldName[],
+    accessLevel?: AccessModifierLabel | undefined
+  ): LookupResult;
   entry(symbol: string): SpaceEntry | undefined;
   entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
   dialectName(): string;
+  connectionName(): string;
   isQueryFieldSpace(): this is QueryFieldSpace;
-  isProtectedAccessSpace(): boolean;
+  accessProtectionLevel(): AccessModifierLabel;
 }
 
 export interface SourceFieldSpace extends FieldSpace {
@@ -53,6 +61,7 @@ export interface SourceFieldSpace extends FieldSpace {
 export interface QueryFieldSpace extends SourceFieldSpace {
   outputSpace(): QueryOperationSpace;
   inputSpace(): SourceFieldSpace;
+  isQueryOutputSpace(): boolean;
 }
 
 export class FieldName extends MalloyElement {

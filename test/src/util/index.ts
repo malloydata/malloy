@@ -21,73 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  FilterCondition,
-  QueryFieldDef,
-  IndexFieldDef,
+import type {
   QueryMaterializer,
   Result,
   Runtime,
-  Expr,
-  composeSQLExpr,
+  SingleConnectionRuntime,
 } from '@malloydata/malloy';
 export * from '@malloydata/malloy/test';
-
-// these two helper functions are here just to make older hand built models
-// easier to use in the new world were refs are not strings
-export function fToQF(fs: (QueryFieldDef | string)[]): QueryFieldDef[] {
-  return fs.map(f =>
-    typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f
-  );
-}
-
-export function fToIF(fs: string[]): IndexFieldDef[] {
-  return fs.map(f =>
-    typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f
-  );
-}
-
-export function fStringEq(field: string, value: string): FilterCondition {
-  return {
-    node: 'filterCondition',
-    e: {
-      node: '=',
-      kids: {
-        left: {node: 'field', path: field.split('.')},
-        right: {node: 'stringLiteral', literal: value},
-      },
-    },
-    code: `${field}='${value}'`,
-    expressionType: 'scalar',
-  };
-}
-
-export function fStringLike(field: string, value: string): FilterCondition {
-  return {
-    node: 'filterCondition',
-    e: {
-      node: 'like',
-      kids: {
-        left: {node: 'field', path: field.split('.')},
-        right: {node: 'stringLiteral', literal: value},
-      },
-    },
-    code: `${field}~'${value}'`,
-    expressionType: 'scalar',
-  };
-}
-
-export function fYearEq(field: string, year: number): FilterCondition {
-  const yBegin = `'${year}-01-01 00:00:00'`;
-  const yEnd = `'${year + 1}-01-01 00:00:00'`;
-  const fx: Expr = {node: 'field', path: field.split('.')};
-  return {
-    node: 'filterCondition',
-    e: composeSQLExpr([fx, `>=${yBegin} and `, fx, `<${yEnd}`]),
-    code: `${field}:@${year}`,
-    expressionType: 'scalar',
-  };
-}
 
 interface InitValues {
   sql?: string;
@@ -102,7 +42,7 @@ function sqlSafe(str: string): string {
 }
 
 export function mkSqlEqWith(
-  runtime: Runtime,
+  runtime: SingleConnectionRuntime,
   cName: string,
   initV?: InitValues
 ) {
@@ -197,20 +137,4 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
   }
 
   return result;
-}
-
-export function booleanResult(value: boolean, dbName: string) {
-  if (dbName === 'mysql') {
-    return value ? 1 : 0;
-  } else {
-    return value;
-  }
-}
-
-export function booleanCode(value: boolean, dbName: string) {
-  if (dbName === 'mysql') {
-    return value ? '1' : '0';
-  } else {
-    return value ? 'true' : 'false';
-  }
 }

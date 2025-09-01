@@ -28,6 +28,7 @@ import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
 function modelText(connectionName: string) {
   return `
   source: aircraft_models is ${connectionName}.table('malloytest.aircraft_models') extend {
@@ -127,7 +128,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: m is manufacturer
         aggregate: num_models is count()
         } extend {
-          join_one: seats is
+          join_one: seats_join is
             aircraft_models->{
               group_by: m is manufacturer
               aggregate: total_seats is seats.sum()
@@ -136,7 +137,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           select:
             m
             num_models
-            seats.total_seats
+            seats_join.total_seats
           order_by: 2 desc
           limit: 1
         }
@@ -222,8 +223,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  // not sure how to solve this one yet, just check for > 4 rows
-  it('All joins at the same level', async () => {
+  it('activates parent join when fields in leaf join are referenced', async () => {
     await expect(`
       source: flights is ${databaseName}.table('malloytest.flights') extend {
         join_one: aircraft is ${databaseName}.table('malloytest.aircraft')
@@ -237,14 +237,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: flight_count is count()
         limit: 5
       }
-    `).malloyResultMatches(joinModel, [{}, {}, {}, {}, {}]);
+    `).malloyResultMatches(runtime, [{}, {}, {}, {}, {}]);
   });
 
+  // I don't know what join issue 440 was, there was a change of repos and that
+  // is no longer recorded anywhere. I suspect it was the indirect reference to
+  // the leaf join field. In a world where the join tree is built from fieldUsage
+  // that automatically works, but what is a problem is inferring the join tree
+  // from the ordering of usages. Inverting the "on" comparison in this test
+  // caused it to fail when the previous one passed.
   it('join issue440', async () => {
     await expect(`
-      source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models')
-
       source: aircraft is ${databaseName}.table('malloytest.aircraft')
+      source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models')
 
       source: flights is ${databaseName}.table('malloytest.flights') extend {
         join_one: aircraft on aircraft.tail_num = tail_num
@@ -252,10 +257,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
 
       run: flights-> {
-        group_by: testingtwo is aircraft_models.model
-        limit: 5
+        group_by: testtwo is aircraft_models.seats
+        limit: 1
       }
-    `).malloyResultMatches(runtime, [{}, {}, {}, {}, {}]);
+    `).malloyResultMatches(runtime, [{}]);
   });
 
   it('join issue1092', async () => {
@@ -302,4 +307,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `).malloyResultMatches(joinModel, {c: 0});
   });
+
+  it.when(runtime.dialect.nestedArrays)(
+    'finds join dependency in non basic atomic fields',
+    async () => {
+      await expect(`
+      run: ${databaseName}.sql("SELECT 1 as n")
+        extend { dimension: a1 is [[1]], a2 is [[2]] }
+        -> { select: pick_a1 is pick a1.each when true else a2.each }
+      `).matchesRows(runtime, {pick_a1: [1]});
+    }
+  );
 });

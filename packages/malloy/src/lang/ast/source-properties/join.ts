@@ -21,39 +21,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Annotation,
   JoinFieldDef,
-  isSourceDef,
   JoinType,
   MatrixOperation,
   SourceDef,
-  isJoinable,
   AccessModifierLabel,
 } from '../../../model/malloy_types';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import {isSourceDef, isJoinable} from '../../../model/malloy_types';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
-import {QueryBuilder} from '../types/query-builder';
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-import {extendNoteMethod, Noteable} from '../types/noteable';
-import {MakeEntry} from '../types/space-entry';
-import {SourceQueryElement} from '../source-query-elements/source-query-element';
+import type {QueryBuilder} from '../types/query-builder';
+import type {ExpressionDef} from '../types/expression-def';
+import type {FieldSpace} from '../types/field-space';
+import type {ModelEntryReference} from '../types/malloy-element';
+import {MalloyElement} from '../types/malloy-element';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {MakeEntry} from '../types/space-entry';
+import type {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {ErrorFactory} from '../error-factory';
-import {ParameterSpace} from '../field-space/parameter-space';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {ParameterSpace} from '../field-space/parameter-space';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
+import {mergeFieldUsage} from '../../composite-source-utils';
 
 export abstract class Join
   extends MalloyElement
   implements Noteable, MakeEntry
 {
   abstract name: ModelEntryReference;
-  abstract structDef(parameterSpace: ParameterSpace): JoinFieldDef;
+  abstract getStructDef(parameterSpace: ParameterSpace): JoinFieldDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
@@ -64,7 +64,12 @@ export abstract class Join
     fs.newEntry(
       this.name.refString,
       this,
-      new JoinSpaceField(fs.parameterSpace(), this, fs.dialectName())
+      new JoinSpaceField(
+        fs.parameterSpace(),
+        this,
+        fs.dialectName(),
+        fs.connectionName()
+      )
     );
   }
 
@@ -95,7 +100,7 @@ export class KeyJoin extends Join {
     super({name, sourceExpr, keyExpr});
   }
 
-  structDef(parameterSpace: ParameterSpace): JoinFieldDef {
+  getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const sourceDef = this.getStructDefFromExpr(parameterSpace);
     if (!isJoinable(sourceDef)) {
       throw this.internalError(`Cannot join struct type '${sourceDef.type}'`);
@@ -125,18 +130,22 @@ export class KeyJoin extends Join {
       );
       if (pkey) {
         if (pkey.type === exprX.type) {
+          const keyPath = [this.name.refString, inStruct.primaryKey];
           inStruct.join = 'one';
           inStruct.onExpression = {
             node: '=',
             kids: {
               left: {
                 node: 'field',
-                path: [this.name.refString, inStruct.primaryKey],
+                path: keyPath,
+                at: this.keyExpr.location,
               },
               right: exprX.value,
             },
           };
-          inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
+          inStruct.fieldUsage = mergeFieldUsage(exprX.fieldUsage, [
+            {path: keyPath},
+          ]);
           return;
         } else {
           this.logError(
@@ -193,10 +202,10 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
+    inStruct.fieldUsage = exprX.fieldUsage;
   }
 
-  structDef(parameterSpace: ParameterSpace): JoinFieldDef {
+  getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog(

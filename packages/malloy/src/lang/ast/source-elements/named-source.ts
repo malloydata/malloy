@@ -22,29 +22,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Argument,
   InvokedStructRef,
+  Parameter,
+  SourceDef,
+} from '../../../model/malloy_types';
+import {
   isCastType,
   isSourceDef,
-  Parameter,
   paramHasValue,
-  SourceDef,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {castTo} from '../time-utils';
 import {ModelEntryReference} from '../types/malloy-element';
-import {Argument as HasArgument} from '../parameters/argument';
-import {
+import type {Argument as HasArgument} from '../parameters/argument';
+import type {
   LogMessageOptions,
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
-import {HasParameter} from '../parameters/has-parameter';
+import type {HasParameter} from '../parameters/has-parameter';
+import {checkFilterExpression} from '../types/expression-def';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
@@ -194,6 +197,23 @@ export class NamedSource extends Source {
           parameterSpace ?? new ParameterSpace(parametersOut ?? []);
         const pVal = argument.value.getExpression(paramSpace);
         let value = pVal.value;
+        if (
+          pVal.type === 'filter expression' &&
+          parameter.type === 'filter expression' &&
+          parameter.filterType
+        ) {
+          if (value.node === 'parameter') {
+            const filterType = pVal['filterType'] ?? 'missing-filter-type';
+            if (parameter.filterType !== filterType) {
+              argument.value.logError(
+                'filter-expression-type',
+                `Parameter types filter<${parameter.filterType}> and filter<${filterType}> do not match`
+              );
+            }
+          } else {
+            checkFilterExpression(argument.value, parameter.filterType, value);
+          }
+        }
         if (pVal.type !== parameter.type && isCastType(parameter.type)) {
           value = castTo(parameter.type, pVal.value, pVal.type, true);
         }
@@ -206,9 +226,7 @@ export class NamedSource extends Source {
 
     for (const paramName in parametersIn) {
       if (!(paramName in outArguments)) {
-        if (paramHasValue(parametersIn[paramName])) {
-          outArguments[paramName] = {...parametersIn[paramName]};
-        } else {
+        if (!paramHasValue(parametersIn[paramName])) {
           this.refLogError(
             'missing-source-argument',
             `Argument not provided for required parameter \`${paramName}\``
@@ -262,6 +280,14 @@ export class NamedSource extends Source {
       base.parameters,
       pList
     );
+    for (const paramName in base.parameters) {
+      if (
+        !(paramName in outArguments) &&
+        paramHasValue(base.parameters[paramName])
+      ) {
+        outArguments[paramName] = {...base.parameters[paramName]};
+      }
+    }
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};
     this.document()?.rememberToAddModelAnnotations(ret);

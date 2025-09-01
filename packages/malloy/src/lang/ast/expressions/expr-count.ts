@@ -21,11 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {AggregateExpr} from '../../../model/malloy_types';
-import {FieldReference} from '../query-items/field-references';
-import {ExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {AggregateExpr} from '../../../model/malloy_types';
+import type {FieldReference} from '../query-items/field-references';
+import type {ExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 
 export class ExprCount extends ExprAggregateFunction {
@@ -49,7 +48,7 @@ export class ExprCount extends ExprAggregateFunction {
       evalSpace: ev.evalSpace,
       expressionType: 'aggregate',
       value: ev.value,
-      compositeFieldUsage: ev.compositeFieldUsage,
+      fieldUsage: ev.fieldUsage,
     };
   }
 
@@ -58,6 +57,7 @@ export class ExprCount extends ExprAggregateFunction {
       node: 'aggregate',
       function: 'count',
       e: {node: ''},
+      at: this.location,
     };
     if (this.source) {
       ret.structPath = this.source.path;
@@ -68,7 +68,9 @@ export class ExprCount extends ExprAggregateFunction {
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',
-      compositeFieldUsage: emptyCompositeFieldUsage(),
+      fieldUsage: [
+        {path: ret.structPath || [], uniqueKeyRequirement: {isCount: true}},
+      ],
     };
   }
 }

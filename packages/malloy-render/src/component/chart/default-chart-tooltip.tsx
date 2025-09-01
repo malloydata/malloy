@@ -6,7 +6,7 @@
  */
 
 import {For, Match, Show, Switch, createEffect, createSignal} from 'solid-js';
-import {ChartTooltipEntry} from '../types';
+import type {ChartTooltipEntry} from '../types';
 
 export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
   const [render, setRender] = createSignal(false);

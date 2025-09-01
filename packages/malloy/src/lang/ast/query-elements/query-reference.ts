@@ -22,12 +22,13 @@
  */
 
 import {ErrorFactory} from '../error-factory';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-import {QueryComp} from '../types/query-comp';
+import type {ModelEntryReference} from '../types/malloy-element';
+import {MalloyElement} from '../types/malloy-element';
+import type {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
-import {Query, refIsStructDef} from '../../../model/malloy_types';
-import {getFinalStruct} from '../struct-utils';
-import {QueryElement} from '../types/query-element';
+import type {Query} from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
+import type {QueryElement} from '../types/query-element';
 
 /**
  * A query operation that is just a reference to an existing query.
@@ -65,7 +66,8 @@ export class QueryReference extends MalloyElement implements QueryElement {
       );
       this.has({queryHead: queryHead});
       const inputStruct = queryHead.getSourceDef(undefined);
-      const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
+      const outputStruct =
+        query.pipeline[query.pipeline.length - 1].outputStruct;
       const unRefedQuery = isRefOk
         ? query
         : refIsStructDef(query.structRef)

@@ -21,23 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   AtomicTypeDef,
   EvalSpace,
-  expressionIsScalar,
   ExpressionType,
   ExpressionValueType,
-  isRepeatedRecord,
-  TD,
+  Parameter,
   TypeDesc,
 } from '../../model';
-import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
+import {expressionIsScalar, isRepeatedRecord, TD} from '../../model';
 
 function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
   // which isn't available. In retrospect the dialect shouldn't be in the type,
   // it should only be in the field, which I wil do eventually.
-  dataType: Exclude<ExpressionValueType, 'record' | 'array'>,
+  dataType: Exclude<ExpressionValueType, 'record' | 'array' | 'turtle'>,
   expressionType: ExpressionType = 'scalar',
   evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
@@ -45,7 +43,7 @@ function mkTypeDesc(
     type: dataType,
     expressionType,
     evalSpace,
-    compositeFieldUsage: emptyCompositeFieldUsage(),
+    fieldUsage: [],
   };
 }
 
@@ -56,7 +54,6 @@ export const dateT = mkTypeDesc('date');
 export const timestampT = mkTypeDesc('timestamp');
 export const boolT = mkTypeDesc('boolean');
 export const errorT = mkTypeDesc('error');
-export const viewT = mkTypeDesc('turtle');
 export const aggregateBoolT = mkTypeDesc('boolean', 'aggregate');
 export const anyAtomicT = [numberT, stringT, dateT, timestampT, boolT];
 
@@ -174,4 +171,21 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
     }
   }
   return {type: 'error'};
+}
+
+export function parameterTypeDesc(
+  p: Parameter,
+  evalSpace: EvalSpace
+): TypeDesc {
+  const t = p.type;
+  const theType =
+    t === 'filter expression'
+      ? {type: t, filterType: p.filterType}
+      : atomicDef(p);
+  return {
+    ...theType,
+    expressionType: 'scalar',
+    evalSpace,
+    fieldUsage: [],
+  };
 }

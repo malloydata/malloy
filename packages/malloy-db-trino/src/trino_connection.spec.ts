@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
+import type {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
 import {TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array

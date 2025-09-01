@@ -21,21 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
+import type {Dialect} from '../../../dialect/dialect';
 import {getDialect} from '../../../dialect/dialect_map';
-import {
+import type {
   FieldDef,
   StructDef,
   SourceDef,
-  isJoined,
-  isTurtle,
-  isSourceDef,
   JoinFieldDef,
+  AccessModifierLabel,
 } from '../../../model/malloy_types';
+import {isJoined, isTurtle, isSourceDef} from '../../../model/malloy_types';
 
-import {SpaceEntry} from '../types/space-entry';
-import {LookupResult} from '../types/lookup-result';
-import {
+import type {SpaceEntry} from '../types/space-entry';
+import type {LookupResult} from '../types/lookup-result';
+import type {
   FieldName,
   FieldSpace,
   QueryFieldSpace,
@@ -53,15 +52,21 @@ export class StaticSpace implements FieldSpace {
   readonly type = 'fieldSpace';
   private memoMap?: FieldMap;
   protected fromStruct: StructDef;
-  protected structDialect: string;
 
-  constructor(struct: StructDef, dialect_name: string) {
+  constructor(
+    struct: StructDef,
+    protected readonly structDialect: string,
+    protected readonly structConnection: string
+  ) {
     this.fromStruct = struct;
-    this.structDialect = dialect_name;
   }
 
   dialectName(): string {
     return this.structDialect;
+  }
+
+  connectionName(): string {
+    return this.structConnection;
   }
 
   dialectObj(): Dialect | undefined {
@@ -74,7 +79,11 @@ export class StaticSpace implements FieldSpace {
 
   defToSpaceField(from: FieldDef): SpaceField {
     if (isJoined(from)) {
-      return new StructSpaceField(from, this.structDialect);
+      return new StructSpaceField(
+        from,
+        this.structDialect,
+        this.structConnection
+      );
     } else if (isTurtle(from)) {
       return new IRViewField(this, from);
     }
@@ -103,8 +112,8 @@ export class StaticSpace implements FieldSpace {
     return this.memoMap;
   }
 
-  isProtectedAccessSpace(): boolean {
-    return false;
+  accessProtectionLevel(): AccessModifierLabel {
+    return 'internal';
   }
 
   protected dropEntries(): void {
@@ -141,7 +150,8 @@ export class StaticSpace implements FieldSpace {
     return ret;
   }
 
-  lookup(path: FieldName[]): LookupResult {
+  lookup(path: FieldName[], accessLevel?: AccessModifierLabel): LookupResult {
+    accessLevel ??= this.accessProtectionLevel();
     const head = path[0];
     const rest = path.slice(1);
     let found = this.entry(head.refString);
@@ -162,7 +172,11 @@ export class StaticSpace implements FieldSpace {
           // because it is someting like "dimension: joinedArray is arrayComputation"
           // which wasn't known to be a join when the fieldspace was constructed.
           // TODO don't make one of these every time you do a lookup
-          found = new StructSpaceField(definition, this.structDialect);
+          found = new StructSpaceField(
+            definition,
+            this.structDialect,
+            this.structConnection
+          );
         }
         // cswenson review todo I don't know how to count the reference properly now
         // i tried only writing it as a join reference if there was more in the path
@@ -179,14 +193,7 @@ export class StaticSpace implements FieldSpace {
         });
       }
       if (definition?.accessModifier) {
-        // TODO path.length === 1 will not work with namespaces
-        if (
-          !(
-            this.isProtectedAccessSpace() &&
-            definition.accessModifier === 'internal' &&
-            path.length === 1
-          )
-        ) {
+        if (!accessAllowed(accessLevel, definition.accessModifier)) {
           return {
             error: {
               message: `'${head}' is ${definition?.accessModifier}`,
@@ -203,7 +210,13 @@ export class StaticSpace implements FieldSpace {
         : [];
     if (rest.length) {
       if (found instanceof StructSpaceFieldBase) {
-        const restResult = found.fieldSpace.lookup(rest);
+        const restResult = found.fieldSpace.lookup(
+          rest,
+          lessPermissiveAccessLevel(
+            accessLevel,
+            found.fieldSpace.accessProtectionLevel()
+          )
+        );
         if (restResult.found) {
           return {
             ...restResult,
@@ -232,23 +245,31 @@ export class StaticSpace implements FieldSpace {
 export class StructSpaceField extends StructSpaceFieldBase {
   constructor(
     def: JoinFieldDef,
-    private forDialect: string
+    private forDialect: string,
+    private forConnection: string
   ) {
     super(def);
   }
 
   get fieldSpace(): FieldSpace {
     if (isSourceDef(this.structDef)) {
-      return new StaticSourceSpace(this.structDef);
+      return new StaticSourceSpace(this.structDef, 'internal');
     } else {
-      return new StaticSpace(this.structDef, this.forDialect);
+      return new StaticSpace(
+        this.structDef,
+        this.forDialect,
+        this.forConnection
+      );
     }
   }
 }
 
 export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
-  constructor(protected source: SourceDef) {
-    super(source, source.dialect);
+  constructor(
+    protected source: SourceDef,
+    public readonly _accessProtectionLevel: AccessModifierLabel
+  ) {
+    super(source, source.dialect, source.connection);
   }
   structDef(): SourceDef {
     return this.source;
@@ -259,4 +280,27 @@ export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
     ret.fields = [];
     return ret;
   }
+
+  accessProtectionLevel(): AccessModifierLabel {
+    return this._accessProtectionLevel;
+  }
+}
+
+function accessAllowed(
+  accessLevel: AccessModifierLabel,
+  accessModifier: AccessModifierLabel
+): boolean {
+  if (accessModifier === 'public') return true;
+  if (accessLevel === 'internal') return accessModifier === 'internal';
+  if (accessLevel === 'private') return true;
+  return false;
+}
+
+function lessPermissiveAccessLevel(
+  a: AccessModifierLabel,
+  b: AccessModifierLabel
+): AccessModifierLabel {
+  if (a === 'public' || b === 'public') return 'public';
+  if (a === 'internal' || b === 'internal') return 'internal';
+  return 'private';
 }

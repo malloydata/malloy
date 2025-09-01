@@ -43,7 +43,6 @@ defineSourceStatement
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
-  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
@@ -67,7 +66,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr CCURLY
   ;
 
 importStatement
@@ -118,8 +117,7 @@ sqlSource
   ;
 
 exploreTable
-  : TABLE OPAREN tableURI CPAREN                     # tableFunction
-  | connectionId DOT TABLE OPAREN tablePath CPAREN   # tableMethod
+  : connectionId DOT TABLE OPAREN tablePath CPAREN
   ;
 
 connectionId
@@ -148,8 +146,12 @@ sourceParameters
   | OPAREN sourceParameter (COMMA sourceParameter)* CPAREN
   ;
 
+legalParamType
+  : malloyType
+  | FILTER LT malloyType GT;
+
 sourceParameter
-  : parameterNameDef (DOUBLECOLON malloyType)? (IS fieldExpr)?
+  : parameterNameDef (DOUBLECOLON legalParamType)? (IS fieldExpr)?
   ;
 
 parameterNameDef: id;
@@ -162,14 +164,12 @@ exploreProperties
 exploreStatement
   : defDimensions                            # defExploreDimension_stub
   | defMeasures                              # defExploreMeasure_stub
-  | declareStatement                         # defDeclare_stub
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
   | accessLabel? RENAME renameList           # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
-  | tags accessLabel? (QUERY | VIEW) subQueryDefList
-                                             # defExploreQuery
+  | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
@@ -285,7 +285,7 @@ includeExceptList
   ;
 
 includeExceptListItem
-  : tags fieldName
+  : tags fieldPath
   | tags collectionWildCard
   ;
 
@@ -294,8 +294,8 @@ includeList
   ;
 
 includeField
-  : tags (as=fieldName isDefine)? name=fieldName
-  | tags name=fieldName
+  : tags (as=fieldName isDefine)? name=fieldPath
+  | tags name=fieldPath
   | tags collectionWildCard
   ;
 
@@ -376,6 +376,7 @@ fieldPropertyStatement
   | partitionByStatement
   | aggregateOrderByStatement
   | fieldPropertyLimitStatement
+  | groupedByStatement
   ;
 
 filterClauseList
@@ -400,6 +401,14 @@ exploreQueryDef
   : ANNOTATION* exploreQueryNameDef isDefine vExpr
   ;
 
+drillStatement
+  : DRILL drillClauseList
+  ;
+
+drillClauseList
+  : fieldExpr (COMMA fieldExpr)* COMMA?
+  ;
+
 queryStatement
   : groupByStatement
   | declareStatement
@@ -417,6 +426,7 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  | drillStatement
   | queryAnnotation
   | ignoredModelAnnotations
   ;
@@ -460,11 +470,15 @@ calculateStatement
   ;
 
 projectStatement
-  : tags (SELECT | PROJECT) fieldCollection
+  : tags SELECT fieldCollection
   ;
 
 partitionByStatement
   : PARTITION_BY id (COMMA id)* COMMA?
+  ;
+
+groupedByStatement
+  : GROUPED_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement
@@ -537,17 +551,24 @@ shortString
   : (SQ_STRING | DQ_STRING)
   ;
 
+rawString
+  : RAW_SQ
+  | RAW_DQ
+  ;
+
 numericLiteral
   : (NUMERIC_LITERAL | INTEGER_LITERAL)
   ;
 
 literal
   : string                                      # exprString
+  | rawString                                   # stub_rawString
   | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
   | (TRUE | FALSE)                              # exprBool
   | HACKY_REGEX                                 # exprRegex
+  | filterString                                # filterString_stub
   | NOW                                         # exprNow
   ;
 
@@ -611,7 +632,7 @@ fieldExpr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
   | (SOURCE_KW DOT)? aggregate
-      OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
+      OPAREN fieldExpr? CPAREN                             # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
   | OPAREN fieldExpr CPAREN                                # exprExpr
@@ -713,6 +734,21 @@ fieldName: id;
 sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
+
+tripFilterString
+  : SQ3_FILTER
+  | BQ3_FILTER
+  | DQ3_FILTER
+  ;
+
+tickFilterString
+  : SQ_FILTER
+  | BQ_FILTER
+  | DQ_FILTER;
+
+filterString
+  : tripFilterString
+  | tickFilterString;
 
 // These are for debug launch configs. Without the EOF a parse can stop without
 // parsing the entire input, if it is legal up to some token, for the debuger

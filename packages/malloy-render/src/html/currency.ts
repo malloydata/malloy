@@ -21,12 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {RendererFactory} from './renderer_factory';
-import {Currency, CurrencyRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {CurrencyRenderOptions, StyleDefaults} from './data_styles';
+import {Currency} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLCurrencyRenderer extends HTMLTextRenderer {
   constructor(
@@ -36,8 +37,8 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(data: Cell): string | null {
+    if (!data.isNumber()) {
       return null;
     }
 
@@ -54,7 +55,7 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
         break;
     }
 
-    const numText = data.number.value.toLocaleString('en-US', {
+    const numText = data.value.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
@@ -77,7 +78,7 @@ export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptio
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: CurrencyRenderOptions
   ): Renderer {
     return new HTMLCurrencyRenderer(document, options);

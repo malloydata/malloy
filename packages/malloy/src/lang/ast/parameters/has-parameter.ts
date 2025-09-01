@@ -21,28 +21,34 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
+import type {
+  Parameter,
+  ParameterType,
+  ParameterTypeDef,
+} from '../../../model/malloy_types';
+import {isParameterType} from '../../../model/malloy_types';
 
-import {ConstantExpression} from '../expressions/constant-expression';
+import type {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
+import {checkFilterExpression} from '../types/expression-def';
 
 interface HasInit {
   name: string;
-  type?: CastType;
+  typeDef?: ParameterTypeDef;
   default?: ConstantExpression;
 }
 
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  readonly type?: CastType;
+  readonly typeDef?: ParameterTypeDef;
   readonly default?: ConstantExpression;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
-    if (init.type && isCastType(init.type)) {
-      this.type = init.type;
+    if (init.typeDef) {
+      this.typeDef = init.typeDef;
     }
     if (init.default) {
       this.default = init.default;
@@ -50,7 +56,16 @@ export class HasParameter extends MalloyElement {
     }
   }
 
+  private get type(): ParameterType | undefined {
+    return this.typeDef?.type;
+  }
+
   parameter(): Parameter {
+    const paramReturn: Parameter = {
+      ...(this.typeDef || {type: 'error'}),
+      value: null,
+      name: this.name,
+    };
     if (this.default !== undefined) {
       const constant = this.default.constantValue();
       if (
@@ -67,9 +82,8 @@ export class HasParameter extends MalloyElement {
       if (constant.type === 'null') {
         if (this.type) {
           return {
-            type: this.type,
+            ...paramReturn,
             value: constant.value,
-            name: this.name,
           };
         } else {
           this.default.logError(
@@ -83,33 +97,43 @@ export class HasParameter extends MalloyElement {
           };
         }
       }
-      if (!isCastType(constant.type) && constant.type !== 'error') {
+      if (constant.type === 'filter expression') {
+        if (this.typeDef?.type !== 'filter expression') {
+          this.logError(
+            'parameter-missing-default-or-type',
+            `Filter expression parameters must have expicit filter type, for example '${this.name}::filter<string>'`
+          );
+          return {...paramReturn, type: 'error'};
+        }
+        checkFilterExpression(this, this.typeDef.filterType, constant.value);
+        return {
+          type: 'filter expression',
+          filterType: this.typeDef.filterType,
+          name: this.name,
+          value: constant.value,
+        };
+      }
+      if (!isParameterType(constant.type)) {
         this.default.logError(
           'parameter-illegal-default-type',
           `Default value cannot have type \`${constant.type}\``
         );
         return {
-          value: constant.value,
-          name: this.name,
+          ...paramReturn,
           type: 'error',
         };
       }
-      return {
-        value: constant.value,
-        name: this.name,
-        type: constant.type,
-      };
+      paramReturn.type = constant.type;
+      paramReturn.value = constant.value;
+    } else {
+      if (this.type === undefined) {
+        this.logError(
+          'parameter-missing-default-or-type',
+          'Parameter must have default value or declared type'
+        );
+        paramReturn.type = 'error';
+      }
     }
-    if (this.type === undefined) {
-      this.logError(
-        'parameter-missing-default-or-type',
-        'Parameter must have default value or declared type'
-      );
-    }
-    return {
-      value: null,
-      name: this.name,
-      type: this.type ?? 'error',
-    };
+    return paramReturn;
   }
 }

@@ -21,19 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Annotation,
+  FieldUsage,
   QueryFieldDef,
-  TD,
   TypeDesc,
-  mkFieldDef,
 } from '../../../model/malloy_types';
+import {TD, mkFieldDef} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
-import {FieldReference} from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
-import {SpaceEntry} from '../types/space-entry';
+import type {FieldReference} from '../query-items/field-references';
+import type {FieldSpace} from '../types/field-space';
+import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
-import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ReferenceField extends SpaceField {
   private didLookup = false;
@@ -78,7 +77,16 @@ export class ReferenceField extends SpaceField {
           throw new Error('impossible turtle/join parameter');
         }
       } else {
-        this.queryFieldDef = {type: 'fieldref', path};
+        this.queryFieldDef = {
+          type: 'fieldref',
+          path,
+          at: this.fieldRef.location,
+          drillExpression: {
+            kind: 'field_reference',
+            name: path[path.length - 1],
+            path: path.slice(0, -1),
+          },
+        };
       }
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField) {
@@ -104,12 +112,18 @@ export class ReferenceField extends SpaceField {
     if (refTo) {
       const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
       const typeDesc = refTo.typeDesc();
+      const usage: FieldUsage = {
+        path: this.fieldRef.path,
+        at: this.fieldRef.location,
+      };
       this.memoTypeDesc = {
         ...typeDesc,
-        compositeFieldUsage: joinedCompositeFieldUsage(
-          joinPath,
-          typeDesc.compositeFieldUsage
-        ),
+        fieldUsage: [usage],
+        requiresGroupBy: typeDesc.requiresGroupBy?.map(gb => ({
+          ...gb,
+          path: [...joinPath, ...gb.path],
+          fieldUsage: usage,
+        })),
       };
       return this.memoTypeDesc;
     }

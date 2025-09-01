@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from '../../model/malloy_types';
+import type * as model from '../../model/malloy_types';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ColumnSpaceField} from '../ast/field-space/column-space-field';
 import {FieldName} from '../ast/types/field-space';
@@ -55,7 +55,7 @@ describe('structdef comprehension', () => {
       type: 'string',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -68,7 +68,7 @@ describe('structdef comprehension', () => {
       numberType: 'float',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -81,7 +81,7 @@ describe('structdef comprehension', () => {
       numberType: 'integer',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -93,7 +93,7 @@ describe('structdef comprehension', () => {
       type: 'boolean',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -105,14 +105,14 @@ describe('structdef comprehension', () => {
       type: 'sql native',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
 
   test('import repeated record', () => {
-    const field: model.ScalarArrayDef = {
+    const field: model.BasicArrayDef = {
       name: 't',
       type: 'array',
       elementTypeDef: {type: 'string'},
@@ -121,7 +121,7 @@ describe('structdef comprehension', () => {
       fields: [{type: 'string', name: 'b'}],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t.b')).found).toBeInstanceOf(
       ColumnSpaceField
     );
@@ -138,7 +138,7 @@ describe('structdef comprehension', () => {
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t.a')).found).toBeInstanceOf(
       ColumnSpaceField
     );
@@ -165,7 +165,7 @@ describe('structdef comprehension', () => {
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t.a')).found).toBeInstanceOf(
       ColumnSpaceField
     );
@@ -181,11 +181,13 @@ describe('structdef comprehension', () => {
         {
           type: 'reduce',
           queryFields: [{type: 'fieldref', path: ['a']}],
+          outputStruct: mkStructDef({name: 'a', type: 'string'}),
+          isRepeated: true,
         },
       ],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(IRViewField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -205,7 +207,7 @@ describe('structdef comprehension', () => {
         value: {node: 'stringLiteral', literal: 'value'},
       },
     };
-    const space = new StaticSourceSpace(struct);
+    const space = new StaticSourceSpace(struct, 'public');
     expect(space.lookup(fieldRef('cReqStr')).found).toBeInstanceOf(
       DefinedParameter
     );

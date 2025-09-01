@@ -21,21 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {FilterCondition} from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
-  FilterCondition,
 } from '../../../model/malloy_types';
 import {isNotUndefined} from '../../utils';
+import {ExprCompare, ExprEquality} from '../expressions/expr-compare';
+import {ExprIdReference} from '../expressions/expr-id-reference';
+import type {FieldReference} from '../query-items/field-references';
 
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {ExpressionDef} from '../types/expression-def';
+import type {FieldSpace} from '../types/field-space';
+import {isLiteral, type Literal} from '../types/literal';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import {QueryBuilder} from '../types/query-builder';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
+import {ExprFilterExpression} from '../expressions/expr-filter-expr';
 
 export class FilterElement extends MalloyElement {
   elementType = 'filterElement';
@@ -44,6 +48,35 @@ export class FilterElement extends MalloyElement {
     readonly exprSrc: string
   ) {
     super({expr: expr});
+  }
+
+  private getStableFilter(): Malloy.Filter | undefined {
+    if (
+      this.expr instanceof ExprEquality &&
+      this.expr.op === '=' &&
+      isLiteral(this.expr.right)
+    ) {
+      const lhs = this.expr.left.drillExpression();
+      if (lhs === undefined) return undefined;
+      return {
+        kind: 'literal_equality',
+        expression: lhs,
+        value: this.expr.right.getStableLiteral(),
+      };
+    } else if (
+      this.expr instanceof ExprCompare &&
+      this.expr.op === '~' &&
+      this.expr.right instanceof ExprFilterExpression
+    ) {
+      const lhs = this.expr.left.drillExpression();
+      if (lhs === undefined) return undefined;
+      return {
+        kind: 'filter_string',
+        expression: lhs,
+        filter: this.expr.right.filterText,
+      };
+    }
+    return undefined;
   }
 
   filterCondition(fs: FieldSpace): FilterCondition {
@@ -58,17 +91,61 @@ export class FilterElement extends MalloyElement {
         code: this.exprSrc,
         e: {node: 'false'},
         expressionType: 'scalar',
-        compositeFieldUsage: exprVal.compositeFieldUsage,
+        fieldUsage: exprVal.fieldUsage,
+        isSourceFilter: false,
       };
     }
+    const stableFilter = this.getStableFilter();
     const exprCond: FilterCondition = {
       node: 'filterCondition',
       code: this.exprSrc,
       e: exprVal.value,
       expressionType: exprVal.expressionType,
-      compositeFieldUsage: exprVal.compositeFieldUsage,
+      fieldUsage: exprVal.fieldUsage,
+      stableFilter,
+      isSourceFilter: false,
     };
     return exprCond;
+  }
+
+  filterExpressionFilter():
+    | {
+        reference: FieldReference;
+        filterExpression: string;
+      }
+    | undefined {
+    if (
+      this.expr instanceof ExprCompare &&
+      this.expr.op === '~' &&
+      this.expr.left instanceof ExprIdReference &&
+      this.expr.right instanceof ExprFilterExpression
+    ) {
+      return {
+        reference: this.expr.left.fieldReference,
+        filterExpression: this.expr.right.filterText,
+      };
+    }
+    return undefined;
+  }
+
+  drillFilter():
+    | {
+        reference: FieldReference;
+        value: Literal;
+      }
+    | undefined {
+    if (
+      this.expr instanceof ExprEquality &&
+      this.expr.op === '=' &&
+      this.expr.left instanceof ExprIdReference &&
+      isLiteral(this.expr.right)
+    ) {
+      return {
+        reference: this.expr.left.fieldReference,
+        value: this.expr.right as Literal,
+      };
+    }
+    return undefined;
   }
 }
 
@@ -140,7 +217,7 @@ export class Filter
       const fExpr = this.checkedFilterCondition(filterFS, filter);
       if (fExpr !== undefined) {
         executeFor.filters.push(fExpr);
-        executeFor.resultFS.addCompositeFieldUserFromFilter(fExpr, filter);
+        executeFor.resultFS.addFieldUserFromFilter(fExpr);
       }
     }
   }

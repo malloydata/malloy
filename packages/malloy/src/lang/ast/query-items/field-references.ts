@@ -21,21 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Annotation,
   FieldDef,
   RefToField,
   TypeDesc,
 } from '../../../model/malloy_types';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
 
-import {FieldName, FieldSpace} from '../types/field-space';
-import {LookupResult} from '../types/lookup-result';
+import type {FieldName, FieldSpace} from '../types/field-space';
+import type {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import {Noteable, extendNoteMethod} from '../types/noteable';
-import {MakeEntry} from '../types/space-entry';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {MakeEntry} from '../types/space-entry';
 
 import {
   typecheckAggregate,
@@ -86,6 +87,7 @@ export abstract class FieldReference
     return {
       type: 'fieldref',
       path: this.list.map(n => n.refString),
+      at: this.location,
     };
   }
 
@@ -154,6 +156,14 @@ export class ExpressionFieldReference extends FieldReference {
   }
 }
 
+export class RefineFromFieldReference extends FieldReference {
+  elementType = 'refineFromFieldReference';
+  // Already typechecked, because it comes from an already-compiled view
+  typecheck() {
+    return;
+  }
+}
+
 export class PartitionByFieldReference extends FieldReference {
   elementType = 'partitionByFieldReference';
   // We assume that the partition by expression will typecheck this
@@ -162,9 +172,24 @@ export class PartitionByFieldReference extends FieldReference {
   }
 }
 
+export class GroupedByReference extends FieldReference {
+  elementType = 'groupedByReference';
+  typecheck() {
+    return;
+  }
+}
+
 export class ParameterFieldReference extends FieldReference {
   elementType = 'parameterFieldReference';
   // The invocation of the argument will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
+export class DrillFieldReference extends FieldReference {
+  elementType = 'drillFieldReference';
+  // This is typechecked in the drill statement
   typecheck() {
     return;
   }

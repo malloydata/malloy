@@ -24,7 +24,8 @@
 import * as malloy from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {BigQueryConnection} from './bigquery_connection';
-import {BigQuery as BigQuerySDK, TableMetadata} from '@google-cloud/bigquery';
+import type {TableMetadata} from '@google-cloud/bigquery';
+import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
 import * as util from 'util';
 import * as fs from 'fs';
 import {fileURLToPath} from 'url';
@@ -274,12 +275,8 @@ describe('db:BigQuery', () => {
   });
 });
 
-const SQL_BLOCK_1: malloy.SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block1',
-  dialect: 'standardsql',
+const SQL_BLOCK_1: malloy.SQLSourceRequest = {
   connection: 'bigquery',
-  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -295,12 +292,8 @@ FROM "inventory_items.parquet"
 `,
 };
 
-const SQL_BLOCK_2: malloy.SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block2',
-  dialect: 'standardsql',
+const SQL_BLOCK_2: malloy.SQLSourceRequest = {
   connection: 'bigquery',
-  fields: [],
   selectStr: `
 SELECT
 created_at,

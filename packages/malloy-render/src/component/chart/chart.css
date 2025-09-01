@@ -3,6 +3,9 @@
   height: fit-content;
   font-variant-numeric: tabular-nums;
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 .malloy-chart_debug_menu {
@@ -41,17 +44,34 @@
 .malloy-chart__titles-bar {
   padding-inline: 8px;
   padding-top: 8px;
-  /* TODO: this feels hacky.
-    Maybe we need to configure the top padding of a chart to have more/less space
-    based on whether we detect there will be a title or not
-  */
-  margin-bottom: -8px;
+  margin-bottom: 6px;
   display: flex;
   flex-direction: column;
   gap: 0px;
   line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+  grid-row: 1;
 }
 
 .malloy-chart__title {
   font-weight: bold;
+}
+
+.malloy-chart__container {
+  grid-row: 2;
+  overflow: hidden;
+}
+
+.malloy-chart .y_reference_lines_backdrop {
+  -webkit-mask-image: linear-gradient(
+    transparent 0%,
+    black 27.7%,
+    black 70%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    transparent 0%,
+    black 27.7%,
+    black 70%,
+    transparent 100%
+  );
 }

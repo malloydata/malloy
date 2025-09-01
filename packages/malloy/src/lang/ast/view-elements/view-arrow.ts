@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {PipeSegment} from '../../../model';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
-import {FieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
 
 /**
@@ -46,7 +46,7 @@ export class ViewArrow extends View {
 
   pipelineComp(fs: FieldSpace): PipelineComp {
     const baseComp = this.base.pipelineComp(fs);
-    const nextFS = new StaticSourceSpace(baseComp.outputStruct);
+    const nextFS = new StaticSourceSpace(baseComp.outputStruct, 'public');
     const finalComp = this.operation.pipelineComp(nextFS);
     return {
       pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
@@ -55,7 +55,7 @@ export class ViewArrow extends View {
   }
 
   refine(
-    _inputFS: FieldSpace,
+    _inputFS: SourceFieldSpace,
     _pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {

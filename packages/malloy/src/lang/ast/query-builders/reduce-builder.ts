@@ -21,14 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  CompositeFieldUsage,
+import type {
+  FieldUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
   QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+} from '../../../model/malloy_types';
+import {
   canOrderBy,
   expressionIsAggregate,
   expressionIsAnalytic,
@@ -40,22 +42,18 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, SourceFieldSpace} from '../types/field-space';
+import type {SourceFieldSpace} from '../types/field-space';
+import {FieldName} from '../types/field-space';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
-import {QueryProperty} from '../types/query-property';
-import {QueryBuilder} from '../types/query-builder';
-import {
-  QueryOperationSpace,
-  ReduceFieldSpace,
-} from '../field-space/query-spaces';
+import type {QueryProperty} from '../types/query-property';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import {ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
-import {QueryInputSpace} from '../field-space/query-input-space';
-import {MalloyElement} from '../types/malloy-element';
-import {
-  emptyCompositeFieldUsage,
-  mergeCompositeFieldUsage,
-} from '../../../model/composite_source_utils';
+import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {MalloyElement} from '../types/malloy-element';
+import {mergeFieldUsage} from '../../composite-source-utils';
 
 function queryFieldName(qf: QueryFieldDef): string {
   if (qf.type === 'fieldref') {
@@ -68,6 +66,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Ordering;
   limit?: number;
   alwaysJoins: string[] = [];
+  requiredGroupBys: string[] = [];
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';
@@ -103,8 +102,8 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
-  get compositeFieldUsage(): CompositeFieldUsage {
-    return this.resultFS.compositeFieldUsage;
+  get fieldUsage(): FieldUsage[] {
+    return this.resultFS.fieldUsage;
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
@@ -115,6 +114,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       if (!this.limit && from.limit) {
         to.limit = from.limit;
       }
+      to.isRepeated ||= from.isRepeated;
     }
 
     if (this.order) {
@@ -137,14 +137,9 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       to.alwaysJoins = [...this.alwaysJoins];
     }
 
-    const fromCompositeFieldUsage =
-      from && isQuerySegment(from)
-        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
-        : emptyCompositeFieldUsage();
-    to.compositeFieldUsage = mergeCompositeFieldUsage(
-      fromCompositeFieldUsage,
-      this.compositeFieldUsage
-    );
+    const fromFieldUsage =
+      from && isQuerySegment(from) ? from.fieldUsage ?? [] : [];
+    to.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
   }
 }
 
@@ -185,7 +180,9 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       for (const by of reduceSegment.orderBy) {
         if (typeof by.field === 'number') {
           const by_field = reduceSegment.queryFields[by.field - 1];
-          by.field = queryFieldName(by_field);
+          if (by_field !== undefined) {
+            by.field = queryFieldName(by_field);
+          }
         }
       }
     }

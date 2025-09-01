@@ -23,10 +23,10 @@
 
 import {readFileSync, writeFileSync, appendFileSync} from 'fs';
 import {inspect} from 'util';
-import {languages as Monarch} from 'monaco-editor';
-import {ScopeName as TextMateScopeName} from 'vscode-textmate/release/theme';
+import type {languages as Monarch} from 'monaco-editor';
+import type {ScopeName as TextMateScopeName} from 'vscode-textmate/release/theme';
 
-import * as TextMate from 'vscode-textmate/release/rawGrammar';
+import type * as TextMate from 'vscode-textmate/release/rawGrammar';
 
 export type MonarchRegExpString = string;
 export type MonarchIncludeString = string;

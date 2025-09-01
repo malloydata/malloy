@@ -21,26 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  emptyCompositeFieldUsage,
-  emptyNarrowedCompositeFieldResolution,
-} from '../../../model/composite_source_utils';
-import {
+import {emptyFieldUsage, mergeFieldUsage} from '../../composite-source-utils';
+import type {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  expressionIsScalar,
-  TD,
-  CompositeFieldUsage,
+  FieldUsage,
+  SourceDef,
 } from '../../../model/malloy_types';
+import {expressionIsScalar, TD} from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
 import {
   FieldReference,
   IndexFieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
-import {SpaceEntry} from '../types/space-entry';
+import type {FieldSpace} from '../types/field-space';
+import type {MalloyElement} from '../types/malloy-element';
+import type {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
 import {ReferenceField} from './reference-field';
@@ -64,28 +62,41 @@ export class IndexFieldSpace extends QueryOperationSpace {
     }
   }
 
+  structDef(): SourceDef {
+    const connection = this.inputSpace().connectionName();
+    return {
+      type: 'query_result',
+      name: 'result',
+      dialect: this.dialectName(),
+      fields: [
+        {type: 'string', name: 'fieldName'},
+        {type: 'string', name: 'fieldPath'},
+        {type: 'string', name: 'fieldValue'},
+        {type: 'string', name: 'fieldType'},
+        {type: 'number', name: 'weight', numberType: 'integer'},
+      ],
+      connection,
+    };
+  }
+
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
       this.logError(
         'refinement-of-index-segment',
         'index query operations cannot be refined'
       );
-      return {type: 'index', indexFields: []};
+      return ErrorFactory.indexSegment;
     }
-    let compositeFieldUsage = emptyCompositeFieldUsage();
-    let narrowedCompositeFieldResolution =
-      emptyNarrowedCompositeFieldResolution();
+    let fieldUsage = emptyFieldUsage();
     const indexFields: IndexFieldDef[] = [];
-    const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        let nextCompositeFieldUsage: CompositeFieldUsage | undefined =
-          undefined;
-        let logTo: MalloyElement | undefined = undefined;
+        let nextFieldUsage: FieldUsage[] | undefined = undefined;
         const wild = this.expandedWild[name];
         if (wild) {
-          indexFields.push({type: 'fieldref', path: wild.path});
-          nextCompositeFieldUsage = wild.entry.typeDesc().compositeFieldUsage;
+          indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
+          fieldUsage.push({path: wild.path});
+          nextFieldUsage = wild.entry.typeDesc().fieldUsage;
         } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
           const fieldRef = field.fieldRef;
@@ -94,25 +105,16 @@ export class IndexFieldSpace extends QueryOperationSpace {
             fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
-            nextCompositeFieldUsage =
-              check.found.typeDesc().compositeFieldUsage;
-            logTo = fieldRef;
+            nextFieldUsage = check.found.typeDesc().fieldUsage;
+            fieldUsage.push({path: fieldRef.path});
           }
         }
-        const next = this.applyNextCompositeFieldUsage(
-          source,
-          compositeFieldUsage,
-          narrowedCompositeFieldResolution,
-          nextCompositeFieldUsage,
-          logTo
-        );
-        compositeFieldUsage = next.compositeFieldUsage;
-        narrowedCompositeFieldResolution =
-          next.narrowedCompositeFieldResolution;
+        fieldUsage = mergeFieldUsage(fieldUsage, nextFieldUsage) ?? [];
       }
     }
-    this._compositeFieldUsage = compositeFieldUsage;
-    return {type: 'index', indexFields};
+    this._fieldUsage = fieldUsage;
+    const outputStruct = this.structDef();
+    return {type: 'index', indexFields, outputStruct};
   }
 
   addRefineFromFields(_refineThis: never) {}
@@ -173,7 +175,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         const eTypeDesc = entry.typeDesc();
         // Don't index arrays and records
         if (
-          TD.isLeafAtomic(eTypeDesc) &&
+          TD.isBasicAtomic(eTypeDesc) &&
           expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
@@ -181,6 +183,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
           this.expandedWild[indexName] = {
             path: joinPath.concat(name),
             entry,
+            at: wild.location,
           };
         }
       }

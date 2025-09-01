@@ -21,21 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicField} from '@malloydata/malloy';
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
-import {getText} from '../html/duration';
-import {NULL_SYMBOL} from './apply-renderer';
+import {
+  getText,
+  NULL_SYMBOL,
+  renderTimeString,
+  type RenderTimeStringOptions,
+} from '../util';
+import type {Field} from '../data_tree';
 
 export function renderNumericField(
-  f: AtomicField,
+  f: Field,
   value: number | null | undefined
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
   let displayValue: string | number = value;
-  const {tag} = f.tagParse();
+  const tag = f.tag;
   if (tag.has('currency')) {
     let unitText = '$';
 
@@ -62,4 +66,36 @@ export function renderNumericField(
     displayValue = format(tag.text('number') ?? '#', value);
   else displayValue = (value as number).toLocaleString();
   return displayValue;
+}
+
+export function renderDateTimeField(
+  f: Field,
+  value: Date | null | undefined,
+  options: RenderTimeStringOptions = {}
+): string {
+  if (value === null || value === undefined) {
+    return NULL_SYMBOL;
+  }
+
+  const tag = f.tag;
+
+  // Check if the field has a number= tag for custom date formatting
+  if (tag.has('number')) {
+    const numberFormat = tag.text('number');
+    if (numberFormat) {
+      try {
+        // Use Excel-style date formatting with ssf library
+        return format(numberFormat, value);
+      } catch (error) {
+        // If the format fails, fall back to default formatting
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Invalid date format "${numberFormat}" for field ${f.name}, falling back to default formatting`
+        );
+      }
+    }
+  }
+
+  // Fall back to default time string rendering
+  return renderTimeString(value, options);
 }

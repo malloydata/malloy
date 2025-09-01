@@ -21,37 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
-  LeafAtomicTypeDef,
-  TD,
+  BasicAtomicTypeDef,
   RecordLiteralNode,
   OrderBy,
+} from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
   mkFieldDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType} from '../dialect';
+import {inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
-import {TinyParseError, TinyParser, TinyToken} from '../tiny_parser';
+import type {TinyToken} from '../tiny_parser';
+import {TinyParseError, TinyParser} from '../tiny_parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
-const duckDBToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const duckDBToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
@@ -122,24 +123,19 @@ export class DuckDBDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
-    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail},[])`;
+    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet}),[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map(f => `${f.sqlOutputName}:=${f.sqlExpression}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}) END)`;
   }
 
   sqlAnyValueLastTurtle(
@@ -387,7 +383,7 @@ export class DuckDBDialect extends PostgresBase {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove decimal precision
     const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params

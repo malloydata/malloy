@@ -145,6 +145,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     }
     # size=spark
     spark is topSellingBrands
+    # size=xs
+    xs is topSellingBrands
     # size=sm
     sm is topSellingBrands
     # size=md
@@ -380,12 +382,49 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: root_chart is topSellingBrands
 
   #(story)
+  # size=md
+  view: root_chart_preset_size is topSellingBrands
+
+  #(story)
   # bar_chart { title='My Title' subtitle='My subtitle'}
   view: with_titles is topSellingBrands
+
+   #(story)
+  # viz=bar { title='My Title' subtitle='My subtitle'}
+  view: with_viz_tag is topSellingBrands
 
   #(story)
   # bar_chart
   view: dimension_series is baseLineData + { group_by: department }
+
+  #(story)
+  view: misconfigurations is {
+    # bar_chart
+    nest:
+      not_enough_dimensions is {
+        aggregate: total_sales
+      }
+      too_many_dimensions is {
+        group_by: a is 1, b is 2, c is 3
+        aggregate: total_sales
+      }
+      no_x_dimension is {
+        # series
+        group_by: a is 1
+        aggregate: total_sales
+      }
+      no_measures is {
+        group_by: a is 1
+      }
+  }
+
+  #(story)
+  # bar_chart
+  view: short_legend_labels is {
+    group_by: brand, l is 'foo'
+    aggregate: ct is count()
+    limit: 10
+  }
 
   #(story)
   view: single_nest is {
@@ -419,17 +458,37 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   }
 
   #(story)
+  # bar_chart
+  view: auto_select_time_axis is
+    {
+    group_by:
+      department
+      `date` is @2001-02-03 + id day
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 10
+    order_by: `date`
+  }
+
+
+  #(story)
   view: indepenent_axis is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
     # bar_chart
-    nest: top_brands is {
+    nest: `Independent X, Shared Y` is {
       group_by: brand
       aggregate: avg_retail is retail_price.avg()
       limit: 10
     }
-    # label='Custom Column Label' bar_chart { y.independent title="Brand Sales" subtitle="with independent axes" }
-    nest: top_brands_independent is {
+    #  bar_chart { y.independent title="Brand Sales" subtitle="optional subtitle" }
+    nest: `Independent X and Y` is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    #  bar_chart { x.independent=false title="Brand Sales" \ }
+    nest: `Shared X and Y` is {
       group_by: brand
       aggregate: avg_retail is retail_price.avg()
       limit: 10
@@ -448,6 +507,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     `Top Selling Brands` is topSellingBrands
     # size=spark
     spark is topSellingBrands
+    # size=xs
+    xs is topSellingBrands
     # size=sm
     sm is topSellingBrands
     # size=md
@@ -473,6 +534,336 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     limit: 10
     order_by: id
   }
+
+
+  --#(story) story="Y in Nested Record"
+  # bar_chart x=carrier y='measures.Sales $'
+  view: y_in_nested_record is {
+    group_by: brand
+    nest: measures is {
+      aggregate:
+        `Sales $`
+        `Cost $ really long label`
+    }
+  }
+
+  --#(story) story="Y Field Name Contains Dot"
+  # bar_chart x=carrier y='measures.Sales $'
+  view: y_field_contains_dot is {
+    group_by: brand
+    aggregate: `measures.Sales $` is `Sales $`
+  }
+
+  #(story)
+  view: disable_embedded_comparison is {
+    # bar_chart { x=brand y=total_sales }
+    nest: embedded_tags_enabled is {
+      group_by: brand
+      aggregate:
+        # y
+        total_sales
+        # y
+        avg_margin
+      limit: 10
+    }
+    # bar_chart { x=brand y=total_sales disableEmbedded }
+    nest: embedded_tags_disabled is {
+      group_by: brand
+      aggregate:
+        # y
+        total_sales
+        # y
+        avg_margin
+      limit: 10
+    }
+  }
+
+  #(story)
+
+  view: numeric_dimensions_as_y is {
+
+    # viz=bar
+    nest:
+      tagged is {
+        group_by: brand
+        aggregate: total_sales
+        limit: 10
+      } -> {
+        group_by:
+          brand
+          # y
+          total_sales
+      }
+      misconfigured is {
+        group_by:
+          brand
+          # y
+          department
+      }
+      not_tagged is {
+        group_by: brand, department
+        limit: 10
+      }
+  }
 }
 
-run: products -> { group_by: distribution_center_id}
+
+source: random_data is duckdb.sql("""
+  from (SELECT i  FROM range(0, 1000) t(i))
+  select
+    id: i,
+    id_text: i::text,
+    dim_2: floor(random()*2),
+    dim_3: floor(random()*3),
+    dim_6: floor(random()*6),
+    dim_10: floor(random()*10),
+    dim_25: floor(random()*25),
+    dim_50: floor(random()*50),
+    dim_100: floor(random()*100),
+    dim_250: floor(random()*250),
+    dim_500: floor(random()*500),
+    independent_dim_2: i%2,
+    independent_dim_3: i%3,
+    independent_dim_6: i%6,
+    independent_dim_10: i%10,
+    independent_dim_25: i%25,
+    independent_dim_50: i%50,
+    independent_dim_100: i%100,
+    independent_dim_250: i%250,
+    independent_dim_500: i%500,
+  """) extend {
+
+
+  #(story) story="Lots of Bars"
+  view: lots_of_bars is {
+    # bar_chart
+    nest: s is {
+      group_by:
+        dim_50
+        dim_3
+      aggregate: id.sum()
+      order_by: 1, 2
+      limit: 1000
+    }
+    nest: nests is {
+      group_by: dim_2
+      # bar_chart
+      nest: `Limited bars` is {
+        group_by:
+          dim_500
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.limit=100 }
+      nest: `Limited bars override` is {
+        group_by:
+          dim_500
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart
+      nest: `Limited with shared axis and legend` is {
+        group_by:
+          dim_50
+          dim_3
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.independent }
+      nest: `Limited with independent axis, shared legend` is {
+        group_by:
+          id_text
+          dim_3
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+       # bar_chart {  x.independent }
+      nest: `Limited with group, independent axis, shared legend` is {
+        group_by:
+          dim_50
+          dim_10
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { stack x.independent }
+      nest: `Limited with stack, independent axis, shared legend` is {
+        group_by:
+          dim_50
+          dim_10
+        aggregate: id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart
+      nest: `Limited with series, shared all` is {
+        group_by:
+          dim_10
+        aggregate:
+          # y
+          m1 is id.sum()
+          # y
+          m2 is id.avg()
+        order_by: 1, 2
+        limit: 1000
+      }
+      # bar_chart { x.independent }
+      nest: `Limited with measures, indie x` is {
+        group_by:
+          dim_10
+        aggregate:
+          # y
+          m1 is id.sum()
+          # y
+          m2 is id.avg()
+        order_by:
+          dim_10
+        limit: 1000
+      }
+      # bar_chart
+      nest: `Limited with shared all, large series` is {
+        group_by:
+          dim_10, dim_50
+        aggregate:
+          # y
+          m1 is id.sum()
+        order_by:
+          1,2
+        limit: 1000
+      }
+      # bar_chart { x.independent }
+      nest: `Limited with indie x, shared series` is {
+        group_by:
+          dim_10, dim_50
+        aggregate:
+          # y
+          m1 is id.sum()
+        order_by:
+          1,2
+        limit: 1000
+      }
+      // independent series?
+      # bar_chart { x.independent series.independent  }
+      nest: `Limited with indie x, indie series` is {
+        group_by:
+          dim_10, dim_50
+        aggregate:
+          # y
+          m1 is id.sum()
+        order_by: 1, 2
+        limit: 1000
+      }
+    }
+  }
+
+  #(story)
+  view: series_concatenation is {
+    # viz=bar size=xl
+    nest:
+      multiple_tagged_series is {
+        group_by:
+          dim_10
+          # series
+          dim_3
+          # series
+          dim_2
+        aggregate: id.sum()
+      }
+      not_tagged_series is {
+        group_by:
+          dim_10
+          # series
+          dim_3
+          dim_2
+        aggregate: id.sum()
+      }
+  }
+}
+
+source: random_data_nulls is duckdb.sql("""
+  from (SELECT i  FROM range(0, 1000) t(i))
+  select
+    id: i,
+    id_text: i::text,
+    dim_2: floor(random()*2),
+    dim_3: floor(random()*3),
+    dim_6: floor(random()*6),
+    dim_10: floor(random()*10),
+    dim_25: floor(random()*25),
+    dim_50: floor(random()*50),
+    dim_100: floor(random()*100),
+    dim_250: floor(random()*250),
+    dim_500: floor(random()*500),
+    independent_dim_2: i%2,
+    independent_dim_3: i%3,
+    independent_dim_6: i%6,
+    independent_dim_10: i%10,
+    independent_dim_25: i%25,
+    independent_dim_50: i%50,
+    independent_dim_100: i%100,
+    independent_dim_250: i%250,
+    independent_dim_500: i%500,
+    null_dim_6: CASE WHEN i%6=0 THEN NULL ELSE i%6 END,
+    null_measure: CASE WHEN random()<0.2 THEN NULL ELSE ceil(random()*1000) END,
+    null_measure_2: CASE WHEN i%6=0 THEN NULL ELSE ceil(random()*1000) END,
+  """) extend {
+
+    view: nulls is {
+      select: *
+      where: null_dim_6 is null
+    }
+
+    #(story)
+    # bar_chart
+    view: with_null_x is {
+      group_by: null_dim_6
+      aggregate: id.sum()
+    }
+
+    #(story)
+    # bar_chart
+    view: with_null_series is {
+      group_by:
+        # series
+        null_dim_6
+        # x
+        dim_3
+      aggregate: id.sum()
+    }
+
+     #(story)
+    # bar_chart.stack
+    view: with_null_series_stacked is {
+      group_by:
+        # series
+        null_dim_6
+        # x
+        dim_3
+      aggregate: id.sum()
+    }
+
+    #(story)
+    # bar_chart
+    view: with_null_x_and_measure is {
+      group_by: null_dim_6
+      aggregate: null_measure_2.sum()
+    }
+
+    #(story)
+    view: with_null_series_stacked_nested is {
+      group_by: dim_2
+      # bar_chart.stack
+      nest: chart is {
+        group_by:
+          # series
+          null_dim_6
+          # x
+          dim_3
+      aggregate: id.sum()
+      }
+    }
+  }

@@ -21,27 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
-import {
+import type {
   Annotation,
-  isAtomicFieldType,
-  StructDef,
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
+} from '../../../model/malloy_types';
+import {
+  isAtomicFieldType,
   isAtomic,
-  FieldDefType,
   mkFieldDef,
 } from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
-import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import type {ExpressionDef} from '../types/expression-def';
+import type {FieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
-import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
-import {MakeEntry, SpaceEntry} from '../types/space-entry';
+import type {MakeEntry} from '../types/space-entry';
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -51,9 +49,11 @@ import {
   typecheckMeasure,
   typecheckProject,
 } from './typecheck_utils';
-import {extendNoteMethod, Noteable} from '../types/noteable';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {SpaceField} from '../types/space-field';
+import {DefSpace} from '../field-space/def-space';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -133,7 +133,8 @@ export abstract class AtomicFieldDeclaration
         value: exprValue.value,
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
-        compositeFieldUsage: exprValue.compositeFieldUsage,
+        fieldUsage: exprValue.fieldUsage,
+        requiresGroupBy: exprValue.requiresGroupBy,
       };
       exprValue = nullAsNumber;
     }
@@ -147,8 +148,27 @@ export abstract class AtomicFieldDeclaration
         ret.timeframe = exprValue.timeframe;
       }
       ret.location = this.location;
-      ret.e = exprValue.value;
-      ret.compositeFieldUsage = exprValue.compositeFieldUsage;
+      if (
+        exprValue.type === 'boolean' &&
+        exprFS.dialectObj()?.booleanType === 'none'
+      ) {
+        // when generating a boolean field on a database without boolean support
+        // map it to integers
+        ret.e = {
+          node: 'case',
+          kids: {
+            caseWhen: [exprValue.value],
+            caseThen: [{node: 'numberLiteral', literal: '1'}],
+            caseElse: {node: 'numberLiteral', literal: '0'},
+          },
+        };
+      } else {
+        ret.e = exprValue.value;
+      }
+      ret.drillExpression = this.expr.drillExpression();
+      ret.fieldUsage = exprValue.fieldUsage;
+      ret.ungroupings = exprValue.ungroupings;
+      ret.requiresGroupBy = exprValue.requiresGroupBy;
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;
       }
@@ -233,70 +253,6 @@ export class DimensionFieldDeclaration extends AtomicFieldDeclaration {
   }
 }
 
-/**
- * Used to detect references to fields in the statement which defines them
- */
-export class DefSpace implements FieldSpace {
-  readonly type = 'fieldSpace';
-  foundCircle = false;
-  constructor(
-    readonly realFS: FieldSpace,
-    readonly circular: AtomicFieldDeclaration
-  ) {}
-  structDef(): StructDef {
-    return this.realFS.structDef();
-  }
-  emptyStructDef(): StructDef {
-    return this.realFS.emptyStructDef();
-  }
-  entry(name: string): SpaceEntry | undefined {
-    return this.realFS.entry(name);
-  }
-  lookup(symbol: FieldName[]): LookupResult {
-    if (symbol[0] && symbol[0].refString === this.circular.defineName) {
-      this.foundCircle = true;
-      return {
-        error: {
-          message: `Circular reference to '${this.circular.defineName}' in definition`,
-          code: 'circular-reference-in-field-definition',
-        },
-        found: undefined,
-      };
-    }
-    return this.realFS.lookup(symbol);
-  }
-  entries(): [string, SpaceEntry][] {
-    return this.realFS.entries();
-  }
-  dialectName() {
-    return this.realFS.dialectName();
-  }
-  dialectObj(): Dialect | undefined {
-    return this.realFS.dialectObj();
-  }
-  isQueryFieldSpace(): this is QueryFieldSpace {
-    return this.realFS.isQueryFieldSpace();
-  }
-
-  outputSpace() {
-    if (this.realFS.isQueryFieldSpace()) {
-      return this.realFS.outputSpace();
-    }
-    throw new Error('Not a query field space');
-  }
-
-  inputSpace() {
-    if (this.realFS.isQueryFieldSpace()) {
-      return this.realFS.inputSpace();
-    }
-    throw new Error('Not a query field space');
-  }
-
-  isProtectedAccessSpace(): boolean {
-    return true;
-  }
-}
-
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
   constructor(
@@ -314,8 +270,15 @@ export class FieldDefinitionValue extends SpaceField {
   // A source will call this when it defines the field
   private defInSource?: FieldDef;
   fieldDef(): FieldDef {
+    // Checking `defInQuery` is necessary to support a case where a field needs
+    // to be looked up from the output space (ex: in `order_by: a`), but where
+    // the field is defined in a group_by expression (ex: `group_by: a.day`).
+    // In this case, this.exprDef.fieldDef() only ever returns an
+    // AtomicFieldDef anyways, so it is safe in this particular implementation.
     const def =
-      this.defInSource ?? this.exprDef.fieldDef(this.space, this.name);
+      this.defInSource ??
+      this.defInQuery ??
+      this.exprDef.fieldDef(this.space, this.name);
     this.defInSource = def;
     return def;
   }
@@ -340,10 +303,5 @@ export class FieldDefinitionValue extends SpaceField {
       return this.fieldTypeFromFieldDef(typeFrom);
     }
     throw new Error(`Can't get typeDesc for ${typeFrom.type}`);
-  }
-
-  entryType(): FieldDefType {
-    const typeFrom = this.defInQuery || this.fieldDef();
-    return typeFrom.type;
   }
 }

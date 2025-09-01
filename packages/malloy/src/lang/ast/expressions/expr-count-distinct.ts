@@ -23,8 +23,8 @@
 
 import * as TDU from '../typedesc-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
-import {ExpressionDef} from '../types/expression-def';
-import {ExprValue} from '../types/expr-value';
+import type {ExpressionDef} from '../types/expression-def';
+import type {ExprValue} from '../types/expr-value';
 
 export class ExprCountDistinct extends ExprAggregateFunction {
   legalChildTypes = [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT];
@@ -39,7 +39,7 @@ export class ExprCountDistinct extends ExprAggregateFunction {
       evalSpace: ev.evalSpace,
       expressionType: 'aggregate',
       value: ev.value,
-      compositeFieldUsage: ev.compositeFieldUsage,
+      fieldUsage: ev.fieldUsage,
     };
   }
 }

@@ -27,7 +27,6 @@ import {
   BetaExpression,
   errorMessage,
 } from './test-translator';
-import {parseString} from '../parse-utils';
 import './parse-expects';
 import {isGranularResult} from '../ast/types/granular-result';
 
@@ -49,6 +48,15 @@ describe('literals', () => {
   test('string with quoted backslash', () => {
     const str = "'Is " + '\\' + '\\' + " nice'";
     expect(new BetaExpression(str)).toTranslate();
+  });
+  test("raw s'string", () => {
+    expect("s'a'").compilesTo('{"a"}');
+  });
+  test('raw s"string', () => {
+    expect('s "a"').compilesTo('{"a"}');
+  });
+  test('raw string with quoted end char', () => {
+    expect("s'a\\'b'").compilesTo('{"a\\\'b"}');
   });
   const literalTimes: [string, string, string | undefined, unknown][] = [
     ['@1960', 'date', 'year', {literal: '1960-01-01'}],
@@ -150,42 +158,6 @@ describe('literals', () => {
     expect(expr`r'RegularExpression'`).toTranslate();
   });
 
-  describe('quote comprehension inside strings', () => {
-    test('\\b', () => {
-      expect(parseString('\\b')).toEqual('\b');
-    });
-    test('\\f', () => {
-      expect(parseString('\\f')).toEqual('\f');
-    });
-    test('\\n', () => {
-      expect(parseString('\\n')).toEqual('\n');
-    });
-    test('\\r', () => {
-      expect(parseString('\\r')).toEqual('\r');
-    });
-    test('\\t', () => {
-      expect(parseString('\\t')).toEqual('\t');
-    });
-    test('unicode ?', () => {
-      expect(parseString('\\u003f')).toEqual('?');
-      expect(parseString('\\u003F')).toEqual('?');
-    });
-    test('normal stuff', () => {
-      expect(parseString('normal stuff')).toEqual('normal stuff');
-    });
-    test('stuff & nonsense', () => {
-      expect(parseString('stuff \\u0026 nonsense')).toEqual('stuff & nonsense');
-    });
-    test('one thing\\nnext thing', () => {
-      expect(parseString('one thing\\nnext thing')).toEqual(
-        'one thing\nnext thing'
-      );
-    });
-    test('quote stripping works', () => {
-      expect(parseString('|42|', '|')).toEqual('42');
-    });
-  });
-
   describe('string parsing in language', () => {
     const tz = 'America/Mexico_City';
     test('multi-line indent increasing', () => {
@@ -281,6 +253,16 @@ describe('literals', () => {
       const x = new BetaExpression('"""x"""');
       expect(x).toParse();
     });
+    test('Error for missing single in raw string', () => {
+      expect(expr`s'hello\n`).toLog(
+        errorMessage('Missing "\'" before end-of-line')
+      );
+    });
+    test('Error for missing double in raw string', () => {
+      expect(expr`s"hello\n`).toLog(
+        errorMessage("Missing '\"' before end-of-line")
+      );
+    });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());
   });
   describe('compound literals', () => {
@@ -293,11 +275,11 @@ describe('literals', () => {
     test('array of records with same schema', () => {
       expect(
         '[{name is "one", val is 1},{name is "two", val is 2}]'
-      ).compilesTo('[{name:"one", val:1}, {name:"two", val:2}]');
+      ).compilesTo('[{name:{"one"}, val:1}, {name:{"two"}, val:2}]');
     });
     test('array of records with head schema', () => {
       expect('[{name is "one", val is 1},{"two", 2}]').compilesTo(
-        '[{name:"one", val:1}, {name:"two", val:2}]'
+        '[{name:{"one"}, val:1}, {name:{"two"}, val:2}]'
       );
     });
   });

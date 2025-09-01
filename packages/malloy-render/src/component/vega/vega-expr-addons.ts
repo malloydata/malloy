@@ -6,19 +6,18 @@
  */
 
 import {expressionFunction} from 'vega';
-import {renderNumericField} from '../render-numeric-field';
-import {Explore, ExploreField} from '@malloydata/malloy';
-import {getFieldFromRootPath} from '../plot/util';
-import {BrushData} from '../result-store/result-store';
-import {renderTimeString} from '../render-time';
+import {renderNumericField, renderDateTimeField} from '../render-numeric-field';
+import type {BrushData} from '../result-store/result-store';
+import {type RenderTimeStringOptions} from '../../util';
+import type {NestField} from '../../data_tree';
 
 if (!expressionFunction('renderMalloyNumber')) {
   expressionFunction(
     'renderMalloyNumber',
-    (explore: Explore | ExploreField, fieldPath: string, value: number) => {
+    (explore: NestField, fieldPath: string, value: number) => {
       if (explore) {
-        const field = getFieldFromRootPath(explore, fieldPath);
-        return field.isAtomicField()
+        const field = explore.fieldAt(fieldPath);
+        return field.isBasic()
           ? renderNumericField(field, value)
           : String(value);
       }
@@ -30,15 +29,25 @@ if (!expressionFunction('renderMalloyNumber')) {
 if (!expressionFunction('renderMalloyTime')) {
   expressionFunction(
     'renderMalloyTime',
-    (explore: Explore | ExploreField, fieldPath: string, value: number) => {
+    (
+      explore: NestField,
+      fieldPath: string,
+      value: number,
+      extractFormat?: string
+    ) => {
       if (explore) {
-        const field = getFieldFromRootPath(explore, fieldPath);
-        if (field.isAtomicField() && (field.isDate() || field.isTimestamp()))
-          return renderTimeString(
-            new Date(value),
-            field.isAtomicField() && field.isDate(),
-            field.timeframe
-          );
+        const field = explore.fieldAt(fieldPath);
+        if (field.isTime()) {
+          const options: RenderTimeStringOptions = {
+            isDate: field.isDate(),
+            timeframe: field.timeframe,
+          };
+          if (extractFormat) {
+            options.extractFormat =
+              extractFormat as RenderTimeStringOptions['extractFormat'];
+          }
+          return renderDateTimeField(field, new Date(value), options);
+        }
       }
       return String(value);
     }

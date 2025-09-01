@@ -5,19 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
-import {VegaChart, ViewInterface} from '../vega/vega-chart';
-import {ChartTooltipEntry, RenderResultMetadata} from '../types';
+import type {ViewInterface} from '../vega/vega-chart';
+import {VegaChart} from '../vega/vega-chart';
+import type {ChartTooltipEntry, VegaChartProps} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
-import {EventListenerHandler, Runtime, View} from 'vega';
-import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
-import css from './chart.css?raw';
-import {useConfig} from '../render';
+import type {EventListenerHandler, Runtime, View} from 'vega';
+import type {VegaBrushOutput} from '../result-store/result-store';
+
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
-
+import type {RepeatedRecordCell} from '../../data_tree';
+import {useResultContext} from '../result-context';
+import {ErrorMessage} from '../error-message/error-message';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import {resize} from '../util';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './chart.css?raw';
 let IS_STORYBOOK = false;
 try {
   const storybookConfig = (process.env as Record<string, string>)[
@@ -30,9 +35,7 @@ try {
 }
 
 export type ChartProps = {
-  field: Explore | ExploreField;
-  data: QueryData;
-  metadata: RenderResultMetadata;
+  data: RepeatedRecordCell;
   // Debugging properties
   devMode?: boolean;
   runtime?: Runtime;
@@ -40,22 +43,52 @@ export type ChartProps = {
 };
 
 export function Chart(props: ChartProps) {
-  const config = useConfig();
-  config.addCSSToShadowRoot(css);
-  const {field, data} = props;
-  const chartProps = props.metadata.field(field).vegaChartProps!;
-  const runtime = props.runtime ?? props.metadata.field(field).runtime;
-  if (!runtime)
-    throw new Error('Charts must have a runtime defined in their metadata');
-  const chartData = data;
-  for (let i = 0; i < chartData.length; i++) {
-    chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
-  }
+  MalloyViz.addStylesheet(styles);
+  const metadata = useResultContext();
+  const data = props.data;
+  const field = data.field;
+  const vegaInfo = metadata.vega[field.key];
+  const runtimeToUse = () => props.runtime || vegaInfo.runtime;
+  const errorMessage = () => {
+    if (vegaInfo.error) return vegaInfo.error.message;
+    if (!vegaInfo.props || !runtimeToUse())
+      return 'Chart could not be rendered';
+    return null;
+  };
+  return (
+    <Show
+      when={!errorMessage()}
+      children={
+        <ChartInner
+          {...props}
+          runtime={runtimeToUse()!}
+          chartProps={vegaInfo.props!}
+        />
+      }
+      fallback={<ErrorMessage message={errorMessage()!} />}
+    />
+  );
+}
+
+export function ChartInner(props: {
+  data: RepeatedRecordCell;
+  runtime: Runtime;
+  chartProps: VegaChartProps;
+  // Debugging properties
+  devMode?: boolean;
+  onView?: (view: View) => void;
+}) {
+  const metadata = useResultContext();
+  const data = props.data;
+  const field = data.field;
   let values: unknown[] = [];
-  // New vega charts use mapMalloyDataToChartData handlers
-  if (chartProps.mapMalloyDataToChartData) {
-    values = chartProps.mapMalloyDataToChartData(field, chartData);
-  }
+  let isDataLimited = false;
+  let dataLimitMessage = 'Showing limited results';
+  const mappedData = props.chartProps.mapMalloyDataToChartData(data);
+  values = mappedData.data;
+  isDataLimited = mappedData.isDataLimited;
+  if (mappedData.dataLimitMessage)
+    dataLimitMessage = mappedData.dataLimitMessage;
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null
@@ -84,13 +117,11 @@ export function Chart(props: ChartProps) {
   };
   // Debounce while moving within chart
   const mouseOverHandler: EventListenerHandler = (event, item) => {
-    if (view() && item && chartProps.getTooltipData) {
-      const data = chartProps.getTooltipData(item, view()!);
+    if (view() && item && props.chartProps.getTooltipData) {
+      const data = props.chartProps.getTooltipData(item, view()!);
       setTooltipDataDebounce(data);
     } else setTooltipDataDebounce(null);
   };
-
-  const resultStore = useResultStore();
 
   // Enable charts to debounce interactions; this helps with rapid mouse movement through charts
   const timeouts = new Map();
@@ -123,24 +154,26 @@ export function Chart(props: ChartProps) {
         timeouts.set(
           brush.sourceId,
           setTimeout(() => {
-            resultStore.applyBrushOps([
+            metadata.store.applyBrushOps([
               {type: 'remove', sourceId: brush.sourceId},
             ]);
           }, debounceTime)
         );
       } else
-        resultStore.applyBrushOps([{type: 'remove', sourceId: brush.sourceId}]);
+        metadata.store.applyBrushOps([
+          {type: 'remove', sourceId: brush.sourceId},
+        ]);
     } else if (shouldDebounce && debounceStrategy === 'always')
       timeouts.set(
         brush.sourceId,
         setTimeout(() => {
-          resultStore.applyBrushOps([
+          metadata.store.applyBrushOps([
             {type: 'add', sourceId: brush.sourceId, value: brush.data!},
           ]);
         }, debounceTime)
       );
     else
-      resultStore.applyBrushOps([
+      metadata.store.applyBrushOps([
         {type: 'add', sourceId: brush.sourceId, value: brush.data!},
       ]);
   };
@@ -161,10 +194,10 @@ export function Chart(props: ChartProps) {
 
   // Pass relevant brushes from store into the vega view
   createEffect(() => {
-    const fieldRefIds = props.field.allFields.map(f =>
-      f.isAtomicField() ? f.referenceId : null
+    const fieldRefIds = field.fields.map(f =>
+      f.isBasic() ? f.referenceId : null
     );
-    const relevantBrushes = resultStore.store.brushes.filter(brush =>
+    const relevantBrushes = metadata.store.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
 
@@ -184,17 +217,26 @@ export function Chart(props: ChartProps) {
 
   const showTooltip = createMemo(() => Boolean(tooltipData()));
 
-  const chartTitle = chartProps.chartTag.text('title');
-  const chartSubtitle = chartProps.chartTag.text('subtitle');
-  const hasTitleBar = chartTitle || chartSubtitle;
+  const chartTitle = props.chartProps.chartTag.text('title');
+  const chartSubtitle = props.chartProps.chartTag.text('subtitle');
+  const hasTitleBar = chartTitle || chartSubtitle || isDataLimited;
+
+  const [chartSpace, setChartSpace] = createSignal({
+    width: props.chartProps.plotWidth,
+    height: props.chartProps.plotHeight,
+  });
 
   return (
     <div
       class="malloy-chart"
+      style={{
+        width: props.chartProps.totalWidth + 'px',
+        height: props.chartProps.totalHeight + 'px',
+      }}
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
-        resultStore.applyBrushOps(
+        metadata.store.applyBrushOps(
           brushOuts
             .filter(brush => brush.data?.type !== 'measure-range')
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
@@ -205,18 +247,30 @@ export function Chart(props: ChartProps) {
         <div class="malloy-chart__titles-bar">
           {chartTitle && <div class="malloy-chart__title">{chartTitle}</div>}
           {chartSubtitle && (
-            <div class="malloy-chart__subtitle">{chartSubtitle}</div>
+            <div class="malloy-chart__subtitle">
+              <div>{chartSubtitle}</div>
+            </div>
+          )}
+          {isDataLimited && (
+            <div class="malloy-chart__subtitle">
+              <div>{dataLimitMessage}</div>
+            </div>
           )}
         </div>
       </Show>
-      <VegaChart
-        width={chartProps.plotWidth}
-        height={chartProps.plotHeight}
-        onMouseOver={mouseOverHandler}
-        onViewInterface={setViewInterface}
-        explore={props.field}
-        runtime={runtime}
-      />
+      <div
+        class="malloy-chart__container"
+        use:resize={[chartSpace, setChartSpace]}
+      >
+        <VegaChart
+          width={chartSpace().width}
+          height={chartSpace().height}
+          onMouseOver={mouseOverHandler}
+          onViewInterface={setViewInterface}
+          explore={field}
+          runtime={props.runtime}
+        />
+      </div>
       <Tooltip show={showTooltip()}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>

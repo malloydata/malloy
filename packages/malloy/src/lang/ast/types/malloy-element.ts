@@ -22,7 +22,7 @@
  */
 
 import {getDialect} from '../../../dialect';
-import {
+import type {
   Annotation,
   DocumentLocation,
   DocumentReference,
@@ -31,26 +31,27 @@ import {
   NamedModelObject,
   Query,
   StructDef,
-  isSourceDef,
 } from '../../../model/malloy_types';
-import {Tag} from '../../../tags';
-import {
+import {isSourceDef} from '../../../model/malloy_types';
+import {Tag} from '@malloydata/malloy-tag';
+import type {
   LogMessageOptions,
   MessageLogger,
   MessageParameterType,
-  makeLogMessage,
   MessageCode,
 } from '../../parse-log';
-import {MalloyTranslation} from '../../parse-malloy';
-import {ModelDataRequest} from '../../translate-response';
+import {makeLogMessage} from '../../parse-log';
+import type {MalloyTranslation} from '../../parse-malloy';
+import type {ModelDataRequest} from '../../translate-response';
 import {errorFor} from '../ast-utils';
 import {DialectNameSpace} from './dialect-name-space';
-import {DocumentCompileResult} from './document-compile-result';
-import {ExprValue} from './expr-value';
+import type {DocumentCompileResult} from './document-compile-result';
+import type {ExprValue} from './expr-value';
 import {GlobalNameSpace} from './global-name-space';
-import {ModelEntry} from './model-entry';
-import {NameSpace} from './name-space';
-import {Noteable, isNoteable, extendNoteMethod} from './noteable';
+import type {ModelEntry} from './model-entry';
+import type {NameSpace} from './name-space';
+import type {Noteable} from './noteable';
+import {isNoteable, extendNoteMethod} from './noteable';
 import {v5 as uuidv5} from 'uuid';
 
 export abstract class MalloyElement {
@@ -521,7 +522,7 @@ export class Document extends MalloyElement implements NameSpace {
         this.annotation.inherits = extendingModelDef.annotation;
       }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
-        const entry = structuredClone(orig);
+        const entry = {...orig};
         if (
           isSourceDef(entry) ||
           entry.type === 'query' ||
@@ -597,7 +598,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
-        const newEntry = structuredClone(entryDef);
+        const newEntry = {...entryDef};
         if (newEntry.modelAnnotation === undefined && def.annotation) {
           newEntry.modelAnnotation = def.annotation;
         }

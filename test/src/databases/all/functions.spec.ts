@@ -23,9 +23,9 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {booleanResult, brokenIn, databasesFromEnvironmentOr} from '../../util';
+import {brokenIn, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
-import * as malloy from '@malloydata/malloy';
+import type * as malloy from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -68,6 +68,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
 expressionModels.forEach((x, databaseName) => {
   const expressionModel = x.expressionModel;
   const runtime = x.runtime;
+  const dbTrue = runtime.dialect.resultBoolean(true);
+  const dbFalse = runtime.dialect.resultBoolean(false);
   const funcTestGeneral = async (
     expr: string,
     type: 'group_by' | 'aggregate',
@@ -85,8 +87,12 @@ expressionModels.forEach((x, databaseName) => {
     };
 
     if (expected.success !== undefined) {
+      const expectedSuccess =
+        typeof expected.success === 'boolean'
+          ? runtime.dialect.resultBoolean(expected.success)
+          : expected.success;
       const result = await run();
-      expect(result.data.path(0, 'f').value).toBe(expected.success);
+      expect(result.data.path(0, 'f').value).toBe(expectedSuccess);
     } else {
       expect(run).rejects.toThrowError(expected.error);
     }
@@ -459,22 +465,40 @@ expressionModels.forEach((x, databaseName) => {
       expect(result.data.path(3, 'r').value).toBe(3);
     });
 
-    it(`works using unary minus in calculate block - ${databaseName}`, async () => {
+    it(`dense_rank is supported - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: state_facts -> {
-            group_by: first_letter is substr(state, 1, 1)
-            aggregate: states_with_first_letter_ish is round(count() / 2) * 2
-            calculate:
-              r is rank()
-              neg_r is -r
+          ` run: state_facts -> {
+            group_by:
+              first_letter is substr(state, 1, 1)
+            aggregate: state_count is count()
+            calculate: r is dense_rank() {order_by: state_count desc}
           }`
         )
         .run();
-      expect(result.data.path(0, 'neg_r').value).toBe(-1);
-      expect(result.data.path(1, 'neg_r').value).toBe(-1);
-      expect(result.data.path(2, 'neg_r').value).toBe(-3);
-      expect(result.data.path(3, 'neg_r').value).toBe(-3);
+      // console.log(result.sql);
+      // console.log(result.data);
+      expect(result.data.path(0, 'r').value).toBe(1);
+      expect(result.data.path(1, 'r').value).toBe(1);
+      expect(result.data.path(2, 'r').value).toBe(2);
+      expect(result.data.path(3, 'r').value).toBe(2);
+    });
+
+    it(`works using unary minus in calculate block - ${databaseName}`, async () => {
+      await expect(`
+        run: state_facts -> {
+          group_by: first_letter is substr(state, 1, 1)
+          aggregate: states_with_first_letter_ish is round(count() / 2) * 2
+          calculate:
+            r is rank()
+            neg_r is -r
+      }`).matchesRows(
+        expressionModel,
+        {neg_r: -1},
+        {neg_r: -1},
+        {neg_r: -3},
+        {neg_r: -3}
+      );
     });
 
     it(`properly isolated nested calculations - ${databaseName}`, async () => {
@@ -604,6 +628,7 @@ expressionModels.forEach((x, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
+          # test.debug
           run: state_facts -> {
             group_by: state
             calculate: lag_val is lag(@2011-11-11 11:11:11, 1, now).year = now.year
@@ -611,10 +636,10 @@ expressionModels.forEach((x, databaseName) => {
         )
         .run();
       expect(result.data.path(0, 'lag_val').value).toBe(
-        booleanResult(true, databaseName)
+        runtime.dialect.resultBoolean(true)
       );
       expect(result.data.path(1, 'lag_val').value).toBe(
-        booleanResult(false, databaseName)
+        runtime.dialect.resultBoolean(false)
       );
     });
   });
@@ -837,18 +862,18 @@ expressionModels.forEach((x, databaseName) => {
       : "'+inf'::number";
     it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        [`is_inf(${inf})`, true],
-        ['is_inf(100)', false],
-        ['is_inf(null)', false]
+        [`is_inf(${inf})`, dbTrue],
+        ['is_inf(100)', dbFalse],
+        ['is_inf(null)', dbFalse]
       );
     });
   });
   describe('is_nan', () => {
     it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["is_nan('NaN'::number)", true],
-        ['is_nan(100)', false],
-        ['is_nan(null)', false]
+        ["is_nan('NaN'::number)", dbTrue],
+        ['is_nan(100)', dbFalse],
+        ['is_nan(null)', dbFalse]
       );
     });
   });
@@ -858,11 +883,11 @@ expressionModels.forEach((x, databaseName) => {
         ['greatest(1, 10, -100)', 10],
         [
           'greatest(@2003, @2004, @1994) = @2004',
-          booleanResult(true, databaseName),
+          runtime.dialect.resultBoolean(true),
         ],
         [
           'greatest(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:59:00',
-          booleanResult(true, databaseName),
+          runtime.dialect.resultBoolean(true),
         ],
         ["greatest('a', 'b')", 'b'],
         ['greatest(1, null, 0)', null],
@@ -876,11 +901,11 @@ expressionModels.forEach((x, databaseName) => {
         ['least(1, 10, -100)', -100],
         [
           'least(@2003, @2004, @1994) = @1994',
-          booleanResult(true, databaseName),
+          runtime.dialect.resultBoolean(true),
         ],
         [
           'least(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:58:00',
-          booleanResult(true, databaseName),
+          runtime.dialect.resultBoolean(true),
         ],
         ["least('a', 'b')", 'a'],
         ['least(1, null, 0)', null],
@@ -912,14 +937,17 @@ expressionModels.forEach((x, databaseName) => {
       await funcTestMultiple(
         [
           "starts_with('hello world', 'hello')",
-          booleanResult(true, databaseName),
+          runtime.dialect.resultBoolean(true),
         ],
         [
           "starts_with('hello world', 'world')",
-          booleanResult(false, databaseName),
+          runtime.dialect.resultBoolean(false),
         ],
-        ["starts_with(null, 'world')", booleanResult(false, databaseName)],
-        ["starts_with('hello world', null)", booleanResult(false, databaseName)]
+        ["starts_with(null, 'world')", runtime.dialect.resultBoolean(false)],
+        [
+          "starts_with('hello world', null)",
+          runtime.dialect.resultBoolean(false),
+        ]
       );
     });
   });
@@ -928,14 +956,14 @@ expressionModels.forEach((x, databaseName) => {
       await funcTestMultiple(
         [
           "ends_with('hello world', 'world')",
-          booleanResult(true, databaseName),
+          runtime.dialect.resultBoolean(true),
         ],
         [
           "ends_with('hello world', 'hello')",
-          booleanResult(false, databaseName),
+          runtime.dialect.resultBoolean(false),
         ],
-        ["ends_with(null, 'world')", booleanResult(false, databaseName)],
-        ["ends_with('hello world', null)", booleanResult(false, databaseName)]
+        ["ends_with(null, 'world')", runtime.dialect.resultBoolean(false)],
+        ["ends_with('hello world', null)", runtime.dialect.resultBoolean(false)]
       );
     });
   });
@@ -980,14 +1008,14 @@ expressionModels.forEach((x, databaseName) => {
       // There are around a billion values that rand() can be, so if this
       // test fails, most likely something is broken. Otherwise, you're the lucky
       // one in a billion!
-      await funcTest('rand() = rand()', booleanResult(false, databaseName));
+      await funcTest('rand() = rand()', runtime.dialect.resultBoolean(false));
     });
   });
   describe('pi', () => {
     it(`is pi - ${databaseName}`, async () => {
       await funcTest(
         'abs(pi() - 3.141592653589793) < 0.0000000000001',
-        booleanResult(true, databaseName)
+        runtime.dialect.resultBoolean(true)
       );
     });
   });
@@ -1150,8 +1178,8 @@ expressionModels.forEach((x, databaseName) => {
             aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
           }
           `).malloyResultMatches(runtime, {
-        'passes': booleanResult(true, databaseName),
-        'also_passes': booleanResult(true, databaseName),
+        'passes': runtime.dialect.resultBoolean(true),
+        'also_passes': runtime.dialect.resultBoolean(true),
       });
     });
     test.when(supported)('works with fanout', async () => {
@@ -1163,7 +1191,7 @@ expressionModels.forEach((x, databaseName) => {
         run: state_facts_fanout -> {
           aggregate: x is state_facts.state.count_approx() > 0
         }
-      `).malloyResultMatches(runtime, {x: booleanResult(true, databaseName)});
+      `).malloyResultMatches(runtime, {x: runtime.dialect.resultBoolean(true)});
     });
   });
   describe('last_value', () => {
@@ -1349,7 +1377,7 @@ expressionModels.forEach((x, databaseName) => {
       it.when(isDuckdb)('to_timestamp', async () => {
         await funcTest(
           'to_timestamp(1725555835) = @2024-09-05 17:03:55',
-          booleanResult(true, databaseName)
+          runtime.dialect.resultBoolean(true)
         );
       });
       it.when(isDuckdb)('list_extract', async () => {
@@ -1365,7 +1393,7 @@ expressionModels.forEach((x, databaseName) => {
       trino('from_unixtime', async () => {
         await funcTest(
           'from_unixtime(1725555835) = @2024-09-05 17:03:55',
-          booleanResult(true, databaseName)
+          runtime.dialect.resultBoolean(true)
         );
       });
     });
@@ -1748,6 +1776,42 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ##! experimental { function_order_by partition_by }
         ##! unsafe_complex_select_query
         run: state_facts -> {
+          select: state, births, popular_name
+          calculate: prev_births_by_name is lag(births) {
+            partition_by: popular_name
+            order_by: births desc
+          }
+          order_by: births desc
+          limit: 3
+        }
+      `).malloyResultMatches(expressionModel, [
+        {
+          state: 'CA',
+          births: 28810563,
+          popular_name: 'Isabella',
+          prev_births_by_name: null,
+        },
+        {
+          state: 'NY',
+          births: 23694136,
+          popular_name: 'Isabella',
+          prev_births_by_name: 28810563,
+        },
+        {
+          state: 'TX',
+          births: 21467359,
+          popular_name: 'Isabella',
+          prev_births_by_name: 23694136,
+        },
+      ]);
+    });
+    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
+    it('can be used in a select in a composite source', async () => {
+      await expect(`
+        ##! experimental { function_order_by partition_by composite_sources }
+        ##! unsafe_complex_select_query
+        source: state_facts_composite is compose(state_facts, state_facts)
+        run: state_facts_composite -> {
           select: state, births, popular_name
           calculate: prev_births_by_name is lag(births) {
             partition_by: popular_name

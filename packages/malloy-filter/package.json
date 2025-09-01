@@ -1,0 +1,35 @@
+{
+  "name": "@malloydata/malloy-filter",
+  "version": "0.0.309",
+  "license": "MIT",
+  "description": "Parsers for the Malloy filtering sub-languages",
+  "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build-parsers && tsc --build && npm run generate-flow",
+    "build-parsers": "mkdir -p src/lib && nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts && nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts && nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts",
+    "clean": "tsc --build --clean && rimraf src/lib/* dist @flowtyped",
+    "test": "jest",
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "jest-diff": "^29.6.2",
+    "luxon": "^3.5.0",
+    "moo": "^0.5.2",
+    "nearley": "^2.20.1"
+  },
+  "devDependencies": {
+    "@types/moo": "^0.5.10",
+    "@types/nearley": "^2.11.5",
+    "rimraf": "^6.0.1"
+  }
+}

@@ -21,10 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue, computedExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
-import {BinaryMalloyOperator, isEquality} from '../types/binary_operators';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {isEquality} from '../types/binary_operators';
 
 /**
  * Return a flattened version of an alternation tree, if the tree is

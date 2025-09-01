@@ -21,14 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   CastType,
   EvalSpace,
   Expr,
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsScalar,
-  expressionIsUngroupedAggregate,
   ExpressionType,
   FunctionCallNode,
   FunctionDef,
@@ -40,32 +36,44 @@ import {
   FunctionParameterTypeDef,
   FunctionReturnTypeDef,
   FunctionReturnTypeDesc,
+  RecordFunctionParameterTypeDef,
+  RecordFunctionReturnTypeDef,
+  RecordTypeDef,
+  FieldUsage,
+  FunctionOrderBy as ModelFunctionOrderBy,
+  AggregateUngrouping,
+} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsScalar,
+  expressionIsUngroupedAggregate,
   isAtomic,
   isAtomicFieldType,
   isExpressionTypeLEQ,
   isRepeatedRecordFunctionParam,
-  isScalarArray,
+  isBasicArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
-  RecordFunctionParameterTypeDef,
-  RecordFunctionReturnTypeDef,
-  RecordTypeDef,
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
-import {FieldReference} from '../query-items/field-references';
-import {FunctionOrdering} from './function-ordering';
-import {Limit} from '../query-properties/limit';
-import {PartitionBy} from './partition_by';
-import {computedExprValue, ExprValue} from '../types/expr-value';
+import type {FieldReference} from '../query-items/field-references';
+import type {FunctionOrdering} from './function-ordering';
+import type {Limit} from '../query-properties/limit';
+import type {PartitionBy} from './partition_by';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace} from '../types/field-space';
-import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
+import type {FieldSpace} from '../types/field-space';
+import {FieldName} from '../types/field-space';
+import type {SQLExprElement} from '../../../model/utils';
+import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {AnyMessageCodeAndParameters} from '../../parse-log';
+import {mergeFieldUsage} from '../../composite-source-utils';
+import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -177,9 +185,13 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             ...TDU.atomicDef(footType),
             expressionType: footType.expressionType,
-            value: {node: 'field', path: this.source.path},
+            value: {
+              node: 'field',
+              path: this.source.path,
+              at: this.source.location,
+            },
             evalSpace: footType.evalSpace,
-            compositeFieldUsage: footType.compositeFieldUsage,
+            fieldUsage: [{path: this.source.path, at: this.source.location}],
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -292,13 +304,13 @@ export class ExprFunc extends ExpressionDef {
       structPath,
     };
     let funcCall: Expr = frag;
+    const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
+    const isAsymmetric = !overload.isSymmetric;
+    const orderByUsage: FieldUsage[] = [];
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
     if (props?.orderBys && props.orderBys.length > 0) {
-      const isAnalytic = expressionIsAnalytic(
-        overload.returnType.expressionType
-      );
       if (!isAnalytic) {
         if (!this.inExperiment('aggregate_order_by', true)) {
           props.orderBys[0].logError(
@@ -309,12 +321,17 @@ export class ExprFunc extends ExpressionDef {
       }
       if (overload.supportsOrderBy || isAnalytic) {
         const allowExpression = overload.supportsOrderBy !== 'only_default';
-        const allObs = props.orderBys.flatMap(orderBy =>
-          isAnalytic
-            ? orderBy.getAnalyticOrderBy(fs)
-            : orderBy.getAggregateOrderBy(fs, allowExpression)
-        );
-        frag.kids.orderBy = allObs;
+        const allOrderBy: ModelFunctionOrderBy[] = [];
+        for (const ordering of props.orderBys) {
+          const {orderBy, fieldUsage} = isAnalytic
+            ? ordering.getAnalyticOrderBy(fs)
+            : ordering.getAggregateOrderBy(fs, allowExpression);
+          if (fieldUsage) {
+            orderByUsage.push(...fieldUsage);
+          }
+          allOrderBy.push(...orderBy);
+        }
+        frag.kids.orderBy = allOrderBy;
       } else {
         props.orderBys[0].logError(
           'function-does-not-support-order-by',
@@ -357,6 +374,7 @@ export class ExprFunc extends ExpressionDef {
       }
       frag.partitionBy = partitionByFields;
     }
+    const sqlFunctionFieldUsage: FieldUsage[] = [];
     if (
       [
         'sql_number',
@@ -382,51 +400,43 @@ export class ExprFunc extends ExpressionDef {
       } else {
         const literal = str.literal;
         const parts = parseSQLInterpolation(literal);
-        const unsupportedInterpolations = parts
-          .filter(
-            part => part.type === 'interpolation' && part.name.includes('.')
-          )
-          .map(unsupportedPart =>
-            unsupportedPart.type === 'interpolation'
-              ? `\${${unsupportedPart.name}}`
-              : `\${${unsupportedPart.value}}`
-          );
-
-        if (unsupportedInterpolations.length > 0) {
-          const unsupportedInterpolationMsg =
-            unsupportedInterpolations.length === 1
-              ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
-                  0
-                )}`
-              : `'.' paths are not yet supported in sql interpolations, found (${unsupportedInterpolations.join(
-                  ', '
-                )})`;
-          return this.loggedErrorExpr(
-            'unsupported-sql-function-interpolation',
-            unsupportedInterpolationMsg
-          );
-        }
 
         const expr: SQLExprElement[] = [];
         for (const part of parts) {
           if (part.type === 'string') {
             expr.push(part.value);
-          } else if (part.name === 'TABLE') {
+          } else if (part.path.length === 1 && part.path[0] === 'TABLE') {
             expr.push({node: 'source-reference'});
           } else {
-            const name = new FieldName(part.name);
-            this.has({name});
-            const result = fs.lookup([name]);
+            const names = part.path.map(p => new FieldName(p));
+            this.has({names});
+            const result = fs.lookup(names);
             if (result.found === undefined) {
               return this.loggedErrorExpr(
                 'sql-function-interpolation-not-found',
                 `Invalid interpolation: ${result.error.message}`
               );
             }
+            const typeDesc = result.found.typeDesc();
+            if (typeDesc.type === 'filter expression') {
+              return this.loggedErrorExpr(
+                'filter-expression-error',
+                'Filter expressions cannot be used in sql_ functions'
+              );
+            }
             if (result.found.refType === 'parameter') {
-              expr.push({node: 'parameter', path: [part.name]});
+              expr.push({node: 'parameter', path: part.path});
             } else {
-              expr.push({node: 'field', path: [part.name]});
+              sqlFunctionFieldUsage.push({
+                path: part.path,
+                at: this.args[0].location,
+              });
+              expr.push({
+                node: 'field',
+                // TODO when we have namespaces, this will need to be replaced with the resolved path
+                path: part.path,
+                at: this.args[0].location,
+              });
             }
           }
         }
@@ -446,6 +456,24 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
+    const aggregateFunctionUsage: FieldUsage[] = [];
+    if (isAsymmetric || isAnalytic) {
+      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
+      if (isAnalytic) funcUsage.analyticFunctionUse = true;
+      aggregateFunctionUsage.push(funcUsage);
+    }
+    const fieldUsage = mergeFieldUsage(
+      ...argExprs.map(ae => ae.fieldUsage),
+      orderByUsage,
+      sqlFunctionFieldUsage,
+      aggregateFunctionUsage
+    );
+    const ungroupings = argExprs.reduce(
+      (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
+      []
+    );
+
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
@@ -454,9 +482,8 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      compositeFieldUsage: mergeCompositeFieldUsage(
-        ...argExprs.map(e => e.compositeFieldUsage)
-      ),
+      fieldUsage,
+      ungroupings,
     };
   }
 }
@@ -604,7 +631,7 @@ function findOverload(
 
 type InterpolationPart =
   | {type: 'string'; value: string}
-  | {type: 'interpolation'; name: string};
+  | {type: 'interpolation'; path: string[]};
 
 function parseSQLInterpolation(template: string): InterpolationPart[] {
   const parts: InterpolationPart[] = [];
@@ -625,7 +652,9 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
       }
       parts.push({
         type: 'interpolation',
-        name: remaining.slice(nextInterp + 2, interpEnd + nextInterp),
+        path: remaining
+          .slice(nextInterp + 2, interpEnd + nextInterp)
+          .split('.'),
       });
       remaining = remaining.slice(interpEnd + nextInterp + 1);
     }
@@ -655,7 +684,7 @@ function isDataTypeMatch(
     return {dataTypeMatch: true, genericsSet: []};
   }
   if (paramT.type === 'array' && arg.type === 'array') {
-    if (isScalarArray(arg)) {
+    if (isBasicArray(arg)) {
       if (!isRepeatedRecordFunctionParam(paramT)) {
         return isDataTypeMatch(
           genericsAlreadySelected,

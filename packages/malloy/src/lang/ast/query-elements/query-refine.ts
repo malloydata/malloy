@@ -22,10 +22,9 @@
  */
 
 import {StaticSourceSpace} from '../field-space/static-space';
-import {getFinalStruct} from '../struct-utils';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
-import {View} from '../view-elements/view';
+import type {QueryComp} from '../types/query-comp';
+import type {QueryElement} from '../types/query-element';
+import type {View} from '../view-elements/view';
 import {QueryBase} from './query-base';
 
 /**
@@ -45,28 +44,35 @@ export class QueryRefine extends QueryBase implements QueryElement {
 
   queryComp(isRefOk: boolean): QueryComp {
     const q = this.base.queryComp(isRefOk);
-    const inputFS = new StaticSourceSpace(q.inputStruct);
-    const resultPipe = this.refinement.refine(
+    const inputFS = new StaticSourceSpace(q.inputStruct, 'public');
+    const pipeline = this.refinement.refine(
       inputFS,
       q.query.pipeline,
       undefined
     );
     const query = {
       ...q.query,
-      pipeline: resultPipe,
+      pipeline,
     };
 
     const compositeResolvedSourceDef = this.resolveCompositeSource(
       q.inputStruct,
-      query
+      pipeline
+    );
+
+    const pipelineWithExpandedFieldUsage = this.expandFieldUsage(
+      compositeResolvedSourceDef ?? q.inputStruct,
+      pipeline
     );
 
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
+        pipeline: pipelineWithExpandedFieldUsage,
       },
-      outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
+      // TODO bleh
+      outputStruct: pipeline[pipeline.length - 1].outputStruct,
       inputStruct: q.inputStruct,
     };
   }

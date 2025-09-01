@@ -1,34 +1,32 @@
+import type {Component, JSXElement, JSX} from 'solid-js';
 import {
   createSignal,
   createMemo,
   For,
-  Component,
   mergeProps,
   Show,
   Switch,
   Match,
-  JSXElement,
-  JSX,
   onMount,
+  onCleanup,
 } from 'solid-js';
-import {
-  AtomicField,
-  DataArrayOrRecord,
-  DataRecord,
-  Field,
-} from '@malloydata/malloy';
-import {getRangeSize, isFirstChild, isLastChild} from '../util';
+import {getRangeSize} from '../util';
 import {getTableLayout} from './table-layout';
-import {useResultContext} from '../result-context';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import tableCss from './table.css?raw';
-import {applyRenderer} from '../apply-renderer';
-import {isFieldHidden} from '../../tags_utils';
+import {applyRenderer} from '@/component/renderer/apply-renderer';
 import {createStore, produce} from 'solid-js/store';
-import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
+import type {Virtualizer} from '@tanstack/solid-virtual';
+import {createVirtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
-import {DimensionContextEntry} from '../types';
 import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
+import type {
+  Field,
+  RecordCell,
+  RecordOrRepeatedRecordCell,
+} from '../../data_tree';
+import {MalloyViz} from '@/api/malloy-viz';
+import styles from './table.css?raw';
+import {useResultContext} from '../result-context';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -47,16 +45,16 @@ const Cell = (props: {
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
-    const columnTag = props.field.tagParse().tag.tag('column');
+    const columnTag = props.field.tag.tag('column');
     const width = layout.fieldLayout(props.field).width;
     const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
+    if (width) {
+      style.width = `${width}px`;
+      style['min-width'] = `${width}px`;
+      style['max-width'] = `${width}px;`;
+    }
     if (!props.isHeader) {
-      if (width) {
-        style.width = `${width}px`;
-        style['min-width'] = `${width}px`;
-        style['max-width'] = `${width}px;`;
-      }
       if (height) {
         style.height = `${height}px`;
       }
@@ -78,7 +76,7 @@ const Cell = (props: {
           ? props.value
           : null,
         value: typeof props.rawValue !== 'function' ? props.rawValue : null,
-        fieldPath: props.field.fieldPath,
+        fieldPath: props.field.path,
         isHeader: !!props.isHeader,
         event: evt,
         type: 'table-cell',
@@ -107,14 +105,14 @@ const Cell = (props: {
 
 const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   const {layout: tableLayout} = useTableContext()!;
-  const metadata = useResultContext();
-  const isFirst = isFirstChild(props.field);
-  const isParentFirst = isFirstChild(props.field.parentExplore);
-  const isParentNotAField = !props.field.parentExplore.isExploreField();
+  const isFirst = props.field.isFirstChild();
+  const parent = props.field.parent!;
+  const isParentFirst = parent.isFirstChild();
+  const isParentNotAField = parent.isRoot();
   const hideStartGutter = isFirst && (isParentFirst || isParentNotAField);
 
-  const isLast = isLastChild(props.field);
-  const isParentLast = isLastChild(props.field.parentExplore);
+  const isLast = props.field.isLastChild();
+  const isParentLast = parent.isLastChild();
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
   const fieldLayout = tableLayout.fieldLayout(props.field);
@@ -123,23 +121,21 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     : fieldLayout.relativeColumnRange;
 
   const tableGutterLeft =
-    (fieldLayout.depth > 0 && isFirstChild(props.field)) ||
-    fieldLayout.metadata.renderAs === 'table';
+    (fieldLayout.depth > 0 && isFirst) ||
+    fieldLayout.field.renderAs() === 'table';
   const tableGutterRight =
-    (fieldLayout.depth > 0 && isLastChild(props.field)) ||
-    (fieldLayout.depth === 0 && fieldLayout.metadata.renderAs === 'table');
+    (fieldLayout.depth > 0 && isLast) ||
+    (fieldLayout.depth === 0 && fieldLayout.field.renderAs() === 'table');
 
-  const customLabel = props.field.tagParse().tag.text('label');
+  const customLabel = props.field.tag.text('label');
   const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
 
   return (
     <div
       class="column-cell th"
-      data-pinned-header={
-        props.isPinned ? metadata.getFieldKey(props.field) : undefined
-      }
+      data-pinned-header={props.isPinned ? props.field.key : undefined}
       classList={{
-        'numeric': props.field.isAtomicField() && props.field.isNumber(),
+        'numeric': props.field.isNumber(),
         'pinned-header': props.isPinned,
       }}
       style={{
@@ -169,22 +165,18 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
 const DRILL_RENDERER_IGNORE_LIST = ['chart', 'link'];
 const TableField = (props: {
   field: Field;
-  row: DataRecord;
+  row: RecordCell;
   rowPath: number[];
-  dimensionContext: DimensionContextEntry[];
 }) => {
   let renderValue: JSXElement = '';
   let renderAs = '';
   ({renderValue, renderAs} = applyRenderer({
-    field: props.field,
-    dataColumn: props.row.cell(props.field),
-    resultMetadata: useResultContext(),
-    tag: props.field.tagParse().tag,
+    dataColumn: props.row.column(props.field.name),
+    tag: props.field.tag,
     customProps: {
       table: {
         rowLimit: 100, // Limit nested tables to 100 records
         currentRow: [...props.rowPath],
-        // dimensionContext,
       },
     },
   }));
@@ -210,13 +202,13 @@ const TableField = (props: {
     style.grid = 'auto / subgrid';
   }
   // TODO: review what should be sticky
-  else if (SUPPORTS_STICKY && props.field.isAtomicField()) {
+  else if (SUPPORTS_STICKY && props.field.isBasic()) {
     style.position = 'sticky';
     style.top = `var(--malloy-render--table-header-cumulative-height-${fieldLayout.depth})`;
   }
 
-  const tableGutterLeft = fieldLayout.depth > 0 && isFirstChild(props.field);
-  const tableGutterRight = fieldLayout.depth > 0 && isLastChild(props.field);
+  const tableGutterLeft = fieldLayout.depth > 0 && props.field.isFirstChild();
+  const tableGutterRight = fieldLayout.depth > 0 && props.field.isLastChild();
 
   const handleMouseEnter = () => {
     if (tableCtx && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
@@ -238,16 +230,12 @@ const TableField = (props: {
   const config = useConfig();
   const isDrillingEnabled = config.tableConfig().enableDrill;
   const metadata = useResultContext();
-  const handleClick = async evt => {
+  const handleClick = async (evt: MouseEvent) => {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
         metadata,
-        field: props.field,
-        dimensionContext: [
-          ...tableCtx!.dimensionContext,
-          ...props.dimensionContext,
-        ],
+        data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });
     }
@@ -257,7 +245,7 @@ const TableField = (props: {
     <div
       class="column-cell td"
       classList={{
-        numeric: props.field.isAtomicField() && props.field.isNumber(),
+        numeric: props.field.isNumber(),
         highlight:
           isDrillingEnabled &&
           !DRILL_RENDERER_IGNORE_LIST.includes(renderAs) &&
@@ -275,11 +263,11 @@ const TableField = (props: {
           <Cell
             field={props.field}
             value={renderValue}
-            hideStartGutter={isFirstChild(props.field)}
-            hideEndGutter={isLastChild(props.field)}
+            hideStartGutter={props.field.isFirstChild()}
+            hideEndGutter={props.field.isLastChild()}
             tableGutterLeft={tableGutterLeft}
             tableGutterRight={tableGutterRight}
-            rawValue={props.row.cell(props.field).value}
+            rawValue={props.row.column(props.field.name).value}
             isChart={renderAs === 'chart'}
           />
         </Match>
@@ -289,7 +277,7 @@ const TableField = (props: {
 };
 
 const MalloyTableRoot = (_props: {
-  data: DataArrayOrRecord;
+  data: RecordOrRepeatedRecordCell;
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
@@ -297,15 +285,16 @@ const MalloyTableRoot = (_props: {
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
-  const resultMetadata = useResultContext();
 
   let shouldFillWidth = false;
   if (tableCtx.root) {
-    const sizeTag = props.data.field.tagParse().tag.tag('table')?.tag('size');
+    const sizeTag = props.data.field.tag.tag('table')?.tag('size');
     if (sizeTag && sizeTag.text() === 'fill') shouldFillWidth = true;
     else if (typeof props.shouldFillWidth === 'boolean')
       shouldFillWidth = props.shouldFillWidth;
   }
+
+  const root = props.data.root().field;
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
@@ -317,17 +306,16 @@ const MalloyTableRoot = (_props: {
         else return 0;
       })
       .filter(([key, value]) => {
-        const field = resultMetadata.fields[key].field;
-        const parentFieldRenderer = field.parentExplore
-          ? resultMetadata.field(field.parentExplore)?.renderAs
-          : null;
+        const field = root.fieldAt(key);
+        const parent = field.parent;
+        const parentFieldRenderer = parent?.renderAs();
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
         return isPartOfTable;
       })
       .map(([key, value]) => ({
         fieldKey: key,
-        field: resultMetadata.fields[key].field,
+        field: root.fieldAt(key),
         ...value,
       }));
     return fields;
@@ -339,7 +327,7 @@ const MalloyTableRoot = (_props: {
 
   const fieldsToSize = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap).filter(
-      ([key]) => !resultMetadata.fields[key].field.isExplore()
+      ([key]) => !root.fieldAt(key).isNest()
     );
     return fields;
   });
@@ -383,9 +371,10 @@ const MalloyTableRoot = (_props: {
   // TODO: Get this from resultMetadata cache?
   const [rowsAreLimited, setRowsAreLimited] = createSignal(false);
   const data = createMemo(() => {
-    const data: DataRecord[] = [];
+    const data: RecordCell[] = [];
     let i = 0;
-    for (const row of props.data) {
+    const rows = props.data.rows;
+    for (const row of rows) {
       if (i >= props.rowLimit) {
         setRowsAreLimited(true);
         break;
@@ -397,7 +386,7 @@ const MalloyTableRoot = (_props: {
   });
 
   const visibleFields = () =>
-    props.data.field.allFields.filter(f => !isFieldHidden(f));
+    props.data.field.fields.filter(f => !f.isHidden());
 
   const pinnedFieldsByDepth = () => {
     const fields = pinnedFields();
@@ -409,32 +398,12 @@ const MalloyTableRoot = (_props: {
   };
 
   /*
-    Detect pinned by checking if the body has scrolled content offscreen,
-    but the pinned content is still fully visible.
+    Detect pinned by checking if the table has been scrolled
   */
-  let bodyDetector: HTMLDivElement | undefined;
-  let pinnedDetector: HTMLDivElement | undefined;
-  const [bodyOffscreen, setBodyOffscreen] = createSignal(false);
-  const [pinnedOffscreen, setPinnedOffscreen] = createSignal(false);
-  const pinned = () => bodyOffscreen() && !pinnedOffscreen();
-  onMount(() => {
-    if (bodyDetector && pinnedDetector) {
-      const observer = new IntersectionObserver(
-        ([e]) => {
-          setBodyOffscreen(e.intersectionRatio < 1);
-        },
-        {threshold: [1]}
-      );
-      observer.observe(bodyDetector);
-
-      const observer2 = new IntersectionObserver(
-        ([e]) => {
-          setPinnedOffscreen(e.intersectionRatio < 1);
-        },
-        {threshold: [1]}
-      );
-      observer2.observe(pinnedDetector);
-    }
+  const [scrollTop, setScrollTop] = createSignal(0);
+  const pinned = createMemo(() => {
+    const isPinned = scrollTop() > 0;
+    return isPinned;
   });
 
   const headerMeasureEls: HTMLDivElement[] = [];
@@ -487,15 +456,33 @@ const MalloyTableRoot = (_props: {
 
   let pinnedHeaderRow!: HTMLDivElement;
 
-  // Track scrolling state with 2s grace period
+  // Track scrolling state with grace period
   // Used to only clear column width states on resize events that aren't due to data virtualization on scroll
   let isScrolling = false;
-  const handleScroll = () => {
+  let scrollTimeout: ReturnType<typeof setTimeout> | undefined;
+  const handleScroll = (evt: Event) => {
+    const target = evt.target as HTMLElement;
+    const newScrollTop = target.scrollTop;
+
+    setScrollTop(newScrollTop);
     isScrolling = true;
-    setTimeout(() => {
+
+    if (scrollTimeout !== undefined) {
+      clearTimeout(scrollTimeout);
+    }
+
+    scrollTimeout = setTimeout(() => {
       isScrolling = false;
-    }, 2000);
+      scrollTimeout = undefined;
+    }, 500);
   };
+
+  // Cleanup scroll timeout on unmount
+  onCleanup(() => {
+    if (scrollTimeout !== undefined) {
+      clearTimeout(scrollTimeout);
+    }
+  });
 
   function updateColumnWidths() {
     const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
@@ -506,8 +493,9 @@ const MalloyTableRoot = (_props: {
       const key = node.getAttribute('data-pinned-header')!;
       const value = node.clientWidth;
       const currWidth = tableCtx.store.columnWidths[key];
-      if (typeof currWidth === 'undefined' || value > currWidth)
+      if (typeof currWidth === 'undefined' || value > currWidth) {
         updates.push([key, value]);
+      }
     });
     if (updates.length > 0) {
       tableCtx.setStore(
@@ -523,11 +511,9 @@ const MalloyTableRoot = (_props: {
   onMount(() => {
     if (pinnedHeaderRow) {
       const resizeObserver = new ResizeObserver(() => {
-        // select all nodes with data-pinned-header attribute
-        if (isScrolling) {
-          // Measure while scrolling
-          updateColumnWidths();
-        }
+        // Always update column widths when headers resize
+        // The updateColumnWidths function already ensures we only expand, never shrink
+        updateColumnWidths();
       });
       resizeObserver.observe(pinnedHeaderRow);
       // Initial measurement
@@ -541,21 +527,45 @@ const MalloyTableRoot = (_props: {
   onMount(() => {
     if (tableCtx.root) {
       let priorWidth: number | null = null;
+      let lastClearTime = 0;
       const resizeObserver = new ResizeObserver(entries => {
         const [entry] = entries;
+        const newWidth = entry.contentRect.width;
+        const now = Date.now();
+        const timeSinceLastClear = now - lastClearTime;
+
         // Not scrolling and skip the initial measurement, it's handled by header row observer
-        if (!isScrolling && priorWidth !== null) {
-          if (priorWidth !== entry.contentRect.width) {
+        // Also add debounce to prevent clearing too frequently
+        if (!isScrolling && priorWidth !== null && timeSinceLastClear > 1000) {
+          if (priorWidth !== newWidth) {
             tableCtx.setStore(s => ({
               ...s,
               columnWidths: {},
             }));
+            lastClearTime = now;
           }
         }
-        priorWidth = entry.contentRect.width;
+        priorWidth = newWidth;
       });
       resizeObserver.observe(scrollEl);
     }
+  });
+
+  // Set up scroll event listener on the actual scroll element
+  onMount(() => {
+    // Wait for next tick to ensure scrollEl is set
+    requestAnimationFrame(() => {
+      if (scrollEl && props.scrollEl) {
+        // If scrollEl is provided externally, we need to listen to it
+        scrollEl.addEventListener('scroll', handleScroll);
+        // Also check initial scroll position
+        handleScroll({target: scrollEl} as unknown as Event);
+
+        onCleanup(() => {
+          scrollEl.removeEventListener('scroll', handleScroll);
+        });
+      }
+    });
   });
 
   const getPinnedHeaderRowStyle = () => ({
@@ -572,23 +582,8 @@ const MalloyTableRoot = (_props: {
 
     tableCtx.setStore(s => ({
       ...s,
-      highlightedExplore: props.data.field.fieldPath,
+      highlightedExplore: props.data.field.path,
     }));
-  };
-
-  const getRowDimensionContext = (row: DataRecord) => {
-    const dimensionContext: DimensionContextEntry[] = [];
-
-    const dimensions = row.field.allFields.filter(
-      f => f.isAtomicField() && f.sourceWasDimension()
-    ) as AtomicField[];
-    dimensions.forEach(field => {
-      dimensionContext.push({
-        fieldDef: field.expression,
-        value: row.cell(field).value as string | number | boolean | Date,
-      });
-    });
-    return dimensionContext;
   };
 
   return (
@@ -601,24 +596,15 @@ const MalloyTableRoot = (_props: {
         'root': tableCtx.root,
         'full-width': shouldFillWidth,
         'pinned': pinned(),
+        'external-scroll': !!props.scrollEl,
       }}
       part={tableCtx.root ? 'table-container' : ''}
       style={getContainerStyle()}
-      onScroll={handleScroll}
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      onScroll={props.scrollEl ? undefined : handleScroll}
       on:mouseover={handleTableMouseOver}
     >
       {/* pinned header */}
       <Show when={tableCtx.root}>
-        <div
-          ref={bodyDetector}
-          style="position: sticky; left: 0px; height: 0px; visibility: hidden;"
-        ></div>
-        <div
-          ref={pinnedDetector}
-          style="position: sticky; top: 0px; left: 0px; height: 0px; visibility: hidden;"
-        ></div>
         <div
           class="pinned-header-row"
           ref={pinnedHeaderRow}
@@ -633,7 +619,7 @@ const MalloyTableRoot = (_props: {
               >
                 <For each={pinnedFields}>
                   {pinnedField => (
-                    <HeaderField field={pinnedField.field as Field} isPinned />
+                    <HeaderField field={pinnedField.field} isPinned />
                   )}
                 </For>
               </div>
@@ -683,9 +669,6 @@ const MalloyTableRoot = (_props: {
                           field={field}
                           row={data()[virtualRow.index]}
                           rowPath={getRowPath(virtualRow.index)}
-                          dimensionContext={getRowDimensionContext(
-                            data()[virtualRow.index]
-                          )}
                         />
                       )}
                     </For>
@@ -716,7 +699,6 @@ const MalloyTableRoot = (_props: {
                     field={field}
                     row={row}
                     rowPath={getRowPath(idx())}
-                    dimensionContext={getRowDimensionContext(row)}
                   />
                 )}
               </For>
@@ -734,62 +716,36 @@ const MalloyTableRoot = (_props: {
 };
 
 const MalloyTable: Component<{
-  data: DataArrayOrRecord;
+  data: RecordOrRepeatedRecordCell;
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
   shouldFillWidth?: boolean;
   currentRow?: number[];
-  dimensionContext?: DimensionContextEntry[];
 }> = props => {
-  const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();
   const tableCtx = createMemo<TableContext>(() => {
     if (hasTableCtx) {
       const parentCtx = useTableContext()!;
-      const parentRecord = props.data.parentRecord;
-      const dimensionContext: DimensionContextEntry[] = [];
-      if (parentRecord) {
-        const dimensions = parentRecord.field.allFields.filter(
-          f => f.isAtomicField() && f.sourceWasDimension()
-        ) as AtomicField[];
-        dimensions.forEach(field => {
-          dimensionContext.push({
-            fieldDef: field.expression,
-            value: parentRecord.cell(field).value as
-              | string
-              | number
-              | boolean
-              | Date,
-          });
-        });
-      }
       return {
         ...parentCtx,
         root: false,
         currentRow: props.currentRow ?? parentCtx.currentRow,
-        currentExplore: props.data.field.fieldPath,
-        dimensionContext: [...parentCtx.dimensionContext, ...dimensionContext],
+        currentExplore: props.data.field.path,
       };
     }
 
     const [store, setStore] = createTableStore();
     return {
       root: true,
-      layout: getTableLayout(metadata, props.data.field),
+      layout: getTableLayout(props.data.field),
       store,
       setStore,
       headerSizeStore: createStore({}),
       currentRow: [],
-      currentExplore: props.data.field.fieldPath,
-      dimensionContext: [],
+      currentExplore: props.data.field.path,
     };
   });
-
-  if (tableCtx().root) {
-    const config = useConfig();
-    config.addCSSToShadowRoot(tableCss);
-  }
 
   const tableConfig = useConfig().tableConfig;
 
@@ -808,6 +764,8 @@ const MalloyTable: Component<{
           ? props.shouldFillWidth
           : tableConfig().shouldFillWidth,
     });
+
+  MalloyViz.addStylesheet(styles);
 
   return (
     <TableContext.Provider value={tableCtx()}>

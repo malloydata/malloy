@@ -21,30 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from 'vega-lite';
-import {
-  DataArray,
-  DataColumn,
-  Explore,
-  Field,
-  TimestampTimeframe,
-} from '@malloydata/malloy';
+import type * as lite from 'vega-lite';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale, timeToString} from './utils';
 import {RendererFactory} from './renderer_factory';
-import {PointMapRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {PointMapRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {Cell, CellBase, Field} from '../data_tree';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
-  getDataValue(data: DataColumn): string | number {
+  getDataValue(data: Cell): string | number {
     if (data.isNumber() || data.isString()) {
       return data.value;
-    } else if (data.isTimestamp() || data.isDate()) {
+    } else if (data.isTime()) {
       return timeToString(
         data.value,
-        data.field.timeframe || TimestampTimeframe.Second,
+        data.field.timeframe ?? (data.isDate() ? 'day' : 'second'),
         this.timezone
       );
     }
@@ -52,32 +46,23 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
   }
 
   getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp() || field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for point map.');
   }
 
-  isTimeFieldDef(field: Field): boolean {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+  getVegaLiteSpec(data: CellBase): lite.TopLevelSpec {
     if (data.isNull()) {
       throw new Error('Expected struct value not to be null.');
     }
+    if (!data.isRecordOrRepeatedRecord()) {
+      throw new Error('Expected field to be a nest field.');
+    }
 
-    const fields = data.field.allFields;
+    const fields = data.field.fields;
 
     const latField = fields[0];
     const lonField = fields[1];
@@ -139,7 +124,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
     return {
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       projection: {
         type: 'albersUsa',
@@ -211,7 +196,7 @@ export class PointMapRendererFactory extends RendererFactory<PointMapRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: PointMapRenderOptions,
     timezone?: string
   ): Renderer {

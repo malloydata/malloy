@@ -7,6 +7,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   dimension: product is name
   dimension: dcId is distribution_center_id::number
 
+
   # line_chart
   view: topSellingBrands is {
     group_by: brand
@@ -33,6 +34,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     aggregate: `Sales $`
     order_by: dcId
   }
+
 
   # dashboard { table.max_height=100000 }
   view: seriesCharts is {
@@ -120,8 +122,33 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: root_chart is topSellingBrands
 
   #(story)
-  # line_chart
+  # viz=line
   view: dimension_series is baseLineData + { group_by: department }
+
+  #(story)
+  # viz = line
+  view: measure_series is {
+    # x
+    group_by: dcId
+    # y
+    aggregate: `Sales $`, `Cost $ really long label`
+  }
+
+  #(story)
+  view: misconfigurations is {
+    # line_chart
+    nest:
+      not_enough_dimensions is {
+        aggregate: total_sales
+      }
+      too_many_dimensions is {
+        group_by: a is 1, b is 2, c is 3
+        aggregate: total_sales
+      }
+      no_measures is {
+        group_by: a is 1
+      }
+  }
 
   #(story)
   view: single_nest is {
@@ -184,6 +211,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     `Top Selling Brands` is topSellingBrands
     # size=spark
     spark is topSellingBrands
+    # size=xs
+    xs is topSellingBrands
     # size=sm
     sm is topSellingBrands
     # size=md
@@ -194,6 +223,17 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     xl is topSellingBrands
     # size=2xl
     `2xl` is topSellingBrands
+  }
+
+    #(story)
+  # line_chart
+  view: month_truncation is {
+    group_by:
+      `date` is (@2001-02-03 00:00  + id day).month
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 10
+    order_by: `date`
   }
 
   #(story)
@@ -266,11 +306,23 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   #(story)
   # line_chart
   view: time_series is {
-    # x
     group_by: date_of_sale
 
     # series
     group_by: brand
+
+    # y
+    aggregate: `Sales $` is retail_price.avg()*500
+    where: date_of_sale >= @2001-02-01 and date_of_sale < @2001-04-01
+    order_by: date_of_sale
+    limit: 20
+  }
+
+  #(story)
+  # line_chart
+  view: time_series_custom_format is {
+    # x number='dd/mm/yyyy'
+    group_by: date_of_sale
 
     # y
     aggregate: `Sales $` is retail_price.avg()*500
@@ -308,6 +360,259 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     where: date_of_sale >= @2001-02-01 and date_of_sale < @2001-04-01
     order_by: date_of_sale
   }
+
+  dimension: sale_year is year(date_of_sale)
+
+
+  #(story)
+  # line_chart
+  view: lots_of_lines is {
+    # x
+    group_by: sale_year
+
+    # series
+    group_by: brand
+
+    aggregate: total is count()
+
+    order_by: sale_year
+  }
+
+    #(story)
+  view: lots_of_lines_nested is {
+    group_by: department
+    # line_chart { series.limit=5 }
+    nest: lots_of_lines is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+     # line_chart { y.independent }
+    nest: lots_of_lines_independent_y is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+    nest: tabular is {
+      group_by: sale_year
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+      where: brand='Motherhood Maternity'
+    }
+    # line_chart { series.independent }
+    nest: lots_of_lines_independent_series is {
+      # x
+      group_by: sale_year
+      # series
+      group_by: brand
+      aggregate: total is count()
+      order_by: sale_year
+    }
+
+  }
+
+  #(story)
+  # line_chart
+  view: WithMissingDimensionValue is {
+    group_by:
+      # series
+      department
+      # x
+      `date` is pick null when dcId = 3 else dcId
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 20
+    order_by: `date`
+  }
+
+  #(story)
+  # line_chart
+  view: auto_select_time_axis is
+    {
+    group_by:
+      department
+      `date` is @2001-02-03 + id day
+    aggregate:
+      `Sales $` is retail_price.avg()*500
+    limit: 10
+    order_by: `date`
+  }
+
+  #(story)
+  # viz=line {mode=yoy}
+  view: date_axis_yoy is {
+      group_by:
+        `date` is @2001-01-02 + ((id - 1) / 90) year + ((id - 1) % 90) day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 270
+      order_by: `date`
+    }
+
+    #(story)
+  # viz=line {mode=yoy}
+  view: month_yoy_NOT_IMPLEMENTED is {
+      group_by:
+        `date` is (@2001-01-02 + ((id - 1) / 90) year + ((id - 1) % 90) day)
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 270
+      order_by: `date`
+    } -> {
+      group_by: m is `date`.month
+      aggregate: `Sales $` is sum(`Sales $`)
+      order_by: m
+    }
 }
+
+source: missing_data is duckdb.table("static/data/missing_data.csv") extend {
+
+  #(story)
+  # line_chart
+  view: WithNullMeasureValue is {
+    group_by:
+      id, category
+    aggregate:
+      m is metric.avg()
+    limit: 20
+    order_by: id
+  }
+
+  #(story)
+  # -line_chart table
+    view: OverrideLineChartWithTable is WithNullMeasureValue + {}
+}
+
+source: random_data_nulls is duckdb.sql("""
+  from (SELECT i  FROM range(0, 1000) t(i))
+  select
+    i as id,
+    i::text as id_text,
+    floor(random()*2) as dim_2,
+    floor(random()*3) as dim_3,
+    floor(random()*6) as dim_6,
+    floor(random()*10) as dim_10,
+    floor(random()*25) as dim_25,
+    floor(random()*50) as dim_50,
+    floor(random()*100) as dim_100,
+    floor(random()*250) as dim_250,
+    floor(random()*500) as dim_500,
+    i%2 as independent_dim_2,
+    i%3 as independent_dim_3,
+    i%6 as independent_dim_6,
+    i%10 as independent_dim_10,
+    i%25 as independent_dim_25,
+    i%50 as independent_dim_50,
+    i%100 as independent_dim_100,
+    i%250 as independent_dim_250,
+    i%500 as independent_dim_500,
+    CASE WHEN i%6=0 THEN NULL ELSE i%6 END as null_dim_6,
+    CASE WHEN random()<0.2 THEN NULL ELSE ceil(random()*1000) END as null_measure,
+    CASE WHEN i%6=0 THEN NULL ELSE ceil(random()*1000) END as null_measure_2,
+    CASE WHEN i%6=0 THEN 2000 ELSE ceil(random()*1000) END as measure_with_large_null
+  """) extend {
+
+    view: nulls is {
+      where: null_dim_6 is null
+      select: *
+    }
+
+    #(story)
+    # line_chart
+    view: with_null_x is {
+      group_by: null_dim_6
+      aggregate: id.sum()
+    }
+
+    #(story)
+    # line_chart
+    view: with_null_x_date is {
+      group_by:
+        `date` is @2001-02-03 + null_dim_6 day
+      aggregate: m1 is id.sum()
+    }
+
+    #(story)
+    # line_chart
+    view: with_null_x_date_series is {
+      group_by:
+        # series
+        dim_2
+        # x
+        `date` is @2001-02-03 + null_dim_6 day
+      aggregate:
+        measure_with_large_null.sum()
+    }
+
+    #(story)
+    # line_chart
+    view: with_null_x_date_measure_series is {
+      group_by:
+        # x
+        `date` is @2001-02-03 + null_dim_6 day
+      # y
+      aggregate: m1 is id.sum(), m2 is id.sum()*.75
+    }
+
+    #(story)
+    # line_chart
+    view: with_null_series is {
+      group_by:
+        # series
+        null_dim_6
+        # x
+        dim_3
+      aggregate: id.sum()
+    }
+
+
+
+    #(story)
+    # line_chart
+    view: with_null_x_and_measure is {
+      group_by: null_dim_6
+      aggregate: null_measure_2.sum()
+    }
+
+    #(story)
+    # line_chart
+    view: with_null_x_and_measure_y_series is {
+      group_by: null_dim_6
+      # y
+      aggregate: id.sum(), null_measure_2.sum()
+    }
+
+    #(story)
+    view: with_null_x_and_measure_y_series_nested is {
+      group_by: dim_2
+      # line_chart
+      nest: chart is {
+        group_by: null_dim_6
+        # y
+        aggregate: id.sum(), null_measure_2.sum()
+      }
+    }
+
+    #(story)
+    view: with_null_series_nested is {
+      group_by: dim_2
+      # line_chart.series.independent
+      nest: chart is {
+      group_by:
+        # series
+        null_dim_6
+        # x
+        dim_3
+      aggregate: id.sum()
+    }
+    }
+  }
 
 run: products -> { group_by: distribution_center_id}

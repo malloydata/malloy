@@ -21,16 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Join} from '../source-properties/join';
-import {ParameterSpace} from './parameter-space';
+import type {Join} from '../source-properties/join';
+import type {ParameterSpace} from './parameter-space';
 import {StructSpaceField} from './static-space';
 
 export class JoinSpaceField extends StructSpaceField {
   constructor(
     readonly parameterSpace: ParameterSpace,
     readonly join: Join,
-    forDialect: string
+    forDialect: string,
+    forConnection: string
   ) {
-    super(join.structDef(parameterSpace), forDialect);
+    super(join.getStructDef(parameterSpace), forDialect, forConnection);
   }
 }

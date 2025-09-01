@@ -24,11 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {
-  booleanResult,
-  databasesFromEnvironmentOr,
-  mkSqlEqWith,
-} from '../../util';
+import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -294,6 +290,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  test.when(runtime.supportsNesting)(
+    'model: having on just aggregation with a nest',
+    async () => {
+      await expect(`${modelText(databaseName)}
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+          having: count(airport_count) > 0
+          aggregate: row_count is count()
+          nest: state
+      }`).malloyResultMatches(runtime, {row_count: 51});
+    }
+  );
+
   it('model: aggregate functions distinct min max', async () => {
     await expect(`
       run: aircraft_models->{
@@ -522,8 +530,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: boolean_2 is sql_boolean("\${engines} = 2")
         }
   `).malloyResultMatches(expressionModel, {
-        boolean_1: booleanResult(true, databaseName),
-        boolean_2: booleanResult(false, databaseName),
+        boolean_1: runtime.dialect.resultBoolean(true),
+        boolean_2: runtime.dialect.resultBoolean(false),
       });
     });
 
@@ -579,54 +587,60 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
+    it('${view_name.dimension_name} - one path', async () => {
+      await expect(`
+        ##! experimental { sql_functions }
+        source: a0 is ${databaseName}.table('malloytest.aircraft_models')
+        source: a is ${databaseName}.table('malloytest.aircraft_models') extend {
+          where: aircraft_model_code ? '0270202'
+          join_one: a0 on aircraft_model_code = a0.aircraft_model_code
+        }
+
+        run: a -> {
+          group_by: string_1 is sql_string("UPPER(\${a0.manufacturer})")
+        }
+      `).malloyResultMatches(expressionModel, {
+        string_1: 'AHRENS AIRCRAFT CORP.',
+      });
+    });
+
+    it('${view_name.dimension_name} - multiple paths', async () => {
+      await expect(`
+        ##! experimental { sql_functions }
+        source: a0 is ${databaseName}.table('malloytest.aircraft_models')
+        source: a is ${databaseName}.table('malloytest.aircraft_models') extend {
+          where: aircraft_model_code ? '0270202'
+          join_one: a0 on aircraft_model_code = a0.aircraft_model_code
+        }
+
+        run: a -> {
+          group_by: number_1 is sql_number("\${seats} + \${a0.seats}")
+        }
+      `).malloyResultMatches(expressionModel, {
+        number_1: 58,
+      });
+    });
+
     describe('[not yet supported]', () => {
       // See ${...} documentation for lookml here for guidance on remaining work:
       // https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions
-      it('${view_name.dimension_name} - one path', async () => {
+      it('${SQL_TABLE_NAME}', async () => {
         const query = await expressionModel.loadQuery(
           `
           ##! experimental { sql_functions }
-          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+          source: a0 is ${databaseName}.table('malloytest.aircraft_models')
+          source: a is ${databaseName}.table('malloytest.aircraft_models') extend {
+            where: aircraft_model_code ? '0270202'
+            join_one: a0 on aircraft_model_code = a0.aircraft_model_code
+          }
 
           run: a -> {
-              group_by: string_1 is sql_string("UPPER(\${a.manufacturer})")
-            }
+            group_by: number_1 is sql_number("\${a0.SQL_TABLE_NAME}.seats")
+          }
           `
         );
         await expect(query.run()).rejects.toThrow(
-          "'.' paths are not yet supported in sql interpolations, found ${a.manufacturer}"
-        );
-      });
-
-      it('${view_name.dimension_name} - multiple paths', async () => {
-        const query = await expressionModel.loadQuery(
-          `
-          ##! experimental { sql_functions }
-          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
-
-          run: a -> {
-              group_by: number_1 is sql_number("\${a.seats} * \${a.seats} + \${a.total_seats}")
-            }
-          `
-        );
-        await expect(query.run()).rejects.toThrow(
-          "'.' paths are not yet supported in sql interpolations, found (${a.seats}, ${a.seats}, ${a.total_seats})"
-        );
-      });
-
-      it('${view_name.SQL_TABLE_NAME}', async () => {
-        const query = await expressionModel.loadQuery(
-          `
-          ##! experimental { sql_functions }
-          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
-
-          run: a -> {
-              group_by: number_1 is sql_number("\${a.SQL_TABLE_NAME}.seats")
-            }
-          `
-        );
-        await expect(query.run()).rejects.toThrow(
-          "'.' paths are not yet supported in sql interpolations, found ${a.SQL_TABLE_NAME}"
+          "Invalid interpolation: 'SQL_TABLE_NAME' is not defined"
         );
       });
     });
@@ -652,6 +666,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             aircraft.aircraft.first_three
             aircraft_count
             order_by: 2 desc, 1
+            limit: 3
         }
       `).malloyResultMatches(expressionModel, {first_three: 'SAB'});
     }
@@ -754,6 +769,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       dimension: satDay is 6
     }`,
   });
+  test('basic like', async () => {
+    const result = await sqlEq("'abz' ~ '%z'", true);
+    expect(result).isSqlEq();
+  });
+  test('basic like with string', async () => {
+    const result = await sqlEq("'%' ~ '\\\\%'", true);
+    expect(result).isSqlEq();
+  });
+  test('basic like with raw string', async () => {
+    const result = await sqlEq("'%' ~ s'\\%'", true);
+    expect(result).isSqlEq();
+  });
 
   describe.skip('alternations with not-eq', () => {
     /*
@@ -836,57 +863,59 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  describe('null safe booleans', () => {
-    const nulls = `${databaseName}.sql("""
-      SELECT
-        0 as ${q`n`},
-        1 as ${q`x`}, 2 as ${q`y`},
-        'a' as ${q`a`}, 'b' as ${q`b`},
-        (1 = 1) as ${q`tf`}
-      UNION ALL SELECT
-        5,
-        null, null, null, null, null
-    """) extend { where: n > 0 }`;
-    const is_true = databaseName === 'mysql' ? 1 : true;
+  if (runtime.dialect.booleanType !== 'none') {
+    describe('null safe booleans', () => {
+      const nulls = `${databaseName}.sql("""
+        SELECT
+          0 as ${q`n`},
+          1 as ${q`x`}, 2 as ${q`y`},
+          'a' as ${q`a`}, 'b' as ${q`b`},
+          (1=1) as ${q`tf`}
+        UNION ALL SELECT
+          5,
+          null, null, null, null, null
+      """) extend { where: n > 0 }`;
+      const is_true = runtime.dialect.resultBoolean(true);
 
-    it('select boolean', async () => {
-      await expect(`run: ${nulls} -> {
-        select:
-          null_boolean is tf
-      }`).malloyResultMatches(runtime, {null_boolean: null});
+      it('select boolean', async () => {
+        await expect(`run: ${nulls} -> {
+          select:
+            null_boolean is tf
+        }`).malloyResultMatches(runtime, {null_boolean: null});
+      });
+      it('not boolean', async () => {
+        await expect(`run: ${nulls} -> {
+          select:
+            not_null_boolean is not tf
+        }`).malloyResultMatches(runtime, {not_null_boolean: is_true});
+      });
+      it('numeric != non-null to null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: val_ne_null is x != 9 }`
+        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+      });
+      it('string !~ non-null to null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
+        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+      });
+      it('regex !~ non-null to null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
+        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+      });
+      it('numeric != null-to-null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: null_ne_null is x != y }`
+        ).malloyResultMatches(runtime, {null_ne_null: is_true});
+      });
+      it('string !~ null-to-null', async () => {
+        await expect(
+          `run: ${nulls} -> { select: null_ne_null is a !~ b }`
+        ).malloyResultMatches(runtime, {null_ne_null: is_true});
+      });
     });
-    it('not boolean', async () => {
-      await expect(`run: ${nulls} -> {
-        select:
-          not_null_boolean is not tf
-      }`).malloyResultMatches(runtime, {not_null_boolean: is_true});
-    });
-    it('numeric != non-null to null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: val_ne_null is x != 9 }`
-      ).malloyResultMatches(runtime, {val_ne_null: is_true});
-    });
-    it('string !~ non-null to null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
-      ).malloyResultMatches(runtime, {val_ne_null: is_true});
-    });
-    it('regex !~ non-null to null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
-      ).malloyResultMatches(runtime, {val_ne_null: is_true});
-    });
-    it('numeric != null-to-null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: null_ne_null is x != y }`
-      ).malloyResultMatches(runtime, {null_ne_null: is_true});
-    });
-    it('string !~ null-to-null', async () => {
-      await expect(
-        `run: ${nulls} -> { select: null_ne_null is a !~ b }`
-      ).malloyResultMatches(runtime, {null_ne_null: is_true});
-    });
-  });
+  }
 
   test('dimension expressions expanded with parens properly', async () => {
     await expect(
@@ -898,8 +927,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           paren is    false and (fot)
       }`
     ).malloyResultMatches(runtime, {
-      paren: booleanResult(false, databaseName),
-      no_paren: booleanResult(false, databaseName),
+      paren: runtime.dialect.resultBoolean(false),
+      no_paren: runtime.dialect.resultBoolean(false),
     });
   });
 });

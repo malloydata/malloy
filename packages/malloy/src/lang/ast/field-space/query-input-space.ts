@@ -29,11 +29,11 @@
  * specialized QuerySpace for each type of query operation.
  */
 
-import {SourceDef} from '../../../model';
-import {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import type {AccessModifierLabel, SourceDef} from '../../../model';
+import type {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {Join} from '../source-properties/join';
-import {QueryFieldSpace} from '../types/field-space';
-import {QueryOperationSpace} from './query-spaces';
+import type {QueryFieldSpace} from '../types/field-space';
+import type {QueryOperationSpace} from './query-spaces';
 import {RefinedSpace} from './refined-space';
 
 export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
@@ -48,7 +48,7 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
   constructor(
     input: SourceDef,
     private queryOutput: QueryOperationSpace,
-    public readonly _isProtectedAccessSpace: boolean
+    public readonly _accessProtectionLevel: AccessModifierLabel
   ) {
     super(input);
   }
@@ -74,7 +74,11 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
     return this;
   }
 
-  isProtectedAccessSpace(): boolean {
-    return this._isProtectedAccessSpace;
+  accessProtectionLevel(): AccessModifierLabel {
+    return this._accessProtectionLevel;
+  }
+
+  isQueryOutputSpace() {
+    return false;
   }
 }

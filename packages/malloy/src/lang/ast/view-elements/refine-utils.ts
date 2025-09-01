@@ -21,15 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  PipeSegment,
-  QueryFieldDef,
-  isQuerySegment,
-  isRawSegment,
-} from '../../../model';
-import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import type {PipeSegment, QueryFieldDef} from '../../../model';
+import {isQuerySegment, isRawSegment} from '../../../model';
+import {mergeFieldUsage} from '../../composite-source-utils';
 import {nameFromDef} from '../../field-utils';
-import {MalloyElement} from '../types/malloy-element';
+import type {MalloyElement} from '../types/malloy-element';
 
 export function refine(
   logTo: MalloyElement,
@@ -117,10 +113,7 @@ export function refine(
           )}`
         );
       }
-      to.compositeFieldUsage = mergeCompositeFieldUsage(
-        to.compositeFieldUsage,
-        from.compositeFieldUsage
-      );
+      to.fieldUsage = mergeFieldUsage(to.fieldUsage, from.fieldUsage);
     } else if (from.type === 'index' && to.type === 'index') {
       to.indexFields = [...from.indexFields, ...to.indexFields];
     }

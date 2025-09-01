@@ -21,20 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   TemporalFieldType,
   TimestampUnit,
   CastType,
   TypecastExpr,
   TimeDeltaExpr,
-  mkTemporal,
-  isCastType,
   ExpressionValueType,
-  isDateUnit,
 } from '../../model/malloy_types';
+import {mkTemporal, isCastType, isDateUnit} from '../../model/malloy_types';
 
-import {TimeResult} from './types/time-result';
+import type {TimeResult} from './types/time-result';
 
 export function timeOffset(
   timeType: TemporalFieldType,

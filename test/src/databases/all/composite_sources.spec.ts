@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Runtime} from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
@@ -41,6 +42,80 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
       run: x -> multistage
     `).malloyResultMatches(runtime, {foo: 1});
+  });
+  it('SQL function contributes to field usage', async () => {
+    await expect(`
+      ##! experimental {composite_sources sql_functions}
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        dimension: foo_copy is sql_number('\${foo}')
+      }
+      run: x -> { group_by: foo_copy }
+    `).malloyResultMatches(runtime, {foo_copy: 1});
+  });
+  describe('composited joins', () => {
+    it('basic composited join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: s1 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: f1 is 1
+          } on j.state = state
+        }
+        source: s2 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: f2 is 2
+          } on j.state = state
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.f2 }
+      `).malloyResultMatches(runtime, {f2: 2});
+    });
+    it('selects correct join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: s1 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: jf is 1
+          } on true
+          dimension: f1 is 1
+        }
+        source: s2 is state_facts extend {
+          join_one: j is state_facts extend {
+            dimension: jf is 2
+          } on true
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.jf, f2 }
+      `).malloyResultMatches(runtime, {f2: 2, jf: 2});
+    });
+    it('join on depends on selected join', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: jbase is compose(
+          state_facts extend {
+            dimension: jf1 is 1
+          },
+          state_facts extend {
+            dimension: jf2 is 2
+          }
+        )
+        source: s1 is state_facts extend {
+          join_one: j is jbase on j.jf1 = 1 and j.state = 'CA'
+          dimension: f1 is 1
+        }
+        source: s2 is state_facts extend {
+          join_one: j is jbase on j.jf2 = 2 and j.state = 'IL'
+          dimension: f2 is 2
+        }
+        source: c is compose(s1, s2)
+        run: c -> { group_by: j.jf2, f2, j.state }
+      `).malloyResultMatches(runtime, {jf2: 2, f2: 2, state: 'IL'});
+    });
   });
   it('composite source used in join', async () => {
     await expect(`
@@ -210,7 +285,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ),
         state_facts extend { dimension: foo is 1.3, bar is 2.3, baz is 3.3 }
       )
-      // even though the first composite has all the fields foo, bar, baz; it is impossible
+      // even though the first composite hAS all the fields foo, bar, baz; it is impossible
       // to resolve it using the first composite, because you can't have both bar and baz
       // so the second input source is used instead
       run: x -> { group_by: foo, bar, baz }
@@ -399,6 +474,177 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           state_facts
         ) -> { index: bar } -> { group_by: fieldName; where: fieldName is not null }
       `).malloyResultMatches(runtime, {fieldName: 'bar'});
+    });
+  });
+  it('composite with parameters in separate file', async () => {
+    const wrappedRuntime = new Runtime({
+      connections: runtime.connections,
+      urlReader: {
+        readURL(_url: URL) {
+          return Promise.resolve(`
+            ##! experimental { composite_sources parameters }
+            source: state_facts is ${databaseName}.table('malloytest.state_facts')
+            source: x(param is 2) is compose(
+              state_facts extend { dimension: a is 1 },
+              state_facts extend { dimension: b is 2 }
+            ) extend {
+              where: param = 1
+            }
+          `);
+        },
+      },
+    });
+    await expect(`
+      import "http://foo.malloy"
+      ##! experimental { composite_sources parameters }
+      run: x(param is 1) -> { group_by: b }
+    `).malloyResultMatches(wrappedRuntime, {b: 2});
+  });
+  it('composite with parameters in separate file passing parameter to use in extended compose', async () => {
+    const wrappedRuntime = new Runtime({
+      connections: runtime.connections,
+      urlReader: {
+        readURL(_url: URL) {
+          return Promise.resolve(`
+            ##! experimental { composite_sources parameters }
+            source: state_facts is ${databaseName}.table('malloytest.state_facts')
+            source: x(param is 1) is compose(
+              state_facts extend { dimension: a is param },
+              state_facts extend { dimension: b is param + 1 }
+            )
+          `);
+        },
+      },
+    });
+    await expect(`
+      import "http://foo.malloy"
+      ##! experimental { composite_sources parameters }
+      run: x(param is 2) -> { group_by: b }
+    `).malloyResultMatches(wrappedRuntime, {b: 3});
+  });
+  it('nested composite where field usage depends on which composite selected', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts extend {
+            dimension: a is 'a1'
+          },
+          state_facts extend {
+            dimension: b is 'b1'
+          }
+        ) extend {
+          dimension: x is b
+        },
+        compose(
+          state_facts extend {
+            dimension: a is 'a2'
+          },
+          state_facts extend {
+            dimension: b is 'b2'
+          }
+        ) extend {
+          dimension: x is b
+        }
+      )
+      run: x -> { group_by: x }
+    `).malloyResultMatches(runtime, {x: 'b1'});
+  });
+  describe('partition composites', () => {
+    const id = (n: string) => (databaseName === 'snowflake' ? `"${n}"` : n);
+    test('partition composite basic', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('sql function contributes to partition composite selection', async () => {
+      await expect(`
+        ##! experimental.sql_functions
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          // a partition comes first, so it would be selected if there was no field usage
+          group_by: b_copy is sql_number('\${b}')
+          limit: 1
+          order_by: b_copy asc
+        }
+      `).malloyResultMatches(runtime, {b_copy: 1});
+    });
+    test('partition composite with fields different from partition name', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={x={a} y={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'y' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'y' AS ${id('p')}
+        """)
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('extended partition composite', async () => {
+      await expect(`
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        source: comp_ext is comp extend {
+          measure: a_avg is a.avg()
+        }
+
+        run: comp_ext -> {
+          aggregate: a_avg
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+    });
+    test('partition composite nested in composite', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        source: part_comp is ${databaseName}.sql("""
+                    SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 1 AS ${id('b')}, 'b' AS ${id('p')}
+          UNION ALL SELECT 0  AS ${id('a')}, 2 AS ${id('b')}, 'b' AS ${id('p')}
+        """)
+
+        source: comp is compose(
+          part_comp,
+          ${databaseName}.sql('SELECT 10 AS ${id('c')}')
+        )
+
+        run: comp -> {
+          aggregate: a_avg is a.avg()
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
     });
   });
 });

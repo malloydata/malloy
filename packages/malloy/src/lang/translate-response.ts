@@ -21,13 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, ModelDef, SQLSentence} from '../model/malloy_types';
-import {MalloyElement} from './ast';
-import {LogMessage} from './parse-log';
-import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
-import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
-import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
-import {PathInfo} from './parse-tree-walkers/find-table-path-walker';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {Annotation, ModelDef} from '../model/malloy_types';
+import type {MalloyElement} from './ast';
+import type {LogMessage} from './parse-log';
+import type {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
+import type {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
+import type {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
+import type {PathInfo} from './parse-tree-walkers/find-table-path-walker';
+
+export interface ResponseBase {
+  timingInfo?: Malloy.TimingInfo;
+}
 
 /**
  * The translation interface is essentially a request/response protocol, and
@@ -55,49 +60,75 @@ export interface NeedURLData {
   urls: string[];
 }
 
+export interface SQLSourceRequest {
+  connection: string;
+  selectStr: string;
+}
+
 export interface NeedCompileSQL {
-  compileSQL: SQLSentence;
-  partialModel: ModelDef | undefined;
+  compileSQL: SQLSourceRequest;
 }
 interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
-export type DataRequestResponse = Partial<NeededData> | null;
+export type DataRequestResponse = Partial<NeededData> & ResponseBase;
 export function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
   return !!dr && (dr.tables || dr.urls || dr.compileSQL) !== undefined;
 }
 export type ModelDataRequest = NeedCompileSQL | undefined;
-interface ASTData extends ProblemResponse, NeededData, FinalResponse {
+interface ASTData
+  extends ResponseBase,
+    ProblemResponse,
+    NeededData,
+    FinalResponse {
   ast: MalloyElement;
 }
 export type ASTResponse = Partial<ASTData>;
-interface Metadata extends NeededData, ProblemResponse, FinalResponse {
+interface Metadata
+  extends ResponseBase,
+    NeededData,
+    ProblemResponse,
+    FinalResponse {
   symbols: DocumentSymbol[];
 }
 export type MetadataResponse = Partial<Metadata>;
 interface ModelAnnotationData
-  extends NeededData,
+  extends ResponseBase,
+    NeededData,
     ProblemResponse,
     FinalResponse {
   modelAnnotation: Annotation;
 }
 export type ModelAnnotationResponse = Partial<ModelAnnotationData>;
-interface Completions extends NeededData, ProblemResponse, FinalResponse {
+interface Completions
+  extends ResponseBase,
+    NeededData,
+    ProblemResponse,
+    FinalResponse {
   completions: DocumentCompletion[];
 }
 export type CompletionsResponse = Partial<Completions>;
-interface HelpContext extends NeededData, ProblemResponse, FinalResponse {
+interface HelpContext
+  extends ResponseBase,
+    NeededData,
+    ProblemResponse,
+    FinalResponse {
   helpContext: DocumentHelpContext | undefined;
 }
 
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
-  extends NeededData,
+  extends ResponseBase,
+    NeededData,
     ProblemResponse,
     FinalResponse {
   modelDef: ModelDef;
   fromSources: string[];
 }
 
-interface TablePath extends NeededData, ProblemResponse, FinalResponse {
+interface TablePath
+  extends ResponseBase,
+    NeededData,
+    ProblemResponse,
+    FinalResponse {
   pathInfo: PathInfo[];
 }
 export type TablePathResponse = Partial<TablePath>;

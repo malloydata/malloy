@@ -23,10 +23,10 @@
 
 import * as model from '../../../model/malloy_types';
 import {nameFromDef} from '../../field-utils';
-import {SpaceEntry} from '../types/space-entry';
+import type {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
-import {HasParameter} from '../parameters/has-parameter';
-import {MalloyElement} from '../types/malloy-element';
+import type {HasParameter} from '../parameters/has-parameter';
+import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
 import {ViewField} from './view-field';
@@ -34,8 +34,8 @@ import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
-import {SourceDef} from '../../../model/malloy_types';
-import {SourceFieldSpace} from '../types/field-space';
+import type {SourceDef} from '../../../model/malloy_types';
+import type {SourceFieldSpace} from '../types/field-space';
 
 export abstract class DynamicSpace
   extends StaticSpace
@@ -50,7 +50,7 @@ export abstract class DynamicSpace
   protected newNotes = new Map<string, model.Annotation>();
 
   constructor(extending: SourceDef) {
-    super(structuredClone(extending), extending.dialect);
+    super({...extending}, extending.dialect, extending.connection);
     this.fromSource = extending;
     this.sourceDef = undefined;
   }
@@ -129,7 +129,7 @@ export abstract class DynamicSpace
       const parameterSpace = this.parameterSpace();
       for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
-          const joinStruct = field.join.structDef(parameterSpace);
+          const joinStruct = field.join.getStructDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
             fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
@@ -151,7 +151,7 @@ export abstract class DynamicSpace
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {
         const index = this.sourceDef.fields.findIndex(
-          f => f.as ?? f.name === name
+          f => (f.as ?? f.name) === name
         );
         if (index === -1) {
           throw new Error(`Can't find field '${name}' to set access modifier`);

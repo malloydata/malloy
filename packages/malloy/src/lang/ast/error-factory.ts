@@ -27,7 +27,7 @@
  ** here to help you.
  */
 
-import {
+import type {
   TableSourceDef,
   IndexSegment,
   ProjectSegment,
@@ -84,14 +84,28 @@ export class ErrorFactory {
   }
 
   static get reduceSegment(): ReduceSegment {
-    return {type: 'reduce', queryFields: []};
+    return {
+      type: 'reduce',
+      queryFields: [],
+      outputStruct: ErrorFactory.structDef,
+      isRepeated: false,
+    };
   }
 
   static get projectSegment(): ProjectSegment {
-    return {type: 'project', queryFields: []};
+    return {
+      type: 'project',
+      queryFields: [],
+      outputStruct: ErrorFactory.structDef,
+      isRepeated: true,
+    };
   }
 
   static get indexSegment(): IndexSegment {
-    return {type: 'index', indexFields: []};
+    return {
+      type: 'index',
+      indexFields: [],
+      outputStruct: ErrorFactory.structDef,
+    };
   }
 }

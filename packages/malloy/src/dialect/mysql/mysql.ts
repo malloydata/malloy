@@ -28,11 +28,8 @@
 //   qtz,
 //   DialectFunctionOverloadDef,
 // } from '..';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingRows,
-  isSamplingPercent,
   MeasureTimeExpr,
   TimeLiteralNode,
   RegexMatchExpr,
@@ -40,25 +37,28 @@ import {
   TimeTruncExpr,
   TimeExtractExpr,
   TypecastExpr,
-  LeafAtomicTypeDef,
-  TD,
+  BasicAtomicTypeDef,
   AtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
-import {indent} from '../../model/utils';
 import {
-  Dialect,
+  isSamplingEnable,
+  isSamplingRows,
+  isSamplingPercent,
+  TD,
+} from '../../model/malloy_types';
+import {indent} from '../../model/utils';
+import type {
+  BooleanTypeSupport,
   DialectFieldList,
   FieldReferenceType,
-  qtz,
+  OrderByClauseType,
   QueryInfo,
 } from '../dialect';
-import {
-  DialectFunctionOverloadDef,
-  expandBlueprintMap,
-  expandOverrideMap,
-} from '../functions';
+import {Dialect, qtz} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -75,7 +75,7 @@ const inSeconds: Record<string, number> = {
   week: 7 * 24 * 3600,
 };
 
-const mysqlToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // TODO: This assumes tinyint is always going to be a boolean.
   'tinyint': {type: 'boolean'},
   'smallint': {type: 'number', numberType: 'integer'},
@@ -127,14 +127,18 @@ export class MySQLDialect extends Dialect {
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
   compoundObjectInSchema = false;
-  booleanAsNumbers = true;
+  booleanType: BooleanTypeSupport = 'simulated';
+  orderByClause: OrderByClauseType = 'ordinal';
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
         return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
       case 'string':
-        return 'CHAR';
+        return 'TEXT';
+      case 'record':
+      case 'array':
+        return 'JSON';
       case 'date':
       case 'timestamp':
       default:
@@ -142,7 +146,7 @@ export class MySQLDialect extends Dialect {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return (
@@ -175,10 +179,9 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    const separator = limit ? ',xrmmex' : ',';
+    const separator = ',';
     let gc = `GROUP_CONCAT(
       IF(group_set=${groupSet},
         JSON_OBJECT(${this.mapFields(fieldList)})
@@ -187,10 +190,6 @@ export class MySQLDialect extends Dialect {
       ${orderBy}
       SEPARATOR '${separator}'
     )`;
-    if (limit) {
-      gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
-      gc = `REPLACE(${gc},'${separator}',',')`;
-    }
     gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
@@ -230,10 +229,18 @@ export class MySQLDialect extends Dialect {
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
+      let fType = this.malloyTypeToSQLType(f.typeDef);
+      if (
+        f.typeDef.type === 'sql native' &&
+        f.typeDef.rawType &&
+        f.typeDef.rawType?.match(/json/)
+      ) {
+        fType = f.typeDef.rawType.toUpperCase();
+      }
       fields.push(
-        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${this.malloyToSQL(
-          f.type
-        )} PATH "$.${f.rawName}"`
+        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${fType}  PATH "$.${
+          f.rawName
+        }"`
       );
     }
     return fields.join(',\n');
@@ -507,15 +514,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return tableSQL;
-  }
-
-  sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms
-      .map(
-        t =>
-          `${t.trim().slice(0, t.trim().lastIndexOf(' '))} IS NULL DESC, ${t}`
-      )
-      .join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {

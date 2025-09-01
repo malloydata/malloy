@@ -22,15 +22,16 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {
   LegalRefinementStage,
   QueryClass,
-  QueryPropertyInterface,
 } from '../types/query-property-interface';
-import {QueryBuilder} from '../types/query-builder';
+import type {QueryBuilder} from '../types/query-builder';
+import {attachDrillPaths} from './drill';
 
 export class NestFieldDeclaration
   extends ViewFieldDeclaration
@@ -52,18 +53,22 @@ export class NestFieldDeclaration
         fs,
         fs.outputSpace()
       );
-      const compositeFieldUsage =
+      const fieldUsage =
         pipeline[0] && model.isQuerySegment(pipeline[0])
-          ? pipeline[0].compositeFieldUsage
+          ? pipeline[0].fieldUsage
           : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
+      const pipelineWithDrillPaths = attachDrillPaths(
+        checkedPipeline,
+        this.name
+      );
       this.turtleDef = {
         type: 'turtle',
         name: this.name,
-        pipeline: checkedPipeline,
+        pipeline: pipelineWithDrillPaths,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
-        compositeFieldUsage,
+        fieldUsage,
       };
       return this.turtleDef;
     }

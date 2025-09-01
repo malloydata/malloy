@@ -1,5 +1,5 @@
 src/
 *.map
 tsconfig*
-*.spec
+*.spec.*
 storybook-static

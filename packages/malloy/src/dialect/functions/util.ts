@@ -22,15 +22,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   FunctionParameterDef,
   TypeDesc,
   Expr,
   FunctionParamTypeDesc,
   GenericSQLExpr,
-  LeafExpressionType,
-  TD,
-  mkFieldDef,
+  BasicExpressionType,
   FieldDef,
   FunctionReturnTypeDesc,
   FunctionParameterTypeDef,
@@ -40,7 +38,8 @@ import {
   TypedDef,
   FunctionGenericTypeDef,
 } from '../../model/malloy_types';
-import {SQLExprElement} from '../../model/utils';
+import {TD, mkFieldDef} from '../../model/malloy_types';
+import type {SQLExprElement} from '../../model/utils';
 
 export interface DialectFunctionOverloadDef {
   // The expression type here is the MINIMUM return type
@@ -236,7 +235,7 @@ export interface SQLNativeTypeBlueprint {
   sql_native: string;
 }
 
-export type LeafPlusType = LeafExpressionType | 'any';
+export type LeafPlusType = BasicExpressionType | 'any';
 export type TypeDescElementBlueprint =
   | LeafPlusType
   | ArrayBlueprint
@@ -406,10 +405,12 @@ function expandReturnTypeBlueprint(
     );
   } else if ('sql_native' in blueprint) {
     return anyExprType({type: 'sql native', rawType: blueprint.sql_native});
-  } else {
+  } else if ('calculation' in blueprint) {
     return minAnalytic(
       expandTypeDescElementBlueprint(blueprint.calculation, false)
     );
+  } else {
+    throw new Error('Invalid function blueprint');
   }
 }
 
@@ -469,8 +470,10 @@ function expandParamTypeBlueprint(
     return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
   } else if ('sql_native' in blueprint) {
     return anyExprType({type: 'sql native', rawType: blueprint.sql_native});
-  } else {
+  } else if ('calculation' in blueprint) {
     return maxAnalytic(expandTypeDescElementBlueprint(blueprint.calculation));
+  } else {
+    throw new Error('Invalid function blueprint');
   }
 }
 

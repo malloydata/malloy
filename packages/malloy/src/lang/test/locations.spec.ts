@@ -35,7 +35,10 @@ import {
   model,
 } from './test-translator';
 import './parse-expects';
-import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
+import type {
+  DocumentLocation,
+  DocumentPosition,
+} from '../../model/malloy_types';
 
 describe('source locations', () => {
   test('renamed source location', () => {
@@ -144,7 +147,7 @@ describe('source locations', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
       const na = getExplore(m.modelDef, 'na');
@@ -155,12 +158,11 @@ describe('source locations', () => {
 
   test('location of fields inherited from a query', () => {
     const source = markSource`
-      source: na is ${"_db_.table('aTable')"} -> {
+      source: na is _db_.table('aTable') -> {
         group_by:
-          abool
+          ${'abool'}
           ${'y is 1'}
-      }
-    `;
+      }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -257,7 +259,7 @@ describe('source locations', () => {
   });
   test('bad query', () => {
     expect(model`run: a -> { group_by: astr; ${'select: *'} }`).toLog(
-      errorMessage(/Not legal in grouping query/)
+      errorMessage(/Use of select is not allowed in a grouping query/)
     );
   });
 

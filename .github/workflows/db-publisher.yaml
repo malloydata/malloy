@@ -1,0 +1,31 @@
+name: 'DB:Publisher'
+permissions: {}
+
+on:
+  workflow_call:
+
+jobs:
+  test-publisher:
+    runs-on: ubuntu-latest
+
+    services:
+      publisher:
+        image: ms2data/malloy-publisher
+        ports:
+          - 8000:8000
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run ci-publisher
+        env:
+          CI: true

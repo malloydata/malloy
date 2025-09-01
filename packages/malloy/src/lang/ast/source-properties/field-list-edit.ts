@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldReferences} from '../query-items/field-references';
+import type {FieldReferences} from '../query-items/field-references';
 import {MalloyElement} from '../types/malloy-element';
 
 export class FieldListEdit extends MalloyElement {

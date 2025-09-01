@@ -5,18 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  DataColumn,
-  DataRecord,
-  Explore,
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Item, Spec, View} from 'vega';
+import type {JSX} from 'solid-js';
+import type {
+  Cell,
+  DrillEntry,
   Field,
-  QueryData,
-  QueryDataRow,
-  Tag,
-} from '@malloydata/malloy';
-import {Item, Runtime, Spec, View} from 'vega';
-import {JSX} from 'solid-js';
-import {ResultStore} from './result-store/result-store';
+  RecordCell,
+  RepeatedRecordCell,
+} from '../data_tree';
+
+export type RendererProps = {
+  dataColumn: Cell;
+  tag: Tag;
+  customProps?: Record<string, Record<string, unknown>>;
+};
 
 export type VegaSignalRef = {signal: string};
 export type VegaPadding = {
@@ -25,10 +30,11 @@ export type VegaPadding = {
   right?: number;
   bottom?: number;
 };
-export type MalloyDataToChartDataHandler = (
-  field: Explore,
-  data: QueryData
-) => unknown[];
+export type MalloyDataToChartDataHandler = (data: RepeatedRecordCell) => {
+  data: unknown[];
+  isDataLimited: boolean;
+  dataLimitMessage?: string;
+};
 export type VegaChartProps = {
   spec: Spec;
   plotWidth: number;
@@ -45,32 +51,6 @@ export type FieldHeaderRangeMap = Record<
   string,
   {abs: [number, number]; rel: [number, number]; depth: number}
 >;
-
-export interface FieldRenderMetadata {
-  field: Field | Explore;
-  min: number | null;
-  max: number | null;
-  minString: string | null;
-  maxString: string | null;
-  values: Set<string | number | boolean>;
-  maxRecordCt: number | null;
-  maxUniqueFieldValueCounts: Map<string, number>;
-  vegaChartProps?: VegaChartProps;
-  runtime?: Runtime;
-  renderAs: string;
-}
-
-export interface RenderResultMetadata {
-  fields: Record<string, FieldRenderMetadata>;
-  fieldKeyMap: WeakMap<Field | Explore, string>;
-  getFieldKey: (f: Field | Explore) => string;
-  field: (f: Field | Explore) => FieldRenderMetadata;
-  getData: (cell: DataColumn) => QueryData;
-  modelTag: Tag;
-  resultTag: Tag;
-  rootField: Field | Explore;
-  store: ResultStore;
-}
 
 export type MalloyClickEventPayload = {
   field: Field;
@@ -100,12 +80,8 @@ export type ChartTooltipEntry = {
   }[];
 };
 
-export type DataRowWithRecord = QueryDataRow & {
-  __malloyDataRecord: DataRecord;
-};
-
 export type MalloyVegaDataRecord = {
-  __source: QueryDataRow & {__malloyDataRecord: DataRecord};
+  __row: RecordCell;
 };
 
 type ScaleType = 'quantitative' | 'nominal';
@@ -113,6 +89,17 @@ type ScaleType = 'quantitative' | 'nominal';
 export type Channel = {
   fields: string[];
   type: ScaleType | null;
+  independent: boolean | 'auto';
+};
+
+export type YChannel = {
+  fields: string[];
+  type: ScaleType | null;
+  independent: boolean;
+};
+
+export type SeriesChannel = Channel & {
+  limit: number | 'auto';
 };
 
 export type TableConfig = {
@@ -126,13 +113,10 @@ export type DashboardConfig = {
 };
 
 export type DrillData = {
-  dimensionFilters: DimensionContextEntry[];
+  dimensionFilters: DrillEntry[];
   copyQueryToClipboard: () => Promise<void>;
   query: string;
   whereClause: string;
-};
-
-export type DimensionContextEntry = {
-  fieldDef: string;
-  value: string | number | boolean | Date;
+  stableQuery: Malloy.Query | undefined;
+  stableDrillClauses: Malloy.DrillOperation[] | undefined;
 };

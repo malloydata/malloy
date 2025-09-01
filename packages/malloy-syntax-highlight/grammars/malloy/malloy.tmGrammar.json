@@ -387,6 +387,14 @@
           "name": "keyword.control.group_by"
         },
         {
+          "match": "(?i)\\bdrill\\b",
+          "name": "keyword.control.drill"
+        },
+        {
+          "match": "(?i)\\bgrouped_by\\b",
+          "name": "keyword.control.grouped_by"
+        },
+        {
           "match": "(?i)\\bhaving\\b",
           "name": "keyword.control.having"
         },

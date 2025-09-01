@@ -21,13 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   AggregateFunctionType,
-  expressionIsAggregate,
   FieldDef,
-  isAtomicFieldType,
   AggregateExpr,
   Expr,
+} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  isAtomicFieldType,
   hasExpression,
   isAtomic,
   isJoined,
@@ -38,13 +40,13 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
 import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
-import {JoinPath, JoinPathElement} from '../types/lookup-result';
-import {MessageCode} from '../../parse-log';
+import type {JoinPath, JoinPathElement} from '../types/lookup-result';
+import type {MessageCode} from '../../parse-log';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -90,9 +92,13 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               value:
                 footType.evalSpace === 'output'
                   ? {node: 'outputField', name: this.source.refString}
-                  : {node: 'field', path: this.source.path},
+                  : {
+                      node: 'field',
+                      path: this.source.path,
+                      at: this.source.location,
+                    },
               evalSpace: footType.evalSpace,
-              compositeFieldUsage: footType.compositeFieldUsage,
+              fieldUsage: [{path: this.source.path, at: this.source.location}],
             };
             structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
@@ -175,12 +181,23 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         node: 'aggregate',
         function: this.func,
         e: exprVal.value,
+        at: this.location,
       };
       if (structPath && structPath.length > 0) {
         f.structPath = structPath;
       }
+      const returnExpr = this.returns(exprVal);
+      if (!this.isSymmetricFunction()) {
+        if (returnExpr.fieldUsage === undefined) {
+          returnExpr.fieldUsage = [];
+        }
+        returnExpr.fieldUsage.push({
+          path: structPath || [],
+          uniqueKeyRequirement: {isCount: false},
+        });
+      }
       return {
-        ...this.returns(exprVal),
+        ...returnExpr,
         expressionType: 'aggregate',
         value: f,
         evalSpace: 'output',
@@ -198,7 +215,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        const sfd: Expr = {node: 'field', path: this.source.path};
+        const sfd: Expr = {
+          node: 'field',
+          path: this.source.path,
+          at: this.source.location,
+        };
         result.push(...getJoinUsage(fs, sfd));
       }
     }
@@ -352,7 +373,7 @@ function suggestNewVersion(
   // Get longest shared prefix
   let longestOverlap = joinUsage[0];
   for (const usage of joinUsage.slice(1)) {
-    for (let i = 0; i < longestOverlap.length; i++) {
+    for (let i = 0; i < longestOverlap.length && i < usage.length; i++) {
       const a = longestOverlap[i];
       const b = usage[i];
       if (a.name !== b.name) {

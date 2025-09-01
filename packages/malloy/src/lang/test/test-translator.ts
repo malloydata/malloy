@@ -23,7 +23,7 @@
  */
 
 import {inspect} from 'util';
-import {
+import type {
   DocumentLocation,
   FieldDef,
   ModelDef,
@@ -33,27 +33,36 @@ import {
   QueryFieldDef,
   StructDef,
   TurtleDef,
-  isQuerySegment,
-  isSegmentSQL,
-  isSourceDef,
   SourceDef,
   JoinBase,
   TableSourceDef,
   SQLSourceDef,
-  SQLSentence,
   NumberTypeDef,
+} from '../../model/malloy_types';
+import {
+  isQuerySegment,
+  isSourceDef,
   mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
-import {NameSpace} from '../ast/types/name-space';
-import {ModelEntry} from '../ast/types/model-entry';
+import type {NameSpace} from '../ast/types/name-space';
+import type {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
-import {DataRequestResponse, TranslateResponse} from '../translate-response';
+import type {
+  DataRequestResponse,
+  SQLSourceRequest,
+  TranslateResponse,
+} from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
-import {ExprValue} from '../ast/types/expr-value';
+import type {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
-import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
-import {EventStream} from '../../runtime_types';
+import type {
+  LogSeverity,
+  MessageCode,
+  MessageParameterType,
+} from '../parse-log';
+import type {EventStream} from '../../runtime_types';
+import {sqlKey} from '../../model/sql_block';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -303,6 +312,17 @@ export class TestTranslator extends MalloyTranslator {
                   {type: 'fieldref', path: ['astr']},
                   {type: 'fieldref', path: ['acount']},
                 ],
+                outputStruct: {
+                  type: 'query_result',
+                  name: 'result',
+                  fields: [
+                    {type: 'string', name: 'astr'},
+                    {type: 'string', name: 'acount'},
+                  ],
+                  connection: 'test',
+                  dialect: 'standardsql',
+                },
+                isRepeated: true,
               },
             ],
           },
@@ -449,7 +469,7 @@ export class BetaExpression extends TestTranslator {
   private testFS() {
     const aStruct = this.internalModel.contents[this.sourceName];
     if (isSourceDef(aStruct)) {
-      const tstFS = new StaticSourceSpace(aStruct);
+      const tstFS = new StaticSourceSpace(aStruct, 'public');
       return tstFS;
     } else {
       throw new Error("Can't get simple namespace for expression tests");
@@ -630,18 +650,19 @@ export function markSource(
   return {code, locations};
 }
 
-export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceDef {
-  const selectThis = sqlBlock.select[0];
-  if (!isSegmentSQL(selectThis)) {
-    throw new Error('weird test support error sorry');
-  }
+export function getSelectOneStruct(sqlBlock: SQLSourceRequest): {
+  [key: string]: SQLSourceDef;
+} {
+  const key = sqlKey(sqlBlock.connection, sqlBlock.selectStr);
   return {
-    type: 'sql_select',
-    name: sqlBlock.name,
-    dialect: 'standardsql',
-    connection: 'bigquery',
-    selectStr: selectThis.sql,
-    fields: [{type: 'number', name: 'one'}],
+    [key]: {
+      type: 'sql_select',
+      name: key,
+      dialect: 'standardsql',
+      connection: '_db_',
+      selectStr: sqlBlock.selectStr,
+      fields: [{type: 'number', name: 'one'}],
+    },
   };
 }
 

@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  def,
+import type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
 } from '../functions/util';
+import {def} from '../functions/util';
 
 // Cute shortcut So you can write things like: {array: T} and {dimension: T}
 const T: TypeDescBlueprint = {generic: 'T'};
@@ -69,10 +69,34 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
+const max_by: DefinitionBlueprint = {
+  generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
+  takes: {
+    'value': {dimension: T},
+    'order_by_val': {dimension: 'any'},
+  },
+  returns: {measure: T},
+  impl: {function: 'MAX_BY'},
+  isSymmetric: true,
+};
+
+const min_by: DefinitionBlueprint = {
+  generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
+  takes: {
+    'value': {dimension: T},
+    'order_by_val': {dimension: 'any'},
+  },
+  returns: {measure: T},
+  impl: {function: 'MIN_BY'},
+  isSymmetric: true,
+};
+
 export const STANDARDSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_from_unix_date,
   string_agg,
   string_agg_distinct,
+  max_by,
+  min_by,
   hll_accumulate: {
     default: {
       takes: {'value': {dimension: T}},

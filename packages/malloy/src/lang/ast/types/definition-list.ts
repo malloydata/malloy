@@ -21,9 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model';
-import {ListOf, MalloyElement} from './malloy-element';
-import {Noteable, extendNoteHelper, isNoteable} from '../types/noteable';
+import type {Annotation} from '../../../model';
+import type {MalloyElement} from './malloy-element';
+import {ListOf} from './malloy-element';
+import type {Noteable} from '../types/noteable';
+import {extendNoteHelper, isNoteable} from '../types/noteable';
 
 export abstract class DefinitionList<DT extends MalloyElement>
   extends ListOf<DT>

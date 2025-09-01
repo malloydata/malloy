@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Item, SignalListenerHandler, View} from 'vega';
+import type {Item, SignalListenerHandler, View} from 'vega';
 
 function viewHasSignal(view: View, signal: string) {
   const viewSignals = view.getState().signals;
@@ -35,10 +35,10 @@ export function getMarkName(item: Item): string {
 export function signalLogger(view: View, id = '') {
   return (...signals: string[]) => {
     signals.forEach(signal => {
-      addSignalListenerIfExists(view, signal, (...args) =>
+      addSignalListenerIfExists(view, signal, (...args) => {
         // eslint-disable-next-line no-console
-        console.log(id, ...args)
-      );
+        console.log(id, ...args);
+      });
     });
   };
 }

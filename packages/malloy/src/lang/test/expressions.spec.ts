@@ -50,6 +50,7 @@ describe('expressions', () => {
       expect(tQuery).toBeDefined();
       const tField = getQueryFieldDef(tQuery!.pipeline[0], 'tts');
       expect(tField['timeframe']).toEqual(unit);
+      expect(`now.${unit}`).compilesTo(`{timeTrunc-${unit} {now}}`);
     });
 
     const dateTF = [['week', 'month', 'quarter', 'year']];
@@ -80,7 +81,7 @@ describe('expressions', () => {
   });
   test('raw function call codegen', () => {
     expect(expr`special_function!(aweird, 'foo')`).compilesTo(
-      'special_function({aweird},{"foo"})'
+      'special_function({aweird},{{"foo"}})'
     );
   });
 
@@ -135,27 +136,27 @@ describe('expressions', () => {
     });
     test('match', () => {
       expect("'forty-two' ~ 'fifty-four'").compilesTo(
-        '{"forty-two" like "fifty-four"}'
+        '{{"forty-two"} like {"fifty-four"}}'
       );
     });
     test('not match', () => {
       expect("'forty-two' !~ 'fifty-four'").compilesTo(
-        '{"forty-two" !like "fifty-four"}'
+        '{{"forty-two"} !like {"fifty-four"}}'
       );
     });
     test('regexp-match', () => {
       expect("'forty-two' ~ r'fifty-four'").compilesTo(
-        '{"forty-two" regex-match /fifty-four/}'
+        '{{"forty-two"} regex-match /fifty-four/}'
       );
     });
     test('not regexp-match', () => {
       expect("'forty-two' !~ r'fifty-four'").compilesTo(
-        '{not {"forty-two" regex-match /fifty-four/}}'
+        '{not {{"forty-two"} regex-match /fifty-four/}}'
       );
     });
     test('apply as equality', () => {
       expect("'forty-two' ? 'fifty-four'").compilesTo(
-        '{"forty-two" = "fifty-four"}'
+        '{{"forty-two"} = {"fifty-four"}}'
       );
     });
     test('not', () => {
@@ -220,6 +221,25 @@ describe('expressions', () => {
         '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
       );
     });
+    test('date = date compiles to =', () => {
+      expect('ad = @2020-01-01').compilesTo('{ad = @2020-01-01}');
+    });
+    test('timestamp = date compiles to range', () => {
+      expect('ats = @2020-01-01').compilesTo(
+        '{{ats >= @2020-01-01 00:00:00} and {ats < @2020-01-02 00:00:00}}'
+      );
+    });
+    test('timestamp = timestamp compiles to =', () => {
+      expect('ats = @2020-01-01 10:00:00').compilesTo(
+        '{ats = @2020-01-01 10:00:00}'
+      );
+    });
+    // TODO timestamp literals to the second have no granularity, and therefore no "next" to compute range
+    test.skip('timestamp ? timestamp compiles to range', () => {
+      expect('ats ? @2020-01-01 10:00:00').compilesTo(
+        '{{ats >= @2020-01-01 10:00:00} and {ats < {+second @2020-01-01 10:00:00 1}}}'
+      );
+    });
     test('apply followed by another condition', () => {
       expect('ai ? (10 | 20) and ai is not null').toLog(
         errorMessage("no viable alternative at input 'ai'")
@@ -277,7 +297,7 @@ describe('expressions', () => {
         expect(warnSrc).toLog(
           warningMessage("Use Malloy operator '~' instead of 'LIKE'")
         );
-        expect(warnSrc).compilesTo('{astr like "a"}');
+        expect(warnSrc).compilesTo('{astr like {"a"}}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr ~ 'a'");
       });
@@ -286,7 +306,7 @@ describe('expressions', () => {
         expect(warnSrc).toLog(
           warningMessage("Use Malloy operator '!~' instead of 'NOT LIKE'")
         );
-        expect(warnSrc).compilesTo('{astr !like "a"}');
+        expect(warnSrc).compilesTo('{astr !like {"a"}}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr !~ 'a'");
       });
@@ -613,6 +633,34 @@ describe('expressions', () => {
         }
       `).toTranslate();
     });
+
+    describe('grouped_by:', () => {
+      test('grouped_by of dimension', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by grouped_by }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: astr }
+          }
+        `).toTranslate();
+      });
+      test('grouped_by of measure', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by grouped_by }
+          source: aext is a extend {
+            measure: c is count()
+            measure: aisum is ai.sum() { grouped_by: ${'c'} }
+          }
+        `).toLog(errorMessage('`grouped_by:` field must be a dimension'));
+      });
+      test('grouped_by of self', () => {
+        expect(markSource`
+          ##! experimental { aggregate_order_by grouped_by }
+          source: aext is a extend {
+            measure: aisum is ai.sum() { grouped_by: aisum }
+          }
+        `).toLog(errorMessage('aisum is not defined'));
+      });
+    });
   });
 
   describe('aggregate forms', () => {
@@ -797,6 +845,18 @@ describe('expressions', () => {
           aggregate: v is f.sum()
         }
       `).toTranslate();
+    });
+    test('shows the correct error message when the longest overlap between the join usages is length zero', () => {
+      expect(markSource`
+    source: testcase is a extend {
+      join_one: a on true
+
+      measure: value is sum(a.ai * ai)
+    }
+      `).toLog;
+      errorMessage(
+        'Join path is required for this calculation; use `a.sum(a.ai * ai)` or `source.sum(a.ai * ai)` to get a result weighted with respect to `source`'
+      );
     });
     test('sum(inline.column)', () => {
       expect(modelX`sum(inline.column)`).toLog(
@@ -1017,7 +1077,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer" else "random"}'
+        '{case when {ai = 42} then {"the answer"} when {ai = 54} then {"the questionable answer"} else {"random"}}'
       );
     });
     test('with value', () => {
@@ -1030,7 +1090,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case ai when 42 then "the answer" when 54 then "the questionable answer" else "random"}'
+        '{case ai when 42 then {"the answer"} when 54 then {"the questionable answer"} else {"random"}}'
       );
     });
     test('no else', () => {
@@ -1042,7 +1102,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer"}'
+        '{case when {ai = 42} then {"the answer"} when {ai = 54} then {"the questionable answer"}}'
       );
     });
     test('wrong then type', () => {

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, TableSourceDef} from '../../model/malloy_types';
+import type {StructDef, TableSourceDef} from '../../model/malloy_types';
 import {Explore} from '../../malloy';
 
 export const CHILD_EXPLORE: TableSourceDef = {

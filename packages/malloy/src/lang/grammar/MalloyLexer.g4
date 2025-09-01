@@ -33,9 +33,11 @@ CALCULATION: C A L C U L A T I O N SPACE_CHAR* ':';
 CONNECTION: C O N N E C T I O N SPACE_CHAR* ':';
 DECLARE: D E C L A R E  ':' ;
 DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
+DRILL: D R I L L SPACE_CHAR* ':';
 EXCEPT: E X C E P T SPACE_CHAR* ':';
 EXTENDQ: E X T E N D SPACE_CHAR* ':';
 GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
+GROUPED_BY: G R O U P E D '_' B Y SPACE_CHAR* ':';
 HAVING: H A V I N G SPACE_CHAR* ':';
 INDEX: I N D E X SPACE_CHAR* ':';
 INTERNAL: I N T E R N A L SPACE_CHAR* ':';
@@ -84,6 +86,7 @@ END: E N D ;
 EXCLUDE: E X C L U D E;
 EXTEND: E X T E N D ;
 FALSE: F A L S E;
+FILTER: F I L T E R;
 FULL: F U L L;
 FOR: F O R;
 FROM: F R O M ;
@@ -132,21 +135,36 @@ WITH: W I T H ;
 YEAR: Y E A R S?;
 UNGROUPED: U N G R O U P E D;
 
-STRING_ESCAPE
-  : '\\' '\''
-  | '\\' '\\'
-  | '\\' .
-  ;
-HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+fragment SQ: '\'';
+fragment BQ: '`';
+fragment DQ: '"';
+fragment SQ3: SQ SQ SQ;
+fragment DQ3: DQ DQ DQ;
+fragment BQ3: BQ BQ BQ;
+fragment RAW_CHAR: ('\\'  ~[\n]) | ~[\\\n];
+fragment RAW3_CHAR: ( '\\' . ) | (~ '\\');
+fragment F_PREFIX: F SPACE_CHAR*;
+fragment S_PREFIX: S SPACE_CHAR*;
+HACKY_REGEX: ('/' | [rR]) SQ RAW_CHAR*? SQ;
+
+RAW_SQ: S_PREFIX SQ RAW_CHAR*? (SQ | '\n');
+RAW_DQ: S_PREFIX DQ RAW_CHAR*? (DQ | '\n');
+
+SQ3_FILTER: F_PREFIX SQ3 RAW3_CHAR*? SQ3;
+SQ_FILTER: F_PREFIX SQ RAW_CHAR*? (SQ | '\n');
+DQ3_FILTER: F_PREFIX DQ3 RAW3_CHAR*? DQ3;
+DQ_FILTER: F_PREFIX DQ RAW_CHAR*? (DQ | '\n');
+BQ3_FILTER: F_PREFIX BQ3 RAW3_CHAR*? BQ3;
+BQ_FILTER: F_PREFIX BQ RAW_CHAR*? (BQ | '\n');
 
 fragment HEX: [0-9a-fA-F];
-fragment UNICODE: '\\u' HEX HEX HEX HEX;
+fragment UNICODE: '\\' U HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' ~ '\n';
 fragment STR_CHAR: UNICODE | ESCAPED | SAFE_NON_QUOTE | '\t';
-SQ_STRING: '\'' (STR_CHAR | ["`])* '\'';
-DQ_STRING: '"' (STR_CHAR | ['`])* '"';
-BQ_STRING: '`' (STR_CHAR | ['"])* '`';
+SQ_STRING: SQ (STR_CHAR | ["`])* SQ;
+DQ_STRING: DQ (STR_CHAR | ['`])* DQ;
+BQ_STRING: BQ (STR_CHAR | ['"])* BQ;
 
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
@@ -189,7 +207,6 @@ QMARK: '?';
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
 fragment F_TZ: '[' (ID_CHAR | '/')* ']';
-fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP
   : '@' F_YEAR '-' F_DD '-' F_DD
@@ -229,7 +246,6 @@ COMMENT_TO_EOL: ('--' | '//') F_TO_EOL -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);
-CLOSE_CODE: '}%' -> popMode;
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;

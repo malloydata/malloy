@@ -23,7 +23,7 @@
 
 import * as duckdb from '@duckdb/duckdb-wasm';
 import Worker from 'web-worker';
-import {
+import type {
   FetchSchemaOptions,
   QueryDataRow,
   QueryOptionsReader,
@@ -31,8 +31,9 @@ import {
   SQLSourceDef,
   ConnectionConfig,
   TableSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
-import {StructRow, Table} from 'apache-arrow';
+import type {StructRow, Table} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
@@ -371,7 +372,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   public async fetchSchemaForSQLStruct(
-    sqlRef: SQLSourceDef,
+    sqlRef: SQLSourceRequest,
     options: FetchSchemaOptions
   ): Promise<
     | {structDef: SQLSourceDef; error?: undefined}

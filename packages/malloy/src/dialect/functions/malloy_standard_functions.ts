@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {LeafExpressionType} from '../../model/malloy_types';
-import {
+import type {BasicExpressionType} from '../../model/malloy_types';
+import type {
   DefinitionBlueprint,
   DialectFunctionOverloadDef,
   ImplementationBlueprint,
-  expandBlueprintMap,
-  expandOverrideMapFromBase,
 } from './util';
+import {expandBlueprintMap, expandOverrideMapFromBase} from './util';
 
 type D = DefinitionBlueprint;
 type I = ImplementationBlueprint;
@@ -84,6 +83,7 @@ type Standard = {
   min_cumulative: D;
   min_window: D;
   rank: D;
+  dense_rank: D;
   row_number: D;
   sum_cumulative: D;
   sum_moving: {preceding: D; following: D};
@@ -498,7 +498,7 @@ const first_value: DefinitionFor<Standard['first_value']> = {
   impl: {function: 'FIRST_VALUE', needsWindowOrderBy: true},
 };
 
-const LAG_TYPES: LeafExpressionType[] = [
+const LAG_TYPES: BasicExpressionType[] = [
   'string',
   'number',
   'timestamp',
@@ -595,6 +595,12 @@ const rank: DefinitionFor<Standard['rank']> = {
   takes: {},
   returns: {calculation: 'number'},
   impl: {function: 'RANK', needsWindowOrderBy: true},
+};
+
+const dense_rank: DefinitionFor<Standard['dense_rank']> = {
+  takes: {},
+  returns: {calculation: 'number'},
+  impl: {function: 'DENSE_RANK', needsWindowOrderBy: true},
 };
 
 const row_number: DefinitionFor<Standard['row_number']> = {
@@ -733,6 +739,7 @@ export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
 
   // Analytic functions
   avg_moving,
+  dense_rank,
   first_value,
   lag,
   last_value,

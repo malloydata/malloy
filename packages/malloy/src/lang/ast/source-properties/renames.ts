@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AccessModifierLabel} from '../../../model';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import type {AccessModifierLabel} from '../../../model';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {RenameSpaceField} from '../field-space/rename-space-field';
-import {FieldName} from '../types/field-space';
+import type {FieldName} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import {MakeEntry} from '../types/space-entry';
+import type {MakeEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
 export class RenameField extends MalloyElement implements MakeEntry {

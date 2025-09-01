@@ -29,9 +29,9 @@ import {
   getSelectOneStruct,
   errorMessage,
   error,
-  warningMessage,
 } from './test-translator';
 import './parse-expects';
+import {sqlKey} from '../../model/sql_block';
 
 describe('model statements', () => {
   describe('table method', () => {
@@ -61,15 +61,6 @@ describe('model statements', () => {
     test('cannot refine table', () => {
       expect(markSource`run: \`_db_\`.table('aTable') + { limit: 10 }`).toLog(
         errorMessage('Cannot add view refinements to a source')
-      );
-    });
-    test('table function is deprecated', () => {
-      expect(`##! m4warnings=warn
-      source: testA is table('_db_:aTable')
-    `).toLog(
-        warningMessage(
-          "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
-        )
       );
     });
     test('cannot run table', () => {
@@ -186,7 +177,7 @@ describe('error handling', () => {
   });
   test('refine cannot change query type', () => {
     expect('run: ab -> aturtle + { select: astr }').toLog(
-      errorMessage(/Not legal in grouping query/)
+      errorMessage(/Use of select is not allowed in a grouping query/)
     );
   });
   test('undefined field ref in query', () => {
@@ -240,10 +231,6 @@ describe('error handling', () => {
     }
     `).toTranslate();
   });
-  test('popping out of embedding when not embedded', () => {
-    expect('}%').toLog(errorMessage(/extraneous input '}%' expecting/));
-  });
-
   test('bad sql in sql block', () => {
     const badSelect = model`source: someName is _db_.sql(")")`;
     const badTrans = badSelect.translator;
@@ -251,10 +238,14 @@ describe('error handling', () => {
     const needSchema = badTrans.translate();
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
+      const key = sqlKey(
+        needSchema.compileSQL.connection,
+        needSchema.compileSQL.selectStr
+      );
       badTrans.update({
         errors: {
           compileSQL: {
-            [needSchema.compileSQL.name]: 'Nobody ZZZZ',
+            [key]: 'Nobody ZZZZ',
           },
         },
       });
@@ -304,7 +295,8 @@ describe('translation need error locations', () => {
     const req = m.translate().compileSQL;
     expect(req).toBeDefined();
     if (req) {
-      m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
+      const key = sqlKey(req.connection, req.selectStr);
+      m.update({errors: {compileSQL: {[key]: 'Bad SQL!'}}});
     }
     expect(m).not.toTranslate();
     const errList = m.problems();
@@ -568,7 +560,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -583,7 +575,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -598,7 +590,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -614,7 +606,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -629,7 +621,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -644,7 +636,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -659,7 +651,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toLog(errorMessage('Cannot add view refinements to a source'));
     }
@@ -677,7 +669,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -692,7 +684,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -707,7 +699,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -722,7 +714,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -738,7 +730,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toLog(errorMessage('A raw query cannot be refined'));
     }
@@ -753,7 +745,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toLog(errorMessage('Cannot add view refinements to a source'));
     }
@@ -843,36 +835,22 @@ describe('extend and refine', () => {
     describe('query name with ambiguous refinements', () => {
       test('adding segment to ambuguously refined query', () => {
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 } -> { select: b.* }
         `).toLog(errorMessage("No such field as 'b'"));
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }
-        `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 } -> { select: * }
         `).toTranslate();
       });
       test('automatically recognize this as a query refinement without new stage', () => {
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 }
-        `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 }
         `).toTranslate();
       });
       test('can extend a query into a source', () => {
@@ -885,28 +863,19 @@ describe('extend and refine', () => {
         // Of course, number 1 and 3 are actually useless because you're defining
         // something and then not using it...
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on b.ai = ai } -> { select: * }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { where: 1 = 1 } -> { select: * }
         `).toTranslate();
-        expect(`
-          ##! -m4warnings
-          query: q is a -> { group_by: ai }
-          run: q + { declare: three is 3 } -> { select: * }
-        `).toTranslate();
         // Alternatively, fix 1 and 3 by actually using the declared thing
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
         `).toTranslate();
         expect(`
-          ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { extend: {dimension: three is 3} group_by: three }
         `).toTranslate();
@@ -969,28 +938,7 @@ describe('extend and refine', () => {
   });
 });
 
-describe('miscellaneous m4 warnings', () => {
-  test('project is deprecated', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { project: * }
-    `).toLog(warningMessage('project: keyword is deprecated, use select:'));
-  });
-  test('query leading arrow', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: x
-    `).toTranslate();
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: x -> { select: * }
-    `).toTranslate();
-  });
-});
-
-describe('m3/m4 source query sentences', () => {
+describe('source query sentences', () => {
   const srcExtend = '{accept:ai}';
   const qryRefine = '{limit:1}';
   const query = '{select:*}';
@@ -1005,14 +953,11 @@ describe('m3/m4 source query sentences', () => {
     );
   });
   test('legal sqexpressions', () => {
-    // some things that are m4 warnings are commented out
     expect(`
       source: s is a
       query: q is s -> ${query}
 
       source: s0 is a;
-      // source: s0_extbare is s ${srcExtend};
-      // source: s0_extplus is s + ${srcExtend};
       source: s0_ext is s extend ${srcExtend};
       source: qs is q;
       source: qs0 is q extend ${srcExtend};
@@ -1021,12 +966,9 @@ describe('m3/m4 source query sentences', () => {
       source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
       source: s3 is s extend ${srcExtend};
       source: s4 is q extend ${srcExtend};
-      // source: s5 is from(s -> ${query})
 
       query: q0 is q;
-      // query: q0_refbare is q ${qryRefine};
       query: q0_refplus is q + ${qryRefine};
-      // query: q1_bare is ab -> aturtle ${qryRefine};
       query: q1_plus is ab -> aturtle + ${qryRefine};
       query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
 

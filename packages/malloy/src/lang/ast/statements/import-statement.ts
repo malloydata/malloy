@@ -21,13 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelDataRequest} from '../../translate-response';
-import {
-  DocStatement,
-  Document,
-  ListOf,
-  MalloyElement,
-} from '../types/malloy-element';
+import type {ModelDataRequest} from '../../translate-response';
+import type {DocStatement, Document} from '../types/malloy-element';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
 export class ImportSourceName extends MalloyElement {
   elementType = 'importSourceName';

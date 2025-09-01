@@ -20,10 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {ExprValue, literalExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {literalExprValue} from '../types/expr-value';
 
 export class ExprString extends ExpressionDef {
   elementType = 'string literal';
@@ -38,5 +40,12 @@ export class ExprString extends ExpressionDef {
       dataType: {type: 'string'},
       value: {node: 'stringLiteral', literal: this.value},
     });
+  }
+
+  getStableLiteral(): Malloy.LiteralValue {
+    return {
+      kind: 'string_literal',
+      string_value: this.value,
+    };
   }
 }

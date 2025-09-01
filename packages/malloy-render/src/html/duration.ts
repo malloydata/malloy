@@ -21,18 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicField, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
-import {
-  DurationRenderOptions,
-  DurationUnit,
-  isDurationUnit,
-  StyleDefaults,
-} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {DurationRenderOptions, StyleDefaults} from './data_styles';
+import {DurationUnit, isDurationUnit} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
+import type {Cell, Field} from '../data_tree';
 
 export function formatTimeUnit(
   value: number,
@@ -73,7 +69,7 @@ const multiplierMap = new Map<DurationUnit, number>([
 ]);
 
 export function getText(
-  field: AtomicField,
+  field: Field,
   value: number,
   options: {
     durationUnit?: string;
@@ -83,7 +79,7 @@ export function getText(
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const tag = field.tagParse().tag;
+  const tag = field.tag;
   const numFormat = tag.text('number');
   const terse = tag.has('duration', 'terse');
 
@@ -131,7 +127,7 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(data: DataColumn): string | null {
+  override getText(data: Cell): string | null {
     if (data.isNull()) {
       return null;
     }
@@ -141,7 +137,7 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
         `Cannot format field ${data.field.name} as a duration unit since its not a number`
       );
     }
-    return getText(data.field, data.number.value, {
+    return getText(data.field, data.value, {
       durationUnit: this.options.duration_unit,
     });
   }
@@ -162,7 +158,7 @@ export class DurationRendererFactory extends RendererFactory<DurationRenderOptio
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: DurationRenderOptions
   ): Renderer {
     return new HTMLDurationRenderer(document, options);

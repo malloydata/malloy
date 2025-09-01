@@ -22,6 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
+
 // clang-format off
 
 /**
@@ -84,6 +86,8 @@ export type Expr =
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
+  | FilterMatchExpr
+  | FilterLiteralExpr
   | StringLiteralNode
   | NumberLiteralNode
   | BooleanLiteralNode
@@ -146,7 +150,12 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  // Attached to filters which come from a view rather than direct in the query
+  // allows the renderer to know which filters should NOT be included in drill queries
+  filterView?: string;
+  stableFilter?: Malloy.Filter;
+  isSourceFilter?: boolean;
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -166,6 +175,7 @@ export interface AggregateExpr extends ExprE {
   node: 'aggregate';
   function: AggregateFunctionType;
   structPath?: string[];
+  at?: DocumentLocation;
 }
 export function isAsymmetricExpr(f: Expr): f is AggregateExpr {
   return (
@@ -207,6 +217,7 @@ export interface SpreadExpr extends ExprE {
 export interface FieldnameNode extends ExprLeaf {
   node: 'field';
   path: string[];
+  at?: DocumentLocation;
 }
 
 export interface SourceReferenceNode extends ExprLeaf {
@@ -221,12 +232,14 @@ export interface ParameterNode extends ExprLeaf {
 
 export interface NowNode extends ExprLeaf {
   node: 'now';
+  typeDef: {type: 'timestamp'};
 }
 
 interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
-type TimeExpr = Expr & HasTimeValue;
+export type TimeExpr = Expr & HasTimeValue;
+
 /**
  * Return true if this node can be turned into a temporal node by simply
  * appending a time type to the typedef. The type systsem makes this hard
@@ -248,9 +261,12 @@ export function mkTemporal(
   e: Expr,
   timeType: TemporalTypeDef | TemporalFieldType
 ): TimeExpr {
-  const ttd = typeof timeType === 'string' ? {type: timeType} : timeType;
-  if (canMakeTemporal(e)) {
-    return {...e, typeDef: {...ttd}};
+  if (!('typeDef' in e)) {
+    const ttd: TemporalTypeDef =
+      typeof timeType === 'string' ? {type: timeType} : timeType;
+    if (canMakeTemporal(e)) {
+      return {...e, typeDef: {...ttd}};
+    }
   }
   return e as TimeExpr;
 }
@@ -284,8 +300,8 @@ export interface MalloyTypecastExpr extends ExprE {
   node: 'cast';
   safe: boolean;
   e: Expr;
-  dstType: LeafAtomicTypeDef;
-  srcType?: LeafAtomicTypeDef;
+  dstType: BasicAtomicTypeDef;
+  srcType?: BasicAtomicTypeDef;
 }
 
 interface RawTypeCastExpr extends ExprE {
@@ -293,7 +309,7 @@ interface RawTypeCastExpr extends ExprE {
   safe: boolean;
   e: Expr;
   dstSQLType: string;
-  srcType?: LeafAtomicTypeDef;
+  srcType?: BasicAtomicTypeDef;
 }
 export type TypecastExpr = MalloyTypecastExpr | RawTypeCastExpr;
 export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
@@ -303,6 +319,28 @@ export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
 export interface RegexMatchExpr extends ExprWithKids {
   node: 'regexpMatch';
   kids: {expr: Expr; regex: Expr};
+}
+
+export type FilterExprType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'timestamp';
+export function isFilterExprType(s: string): s is FilterExprType {
+  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
+}
+
+export interface FilterMatchExpr extends ExprWithKids {
+  node: 'filterMatch';
+  dataType: FilterExprType;
+  notMatch?: true;
+  kids: {filterExpr: Expr; expr: Expr};
+}
+
+export interface FilterLiteralExpr extends ExprLeaf {
+  node: 'filterLiteral';
+  filterSrc: string;
 }
 
 export interface TimeLiteralNode extends ExprLeaf {
@@ -387,9 +425,10 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  compositeFieldUsage?: CompositeFieldUsage; // TODO maybe make required?
+  fieldUsage?: FieldUsage[];
   expressionType?: ExpressionType;
   code?: string;
+  drillExpression?: Malloy.Expression;
 }
 
 type ConstantExpr = Expr;
@@ -398,7 +437,42 @@ interface ParameterInfo {
   name: string;
   value: ConstantExpr | null;
 }
-export type Parameter = AtomicTypeDef & ParameterInfo;
+
+interface FilterExpressionParamTypeDef {
+  type: 'filter expression';
+  filterType: FilterExprType;
+}
+
+export type ParameterType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'timestamp'
+  | 'filter expression'
+  | 'error';
+
+export function isParameterType(t: string): t is ParameterType {
+  return [
+    'string',
+    'number',
+    'boolean',
+    'date',
+    'timestamp',
+    'filter expression',
+    'error',
+  ].includes(t);
+}
+
+export type ParameterTypeDef =
+  | StringTypeDef
+  | NumberTypeDef
+  | BooleanTypeDef
+  | TemporalTypeDef
+  | FilterExpressionParamTypeDef
+  | ErrorTypeDef;
+
+export type Parameter = ParameterTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
 export function paramHasValue(p: Parameter): boolean {
@@ -487,6 +561,8 @@ export interface ResultMetadataDef {
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
   referenceId?: string;
+  drillExpression?: Malloy.Expression | undefined;
+  drillable?: boolean;
 }
 
 export interface Ordered {
@@ -600,7 +676,7 @@ export interface HasExpression {
 export function hasExpression<T extends FieldDef>(
   f: T
 ): f is T & Expression & HasExpression {
-  return 'e' in f;
+  return 'e' in f && f.e !== undefined;
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';
@@ -654,10 +730,13 @@ export function isCastType(s: string): s is CastType {
 export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  requiresGroupBy?: RequiredGroupBy[];
+  ungroupings?: AggregateUngrouping[];
+  drillExpression?: Malloy.Expression | undefined;
 }
 
 // this field definition represents something in the database.
-export function fieldIsIntrinsic(f: FieldDef): boolean {
+export function fieldIsIntrinsic(f: FieldDef): f is AtomicFieldDef {
   return isAtomicFieldType(f.type) && !hasExpression(f);
 }
 
@@ -691,12 +770,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface ScalarArrayTypeDef {
+export interface BasicArrayTypeDef {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
 }
-export interface ScalarArrayDef
-  extends ScalarArrayTypeDef,
+export interface BasicArrayDef
+  extends BasicArrayTypeDef,
     StructDefBase,
     JoinBase,
     FieldBase {
@@ -704,8 +783,14 @@ export interface ScalarArrayDef
   join: 'many';
 }
 
+/**
+ * Create a clean FieldDef from a TypeDef descendent
+ * @param atd Usually a TypeDesc
+ * @param name
+ * @returns Field with `name` and no type meta data
+ */
 export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
-  if (isScalarArray(atd)) {
+  if (isBasicArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name);
   }
   if (isRepeatedRecord(atd)) {
@@ -716,7 +801,24 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
     const {type, fields} = atd;
     return {type, fields, join: 'one', name};
   }
-  return {...atd, name};
+  const ret = {name, type: atd.type};
+  switch (atd.type) {
+    case 'sql native':
+      return {...ret, rawType: atd.rawType};
+    case 'number': {
+      const numberType = atd.numberType;
+      return numberType ? {...ret, numberType} : ret;
+    }
+    case 'date': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'date', timeframe} : ret;
+    }
+    case 'timestamp': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'timestamp', timeframe} : ret;
+    }
+  }
+  return ret;
 }
 
 export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {
@@ -785,8 +887,8 @@ export interface RepeatedRecordDef
   type: 'array';
   join: 'many';
 }
-export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
-export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
+export type ArrayTypeDef = BasicArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = BasicArrayDef | RepeatedRecordDef;
 
 export function isRepeatedRecordFunctionParam(
   paramT: FunctionParameterTypeDef
@@ -802,9 +904,9 @@ export function isRepeatedRecord(
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
-export function isScalarArray(
+export function isBasicArray(
   td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
-): td is ScalarArrayTypeDef {
+): td is BasicArrayTypeDef {
   return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
 }
 
@@ -839,7 +941,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onCompositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
@@ -1041,6 +1143,8 @@ export function isSamplingEnable(s: Sampling): s is SamplingEnable {
 export interface RawSegment extends Filtered {
   type: 'raw';
   fields: never[];
+  referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
@@ -1049,32 +1153,65 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
 export type IndexFieldDef = RefToField;
 export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
-export interface IndexSegment extends Filtered {
+/**
+ * The compiler needs to know a number of things computed for a query.
+ * We've modified the fieldUsage code from composite sources to collect
+ * the information needed by the compiler and a query is processed
+ * as a final step to append this information.
+ *
+ *   0) An ordered list list of active joins
+ *   1) Each field that is referenced, even indirectly
+ *   2) Each join path ending in a count
+ *   3) Each join path ending in an assymmetric aggregate
+ *   4) Each join path ending in an analytic funtion
+ */
+
+export interface SegmentUsageSummary {
+  activeJoins?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
+}
+
+export interface IndexSegment extends Filtered, SegmentUsageSummary {
   type: 'index';
   indexFields: IndexFieldDef[];
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export interface CompositeFieldUsage {
-  fields: string[];
-  joinedUsage: Record<string, CompositeFieldUsage>;
+export interface FieldUsage {
+  path: string[];
+  at?: DocumentLocation;
+  uniqueKeyRequirement?: UniqueKeyRequirement;
+  analyticFunctionUse?: boolean;
 }
 
-export interface QuerySegment extends Filtered, Ordered {
+export function bareFieldUsage(fu: FieldUsage): boolean {
+  return (
+    fu.uniqueKeyRequirement === undefined &&
+    fu.analyticFunctionUse === undefined
+  );
+}
+
+export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
   queryTimezone?: string;
   alwaysJoins?: string[];
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  referencedAt?: DocumentLocation;
+  outputStruct: SourceDef;
+  isRepeated: boolean;
 }
 
 export type NonDefaultAccessModifierLabel = 'private' | 'internal';
@@ -1084,14 +1221,23 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
-  compositeFieldUsage?: CompositeFieldUsage;
+  fieldUsage?: FieldUsage[];
+  requiredGroupBys?: string[][];
 }
+
+export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
+}
+
+export interface PartitionCompositeDesc {
+  partitionField: string;
+  partitions: {id: string; fields: string[]}[];
+  compositeFields: string[];
 }
 
 interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
@@ -1101,6 +1247,7 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   connection: string;
   primaryKey?: PrimaryKeyRef;
   dialect: string;
+  partitionComposite?: PartitionCompositeDesc;
 }
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;
@@ -1120,11 +1267,6 @@ export interface CompositeSourceDef extends SourceDefBase {
  * Malloy has a kind of "strings" which is a list of segments. Each segment
  * is either a string, or a query, which is meant to be replaced
  * by the text of the query when the query is compiled to SQL.
- *
- * The data types for this are:
- *  SQLPhrase -- A phrase, used to make a sentence
- *  SQLSentence -- Used to request a schema from the connection
- *  SQLSelectSource -- Returned from a query, contains the scehma
  */
 export interface SQLStringSegment {
   sql: string;
@@ -1132,12 +1274,6 @@ export interface SQLStringSegment {
 export type SQLPhraseSegment = Query | SQLStringSegment;
 export function isSegmentSQL(f: SQLPhraseSegment): f is SQLStringSegment {
   return 'sql' in f;
-}
-
-export interface SQLSentence {
-  name: string;
-  connection: string;
-  select: SQLPhraseSegment[];
 }
 
 export interface SQLSourceDef extends SourceDefBase {
@@ -1207,30 +1343,66 @@ export function isBaseTable(def: StructDef): def is SourceDef {
 
 export type StructDef = SourceDef | RecordDef | ArrayDef;
 
+export type SourceComponentInfo =
+  | {type: 'table'; tableName: string; componentID?: string; sourceID?: string}
+  | {
+      type: 'sql';
+      selectStatement: string;
+      componentID?: string;
+      sourceID?: string;
+    };
+
+export type TurtleType = 'turtle';
+
+export type TurtleTypeDef = {
+  type: 'turtle';
+  pipeline: PipeSegment[];
+};
+
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
 // for "non-atomic" and even the AI couldn't think of the right word.
 export type NonAtomicType =
   | Exclude<JoinElementType, 'array' | 'record'>
-  | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
-  | 'regular expression';
+  | 'regular expression'
+  | 'filter expression';
 export interface NonAtomicTypeDef {
   type: NonAtomicType;
 }
 
-export type ExpressionValueType = AtomicFieldType | NonAtomicType;
-export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
-export type LeafExpressionType = Exclude<
+export type ExpressionValueType = AtomicFieldType | NonAtomicType | TurtleType;
+export type ExpressionValueTypeDef =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | TurtleTypeDef;
+export type BasicExpressionType = Exclude<
   ExpressionValueType,
   JoinElementType | 'turtle'
 >;
 
+export interface RequiredGroupBy {
+  fieldUsage?: FieldUsage;
+  at?: DocumentLocation;
+  path: string[];
+}
+
+export interface AggregateUngrouping {
+  ungroupedFields: string[][] | '*';
+  fieldUsage: FieldUsage[];
+  requiresGroupBy?: RequiredGroupBy[];
+  exclude: boolean;
+  path: string[];
+  refFields?: string[];
+}
+
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
-  compositeFieldUsage: CompositeFieldUsage;
+  fieldUsage: FieldUsage[];
+  requiresGroupBy?: RequiredGroupBy[];
+  ungroupings?: AggregateUngrouping[];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
@@ -1242,7 +1414,7 @@ export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   evalSpace: EvalSpace;
 };
 
-interface ScalarArrayExtTypeDef<TypeExtensions> {
+interface BasicArrayExtTypeDef<TypeExtensions> {
   type: 'array';
   elementTypeDef: Exclude<
     ExpressionValueExtTypeDef<TypeExtensions>,
@@ -1253,7 +1425,8 @@ interface ScalarArrayExtTypeDef<TypeExtensions> {
 type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
-  | ScalarArrayExtTypeDef<TypeExtensions>
+  | TurtleTypeDef
+  | BasicArrayExtTypeDef<TypeExtensions>
   | RecordExtTypeDef<TypeExtensions>
   | RepeatedRecordExtTypeDef<TypeExtensions>
   | TypeExtensions;
@@ -1273,8 +1446,8 @@ interface RepeatedRecordExtTypeDef<TypeExtensions> {
 
 type FunctionReturnTypeExtensions = GenericTypeDef;
 
-export type ScalarArrayFunctionReturnTypeDef =
-  ScalarArrayExtTypeDef<FunctionReturnTypeExtensions>;
+export type BasicArrayFunctionReturnTypeDef =
+  BasicArrayExtTypeDef<FunctionReturnTypeExtensions>;
 
 export type FunctionReturnFieldDef = ExtFieldDef<FunctionReturnTypeExtensions>;
 
@@ -1286,8 +1459,8 @@ export type RepeatedRecordFunctionReturnTypeDef =
 
 type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
 
-export type ScalarArrayFunctionParameterTypeDef =
-  ScalarArrayExtTypeDef<FunctionParameterTypeExtensions>;
+export type BasicArrayFunctionParameterTypeDef =
+  BasicArrayExtTypeDef<FunctionParameterTypeExtensions>;
 
 export type FunctionParameterFieldDef =
   ExtFieldDef<FunctionParameterTypeExtensions>;
@@ -1300,8 +1473,8 @@ export type RepeatedRecordFunctionParameterTypeDef =
 
 type FunctionGenericTypeExtensions = AnyTypeDef;
 
-export type ScalarArrayFunctionGenericTypeDef =
-  ScalarArrayExtTypeDef<FunctionGenericTypeExtensions>;
+export type BasicArrayFunctionGenericTypeDef =
+  BasicArrayExtTypeDef<FunctionGenericTypeExtensions>;
 
 export type FunctionGenericFieldDef =
   ExtFieldDef<FunctionGenericTypeExtensions>;
@@ -1389,7 +1562,7 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type LeafAtomicTypeDef =
+export type BasicAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
@@ -1397,22 +1570,22 @@ export type LeafAtomicTypeDef =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
+export type BasicAtomicDef = BasicAtomicTypeDef & FieldBase;
 
 export type AtomicTypeDef =
-  | LeafAtomicTypeDef
-  | ScalarArrayTypeDef
+  | BasicAtomicTypeDef
+  | BasicArrayTypeDef
   | RecordTypeDef
   | RepeatedRecordTypeDef;
 export type AtomicFieldDef =
-  | LeafAtomicDef
-  | ScalarArrayDef
+  | BasicAtomicDef
+  | BasicArrayDef
   | RecordDef
   | RepeatedRecordDef;
 
-export function isLeafAtomic(
+export function isBasicAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
-): fd is LeafAtomicDef {
+): fd is BasicAtomicDef {
   return (
     fd.type === 'string' ||
     isTemporalType(fd.type) ||
@@ -1425,7 +1598,7 @@ export function isLeafAtomic(
 }
 
 // Sources have fields like this ...
-export type FieldDef = LeafAtomicDef | JoinFieldDef | TurtleDef;
+export type FieldDef = BasicAtomicDef | JoinFieldDef | TurtleDef;
 export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
@@ -1434,6 +1607,8 @@ export interface RefToField {
   type: 'fieldref';
   path: string[];
   annotation?: Annotation;
+  at?: DocumentLocation;
+  drillExpression?: Malloy.Expression | undefined;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
@@ -1471,6 +1646,8 @@ export interface ModelDef {
   annotation?: ModelAnnotation;
   queryList: Query[];
   dependencies: DependencyTree;
+  references?: DocumentReference[];
+  imports?: ImportLocation[];
 }
 
 /** Very common record type */
@@ -1519,6 +1696,7 @@ export type MalloyQueryData = {
 export interface DrillSource {
   sourceExplore: string;
   sourceFilters?: FilterCondition[];
+  sourceArguments?: Record<string, Argument>;
 }
 
 export type QueryToMaterialize = {
@@ -1540,6 +1718,7 @@ export interface CompiledQuery extends DrillSource {
   // Map of query unique id to the SQL.
   dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
   materialization?: QueryToMaterialize;
+  defaultRowLimitAdded?: number;
 }
 
 /** Result type for running a Malloy query. */
@@ -1637,8 +1816,8 @@ export const TD = {
   isAtomic(td: UTD): td is AtomicTypeDef {
     return td !== undefined && isAtomicFieldType(td.type);
   },
-  isLeafAtomic(td: UTD): td is LeafAtomicTypeDef {
-    return td !== undefined && isLeafAtomic({type: td.type} as AtomicTypeDef);
+  isBasicAtomic(td: UTD): td is BasicAtomicTypeDef {
+    return td !== undefined && isBasicAtomic({type: td.type} as AtomicTypeDef);
   },
   isString: (td: UTD): td is StringTypeDef => td?.type === 'string',
   isNumber: (td: UTD): td is NumberTypeDef => td?.type === 'number',
@@ -1692,5 +1871,29 @@ export const TD = {
     return x.type === y.type;
   },
 };
+
+/**
+ * Aggregate functions carry this meta data. Used to determine if
+ * a function requires the existence of a unique key. This used
+ * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
+ *
+ * The three states are:
+ *
+ * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
+ * 2. {isCount: true} - this is a COUNT aggregate
+ * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
+ */
+export type UniqueKeyRequirement = undefined | {isCount: boolean};
+
+export function mergeUniqueKeyRequirement(
+  existing: UniqueKeyRequirement,
+  newInfo: UniqueKeyRequirement
+): UniqueKeyRequirement {
+  if (!existing) return newInfo;
+  if (!newInfo) return existing;
+  return {
+    isCount: existing.isCount || newInfo.isCount,
+  };
+}
 
 // clang-format on

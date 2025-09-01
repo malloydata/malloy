@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {FieldSpace} from '../types/field-space';
+import type {PipeSegment} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {PipelineComp} from '../types/pipeline-comp';
 
 /**
  * A `View` represents a sequence of operations to be performed on a
@@ -53,7 +53,7 @@ export abstract class View extends MalloyElement {
   }
 
   abstract refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[];

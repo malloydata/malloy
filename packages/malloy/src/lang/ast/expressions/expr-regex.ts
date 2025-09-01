@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue, literalExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {literalExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprRegEx extends ExpressionDef {

@@ -22,11 +22,8 @@
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeTruncExpr,
   TimeExtractExpr,
@@ -35,26 +32,23 @@ import {
   TimeLiteralNode,
   MeasureTimeExpr,
   RegexMatchExpr,
-  LeafAtomicTypeDef,
-  TD,
+  BasicAtomicTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
-  isAtomic,
-  isRepeatedRecord,
-  isScalarArray,
 } from '../../model/malloy_types';
 import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {
-  Dialect,
-  DialectFieldList,
-  FieldReferenceType,
-  QueryInfo,
-  qtz,
-} from '../dialect';
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
+  isAtomic,
+  isRepeatedRecord,
+  isBasicArray,
+} from '../../model/malloy_types';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import {Dialect, qtz} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -63,7 +57,7 @@ const extractionMap: Record<string, string> = {
   'day_of_year': 'dayofyear',
 };
 
-const snowflakeToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
+const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // string
   'varchar': {type: 'string'},
   'text': {type: 'string'},
@@ -159,16 +153,12 @@ export class SnowflakeDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy ? ` WITHIN GROUP (${orderBy})` : '';
     const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
-    if (limit === undefined) {
-      return `COALESCE(${aggClause}, [])`;
-    }
-    return `COALESCE(ARRAY_SLICE(${aggClause}, 0, ${limit}), [])`;
+    return `COALESCE(${aggClause}, [])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -348,8 +338,9 @@ ${indent(sql)}
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    const interval = `INTERVAL '${df.kids.delta.sql} ${df.units}'`;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
+    const add = df.typeDef?.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
+    const n = df.op === '+' ? df.kids.delta.sql : `-(${df.kids.delta.sql})`;
+    return `${add}(${df.units},${n},${df.kids.base.sql})`;
   }
 
   private atTz(sqlExpr: string, tz: string | undefined): string {
@@ -504,13 +495,13 @@ ${indent(sql)}
       return malloyType.type === 'record'
         ? recordScehma
         : `ARRAY(${recordScehma})`;
-    } else if (isScalarArray(malloyType)) {
+    } else if (isBasicArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

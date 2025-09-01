@@ -21,14 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
+import type {Query, StructDef} from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
 import {StaticSourceSpace} from '../field-space/static-space';
-import {FieldSpace} from '../types/field-space';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
+import type {FieldSpace} from '../types/field-space';
+import type {QueryComp} from '../types/query-comp';
+import type {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
-import {View} from '../view-elements/view';
+import type {View} from '../view-elements/view';
+import {checkRequiredGroupBys} from '../../composite-source-utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -64,32 +66,69 @@ export class QueryArrow extends QueryBase implements QueryElement {
       inputStruct = refIsStructDef(invoked.structRef)
         ? invoked.structRef
         : this.source.getSourceDef(undefined);
-      fieldSpace = new StaticSourceSpace(inputStruct);
+      fieldSpace = new StaticSourceSpace(inputStruct, 'public');
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
-      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct);
+      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct, 'public');
     }
-    const {pipeline, annotation, outputStruct, name} =
-      this.view.pipelineComp(fieldSpace);
+    const {
+      pipeline: rhsPipeline,
+      annotation,
+      outputStruct,
+      name,
+    } = this.view.pipelineComp(fieldSpace);
 
     const query = {
       ...queryBase,
       name,
       annotation,
-      pipeline: [...queryBase.pipeline, ...pipeline],
+      pipeline: [...queryBase.pipeline, ...rhsPipeline],
     };
 
     const compositeResolvedSourceDef =
       query.compositeResolvedSourceDef ??
-      this.resolveCompositeSource(inputStruct, query);
+      this.resolveCompositeSource(inputStruct, rhsPipeline);
+
+    const segment = query.pipeline[0];
+    if (segment !== undefined) {
+      const unsatisfiedGroupBys = checkRequiredGroupBys(
+        compositeResolvedSourceDef ?? inputStruct,
+        segment
+      );
+      for (const unsatisfiedGroupBy of unsatisfiedGroupBys) {
+        this.logError(
+          'missing-required-group-by',
+          `Group by or single value filter of \`${unsatisfiedGroupBy.path.join(
+            '.'
+          )}\` is required but not present`,
+          {
+            at: unsatisfiedGroupBy.at,
+          }
+        );
+      }
+    }
+
+    const pipelineWithExpandedFieldUsage = [
+      // The base query (if it exists) will already have its `expandedFieldUsage` computed
+      ...queryBase.pipeline,
+      ...this.expandFieldUsage(
+        this.source instanceof Source
+          ? // If `source ->` then use the composite resolved struct,
+            compositeResolvedSourceDef ?? inputStruct
+          : // Otherwise just use the `inputStruct`
+            inputStruct,
+        rhsPipeline
+      ),
+    ];
 
     return {
       query: {
         ...query,
         compositeResolvedSourceDef,
+        pipeline: pipelineWithExpandedFieldUsage,
       },
       outputStruct,
       inputStruct,

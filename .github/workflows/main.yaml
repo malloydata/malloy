@@ -3,6 +3,7 @@
 # which touch some combination of duckdb,bigquery,postgres but do
 # not need to be once times for each dialect.
 name: Core
+permissions: {}
 
 on:
   workflow_call:
@@ -31,11 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
-      - name: Use Node.js 18.x
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - name: GCloud auth
         uses: 'google-github-actions/auth@v2'
         with:
@@ -44,12 +45,13 @@ jobs:
         run: |
           npm ci --loglevel error
           sh scripts/ci-test-sanity-check.sh
+          sh scripts/ci-env-sanity-check.sh
           npm run lint
           npm run build
           npm run build-duckdb-db
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.core.config.ts --runInBand
+          npm run ci-core
         env:
           CI: true
           PGHOST: localhost

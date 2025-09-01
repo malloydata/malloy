@@ -21,11 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-import * as TDU from '../typedesc-utils';
+import type {
+  QueryFieldDef,
+  TurtleDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 
 export abstract class ViewField extends SpaceField {
@@ -36,12 +38,8 @@ export abstract class ViewField extends SpaceField {
   abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
   abstract fieldDef(): TurtleDef;
 
-  typeDesc() {
+  typeDesc(): TypeDesc {
     const fieldDef = this.fieldDef();
-    return {
-      ...TDU.viewT,
-      compositeFieldUsage:
-        fieldDef.compositeFieldUsage ?? emptyCompositeFieldUsage(),
-    };
+    return this.turtleTypeFromTurtleDef(fieldDef);
   }
 }

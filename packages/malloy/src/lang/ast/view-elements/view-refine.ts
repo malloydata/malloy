@@ -21,12 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model';
+import type {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {getFinalStruct} from '../struct-utils';
-import {FieldSpace, SourceFieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {refine} from './refine-utils';
 import {View} from './view';
 
@@ -57,18 +56,18 @@ export class ViewRefine extends View {
       annotation: query.annotation,
       outputStruct:
         resultPipe.length > 0
-          ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
+          ? resultPipe[resultPipe.length - 1].outputStruct
           : ErrorFactory.structDef,
     };
   }
 
   refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
-    const refineFrom = this.pipeline(inputFS, isNestIn);
-    if (refineFrom.length !== 1) {
+    const refineFrom = this.pipelineComp(inputFS, isNestIn);
+    if (refineFrom.pipeline.length !== 1) {
       this.refinement.logError(
         'refinement-with-multistage-view',
         'refinement must have exactly one stage'
@@ -76,7 +75,7 @@ export class ViewRefine extends View {
       // TODO better error pipeline?
       return pipeline;
     }
-    return refine(this, pipeline, refineFrom[0]);
+    return refine(this, pipeline, refineFrom.pipeline[0]);
   }
 
   getImplicitName(): string | undefined {

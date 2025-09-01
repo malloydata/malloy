@@ -22,23 +22,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyTranslator, TranslateResponse} from '..';
+import type {MalloyTranslator, TranslateResponse} from '..';
 import {
-  CompositeFieldUsage,
-  DocumentLocation,
-  DocumentRange,
-  Expr,
-  exprHasE,
-  exprHasKids,
-  exprIsLeaf,
+  bareFieldUsage,
+  type DocumentLocation,
+  type DocumentRange,
+  type Expr,
 } from '../../model';
-import {
-  BetaExpression,
-  MarkedSource,
-  pretty,
-  TestTranslator,
-} from './test-translator';
-import {LogSeverity} from '../parse-log';
+import {exprToStr} from './expr-to-str';
+import type {MarkedSource} from './test-translator';
+import {BetaExpression, pretty, TestTranslator} from './test-translator';
+import type {LogSeverity} from '../parse-log';
 
 type MessageProblemSpec = {
   severity: LogSeverity;
@@ -85,7 +79,8 @@ declare global {
        * Warnings are ignored, so need to be checked seperately
        */
       compilesTo(exprString: string): R;
-      hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
+      toBeExpr(exprString: string): R;
+      hasFieldUsage(paths: string[][]): R;
     }
   }
 }
@@ -124,7 +119,7 @@ function prettyNeeds(response: TranslateResponse) {
     }
   }
   if (response.compileSQL) {
-    needString += `Compile SQL: ${response.compileSQL.name}`;
+    needString += `Compile SQL: ${response.compileSQL.selectStr}`;
   }
   if (response.urls) {
     needString += 'URLs:\n';
@@ -196,106 +191,6 @@ function xlated(tt: TestTranslator, warningsOkay = false) {
   }
   tt.translate();
   return checkForNeededs(tt);
-}
-
-/**
- * Returns a readable shorthand for the node. Not complete, will be expanded
- * as more expressions are tested. One weird thing it does is compress field
- * references if passed an empty hash. The first field in an expression will be
- * A in the output, the second B, and so on.
- */
-type ESymbols = Record<string, string> | undefined;
-function eToStr(e: Expr, symbols: ESymbols): string {
-  function subExpr(e: Expr): string {
-    return eToStr(e, symbols);
-  }
-  switch (e.node) {
-    case 'field': {
-      const ref = e.path.join('.');
-      if (symbols) {
-        if (symbols[ref] === undefined) {
-          const nSyms = Object.keys(symbols).length;
-          symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
-        }
-        return symbols[ref];
-      } else {
-        return ref;
-      }
-    }
-    case '()':
-      return `(${subExpr(e.e)})`;
-    case 'numberLiteral':
-      return `${e.literal}`;
-    case 'stringLiteral':
-      return `"${e.literal}"`;
-    case 'timeLiteral':
-      return `@${e.literal}`;
-    case 'recordLiteral': {
-      const parts: string[] = [];
-      for (const [name, val] of Object.entries(e.kids)) {
-        parts.push(`${name}:${subExpr(val)}`);
-      }
-      return `{${parts.join(', ')}}`;
-    }
-    case 'arrayLiteral': {
-      const parts = e.kids.values.map(k => subExpr(k));
-      return `[${parts.join(', ')}]`;
-    }
-    case 'regexpLiteral':
-      return `/${e.literal}/`;
-    case 'trunc':
-      return `{timeTrunc-${e.units} ${subExpr(e.e)}}`;
-    case 'delta':
-      return `{${e.op}${e.units} ${subExpr(e.kids.base)} ${subExpr(
-        e.kids.delta
-      )}}`;
-    case 'true':
-    case 'false':
-      return e.node;
-    case 'case': {
-      const caseStmt = ['case'];
-      if (e.kids.caseValue !== undefined) {
-        caseStmt.push(`${subExpr(e.kids.caseValue)}`);
-      }
-      for (let i = 0; i < e.kids.caseWhen.length; i += 1) {
-        caseStmt.push(
-          `when ${subExpr(e.kids.caseWhen[i])} then ${subExpr(
-            e.kids.caseThen[i]
-          )}`
-        );
-      }
-      if (e.kids.caseElse !== undefined) {
-        caseStmt.push(`else ${subExpr(e.kids.caseElse)}`);
-      }
-      return `{${caseStmt.join(' ')}}`;
-    }
-    case 'regexpMatch':
-      return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
-    case 'in': {
-      return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
-        .map(o => `${subExpr(o)}`)
-        .join(',')}}}`;
-    }
-    case 'genericSQLExpr': {
-      let sql = '';
-      let i = 0;
-      for (; i < e.kids.args.length; i++) {
-        sql += `${e.src[i]}{${subExpr(e.kids.args[i])}}`;
-      }
-      if (i < e.src.length) {
-        sql += e.src[i];
-      }
-      return sql;
-    }
-  }
-  if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
-    return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;
-  } else if (exprHasE(e)) {
-    return `{${e.node} ${subExpr(e.e)}}`;
-  } else if (exprIsLeaf(e)) {
-    return `{${e.node}}`;
-  }
-  return `{?${e.node}}`;
 }
 
 expect.extend({
@@ -377,15 +272,21 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const rcvExpr = eToStr(bx.generated().value, undefined);
+    const toExpr = bx.generated().value;
+    const rcvExpr = exprToStr(toExpr, undefined);
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
     return {pass, message: () => `${msg}`};
   },
-  hasCompositeUsage: function (
-    tx: TestSource,
-    compositeFieldUsage: CompositeFieldUsage
-  ) {
+  toBeExpr: function (expr: Expr, exprString: string) {
+    const rcvExpr = exprToStr(expr, undefined);
+    const pass = this.equals(rcvExpr, exprString);
+    const msg = pass
+      ? `Matched: ${rcvExpr}`
+      : this.utils.diff(exprString, rcvExpr);
+    return {pass, message: () => `${msg}`};
+  },
+  hasFieldUsage: function (tx: TestSource, paths: string[][]) {
     let bx: BetaExpression;
     if (typeof tx === 'string') {
       bx = new BetaExpression(tx);
@@ -413,11 +314,18 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const actual = bx.generated().compositeFieldUsage;
-    const pass = this.equals(actual, compositeFieldUsage);
+    const actual = bx.generated().fieldUsage;
+    const actualPaths = actual.filter(u => bareFieldUsage(u)).map(u => u.path);
+    // there is no guarantee of the order of field usage data, so we sort the two lists
+    // so i need to compare sorted versions of the two lists... we can sort on path.join('.)
+    // maybe make a lambda for that and pass it to sort
+    const pass = this.equals(
+      actualPaths.sort((a, b) => a.join('.').localeCompare(b.join('.'))),
+      paths.sort((a, b) => a.join('.').localeCompare(b.join('.')))
+    );
     const msg = pass
       ? `Matched: ${actual}`
-      : this.utils.diff(compositeFieldUsage, actual);
+      : this.utils.diff(paths, actualPaths);
     return {pass, message: () => `${msg}`};
   },
 });
@@ -512,7 +420,7 @@ function checkForProblems(
       }
     }
     if (i !== msgs.length) {
-      explain.push(...msgs.slice(i).map(m => `Missing: ${m}`));
+      explain.push(...msgs.slice(i).map(m => `Missing: ${JSON.stringify(m)}`));
     }
     if (!allowAdditionalErrors && i !== errList.length) {
       explain.push(

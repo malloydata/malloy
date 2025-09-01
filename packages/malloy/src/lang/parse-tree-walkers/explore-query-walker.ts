@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
+import type {CommonTokenStream} from 'antlr4ts';
+import type {ParseTree} from 'antlr4ts/tree';
 import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 // import {
 //   ExploreContext,
 //   FilterElementContext,

@@ -23,44 +23,49 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
-import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
-import * as parse from './lib/Malloy/MalloyParser';
+import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
+import type * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
-import {
+import type {
   LogMessageOptions,
-  LogSeverity,
   MessageCode,
   MessageLogger,
   MessageParameterType,
-  makeLogMessage,
 } from './parse-log';
-import {MalloyParseInfo} from './malloy-parse-info';
+import {makeLogMessage} from './parse-log';
+import type {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {FieldDeclarationConstructor, TableSource} from './ast';
+import type {FieldDeclarationConstructor} from './ast';
+import {TableSource} from './ast';
+import type {HasString, HasID} from './parse-utils';
 import {
   getId,
   getOptionalId,
-  HasString,
-  HasID,
   getStringParts,
   getShortString,
   idToStr,
   getPlainString,
 } from './parse-utils';
-import {CastType} from '../model';
-import {
+import type {CastType} from '../model';
+import type {
   AccessModifierLabel,
   DocumentLocation,
   DocumentRange,
+  Note,
+  ParameterTypeDef,
+} from '../model/malloy_types';
+import {
   isCastType,
   isMatrixOperation,
-  Note,
+  isParameterType,
 } from '../model/malloy_types';
-import {Tag} from '../tags';
-import {ConstantExpression} from './ast/expressions/constant-expression';
-import {isNotUndefined} from './utils';
+import {Tag} from '@malloydata/malloy-tag';
+import {isNotUndefined, rangeFromContext} from './utils';
+import {isFilterable} from '@malloydata/malloy-filter';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import {Timer} from '../timing';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -75,7 +80,7 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
-const DEFAULT_COMPILER_FLAGS = ['##! m4warnings=error'];
+const DEFAULT_COMPILER_FLAGS = [];
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
@@ -87,16 +92,34 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyParserVisitor<ast.MalloyElement>
 {
+  readonly timer: Timer;
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
     public compilerFlags: Tag
   ) {
     super();
+    this.timer = new Timer('generate_ast');
+    const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
     for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = Tag.fromTagline(flag, this.compilerFlags);
+      const withNewTag = Tag.fromTagLine(flag, 0, this.compilerFlags);
       this.compilerFlags = withNewTag.tag;
     }
+    this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+  }
+
+  public run(): {
+    ast: ast.MalloyElement;
+    compilerFlags: Tag;
+    timingInfo: Malloy.TimingInfo;
+  } {
+    const ast = this.visit(this.parseInfo.root);
+    const compilerFlags = this.compilerFlags;
+    return {
+      ast,
+      compilerFlags,
+      timingInfo: this.timer.stop(),
+    };
   }
 
   /**
@@ -124,10 +147,14 @@ export class MalloyToAST
     this.msgLog.log(makeLogMessage(code, data, {at: el.location, ...options}));
   }
 
+  protected rangeFromContext(cx: ParserRuleContext) {
+    return rangeFromContext(this.parseInfo.sourceInfo, cx);
+  }
+
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
     return {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.rangeFromContext(cx),
     };
   }
 
@@ -184,25 +211,6 @@ export class MalloyToAST
     return false;
   }
 
-  protected m4Severity(): LogSeverity | false {
-    const m4severityTag = this.compilerFlags.tag('m4warnings');
-    if (m4severityTag) {
-      return m4severityTag.text() === 'warn' ? 'warn' : 'error';
-    }
-    return false;
-  }
-
-  protected m4advisory<T extends MessageCode>(
-    cx: ParserRuleContext,
-    code: T,
-    data: MessageParameterType<T>
-  ): void {
-    const m4 = this.m4Severity();
-    if (m4) {
-      this.contextError(cx, code, data, {severity: m4});
-    }
-  }
-
   protected only<T extends ast.MalloyElement>(
     els: ast.MalloyElement[],
     isGood: (el: ast.MalloyElement) => T | false,
@@ -246,7 +254,7 @@ export class MalloyToAST
   ): MT {
     el.location = {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.rangeFromContext(cx),
     };
     return el;
   }
@@ -300,15 +308,6 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
-    for (const part of pcx.sqlInterpolation()) {
-      if (part.CLOSE_CODE()) {
-        this.m4advisory(
-          part,
-          'percent-terminated-query-interpolation',
-          'Use %{ ... } instead of %{ ... }%'
-        );
-      }
-    }
     for (const part of getStringParts(pcx)) {
       if (part instanceof ParserRuleContext) {
         sqlStr.push(this.visit(part));
@@ -383,22 +382,47 @@ export class MalloyToAST
     return defList;
   }
 
-  getSourceParameter(pcx: parse.SourceParameterContext): ast.HasParameter {
+  getSourceParameter(
+    pcx: parse.SourceParameterContext
+  ): ast.HasParameter | null {
+    const name = getId(pcx.parameterNameDef());
+
+    let pType: ParameterTypeDef | undefined;
+    const typeCx = pcx.legalParamType();
+    if (typeCx) {
+      const t = this.getMalloyType(typeCx.malloyType());
+      if (typeCx.FILTER()) {
+        if (isFilterable(t)) {
+          pType = {type: 'filter expression', filterType: t};
+        } else {
+          this.contextError(
+            typeCx,
+            'parameter-illegal-default-type',
+            `Unknown filter type ${t}`
+          );
+        }
+      } else if (isParameterType(t)) {
+        pType = {type: t};
+      } else {
+        this.contextError(
+          typeCx,
+          'parameter-illegal-default-type',
+          `Unknown parameter type ${t}`
+        );
+      }
+    }
+
     const defaultCx = pcx.fieldExpr();
-    const defaultValue = defaultCx
-      ? this.astAt(
-          new ConstantExpression(this.getFieldExpr(defaultCx)),
-          defaultCx
-        )
-      : undefined;
-    const typeCx = pcx.malloyType();
-    const type = typeCx ? this.getMalloyType(typeCx) : undefined;
+    let defVal;
+    if (defaultCx) {
+      defVal = this.astAt(
+        new ast.ConstantExpression(this.getFieldExpr(defaultCx)),
+        defaultCx
+      );
+    }
+
     return this.astAt(
-      new ast.HasParameter({
-        name: getId(pcx.parameterNameDef()),
-        type,
-        default: defaultValue,
-      }),
+      new ast.HasParameter({name, typeDef: pType, default: defVal}),
       pcx
     );
   }
@@ -408,7 +432,13 @@ export class MalloyToAST
   ): ast.HasParameter[] {
     if (pcx === undefined) return [];
     this.inExperiment('parameters', pcx);
-    return pcx.sourceParameter().map(param => this.getSourceParameter(param));
+    function notNullParam(p: ast.HasParameter | null): p is ast.HasParameter {
+      return p !== null;
+    }
+    return pcx
+      .sourceParameter()
+      .map(param => this.getSourceParameter(param))
+      .filter(notNullParam);
   }
 
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
@@ -443,18 +473,7 @@ export class MalloyToAST
     return propList;
   }
 
-  visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableURI = this.getPlainStringFrom(pcx.tableURI());
-    const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
-    this.m4advisory(
-      pcx,
-      'table-function',
-      "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
-    );
-    return el;
-  }
-
-  visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
+  visitExploreTable(pcx: parse.ExploreTableContext): ast.TableSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const tablePath = this.getPlainStringFrom(pcx.tablePath());
@@ -694,22 +713,6 @@ export class MalloyToAST
     return this.astAt(el, pcx);
   }
 
-  visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
-    const accessLabel = this.getAccessLabel(pcx.accessLabel());
-    const defs = this.getFieldDefs(
-      pcx.defList().fieldDef(),
-      ast.DeclareFieldDeclaration
-    );
-    const stmt = new ast.DeclareFields(defs, accessLabel);
-    const result = this.astAt(stmt, pcx);
-    this.m4advisory(
-      pcx,
-      'declare',
-      '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
-    );
-    return result;
-  }
-
   visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0);
     const oldName = pcx.fieldName(1);
@@ -732,10 +735,19 @@ export class MalloyToAST
     return new ast.Filter(pcx.fieldExpr().map(f => this.getFilterElement(f)));
   }
 
+  visitDrillClauseList(pcx: parse.FilterClauseListContext): ast.Drill {
+    return new ast.Drill(pcx.fieldExpr().map(f => this.getFilterElement(f)));
+  }
+
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
     const where = this.visitFilterClauseList(pcx.filterClauseList());
     where.having = false;
     return this.astAt(where, pcx);
+  }
+
+  visitDrillStatement(pcx: parse.DrillStatementContext): ast.Drill {
+    const drill = this.visitDrillClauseList(pcx.drillClauseList());
+    return this.astAt(drill, pcx);
   }
 
   visitHavingStatement(pcx: parse.HavingStatementContext): ast.Filter {
@@ -753,13 +765,6 @@ export class MalloyToAST
     const queryDefs = new ast.Views(babyTurtles, accessLabel);
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
-    if (pcx.QUERY()) {
-      this.m4advisory(
-        pcx,
-        'query-in-source',
-        'Use view: inside of a source instead of query:'
-      );
-    }
     return queryDefs;
   }
 
@@ -1011,13 +1016,6 @@ export class MalloyToAST
   visitProjectStatement(
     pcx: parse.ProjectStatementContext
   ): ast.ProjectStatement {
-    if (pcx.PROJECT()) {
-      this.m4advisory(
-        pcx,
-        'project',
-        'project: keyword is deprecated, use select:'
-      );
-    }
     const stmt = this.visitFieldCollection(pcx.fieldCollection());
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return stmt;
@@ -1148,21 +1146,6 @@ export class MalloyToAST
       pcx,
       `Expected query definition, got a '${queryExpr.elementType}'`
     );
-  }
-
-  visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const defCx = pcx.topLevelAnonQueryDef();
-    const query = this.getSqExpr(defCx.sqExpr());
-    const theQuery = this.astAt(new ast.AnonymousQuery(query), defCx);
-    const notes = this.getNotes(pcx.topLevelAnonQueryDef().tags());
-    const blockNotes = this.getNotes(pcx.tags());
-    theQuery.extendNote({notes, blockNotes});
-    this.m4advisory(
-      defCx,
-      'anonymous-query',
-      'Anonymous `query:` statements are deprecated, use `run:` instead'
-    );
-    return this.astAt(theQuery, pcx);
   }
 
   visitRunStatement(pcx: parse.RunStatementContext) {
@@ -1314,6 +1297,21 @@ export class MalloyToAST
     return new ast.ExprString(str);
   }
 
+  visitRawString(pcx: parse.RawStringContext): ast.ExprString {
+    const str = pcx.text.slice(1).trimStart();
+    const lastChar = str[str.length - 1];
+    if (lastChar === '\n') {
+      const t = str[0] === "'" ? '"' : "'";
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        `Missing ${t}${str[0]}${t} before end-of-line`
+      );
+    }
+    const astStr = new ast.ExprString(str.slice(1, -1));
+    return this.astAt(astStr, pcx);
+  }
+
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
     const malloyRegex = pcx.HACKY_REGEX().text;
     return new ast.ExprRegEx(malloyRegex.slice(2, -1));
@@ -1367,7 +1365,7 @@ export class MalloyToAST
     const left = this.getFieldExpr(pcx.fieldExpr(0));
     const right = this.getFieldExpr(pcx.fieldExpr(1));
     if (ast.isEquality(op)) {
-      const wholeRange = this.parseInfo.rangeFromContext(pcx);
+      const wholeRange = this.rangeFromContext(pcx);
       if (right instanceof ast.ExprNULL) {
         if (op === '=') {
           this.warnWithReplacement(
@@ -1481,13 +1479,6 @@ export class MalloyToAST
     const source = undefined;
     const aggFunc = pcx.aggregate().text.toLowerCase();
 
-    if (pcx.STAR()) {
-      this.m4advisory(
-        pcx,
-        'wildcard-in-aggregate',
-        `* illegal inside ${aggFunc}()`
-      );
-    }
     if (aggFunc === 'count') {
       return this.astAt(
         expr ? new ast.ExprCountDistinct(expr) : new ast.ExprCount(),
@@ -1679,7 +1670,7 @@ export class MalloyToAST
     this.warnWithReplacement(
       'sql-case',
       'Use a `pick` statement instead of `case`',
-      this.parseInfo.rangeFromContext(pcx),
+      this.rangeFromContext(pcx),
       `${[
         ...(valueCx ? [`${this.getSourceCode(valueCx)} ?`] : []),
         ...whenCxs.map(
@@ -1709,9 +1700,7 @@ export class MalloyToAST
   }
 
   visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
-    const statements = this.only<
-      ast.Filter | ast.FunctionOrdering | ast.PartitionBy | ast.Limit
-    >(
+    const statements = this.only<ast.FieldPropStatement>(
       pcx
         .fieldProperties()
         .fieldPropertyStatement()
@@ -1730,6 +1719,25 @@ export class MalloyToAST
           .map(idCx =>
             this.astAt(
               new ast.PartitionByFieldReference([
+                this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
+              ]),
+              idCx
+            )
+          )
+      ),
+      pcx
+    );
+  }
+
+  visitGroupedByStatement(pcx: parse.GroupedByStatementContext) {
+    this.inExperiment('grouped_by', pcx);
+    return this.astAt(
+      new ast.GroupedBy(
+        pcx
+          .id()
+          .map(idCx =>
+            this.astAt(
+              new ast.GroupedByReference([
                 this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
               ]),
               idCx
@@ -1806,6 +1814,12 @@ export class MalloyToAST
     return new ast.SampleProperty({enable: enabled});
   }
 
+  updateCompilerFlags(tags: ast.ModelAnnotation) {
+    const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
+    this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+  }
+
   visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
     const allNotes = pcx.DOC_ANNOTATION().map(note => {
       return {
@@ -1814,7 +1828,7 @@ export class MalloyToAST
       };
     });
     const tags = new ast.ModelAnnotation(allNotes);
-    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
+    this.updateCompilerFlags(tags);
     return tags;
   }
 
@@ -1969,14 +1983,12 @@ export class MalloyToAST
           {severity: 'warn'}
         );
       }
-      const fieldNameCx = fcx.fieldName();
+      const fieldNameCx = fcx.fieldPath();
       if (fieldNameCx) {
         return this.astAt(
-          new ast.AccessModifierFieldReference([
-            this.astAt(new ast.FieldName(fcx.text), fcx),
-          ]),
+          this.getFieldPath(fieldNameCx, ast.AccessModifierFieldReference),
           fieldNameCx
-        );
+        ) as ast.AccessModifierFieldReference;
       }
       const wildcardCx = fcx.collectionWildCard();
       if (wildcardCx) {
@@ -1991,25 +2003,26 @@ export class MalloyToAST
     const wildcard = wildcardCx
       ? this.visitCollectionWildCard(wildcardCx)
       : undefined;
-    const as = pcx._as ? pcx._as.text : undefined;
+    const as = pcx._as ? this.getFieldName(pcx._as) : undefined;
     const tags1cx = pcx.tags();
     const tags1 = tags1cx ? this.getNotes(tags1cx) : [];
     const tags2cx = pcx.isDefine();
     const tags2 = tags2cx ? this.getIsNotes(tags2cx) : [];
     const notes = [...tags1, ...tags2];
     const name = pcx._name
-      ? this.astAt(
-          new ast.AccessModifierFieldReference([
-            this.astAt(this.getFieldName(pcx._name), pcx._name),
-          ]),
+      ? (this.astAt(
+          this.getFieldPath(pcx._name, ast.AccessModifierFieldReference),
           pcx._name
-        )
+        ) as ast.AccessModifierFieldReference)
       : undefined;
     const reference = name ?? wildcard;
     if (reference === undefined) {
       throw this.internalError(pcx, 'Expected a field name or wildcard');
     }
-    const item = this.astAt(new ast.IncludeListItem(reference, as), pcx);
+    const item = this.astAt(
+      new ast.IncludeListItem(reference, as?.refString),
+      pcx
+    );
     item.extendNote({notes});
     return item;
   }
@@ -2134,7 +2147,7 @@ export class MalloyToAST
     let op: ast.CompareMalloyOperator = '~';
     const left = pcx.fieldExpr(0);
     const right = pcx.fieldExpr(1);
-    const wholeRange = this.parseInfo.rangeFromContext(pcx);
+    const wholeRange = this.rangeFromContext(pcx);
     if (pcx.NOT()) {
       op = '!~';
       this.warnWithReplacement(
@@ -2184,11 +2197,38 @@ export class MalloyToAST
     this.warnWithReplacement(
       'sql-in',
       `Use = (a|b|c) instead of${isNot ? ' NOT' : ''} IN (a,b,c)`,
-      this.parseInfo.rangeFromContext(pcx),
+      this.rangeFromContext(pcx),
       `${this.getSourceCode(pcx.fieldExpr())} ${isNot ? '!=' : '='} (${from
         .map(f => this.getSourceCode(f))
         .join(' | ')})`
     );
     return inStmt;
+  }
+
+  visitTickFilterString(
+    pcx: parse.TickFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart(); // remove fSPACE
+    const lastChar = fString[fString.length - 1];
+    if (lastChar === '\n') {
+      const t = fString[0] === "'" ? '"' : "'";
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        `Missing $${t}${fString[0]}${t} before end-of-line`
+      );
+    }
+    const filterText = fString.slice(1, -1);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
+  }
+
+  visitTripFilterString(
+    pcx: parse.TripFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart();
+    const filterText = fString.slice(3, -3);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
   }
 }

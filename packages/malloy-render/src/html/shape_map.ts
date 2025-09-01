@@ -21,31 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from 'vega-lite';
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
+import type * as lite from 'vega-lite';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {STATE_CODES} from './state_codes';
 import {formatTitle, getColorScale} from './utils';
-import {ShapeMapRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {ShapeMapRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import type {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
-  private getRegionField(explore: Explore): Field {
-    return explore.allFields[0];
+  private getRegionField(explore: RecordOrRepeatedRecordField): Field {
+    return explore.fields[0];
   }
 
-  private getColorField(explore: Explore): Field {
-    return explore.allFields[1];
+  private getColorField(explore: RecordOrRepeatedRecordField): Field {
+    return explore.fields[1];
   }
 
-  getDataValue(data: DataColumn): string | number | undefined {
+  getDataValue(data: Cell): Date | string | number | null | undefined {
     if (data.isNumber()) {
       return data.value;
     } else if (data.isString()) {
-      if (data.field === this.getRegionField(data.field.parentExplore)) {
+      const regionField = this.getRegionField(data.getParentRecord(1).field);
+      if (data.field === regionField) {
         const id = STATE_CODES[data.value];
         if (id === undefined) {
           return undefined;
@@ -62,12 +63,15 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     }
   }
 
-  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
+  getDataType(
+    field: Field
+  ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
+    if (field.isBasic()) {
+      if (field.isTime()) {
         return 'nominal';
       } else if (field.isString()) {
-        if (field === this.getRegionField(field.parentExplore)) {
+        const regionField = this.getRegionField(field.getParentRecord(1));
+        if (field === regionField) {
           return 'quantitative';
         } else {
           return 'nominal';
@@ -79,12 +83,12 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     throw new Error('Invalid field type for shape map.');
   }
 
-  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
     if (data.isNull()) {
       throw new Error('Expected struct value not to be null.');
     }
 
-    if (!data.isArray()) {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Invalid data for shape map');
     }
 
@@ -110,7 +114,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
           }
         : undefined;
 
-    const mapped = this.mapData(data).filter(
+    const mapped = this.mapData(data.rows).filter(
       row => row[regionField.name] !== undefined
     );
 
@@ -200,7 +204,7 @@ export class ShapeMapRendererFactory extends RendererFactory<ShapeMapRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: ShapeMapRenderOptions,
     timezone?: string
   ): Renderer {

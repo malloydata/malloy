@@ -21,18 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, StructDef} from '../../../model/malloy_types';
-
+import type {Annotation, StructDef} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {HasParameter} from '../parameters/has-parameter';
-import {
-  DocStatement,
-  Document,
-  MalloyElement,
-  DocStatementList,
-} from '../types/malloy-element';
-import {Noteable, extendNoteMethod} from '../types/noteable';
-import {SourceQueryElement} from '../source-query-elements/source-query-element';
+import type {HasParameter} from '../parameters/has-parameter';
+import type {DocStatement, Document} from '../types/malloy-element';
+import {MalloyElement, DocStatementList} from '../types/malloy-element';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {SourceQueryElement} from '../source-query-elements/source-query-element';
+import {getPartitionCompositeDesc} from '../../composite-source-utils';
 
 export class DefineSource
   extends MalloyElement
@@ -63,29 +60,35 @@ export class DefineSource
         'source-definition-name-conflict',
         `Cannot redefine '${this.name}'`
       );
-    } else {
-      const theSource = this.sourceExpr?.getSource();
-      if (theSource === undefined) {
-        return;
-      }
-      const parameters = this.deduplicatedParameters();
-      const structDef = theSource.withParameters(undefined, this.parameters);
-      this.validateParameterShadowing(parameters, structDef);
-      if (ErrorFactory.didCreate(structDef)) {
-        return;
-      }
-      const entry: StructDef = {
-        ...structDef,
-        as: this.name,
-        location: this.location,
-      };
-      if (this.note) {
-        entry.annotation = structDef.annotation
-          ? {...this.note, inherits: structDef.annotation}
-          : this.note;
-      }
-      doc.setEntry(this.name, {entry, exported: this.exported});
+      return;
     }
+    const theSource = this.sourceExpr?.getSource();
+    if (theSource === undefined) {
+      return;
+    }
+    const parameters = this.deduplicatedParameters();
+    const structDef = theSource.withParameters(undefined, this.parameters);
+    this.validateParameterShadowing(parameters, structDef);
+    if (ErrorFactory.didCreate(structDef)) {
+      return;
+    }
+    const entry: StructDef = {
+      ...structDef,
+      as: this.name,
+      location: this.location,
+    };
+    if (this.note) {
+      entry.annotation = structDef.annotation
+        ? {...this.note, inherits: structDef.annotation}
+        : this.note;
+    }
+    entry.partitionComposite =
+      getPartitionCompositeDesc(
+        this.note,
+        structDef,
+        this.sourceExpr ?? this
+      ) ?? structDef.partitionComposite;
+    doc.setEntry(this.name, {entry, exported: this.exported});
   }
 
   private deduplicatedParameters(): HasParameter[] {

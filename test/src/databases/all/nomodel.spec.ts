@@ -550,6 +550,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       // symmetric aggregate are needed on both sides of the join
       // Check the row count and that sums on each side work properly.
       await expect(`
+        # test.verbose
         run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: state
           nest: ugly is {

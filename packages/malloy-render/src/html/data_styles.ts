@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from 'vega-lite';
-import {Config} from 'vega';
+import type * as lite from 'vega-lite';
+import type {Config} from 'vega';
 
 export type DataStyles = {[fieldName: string]: RenderDef};
 export type ChartSize = 'small' | 'medium' | 'large';

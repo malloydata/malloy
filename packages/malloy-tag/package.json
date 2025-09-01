@@ -1,0 +1,33 @@
+{
+  "name": "@malloydata/malloy-tag",
+  "version": "0.0.309",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "test": "jest --config=../../jest.config.js",
+    "build-parser": "node scripts/build_parser.js",
+    "clean": "tsc --build --clean && rimraf @flowtyped  && rm -rf src/lib",
+    "build": "npm run build-parser && tsc --build && npm run generate-flow",
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
+  },
+  "dependencies": {
+    "antlr4ts": "^0.5.0-alpha.4",
+    "assert": "^2.0.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "antlr4ts-cli": "^0.5.0-alpha.4",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2"
+  }
+}

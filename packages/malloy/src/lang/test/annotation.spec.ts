@@ -31,7 +31,7 @@ import {
 } from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
-import {Annotation} from '../../model/malloy_types';
+import type {Annotation} from '../../model/malloy_types';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;
@@ -825,8 +825,7 @@ describe('query operation annotations', () => {
       `);
       expect(m).toLog(
         warningMessage('Tags on `except:` are ignored'),
-        warningMessage('Tags on `except:` are ignored'),
-        warningMessage('`except: *` is implied, unless another clause uses *')
+        warningMessage('Tags on `except:` are ignored')
       );
     });
     test('oprhaned annotation', () => {

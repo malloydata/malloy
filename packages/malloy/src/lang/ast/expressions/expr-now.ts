@@ -21,10 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprNow extends ExpressionDef {
   elementType = 'timestamp';
@@ -35,8 +34,8 @@ export class ExprNow extends ExpressionDef {
       expressionType: 'scalar',
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',
-      value: {node: 'now'},
-      compositeFieldUsage: emptyCompositeFieldUsage(),
+      value: {node: 'now', typeDef: {type: 'timestamp'}},
+      fieldUsage: [],
     };
   }
 }

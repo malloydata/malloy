@@ -21,19 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {mergeFieldUsage} from '../../composite-source-utils';
+import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
 import {
-  PipeSegment,
-  SourceDef,
+  expressionIsScalar,
   isAtomic,
+  isQuerySegment,
+  isRawSegment,
   isTurtle,
   sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {getFinalStruct} from '../struct-utils';
-import {SourceFieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {ViewOrScalarFieldReference} from '../query-items/field-references';
+import {attachDrillPaths} from '../query-properties/drill';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
 import {refine} from './refine-utils';
 import {View} from './view';
@@ -73,6 +76,7 @@ export class ReferenceView extends View {
         outputStruct: ErrorFactory.structDef,
         pipeline: [],
         error: true,
+        requiredGroupBys: [],
       };
     };
     if (!lookup.found) {
@@ -87,17 +91,22 @@ export class ReferenceView extends View {
       throw new Error('Expected field to have definition');
     }
     if (isAtomic(fieldDef)) {
-      const newSegment: PipeSegment = {
-        type: 'reduce',
-        queryFields: [this.reference.refToField],
-        compositeFieldUsage: fieldDef.compositeFieldUsage,
-      };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
         ...sourceBase(fs.structDef()),
         type: 'query_result',
         name,
         fields: [fieldDef],
+      };
+      const newSegment: PipeSegment = {
+        type: 'reduce',
+        queryFields: [this.reference.refToField],
+        fieldUsage: mergeFieldUsage(fieldDef.fieldUsage, [
+          {path: this.reference.refToField.path, at: this.reference.location},
+        ]),
+        outputStruct,
+        // An atomic lens results in a array segment if it is a scalar
+        isRepeated: expressionIsScalar(fieldDef.expressionType),
       };
       return {
         pipeline: [newSegment],
@@ -116,15 +125,23 @@ export class ReferenceView extends View {
         }
         return oops();
       }
+      let pipeline = [...fieldDef.pipeline];
+      if (pipeline.length > 0 && isQuerySegment(pipeline[0])) {
+        const head = pipeline[0];
+        pipeline = [
+          {
+            ...head,
+            referencedAt: this.reference.location,
+          },
+          ...pipeline.slice(1),
+        ];
+      }
+      pipeline = attachDrillPaths(pipeline, fieldDef.name);
       return {
-        pipeline: [...fieldDef.pipeline],
+        pipeline,
         name: fieldDef.name,
         annotation: fieldDef.annotation,
-        outputStruct: getFinalStruct(
-          this.reference,
-          fs.structDef(),
-          fieldDef.pipeline
-        ),
+        outputStruct: pipeline[pipeline.length - 1].outputStruct,
       };
     } else {
       if (forRefinement) {
@@ -142,19 +159,27 @@ export class ReferenceView extends View {
     }
   }
 
-  private getRefinementSegment(inputFS: SourceFieldSpace) {
+  private getRefinement(inputFS: SourceFieldSpace): PipeSegment | undefined {
     const {pipeline, error} = this._pipelineComp(inputFS, {
       forRefinement: true,
     });
-    if (error) return;
+    if (error) return undefined;
     if (pipeline.length !== 1) {
       this.reference.logError(
         'refinement-with-multistage-view',
         `named refinement \`${this.reference.refString}\` must have exactly one stage`
       );
-      return;
+      return undefined;
     }
-    return pipeline[0];
+    const segment = pipeline[0];
+    if (isRawSegment(segment)) return segment;
+    return {
+      ...segment,
+      fieldUsage: segment.fieldUsage?.map(u => ({
+        ...u,
+        at: this.reference.location,
+      })),
+    };
   }
 
   // `isNestIn` is not needed because `ReferenceView`s never create a field space
@@ -165,7 +190,7 @@ export class ReferenceView extends View {
     pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
-    const refineFrom = this.getRefinementSegment(inputFS);
+    const refineFrom = this.getRefinement(inputFS);
     if (refineFrom) {
       return refine(this, pipeline, refineFrom);
     }
