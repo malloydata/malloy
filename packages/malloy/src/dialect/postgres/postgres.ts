@@ -306,6 +306,9 @@ export class PostgresDialect extends PostgresBase {
     throw new Error(`Unknown or unhandled postgres time unit: ${df.units}`);
   }
 
+  // This looks like a partial implementation of a method similar to how DuckDB
+  // does symmetric aggregates, which was abandoned. Leaving it in here for now
+  // in case the original author wants to pick it up again.
   // sqlSumDistinct(key: string, value: string, funcName: string): string {
   //   // return `sum_distinct(list({key:${key}, val: ${value}}))`;
   //   return `(
@@ -319,14 +322,11 @@ export class PostgresDialect extends PostgresBase {
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
 
-    // PostgreSQL requires CAST to NUMERIC before ROUND
+    // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
+    // than the generic implementation of sqlSumDistinct, but is OK in
+    // PostgreSQL because NUMERIC has arbitrary precision.
     const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
-
-    const sumSQL = `(
-    SUM(DISTINCT ${roundedValue} + ${hashKey})
-    - SUM(DISTINCT ${hashKey})
-  )`;
-
+    const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
     const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
 
     if (funcName === 'SUM') {
