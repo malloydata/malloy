@@ -96,7 +96,7 @@ export class PostgresDialect extends PostgresBase {
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -306,14 +306,35 @@ export class PostgresDialect extends PostgresBase {
     throw new Error(`Unknown or unhandled postgres time unit: ${df.units}`);
   }
 
+  // sqlSumDistinct(key: string, value: string, funcName: string): string {
+  //   // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+  //   return `(
+  //     SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
+  //     FROM (
+  //       SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
+  //     ) a
+  //   )`;
+  // }
+
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
-    return `(
-      SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
-      FROM (
-        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
-      ) a
-    )`;
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+
+    // PostgreSQL requires CAST to NUMERIC before ROUND
+    const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
+
+    const sumSQL = `(
+    SUM(DISTINCT ${roundedValue} + ${hashKey})
+    - SUM(DISTINCT ${hashKey})
+  )`;
+
+    const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
+
+    if (funcName === 'SUM') {
+      return ret;
+    } else if (funcName === 'AVG') {
+      return `(${ret})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   // TODO this does not preserve the types of the arguments, meaning we have to hack
