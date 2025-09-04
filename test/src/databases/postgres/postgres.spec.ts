@@ -120,6 +120,19 @@ describe('Postgres tests', () => {
     ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
 
+  it('can compute symmetric aggregates on double precisions numbers', async () => {
+    await expect(`source: values is postgres.sql("""
+        SELECT 1::DOUBLE PRECISION as val, 1 as id
+      """) extend { measure: total_value is val.sum() }
+    source: thing is postgres.sql(""" SELECT 1 as id """) extend {
+      join_one: values on values.id = id
+    }
+    run: thing -> {
+      group_by: id
+      aggregate: tenx is 10 * values.total_value
+    }
+    `).malloyResultMatches(runtime, {tenx: 10});
+  });
   describe('time', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(

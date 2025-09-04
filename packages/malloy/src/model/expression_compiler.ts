@@ -70,16 +70,18 @@ function sqlSumDistinct(
   const precision = 9;
   const uniqueInt = dialect.sqlSumDistinctHashedKey(sqlDistintKey);
   const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
-  const sumSQL = `
-  (
-    SUM(DISTINCT
-      (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS ${dialect.defaultDecimalType}) +
-      ${uniqueInt}
-    ))
-    -
-     SUM(DISTINCT ${uniqueInt})
+
+  // Ensure value is numeric and handle nulls
+  const safeValue = `CAST(COALESCE(${sqlExp}, 0) AS ${dialect.defaultDecimalType})`;
+  // Scale and round to eliminate floating point differences
+  const roundedValue = `ROUND(${safeValue}*${multiplier}, ${NUMERIC_DECIMAL_PRECISION})`;
+
+  const sumSQL = `(
+    SUM(DISTINCT ${roundedValue} + ${uniqueInt})
+    - SUM(DISTINCT ${uniqueInt})
   )`;
-  let ret = `(${sumSQL}/(${multiplier}*1.0))`;
+
+  let ret = `(${sumSQL}/${multiplier})`;
   ret = `CAST(${ret} AS ${dialect.defaultNumberType})`;
   return ret;
 }
