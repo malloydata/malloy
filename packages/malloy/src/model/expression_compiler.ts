@@ -72,12 +72,21 @@ function sqlSumDistinct(
   const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
   const sumSQL = `
   (
-    SUM(DISTINCT
-      (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS ${dialect.defaultDecimalType}) +
-      ${uniqueInt}
-    ))
+    SUM(
+      DISTINCT
+      (
+        ROUND(
+          CAST(
+            COALESCE(${sqlExp},0)*(${multiplier}*1.0)
+            AS ${dialect.defaultDecimalType}
+          ),
+          ${NUMERIC_DECIMAL_PRECISION}
+        )
+        + ${uniqueInt}
+      )
+    )
     -
-     SUM(DISTINCT ${uniqueInt})
+    SUM(DISTINCT ${uniqueInt})
   )`;
   let ret = `(${sumSQL}/(${multiplier}*1.0))`;
   ret = `CAST(${ret} AS ${dialect.defaultNumberType})`;
