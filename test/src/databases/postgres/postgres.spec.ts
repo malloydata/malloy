@@ -127,7 +127,6 @@ describe('Postgres tests', () => {
     source: thing is postgres.sql(""" SELECT 1 as id """) extend {
       join_one: values on values.id = id
     }
-    # test.debug
     run: thing -> {
       group_by: id
       aggregate: tenx is 10 * values.total_value
