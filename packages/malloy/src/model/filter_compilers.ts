@@ -630,66 +630,20 @@ export class TemporalFilterCompiler {
         return this.lastUnit(m.units);
       case 'next':
         return this.nextUnit(m.units);
+      case 'sunday':
+        return this.weekdayMoment(1, m.which);
       case 'monday':
+        return this.weekdayMoment(2, m.which);
       case 'tuesday':
+        return this.weekdayMoment(3, m.which);
       case 'wednesday':
+        return this.weekdayMoment(4, m.which);
       case 'thursday':
+        return this.weekdayMoment(5, m.which);
       case 'friday':
+        return this.weekdayMoment(6, m.which);
       case 'saturday':
-      case 'sunday': {
-        const destDay = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-        ].indexOf(m.moment);
-        const dow = this.dayofWeek(this.nowExpr()).sql;
-        if (m.which === 'next') {
-          const nForwards = `${this.mod7(`${destDay}-(${dow}-1)+6`)}+1`;
-          const begin = this.delta(
-            this.thisUnit('day').begin,
-            '+',
-            nForwards,
-            'day'
-          );
-          const end = this.delta(
-            this.thisUnit('day').begin,
-            '+',
-            `${nForwards}+1`,
-            'day'
-          );
-          // console.log(
-          //   `SELECT ${
-          //     this.nowExpr().sql
-          //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nForwards} as nForwards,\n  ${
-          //     begin.sql
-          //   } as begin,\n   ${end.sql} as end`
-          // );
-          return {begin, end: end.sql};
-        }
-        // dacks back = mod((daw0 - dst) + 6, 7) + 1;
-        // dacks back = mod(((daw - 1) - dst) + 6, 7) + 1;
-        // dacks back = mod(((daw) - dst) + 7, 7) + 1;
-        const nBack = `${this.mod7(`(${dow}-1)-${destDay}+6`)}+1`;
-        const begin = this.delta(this.thisUnit('day').begin, '-', nBack, 'day');
-        const end = this.delta(
-          this.thisUnit('day').begin,
-          '-',
-          `(${nBack})-1`,
-          'day'
-        );
-        // console.log(
-        //   `SELECT ${
-        //     this.nowExpr().sql
-        //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nBack} as nBack,\n  ${
-        //     begin.sql
-        //   } as begin,\n   ${end.sql} as end`
-        // );
-        return {begin, end: end.sql};
-      }
+        return this.weekdayMoment(7, m.which);
     }
   }
 
@@ -705,5 +659,39 @@ export class TemporalFilterCompiler {
     begin = this.time(begin);
     end = this.time(end);
     return `${this.expr} ${begOp} ${begin} ${joinOp} ${this.expr} ${endOp} ${end}`;
+  }
+
+  private weekdayMoment(
+    destDay: number,
+    which: 'last' | 'next' | undefined
+  ): MomentIs {
+    const direction = which || 'last';
+    const dow = this.dayofWeek(this.nowExpr());
+    const todayBegin = this.thisUnit('day').begin;
+
+    // destDay comes in as 1-7 (Malloy format), convert to 0-6
+    const destDayZeroBased = destDay - 1;
+    // dow is 1-7, convert to 0-6 for the arithmetic
+    const dowZeroBased = `(${dow.sql}-1)`;
+
+    let daysOffset: string;
+    if (direction === 'next') {
+      // Days forward: ((destDay - dow + 6) % 7) + 1
+      daysOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+1`;
+    } else {
+      // Days back: ((dow - destDay + 6) % 7) + 1
+      daysOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}+1`;
+    }
+
+    const begin = this.delta(
+      todayBegin,
+      direction === 'next' ? '+' : '-',
+      daysOffset,
+      'day'
+    );
+
+    const end = this.delta(begin, '+', '1', 'day');
+
+    return {begin, end: end.sql};
   }
 }
