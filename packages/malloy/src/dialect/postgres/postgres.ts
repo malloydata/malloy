@@ -31,16 +31,23 @@ import type {
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
+  TimeExtractExpr,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
+  TD,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {PostgresBase} from '../pg_impl';
+import {
+  qtz,
+  type DialectFieldList,
+  type FieldReferenceType,
+  type QueryInfo,
+} from '../dialect';
+import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -443,5 +450,22 @@ export class PostgresDialect extends PostgresBase {
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
     return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
+  }
+
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const units = timeExtractMap[from.units] || from.units;
+    let extractFrom = from.e.sql;
+    if (TD.isTimestamp(from.e.typeDef)) {
+      const tz = qtz(qi);
+      if (tz) {
+        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+      }
+    }
+
+    // PostgreSQL before 14 returns a double precision for EXTRACT, cast to integer
+    // since it is common to pass an extraction to mod ( like in fitler expressions )
+    const extracted = `EXTRACT(${units} FROM ${extractFrom})::integer`;
+
+    return from.units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
   }
 }
