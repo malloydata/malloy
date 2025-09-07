@@ -26,7 +26,6 @@
     "@malloydata/db-postgres": "0.0.309",
     "@malloydata/db-snowflake": "0.0.309",
     "@malloydata/db-trino": "0.0.309",
-    "@malloydata/db-databricks": "0.0.309",
     "@malloydata/malloy": "0.0.309",
     "@malloydata/malloy-tag": "0.0.309",
     "@malloydata/render": "0.0.309",
