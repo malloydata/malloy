@@ -247,17 +247,15 @@ export class QueryQuery extends QueryField {
   }
 
   private addDependantPath(
-    resultRoot: FieldInstanceResultRoot,
-    context: QueryStruct,
     path: string[],
     uniqueKeyRequirement: UniqueKeyRequirement
   ) {
-    const node = context.getFieldByName(path);
+    const node = this.parent.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    resultRoot.addStructToJoin(joinableParent, uniqueKeyRequirement);
+    this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement);
   }
 
   private dependenciesFromFieldUsage() {
@@ -271,7 +269,7 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(resultRoot, this.parent, joinUsage.path, undefined);
+      this.addDependantPath(joinUsage.path, undefined);
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -292,12 +290,7 @@ export class QueryQuery extends QueryField {
         if (usage.path.length === 0) {
           resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
-          this.addDependantPath(
-            resultRoot,
-            this.parent,
-            usage.path,
-            usage.uniqueKeyRequirement
-          );
+          this.addDependantPath(usage.path, usage.uniqueKeyRequirement);
         }
       }
     }
