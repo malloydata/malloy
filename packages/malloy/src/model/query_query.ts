@@ -50,7 +50,6 @@ import {
   getDialectFieldList,
   groupingKey,
   caseGroup,
-  pathToKey,
 } from './utils';
 import type {JoinInstance} from './join_instance';
 import {
@@ -287,10 +286,8 @@ export class QueryQuery extends QueryField {
       throw new Error('QueryQuery attempt to load a raw or partial segment');
     }
 
-    const joins = new Set<string>();
     for (const joinUsage of this.firstSegment.activeJoins || []) {
       this.activateJoinPath(resultRoot, this.parent, joinUsage.path);
-      joins.add(pathToKey('=', joinUsage.path));
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
