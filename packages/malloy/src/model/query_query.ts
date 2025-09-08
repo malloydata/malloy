@@ -267,15 +267,10 @@ export class QueryQuery extends QueryField {
         );
       }
       if (segmentField instanceof QueryFieldStruct) {
-        if (isJoinedSource(segmentField.fieldDef)) {
-          resultStruct
-            .root()
-            .addStructToJoin(segmentField.queryStruct, undefined);
-          currentContext = segmentField.queryStruct;
-        } else {
-          // Can't navigate deeper into non-joined sources like records
-          break;
-        }
+        resultStruct
+          .root()
+          .addStructToJoin(segmentField.queryStruct, undefined);
+        currentContext = segmentField.queryStruct;
       }
     }
   }
