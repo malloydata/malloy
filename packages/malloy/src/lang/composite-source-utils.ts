@@ -31,6 +31,8 @@ import type {
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
+  AtomicFieldDef,
+  Argument,
 } from '../model/malloy_types';
 import {
   expressionIsScalar,
@@ -43,7 +45,7 @@ import {
   isTurtle,
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
-import {pathToKey} from '../model/utils';
+import {exprMapDeep, pathToKey} from '../model/utils';
 import {annotationToTag} from '../annotation';
 
 type CompositeCouldNotFindFieldError = {
@@ -74,6 +76,11 @@ type CompositeIssue =
       type: 'missing-required-group-by';
       requiredGroupBy: RequiredGroupBy;
     };
+
+type Namespace = {
+  fields: Record<string, FieldDef>;
+  nested: Record<string, Namespace>;
+};
 
 interface CompositeFailure {
   source: SourceDef;
@@ -337,6 +344,102 @@ function onlyCompositeUsage(fieldUsage: FieldUsage[], fields: FieldDef[]) {
   });
 }
 
+class ReferenceMap {
+  private map: Map<FieldDef, {referenceId: string; definition: Expr}> =
+    new Map();
+  private argMap: Map<Argument, {referenceId: string; definition: Expr}> =
+    new Map();
+
+  constructor(
+    private readonly namespace: Namespace,
+    private readonly parameters: ArgumentNamespace
+  ) {}
+
+  getOrAddField(entry: AtomicFieldDef, path: string[]): string {
+    const existing = this.map.get(entry);
+    if (existing !== undefined) {
+      return existing.referenceId;
+    } else {
+      const referenceId = `ref${this.map.size}`;
+      const mapped = this.collectReferences(entry, []);
+      const definition = this.exprOrColumn(mapped.e, path);
+      this.map.set(entry, {
+        referenceId,
+        definition,
+      });
+      return referenceId;
+    }
+  }
+
+  getOrAddArgument(entry: Argument): string {
+    const existing = this.argMap.get(entry);
+    if (existing !== undefined) {
+      return existing.referenceId;
+    } else {
+      const referenceId = `arg${this.argMap.size}`;
+      const definition = entry.value!;
+      this.argMap.set(entry, {referenceId, definition});
+      return referenceId;
+    }
+  }
+
+  definitions(): Record<string, Expr> {
+    const definitions: Record<string, Expr> = {};
+    this.map.forEach(
+      entry => (definitions[entry.referenceId] = entry.definition)
+    );
+    this.argMap.forEach(
+      entry => (definitions[entry.referenceId] = entry.definition)
+    );
+    return definitions;
+  }
+
+  exprOrColumn(e: Expr | undefined, path: string[]): Expr {
+    if (e === undefined) return {node: 'column', path};
+    return e;
+  }
+
+  collectReferences(def: AtomicFieldDef, joinPath: string[]): AtomicFieldDef {
+    if (def.e === undefined) return def;
+    const e = exprMapDeep(def.e, expr => {
+      if (expr.node === 'field') {
+        const path = [...joinPath, ...expr.path];
+        const definition = inNamespace(path, this.namespace);
+        if (definition !== undefined && isAtomic(definition)) {
+          const referenceId = this.getOrAddField(definition, path);
+          return {...expr, referenceId};
+        }
+      } else if (expr.node === 'parameter') {
+        const definition = this.parameters[expr.path[0]];
+        if (definition !== undefined) {
+          const referenceId = this.getOrAddArgument(definition);
+          return {...expr, referenceId};
+        }
+        return expr;
+      }
+      return expr;
+    });
+    return {...def, e};
+  }
+}
+
+type ArgumentNamespace = Record<string, Argument>;
+
+function buildParameterNamespace(inputSource: SourceDef): ArgumentNamespace {
+  const ns: ArgumentNamespace = {};
+  const args = {
+    ...(inputSource.parameters ?? {}),
+    ...(inputSource.arguments ?? {}),
+  };
+  for (const name in args) {
+    const arg = args[name];
+    if (arg.value) {
+      ns[name] = arg;
+    }
+  }
+  return ns;
+}
+
 export function getExpandedSegment(
   segment: PipeSegment,
   inputSource: SourceDef
@@ -346,6 +449,9 @@ export function getExpandedSegment(
     ? segment.extendSource ?? []
     : [];
   const fields = mergeFields(inputSource.fields, sourceExtensions);
+  const namespace = buildNamespace(fields);
+  const parameters = buildParameterNamespace(inputSource);
+  const references = new ReferenceMap(namespace, parameters);
 
   const collectedUngroupings: AggregateUngrouping[] = [];
   let updatedSegment = segment;
@@ -354,6 +460,11 @@ export function getExpandedSegment(
     // Single walk through query fields
     const updatedQueryFields = segment.queryFields.map(field => {
       if (field.type === 'fieldref') {
+        const definition = inNamespace(field.path, namespace);
+        if (definition !== undefined && isAtomic(definition)) {
+          const referenceId = references.getOrAddField(definition, field.path);
+          return {...field, referenceId};
+        }
         // Just return it - field usage already in segment.fieldUsage
         return field;
       } else if (field.type === 'turtle') {
@@ -382,11 +493,15 @@ export function getExpandedSegment(
       } else {
         // Regular fields - only collect ungroupings
         collectedUngroupings.push(...(field.ungroupings || []));
-        return field;
+        return references.collectReferences(field, []);
       }
     });
 
-    updatedSegment = {...segment, queryFields: updatedQueryFields};
+    updatedSegment = {
+      ...segment,
+      queryFields: updatedQueryFields,
+      definitions: references.definitions(),
+    };
   }
 
   const allFieldUsage = mergeFieldUsage(
@@ -1473,16 +1588,12 @@ export function pathBegins(path: string[], prefix: string[]) {
   return path.length >= prefix.length && prefix.every((s, i) => path[i] === s);
 }
 
-type Namespace = {
-  fields: Record<string, FieldDef>;
-  nested: Record<string, Namespace>;
-};
+function emptyNamespace(): Namespace {
+  return {fields: {}, nested: {}};
+}
 
 function buildNamespace(fields: FieldDef[]): Namespace {
-  const namespace: Namespace = {
-    fields: {},
-    nested: {},
-  };
+  const namespace = emptyNamespace();
 
   for (const field of fields) {
     const name = field.as ?? field.name;
