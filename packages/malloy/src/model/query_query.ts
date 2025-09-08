@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright Contributors to the Malloy project
  * SPDX-License-Identifier: MIT
@@ -50,6 +51,7 @@ import {
   getDialectFieldList,
   groupingKey,
   caseGroup,
+  pathToKey,
 } from './utils';
 import type {JoinInstance} from './join_instance';
 import {
@@ -263,12 +265,14 @@ export class QueryQuery extends QueryField {
           `Cannot find join '${segment}' in ${path.join('.')} to add to query`
         );
       }
-      if (
-        segmentField instanceof QueryFieldStruct &&
-        segmentField.queryStruct.structDef.type !== 'record'
-      ) {
-        resultRoot.addStructToJoin(segmentField.queryStruct, undefined);
-        currentContext = segmentField.queryStruct;
+      if (segmentField instanceof QueryFieldStruct) {
+        if (isJoinedSource(segmentField.fieldDef)) {
+          resultRoot.addStructToJoin(segmentField.queryStruct, undefined);
+          currentContext = segmentField.queryStruct;
+        } else {
+          // Can't navigate deeper into non-joined sources like records
+          break;
+        }
       }
     }
   }
@@ -297,8 +301,10 @@ export class QueryQuery extends QueryField {
       throw new Error('QueryQuery attempt to load a raw or partial segment');
     }
 
+    const joins = new Set<string>();
     for (const joinUsage of this.firstSegment.activeJoins || []) {
       this.activateJoinPath(resultRoot, this.parent, joinUsage.path);
+      joins.add(pathToKey('=', joinUsage.path));
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -315,17 +321,15 @@ export class QueryQuery extends QueryField {
         }
         continue;
       }
-      if (usage.uniqueKeyRequirement) {
-        if (usage.path.length === 0) {
-          resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
-        } else {
-          this.requireUniqueKey(
-            resultRoot,
-            this.parent,
-            usage.path,
-            usage.uniqueKeyRequirement
-          );
-        }
+      if (usage.path.length === 0) {
+        resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
+      } else {
+        this.requireUniqueKey(
+          resultRoot,
+          this.parent,
+          usage.path,
+          usage.uniqueKeyRequirement
+        );
         continue;
       }
     }
