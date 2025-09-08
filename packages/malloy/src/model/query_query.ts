@@ -246,19 +246,14 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
-  private addDependantPath(
+  private activateJoinPath(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
-    path: string[],
-    uniqueKeyRequirement: UniqueKeyRequirement
+    path: string[]
   ) {
-    if (path.length === 0) {
-      return;
-    }
-
     // Loop through path segments, ensuring each join exists
     let currentContext = context;
-    for (const segment of path.slice(0, -1)) {
+    for (const segment of path) {
       // Try to get the field at this path segment
       let segmentField: QueryField;
       try {
@@ -283,8 +278,14 @@ export class QueryQuery extends QueryField {
         }
       }
     }
+  }
 
-    // Now handle the full path for the final dependency
+  private requireUniqueKey(
+    resultStruct: FieldInstanceResult,
+    context: QueryStruct,
+    path: string[],
+    uniqueKeyRequirement: UniqueKeyRequirement
+  ) {
     const node = context.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
@@ -303,12 +304,7 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(
-        resultStruct,
-        this.parent,
-        joinUsage.path,
-        undefined
-      );
+      this.activateJoinPath(resultStruct, this.parent, joinUsage.path);
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -329,7 +325,7 @@ export class QueryQuery extends QueryField {
         if (usage.path.length === 0) {
           resultStruct.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
-          this.addDependantPath(
+          this.requireUniqueKey(
             resultStruct,
             this.parent,
             usage.path,
@@ -476,7 +472,10 @@ export class QueryQuery extends QueryField {
    * @param resultStruct - The FieldInstanceResult containing compilation context
    * @param source - The QueryStruct to traverse (initially the query's parent/input)
    */
-  expandSource(resultStruct: FieldInstanceResult, source: QueryStruct) {
+  expandRecordExpressions(
+    resultStruct: FieldInstanceResult,
+    source: QueryStruct
+  ) {
     for (const field of source.nameMap.values()) {
       if (field instanceof QueryFieldStruct) {
         const qs = field.queryStruct;
@@ -493,7 +492,7 @@ export class QueryQuery extends QueryField {
         }
 
         // Recurse into this structure
-        this.expandSource(resultStruct, qs);
+        this.expandRecordExpressions(resultStruct, qs);
       }
     }
   }
@@ -527,7 +526,7 @@ export class QueryQuery extends QueryField {
 
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
-      this.expandSource(this.rootResult, this.parent);
+      this.expandRecordExpressions(this.rootResult, this.parent);
       // Add the root base join to the joins map
       this.rootResult.addStructToJoin(this.parent, undefined);
 

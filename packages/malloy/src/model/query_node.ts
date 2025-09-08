@@ -278,7 +278,7 @@ export class QueryStruct {
   /**
    * For fields which are a record, but the value is an expression
    * we capture the context needed to generate the expression in
-   * QueryQuery.expandFields. Later in the compilation if a
+   * QueryQuery.expandRecordAliases. Later in the compilation if a
    * reference passes through this struct, this will call
    * the expression compiler with the correct context
    * to compute the record value.
