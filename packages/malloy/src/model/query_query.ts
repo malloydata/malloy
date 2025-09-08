@@ -252,29 +252,16 @@ export class QueryQuery extends QueryField {
     resultRoot: FieldInstanceResultRoot,
     context: QueryStruct,
     path: string[]
-  ) {
-    // Loop through path segments, ensuring each join exists
-    let currentContext = context;
-    for (const segment of path) {
-      // Try to get the field at this path segment
-      let segmentField: QueryField;
-      try {
-        segmentField = currentContext.getFieldByName([segment]);
-      } catch {
-        throw new Error(
-          `Cannot find join '${segment}' in ${path.join('.')} to add to query`
-        );
-      }
-      if (segmentField instanceof QueryFieldStruct) {
-        if (isJoinedSource(segmentField.fieldDef)) {
-          resultRoot.addStructToJoin(segmentField.queryStruct, undefined);
-          currentContext = segmentField.queryStruct;
-        } else {
-          // Can't navigate deeper into non-joined sources like records
-          break;
-        }
-      }
-    }
+  ): void {
+    if (path.length === 0) return;
+
+    const node = context.getFieldByName(path);
+    const joinableParent =
+      node instanceof QueryFieldStruct
+        ? node.queryStruct.getJoinableParent()
+        : node.parent.getJoinableParent();
+
+    resultRoot.addStructToJoin(joinableParent, undefined);
   }
 
   private requireUniqueKey(
@@ -321,16 +308,17 @@ export class QueryQuery extends QueryField {
         }
         continue;
       }
-      if (usage.path.length === 0) {
-        resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
-      } else {
-        this.requireUniqueKey(
-          resultRoot,
-          this.parent,
-          usage.path,
-          usage.uniqueKeyRequirement
-        );
-        continue;
+      if (usage.uniqueKeyRequirement) {
+        if (usage.path.length === 0) {
+          resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
+        } else {
+          this.requireUniqueKey(
+            resultRoot,
+            this.parent,
+            usage.path,
+            usage.uniqueKeyRequirement
+          );
+        }
       }
     }
 
