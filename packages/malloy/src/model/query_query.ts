@@ -246,23 +246,7 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
-  private activateJoinPath(
-    resultRoot: FieldInstanceResultRoot,
-    context: QueryStruct,
-    path: string[]
-  ): void {
-    if (path.length === 0) return;
-
-    const node = context.getFieldByName(path);
-    const joinableParent =
-      node instanceof QueryFieldStruct
-        ? node.queryStruct.getJoinableParent()
-        : node.parent.getJoinableParent();
-
-    resultRoot.addStructToJoin(joinableParent, undefined);
-  }
-
-  private requireUniqueKey(
+  private addDependantPath(
     resultRoot: FieldInstanceResultRoot,
     context: QueryStruct,
     path: string[],
@@ -287,7 +271,7 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.activateJoinPath(resultRoot, this.parent, joinUsage.path);
+      this.addDependantPath(resultRoot, this.parent, joinUsage.path, undefined);
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -308,7 +292,7 @@ export class QueryQuery extends QueryField {
         if (usage.path.length === 0) {
           resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
-          this.requireUniqueKey(
+          this.addDependantPath(
             resultRoot,
             this.parent,
             usage.path,
