@@ -247,7 +247,7 @@ export class QueryQuery extends QueryField {
   }
 
   private activateJoinPath(
-    resultStruct: FieldInstanceResult,
+    resultRoot: FieldInstanceResultRoot,
     context: QueryStruct,
     path: string[]
   ) {
@@ -259,24 +259,22 @@ export class QueryQuery extends QueryField {
       try {
         segmentField = currentContext.getFieldByName([segment]);
       } catch {
-        // Field doesn't exist, need to add the join
-        // This is where we'd need to figure out how to create the missing join
-        // Maybe we need more context about what join we're trying to add?
         throw new Error(
           `Cannot find join '${segment}' in ${path.join('.')} to add to query`
         );
       }
-      if (segmentField instanceof QueryFieldStruct) {
-        resultStruct
-          .root()
-          .addStructToJoin(segmentField.queryStruct, undefined);
+      if (
+        segmentField instanceof QueryFieldStruct &&
+        segmentField.queryStruct.structDef.type !== 'record'
+      ) {
+        resultRoot.addStructToJoin(segmentField.queryStruct, undefined);
         currentContext = segmentField.queryStruct;
       }
     }
   }
 
   private requireUniqueKey(
-    resultStruct: FieldInstanceResult,
+    resultRoot: FieldInstanceResultRoot,
     context: QueryStruct,
     path: string[],
     uniqueKeyRequirement: UniqueKeyRequirement
@@ -286,10 +284,11 @@ export class QueryQuery extends QueryField {
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    resultStruct.root().addStructToJoin(joinableParent, uniqueKeyRequirement);
+    resultRoot.addStructToJoin(joinableParent, uniqueKeyRequirement);
   }
 
-  private dependenciesFromFieldUsage(resultStruct: FieldInstanceResult) {
+  private dependenciesFromFieldUsage() {
+    const resultRoot = this.rootResult;
     // Only QuerySegment and IndexSegment have fieldUsage, RawSegment does not
     if (
       this.firstSegment.type === 'raw' ||
@@ -299,29 +298,29 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.activateJoinPath(resultStruct, this.parent, joinUsage.path);
+      this.activateJoinPath(resultRoot, this.parent, joinUsage.path);
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
-        resultStruct.root().queryUsesPartitioning = true;
+        resultRoot.queryUsesPartitioning = true;
 
         // BigQuery-specific handling
         if (
           this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
-          resultStruct.firstSegment.type === 'reduce'
+          resultRoot.firstSegment.type === 'reduce'
         ) {
           // force the use of a lateral_join_bag
-          resultStruct.root().isComplexQuery = true;
-          resultStruct.root().queryUsesPartitioning = true;
+          resultRoot.isComplexQuery = true;
+          resultRoot.queryUsesPartitioning = true;
         }
         continue;
       }
       if (usage.uniqueKeyRequirement) {
         if (usage.path.length === 0) {
-          resultStruct.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
+          resultRoot.addStructToJoin(this.parent, usage.uniqueKeyRequirement);
         } else {
           this.requireUniqueKey(
-            resultStruct,
+            resultRoot,
             this.parent,
             usage.path,
             usage.uniqueKeyRequirement
@@ -337,11 +336,11 @@ export class QueryQuery extends QueryField {
         : [];
 
     for (const ungrouping of expandedUngroupings) {
-      resultStruct.root().isComplexQuery = true;
-      resultStruct.root().queryUsesPartitioning = true;
+      resultRoot.isComplexQuery = true;
+      resultRoot.queryUsesPartitioning = true;
 
       // Navigate to correct result struct using ungrouping's path
-      let destResult = resultStruct;
+      let destResult: FieldInstanceResult = resultRoot;
       for (const pathSegment of ungrouping.path) {
         const nextStruct = destResult.allFields.get(pathSegment);
         if (!(nextStruct instanceof FieldInstanceResult)) {
@@ -529,10 +528,10 @@ export class QueryQuery extends QueryField {
       this.expandFields(this.rootResult);
 
       // Process all dependencies from translator's fieldUsage
-      this.dependenciesFromFieldUsage(this.rootResult);
+      this.dependenciesFromFieldUsage();
 
       // Handle always joins
-      this.addAlwaysJoins(this.rootResult);
+      this.addAlwaysJoins();
 
       // Calculate symmetric aggregates based on the joins
       this.rootResult.calculateSymmetricAggregates();
@@ -553,14 +552,14 @@ export class QueryQuery extends QueryField {
     }
   }
 
-  addAlwaysJoins(rootResult: FieldInstanceResultRoot) {
+  addAlwaysJoins() {
     const stage = this.fieldDef.pipeline[0];
     if (stage.type !== 'raw') {
       const alwaysJoins = stage.alwaysJoins ?? [];
       for (const joinName of alwaysJoins) {
         const qs = this.parent.getChildByName(joinName);
         if (qs instanceof QueryFieldStruct) {
-          rootResult.addStructToJoin(qs.queryStruct, undefined);
+          this.rootResult.addStructToJoin(qs.queryStruct, undefined);
         }
       }
     }
