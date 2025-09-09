@@ -20,6 +20,7 @@ export class StageWriter {
   dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
+  stageNumber = 0;
 
   constructor(
     useCTE = true,
@@ -28,8 +29,8 @@ export class StageWriter {
     this.useCTE = useCTE;
   }
 
-  getName(id: number) {
-    return `${this.stagePrefix}${id}`;
+  private getNextName() {
+    return `${this.stagePrefix}${this.root().stageNumber++}`;
   }
 
   root(): StageWriter {
@@ -43,7 +44,7 @@ export class StageWriter {
   addStage(sql: string): string {
     if (this.useCTE) {
       this.withs.push(sql);
-      return this.getName(this.withs.length - 1);
+      return this.getNextName();
     } else {
       this.withs[0] = sql;
       return indent(`\n(${sql})\n`);
