@@ -122,12 +122,12 @@ export class StageWriter {
     if (!this.useCTE) {
       return {sql: this.withs[0], lastStageName: this.withs[0]};
     }
-    let lastStageName = this.getName(0);
+    let lastStageName = this.getNextName();
     let prefix = 'WITH ';
     let w = '';
     for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
       const sql = this.withs[i];
-      lastStageName = this.getName(i);
+      lastStageName = this.getNextName();
       if (sql === undefined) {
         throw new Error(
           `Expected sql WITH to be present for stage ${lastStageName}.`
@@ -162,7 +162,7 @@ export class StageWriter {
       return (
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
-          this.getName(this.withs.length - 1),
+          this.getNextName(),
           getDialectFieldList(structDef),
           (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
         )
