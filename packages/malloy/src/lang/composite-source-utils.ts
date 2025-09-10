@@ -100,7 +100,7 @@ function _resolveCompositeSources(
   let joinsProcessed = false;
   const nonCompositeFields = getNonCompositeFields(source);
   const expandedForError = onlyCompositeUsage(
-    _expandFieldUsage(fieldUsage, rootFields).result,
+    expandFieldUsage(fieldUsage, rootFields).result,
     source.fields
   );
   if (source.type === 'composite') {
@@ -133,7 +133,7 @@ function _resolveCompositeSources(
         [];
 
       const fieldsForLookup = [...nonCompositeFields, ...inputSource.fields];
-      const expanded = _expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
+      const expanded = expandFieldUsage(fieldUsageWithWheres, fieldsForLookup);
       if (expanded.missingFields.length > 0) {
         // A lookup failed while expanding, which means this source certainly won't work
         for (const missingField of expanded.missingFields) {
@@ -270,7 +270,7 @@ function _resolveCompositeSources(
     }
   } else if (source.partitionComposite !== undefined) {
     anyComposites = true;
-    const expanded = _expandFieldUsage(fieldUsage, rootFields).result;
+    const expanded = expandFieldUsage(fieldUsage, rootFields).result;
     // TODO possibly abort if expanded has missing fields...
     const expandedCategorized = categorizeFieldUsage(expanded);
     const {partitionFilter, issues} = getPartitionCompositeFilter(
@@ -296,7 +296,7 @@ function _resolveCompositeSources(
   }
 
   if (!joinsProcessed) {
-    const expanded = _expandFieldUsage(
+    const expanded = expandFieldUsage(
       fieldUsage,
       getJoinFields(rootFields, path)
     );
@@ -393,7 +393,7 @@ export function getExpandedSegment(
     getFieldUsageFromFilterList(inputSource),
     segment.fieldUsage
   );
-  const expanded = _expandFieldUsage(allFieldUsage || [], fields);
+  const expanded = expandFieldUsage(allFieldUsage || [], fields);
 
   // Merge ungroupings from direct collection and field expansion
   const allUngroupings = [...collectedUngroupings, ...expanded.ungroupings];
@@ -470,7 +470,7 @@ function findActiveJoins(
  * - `missingFields`: References to fields which could not be resolved
  * - `activeJoins`: Topologically sorted list of joins needed to resolve these uses
  */
-function _expandFieldUsage(
+function expandFieldUsage(
   fieldUsage: FieldUsage[],
   fields: FieldDef[]
 ): {
