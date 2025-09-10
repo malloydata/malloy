@@ -48,7 +48,7 @@
     "@malloydata/malloy": "0.0.310",
     "@motherduck/wasm-client": "^0.6.6",
     "apache-arrow": "^17.0.0",
-    "duckdb": "1.3.1",
+    "duckdb": "1.3.4",
     "web-worker": "^1.3.0"
   }
 }
