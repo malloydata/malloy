@@ -940,7 +940,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         query: u is ${databaseName}.sql("""%{st0 } UNION ALL %{st1 }""") -> {
           select: *
         }
-
+        # test.debug
         run: u -> {
           aggregate: c is count()
         }

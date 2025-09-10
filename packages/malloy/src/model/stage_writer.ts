@@ -20,7 +20,6 @@ export class StageWriter {
   dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
-  stageNumber = 0;
 
   constructor(
     useCTE = true,
@@ -29,8 +28,8 @@ export class StageWriter {
     this.useCTE = useCTE;
   }
 
-  private getNextName() {
-    return `${this.stagePrefix}${this.root().stageNumber++}`;
+  getName(id: number) {
+    return `${this.stagePrefix}${id}`;
   }
 
   root(): StageWriter {
@@ -44,7 +43,7 @@ export class StageWriter {
   addStage(sql: string): string {
     if (this.useCTE) {
       this.withs.push(sql);
-      return this.getNextName();
+      return this.getName(this.withs.length - 1);
     } else {
       this.withs[0] = sql;
       return indent(`\n(${sql})\n`);
@@ -122,12 +121,12 @@ export class StageWriter {
     if (!this.useCTE) {
       return {sql: this.withs[0], lastStageName: this.withs[0]};
     }
-    let lastStageName = this.getNextName();
+    let lastStageName = this.getName(0);
     let prefix = 'WITH ';
     let w = '';
     for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
       const sql = this.withs[i];
-      lastStageName = this.getNextName();
+      lastStageName = this.getName(i);
       if (sql === undefined) {
         throw new Error(
           `Expected sql WITH to be present for stage ${lastStageName}.`
@@ -162,7 +161,7 @@ export class StageWriter {
       return (
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
-          this.getNextName(),
+          this.getName(this.withs.length - 1),
           getDialectFieldList(structDef),
           (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
         )
