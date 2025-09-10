@@ -1020,4 +1020,35 @@ describe('source:', () => {
       `).toTranslate();
     });
   });
+  test('next join dependency ordering', () => {
+    const m = model`
+      source: flights is _db_.table('malloytest.flights') extend {
+        join_one: origin_airport is _db_.table('malloytest.airports') on origin = origin_airport.code
+        join_one: dest_airport is _db_.table('malloytest.airports') on destination = dest_airport.code
+        join_one: carrier_info is _db_.table('malloytest.carriers') on carrier = carrier_info.code
+      }
+
+      run: _db_.table("malloytest.carriers") extend {
+        join_many: carrier_flights is flights on carrier_flights.carrier = code
+      } -> {
+        select:
+          code,
+          carrier_flights.origin_airport.city,
+          carrier_flights.dest_airport.state
+      }
+    `;
+    expect(m).toTranslate();
+    const query = m.translator.getQuery(0)?.pipeline[0];
+    expect(query).toBeDefined();
+    if (query) {
+      expect(query.type).toBe('project');
+      if (query.type === 'project') {
+        expect(query.activeJoins).toEqual([
+          {path: ['carrier_flights']},
+          {path: ['carrier_flights', 'origin_airport']},
+          {path: ['carrier_flights', 'dest_airport']},
+        ]);
+      }
+    }
+  });
 });
