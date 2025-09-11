@@ -633,7 +633,7 @@ ${indent(sql)}
         const name = f.as ?? f.name;
         rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
         const elType = this.malloyTypeToSQLType(f);
-        rowTypes.push(`${name} ${elType}`);
+        rowTypes.push(`${this.sqlMaybeQuoteIdentifier(name)} ${elType}`);
       }
     }
     return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;
