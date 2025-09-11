@@ -450,13 +450,28 @@ export class TestSelect {
       return selects[0] + '\n';
     }
 
-    // Multiple rows: wrap with ordering
+    // Multiple rows: double wrap - inner for sorting, outer for column selection
     const quotedColumns = columnList.map(col =>
       this.dialect.sqlMaybeQuoteIdentifier(col)
     );
     const innerQuery = selects.join('\nUNION ALL ');
-    const outerSelect = `SELECT ${quotedColumns.join(', ')}`;
-    const sql = `${outerSelect}\nFROM (\n${innerQuery}\n) AS t\nORDER BY ${rowIdColumn}\n`;
+
+    // Generate ORDER BY based on dialect preference
+    let orderByClause: string;
+    if (this.dialect.orderByClause === 'ordinal') {
+      // ORDER BY position (column count + 1 since row_id is last)
+      orderByClause = `ORDER BY ${columnList.length + 1}`;
+    } else if (this.dialect.orderByClause === 'output_name') {
+      // ORDER BY column name
+      orderByClause = `ORDER BY ${rowIdColumn}`;
+    } else {
+      // ORDER BY expression - just use column name (qualified would be t_sorted.__ts_row_id__)
+      orderByClause = `ORDER BY ${rowIdColumn}`;
+    }
+
+    const sql = `SELECT ${quotedColumns.join(
+      ', '
+    )}\nFROM (\n  SELECT *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
 
     return sql;
   }
