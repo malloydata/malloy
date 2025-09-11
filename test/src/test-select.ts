@@ -392,26 +392,33 @@ export class TestSelect {
       throw new Error('generate() requires a non-empty array of rows');
     }
 
-    // Collect all column names from all rows
-    const allColumns = new Set<string>();
+    // Collect all column names from all rows (preserving order from first occurrence)
+    const columnList: string[] = [];
+    const columnSet = new Set<string>();
     for (const row of rows) {
       for (const colName of Object.keys(row)) {
-        allColumns.add(colName);
+        if (!columnSet.has(colName)) {
+          columnList.push(colName);
+          columnSet.add(colName);
+        }
       }
     }
+
+    const needsOrdering = rows.length > 1;
+    const rowIdColumn = this.dialect.sqlMaybeQuoteIdentifier('__ts_row_id__');
 
     // Generate SELECT statements
     const selects = rows.map((row, idx) => {
       const fields: string[] = [];
 
-      for (const colName of allColumns) {
+      for (const colName of columnList) {
         const value = row[colName] ?? null;
         const typedValue = this.toTypedValue(value);
         const sql = this.exprToSQL(typedValue.expr);
-        const quotedName = this.dialect.sqlMaybeQuoteIdentifier(colName);
 
         if (idx === 0) {
           // First row: include column aliases and explicit casts if needed
+          const quotedName = this.dialect.sqlMaybeQuoteIdentifier(colName);
           if (typedValue.needsCast) {
             const sqlType = this.dialect.malloyTypeToSQLType(
               typedValue.malloyType
@@ -426,10 +433,32 @@ export class TestSelect {
         }
       }
 
+      // Add row ID at the end if we have multiple rows
+      if (needsOrdering) {
+        if (idx === 0) {
+          fields.push(`${idx} AS ${rowIdColumn}`);
+        } else {
+          fields.push(`${idx}`);
+        }
+      }
+
       return `SELECT ${fields.join(', ')}`;
     });
 
-    return selects.join('\nUNION ALL ') + '\n';
+    // Single row: just return the SELECT
+    if (!needsOrdering) {
+      return selects[0] + '\n';
+    }
+
+    // Multiple rows: wrap with ordering
+    const quotedColumns = columnList.map(col =>
+      this.dialect.sqlMaybeQuoteIdentifier(col)
+    );
+    const innerQuery = selects.join('\nUNION ALL ');
+    const outerSelect = `SELECT ${quotedColumns.join(', ')}`;
+    const sql = `${outerSelect}\nFROM (\n${innerQuery}\n) AS t\nORDER BY ${rowIdColumn}\n`;
+
+    return sql;
   }
 
   // ============= Private helper methods =============
