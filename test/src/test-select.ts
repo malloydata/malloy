@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-/**
- * TestSelect - Generate dialect-specific SQL from JavaScript objects for testing
- *
- * Usage:
- *   const testSelect = new TestSelect(dialect);
- *   const userSQL = testSelect.generate([
- *     {id: testSelect.mk_bigint(1), name: "bob", score: testSelect.mk_float(85.5)},
- *     {id: testSelect.mk_bigint(2), name: "alice", score: testSelect.mk_float(92.0)}
- *   ]);
- */
-
 import type {
   Dialect,
   QueryInfo,
@@ -27,7 +16,6 @@ import type {
 
 import {constantExprToSQL, mkFieldDef} from '@malloydata/malloy';
 
-// Value with a known type
 interface TypedValue {
   expr: Expr;
   malloyType: AtomicTypeDef;
@@ -35,7 +23,7 @@ interface TypedValue {
 }
 
 // Valid value types for inferrable types
-type PrimitiveValue = string | number | boolean | null | undefined;
+type PrimitiveValue = string | number | boolean | null;
 
 // Test data value types
 type TestValue =
@@ -50,6 +38,92 @@ interface TestDataRow {
   [columnName: string]: TestValue;
 }
 
+/**
+ * TestSelect - Generate dialect-specific SQL test data from JavaScript objects
+ *
+ * TestSelect provides a simple, type-safe way to generate SQL SELECT statements
+ * that produce test data across different SQL dialects. It handles dialect-specific
+ * differences in literal syntax, type casting, and complex types (arrays/records).
+ *
+ * @example Basic usage with inferred types
+ * ```typescript
+ * const ts = new TestSelect(dialect);
+ * const sql = ts.generate(
+ *   {id: 1, name: "Alice", active: true},
+ *   {id: 2, name: "Bob", active: false}
+ * );
+ * // Generates: SELECT 1 AS "id", 'Alice' AS "name", true AS "active"
+ * //           UNION ALL SELECT 2, 'Bob', false
+ * ```
+ *
+ * @example Explicit type hints for precision
+ * ```typescript
+ * const sql = ts.generate({
+ *   id: ts.mk_int(1),
+ *   score: ts.mk_float(95.5),    // Forces float type (gets CAST)
+ *   name: ts.mk_string("Test"),
+ *   active: ts.mk_bool(true),
+ *   created: ts.mk_timestamp('2024-01-15 10:30:00'),
+ *   birthday: ts.mk_date('1990-05-20')
+ * });
+ * ```
+ *
+ * @example Handling NULL values with proper typing
+ * ```typescript
+ * const sql = ts.generate({
+ *   id: ts.mk_int(1),
+ *   email: ts.mk_string(null),    // Typed NULL - generates CAST(NULL AS VARCHAR)
+ *   score: ts.mk_float(null)      // Typed NULL - generates CAST(NULL AS FLOAT)
+ * });
+ * ```
+ *
+ * @example Arrays and records (for dialects that support them)
+ * ```typescript
+ * const sql = ts.generate({
+ *   tags: ['red', 'blue', 'green'],              // Inferred array
+ *   scores: ts.mk_array([85, 90, 95]),          // Explicit array
+ *   address: {street: '123 Main', city: 'NYC'}, // Inferred record
+ *   user: ts.mk_record({                        // Explicit record
+ *     name: ts.mk_string('Alice'),
+ *     age: ts.mk_int(30)
+ *   })
+ * });
+ * ```
+ *
+ * @example Arrays of records (repeated records in Malloy)
+ * ```typescript
+ * const sql = ts.generate({
+ *   orders: [
+ *     {item: 'Widget', qty: 5, price: 10.00},
+ *     {item: 'Gadget', qty: 2, price: 25.00}
+ *   ]
+ * });
+ * ```
+ *
+ * Type inference rules:
+ * - JavaScript number → INTEGER if whole number, FLOAT if decimal
+ * - JavaScript string → VARCHAR/TEXT (dialect decides)
+ * - JavaScript boolean → BOOLEAN
+ * - JavaScript Date → TIMESTAMP
+ * - JavaScript array → ARRAY (if supported by dialect)
+ * - JavaScript object → RECORD/STRUCT (if supported by dialect)
+ * - null/undefined → defaults to STRING type (use mk_* functions for typed nulls)
+ *
+ * CAST behavior:
+ * - NULLs always get CAST to ensure proper typing
+ * - Floats always get CAST to ensure they're treated as floating point
+ * - Other types generally don't need CAST (dialect handles conversion)
+ *
+ * Important notes:
+ * - First row determines column types when using inference
+ * - Use mk_* functions for nulls in first row to ensure correct types
+ * - Not all dialects support arrays and records
+ * - Timestamps are generated in UTC by default
+ * - Large integers can be passed as strings: mk_int('9223372036854775807')
+ *
+ * @param dialect - The SQL dialect to generate for (from Malloy)
+ * @param queryTimezone - Timezone for timestamp literals (default: 'UTC')
+ */
 export class TestSelect {
   private qi: QueryInfo;
 
@@ -367,9 +441,12 @@ export class TestSelect {
     }
 
     // Handle null/undefined
-    if (value === null || value === undefined) {
-      // Default to string type for bare nulls
-      return this.mk_string(null);
+    if (value === null) {
+      return {
+        expr: nullExpr,
+        malloyType: {type: 'sql native'}, // to ensure a cast happens
+        needsCast: true,
+      };
     }
 
     // Infer from JavaScript type
@@ -393,7 +470,7 @@ export class TestSelect {
       return this.mk_array(value);
     }
 
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && Object.keys(value).length > 0) {
       return this.mk_record(value);
     }
 
