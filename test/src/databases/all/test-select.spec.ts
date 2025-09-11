@@ -117,10 +117,10 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
     ]);
   });
 
-  // postfgres doesn't have literal records that Malloy can read
+  // postgres doesn't have literal records that Malloy can read
   // so the current code doesn't generate SELECT statements that
-  // we can use
-  if (db !== 'postgres') {
+  // we can use, and obviously we need nested data
+  if (db !== 'postgres' && runtime.dialect.supportsNesting) {
     describe('tests involving records', () => {
       // Record Tests - Inferred
       test(`${db} simple inferred records`, async () => {
