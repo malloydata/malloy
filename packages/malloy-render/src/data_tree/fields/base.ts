@@ -34,7 +34,7 @@ export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
   protected readonly metadataTag: Tag;
-  public readonly valueSet = new Set<string | number | boolean>();
+  public readonly valueSet = new Set<string | number | bigint | boolean>();
   protected plugins: RenderPluginInstance[] = [];
   protected _renderAs = '';
 
@@ -236,11 +236,11 @@ export abstract class FieldBase {
     return this.tag.has('hidden');
   }
 
-  get minNumber(): number | undefined {
+  get minNumber(): number | bigint | undefined {
     return undefined;
   }
 
-  get maxNumber(): number | undefined {
+  get maxNumber(): number | bigint | undefined {
     return undefined;
   }
 
