@@ -11,17 +11,18 @@ import {TestSelect} from '../../test-select';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
+  const d = runtime.dialect;
   const ts = new TestSelect(runtime.dialect);
 
   // Basic Type Tests
   test(`${db} inferred basic types`, async () => {
     const sql = ts.generate(
-      {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},
-      {t_int: 2, t_string: 'b', t_bool: false, t_float: 2.5}
+      {t_int: 1, t_string: 'a', t_bool: d.resultBoolean(true), t_float: 1.5},
+      {t_int: 2, t_string: 'b', t_bool: d.resultBoolean(false), t_float: 2.5}
     );
     await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
-      {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},
-      {t_int: 2, t_string: 'b', t_bool: false, t_float: 2.5},
+      {t_int: 1, t_string: 'a', t_bool: d.resultBoolean(true), t_float: 1.5},
+      {t_int: 2, t_string: 'b', t_bool: d.resultBoolean(false), t_float: 2.5},
     ]);
   });
 
@@ -33,7 +34,12 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       t_bool: ts.mk_bool(true),
     });
     await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
-      {t_int: 1, t_float: 1.5, t_string: 'hello', t_bool: true},
+      {
+        t_int: 1,
+        t_float: 1.5,
+        t_string: 'hello',
+        t_bool: d.resultBoolean(true),
+      },
     ]);
   });
 
@@ -161,7 +167,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
           }),
         });
         await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
-          person: {name: 'Alice', age: 30, active: true},
+          person: {name: 'Alice', age: 30, active: d.resultBoolean(true)},
         });
       });
 
