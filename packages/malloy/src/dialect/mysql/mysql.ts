@@ -137,7 +137,7 @@ export class MySQLDialect extends Dialect {
       case 'string':
         return 'CHAR';
       case 'boolean':
-        return 'TINYINT(1)';
+        return 'INTEGER';
       case 'record':
       case 'array':
         return 'JSON';

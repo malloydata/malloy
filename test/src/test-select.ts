@@ -468,6 +468,8 @@ export class TestSelect {
       // ORDER BY expression - just use column name (qualified would be t_sorted.__ts_row_id__)
       orderByClause = `ORDER BY ${rowIdColumn}`;
     }
+    // Presto/Trino ignores ORDER BY on a subquery without LIMIT
+    orderByClause += ` LIMIT ${rows.length}`;
 
     const sql = `SELECT ${quotedColumns.join(
       ', '
