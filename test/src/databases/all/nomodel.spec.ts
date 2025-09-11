@@ -937,7 +937,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           select: *
         }
 
-        query: u is ${databaseName}.sql("""%{st0 } UNION ALL %{st1 }""") -> {
+        query: u is ${databaseName}.sql("""SELECT * FROM %{st0 } as x UNION ALL %{st1 }""") -> {
           select: *
         }
         // # test.debug

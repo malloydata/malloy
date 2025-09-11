@@ -122,8 +122,11 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   ): QueryResults {
     const malloy = '';
 
+    // If this query is being written as part of a SQL block don't use CTE (WITH ...)
+    const noCTE = prepareResultOptions && prepareResultOptions.isPartialQuery;
+
     if (!stageWriter) {
-      stageWriter = new StageWriter(true, undefined);
+      stageWriter = new StageWriter(!noCTE, undefined);
     }
 
     const turtleDef: TurtleDefPlusFilters = {
@@ -167,6 +170,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );
     }
+    // console.log('---', stageWriter.combineStages(true).sql, '---');
     return {
       lastStageName: ret.lastStageName,
       malloy,

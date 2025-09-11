@@ -155,7 +155,7 @@ export class StageWriter {
     }
     const udfs = this.udfs.join('\n');
     const pdts = this.pdts.join('\n');
-    const sql = this.combineStages(false).sql;
+    const sql = this.useCTE ? this.combineStages(false).sql : '';
     return udfs + pdts + sql + this.withs[lastStageNum];
   }
 
