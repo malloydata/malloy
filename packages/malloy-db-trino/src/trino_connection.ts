@@ -246,9 +246,8 @@ export abstract class TrinoPrestoConnection
         retRow[field.name] = this.convertRow(field.fields, row[i]);
       } else if (isRepeatedRecord(field)) {
         retRow[field.name] = this.convertNest(field.fields, row[i]);
-      } else if (field.type === 'array') {
-        // mtoy todo don't understand this line actually
-        retRow[field.name] = this.convertNest(field.fields.slice(0, 1), row[i]);
+      } else if (isBasicArray(field)) {
+        retRow[field.name] = this.unpackArray([], row[i]);
       } else {
         retRow[field.name] = row[i] ?? null;
       }
