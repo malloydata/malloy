@@ -133,14 +133,16 @@ export class MySQLDialect extends Dialect {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
-        return malloyType.numberType === 'integer' ? 'INTEGER' : 'DOUBLE';
+        return malloyType.numberType === 'integer' ? 'SIGNED' : 'DOUBLE';
       case 'string':
         return 'CHAR';
       case 'boolean':
-        return 'INTEGER';
+        return 'SIGNED';
       case 'record':
       case 'array':
         return 'JSON';
+      case 'timestamp':
+        return 'DATETIME';
       default:
         return malloyType.type;
     }

@@ -123,42 +123,44 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
     ]);
   });
 
-  // postgres doesn't have literal records that Malloy can read
-  // so the current code doesn't generate SELECT statements that
-  // we can use, and obviously we need nested data
-  if (db !== 'postgres' && runtime.dialect.supportsNesting) {
-    describe('tests involving records', () => {
-      // Record Tests - Inferred
-      test(`${db} simple inferred records`, async () => {
-        const sql = ts.generate({
-          person: {name: 'Alice', age: 30},
-        });
-        await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
-          runtime,
-          {
-            'person/name': 'Alice',
-            'person/age': 30,
-          }
-        );
-      });
+  // mysql and postgres don't have literal records that Malloy can read
+  // so when reading a record, it will just see json
+  const testRecords = db !== 'mysql' && db !== 'postgres';
 
-      test(`${db} nested inferred records`, async () => {
-        const sql = ts.generate({
-          user: {
-            name: 'Bob',
-            address: {
-              street: '123 Main',
-              city: 'Boston',
-            },
+  describe('tests involving records', () => {
+    // Record Tests - Inferred
+    test.when(testRecords)(`${db} simple inferred records`, async () => {
+      const sql = ts.generate({
+        person: {name: 'Alice', age: 30},
+      });
+      await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
+        runtime,
+        {
+          'person/name': 'Alice',
+          'person/age': 30,
+        }
+      );
+    });
+
+    test.when(testRecords)(`${db} nested inferred records`, async () => {
+      const sql = ts.generate({
+        user: {
+          name: 'Bob',
+          address: {
+            street: '123 Main',
+            city: 'Boston',
           },
-        });
-        await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
-          user: {name: 'Bob', address: {street: '123 Main', city: 'Boston'}},
-        });
+        },
       });
+      await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
+        user: {name: 'Bob', address: {street: '123 Main', city: 'Boston'}},
+      });
+    });
 
-      // Record Tests - Explicit mk_record
-      test(`${db} explicit record creation with mk_record`, async () => {
+    // Record Tests - Explicit mk_record
+    test.when(testRecords)(
+      `${db} explicit record creation with mk_record`,
+      async () => {
         const sql = ts.generate({
           person: ts.mk_record({
             name: ts.mk_string('Alice'),
@@ -169,62 +171,65 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
         await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
           person: {name: 'Alice', age: 30, active: d.resultBoolean(true)},
         });
-      });
+      }
+    );
 
-      test(`${db} nested records with mk_record`, async () => {
-        const sql = ts.generate({
-          user: ts.mk_record({
-            name: ts.mk_string('Bob'),
-            address: ts.mk_record({
-              street: ts.mk_string('123 Main'),
-              city: ts.mk_string('Boston'),
-              zip: ts.mk_int(12345),
-            }),
+    test.when(testRecords)(`${db} nested records with mk_record`, async () => {
+      const sql = ts.generate({
+        user: ts.mk_record({
+          name: ts.mk_string('Bob'),
+          address: ts.mk_record({
+            street: ts.mk_string('123 Main'),
+            city: ts.mk_string('Boston'),
+            zip: ts.mk_int(12345),
           }),
-        });
-        await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
-          user: {
-            name: 'Bob',
-            address: {street: '123 Main', city: 'Boston', zip: 12345},
+        }),
+      });
+      await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
+        user: {
+          name: 'Bob',
+          address: {street: '123 Main', city: 'Boston', zip: 12345},
+        },
+      });
+    });
+
+    test.when(testRecords)(`${db} records with arrays`, async () => {
+      const sql = ts.generate({
+        data: {
+          name: 'Test',
+          values: [1, 2, 3],
+        },
+      });
+      await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
+        data: {name: 'Test', values: [1, 2, 3]},
+      });
+    });
+
+    // Array of Records Tests - Inferred
+    test.when(testRecords)(`${db} inferred repeated records`, async () => {
+      const sql = ts.generate({
+        items: [
+          {sku: 'ABC', qty: 2},
+          {sku: 'DEF', qty: 3},
+        ],
+      });
+      await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
+        runtime,
+        [
+          {
+            items: [
+              {sku: 'ABC', qty: 2},
+              {sku: 'DEF', qty: 3},
+            ],
           },
-        });
-      });
+        ]
+      );
+    });
 
-      test(`${db} records with arrays`, async () => {
-        const sql = ts.generate({
-          data: {
-            name: 'Test',
-            values: [1, 2, 3],
-          },
-        });
-        await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
-          data: {name: 'Test', values: [1, 2, 3]},
-        });
-      });
-
-      // Array of Records Tests - Inferred
-      test(`${db} inferred repeated records`, async () => {
-        const sql = ts.generate({
-          items: [
-            {sku: 'ABC', qty: 2},
-            {sku: 'DEF', qty: 3},
-          ],
-        });
-        await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
-          runtime,
-          [
-            {
-              items: [
-                {sku: 'ABC', qty: 2},
-                {sku: 'DEF', qty: 3},
-              ],
-            },
-          ]
-        );
-      });
-
-      // Array of Records Tests - Explicit
-      test(`${db} array of records with mk_array and mk_record`, async () => {
+    // Array of Records Tests - Explicit
+    test.when(testRecords)(
+      `${db} array of records with mk_array and mk_record`,
+      async () => {
         const sql = ts.generate({
           items: ts.mk_array([
             ts.mk_record({sku: ts.mk_string('ABC'), qty: ts.mk_int(2)}),
@@ -242,9 +247,9 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
             },
           ]
         );
-      });
-    });
-  }
+      }
+    );
+  });
 
   // Date/Time Tests
   test(`${db} date literals`, async () => {
@@ -285,4 +290,8 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       {d: null, ts: null},
     ]);
   });
+});
+
+afterAll(async () => {
+  await runtimes.closeAll();
 });
