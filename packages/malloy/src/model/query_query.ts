@@ -944,7 +944,7 @@ export class QueryQuery extends QueryField {
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
-        for (const childJoin of ji.children) {
+        for (const childJoin of this.sortJoinChildren(ji.children)) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias,
@@ -1002,10 +1002,23 @@ export class QueryQuery extends QueryField {
     } else {
       throw new Error(`Join type not implemented ${qs.structDef.type}`);
     }
-    for (const childJoin of ji.children) {
+    for (const childJoin of this.sortJoinChildren(ji.children)) {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
     }
     return s;
+  }
+
+  /**
+   * Sort join children to ensure array joins are processed before table joins that might reference them
+   */
+  private sortJoinChildren(children: JoinInstance[]): JoinInstance[] {
+    return [...children].sort((a, b) => {
+      const aIsArray = a.queryStruct.structDef.type === 'array';
+      const bIsArray = b.queryStruct.structDef.type === 'array';
+      if (aIsArray && !bIsArray) return -1;
+      if (!aIsArray && bIsArray) return 1;
+      return 0;
+    });
   }
 
   // BigQuery has wildcard psudo columns that are treated differently
@@ -1058,17 +1071,7 @@ export class QueryQuery extends QueryField {
       throw new Error('Internal Error, queries must start from a basetable');
     }
 
-    // Sort children to ensure array joins are processed before table joins that might reference them
-    // const sortedChildren = [...ji.children].sort((a, b) => {
-    //   const aIsArray = a.queryStruct.structDef.type === 'array';
-    //   const bIsArray = b.queryStruct.structDef.type === 'array';
-    //   if (aIsArray && !bIsArray) return -1;
-    //   if (!aIsArray && bIsArray) return 1;
-    //   return 0;
-    // });
-
-    //    for (const childJoin of sortedChildren) {
-    for (const childJoin of ji.children) {
+    for (const childJoin of this.sortJoinChildren(ji.children)) {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, 0);
     }
     return s;
