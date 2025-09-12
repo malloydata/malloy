@@ -405,7 +405,10 @@ export class TestSelect {
     }
 
     const needsOrdering = rows.length > 1;
-    const rowIdColumn = this.dialect.sqlMaybeQuoteIdentifier('__ts_row_id__');
+    // Two reasons to quote a column name, neither matter here:
+    // 1) snowflake uppercases unquoted names
+    // 2) it is a reserved word in the dialect
+    const rowIdColumn = '__ts_n__';
 
     // Generate SELECT statements
     const selects = rows.map((row, idx) => {
@@ -451,9 +454,9 @@ export class TestSelect {
     }
 
     // Multiple rows: double wrap - inner for sorting, outer for column selection
-    const quotedColumns = columnList.map(col =>
-      this.dialect.sqlMaybeQuoteIdentifier(col)
-    );
+    const quotedColumns = columnList
+      .map(col => this.dialect.sqlMaybeQuoteIdentifier(col))
+      .join(', ');
     const innerQuery = selects.join('\nUNION ALL ');
 
     // Generate ORDER BY based on dialect preference
@@ -471,9 +474,7 @@ export class TestSelect {
     // Presto/Trino ignores ORDER BY on a subquery without LIMIT
     orderByClause += ` LIMIT ${rows.length}`;
 
-    const sql = `SELECT ${quotedColumns.join(
-      ', '
-    )}\nFROM (\n  SELECT *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
+    const sql = `SELECT ${quotedColumns}\nFROM (\n  SELECT *\n  FROM (\n${innerQuery}\n  ) AS t_sorted\n  ${orderByClause}\n) AS t_result\n`;
 
     return sql;
   }
