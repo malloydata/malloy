@@ -39,6 +39,7 @@ import {
   isJoinable,
   isJoined,
   isQuerySegment,
+  isRepeatedRecord,
   isSourceDef,
   isTurtle,
 } from '../model/malloy_types';
@@ -410,6 +411,7 @@ interface JoinDependency {
   path: string[];
   dependsOn: Set<string>;
   checked?: boolean;
+  onReferencesNestedData?: boolean;
 }
 
 function getJoin(
@@ -449,7 +451,12 @@ function findActiveJoins(
 
     // Add this join's path to the sorted list after its dependencies
     if (dep) {
-      sorted.push({path: dep.path});
+      const usage: FieldUsage = {path: dep.path};
+      if (dep.onReferencesNestedData) {
+        usage.onReferencesNestedData = true;
+      }
+
+      sorted.push(usage);
     }
   };
 
@@ -536,9 +543,26 @@ function expandFieldUsage(
       const joinKey = pathToKey('join', joinPath);
       const thisDep = getJoin(activeJoinGraph, joinKey, joinPath);
 
-      if (isJoined(joinDef) && !thisDep.checked) {
+      const needsTracking = isJoined(joinDef) || isRepeatedRecord(joinDef);
+      if (needsTracking && !thisDep.checked) {
         thisDep.checked = true;
+
         const joinFieldUsage = getJoinFieldUsage(joinDef, joinPath);
+
+        if (
+          joinPath.length > 1 &&
+          (isJoined(joinDef) || isRepeatedRecord(joinDef))
+        ) {
+          const parentPath = joinPath.slice(0, -1);
+          const parentKey = pathToKey('join', parentPath);
+          const parentDep = activeJoinGraph[parentKey];
+
+          // The parent join's ON expression led us to this nested structure
+          // Mark it as needing complex SQL generation
+          if (parentDep && !parentDep.onReferencesNestedData) {
+            parentDep.onReferencesNestedData = true;
+          }
+        }
 
         // Add join's field dependencies to the queue
         for (const usage of joinFieldUsage) {

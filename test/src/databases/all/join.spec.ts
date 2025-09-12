@@ -24,6 +24,7 @@
 /* eslint-disable no-console */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
+import {TestSelect} from '../../test-select';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
@@ -318,4 +319,66 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       `).matchesRows(runtime, {pick_a1: [1]});
     }
   );
+  test('join ON expression references nested join dimension', async () => {
+    const ts = new TestSelect(runtime.dialect);
+    const usrSQL = ts.generate({id: 1, email: 'email@co.com'});
+    const resSQL = ts.generate({id: 1, user_id: 1});
+    const msgSQL = ts.generate({id: 1, msg_email: 'email@co.com'});
+    await expect(`
+      source: usr is ${databaseName}.sql("""${usrSQL}""")
+      source: res is ${databaseName}.sql("""${resSQL}""") extend {
+        join_one: usr on usr.id = user_id
+        dimension: usr_email is usr.email
+      }
+      source: msg is ${databaseName}.sql("""${msgSQL}""") extend {
+        join_many: res on res.usr_email = msg_email
+      }
+      run: msg -> {
+        group_by: msg_email, res.usr_email
+      }
+    `).malloyResultMatches(runtime, {
+      msg_email: 'email@co.com',
+      usr_email: 'email@co.com',
+    });
+  });
+  test('array field in joined source used in join condition', async () => {
+    const ts = new TestSelect(runtime.dialect);
+
+    // Mock GA4 events table with event_params array
+    const eventsSQL = ts.generate(
+      {
+        event_name: 'page_view',
+        event_params: [
+          {key: 'page_location', value: '/home'},
+          {key: 'page_title', value: 'Home Page'},
+        ],
+      },
+      {
+        event_name: 'user_engagement',
+        event_params: [
+          {key: 'engagement_time', value: '1000'},
+          {key: 'page_view', value: 'true'}, // This matches event_name from row 1
+        ],
+      },
+      {
+        event_name: 'scroll',
+        event_params: [{key: 'percent', value: '50'}],
+      }
+    );
+
+    await expect(`
+    source: ga4_1 is duckdb.sql("""${eventsSQL}""") extend {
+      dimension: event_param is event_params.key
+    }
+
+    source: ga4_2 is duckdb.sql("""${eventsSQL}""") extend {
+      join_one: ga4 is ga4_1 on event_name = ga4.event_param
+    }
+
+    run: ga4_2 -> {
+      aggregate: cnt is count()
+      where: ga4.event_param is not null
+    }
+  `).malloyResultMatches(runtime, {cnt: 1}); // Should match 'page_view' = 'page_view'
+  });
 });

@@ -1051,4 +1051,54 @@ describe('source:', () => {
       }
     }
   });
+  test('join ON expression sets onReferencesNestedData flag', () => {
+    const t = model`
+      source: usr is a extend {
+        rename: id is ai
+        dimension: email is concat(astr, ".com")
+      }
+      source: res is a extend {
+        rename: user_id is ai
+        join_one: usr on usr.id = user_id
+        dimension: usr_email is usr.email
+      }
+      source: msg is a extend {
+        rename: id is ai
+        dimension: msg_email is concat(astr, '.com')
+        join_many: res on msg_email = res.usr_email
+      }
+      run: msg -> {
+        select: *, res.usr_email
+      }
+    `;
+
+    expect(t).toTranslate();
+
+    const query = t.translator.getQuery(0);
+    expect(query).toBeDefined();
+    if (query) {
+      const firstSegment = query.pipeline[0];
+      expect(firstSegment.type).toBe('project');
+      if (firstSegment.type === 'project') {
+        expect(firstSegment.activeJoins).toBeDefined();
+
+        // Find the 'res' join in activeJoins
+        const resJoin = firstSegment.activeJoins?.find(
+          j => j.path.length === 1 && j.path[0] === 'res'
+        );
+
+        // The 'res' join should have onReferencesChildren set to true
+        // because its ON expression uses res.usr_email which expands to usr.email
+        expect(resJoin).toBeDefined();
+        expect(resJoin?.onReferencesNestedData).toBe(true);
+
+        // The 'usr' join (nested within res) should NOT have the flag
+        const usrJoin = firstSegment.activeJoins?.find(
+          j => j.path.length === 2 && j.path[0] === 'res' && j.path[1] === 'usr'
+        );
+        expect(usrJoin).toBeDefined();
+        expect(usrJoin?.onReferencesNestedData).toBeUndefined();
+      }
+    }
+  });
 });
