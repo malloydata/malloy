@@ -919,6 +919,34 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).malloyResultMatches(runtime, {'fun.t1': 52});
   });
 
+  // not sure this works on all dialect.
+  it("stage names don't conflict- duckdb", async () => {
+    await expect(`
+        source: airports is ${databaseName}.table('malloytest.state_facts') extend {
+        }
+
+        query: st0 is airports -> {
+          select: state
+        } -> {
+          select: *
+        }
+
+        query: st1 is airports -> {
+          select: state
+        } -> {
+          select: *
+        }
+
+        query: u is ${databaseName}.sql("""SELECT * FROM %{st0 } as x UNION ALL %{st1 }""") -> {
+          select: *
+        }
+        // # test.debug
+        run: u -> {
+          aggregate: c is count()
+        }
+    `).malloyResultMatches(runtime, {c: 102});
+  });
+
   const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
 
   it(`sql as source - ${databaseName}`, async () => {

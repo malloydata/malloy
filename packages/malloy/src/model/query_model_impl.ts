@@ -122,8 +122,21 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   ): QueryResults {
     const malloy = '';
 
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+    const queryStruct = this.getStructFromRef(
+      structRef,
+      query.sourceArguments,
+      prepareResultOptions
+    );
+
+    // If this query is being written as part of a SQL block don't use CTE (WITH ...)
+    const noCTE =
+      prepareResultOptions &&
+      prepareResultOptions.isPartialQuery &&
+      queryStruct.dialect.name !== 'postgres'; // postgres does weird stuff with final stages that won't work here.
+
     if (!stageWriter) {
-      stageWriter = new StageWriter(true, undefined);
+      stageWriter = new StageWriter(!noCTE, undefined);
     }
 
     const turtleDef: TurtleDefPlusFilters = {
@@ -133,15 +146,9 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       filterList: query.filterList,
     };
 
-    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
-
     const q = QueryQuery.makeQuery(
       turtleDef,
-      this.getStructFromRef(
-        structRef,
-        query.sourceArguments,
-        prepareResultOptions
-      ),
+      queryStruct,
       stageWriter,
       isJoinedSubquery,
       (name: string) => this.structs.get(name)
@@ -167,6 +174,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );
     }
+    // console.log('---', stageWriter.combineStages(true).sql, '---');
     return {
       lastStageName: ret.lastStageName,
       malloy,

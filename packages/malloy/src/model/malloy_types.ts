@@ -1800,6 +1800,7 @@ export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
   materializedTablePrefix?: string;
   defaultRowLimit?: number;
+  isPartialQuery?: boolean; // Query is being used as a sql_block
 }
 
 type UTD =

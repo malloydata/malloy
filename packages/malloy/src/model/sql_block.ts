@@ -53,10 +53,12 @@ export function compileSQLInterpolation(
         segment,
         {
           defaultRowLimit: undefined,
+          isPartialQuery: true,
         },
         false
       ).sql;
       selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
+      // console.log(selectStr);
       parenAlready = false;
     }
   }
