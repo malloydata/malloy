@@ -106,9 +106,9 @@ function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
     case 'number':
       return malloyType.numberType === 'integer' ? 'INT' : 'DOUBLE';
     case 'string':
-      return 'CHAR(255)';  // JSON_TABLE needs a length
+      return 'CHAR(255)'; // JSON_TABLE needs a length
     case 'boolean':
-      return 'INT';  // or TINYINT(1) if you prefer
+      return 'INT'; // or TINYINT(1) if you prefer
     case 'record':
     case 'array':
       return 'JSON';
