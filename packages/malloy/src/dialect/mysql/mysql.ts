@@ -101,6 +101,24 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'tinyint(1)': {type: 'boolean'},
 };
 
+function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
+  switch (malloyType.type) {
+    case 'number':
+      return malloyType.numberType === 'integer' ? 'INT' : 'DOUBLE';
+    case 'string':
+      return 'CHAR(255)';  // JSON_TABLE needs a length
+    case 'boolean':
+      return 'INT';  // or TINYINT(1) if you prefer
+    case 'record':
+    case 'array':
+      return 'JSON';
+    case 'timestamp':
+      return 'DATETIME';
+    default:
+      return malloyType.type.toUpperCase();
+  }
+}
+
 export class MySQLDialect extends Dialect {
   name = 'mysql';
   defaultNumberType = 'DOUBLE PRECISION';
@@ -228,10 +246,11 @@ export class MySQLDialect extends Dialect {
       return 'JSON';
     } else return t;
   }
+
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
-      let fType = this.malloyTypeToSQLType(f.typeDef);
+      let fType = malloyTypeToJSONTableType(f.typeDef);
       if (
         f.typeDef.type === 'sql native' &&
         f.typeDef.rawType &&
