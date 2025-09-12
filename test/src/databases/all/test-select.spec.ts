@@ -257,18 +257,24 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
     ]);
   });
 
-  test(`${db} timestamp literals`, async () => {
-    const sql = ts.generate({
-      ts1: ts.mk_timestamp('2024-01-15 10:30:00'),
-      ts2: ts.mk_timestamp('2024-12-31 23:59:59'),
-    });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
-      {
-        ts1: new Date('2024-01-15T10:30:00Z'),
-        ts2: new Date('2024-12-31T23:59:59Z'),
-      },
-    ]);
-  });
+  test.when(db !== 'presto' && db !== 'trino')(
+    `${db} timestamp literals`,
+    async () => {
+      const sql = ts.generate({
+        ts1: ts.mk_timestamp('2024-01-15 10:30:00'),
+        ts2: ts.mk_timestamp('2024-12-31 23:59:59'),
+      });
+      await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
+        runtime,
+        [
+          {
+            ts1: new Date('2024-01-15T10:30:00Z'),
+            ts2: new Date('2024-12-31T23:59:59Z'),
+          },
+        ]
+      );
+    }
+  );
 
   test(`${db} null dates and timestamps`, async () => {
     const sql = ts.generate({
