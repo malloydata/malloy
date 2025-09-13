@@ -1192,6 +1192,7 @@ export interface FieldUsage {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
+  onReferencesNestedData?: boolean;
 }
 
 export function bareFieldUsage(fu: FieldUsage): boolean {
