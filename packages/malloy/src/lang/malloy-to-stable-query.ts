@@ -105,7 +105,12 @@ export class MalloyToQuery
     cx: HasAnnotations
   ): Malloy.Annotation[] | undefined {
     const annotations = cx.ANNOTATION().map(a => {
-      return {value: a.text};
+      // Strip trailing newline/EOF from annotation text but keep the '#' prefix
+      let value = a.text;
+      if (value.endsWith('\n')) {
+        value = value.slice(0, -1);
+      }
+      return {value};
     });
     return annotations.length > 0 ? annotations : undefined;
   }
@@ -161,7 +166,11 @@ export class MalloyToQuery
   visitRunStatement(pcx: parse.RunStatementContext): Malloy.Query | null {
     const defCx = pcx.topLevelAnonQueryDef();
     const definition = this.getQueryDefinition(defCx.sqExpr());
-    const annotations = this.getAnnotations(pcx.topLevelAnonQueryDef().tags());
+    const runAnnotations = this.getAnnotations(pcx.tags());
+    const defAnnotations = this.getAnnotations(
+      pcx.topLevelAnonQueryDef().tags()
+    );
+    const annotations = this.combineAnnotations(runAnnotations, defAnnotations);
     if (definition !== null) {
       return {
         annotations,
