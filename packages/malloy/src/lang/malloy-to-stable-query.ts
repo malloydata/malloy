@@ -172,7 +172,11 @@ export class MalloyToQuery
   visitRunStatement(pcx: parse.RunStatementContext): Malloy.Query | null {
     const defCx = pcx.topLevelAnonQueryDef();
     const definition = this.getQueryDefinition(defCx.sqExpr());
-    const annotations = this.getAnnotations(pcx.topLevelAnonQueryDef().tags());
+    const runAnnotations = this.getAnnotations(pcx.tags());
+    const defAnnotations = this.getAnnotations(
+      pcx.topLevelAnonQueryDef().tags()
+    );
+    const annotations = this.combineAnnotations(runAnnotations, defAnnotations);
     if (definition !== null) {
       return {
         annotations,
