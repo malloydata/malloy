@@ -105,12 +105,7 @@ export class MalloyToQuery
     cx: HasAnnotations
   ): Malloy.Annotation[] | undefined {
     const annotations = cx.ANNOTATION().map(a => {
-      // Strip trailing newline/EOF from annotation text but keep the '#' prefix
-      let value = a.text;
-      if (value.endsWith('\n')) {
-        value = value.slice(0, -1);
-      }
-      return {value};
+      return {value: a.text};
     });
     return annotations.length > 0 ? annotations : undefined;
   }

@@ -355,7 +355,7 @@ describe('Malloy to Stable Query', () => {
                 ],
               },
             },
-            annotations: [{value: "# bar_chart"}],
+            annotations: [{value: "# bar_chart\n"}],
           },
           logs: [],
         }
