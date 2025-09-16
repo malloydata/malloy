@@ -147,16 +147,16 @@ export function getXAxisSettings({
   chartWidth,
   xField,
   parentField,
-  parentTag,
   vegaConfig,
+  isSpark,
 }: {
   maxString: string;
   chartHeight: number;
   chartWidth: number;
   xField: Field;
   parentField: NestField;
-  parentTag: Tag;
   vegaConfig?: Config;
+  isSpark: boolean;
 }): XAxisSettings {
   let xAxisHeight = 0;
   let labelAngle = -90;
@@ -267,7 +267,7 @@ export function getXAxisSettings({
     titleSize: xTitleSize,
     titleBaseline: 'middle',
     titleY: xAxisHeight - titleArea / 2,
-    hidden: parentTag.text('size') === 'spark',
+    hidden: isSpark,
   };
 }
 
@@ -484,17 +484,18 @@ export function getChartLayoutSettings(
     }
   }
 
+  const isSpark =
+    tag.text('viz', 'size') === 'spark' || tag.text('size') === 'spark';
+
   const xAxisSettings = getXAxisSettings({
     maxString: xField.maxString!,
     chartHeight,
     chartWidth,
     xField,
     parentField: field,
-    parentTag: tag,
     vegaConfig: options.vegaConfig,
+    isSpark,
   });
-
-  const isSpark = tag.text('size') === 'spark';
 
   const padding = xAxisSettings.hidden
     ? {top: 0, left: 0, bottom: 0, right: 0}
