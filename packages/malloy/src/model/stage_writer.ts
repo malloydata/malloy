@@ -23,9 +23,15 @@ export class StageWriter {
 
   constructor(
     useCTE = true,
-    public parent: StageWriter | undefined
+    public parent: StageWriter | undefined,
+    isInnerQuery = false
   ) {
     this.useCTE = useCTE;
+    if (isInnerQuery) {
+      // Generate a short random ID for inner queries to avoid conflicts
+      const shortId = Math.random().toString(36).substring(2, 8);
+      this.stagePrefix = `__stage_${shortId}`;
+    }
   }
 
   getName(id: number) {

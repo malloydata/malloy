@@ -123,7 +123,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     const malloy = '';
 
     if (!stageWriter) {
-      stageWriter = new StageWriter(true, undefined);
+      stageWriter = new StageWriter(true, undefined, !emitFinalStage);
     }
 
     const turtleDef: TurtleDefPlusFilters = {
