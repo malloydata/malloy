@@ -96,10 +96,12 @@ export const FilterCompilers = {
       case '>':
       case '<':
       case '>=':
-      case '<=':
+      case '<=': {
+        const op = nc.not ? invertCompare(nc.operator) : nc.operator;
         return nc.values
-          .map(v => `${x} ${nc.operator} ${v}`)
+          .map(v => `${x} ${op} ${v}`)
           .join(nc.not ? ' AND ' : ' OR ');
+      }
       case 'range': {
         let startOp = nc.startOperator;
         let endOp = nc.endOperator;
@@ -127,14 +129,16 @@ export const FilterCompilers = {
   },
   booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
     switch (bc.operator) {
+      case 'true':
+        return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
       case 'false':
-        return `${x} = false`;
+        return bc.not
+          ? `COALESCE(${x} != false, true)`
+          : `COALESCE(${x} = false, false)`;
       case 'false_or_null':
-        return `${x} IS NULL OR ${x} = false`;
+        return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
       case 'null':
         return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
-      case 'true':
-        return x;
     }
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {

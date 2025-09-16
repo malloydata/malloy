@@ -319,6 +319,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: n; order_by: n asc
         }`).malloyResultMatches(nums, [{n: 0}, {n: 1}]);
     });
+    test('not <=1', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'not <=1'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(nums, [{n: 2}, {n: 3}, {n: 4}]);
+    });
   });
 
   const testBoolean = db.dialect.booleanType === 'supported';
@@ -364,6 +371,27 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           where: b ~ f'nOt NuLL'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
+    });
+    test.when(testBoolean)('not true', async () => {
+      await expect(`
+    run: facts -> {
+      where: b ~ f'not true'
+      select: t; order_by: t asc
+    }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+    });
+    test.when(testBoolean)('not false', async () => {
+      await expect(`
+    run: facts -> {
+      where: b ~ f'not false'
+      select: t; order_by: t asc
+    }`).malloyResultMatches(facts, [{t: 'true'}]);
+    });
+    test.when(testBoolean)('not =false', async () => {
+      await expect(`
+    run: facts -> {
+      where: b ~ f'not =false'
+      select: t; order_by: t asc
+    }`).malloyResultMatches(facts, [{t: 'null'}, {t: 'true'}]);
     });
     test.when(testBoolean)('empty boolean filter', async () => {
       await expect(`
