@@ -212,7 +212,7 @@ export const FilterCompilers = {
         const clauses = sc.members.map(c =>
           FilterCompilers.stringCompile(c, x, d)
         );
-        return clauses.join(' AND ');
+        return clauses.join(' OR ');
       }
       case ',': {
         /*

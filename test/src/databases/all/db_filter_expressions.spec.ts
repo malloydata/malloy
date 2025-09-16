@@ -183,6 +183,21 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: nm
         }`).malloyResultMatches(abc, got('xback'));
     });
+    test('string or with pipe', async () => {
+      await expect(`
+    run: abc -> {
+      where: s ~ f'abc | def'
+      select: nm; order_by: nm asc
+    }`).malloyResultMatches(abc, got('abc,def'));
+    });
+
+    test('string and with semicolon', async () => {
+      await expect(`
+    run: abc -> {
+      where: s ~ f'%b% ; %c'
+      select: nm; order_by: nm asc
+    }`).malloyResultMatches(abc, got('abc'));
+    });
   });
 
   describe('numeric filter expressions', () => {
