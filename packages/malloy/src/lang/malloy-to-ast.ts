@@ -713,21 +713,27 @@ export class MalloyToAST
     return this.astAt(el, pcx);
   }
 
-  visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
+  visitRenameEntry(pcx: parse.RenameEntryContext): ast.RenameField {
     const newName = pcx.fieldName(0);
     const oldName = pcx.fieldName(1);
     const rename = new ast.RenameField(
       getId(newName),
       this.getFieldName(oldName)
     );
+    const notes = this.getNotes(pcx.tags()).concat(
+      this.getIsNotes(pcx.isDefine())
+    );
+    rename.extendNote({notes});
     return this.astAt(rename, pcx);
   }
 
   visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.Renames {
     const accessLabel = this.getAccessLabel(pcx.accessLabel());
-    const rcxs = pcx.renameList().exploreRenameDef();
-    const renames = rcxs.map(rcx => this.visitExploreRenameDef(rcx));
+    const rcxs = pcx.renameList().renameEntry();
+    const renames = rcxs.map(rcx => this.visitRenameEntry(rcx));
     const stmt = new ast.Renames(renames, accessLabel);
+    const blockNotes = this.getNotes(pcx.tags());
+    stmt.extendNote({blockNotes});
     return this.astAt(stmt, pcx);
   }
 

@@ -230,7 +230,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     }
   }
 
-  enterExploreRenameDef(pcx: parser.ExploreRenameDefContext) {
+  enterExploreRenameDef(pcx: parser.RenameEntryContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldName()[0].text,

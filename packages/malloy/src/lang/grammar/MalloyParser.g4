@@ -167,7 +167,7 @@ exploreStatement
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
-  | accessLabel? RENAME renameList           # defExploreRename
+  | tags accessLabel? RENAME renameList      # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
   | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
@@ -196,11 +196,11 @@ defDimensions
   ;
 
 renameList
-  : exploreRenameDef (COMMA? exploreRenameDef)* COMMA?
+  : renameEntry (COMMA? renameEntry)* COMMA?
   ;
 
-exploreRenameDef
-  : fieldName isDefine fieldName
+renameEntry
+  : tags fieldName isDefine fieldName
   ;
 
 defList
