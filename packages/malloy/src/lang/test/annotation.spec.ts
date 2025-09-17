@@ -260,11 +260,15 @@ describe('document annotation', () => {
   });
   test('annotations and renamed fields', () => {
     const m = model`
-      source: inventory_items is a extend {
+      source: aplus is a extend {
+        # from_inherit
+        rename: _cost is af
+      }
+      source: inventory_items is aplus extend {
         # block
         rename:
           # b4name
-          cost_prep is af
+        cost_prep is _cost
       }
     `;
     expect(m).toTranslate();
@@ -273,6 +277,7 @@ describe('document annotation', () => {
     const cost_prep = getFieldDef(src!, 'cost_prep');
     expect(cost_prep).toBeDefined();
     expect(cost_prep!.annotation).matchesAnnotation({
+      inherits: {blockNotes: ['# from_inherit\n']},
       notes: ['# b4name\n'],
       blockNotes: ['# block\n'],
     });
