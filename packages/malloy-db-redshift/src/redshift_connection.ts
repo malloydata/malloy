@@ -47,6 +47,8 @@ import {
   FieldDef,
   ArrayDef,
   Expr,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -151,9 +153,15 @@ export class RedshiftConnection
   }
 
   async fetchSelectSchema(
-    sqlRef: SQLSourceDef
+    sqlRef: SQLSourceRequest
   ): Promise<SQLSourceDef | string> {
-    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
     const basicSchemaQuery = `DROP TABLE IF EXISTS ${tempTableName};
       CREATE TEMP TABLE ${tempTableName} AS ${sqlRef.selectStr};

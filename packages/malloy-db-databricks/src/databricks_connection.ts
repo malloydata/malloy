@@ -37,6 +37,8 @@ import {
   StreamingConnection,
   StructDef,
   mkArrayDef,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -126,9 +128,15 @@ export class DatabricksConnection
   }
 
   async fetchSelectSchema(
-    sqlRef: SQLSourceDef
+    sqlRef: SQLSourceRequest
   ): Promise<SQLSourceDef | string> {
-    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
 
     const infoQuery = [
       `CREATE OR REPLACE TEMP VIEW temp_schema_view AS
