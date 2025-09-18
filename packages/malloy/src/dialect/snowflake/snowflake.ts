@@ -363,16 +363,6 @@ ${indent(sql)}
     if (TD.eq(srcTypeDef, dstTypeDef)) {
       return src;
     }
-    if (cast.safe && !TD.isString(srcTypeDef)) {
-      // safe cast is only supported for a few combinations of src -> dst types
-      // so we will not support it in the general case
-      // see: https://docs.snowflake.com/en/sql-reference/functions/try_cast
-
-      throw new Error(
-        `Snowflake dialect doesn't support safe cast for a few types:
-        refer to: https://docs.snowflake.com/en/sql-reference/functions/try_cast`
-      );
-    }
 
     const tz = qtz(qi);
     // casting timestamps and dates
@@ -387,7 +377,10 @@ ${indent(sql)}
       return this.atTz(retExpr, tz);
     }
 
-    const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
+    // safe cast is only supported for a few combinations of src -> dst types
+    // so we will not support it in the general case
+    // see: https://docs.snowflake.com/en/sql-reference/functions/try_cast
+    const castFunc = cast.safe && TD.isString(srcTypeDef) ? 'TRY_CAST' : 'CAST';
     return `${castFunc}(${src} AS ${dstSQLType})`;
   }
 
