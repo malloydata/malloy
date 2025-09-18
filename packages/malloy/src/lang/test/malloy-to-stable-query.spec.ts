@@ -741,6 +741,40 @@ describe('Malloy to Stable Query', () => {
       });
     });
   });
+  describe('Render annotations', () => {
+    test('single render annotation', () => {
+      idempotent('# bar_chart\nrun: flights -> { group_by: carrier }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  'field': {
+                    'annotations': undefined,
+                    'expression': {
+                      'kind': 'field_reference',
+                      'name': 'carrier',
+                      'path': undefined,
+                    },
+                  },
+                  'kind': 'group_by',
+                  'name': undefined,
+                },
+              ],
+            },
+          },
+          annotations: [{value: '# bar_chart\n'}],
+        },
+        logs: [],
+      });
+    });
+  });
 });
 
 function idempotent(query: string, expected?: QueryAndLogs) {
