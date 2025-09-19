@@ -274,6 +274,33 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`symmetric sum and average large  - ${databaseName}`, async () => {
+    await expect(`
+      source: a is ${databaseName}.table('malloytest.airports') extend {
+        primary_key: code
+        dimension: big_elevation is elevation * 100000
+        measure:
+          total_elevation is elevation.sum()
+          average_elevation is floor(elevation.avg())
+          total_big_elevation is big_elevation.sum()
+          average_big_elevation is floor(big_elevation.avg())
+      }
+      query: two_rows is ${databaseName}.table('malloytest.state_facts') -> {select: state;  limit: 2}
+      source: b is two_rows extend {
+        join_cross: a on 1=1
+      }
+
+      run: b -> {aggregate: a.total_elevation, a.average_elevation, a.total_big_elevation, a.average_big_elevation}
+      // run: two_rows
+
+    `).malloyResultMatches(runtime, {
+      total_elevation: 22629146,
+      average_elevation: 1143,
+      total_big_elevation: 2262914600000,
+      average_big_elevation: 114329035,
+    });
+  });
+
   it(`limit - provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
