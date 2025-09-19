@@ -123,7 +123,7 @@ export class DatabricksDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
+    orderBy: string | undefined
   ): string {
     let fields = this.mapFields(fieldList);
 
@@ -539,16 +539,6 @@ export class DatabricksDialect extends Dialect {
       return src;
     }
 
-    // Databricks doesn't have a TRY_CAST equivalent, so we'll need to handle safe casting differently
-    if (cast.safe) {
-      // For safe casting in Databricks, we can use a CASE statement to handle NULL and invalid casts
-      return `CASE
-        WHEN ${src} IS NULL THEN NULL
-        WHEN TRY_CAST(${src} AS ${dstSQLType}) IS NOT NULL THEN CAST(${src} AS ${dstSQLType})
-        ELSE NULL
-      END`;
-    }
-
     // Handle special timestamp and date casting cases
     if (op === 'timestamp::date') {
       return `DATE(${src})`;
@@ -559,6 +549,15 @@ export class DatabricksDialect extends Dialect {
         return `to_utc_timestamp(TIMESTAMP(${src}), '${queryTZ}')`;
       }
       return `TIMESTAMP(${src})`;
+    }
+
+    if (cast.safe) {
+      // For safe casting in Databricks, we can use a CASE statement to handle NULL and invalid casts
+      return `CASE
+        WHEN ${src} IS NULL THEN NULL
+        WHEN TRY_CAST(${src} AS ${dstSQLType}) IS NOT NULL THEN CAST(${src} AS ${dstSQLType})
+        ELSE NULL
+      END`;
     }
 
     // Default case - standard CAST

@@ -161,7 +161,7 @@ export class RedshiftDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
+    orderBy: string | undefined
   ): string {
     let tail = '';
     const fields = this.mapFields(fieldList);
@@ -323,12 +323,9 @@ export class RedshiftDialect extends PostgresBase {
       df.op === '+' ? '' : '*-1'
     })::INT, (${df.kids.base.sql})::TIMESTAMP)`;
   }
-  // todo
+
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    if (cast.safe) {
-      throw new Error("Postgres dialect doesn't support Safe Cast");
-    }
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const {op, dstSQLType} = this.sqlCastPrep(cast);
 
     if (op === 'boolean::string') {
       const expr = cast.e.sql || '';
