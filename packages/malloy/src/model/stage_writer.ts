@@ -15,11 +15,13 @@ import {indent, generateHash, getDialectFieldList} from './utils';
 
 export class StageWriter {
   withs: string[] = [];
+  stageNames: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
   dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
+  stageNumber = 0;
 
   constructor(
     useCTE = true,
@@ -28,8 +30,13 @@ export class StageWriter {
     this.useCTE = useCTE;
   }
 
+  private nextName() {
+    const stageName = `${this.stagePrefix}${this.root().stageNumber++}`;
+    return stageName;
+  }
+
   getName(id: number) {
-    return `${this.stagePrefix}${id}`;
+    return this.stageNames[id];
   }
 
   root(): StageWriter {
@@ -43,7 +50,9 @@ export class StageWriter {
   addStage(sql: string): string {
     if (this.useCTE) {
       this.withs.push(sql);
-      return this.getName(this.withs.length - 1);
+      const stageName = this.nextName();
+      this.stageNames.push(stageName);
+      return stageName;
     } else {
       this.withs[0] = sql;
       return indent(`\n(${sql})\n`);
@@ -146,7 +155,7 @@ export class StageWriter {
     }
     const udfs = this.udfs.join('\n');
     const pdts = this.pdts.join('\n');
-    const sql = this.combineStages(false).sql;
+    const sql = this.useCTE ? this.combineStages(false).sql : '';
     return udfs + pdts + sql + this.withs[lastStageNum];
   }
 
