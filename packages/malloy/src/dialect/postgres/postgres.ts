@@ -258,7 +258,8 @@ export class PostgresDialect extends PostgresBase {
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+    //return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+    return `SELECT JSONB_AGG(${lastStageName}) FROM ${lastStageName}\n`;
   }
 
   sqlFinalStage(lastStageName: string, _fields: string[]): string {
