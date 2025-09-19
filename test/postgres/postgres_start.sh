@@ -2,7 +2,6 @@
 #
 # Setup postgres as a docker container
 #
-# 
 set -e
 
 rm -rf .tmp

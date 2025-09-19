@@ -1,5 +1,4 @@
 #! /bin/bash
-#
 
 # clear tmp files
 rm -rf .tmp
