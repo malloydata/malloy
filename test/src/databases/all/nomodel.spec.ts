@@ -920,7 +920,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   });
 
   // not sure this works on all dialect.
-  it("stage names don't conflict- duckdb", async () => {
+  it("stage names don't conflict- ${databaseName}", async () => {
     await expect(`
         source: airports is ${databaseName}.table('malloytest.state_facts') extend {
         }
