@@ -240,8 +240,8 @@ export function generateBarChartVegaSpecV2(
     chartWidth: chartSettings.plotWidth,
     xField,
     parentField: explore,
-    parentTag: tag,
     vegaConfig,
+    isSpark: false,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting

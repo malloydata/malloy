@@ -218,6 +218,9 @@ export class FieldInstanceResult implements FieldInstance {
    * Information about the query containing this result set. Invented
    * to pass on timezone information, but maybe more things will
    * eventually go in here.
+   *
+   * For nested queries, this walks up the FieldInstanceResult parent chain
+   * to find the most specific (innermost) query timezone that applies.
    * @returns QueryInfo
    */
   getQueryInfo(): QueryInfo {
@@ -230,6 +233,11 @@ export class FieldInstanceResult implements FieldInstance {
         return {queryTimezone};
       }
     }
+
+    if (this.parent) {
+      return this.parent.getQueryInfo();
+    }
+
     return {};
   }
 

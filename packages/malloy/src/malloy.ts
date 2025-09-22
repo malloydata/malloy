@@ -74,6 +74,7 @@ import {
   isAtomicFieldType,
   isSourceDef,
   isJoined,
+  isRecordOrRepeatedRecord,
 } from './model';
 import type {
   EventStream,
@@ -2412,6 +2413,15 @@ export class ExploreField extends Explore {
   public get sourceClasses(): string[] {
     const sourceField = this.structDef.name || this.structDef.as;
     return sourceField ? [sourceField] : [];
+  }
+
+  public get queryTimezone(): string | undefined {
+    // For ExploreField, check the structDef directly first
+    if (isRecordOrRepeatedRecord(this._structDef)) {
+      return this._structDef.queryTimezone;
+    }
+    // Fall back to the parent implementation
+    return super.queryTimezone;
   }
 }
 

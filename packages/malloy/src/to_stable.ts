@@ -29,6 +29,7 @@ import {
   isJoinedSource,
   isBasicAtomic,
   isRepeatedRecord,
+  isRecordOrRepeatedRecord,
   isSourceDef,
   isTurtle,
   getResultStructDefForQuery,
@@ -210,9 +211,19 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       const resultMetadataAnnotation = field.resultMetadata
         ? getResultMetadataAnnotation(field, field.resultMetadata)
         : undefined;
+
+      // Check if this field has queryTimezone information (for RecordDef/RepeatedRecordDef)
+      let timezoneAnnotation: Malloy.Annotation | undefined;
+      if (isRecordOrRepeatedRecord(field) && field.queryTimezone) {
+        const timezoneTag = Tag.withPrefix('#(malloy) ');
+        timezoneTag.set(['query_timezone'], field.queryTimezone);
+        timezoneAnnotation = {value: timezoneTag.toString()};
+      }
+
       const fieldAnnotations = [
         ...(annotations ?? []),
         ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+        ...(timezoneAnnotation ? [timezoneAnnotation] : []),
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: aggregate ? 'measure' : 'dimension',
@@ -372,6 +383,11 @@ export function getResultStructMetadataAnnotation(
       const direction = orderBy.dir ?? null;
       tag.set(['ordered_by', i, orderByField], direction);
     }
+    hasAny = true;
+  }
+  // Include queryTimezone if present on the field
+  if (field.queryTimezone) {
+    tag.set(['query_timezone'], field.queryTimezone);
     hasAny = true;
   }
   return hasAny

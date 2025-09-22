@@ -855,6 +855,7 @@ export interface RecordDef
     FieldBase {
   type: 'record';
   join: 'one';
+  queryTimezone?: string;
 }
 
 // While repeated records are mostly treated like arrays of records,
@@ -886,6 +887,7 @@ export interface RepeatedRecordDef
     FieldBase {
   type: 'array';
   join: 'many';
+  queryTimezone?: string;
 }
 export type ArrayTypeDef = BasicArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = BasicArrayDef | RepeatedRecordDef;
@@ -902,6 +904,17 @@ export function isRepeatedRecord(
   fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
 ): fd is RepeatedRecordTypeDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+}
+
+export function isRecordOrRepeatedRecord(
+  fd: FieldDef | StructDef
+): fd is RecordDef | RepeatedRecordDef {
+  return (
+    fd.type === 'record' ||
+    (fd.type === 'array' &&
+      'elementTypeDef' in fd &&
+      fd.elementTypeDef.type === 'record_element')
+  );
 }
 
 export function isBasicArray(
