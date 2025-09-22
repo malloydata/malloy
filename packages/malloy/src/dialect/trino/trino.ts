@@ -32,6 +32,7 @@ import type {
   MeasureTimeExpr,
   TimeLiteralNode,
   TimeExtractExpr,
+  TimeTruncExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
 } from '../../model/malloy_types';
