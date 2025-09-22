@@ -86,17 +86,10 @@ export function timeToString(
 ): string {
   timeframe ||= 'second';
 
-  let shouldNormalize = false;
-  switch (timeframe) {
-    case 'hour':
-    case 'minute':
-    case 'second':
-      shouldNormalize = true;
-      break;
-  }
-
+  // For timestamp fields, always use timezone when provided
+  // The caller (renderDateTimeField) already filters to only pass timezone for timestamps
   const dateTime = DateTime.fromJSDate(time, {
-    zone: shouldNormalize && timezone ? timezone : 'UTC',
+    zone: timezone ?? 'UTC',
   });
 
   switch (timeframe) {

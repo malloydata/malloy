@@ -623,23 +623,37 @@ export class QueryQuery extends QueryField {
           '<nosource>'
         );
 
+        // Get the timezone from the nested query
+        const nestedQueryInfo = fi.getQueryInfo();
+        const queryTimezone = nestedQueryInfo.queryTimezone;
+
         if (repeatedResultType === 'nested') {
           const multiLineNest: RepeatedRecordDef = {
-            ...structDef,
             type: 'array',
             elementTypeDef: {type: 'record_element'},
             join: 'many',
             name,
+            fields: structDef.fields,
+            ...(structDef.annotation && {annotation: structDef.annotation}),
+            ...(structDef.modelAnnotation && {
+              modelAnnotation: structDef.modelAnnotation,
+            }),
             resultMetadata,
+            ...(queryTimezone && {queryTimezone}),
           };
           fields.push(multiLineNest);
         } else {
           const oneLineNest: RecordDef = {
-            ...structDef,
             type: 'record',
             join: 'one',
             name,
+            fields: structDef.fields,
+            ...(structDef.annotation && {annotation: structDef.annotation}),
+            ...(structDef.modelAnnotation && {
+              modelAnnotation: structDef.modelAnnotation,
+            }),
             resultMetadata,
+            ...(queryTimezone && {queryTimezone}),
           };
           fields.push(oneLineNest);
         }

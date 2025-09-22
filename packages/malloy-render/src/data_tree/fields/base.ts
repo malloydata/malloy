@@ -82,6 +82,27 @@ export abstract class FieldBase {
     throw new Error('Root field was not an instance of RootField');
   }
 
+  /**
+   * Get the effective query timezone for this field.
+   * Walks up the parent chain to find nested timezone metadata from tags,
+   * or falls back to the root query timezone.
+   */
+  getEffectiveQueryTimezone(): string | undefined {
+    // Check if this field has a nested timezone in its metadata tags
+    const nestedTimezone = this.metadataTag.text('query_timezone');
+    if (nestedTimezone) {
+      return nestedTimezone;
+    }
+
+    // Walk up the parent chain to find a nested timezone
+    if (this.parent) {
+      return this.parent.getEffectiveQueryTimezone();
+    }
+
+    // Fall back to root query timezone
+    return this.root().queryTimezone;
+  }
+
   get drillStableExpression(): Malloy.Expression | undefined {
     const expressionTag = this.metadataTag.tag('drill_expression');
     if (expressionTag === undefined) return undefined;

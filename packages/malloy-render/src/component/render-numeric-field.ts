@@ -96,6 +96,17 @@ export function renderDateTimeField(
     }
   }
 
+  // Get the effective query timezone for timestamp fields (not date fields)
+  // Date fields represent calendar dates and shouldn't be timezone-adjusted
+  const effectiveTimezone = !options.isDate
+    ? options.timezone ?? f.getEffectiveQueryTimezone()
+    : undefined;
+
+  const optionsWithTimezone = {
+    ...options,
+    timezone: effectiveTimezone,
+  };
+
   // Fall back to default time string rendering
-  return renderTimeString(value, options);
+  return renderTimeString(value, optionsWithTimezone);
 }

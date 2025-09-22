@@ -37,13 +37,18 @@ export abstract class PostgresBase extends Dialect {
     if (TD.isTimestamp(df.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
+        // get a civil version of the time in the query time zone
         const civilSource = `(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        // do truncation in that time space
         let civilTrunc = `DATE_TRUNC('${df.units}', ${civilSource})`;
         if (week) {
           civilTrunc = `(${civilTrunc} - INTERVAL '1' DAY)`;
         }
-        // Convert the truncated civil time back to UTC by treating it as being IN the query timezone
+        // make a tstz from the civil time ... "AT TIME ZONE" of
+        // a TIMESTAMP will produce a TIMESTAMPTZ in that zone
+        // where the civi appeareance is the same as the TIMESTAMP
         const truncTsTz = `${civilTrunc} AT TIME ZONE '${tz}'`;
+        // Now just make a system TIMESTAMP from that
         return `(${truncTsTz})::TIMESTAMP`;
       }
     }

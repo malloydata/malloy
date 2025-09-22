@@ -7,7 +7,9 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {Tag} from '@malloydata/malloy-tag';
+import {isTimestampUnit, isDateUnit as _isDateUnit} from '@malloydata/malloy';
 import {DurationUnit, isDurationUnit} from './html/data_styles';
+import {timeToString as htmlTimeToString} from './html/utils';
 import {format} from 'ssf';
 import type {Cell, NestField} from './data_tree';
 import {Field} from './data_tree';
@@ -196,12 +198,23 @@ export interface RenderTimeStringOptions {
   isDate?: boolean;
   timeframe?: string;
   extractFormat?: 'month-day' | 'quarter' | 'month' | 'week' | 'day';
+  timezone?: string;
 }
 
 export function renderTimeString(
   value: Date,
   options: RenderTimeStringOptions = {}
 ) {
+  // If timezone is provided, use the timezone-aware function
+  // For full timestamps without timeframe, default to 'second' granularity
+  if (options.timezone) {
+    const timeframe =
+      options.timeframe && isTimestampUnit(options.timeframe)
+        ? options.timeframe
+        : 'second';
+    return htmlTimeToString(value, timeframe, options.timezone);
+  }
+
   // Handle extraction formats for YoY mode
   if (options.extractFormat) {
     switch (options.extractFormat) {
@@ -241,33 +254,41 @@ export function renderTimeString(
   const seconds = padZeros(value.getUTCSeconds());
   const time = `${hours}:${minutes}:${seconds}`;
   const dateDisplay = `${fullYear}-${fullMonth}-${fullDate}`;
-  switch (options.timeframe) {
-    case 'minute': {
-      return `${dateDisplay} ${hours}:${minutes}`;
-    }
-    case 'hour': {
-      return `${dateDisplay} ${hours}`;
-    }
-    case 'day': {
-      return `${dateDisplay}`;
-    }
-    case 'week': {
-      return `${dateDisplay}-WK`;
-    }
-    case 'month': {
-      return `${fullYear}-${fullMonth}`;
-    }
-    case 'quarter': {
-      return `${fullYear}-Q${Math.floor(value.getUTCMonth() / 3) + 1}`;
-    }
-    case 'year': {
-      return value.getUTCFullYear().toString();
-    }
-    default: {
-      if (options.isDate) return dateDisplay;
-      return `${dateDisplay} ${time}`;
+
+  // Use type guards for safer timeframe validation
+  const timeframe = options.timeframe;
+  if (timeframe && isTimestampUnit(timeframe)) {
+    switch (timeframe) {
+      case 'second': {
+        return `${dateDisplay} ${time}`;
+      }
+      case 'minute': {
+        return `${dateDisplay} ${hours}:${minutes}`;
+      }
+      case 'hour': {
+        return `${dateDisplay} ${hours}`;
+      }
+      case 'day': {
+        return `${dateDisplay}`;
+      }
+      case 'week': {
+        return `${dateDisplay}-WK`;
+      }
+      case 'month': {
+        return `${fullYear}-${fullMonth}`;
+      }
+      case 'quarter': {
+        return `${fullYear}-Q${Math.floor(value.getUTCMonth() / 3) + 1}`;
+      }
+      case 'year': {
+        return value.getUTCFullYear().toString();
+      }
     }
   }
+
+  // Fallback for unrecognized timeframes or no timeframe
+  if (options.isDate) return dateDisplay;
+  return `${dateDisplay} ${time}`;
 }
 
 function filterQuote(s: string): string {
