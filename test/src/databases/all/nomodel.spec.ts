@@ -363,7 +363,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         join_cross: a
       }
 
-      # test.debug
       run: b -> {aggregate: a.total_elevation, a.total_little_elevation, a.average_elevation, a.total_big_elevation, a.average_big_elevation}
       // run: two_rows
 
