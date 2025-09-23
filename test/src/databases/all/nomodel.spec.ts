@@ -355,7 +355,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           total_elevation is elevation.sum()
           total_little_elevation is round(little_elevation.sum(),4)
           average_elevation is floor(elevation.avg())
-          total_big_elevation is big_elevation.sum()
+          total_big_elevation is round(big_elevation.sum(),0)     // mysql is weird
           average_big_elevation is floor(big_elevation.avg())
       }
       query: two_rows is ${databaseName}.table('malloytest.state_facts') -> {select: state;  limit: 2}
