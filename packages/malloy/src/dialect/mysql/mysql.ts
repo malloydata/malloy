@@ -315,10 +315,10 @@ export class MySQLDialect extends Dialect {
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const sqlDistinctKey = `CONCAT(${key}, '')`;
-    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(65, 0)) * 4294967296`;
-    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(65, 0))`;
+    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(55, 10)) * 4294967296`;
+    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(55, 10))`;
     const hashkey = `(${upperPart} + ${lowerPart})`;
-    const v = `COALESCE(${value},0)`;
+    const v = `CAST(COALESCE(${value},0) as DECIMAL(55, 10))`;
     const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
     if (funcName === 'SUM') {
       return sqlSum;
