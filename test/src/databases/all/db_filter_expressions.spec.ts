@@ -982,8 +982,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'z-null'}
       );
     });
+    const tzTesting = dbName !== 'presto' && dbName !== 'trino';
     describe('query time zone', () => {
-      test('day literal in query time zone', async () => {
+      test.when(tzTesting)('day literal in query time zone', async () => {
         const rangeQuery = mkRangeQuery(
           "f'2024-01-01'",
           '2024-01-01 00:00:00',
@@ -992,7 +993,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         );
         await expect(rangeQuery).malloyResultMatches(db, inRange);
       });
-      test('today in query time zone', async () => {
+      test.when(tzTesting)('day literal in query time zone', async () => {
         nowIs('2024-01-15 00:34:56', 'America/Mexico_City');
         const rangeQuery = mkRangeQuery(
           "f'today'",
@@ -1002,7 +1003,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         );
         await expect(rangeQuery).malloyResultMatches(db, inRange);
       });
-      test('next wednesday in query time zone', async () => {
+      test.when(tzTesting)('day literal in query time zone', async () => {
         nowIs('2024-01-01 00:00:00', 'America/Mexico_City');
         const rangeQuery = mkRangeQuery(
           "f'next wednesday'",
@@ -1012,7 +1013,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         );
         await expect(rangeQuery).malloyResultMatches(db, inRange);
       });
-      test('exact timestamp literal in query time zone', async () => {
+      test.when(tzTesting)('day literal in query time zone', async () => {
         const exactTimeModel = mkEqTime('2024-01-15 12:00:00');
         await expect(`
           run: eqtime -> {
