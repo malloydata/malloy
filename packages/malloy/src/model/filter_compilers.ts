@@ -22,7 +22,7 @@ import {
   isTemporalFilter,
   isBooleanFilter,
 } from '@malloydata/malloy-filter';
-import type {Dialect} from '../dialect';
+import type {Dialect, QueryInfo} from '../dialect';
 import type {
   TimeLiteralNode,
   TimeDeltaExpr,
@@ -64,7 +64,13 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
-  compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
+  compile(
+    t: string,
+    c: FilterExpression | null,
+    x: string,
+    d: Dialect,
+    qi: QueryInfo = {}
+  ) {
     if (c === null) {
       return 'true';
     }
@@ -75,7 +81,7 @@ export const FilterCompilers = {
     } else if (t === 'boolean' && isBooleanFilter(c)) {
       return FilterCompilers.booleanCompile(c, x, d);
     } else if ((t === 'date' || t === 'timestamp') && isTemporalFilter(c)) {
-      return FilterCompilers.temporalCompile(c, x, d, t);
+      return FilterCompilers.temporalCompile(c, x, d, t, qi);
     }
     throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
   },
@@ -299,9 +305,10 @@ export const FilterCompilers = {
     tc: TemporalFilter,
     x: string,
     d: Dialect,
-    t: 'date' | 'timestamp'
+    t: 'date' | 'timestamp',
+    qi: QueryInfo = {}
   ): string {
-    const c = new TemporalFilterCompiler(x, d, t);
+    const c = new TemporalFilterCompiler(x, d, t, qi);
     return c.compile(tc);
   },
 };
@@ -341,13 +348,16 @@ const fTimestamp = `${fMinute}:ss`;
  */
 export class TemporalFilterCompiler {
   readonly d: Dialect;
+  readonly qi: QueryInfo;
 
   constructor(
     readonly expr: string,
     dialect: Dialect,
-    readonly timetype: 'timestamp' | 'date' = 'timestamp'
+    readonly timetype: 'timestamp' | 'date' = 'timestamp',
+    queryInfo: QueryInfo = {}
   ) {
     this.d = dialect;
+    this.qi = queryInfo;
   }
 
   time(timeSQL: string): string {
@@ -519,7 +529,10 @@ export class TemporalFilterCompiler {
       typeDef: {type: 'timestamp'},
       literal,
     };
-    return {...literalNode, sql: this.d.sqlLiteralTime({}, literalNode)};
+    if (this.qi.queryTimezone) {
+      literalNode.timezone = this.qi.queryTimezone;
+    }
+    return {...literalNode, sql: this.d.sqlLiteralTime(this.qi, literalNode)};
   }
 
   private nowExpr(): Translated<NowNode> {
@@ -558,7 +571,7 @@ export class TemporalFilterCompiler {
       e: mkTemporal(e, 'timestamp'),
       units: 'day_of_week',
     };
-    return {...t, sql: this.d.sqlTimeExtractExpr({}, t)};
+    return {...t, sql: this.d.sqlTimeExtractExpr(this.qi, t)};
   }
 
   private nowDot(units: TimestampUnit): Translated<TimeTruncExpr> {
@@ -567,7 +580,7 @@ export class TemporalFilterCompiler {
       e: this.nowExpr(),
       units,
     };
-    return {...nowTruncExpr, sql: this.d.sqlTruncExpr({}, nowTruncExpr)};
+    return {...nowTruncExpr, sql: this.d.sqlTruncExpr(this.qi, nowTruncExpr)};
   }
 
   private thisUnit(units: TimestampUnit): MomentIs {
@@ -678,23 +691,35 @@ export class TemporalFilterCompiler {
     // dow is 1-7, convert to 0-6 for the arithmetic
     const dowZeroBased = `(${dow.sql}-1)`;
 
-    let daysOffset: string;
+    let beginOffset: string;
+    let endOffset: string;
+
+    // "dayname" and "last dayname" both refer to the most recent,
+    // already complete day of that name. So if today is Sunday,
+    // "next sunday" is "today", and "last sunday" is 7 days ago.
     if (direction === 'next') {
-      // Days forward: ((destDay - dow + 6) % 7) + 1
-      daysOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+1`;
+      // Days forward: ((destDay - currentDay + 6) % 7) + 1
+      beginOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+1`;
+      endOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+2`;
     } else {
-      // Days back: ((dow - destDay + 6) % 7) + 1
-      daysOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}+1`;
+      // Days back: ((currentDay - destDay + 6) % 7) + 1
+      beginOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}+1`;
+      // End offset is one day less (closer to today)
+      endOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}`;
     }
 
     const begin = this.delta(
       todayBegin,
       direction === 'next' ? '+' : '-',
-      daysOffset,
+      beginOffset,
       'day'
     );
-
-    const end = this.delta(begin, '+', '1', 'day');
+    const end = this.delta(
+      todayBegin,
+      direction === 'next' ? '+' : '-',
+      endOffset,
+      'day'
+    );
 
     return {begin, end: end.sql};
   }

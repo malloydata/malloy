@@ -58,7 +58,7 @@ import {
 } from './utils';
 import {isBasicScalar} from './query_node';
 import type {QueryStruct, QueryField} from './query_node';
-import type {Dialect} from '../dialect';
+import type {Dialect, QueryInfo} from '../dialect';
 
 const NUMERIC_DECIMAL_PRECISION = 9;
 
@@ -268,7 +268,7 @@ export function exprToSQL(
     case 'compositeField':
       return '{COMPOSITE_FIELD}';
     case 'filterMatch':
-      return generateAppliedFilter(context, expr);
+      return generateAppliedFilter(context, expr, qi);
     case 'filterLiteral':
       return 'INTERNAL ERROR FILTER EXPRESSION VALUE SHOULD NOT BE USED';
     default:
@@ -282,7 +282,8 @@ export function exprToSQL(
 
 function generateAppliedFilter(
   context: QueryStruct,
-  filterMatchExpr: FilterMatchExpr
+  filterMatchExpr: FilterMatchExpr,
+  qi: QueryInfo
 ): string {
   let filterExpr = filterMatchExpr.kids.filterExpr;
   while (filterExpr.node === '()') {
@@ -332,7 +333,8 @@ function generateAppliedFilter(
     filterMatchExpr.dataType,
     fParse.parsed,
     filterMatchExpr.kids.expr.sql || '',
-    context.dialect
+    context.dialect,
+    qi
   );
 }
 
