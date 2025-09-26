@@ -206,7 +206,7 @@ export class ExpressionJoin extends Join {
     // This allows the dependency system to track which field references come from ON conditions
     inStruct.fieldUsage = exprX.fieldUsage?.map(usage => ({
       ...usage,
-      fromOnExpression: true
+      fromOnExpression: true,
     }));
   }
 

@@ -453,7 +453,7 @@ function findActiveJoins(
     if (dep) {
       sorted.push({
         path: dep.path,
-        onReferencesChildren: dep.onReferencesChildren
+        onReferencesChildren: dep.onReferencesChildren,
       });
     }
   };
@@ -575,12 +575,15 @@ function expandFieldUsage(
           }
 
           // Check if this join's ON expression references nested source joins
-          if (usage.fromOnExpression && usage.path.length > joinPath.length + 1) {
+          if (
+            usage.fromOnExpression &&
+            usage.path.length > joinPath.length + 1
+          ) {
             const nestedPath = usage.path.slice(0, joinPath.length + 1);
             const nestedDef = inNamespace(nestedPath, fieldNameSpace);
-              if (nestedDef && isSourceDef(nestedDef)) {
-                thisDep.onReferencesChildren = true;
-              }
+            if (nestedDef && isSourceDef(nestedDef)) {
+              thisDep.onReferencesChildren = true;
+            }
           }
 
           // Track join-to-join dependencies
@@ -594,10 +597,13 @@ function expandFieldUsage(
             thisDep.dependsOn.add(dependencyKey);
           }
         }
-        
+
         // After processing all field usage, check for nested references in the seen map
         for (const seenUsage of Object.values(seen)) {
-          if (seenUsage.fromOnExpression && seenUsage.path.length > joinPath.length + 1) {
+          if (
+            seenUsage.fromOnExpression &&
+            seenUsage.path.length > joinPath.length + 1
+          ) {
             // Check if this path goes through the current join
             if (pathBegins(seenUsage.path, joinPath)) {
               const nestedPath = seenUsage.path.slice(0, joinPath.length + 1);

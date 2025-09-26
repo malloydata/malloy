@@ -256,7 +256,11 @@ export class QueryQuery extends QueryField {
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement, onReferencesChildren);
+    this.rootResult.addStructToJoin(
+      joinableParent,
+      uniqueKeyRequirement,
+      onReferencesChildren
+    );
   }
 
   private dependenciesFromFieldUsage() {
@@ -270,7 +274,11 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(joinUsage.path, undefined, joinUsage.onReferencesChildren);
+      this.addDependantPath(
+        joinUsage.path,
+        undefined,
+        joinUsage.onReferencesChildren
+      );
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {

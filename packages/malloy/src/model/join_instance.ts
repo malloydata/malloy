@@ -16,7 +16,7 @@ export class JoinInstance {
   makeUniqueKey = false;
   leafiest = false;
   // [REVIEW] Flag indicating this join's ON expression references nested joins
-  // Used by SQL generation to determine when to rewrite ON conditions  
+  // Used by SQL generation to determine when to rewrite ON conditions
   onReferencesChildren?: boolean;
   joinFilterConditions?: QueryFieldBoolean[];
   children: JoinInstance[] = [];
