@@ -24,6 +24,7 @@
 /* eslint-disable no-console */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
+import {TestSelect} from '../../test-select';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
@@ -320,13 +321,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   );
 
   test('join through join', async () => {
+    const ts = new TestSelect(runtime.dialect);
+    const usr = ts.generate({id: 1, email: 'email'});
+    const res = ts.generate({id: 1, user_id: 1});
+    const msg = ts.generate({id: 1, msg_email: 'email'});
     await expect(`
-      source: usr is ${databaseName}.sql("""select 1 as id, 'email' as email""")
-      source: res is ${databaseName}.sql("""select 1 as id, 1 as user_id""") extend {
+      source: usr is ${databaseName}.sql("""${usr}""")
+      source: res is ${databaseName}.sql("""${res}""") extend {
         join_one: usr is usr on usr.id = user_id
         dimension: usr_email is usr.email
       }
-      source: msg is ${databaseName}.sql("""select 1 as id, 'email' as msg_email""") extend {
+      source: msg is ${databaseName}.sql("""${msg}""") extend {
         join_many: res is res on msg_email = res.usr_email
       }
       run: msg -> {
