@@ -318,4 +318,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       `).matchesRows(runtime, {pick_a1: [1]});
     }
   );
+
+  test('join through join', async () => {
+    await expect(`
+      source: usr is ${databaseName}.sql("""select 1 as id, 'email' as email""")
+      source: res is ${databaseName}.sql("""select 1 as id, 1 as user_id""") extend {
+        join_one: usr is usr on usr.id = user_id
+        dimension: usr_email is usr.email
+      }
+      source: msg is ${databaseName}.sql("""select 1 as id, 'email' as msg_email""") extend {
+        join_many: res is res on msg_email = res.usr_email
+      }
+      run: msg -> {
+        select: *, res.usr_email
+      }`).malloyResultMatches(runtime, {usr_email: 'email'});
+  });
 });
