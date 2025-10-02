@@ -383,7 +383,7 @@ export abstract class TrinoPrestoConnection
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
       const name = row[0];
-      const type = row[4] || row[1];
+      const type = row[4] && typeof row[4] === 'string' ? row[4] : row[1];
       const malloyType = mkFieldDef(this.malloyTypeFromTrinoType(type), name);
       structDef.fields.push(mkFieldDef(malloyType, name));
     }
