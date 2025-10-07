@@ -31,7 +31,7 @@ export abstract class PostgresBase extends Dialect {
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
     // adjusting for monday/sunday weeks
     const week = df.units === 'week';
-    const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
+    const truncThis = week ? `(${df.e.sql} + INTERVAL '1' DAY)` : df.e.sql;
 
     // Only do timezone conversion for timestamps, not dates
     if (TD.isTimestamp(df.e.typeDef)) {
