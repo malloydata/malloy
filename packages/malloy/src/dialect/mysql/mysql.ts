@@ -390,12 +390,8 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
-  // truncToUnit(sql, unit: string): string {
-  //   return `EXTRACT(${unit} FROM ${sql})`;
-  // }
   sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
-    // LTNOTE: how come this can be undefined?
-    const truncThis = trunc.e.sql || 'why could this be undefined';
+    const truncThis = trunc.e.sql || 'internal-error-in-sql-generation';
     const week = trunc.units === 'week';
 
     // Only do timezone conversion for timestamps, not dates
