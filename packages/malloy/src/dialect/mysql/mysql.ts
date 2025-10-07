@@ -395,20 +395,37 @@ export class MySQLDialect extends Dialect {
   // }
   sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
     // LTNOTE: how come this can be undefined?
-    let truncThis = trunc.e.sql || 'why could this be undefined';
-    if (trunc.units === 'week') {
-      truncThis = `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`;
-    }
+    const truncThis = trunc.e.sql || 'why could this be undefined';
+    const week = trunc.units === 'week';
+
+    // Only do timezone conversion for timestamps, not dates
     if (TD.isTimestamp(trunc.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
+        // Convert timestamp to the query timezone (civil time)
         const civilSource = `(CONVERT_TZ(${truncThis}, 'UTC','${tz}'))`;
-        const civilTrunc = `${this.truncToUnit(civilSource, trunc.units)}`;
+
+        // For week truncation, we need to adjust to Sunday in the civil timezone
+        // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
+        const adjustedSource = week
+          ? `DATE_SUB(${civilSource}, INTERVAL DAYOFWEEK(${civilSource}) - 1 DAY)`
+          : civilSource;
+
+        // Truncate to the appropriate unit in civil time
+        const civilTrunc = `${this.truncToUnit(adjustedSource, trunc.units)}`;
+
+        // Convert the truncated civil time back to UTC
         const truncTsTz = `CONVERT_TZ(${civilTrunc}, '${tz}', 'UTC')`;
         return `(${truncTsTz})`; // TODO: should it cast?
       }
     }
-    const result = `${this.truncToUnit(truncThis, trunc.units)}`;
+
+    // For dates (civil time) or timestamps without query timezone
+    // do the week adjustment before truncating
+    const adjustedThis = week
+      ? `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`
+      : truncThis;
+    const result = `${this.truncToUnit(adjustedThis, trunc.units)}`;
     return result;
   }
 
