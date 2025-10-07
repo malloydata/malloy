@@ -31,14 +31,14 @@ export abstract class PostgresBase extends Dialect {
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
     // adjusting for monday/sunday weeks
     const week = df.units === 'week';
-    const truncThis = week ? `(${df.e.sql} + INTERVAL '1' DAY)` : df.e.sql;
+    const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
 
     // Only do timezone conversion for timestamps, not dates
     if (TD.isTimestamp(df.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         // get a civil version of the time in the query time zone
-        const civilSource = `(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        const civilSource = `((${truncThis})::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
         // do truncation in that time space
         let civilTrunc = `DATE_TRUNC('${df.units}', ${civilSource})`;
         if (week) {
