@@ -715,6 +715,22 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
 
   test.when(
     !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('truncate week', async () => {
+    // the 19th in mexico is a wednesday, so trunc to the 15th
+    const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
+    // Find the sunday before then
+    const mex_sunday = mex_19.minus({days: mex_19.weekday % 7});
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
+        timezone: '${zone}'
+        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
+        select: mex_week is utc_midnight.week
+      }`
+    ).malloyResultMatches(runtime, {mex_week: mex_sunday.toJSDate()});
+  });
+
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
   )('cast timestamp to date', async () => {
     // At midnight in london it is the 19th in Mexico, so when we cast that
     // to a date, it should be the 19th.
