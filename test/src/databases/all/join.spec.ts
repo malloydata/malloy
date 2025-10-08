@@ -24,6 +24,7 @@
 /* eslint-disable no-console */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
+import {TestSelect} from '../../test-select';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
@@ -318,4 +319,47 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       `).matchesRows(runtime, {pick_a1: [1]});
     }
   );
+
+  // Issue 2486, tried to resolve, but could not arrrive at a solution
+  // which works on all dialects.
+  test.skip('2486 -- join on joined column', async () => {
+    await expect(`
+        source: usr is ${databaseName}.sql("""select 1 as id, 'email' as email""")
+        source: res is ${databaseName}.sql("""select 1 as id, 1 as user_id""") extend {
+          join_one: usr is usr on usr.id = user_id
+          dimension: usr_email is usr.email
+        }
+        source: msg is ${databaseName}.sql("""select 1 as id, 'email' as msg_email""") extend {
+          join_many: res is res on msg_email = res.usr_email
+        }
+        run: msg -> {
+          select: *, res.usr_email
+        }
+      `).malloyResultMatches(runtime, {
+      id: 1,
+      usr_email: 'email',
+    });
+  });
+
+  test('another join problem', async () => {
+    const ts = new TestSelect(runtime.dialect);
+    const events = ts.generate(
+      {event_name: 'n1', event_params: {key: 'k1', value: 'v1'}},
+      {event_name: 'k1', event_params: {key: 'k2', value: 'v2'}}
+    );
+    await expect(`
+      source: events is ${databaseName}.sql("""${events}""")
+      source: ga4_1 is events extend { dimension: event_param is event_params.key }
+      source: ga4_2 is events extend { join_one: ga4 is ga4_1 on event_name = ga4.event_param }
+      run: ga4_2 -> {
+        group_by: event_name, ga4_event is ga4.event_name
+        aggregate: cnt is count()
+        where: ga4.event_param is not null
+      }
+    `).malloyResultMatches(runtime, {
+      event_name: 'k1',
+      ga4_event: 'n1',
+      cnt: 1,
+    });
+  });
 });
