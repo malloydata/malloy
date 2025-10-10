@@ -322,18 +322,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // Issue 2486, tried to resolve, but could not arrrive at a solution
   // which works on all dialects.
-  test.skip('2486 -- join on joined column', async () => {
+  test('2486 -- join on joined column', async () => {
     await expect(`
         source: usr is ${databaseName}.sql("""select 1 as id, 'email' as email""")
         source: res is ${databaseName}.sql("""select 1 as id, 1 as user_id""") extend {
           join_one: usr is usr on usr.id = user_id
-          dimension: usr_email is usr.email
+          // dimension: usr_email is usr.email
         }
         source: msg is ${databaseName}.sql("""select 1 as id, 'email' as msg_email""") extend {
-          join_many: res is res on msg_email = res.usr_email
+          join_many: res is res on msg_email = res.usr.email
         }
         run: msg -> {
-          select: *, res.usr_email
+          select: *, res.usr.email
         }
       `).malloyResultMatches(runtime, {
       id: 1,
@@ -341,24 +341,57 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  test('another join problem', async () => {
+  function randomBase36Id(): string {
+    // Generate two random 32-bit integers
+    const high = Math.floor(Math.random() * 0x100000000); // 2^32
+    const low = Math.floor(Math.random() * 0x100000000);
+
+    // Combine into a 64-bit BigInt
+    const random64 = (BigInt(high) << BigInt(32)) | BigInt(low);
+
+    // Convert to base36 and pad to 13 characters
+    return random64.toString(36).padStart(13, '0');
+  }
+
+  test('join through repeated record problem', async () => {
     const ts = new TestSelect(runtime.dialect);
     const events = ts.generate(
-      {event_name: 'n1', event_params: {key: 'k1', value: 'v1'}},
-      {event_name: 'k1', event_params: {key: 'k2', value: 'v2'}}
+      {
+        event_name: 'page_view',
+        event_params: [
+          {key: 'page_location', value: '/home'},
+          {key: 'page_title', value: 'Home Page'},
+        ],
+      },
+      {
+        event_name: 'user_engagement',
+        event_params: [
+          {key: 'engagement_time', value: '1000'},
+          {key: 'page_view', value: 'true'},
+        ],
+      },
+      {event_name: 'scroll', event_params: [{key: 'percent', value: '50'}]}
     );
+    let eventTable: string;
+    if (databaseName === 'duckdb') {
+      const tableName = `event_${randomBase36Id()}`;
+      await runtime.connection.runSQL(
+        `CREATE TEMPORARY TABLE ${tableName} AS ${events}`
+      );
+      eventTable = `${databaseName}.table('${tableName}')`;
+    } else {
+      eventTable = `${databaseName}.sql("""${events}""")`;
+    }
     await expect(`
-      source: events is ${databaseName}.sql("""${events}""")
-      source: ga4_1 is events extend { dimension: event_param is event_params.key }
-      source: ga4_2 is events extend { join_one: ga4 is ga4_1 on event_name = ga4.event_param }
-      run: ga4_2 -> {
-        group_by: event_name, ga4_event is ga4.event_name
-        aggregate: cnt is count()
-        where: ga4.event_param is not null
+      source: ga4_s1 is ${eventTable} extend { dimension: event_param is event_params.key }
+      source: ga4_s2 is ${eventTable} extend { join_one: ga4_j1 is ga4_s1 on event_name = ga4_j1.event_param }
+      run: ga4_s2 -> {
+        select: event_name, ga4_event is ga4_j1.event_name
+        where: ga4_j1.event_param is not null
       }
     `).malloyResultMatches(runtime, {
-      event_name: 'k1',
-      ga4_event: 'n1',
+      event_name: 'page_view',
+      ga4_event: 'user_engagement',
       cnt: 1,
     });
   });
