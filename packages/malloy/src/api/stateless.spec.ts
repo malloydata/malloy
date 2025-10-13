@@ -1281,6 +1281,104 @@ LIMIT 101
       expect(result.result?.sql).toContain('LEFT JOIN malloytest.airports');
       expect(result.result?.sql).toContain('airports_0."city"');
     });
+    test('coalesce with parameter and constant', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: `
+          run: flights(my_param is "some_value") -> {
+            select:
+              result1 is param_field ?? "default_value"
+          }
+        `,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'id2',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.parameters
+                source: flights(my_param::string is "default_value") is duckdb.table('malloytest.flights') extend {
+                  dimension: param_field is my_param
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'duckdb', dialect: 'duckdb'}],
+        },
+      });
+
+      expect(result.compiler_needs).toBeUndefined();
+      expect(result.logs).toBeUndefined();
+      expect(result.result).toBeDefined();
+      expect(result.result?.sql).toBeDefined();
+      expect(result.result?.connection_name).toBe('duckdb');
+      expect(result.result?.sql).toContain(
+        "COALESCE(('some_value'),'default_value')"
+      );
+    });
+    test('coalesce with parameter and field', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: `
+          run: flights -> {
+            select:
+              result1 is param_field ?? carrier
+          }
+        `,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.parameters
+                source: flights(my_param::string is "default_value") is duckdb.table('malloytest.flights') extend {
+                  dimension: param_field is my_param
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'duckdb', dialect: 'duckdb'}],
+        },
+      });
+
+      expect(result.compiler_needs).toBeUndefined();
+      expect(result.logs).toBeUndefined();
+      expect(result.result).toBeDefined();
+      expect(result.result?.sql).toBeDefined();
+      expect(result.result?.connection_name).toBe('duckdb');
+      expect(result.result?.sql).toContain(
+        'COALESCE((\'default_value\'),base."carrier")'
+      );
+    });
   });
   test('compile and get source annotations', () => {
     const result = compileQuery({
