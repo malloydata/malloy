@@ -261,7 +261,7 @@
           "name": "string.quoted.triple"
         },
         {
-          "begin": "(?i)[r|/]'",
+          "begin": "(?i)[r/]'",
           "end": "'",
           "name": "string.regexp",
           "patterns": [{ "include": "#regex-escapes" }]
