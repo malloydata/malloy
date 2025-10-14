@@ -133,7 +133,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/'/, {next: '@string_quoted_single_end', token: 'string.quoted'}],
       [/"/, {next: '@string_quoted_double_end', token: 'string.quoted'}],
       [/"""/, {next: '@string_quoted_triple_end', token: 'string.quoted'}],
-      [/[r|\/]'/, {next: '@string_regexp_end', token: 'string.regexp'}],
+      [/[r\/]'/, {next: '@string_regexp_end', token: 'string.regexp'}],
     ],
     string_quoted_single_end: [
       [/'/, {next: '@pop', token: 'string.quoted'}],
