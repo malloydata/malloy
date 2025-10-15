@@ -55,6 +55,7 @@ export type Cell =
 export type CellValue =
   | string
   | number
+  | bigint
   | boolean
   | Date
   | Cell[]

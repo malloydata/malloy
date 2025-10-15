@@ -70,7 +70,7 @@ const multiplierMap = new Map<DurationUnit, number>([
 
 export function getText(
   field: Field,
-  value: number,
+  value: number | bigint,
   options: {
     durationUnit?: string;
   }
@@ -83,7 +83,7 @@ export function getText(
   const numFormat = tag.text('number');
   const terse = tag.has('duration', 'terse');
 
-  let currentDuration = value;
+  let currentDuration = Number(value);
   let currentUnitValue = 0;
   let durationParts: string[] = [];
   let foundUnit = false;

@@ -33,12 +33,12 @@ import type {Field} from '../data_tree';
 
 export function renderNumericField(
   f: Field,
-  value: number | null | undefined
+  value: number | bigint | null | undefined
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
-  let displayValue: string | number = value;
+  let displayValue: string | number | bigint = value;
   const tag = f.tag;
   if (tag.has('currency')) {
     let unitText = '$';
