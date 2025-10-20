@@ -99,7 +99,7 @@ export abstract class QueryOperationSpace
   }
 
   constructor(
-    readonly queryInputSpace: SourceFieldSpace,
+    queryInputSpace: SourceFieldSpace,
     refineThis: model.PipeSegment | undefined,
     readonly nestParent: QueryOperationSpace | undefined,
     readonly astEl: MalloyElement
@@ -317,7 +317,8 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (typeDesc.type === 'turtle') {
       const pipeline = typeDesc.pipeline;
       const lastSegment = pipeline[pipeline.length - 1];
-      const outputStruct = lastSegment?.outputStruct ?? ErrorFactory.structDef;
+      const outputStruct =
+        lastSegment?.outputStruct ?? this.exprSpace.emptyStructDef();
       const isRepeated = lastSegment
         ? model.isQuerySegment(lastSegment)
           ? lastSegment.isRepeated

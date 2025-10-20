@@ -89,28 +89,44 @@ export function refine(
         : undefined;
 
     if (isQuerySegment(from) && isQuerySegment(to)) {
-      const overlappingFields: QueryFieldDef[] = [];
-      const nonOverlappingFields: QueryFieldDef[] = [];
+      const overlappingFields: string[] = [];
+      const missingOut: string[] = [];
       const existingNames = new Map<string, QueryFieldDef>(
         to.queryFields.map((f: QueryFieldDef): [string, QueryFieldDef] => [
           nameFromDef(f),
           f,
         ])
       );
+      const outputFields = [...to.outputStruct.fields];
+      const queryFields = [...to.queryFields];
       for (const field of from.queryFields) {
-        if (existingNames.has(nameFromDef(field))) {
-          overlappingFields.push(field);
+        const fieldName = nameFromDef(field);
+        if (existingNames.has(fieldName)) {
+          overlappingFields.push(fieldName);
         } else {
-          nonOverlappingFields.push(field);
+          queryFields.push(field);
+          const outField = from.outputStruct.fields.find(
+            f => f.name === fieldName
+          );
+          if (outField) {
+            outputFields.push(outField);
+          } else {
+            missingOut.push(fieldName);
+          }
         }
       }
-      to.queryFields = [...to.queryFields, ...nonOverlappingFields];
+      to.queryFields = queryFields;
+      to.outputStruct.fields = outputFields;
       if (overlappingFields.length > 0) {
         logTo.logError(
           'name-conflict-in-refinement',
-          `overlapping fields in refinement: ${overlappingFields.map(
-            nameFromDef
-          )}`
+          `overlapping fields in refinement: ${overlappingFields.join(', ')}`
+        );
+      }
+      if (missingOut.length > 0) {
+        logTo.logError(
+          'name-conflict-in-refinement',
+          `missing output fields in refinement: ${missingOut.join(', ')}`
         );
       }
       to.fieldUsage = mergeFieldUsage(to.fieldUsage, from.fieldUsage);
