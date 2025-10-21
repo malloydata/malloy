@@ -132,6 +132,17 @@ export class DuckDBTestConnection extends DuckDBConnection {
   }
 }
 
+export class DuckDBROTestConnection extends DuckDBTestConnection {
+  constructor(name: string, databasePath?: string, workingDirectory?: string) {
+    super({
+      name,
+      databasePath,
+      workingDirectory,
+      readOnly: true,
+    });
+  }
+}
+
 export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
 
@@ -190,6 +201,12 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new PostgresTestConnection(dbName);
         break;
       case 'duckdb':
+        connection = new DuckDBROTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
+        break;
+      case 'duckdb_rw':
         connection = new DuckDBTestConnection(
           dbName,
           'test/data/duckdb/duckdb_test.db'
