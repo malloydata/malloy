@@ -145,7 +145,7 @@ export class DuckDBConnection extends DuckDBCommon {
           }
         }
         if (this.readOnly) {
-          config['access_mode'] = 'read_only';
+          config['access_mode'] = 'READ_ONLY';
         }
         const database = new Database(this.databasePath, config, err => {
           if (err) {
