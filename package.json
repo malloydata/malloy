@@ -20,7 +20,8 @@
       "packages/malloy-malloy-sql",
       "packages/malloy-render",
       "packages/malloy-syntax-highlight",
-      "test"
+      "test",
+      "profiler"
     ]
   },
   "files": [
@@ -40,21 +41,22 @@
     "test-bigquery": "MALLOY_DATABASE=bigquery jest",
     "test-postgres": "MALLOY_DATABASE=postgres jest",
     "test-publisher": "MALLOY_DATABASE=publisher jest",
-    "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter",
+    "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --reporters jest-silent-reporter",
     "ci-core": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --reporters --selectProjects malloy-core malloy-render --reporters jest-silent-reporter summary --runInBand",
     "ci-bigquery": "MALLOY_DATABASE=bigquery JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-bigquery --reporters jest-silent-reporter summary",
     "ci-duckdb-wasm": "MALLOY_DATABASE=duckdb_wasm JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-duckdb --reporters jest-silent-reporter summary --runInBand",
-    "ci-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-duckdb db-duckdb-core --reporters jest-silent-reporter summary --runInBand",
+    "ci-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-duckdb db-duckdb-core --reporters jest-silent-reporter summary",
     "ci-motherduck": "MALLOY_DATABASE=motherduck JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-duckdb --reporters jest-silent-reporter summary",
     "ci-mysql": "MALLOY_DATABASE=mysql JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-mysql --reporters jest-silent-reporter summary",
     "ci-postgres": "MALLOY_DATABASE=postgres JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-postgres --reporters jest-silent-reporter summary",
-    "ci-presto": "MALLOY_DATABASE=presto JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto --reporters jest-silent-reporter summary",
+    "ci-presto": "MALLOY_DATABASE=presto JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto-trino --reporters jest-silent-reporter summary",
     "ci-publisher": "MALLOY_DATABASE=publisher JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-publisher --reporters jest-silent-reporter summary",
     "ci-snowflake": "MALLOY_DATABASE=snowflake JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-snowflake --reporters jest-silent-reporter summary",
-    "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-trino --reporters jest-silent-reporter summary",
+    "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-presto-trino --reporters jest-silent-reporter summary",
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
+    "profile": "ts-node scripts/profiler",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
     "ping-db": "ts-node ./test/bin/ping_db.ts"
@@ -99,5 +101,8 @@
     "unified": "^10.1.2",
     "uuid": "^8.3.2",
     "yargs": "^17.7.2"
+  },
+  "dependencies": {
+    "clinic": "^13.0.0"
   }
 }

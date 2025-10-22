@@ -348,7 +348,7 @@ describe('Tag access', () => {
     expect(ext.toString()).toBe('#(docs) a = []\n');
     idempotent(ext);
   });
-  test.skip('empty array followed by field', () => {
+  test('empty array followed by field', () => {
     const base = Tag.withPrefix('#(docs) ');
     const ext = base.set(['a'], []).set(['b'], 'foo');
     expect(ext.toString()).toBe('#(docs) a = [] b = foo\n');

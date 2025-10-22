@@ -45,6 +45,7 @@ jobs:
         run: |
           npm ci --loglevel error
           sh scripts/ci-test-sanity-check.sh
+          sh scripts/ci-env-sanity-check.sh
           npm run lint
           npm run build
           npm run build-duckdb-db

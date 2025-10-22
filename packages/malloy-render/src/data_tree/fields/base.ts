@@ -1,4 +1,9 @@
-import {tagFor, extractLiteralFromTag, shouldRenderAs} from '../utils';
+import {
+  tagFor,
+  extractLiteralFromTag,
+  shouldRenderAs,
+  extractExpressionFromTag,
+} from '../utils';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {Tag} from '@malloydata/malloy-tag';
 import {renderTagFromAnnotations, NULL_SYMBOL, notUndefined} from '../../util';
@@ -50,10 +55,17 @@ export abstract class FieldBase {
 
   constructor(
     public readonly field: Malloy.DimensionInfo,
-    public readonly parent: Field | undefined
+    public readonly parent: Field | undefined,
+    /**
+     * Performance optimization: Skip metadata tag parsing for synthetic fields.
+     * Used when creating internal RecordField instances that don't need metadata.
+     */
+    skipTagParsing = false
   ) {
     this.tag = renderTagFromAnnotations(this.field.annotations);
-    this.metadataTag = tagFor(this.field, '#(malloy) ');
+    this.metadataTag = skipTagParsing
+      ? this.tag
+      : tagFor(this.field, '#(malloy) ');
     this.path = parent ? [...parent.path, field.name] : [];
   }
 
@@ -70,14 +82,31 @@ export abstract class FieldBase {
     throw new Error('Root field was not an instance of RootField');
   }
 
-  get drillPath(): string[] {
-    if (this.parent) {
-      const view = this.metadataTag.text('drill_view');
-      const parentPath = this.parent.drillPath;
-      if (view === undefined) return parentPath;
-      return [...parentPath, view];
+  /**
+   * Get the effective query timezone for this field.
+   * Walks up the parent chain to find nested timezone metadata from tags,
+   * or falls back to the root query timezone.
+   */
+  getEffectiveQueryTimezone(): string | undefined {
+    // Check if this field has a nested timezone in its metadata tags
+    const nestedTimezone = this.metadataTag.text('query_timezone');
+    if (nestedTimezone) {
+      return nestedTimezone;
     }
-    return [];
+
+    // Walk up the parent chain to find a nested timezone
+    if (this.parent) {
+      return this.parent.getEffectiveQueryTimezone();
+    }
+
+    // Fall back to root query timezone
+    return this.root().queryTimezone;
+  }
+
+  get drillStableExpression(): Malloy.Expression | undefined {
+    const expressionTag = this.metadataTag.tag('drill_expression');
+    if (expressionTag === undefined) return undefined;
+    return extractExpressionFromTag(expressionTag);
   }
 
   get sourceName() {
@@ -148,7 +177,7 @@ export abstract class FieldBase {
   get drillFilters(): string[] {
     return (this.metadataTag.array('drill_filters') ?? [])
       .map(filterTag => {
-        if (filterTag.text('drill_view')) return undefined;
+        if (filterTag.text('filter_view')) return undefined;
         const stableFilter = this.getStableDrillFilter(filterTag);
         if (stableFilter === undefined) {
           return filterTag.text('code');
@@ -160,27 +189,26 @@ export abstract class FieldBase {
 
   getStableDrillFilter(filter: Tag): Malloy.Filter | undefined {
     const kind = filter.text('kind');
-    const field = filter.textArray('field_reference');
-    if (kind === undefined || field === undefined) return undefined;
-    const fieldReference: Malloy.Reference = {
-      name: field[field.length - 1],
-      path: field.slice(0, -1),
-    };
+    const expressionTag = filter.tag('expression');
+    if (expressionTag === undefined) return undefined;
+    const expression = extractExpressionFromTag(expressionTag);
+    if (kind === undefined || expression === undefined) return undefined;
     if (kind === 'filter_expression') {
       const filterExpression = filter.text('filter_expression');
       if (filterExpression === undefined) return undefined;
       return {
         kind: 'filter_string',
-        field_reference: fieldReference,
+        expression,
         filter: filterExpression,
       };
     } else if (kind === 'literal_equality') {
       const value = filter.tag('value');
+      if (value === undefined) return undefined;
       const literal = extractLiteralFromTag(value);
       if (literal !== undefined) {
         return {
           kind: 'literal_equality',
-          field_reference: fieldReference,
+          expression,
           value: literal,
         };
       }
@@ -192,7 +220,7 @@ export abstract class FieldBase {
     const result: Malloy.Filter[] = [];
     const filterTags = this.metadataTag.array('drill_filters');
     for (const filterTag of filterTags ?? []) {
-      if (filterTag.text('drill_view')) continue;
+      if (filterTag.text('filter_view')) continue;
       const stableFilter = this.getStableDrillFilter(filterTag);
       if (stableFilter === undefined) return undefined;
       result.push(stableFilter);

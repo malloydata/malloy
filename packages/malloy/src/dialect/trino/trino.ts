@@ -32,6 +32,7 @@ import type {
   MeasureTimeExpr,
   TimeLiteralNode,
   TimeExtractExpr,
+  TimeTruncExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -170,16 +171,11 @@ export class TrinoDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
-    let ret = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
-    if (limit !== undefined) {
-      ret = `SLICE(${ret}, 1, ${limit})`;
-    }
-    return ret;
+    return `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -617,6 +613,39 @@ ${indent(sql)}
     return `TIMESTAMP '${lit.literal}'`;
   }
 
+  sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
+    // adjusting for monday/sunday weeks
+    const week = df.units === 'week';
+    const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
+
+    // Only do timezone conversion for timestamps, not dates
+    if (TD.isTimestamp(df.e.typeDef)) {
+      const tz = qtz(qi);
+      if (tz) {
+        // get a civil version of the time in the query time zone
+        const civilSource = `(CAST(${truncThis} AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE '${tz}')`;
+        // do truncation in that time space
+        let civilTrunc = `DATE_TRUNC('${df.units}', ${civilSource})`;
+        if (week) {
+          civilTrunc = `(${civilTrunc} - INTERVAL '1' DAY)`;
+        }
+        // make a tstz from the civil time ... "AT TIME ZONE" of
+        // a TIMESTAMP will produce a TIMESTAMP WITH TIME ZONE in that zone
+        // where the civil appearance is the same as the TIMESTAMP
+        const truncTsTz = `${civilTrunc} AT TIME ZONE '${tz}'`;
+        // Now just make a system TIMESTAMP from that
+        return `CAST(${truncTsTz} AS TIMESTAMP)`;
+      }
+    }
+
+    // For dates (civil time) or timestamps without query timezone
+    let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
+    if (week) {
+      result = `(${result} - INTERVAL '1' DAY)`;
+    }
+    return result;
+  }
+
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const pgUnits = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql || '';
@@ -638,7 +667,7 @@ ${indent(sql)}
         const name = f.as ?? f.name;
         rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
         const elType = this.malloyTypeToSQLType(f);
-        rowTypes.push(`${name} ${elType}`);
+        rowTypes.push(`${this.sqlMaybeQuoteIdentifier(name)} ${elType}`);
       }
     }
     return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;

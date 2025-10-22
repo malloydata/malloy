@@ -57,6 +57,57 @@ function getSplitFunction(db: string) {
   }[db];
 }
 
+function lotsOfNumbersSQLTable(db: string): string | undefined {
+  return {
+    'mysql': `
+    SELECT
+    p0.n
+    + p1.n*2
+    + p2.n * POWER(2,2)
+    + p3.n * POWER(2,3)
+    + p4.n * POWER(2,4)
+    + p5.n * POWER(2,5)
+    + p6.n * POWER(2,6)
+    + p7.n * POWER(2,7)
+    + p8.n * POWER(2,8)
+    + p9.n * POWER(2,9)
+    + p10.n * POWER(2,10)
+    + p11.n * POWER(2,11)
+    + p12.n * POWER(2,12)
+    + p13.n * POWER(2,13)
+    + p14.n * POWER(2,14)
+    + p15.n * POWER(2,15)
+    + p16.n * POWER(2,16)
+    + p17.n * POWER(2,17)
+    + p18.n * POWER(2,18)
+    + p19.n * POWER(2,19)
+    as n
+  FROM
+    (SELECT 0 as n UNION SELECT 1) p0,
+    (SELECT 0 as n UNION SELECT 1) p1,
+    (SELECT 0 as n UNION SELECT 1) p2,
+    (SELECT 0 as n UNION SELECT 1) p3,
+    (SELECT 0 as n UNION SELECT 1) p4,
+    (SELECT 0 as n UNION SELECT 1) p5,
+    (SELECT 0 as n UNION SELECT 1) p6,
+    (SELECT 0 as n UNION SELECT 1) p7,
+    (SELECT 0 as n UNION SELECT 1) p8,
+    (SELECT 0 as n UNION SELECT 1) p9,
+    (SELECT 0 as n UNION SELECT 1) p10,
+    (SELECT 0 as n UNION SELECT 1) p11,
+    (SELECT 0 as n UNION SELECT 1) p12,
+    (SELECT 0 as n UNION SELECT 1) p13,
+    (SELECT 0 as n UNION SELECT 1) p14,
+    (SELECT 0 as n UNION SELECT 1) p15,
+    (SELECT 0 as n UNION SELECT 1) p16,
+    (SELECT 0 as n UNION SELECT 1) p17,
+    (SELECT 0 as n UNION SELECT 1) p18,
+    (SELECT 0 as n UNION SELECT 1) p19
+    `,
+    'duckdb': 'SELECT UNNEST(GENERATE_SERIES(0,1048575,1)) as n',
+  }[db];
+}
+
 afterAll(async () => {
   await runtimes.closeAll();
 });
@@ -64,6 +115,25 @@ afterAll(async () => {
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
 
+  const lotsSQL = lotsOfNumbersSQLTable(databaseName);
+  it.when(lotsSQL !== undefined)(
+    `big symmetric sum - ${databaseName}`,
+    async () => {
+      await expect(`
+      source: lots_of_numbers is ${databaseName}.sql(""" ${lotsSQL} """) extend {
+        measure:
+          total_n is n.sum()
+      }
+      query: two_rows is ${databaseName}.table('malloytest.state_facts') -> {select: state;  limit: 2}
+      source: b is two_rows extend {
+        join_cross: lots_of_numbers
+      }
+      run: b -> {
+        aggregate: lots_of_numbers.total_n
+      }
+    `).malloyResultMatches(runtime, {total_n: 549755289600});
+    }
+  );
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
     await expect(`
@@ -271,6 +341,37 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       row_count: 51 * 2,
       left_sum: 19701,
       right_sum: 1560,
+    });
+  });
+
+  it(`symmetric sum and average large  - ${databaseName}`, async () => {
+    await expect(`
+      source: a is ${databaseName}.table('malloytest.airports') extend {
+        primary_key: code
+        dimension:
+          big_elevation is elevation * 100000.0
+          little_elevation is elevation / 100000.0
+        measure:
+          total_elevation is elevation.sum()
+          total_little_elevation is round(little_elevation.sum(),4)
+          average_elevation is floor(elevation.avg())
+          total_big_elevation is round(big_elevation.sum(),0)     // mysql is weird
+          average_big_elevation is floor(big_elevation.avg())
+      }
+      query: two_rows is ${databaseName}.table('malloytest.state_facts') -> {select: state;  limit: 2}
+      source: b is two_rows extend {
+        join_cross: a
+      }
+
+      run: b -> {aggregate: a.total_elevation, a.total_little_elevation, a.average_elevation, a.total_big_elevation, a.average_big_elevation}
+      // run: two_rows
+
+    `).malloyResultMatches(runtime, {
+      total_elevation: 22629146,
+      total_little_elevation: 226.2915,
+      average_elevation: 1143,
+      total_big_elevation: 2262914600000,
+      average_big_elevation: 114329035,
     });
   });
 
@@ -917,6 +1018,34 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
+  });
+
+  // not sure this works on all dialect.
+  it("stage names don't conflict- ${databaseName}", async () => {
+    await expect(`
+        source: airports is ${databaseName}.table('malloytest.state_facts') extend {
+        }
+
+        query: st0 is airports -> {
+          select: state
+        } -> {
+          select: *
+        }
+
+        query: st1 is airports -> {
+          select: state
+        } -> {
+          select: *
+        }
+
+        query: u is ${databaseName}.sql("""SELECT * FROM %{st0 } as x UNION ALL %{st1 }""") -> {
+          select: *
+        }
+        // # test.debug
+        run: u -> {
+          aggregate: c is count()
+        }
+    `).malloyResultMatches(runtime, {c: 102});
   });
 
   const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;

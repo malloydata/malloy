@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {renderTimeString} from '../util';
+import {renderDateTimeField} from './render-numeric-field';
 import type {RendererProps} from './types';
 
 export function renderTime({dataColumn}: RendererProps) {
@@ -19,7 +19,7 @@ export function renderTime({dataColumn}: RendererProps) {
     );
 
   const value = dataColumn.value;
-  return renderTimeString(value, {
+  return renderDateTimeField(dataColumn.field, value, {
     isDate: dataColumn.field.isDate(),
     timeframe: dataColumn.field.timeframe,
   });

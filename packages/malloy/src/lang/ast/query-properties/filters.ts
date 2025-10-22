@@ -51,28 +51,29 @@ export class FilterElement extends MalloyElement {
   }
 
   private getStableFilter(): Malloy.Filter | undefined {
-    const drillFilter = this.drillFilter();
-    if (drillFilter !== undefined) {
+    if (
+      this.expr instanceof ExprEquality &&
+      this.expr.op === '=' &&
+      isLiteral(this.expr.right)
+    ) {
+      const lhs = this.expr.left.drillExpression();
+      if (lhs === undefined) return undefined;
       return {
         kind: 'literal_equality',
-        field_reference: {
-          name: drillFilter.reference.nameString,
-          path: drillFilter.reference.list.map(f => f.name).slice(0, -1),
-        },
-        value: drillFilter.value.getStableLiteral(),
+        expression: lhs,
+        value: this.expr.right.getStableLiteral(),
       };
-    }
-    const filterExpressionFilter = this.filterExpressionFilter();
-    if (filterExpressionFilter !== undefined) {
+    } else if (
+      this.expr instanceof ExprCompare &&
+      this.expr.op === '~' &&
+      this.expr.right instanceof ExprFilterExpression
+    ) {
+      const lhs = this.expr.left.drillExpression();
+      if (lhs === undefined) return undefined;
       return {
         kind: 'filter_string',
-        field_reference: {
-          name: filterExpressionFilter.reference.nameString,
-          path: filterExpressionFilter.reference.list
-            .map(f => f.name)
-            .slice(0, -1),
-        },
-        filter: filterExpressionFilter.filterExpression,
+        expression: lhs,
+        filter: this.expr.right.filterText,
       };
     }
     return undefined;
@@ -216,7 +217,7 @@ export class Filter
       const fExpr = this.checkedFilterCondition(filterFS, filter);
       if (fExpr !== undefined) {
         executeFor.filters.push(fExpr);
-        executeFor.resultFS.addFieldUserFromFilter(fExpr, filter);
+        executeFor.resultFS.addFieldUserFromFilter(fExpr);
       }
     }
   }

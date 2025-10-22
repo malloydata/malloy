@@ -32,17 +32,28 @@ export abstract class PostgresBase extends Dialect {
     // adjusting for monday/sunday weeks
     const week = df.units === 'week';
     const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
+
+    // Only do timezone conversion for timestamps, not dates
     if (TD.isTimestamp(df.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
-        const civilSource = `(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        // get a civil version of the time in the query time zone
+        const civilSource = `((${truncThis})::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        // do truncation in that time space
         let civilTrunc = `DATE_TRUNC('${df.units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        civilTrunc = `${civilTrunc}::TIMESTAMP`;
+        if (week) {
+          civilTrunc = `(${civilTrunc} - INTERVAL '1' DAY)`;
+        }
+        // make a tstz from the civil time ... "AT TIME ZONE" of
+        // a TIMESTAMP will produce a TIMESTAMPTZ in that zone
+        // where the civi appeareance is the same as the TIMESTAMP
         const truncTsTz = `${civilTrunc} AT TIME ZONE '${tz}'`;
+        // Now just make a system TIMESTAMP from that
         return `(${truncTsTz})::TIMESTAMP`;
       }
     }
+
+    // For dates (civil time) or timestamps without query timezone
     let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
     if (week) {
       result = `(${result} - INTERVAL '1' DAY)`;

@@ -165,6 +165,7 @@ export abstract class AtomicFieldDeclaration
       } else {
         ret.e = exprValue.value;
       }
+      ret.drillExpression = this.expr.drillExpression();
       ret.fieldUsage = exprValue.fieldUsage;
       ret.ungroupings = exprValue.ungroupings;
       ret.requiresGroupBy = exprValue.requiresGroupBy;
@@ -269,8 +270,15 @@ export class FieldDefinitionValue extends SpaceField {
   // A source will call this when it defines the field
   private defInSource?: FieldDef;
   fieldDef(): FieldDef {
+    // Checking `defInQuery` is necessary to support a case where a field needs
+    // to be looked up from the output space (ex: in `order_by: a`), but where
+    // the field is defined in a group_by expression (ex: `group_by: a.day`).
+    // In this case, this.exprDef.fieldDef() only ever returns an
+    // AtomicFieldDef anyways, so it is safe in this particular implementation.
     const def =
-      this.defInSource ?? this.exprDef.fieldDef(this.space, this.name);
+      this.defInSource ??
+      this.defInQuery ??
+      this.exprDef.fieldDef(this.space, this.name);
     this.defInSource = def;
     return def;
   }

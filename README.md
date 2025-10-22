@@ -1,6 +1,6 @@
 # Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a query language that uses an existing SQL engine to execute queries. Malloy currently can connect to BigQuery, Snowflake, PostgreSQL, MySQL, Trino, or Presto, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
+Malloy is a modern open source language for describing data relationships and transformations. It is both a semantic modeling language and a query language that uses an existing SQL engine to execute queries. Malloy currently can connect to BigQuery, Snowflake, PostgreSQL, MySQL, Trino, or Presto, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
 
 ### [Click here](https://github.dev/malloydata/try-malloy/airports.malloy) to try Malloy in your browser!
 

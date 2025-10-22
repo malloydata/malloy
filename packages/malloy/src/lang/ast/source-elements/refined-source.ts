@@ -131,7 +131,7 @@ export class RefinedSource extends Source {
     }
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const from = structuredClone(this.source.getSourceDef(paramSpace));
+    const from = {...this.source.getSourceDef(paramSpace)};
     const includeState = processIncludeList(this.includeList, from);
     const thisIncludeState = getIncludeStateForJoin([], includeState);
     for (const modifier of inlineAccessModifiers) {
@@ -140,7 +140,7 @@ export class RefinedSource extends Source {
       }
     }
     // Note that this is explicitly not:
-    // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
+    // const from = this.source.withParameters(parameterSpace, pList);
     // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;

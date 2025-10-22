@@ -6,9 +6,9 @@
  */
 
 import {expressionFunction} from 'vega';
-import {renderNumericField} from '../render-numeric-field';
+import {renderNumericField, renderDateTimeField} from '../render-numeric-field';
 import type {BrushData} from '../result-store/result-store';
-import {renderTimeString, type RenderTimeStringOptions} from '../../util';
+import {type RenderTimeStringOptions} from '../../util';
 import type {NestField} from '../../data_tree';
 
 if (!expressionFunction('renderMalloyNumber')) {
@@ -46,7 +46,7 @@ if (!expressionFunction('renderMalloyTime')) {
             options.extractFormat =
               extractFormat as RenderTimeStringOptions['extractFormat'];
           }
-          return renderTimeString(new Date(value), options);
+          return renderDateTimeField(field, new Date(value), options);
         }
       }
       return String(value);

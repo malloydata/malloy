@@ -49,12 +49,12 @@ const Cell = (props: {
     const width = layout.fieldLayout(props.field).width;
     const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
+    if (width) {
+      style.width = `${width}px`;
+      style['min-width'] = `${width}px`;
+      style['max-width'] = `${width}px;`;
+    }
     if (!props.isHeader) {
-      if (width) {
-        style.width = `${width}px`;
-        style['min-width'] = `${width}px`;
-        style['max-width'] = `${width}px;`;
-      }
       if (height) {
         style.height = `${height}px`;
       }
@@ -229,11 +229,12 @@ const TableField = (props: {
 
   const config = useConfig();
   const isDrillingEnabled = config.tableConfig().enableDrill;
+  const metadata = useResultContext();
   const handleClick = async (evt: MouseEvent) => {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
-        metadata: useResultContext(),
+        metadata,
         data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });

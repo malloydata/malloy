@@ -246,9 +246,8 @@ export abstract class TrinoPrestoConnection
         retRow[field.name] = this.convertRow(field.fields, row[i]);
       } else if (isRepeatedRecord(field)) {
         retRow[field.name] = this.convertNest(field.fields, row[i]);
-      } else if (field.type === 'array') {
-        // mtoy todo don't understand this line actually
-        retRow[field.name] = this.convertNest(field.fields.slice(0, 1), row[i]);
+      } else if (isBasicArray(field)) {
+        retRow[field.name] = this.unpackArray([], row[i]);
       } else {
         retRow[field.name] = row[i] ?? null;
       }
@@ -384,7 +383,7 @@ export abstract class TrinoPrestoConnection
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
       const name = row[0];
-      const type = row[4] || row[1];
+      const type = row[4] && typeof row[4] === 'string' ? row[4] : row[1];
       const malloyType = mkFieldDef(this.malloyTypeFromTrinoType(type), name);
       structDef.fields.push(mkFieldDef(malloyType, name));
     }

@@ -172,7 +172,11 @@ export class MalloyToQuery
   visitRunStatement(pcx: parse.RunStatementContext): Malloy.Query | null {
     const defCx = pcx.topLevelAnonQueryDef();
     const definition = this.getQueryDefinition(defCx.sqExpr());
-    const annotations = this.getAnnotations(pcx.topLevelAnonQueryDef().tags());
+    const runAnnotations = this.getAnnotations(pcx.tags());
+    const defAnnotations = this.getAnnotations(
+      pcx.topLevelAnonQueryDef().tags()
+    );
+    const annotations = this.combineAnnotations(runAnnotations, defAnnotations);
     if (definition !== null) {
       return {
         annotations,
@@ -742,7 +746,8 @@ export class MalloyToQuery
             return {
               filter: {
                 kind: 'filter_string',
-                field_reference: {
+                expression: {
+                  kind: 'field_reference',
                   name,
                   path,
                 },
@@ -767,7 +772,8 @@ export class MalloyToQuery
           return {
             filter: {
               kind: 'literal_equality',
-              field_reference: {
+              expression: {
+                kind: 'field_reference',
                 name,
                 path,
               },
@@ -899,6 +905,17 @@ export class MalloyToQuery
       return {kind: 'number_literal', number_value: n};
     } else if (literalCx instanceof parse.ExprNULLContext) {
       return {kind: 'null_literal'};
+    } else if (literalCx instanceof parse.FilterString_stubContext) {
+      const filterContext = literalCx.getChild(0);
+      if (filterContext instanceof parse.FilterStringContext) {
+        const filterString = this.getFilterString(filterContext);
+        if (filterString) {
+          return {
+            kind: 'filter_expression_literal',
+            filter_expression_value: filterString,
+          };
+        }
+      }
     }
     return null;
   }

@@ -61,7 +61,9 @@ arrayElement
 
 reference: RF_BEG propName RF_END;
 
-arrayValue: AR_BEG arrayElement (COMMA arrayElement)* COMMA? AR_END;
+arrayValue
+  : AR_BEG arrayElement (COMMA arrayElement)* COMMA? AR_END
+  | AR_BEG AR_END;
 properties: PR_BEG (DOTTY | (tagSpec*)) PR_END;
 
 MINUS_DOTTY: '-...';

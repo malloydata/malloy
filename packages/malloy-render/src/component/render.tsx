@@ -47,6 +47,7 @@ export type MalloyRenderProps = {
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
   renderFieldMetadata: RenderFieldMetadata;
+  useVegaInterpreter?: boolean;
 };
 
 const ConfigContext = createContext<{
@@ -92,7 +93,7 @@ export function MalloyRender(props: MalloyRenderProps) {
     <ErrorBoundary
       fallback={errorProps => {
         const message = () => errorProps.error?.message ?? errorProps;
-        props?.onError?.(errorProps.error);
+        props?.onError?.(errorProps);
         return <ErrorMessage message={message()} />;
       }}
     >
@@ -113,6 +114,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             scrollEl={props.scrollEl}
             vegaConfigOverride={props.vegaConfigOverride}
             renderFieldMetadata={props.renderFieldMetadata}
+            useVegaInterpreter={props.useVegaInterpreter}
           />
         </ConfigContext.Provider>
       </Show>
@@ -127,6 +129,7 @@ export function MalloyRenderInner(props: {
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
   renderFieldMetadata: RenderFieldMetadata;
+  useVegaInterpreter?: boolean;
 }) {
   const [parentSize, setParentSize] = createSignal({
     width: 0,
@@ -149,7 +152,11 @@ export function MalloyRenderInner(props: {
         width: parentSize().width - CHART_SIZE_BUFFER,
         height: parentSize().height - CHART_SIZE_BUFFER,
       },
+      useVegaInterpreter: props.useVegaInterpreter,
     });
+
+    // Collect style overrides from plugins
+    const styleOverrides: Record<string, string> = {};
     props.renderFieldMetadata?.getAllFields().forEach(field => {
       const plugins =
         props.renderFieldMetadata?.getPluginsForField(field.key) ?? [];
@@ -161,9 +168,18 @@ export function MalloyRenderInner(props: {
             width: parentSize().width - CHART_SIZE_BUFFER,
             height: parentSize().height - CHART_SIZE_BUFFER,
           },
+          useVegaInterpreter: props.useVegaInterpreter,
         });
+
+        // Collect style overrides from plugin
+        if (plugin.getStyleOverrides) {
+          Object.assign(styleOverrides, plugin.getStyleOverrides());
+        }
       });
     });
+
+    resultMetadata.styleOverrides = styleOverrides;
+
     return resultMetadata;
   });
 
@@ -193,7 +209,13 @@ export function MalloyRenderInner(props: {
     };
   };
 
-  const style = () => generateThemeStyle(tags().modelTheme, tags().localTheme);
+  const style = () => {
+    const baseStyles = generateThemeStyle(tags().modelTheme, tags().localTheme);
+    const overrideStyles = Object.entries(metadata().styleOverrides)
+      .map(([key, value]) => `${key}: ${value};`)
+      .join('\n');
+    return baseStyles + overrideStyles;
+  };
 
   const rendering = () => {
     const data = rootCell();
@@ -310,6 +332,7 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     modelTheme
   );
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
+  const background = getThemeValue('background', localTheme, modelTheme);
 
   const css = `
     --malloy-render--table-row-height: ${tableRowHeight};
@@ -324,6 +347,7 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     --malloy-render--table-gutter-size: ${tableGutterSize};
     --malloy-render--table-pinned-background: ${tablePinnedBackground};
     --malloy-render--table-pinned-border: ${tablePinnedBorder};
+    --malloy-render--background: ${background};
 
 `;
   return css;

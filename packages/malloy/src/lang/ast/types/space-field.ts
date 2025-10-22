@@ -26,6 +26,8 @@ import type {
   QueryFieldDef,
   TypeDesc,
   AtomicFieldDef,
+  TurtleDef,
+  TurtleTypeDef,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import type {FieldSpace} from './field-space';
@@ -49,6 +51,28 @@ export abstract class SpaceField extends SpaceEntry {
           : []),
     };
     return ref;
+  }
+
+  protected turtleTypeFromTurtleDef(def: TurtleDef): TypeDesc {
+    const turtleTypeDef: TurtleTypeDef = {
+      type: 'turtle',
+      pipeline: def.pipeline,
+    };
+    return {
+      ...turtleTypeDef,
+      fieldUsage: def.fieldUsage ?? [],
+      // TODO these are sorta weird for a turtle...
+      expressionType: 'scalar',
+      evalSpace: 'constant',
+    };
+  }
+
+  protected typeFromFieldDef(def: AtomicFieldDef | TurtleDef): TypeDesc {
+    if (def.type === 'turtle') {
+      return this.turtleTypeFromTurtleDef(def);
+    } else {
+      return this.fieldTypeFromFieldDef(def);
+    }
   }
 
   getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {

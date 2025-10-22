@@ -23,7 +23,12 @@
 
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
-import {getText, NULL_SYMBOL} from '../util';
+import {
+  getText,
+  NULL_SYMBOL,
+  renderTimeString,
+  type RenderTimeStringOptions,
+} from '../util';
 import type {Field} from '../data_tree';
 
 export function renderNumericField(
@@ -61,4 +66,47 @@ export function renderNumericField(
     displayValue = format(tag.text('number') ?? '#', value);
   else displayValue = (value as number).toLocaleString();
   return displayValue;
+}
+
+export function renderDateTimeField(
+  f: Field,
+  value: Date | null | undefined,
+  options: RenderTimeStringOptions = {}
+): string {
+  if (value === null || value === undefined) {
+    return NULL_SYMBOL;
+  }
+
+  const tag = f.tag;
+
+  // Check if the field has a number= tag for custom date formatting
+  if (tag.has('number')) {
+    const numberFormat = tag.text('number');
+    if (numberFormat) {
+      try {
+        // Use Excel-style date formatting with ssf library
+        return format(numberFormat, value);
+      } catch (error) {
+        // If the format fails, fall back to default formatting
+        // eslint-disable-next-line no-console
+        console.warn(
+          `Invalid date format "${numberFormat}" for field ${f.name}, falling back to default formatting`
+        );
+      }
+    }
+  }
+
+  // Get the effective query timezone for timestamp fields (not date fields)
+  // Date fields represent calendar dates and shouldn't be timezone-adjusted
+  const effectiveTimezone = !options.isDate
+    ? options.timezone ?? f.getEffectiveQueryTimezone()
+    : undefined;
+
+  const optionsWithTimezone = {
+    ...options,
+    timezone: effectiveTimezone,
+  };
+
+  // Fall back to default time string rendering
+  return renderTimeString(value, optionsWithTimezone);
 }

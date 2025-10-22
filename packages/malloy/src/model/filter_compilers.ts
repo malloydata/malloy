@@ -22,7 +22,7 @@ import {
   isTemporalFilter,
   isBooleanFilter,
 } from '@malloydata/malloy-filter';
-import type {Dialect} from '../dialect';
+import type {Dialect, QueryInfo} from '../dialect';
 import type {
   TimeLiteralNode,
   TimeDeltaExpr,
@@ -64,7 +64,13 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
-  compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
+  compile(
+    t: string,
+    c: FilterExpression | null,
+    x: string,
+    d: Dialect,
+    qi: QueryInfo = {}
+  ) {
     if (c === null) {
       return 'true';
     }
@@ -75,7 +81,7 @@ export const FilterCompilers = {
     } else if (t === 'boolean' && isBooleanFilter(c)) {
       return FilterCompilers.booleanCompile(c, x, d);
     } else if ((t === 'date' || t === 'timestamp') && isTemporalFilter(c)) {
-      return FilterCompilers.temporalCompile(c, x, d, t);
+      return FilterCompilers.temporalCompile(c, x, d, t, qi);
     }
     throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
   },
@@ -96,10 +102,12 @@ export const FilterCompilers = {
       case '>':
       case '<':
       case '>=':
-      case '<=':
+      case '<=': {
+        const op = nc.not ? invertCompare(nc.operator) : nc.operator;
         return nc.values
-          .map(v => `${x} ${nc.operator} ${v}`)
+          .map(v => `${x} ${op} ${v}`)
           .join(nc.not ? ' AND ' : ' OR ');
+      }
       case 'range': {
         let startOp = nc.startOperator;
         let endOp = nc.endOperator;
@@ -127,14 +135,16 @@ export const FilterCompilers = {
   },
   booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
     switch (bc.operator) {
+      case 'true':
+        return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
       case 'false':
-        return `${x} = false`;
+        return bc.not
+          ? `COALESCE(${x} != false, true)`
+          : `COALESCE(${x} = false, false)`;
       case 'false_or_null':
-        return `${x} IS NULL OR ${x} = false`;
+        return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
       case 'null':
         return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
-      case 'true':
-        return x;
     }
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
@@ -208,7 +218,7 @@ export const FilterCompilers = {
         const clauses = sc.members.map(c =>
           FilterCompilers.stringCompile(c, x, d)
         );
-        return clauses.join(' AND ');
+        return clauses.join(' OR ');
       }
       case ',': {
         /*
@@ -295,9 +305,10 @@ export const FilterCompilers = {
     tc: TemporalFilter,
     x: string,
     d: Dialect,
-    t: 'date' | 'timestamp'
+    t: 'date' | 'timestamp',
+    qi: QueryInfo = {}
   ): string {
-    const c = new TemporalFilterCompiler(x, d, t);
+    const c = new TemporalFilterCompiler(x, d, t, qi);
     return c.compile(tc);
   },
 };
@@ -337,13 +348,16 @@ const fTimestamp = `${fMinute}:ss`;
  */
 export class TemporalFilterCompiler {
   readonly d: Dialect;
+  readonly qi: QueryInfo;
 
   constructor(
     readonly expr: string,
     dialect: Dialect,
-    readonly timetype: 'timestamp' | 'date' = 'timestamp'
+    readonly timetype: 'timestamp' | 'date' = 'timestamp',
+    queryInfo: QueryInfo = {}
   ) {
     this.d = dialect;
+    this.qi = queryInfo;
   }
 
   time(timeSQL: string): string {
@@ -515,7 +529,10 @@ export class TemporalFilterCompiler {
       typeDef: {type: 'timestamp'},
       literal,
     };
-    return {...literalNode, sql: this.d.sqlLiteralTime({}, literalNode)};
+    if (this.qi.queryTimezone) {
+      literalNode.timezone = this.qi.queryTimezone;
+    }
+    return {...literalNode, sql: this.d.sqlLiteralTime(this.qi, literalNode)};
   }
 
   private nowExpr(): Translated<NowNode> {
@@ -554,7 +571,7 @@ export class TemporalFilterCompiler {
       e: mkTemporal(e, 'timestamp'),
       units: 'day_of_week',
     };
-    return {...t, sql: this.d.sqlTimeExtractExpr({}, t)};
+    return {...t, sql: this.d.sqlTimeExtractExpr(this.qi, t)};
   }
 
   private nowDot(units: TimestampUnit): Translated<TimeTruncExpr> {
@@ -563,7 +580,7 @@ export class TemporalFilterCompiler {
       e: this.nowExpr(),
       units,
     };
-    return {...nowTruncExpr, sql: this.d.sqlTruncExpr({}, nowTruncExpr)};
+    return {...nowTruncExpr, sql: this.d.sqlTruncExpr(this.qi, nowTruncExpr)};
   }
 
   private thisUnit(units: TimestampUnit): MomentIs {
@@ -630,66 +647,20 @@ export class TemporalFilterCompiler {
         return this.lastUnit(m.units);
       case 'next':
         return this.nextUnit(m.units);
+      case 'sunday':
+        return this.weekdayMoment(1, m.which);
       case 'monday':
+        return this.weekdayMoment(2, m.which);
       case 'tuesday':
+        return this.weekdayMoment(3, m.which);
       case 'wednesday':
+        return this.weekdayMoment(4, m.which);
       case 'thursday':
+        return this.weekdayMoment(5, m.which);
       case 'friday':
+        return this.weekdayMoment(6, m.which);
       case 'saturday':
-      case 'sunday': {
-        const destDay = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-        ].indexOf(m.moment);
-        const dow = this.dayofWeek(this.nowExpr()).sql;
-        if (m.which === 'next') {
-          const nForwards = `${this.mod7(`${destDay}-(${dow}-1)+6`)}+1`;
-          const begin = this.delta(
-            this.thisUnit('day').begin,
-            '+',
-            nForwards,
-            'day'
-          );
-          const end = this.delta(
-            this.thisUnit('day').begin,
-            '+',
-            `${nForwards}+1`,
-            'day'
-          );
-          // console.log(
-          //   `SELECT ${
-          //     this.nowExpr().sql
-          //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nForwards} as nForwards,\n  ${
-          //     begin.sql
-          //   } as begin,\n   ${end.sql} as end`
-          // );
-          return {begin, end: end.sql};
-        }
-        // dacks back = mod((daw0 - dst) + 6, 7) + 1;
-        // dacks back = mod(((daw - 1) - dst) + 6, 7) + 1;
-        // dacks back = mod(((daw) - dst) + 7, 7) + 1;
-        const nBack = `${this.mod7(`(${dow}-1)-${destDay}+6`)}+1`;
-        const begin = this.delta(this.thisUnit('day').begin, '-', nBack, 'day');
-        const end = this.delta(
-          this.thisUnit('day').begin,
-          '-',
-          `(${nBack})-1`,
-          'day'
-        );
-        // console.log(
-        //   `SELECT ${
-        //     this.nowExpr().sql
-        //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nBack} as nBack,\n  ${
-        //     begin.sql
-        //   } as begin,\n   ${end.sql} as end`
-        // );
-        return {begin, end: end.sql};
-      }
+        return this.weekdayMoment(7, m.which);
     }
   }
 
@@ -705,5 +676,51 @@ export class TemporalFilterCompiler {
     begin = this.time(begin);
     end = this.time(end);
     return `${this.expr} ${begOp} ${begin} ${joinOp} ${this.expr} ${endOp} ${end}`;
+  }
+
+  private weekdayMoment(
+    destDay: number,
+    which: 'last' | 'next' | undefined
+  ): MomentIs {
+    const direction = which || 'last';
+    const dow = this.dayofWeek(this.nowExpr());
+    const todayBegin = this.thisUnit('day').begin;
+
+    // destDay comes in as 1-7 (Malloy format), convert to 0-6
+    const destDayZeroBased = destDay - 1;
+    // dow is 1-7, convert to 0-6 for the arithmetic
+    const dowZeroBased = `(${dow.sql}-1)`;
+
+    let beginOffset: string;
+    let endOffset: string;
+
+    // "dayname" and "last dayname" both refer to the most recent,
+    // already complete day of that name. So if today is Sunday,
+    // "next sunday" is "today", and "last sunday" is 7 days ago.
+    if (direction === 'next') {
+      // Days forward: ((destDay - currentDay + 6) % 7) + 1
+      beginOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+1`;
+      endOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+2`;
+    } else {
+      // Days back: ((currentDay - destDay + 6) % 7) + 1
+      beginOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}+1`;
+      // End offset is one day less (closer to today)
+      endOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}`;
+    }
+
+    const begin = this.delta(
+      todayBegin,
+      direction === 'next' ? '+' : '-',
+      beginOffset,
+      'day'
+    );
+    const end = this.delta(
+      todayBegin,
+      direction === 'next' ? '+' : '-',
+      endOffset,
+      'day'
+    );
+
+    return {begin, end: end.sql};
   }
 }

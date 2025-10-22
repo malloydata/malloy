@@ -514,6 +514,30 @@ describe('query:', () => {
           order_by: c
         }`).toTranslate();
       });
+      test('can order by a date grouped by timeframe', () => {
+        expect(`
+          run: a -> {
+            group_by: ats.day
+            order_by: ats
+          }
+        `).toTranslate();
+      });
+      test('use a calculate on a self-named group_by', () => {
+        expect(`
+        run: a -> {
+          group_by: ai is round(ai)
+          calculate: lats is lag(ai)
+        }
+      `).toTranslate();
+      });
+      test('use a having on a self-named aggregate', () => {
+        expect(`
+        run: a -> {
+          aggregate: ai is round(ai.sum())
+          having: ai > 0
+        }
+      `).toTranslate();
+      });
     });
   });
   describe('function typechecking', () => {
@@ -2399,10 +2423,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum`'
-        ),
-        errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `y` as required in composed source #2 (`a`)\nFields required in source: `aisum`'
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `x` and/or `y` (fields required in source: `aisum`)'
         )
       );
     });
@@ -2421,16 +2442,13 @@ describe('query:', () => {
             }
           )
           run: aext -> {
-            aggregate: ${'aisum'}
+            aggregate: aisum
             group_by: ${'foo'}
           }
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `x` as required in composed source #1 (`a`)\nFields required in source: `aisum` and `foo`'
-        ),
-        errorMessage(
-          'Could not resolve composite source: missing field `foo` in composed source #2 (`a`)\nFields required in source: `aisum` and `foo`'
+          'This operation uses field `foo`, resulting in invalid usage of the composite source, as there is no composite input source which defines `foo` without having an unsatisfied required group by or single value filter on `x` (fields required in source: `aisum` and `foo`)'
         )
       );
     });
@@ -2686,10 +2704,7 @@ describe('query:', () => {
         `
       ).toLog(
         errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `astr` as required in composed source #1 (`slice_1`)\nFields required in source: `astr`, `abool`, and `aisum`'
-        ),
-        errorMessage(
-          'Could not resolve composite source: missing group by or single value filter of `abool` as required in composed source #2 (`a`)\nFields required in source: `astr`, `abool`, and `aisum`'
+          'This operation uses field `aisum`, resulting in invalid usage of the composite source, as there is a missing required group by or single value filter of `astr` and/or `abool` (fields required in source: `astr`, `abool`, and `aisum`)'
         )
       );
     });

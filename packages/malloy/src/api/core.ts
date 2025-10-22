@@ -25,6 +25,7 @@ import type {SQLSourceRequest} from '../lang/translate-response';
 import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 import {DEFAULT_LOG_RANGE, mapLogs, nodeToLiteralValue} from './util';
+import {Timer} from '../timing';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -238,18 +239,21 @@ export type CompileResponse =
       modelDef: ModelDef;
       compilerNeeds?: undefined;
       logs?: LogMessage[];
+      timingInfo: Malloy.TimingInfo;
     }
   | {
       model?: undefined;
       modelDef?: undefined;
       compilerNeeds: Malloy.CompilerNeeds;
       logs?: LogMessage[];
+      timingInfo: Malloy.TimingInfo;
     }
   | {
       model?: undefined;
       modelDef?: undefined;
       compilerNeeds?: undefined;
       logs: LogMessage[];
+      timingInfo: Malloy.TimingInfo;
     };
 
 export function compileQuery(
@@ -265,6 +269,7 @@ export interface CompileModelState {
   translator: MalloyTranslator;
   done: boolean;
   hasSource: boolean;
+  excludeReferences: boolean;
 }
 
 export function updateCompileModelState(
@@ -291,28 +296,35 @@ export function updateCompileModelState(
 function _newCompileModelState(
   modelURL: string,
   compilerNeeds?: Malloy.CompilerNeeds,
-  extendURL?: string
+  parseUpdate?: ParseUpdate | undefined,
+  extendURL?: string,
+  excludeReferences = false
 ): CompileModelState {
-  const translator = new MalloyTranslator(
-    modelURL,
-    null,
-    compilerNeedsToUpdate(compilerNeeds)
-  );
+  parseUpdate ??= compilerNeedsToUpdate(compilerNeeds);
+  const translator = new MalloyTranslator(modelURL, null, parseUpdate);
   const hasSource =
     (compilerNeeds?.files?.some(f => f.url === modelURL) ?? false) ||
     (compilerNeeds?.translations?.some(t => t.url === modelURL) ?? false);
   if (extendURL) {
     return {
-      extending: _newCompileModelState(extendURL, compilerNeeds),
+      extending: _newCompileModelState(
+        extendURL,
+        compilerNeeds,
+        parseUpdate,
+        undefined,
+        excludeReferences
+      ),
       translator,
       done: false,
       hasSource,
+      excludeReferences,
     };
   } else {
     return {
       translator,
       done: false,
       hasSource,
+      excludeReferences,
     };
   }
 }
@@ -323,7 +335,9 @@ export function newCompileModelState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
-    request.extend_model_url
+    undefined,
+    request.extend_model_url,
+    request.exclude_references
   );
 }
 
@@ -333,7 +347,9 @@ export function newCompileSourceState(
   return _newCompileModelState(
     request.model_url,
     request.compiler_needs,
-    request.extend_model_url
+    undefined,
+    request.extend_model_url,
+    request.exclude_references
   );
 }
 
@@ -364,12 +380,15 @@ export function statedCompileSource(
 }
 
 export function _statedCompileModel(state: CompileModelState): CompileResponse {
+  const timer = new Timer('compile_model');
   let extendingModel: ModelDef | undefined = undefined;
+  let extendingResult: CompileResponse | undefined = undefined;
   if (state.extending) {
     if (!state.extending.done) {
-      const extendingResult = _statedCompileModel(state.extending);
+      extendingResult = _statedCompileModel(state.extending);
+      timer.contribute([extendingResult.timingInfo]);
       if (!state.extending.done) {
-        return extendingResult;
+        return {...extendingResult, timingInfo: timer.stop()};
       }
     }
     extendingModel = state.extending.translator!.modelDef;
@@ -381,16 +400,24 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
         [state.translator.sourceURL],
         undefined
       ),
+      timingInfo: timer.stop(),
     };
   }
 
   const result = state.translator.translate(extendingModel);
+  timer.incorporate(result.timingInfo);
   if (result.final) {
     state.done = true;
+    const timingInfo = timer.stop();
     if (result.modelDef) {
+      const model = modelDefToModelInfo(result.modelDef);
       return {
-        model: modelDefToModelInfo(result.modelDef),
-        modelDef: result.modelDef,
+        model,
+        modelDef: maybeExcludeReferences(
+          result.modelDef,
+          state.excludeReferences
+        ),
+        timingInfo,
       };
     } else {
       if (result.problems === undefined || result.problems.length === 0) {
@@ -398,6 +425,7 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       }
       return {
         logs: result.problems,
+        timingInfo,
       };
     }
   } else {
@@ -406,8 +434,20 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       result.urls,
       result.tables
     );
-    return {compilerNeeds, logs: result.problems};
+    const timingInfo = timer.stop();
+    return {compilerNeeds, logs: result.problems, timingInfo};
   }
+}
+
+function maybeExcludeReferences(
+  modelDef: ModelDef,
+  excludeReferences: boolean
+): ModelDef {
+  if (!excludeReferences) return modelDef;
+  return {
+    ...modelDef,
+    references: undefined,
+  };
 }
 
 function wrapResponse(
@@ -416,7 +456,11 @@ function wrapResponse(
 ): Malloy.CompileModelResponse {
   const logs = response.logs ? mapLogs(response.logs, defaultURL) : undefined;
   if (response.compilerNeeds) {
-    return {compiler_needs: response.compilerNeeds, logs};
+    return {
+      compiler_needs: response.compilerNeeds,
+      logs,
+      timing_info: response.timingInfo,
+    };
   } else {
     let translations: Array<Malloy.Translation> | undefined = undefined;
     if (response.modelDef) {
@@ -427,18 +471,13 @@ function wrapResponse(
         },
       ];
     }
-    return {model: response.model, logs, translations};
+    return {
+      model: response.model,
+      logs,
+      translations,
+      timing_info: response.timingInfo,
+    };
   }
-}
-
-function _compileModel(
-  modelURL: string,
-  compilerNeeds?: Malloy.CompilerNeeds,
-  extendURL?: string,
-  state?: CompileModelState
-): CompileResponse {
-  state ??= _newCompileModelState(modelURL, compilerNeeds, extendURL);
-  return _statedCompileModel(state);
 }
 
 export function compileModel(
@@ -477,11 +516,16 @@ function extractSource(
             range: DEFAULT_LOG_RANGE,
           },
         ],
+        timing_info: result.timingInfo,
       };
     }
-    return {source, logs};
+    return {source, logs, timing_info: result.timingInfo};
   } else {
-    return {compiler_needs: result.compilerNeeds, logs};
+    return {
+      compiler_needs: result.compilerNeeds,
+      logs,
+      timing_info: result.timingInfo,
+    };
   }
 }
 
@@ -504,7 +548,12 @@ export interface CompileQueryState extends CompileModelState {
 export function newCompileQueryState(
   request: Malloy.CompileQueryRequest
 ): CompileQueryState {
-  const queryMalloy = Malloy.queryToMalloy(request.query);
+  const queryMalloy =
+    request.query_malloy ??
+    (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+  if (queryMalloy === undefined) {
+    throw new Error('Expected either query or query_malloy');
+  }
   const needs = {
     ...(request.compiler_needs ?? {}),
   };
@@ -517,7 +566,13 @@ export function newCompileQueryState(
     ...(needs.files ?? []),
   ];
   return {
-    ..._newCompileModelState(queryURL, needs, request.model_url),
+    ..._newCompileModelState(
+      queryURL,
+      needs,
+      undefined,
+      request.model_url,
+      request.exclude_references
+    ),
     defaultRowLimit: request.default_row_limit,
   };
 }
@@ -525,7 +580,9 @@ export function newCompileQueryState(
 export function statedCompileQuery(
   state: CompileQueryState
 ): Malloy.CompileQueryResponse {
+  const timer = new Timer('compile_query');
   const result = _statedCompileModel(state);
+  timer.incorporate(result.timingInfo);
   // TODO this can expose the internal URL... is there a better way to handle URL-less errors from the compiler?
   const defaultURL = state.translator.sourceURL;
   const logs = result.logs ? mapLogs(result.logs, defaultURL) : undefined;
@@ -533,6 +590,7 @@ export function statedCompileQuery(
     const queries = result.modelDef.queryList;
     if (queries.length === 0) {
       return {
+        timing_info: timer.stop(),
         logs: [
           ...(logs ?? []),
           {
@@ -549,10 +607,12 @@ export function statedCompileQuery(
     const schema = result.model.anonymous_queries[index].schema;
     const annotations = result.model.anonymous_queries[index].annotations ?? [];
     try {
+      const sqlTimer = new Timer('generate_sql');
       const queryModel = new QueryModel(result.modelDef);
       const translatedQuery = queryModel.compileQuery(query, {
         defaultRowLimit: state.defaultRowLimit,
       });
+      timer.contribute([sqlTimer.stop()]);
       const modelAnnotations = annotationToTaglines(
         result.modelDef.annotation
       ).map(l => ({
@@ -568,6 +628,7 @@ export function statedCompileQuery(
           source = result.modelDef.contents[query.structRef] as StructDef;
         }
       }
+
       const sourceAnnotations = annotationToTaglines(source.annotation).map(
         l => ({
           value: l,
@@ -605,6 +666,7 @@ export function statedCompileQuery(
             .toString(),
         });
       }
+      const timingInfo: Malloy.TimingInfo = timer.stop();
       return {
         result: {
           sql: translatedQuery.sql,
@@ -616,8 +678,10 @@ export function statedCompileQuery(
           source_annotations: annotationsOrUndefined(sourceAnnotations),
         },
         default_row_limit_added: translatedQuery.defaultRowLimitAdded,
+        timing_info: timingInfo,
       };
     } catch (error) {
+      const timingInfo: Malloy.TimingInfo = timer.stop();
       return {
         logs: [
           ...(logs ?? []),
@@ -628,10 +692,15 @@ export function statedCompileQuery(
             range: DEFAULT_LOG_RANGE,
           },
         ],
+        timing_info: timingInfo,
       };
     }
   } else {
-    return {compiler_needs: result.compilerNeeds, logs};
+    return {
+      compiler_needs: result.compilerNeeds,
+      logs,
+      timing_info: timer.stop(),
+    };
   }
 }
 

@@ -258,6 +258,30 @@ describe('document annotation', () => {
     const notes = model?.annotation;
     expect(notes).matchesAnnotation({notes: ['## model1\n', '## model2\n']});
   });
+  test('annotations and renamed fields', () => {
+    const m = model`
+      source: aplus is a extend {
+        # from_inherit
+        rename: _cost is af
+      }
+      source: inventory_items is aplus extend {
+        # block
+        rename:
+          # b4name
+        cost_prep is _cost
+      }
+    `;
+    expect(m).toTranslate();
+    const src = m.translator.getSourceDef('inventory_items');
+    expect(src).toBeDefined();
+    const cost_prep = getFieldDef(src!, 'cost_prep');
+    expect(cost_prep).toBeDefined();
+    expect(cost_prep!.annotation).matchesAnnotation({
+      inherits: {blockNotes: ['# from_inherit\n']},
+      notes: ['# b4name\n'],
+      blockNotes: ['# block\n'],
+    });
+  });
   test('ignores objectless object annotations', () => {
     const m = new TestTranslator(`
       # note1

@@ -115,16 +115,17 @@ export type {
   RepeatedRecordTypeDef,
   RecordDef,
   RepeatedRecordDef,
-  // Used in array/record tests
+  // Used in testing, not really public API
   RecordLiteralNode,
   StringLiteralNode,
   ArrayLiteralNode,
   SourceComponentInfo,
+  TimeLiteralNode,
+  TypecastExpr,
 } from './model';
 export {
   isSourceDef,
   // Used in Composer Demo
-  Segment,
   isBasicAtomic,
   isJoined,
   isJoinedSource,
@@ -144,6 +145,8 @@ export {
   composeSQLExpr,
   isTimestampUnit,
   isDateUnit,
+  // Used in testing, not really public API
+  constantExprToSQL,
 } from './model';
 export {
   malloyToQuery,
@@ -230,7 +233,12 @@ export type {
   StreamingConnection,
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
-export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
+export {
+  modelDefToModelInfo,
+  sourceDefToSourceInfo,
+  writeMalloyObjectToTag,
+  extractMalloyObjectFromTag,
+} from './to_stable';
 export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';

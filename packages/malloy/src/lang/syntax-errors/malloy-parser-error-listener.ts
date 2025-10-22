@@ -186,6 +186,57 @@ export const malloyCustomErrorCases: ErrorCase[] = [
       with: ['run:', 'query:', 'source:'],
     },
   },
+  {
+    errorMessage:
+      '`count(distinct expression)` deprecated, use `count(expression)` instead.',
+    offendingSymbol: MalloyParser.DISTINCT,
+    ruleContextOptions: ['fieldExpr'],
+    precedingTokenOptions: [[MalloyParser.COUNT], [MalloyParser.OPAREN]],
+  },
+  {
+    errorMessage:
+      "Unexpected type '${offendingSymbol}' in dimension definition. Expected an expression or field reference.",
+    offendingSymbolTextOptions: [
+      'string',
+      'number',
+      'int',
+      'integer',
+      'bool',
+      'boolean',
+      'date',
+      'time',
+      'timestamp',
+      'array',
+    ],
+    ruleContextOptions: ['fieldExpr'],
+    precedingTokenOptions: [[MalloyParser.IDENTIFIER], [MalloyParser.IS]],
+  },
+  // Identify a case where a user is using an open parenthesis following an
+  // identifier that does not represent a valid function.
+  {
+    errorMessage:
+      "Unknown function '${previousSymbol}'. You can find available functions here: https://docs.malloydata.dev/documentation/language/functions",
+    offendingSymbol: MalloyParser.OPAREN,
+    ruleContextOptions: ['vExpr'],
+    precedingTokenOptions: [[MalloyParser.IDENTIFIER]],
+  },
+  {
+    errorMessage:
+      "The 'project:' keyword is no longer supported. Use 'select:' instead.",
+    offendingSymbol: MalloyParser.PROJECT,
+  },
+  {
+    errorMessage:
+      "Unsupported keyword 'as'. Use 'is' to name something (ex: `dimension: name is expression`)",
+    offendingSymbolTextOptions: ['as'],
+    ruleContextOptions: ['isDefine'],
+  },
+  {
+    // Broader catch-all case for the 'as' keyword, including an alternative example.
+    errorMessage:
+      "Unsupported keyword 'as'. Use 'is' to name something (ex: `select: new_name is column_name`)",
+    offendingSymbolTextOptions: ['as'],
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {

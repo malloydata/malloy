@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {
   Expr,
   TimestampUnit,
@@ -126,6 +127,10 @@ export abstract class ExpressionDef extends MalloyElement {
       return false;
     }
     return true;
+  }
+
+  drillExpression(): Malloy.Expression | undefined {
+    return undefined;
   }
 
   /**

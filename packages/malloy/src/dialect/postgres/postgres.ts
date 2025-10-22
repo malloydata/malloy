@@ -31,16 +31,23 @@ import type {
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
+  TimeExtractExpr,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
+  TD,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {PostgresBase} from '../pg_impl';
+import {
+  qtz,
+  type DialectFieldList,
+  type FieldReferenceType,
+  type QueryInfo,
+} from '../dialect';
+import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -96,7 +103,7 @@ export class PostgresDialect extends PostgresBase {
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -141,15 +148,10 @@ export class PostgresDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
     const fields = this.mapFields(fieldList);
-    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
+    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))),'[]'::JSONB)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -255,8 +257,9 @@ export class PostgresDialect extends PostgresBase {
     )}\n$$ LANGUAGE SQL;\n`;
   }
 
+  //
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+    return `SELECT JSONB_AGG(${lastStageName}) FROM ${lastStageName}\n`;
   }
 
   sqlFinalStage(lastStageName: string, _fields: string[]): string {
@@ -311,14 +314,35 @@ export class PostgresDialect extends PostgresBase {
     throw new Error(`Unknown or unhandled postgres time unit: ${df.units}`);
   }
 
+  // This looks like a partial implementation of a method similar to how DuckDB
+  // does symmetric aggregates, which was abandoned. Leaving it in here for now
+  // in case the original author wants to pick it up again.
+  // sqlSumDistinct(key: string, value: string, funcName: string): string {
+  //   // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+  //   return `(
+  //     SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
+  //     FROM (
+  //       SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
+  //     ) a
+  //   )`;
+  // }
+
   sqlSumDistinct(key: string, value: string, funcName: string): string {
-    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
-    return `(
-      SELECT ${funcName}((a::json->>'f2')::DOUBLE PRECISION) as value
-      FROM (
-        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
-      ) a
-    )`;
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+
+    // PostgreSQL requires CAST to NUMERIC before ROUND, which is different
+    // than the generic implementation of sqlSumDistinct, but is OK in
+    // PostgreSQL because NUMERIC has arbitrary precision.
+    const roundedValue = `ROUND(CAST(COALESCE(${value}, 0) AS NUMERIC), 9)`;
+    const sumSQL = `SUM(DISTINCT ${roundedValue} + ${hashKey}) - SUM(DISTINCT ${hashKey})`;
+    const ret = `CAST(${sumSQL} AS DOUBLE PRECISION)`;
+
+    if (funcName === 'SUM') {
+      return ret;
+    } else if (funcName === 'AVG') {
+      return `(${ret})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END), 0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   // TODO this does not preserve the types of the arguments, meaning we have to hack
@@ -427,5 +451,22 @@ export class PostgresDialect extends PostgresBase {
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
     return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
+  }
+
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const units = timeExtractMap[from.units] || from.units;
+    let extractFrom = from.e.sql;
+    if (TD.isTimestamp(from.e.typeDef)) {
+      const tz = qtz(qi);
+      if (tz) {
+        extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+      }
+    }
+
+    // PostgreSQL before 14 returns a double precision for EXTRACT, cast to integer
+    // since it is common to pass an extraction to mod ( like in fitler expressions )
+    const extracted = `EXTRACT(${units} FROM ${extractFrom})::integer`;
+
+    return from.units === 'day_of_week' ? `(${extracted}+1)` : `(${extracted})`;
   }
 }

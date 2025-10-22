@@ -8,6 +8,7 @@
 import {Tag} from '@malloydata/malloy-tag';
 import {compileModel, compileQuery, compileSource} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import {extractMalloyObjectFromTag} from '../to_stable';
 
 type DeepPartial<T> = T extends object
   ? {
@@ -66,6 +67,46 @@ describe('api', () => {
         },
       };
       expect(result).toMatchObject(expected);
+    });
+    test('compile model exclude references', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        exclude_references: true,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: flights is connection.table('flights') extend {
+                  view: by_carrier is {
+                    group_by: carrier
+                    aggregate: flight_count is count()
+                  }
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      expect(result.translations?.length).toBe(1);
+      const modelDef = JSON.parse(result.translations![0].compiled_model_json!);
+      expect(modelDef.references).toBe(undefined);
     });
     test('compile model with model extension', () => {
       const result = compileModel({
@@ -588,6 +629,51 @@ ORDER BY 1 asc NULLS LAST
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile query from query string', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: 'run: flights -> { group_by: carrier }',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileQueryResponse = {
+        result: {
+          connection_name: 'connection',
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
     test('compile query with default row limit added', () => {
       const result = compileQuery({
         model_url: 'file://test.malloy',
@@ -908,15 +994,17 @@ LIMIT 101
         };
         expect(result).toMatchObject(expected);
         const carrier = result.result?.schema.fields[0];
-        const carrierTag = tagFor(carrier);
-        expect(carrierTag?.text('drill_view')).toBe('dashboard');
+        expect(drillExpressionFor(carrier)).toMatchObject({
+          kind: 'field_reference',
+          name: 'carrier',
+          path: ['dashboard'],
+        });
         const expression = result.result?.schema.fields[1];
         const expressionTag = tagFor(expression);
-        expect(expressionTag?.text('drill_view')).toBe('dashboard');
+        expect(expressionTag?.text('drill_expression', 'code')).toBe('1');
         const byCarrier = result.result?.schema.fields[2];
         const byCarrierTag = tagFor(byCarrier);
         expect(byCarrierTag?.has('drillable')).toBe(true);
-        expect(byCarrierTag?.text('drill_view')).toBe('dashboard');
         const pipeline = result.result?.schema.fields[4];
         const pipelineTag = tagFor(pipeline);
         expect(pipelineTag?.has('drillable')).toBe(false);
@@ -1323,6 +1411,168 @@ LIMIT 101
       'locations of annotations should match the location of the table call'
     );
   });
+  describe('timing_info', () => {
+    test('compile model timing info', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      expect(result).toMatchObject({
+        timing_info: {
+          name: 'compile_model',
+          duration_ms: expect.any(Number),
+          detailed_timing: [
+            {
+              name: 'parse_malloy',
+              duration_ms: expect.any(Number),
+            },
+            {
+              name: 'generate_ast',
+              duration_ms: expect.any(Number),
+              detailed_timing: [
+                {
+                  name: 'parse_compiler_flags',
+                  duration_ms: expect.any(Number),
+                },
+              ],
+            },
+            {
+              name: 'compile_malloy',
+              duration_ms: expect.any(Number),
+            },
+          ],
+        },
+      });
+    });
+  });
+  test('compile query', () => {
+    const result = compileQuery({
+      model_url: 'file://test.malloy',
+      query: {
+        annotations: [{value: '#(test) hello'}],
+        definition: {
+          kind: 'arrow',
+          source: {kind: 'source_reference', name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {kind: 'field_reference', name: 'carrier'},
+                },
+              },
+            ],
+          },
+        },
+      },
+      compiler_needs: {
+        table_schemas: [
+          {
+            connection_name: 'connection',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        files: [
+          {
+            url: 'file://test.malloy',
+            contents: "source: flights is connection.table('flights')",
+          },
+        ],
+        connections: [{name: 'connection', dialect: 'duckdb'}],
+      },
+    });
+    expect(result).toMatchObject({
+      timing_info: {
+        name: 'compile_query',
+        duration_ms: expect.any(Number),
+        detailed_timing: [
+          {
+            name: 'compile_model',
+            duration_ms: expect.any(Number),
+            detailed_timing: [
+              {
+                name: 'parse_malloy',
+                duration_ms: expect.any(Number),
+              },
+              {
+                name: 'generate_ast',
+                duration_ms: expect.any(Number),
+                detailed_timing: [
+                  {
+                    name: 'parse_compiler_flags',
+                    duration_ms: expect.any(Number),
+                  },
+                ],
+              },
+              {
+                name: 'compile_malloy',
+                duration_ms: expect.any(Number),
+              },
+            ],
+          },
+          {
+            name: 'parse_compiler_flags',
+            duration_ms: expect.any(Number),
+          },
+          {
+            name: 'parse_malloy',
+            duration_ms: expect.any(Number),
+          },
+          {
+            name: 'generate_ast',
+            duration_ms: expect.any(Number),
+            detailed_timing: [
+              {
+                name: 'parse_compiler_flags',
+                duration_ms: expect.any(Number),
+              },
+            ],
+          },
+          {
+            name: 'compile_malloy',
+            duration_ms: expect.any(Number),
+          },
+          {
+            name: 'generate_sql',
+            duration_ms: expect.any(Number),
+          },
+        ],
+      },
+    });
+  });
 });
 
 interface HasAnnotations {
@@ -1335,4 +1585,10 @@ function tagFor(field: HasAnnotations | undefined) {
       ?.filter(a => a.value.startsWith('#(malloy) '))
       .map(a => a.value) ?? []
   ).tag;
+}
+
+function drillExpressionFor(field: HasAnnotations | undefined) {
+  const tag = tagFor(field)?.tag('drill_expression');
+  if (tag === undefined) return undefined;
+  return extractMalloyObjectFromTag(tag, 'Expression');
 }

@@ -30,7 +30,7 @@ describe('import:', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {'internal://test/langtests/child': 'source: aa is a'},
     });
@@ -48,7 +48,7 @@ describe('import:', () => {
     );
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['http://example.com/child']});
+    expect(xr).toMatchObject({urls: ['http://example.com/child']});
     docParse.update({
       urls: {'http://example.com/child': 'source: aa is a'},
     });
@@ -63,7 +63,7 @@ describe('import:', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {
         'internal://test/langtests/child': 'query: aq is a->{ select: * }',
@@ -85,7 +85,7 @@ source: newSrc is a extend {
 `);
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {
         'internal://test/langtests/child': `
@@ -112,7 +112,7 @@ source: botProjQSrc is botProjQ
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     const reportedError = 'ENOWAY: No way to find your child';
     docParse.update({
       errors: {
@@ -131,7 +131,7 @@ source: botProjQSrc is botProjQ
     });
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/grandChild']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/grandChild']});
     docParse.update({
       urls: {'internal://test/langtests/grandChild': '// empty file'},
     });
@@ -164,7 +164,7 @@ source: botProjQSrc is botProjQ
     const docParse = new TestTranslator('import "../parent.malloy"');
     expect(docParse).toParse();
     const xr = docParse.unresolved();
-    expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
+    expect(xr).toMatchObject({urls: ['internal://test/parent.malloy']});
     docParse.update({
       urls: {
         'internal://test/parent.malloy': "source: aa is _db_.table('aTable')",
@@ -176,7 +176,7 @@ source: botProjQSrc is botProjQ
     const docParse = new TestTranslator('import "../parent.malloy"');
     expect(docParse).toParse();
     const xr = docParse.unresolved();
-    expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
+    expect(xr).toMatchObject({urls: ['internal://test/parent.malloy']});
     docParse.update({
       urls: {
         'internal://test/parent.malloy': `
@@ -217,7 +217,7 @@ source: botProjQSrc is botProjQ
     const docParse = new TestTranslator('import { bb } from "child"');
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {
         'internal://test/langtests/child': 'source: aa is a; source: bb is a',
@@ -233,7 +233,7 @@ source: botProjQSrc is botProjQ
     const docParse = new TestTranslator('import { bb is aa } from "child"');
     const xr = docParse.unresolved();
     expect(docParse).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {'internal://test/langtests/child': 'source: aa is a'},
     });
@@ -245,7 +245,7 @@ source: botProjQSrc is botProjQ
     const doc = model`import { ${'bb'} } from "child"`;
     const xr = doc.translator.unresolved();
     expect(doc).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     doc.translator.update({
       urls: {
         'internal://test/langtests/child': 'source: aa is a',
@@ -259,7 +259,7 @@ source: botProjQSrc is botProjQ
     const doc = model`import { cc is ${'bb'} } from "child"`;
     const xr = doc.translator.unresolved();
     expect(doc).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     doc.translator.update({
       urls: {
         'internal://test/langtests/child': 'source: aa is a',
@@ -275,7 +275,7 @@ source: botProjQSrc is botProjQ
       import { cc is ${'bb'} } from "child"`;
     const xr = doc.translator.unresolved();
     expect(doc).toParse();
-    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
     doc.translator.update({
       urls: {
         'internal://test/langtests/child': 'source: bb is a',

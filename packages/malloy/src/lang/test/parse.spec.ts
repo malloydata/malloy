@@ -177,7 +177,7 @@ describe('error handling', () => {
   });
   test('refine cannot change query type', () => {
     expect('run: ab -> aturtle + { select: astr }').toLog(
-      errorMessage(/Not legal in grouping query/)
+      errorMessage(/Use of select is not allowed in a grouping query/)
     );
   });
   test('undefined field ref in query', () => {

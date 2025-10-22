@@ -158,12 +158,11 @@ describe('source locations', () => {
 
   test('location of fields inherited from a query', () => {
     const source = markSource`
-      source: na is ${"_db_.table('aTable')"} -> {
+      source: na is _db_.table('aTable') -> {
         group_by:
-          abool
+          ${'abool'}
           ${'y is 1'}
-      }
-    `;
+      }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -260,7 +259,7 @@ describe('source locations', () => {
   });
   test('bad query', () => {
     expect(model`run: a -> { group_by: astr; ${'select: *'} }`).toLog(
-      errorMessage(/Not legal in grouping query/)
+      errorMessage(/Use of select is not allowed in a grouping query/)
     );
   });
 

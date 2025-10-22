@@ -224,6 +224,33 @@ describe('Malloy to Stable Query', () => {
         logs: [],
       });
     });
+    test('filter parameter is passed properly', () => {
+      idempotent('run: a(p is f`foo`) -> by_carrier', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+              parameters: [
+                {
+                  name: 'p',
+                  value: {
+                    kind: 'filter_expression_literal',
+                    filter_expression_value: 'foo',
+                  },
+                },
+              ],
+            },
+            view: {
+              kind: 'view_reference',
+              name: 'by_carrier',
+            },
+          },
+        },
+        logs: [],
+      });
+    });
   });
   describe('drill', () => {
     test('drill clauses with all the literal types, as well as a filter string comparison', () => {
@@ -258,7 +285,8 @@ describe('Malloy to Stable Query', () => {
                 operations: [
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -271,7 +299,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       filter: 'AA',
@@ -281,7 +310,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'b',
                         path: ['a'],
                       },
@@ -295,7 +325,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -308,7 +339,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -321,7 +353,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -335,7 +368,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -349,7 +383,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -363,7 +398,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -377,7 +413,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -391,7 +428,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -405,7 +443,8 @@ describe('Malloy to Stable Query', () => {
                   },
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -443,7 +482,8 @@ describe('Malloy to Stable Query', () => {
                 operations: [
                   {
                     filter: {
-                      field_reference: {
+                      expression: {
+                        kind: 'field_reference',
                         name: 'a',
                       },
                       kind: 'literal_equality',
@@ -481,7 +521,8 @@ describe('Malloy to Stable Query', () => {
                   kind: 'where',
                   filter: {
                     kind: 'filter_string',
-                    field_reference: {
+                    expression: {
+                      kind: 'field_reference',
                       name: 'carrier',
                     },
                     filter: 'AA',
@@ -499,7 +540,8 @@ describe('Malloy to Stable Query', () => {
         kind: 'where',
         filter: {
           kind: 'filter_string',
-          field_reference: {
+          expression: {
+            kind: 'field_reference',
             name: 'carrier',
           },
           filter: 'AA',
@@ -694,6 +736,40 @@ describe('Malloy to Stable Query', () => {
               },
             },
           },
+        },
+        logs: [],
+      });
+    });
+  });
+  describe('Render annotations', () => {
+    test('single render annotation', () => {
+      idempotent('# bar_chart\nrun: flights -> { group_by: carrier }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  'field': {
+                    'annotations': undefined,
+                    'expression': {
+                      'kind': 'field_reference',
+                      'name': 'carrier',
+                      'path': undefined,
+                    },
+                  },
+                  'kind': 'group_by',
+                  'name': undefined,
+                },
+              ],
+            },
+          },
+          annotations: [{value: '# bar_chart\n'}],
         },
         logs: [],
       });

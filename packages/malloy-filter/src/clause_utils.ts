@@ -236,6 +236,16 @@ export function numNot(op: Object, notToken: unknown) {
 
 export function temporalNot(op: Object, notToken: unknown) {
   if (isTemporalFilter(op) && notToken) {
+    // maintain not-ness for ease of testing
+    if ('not' in op) {
+      const ret = {...op};
+      if (op.not) {
+        delete ret.not;
+      } else {
+        ret.not = true;
+      }
+      return ret;
+    }
     return {...op, not: true};
   }
   return op;

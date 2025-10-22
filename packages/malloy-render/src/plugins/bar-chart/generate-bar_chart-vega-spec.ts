@@ -29,14 +29,18 @@ import type {
   Signal,
   Spec,
   View,
+  Config,
 } from 'vega';
-import {renderNumericField} from '@/component/render-numeric-field';
+import {
+  renderNumericField,
+  renderDateTimeField,
+} from '@/component/render-numeric-field';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import {getMarkName} from '@/component/vega/vega-utils';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
-import {NULL_SYMBOL, renderTimeString} from '@/util';
+import {NULL_SYMBOL} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {Tag} from '@malloydata/malloy-tag';
@@ -116,7 +120,8 @@ function getLimitedData({
 
 export function generateBarChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: BarChartPluginInstance
+  plugin: BarChartPluginInstance,
+  vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -213,6 +218,7 @@ export function generateBarChartVegaSpecV2(
     chartType: 'bar',
     getYMinMax: () => [yDomainMin, yDomainMax],
     independentY: chartTag.has('y', 'independent') || isLimitingSeries,
+    vegaConfig,
   });
 
   // Data limits
@@ -239,7 +245,8 @@ export function generateBarChartVegaSpecV2(
     chartWidth: chartSettings.plotWidth,
     xField,
     parentField: explore,
-    parentTag: tag,
+    vegaConfig,
+    isSpark: false,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -279,6 +286,7 @@ export function generateBarChartVegaSpecV2(
         fieldRef: yRef,
         brushMeasureRangeSourceId,
         axisSettings: chartSettings.yAxis,
+        vegaConfig,
       })
     : null;
 
@@ -675,7 +683,10 @@ export function generateBarChartVegaSpecV2(
       contains: 'padding',
     },
     data: [valuesData],
-    padding: {...chartSettings.padding},
+    padding: {
+      ...chartSettings.padding,
+      bottom: xAxisSettings.hidden ? 0 : xAxisSettings.height,
+    },
     scales: [
       {
         name: 'xscale',
@@ -728,7 +739,6 @@ export function generateBarChartVegaSpecV2(
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
-        titleY: xAxisSettings.height,
         encode: {
           labels: {
             enter: {
@@ -1019,7 +1029,7 @@ export function generateBarChartVegaSpecV2(
         records = item.datum.v;
 
         const title = xIsDateorTime
-          ? renderTimeString(new Date(x), {
+          ? renderDateTimeField(xField, new Date(x), {
               isDate: xField.isDate(),
               timeframe: xField.timeframe,
             })
@@ -1044,7 +1054,7 @@ export function generateBarChartVegaSpecV2(
         highlightedSeries = itemData.series;
         records = item.mark.group.datum.v;
         const title = xIsDateorTime
-          ? renderTimeString(new Date(itemData.x), {
+          ? renderDateTimeField(xField, new Date(itemData.x), {
               isDate: xField.isDate(),
               timeframe: xField.timeframe,
             })

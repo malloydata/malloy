@@ -9,7 +9,7 @@ import type {
   TimestampFieldInfo,
 } from '../types';
 import {FieldBase} from './base';
-import {renderTimeString} from '../../util';
+import {renderDateTimeField} from '../../component/render-numeric-field';
 
 export class NumberField extends FieldBase {
   public min: number | undefined = undefined;
@@ -80,7 +80,7 @@ export class DateField extends FieldBase {
     if (this.min === undefined || value < this.min) {
       this.min = value;
     }
-    const stringValue = renderTimeString(value, {
+    const stringValue = renderDateTimeField(this.asField(), value, {
       isDate: true,
       timeframe: this.timeframe,
     }).toString();
@@ -137,7 +137,7 @@ export class TimestampField extends FieldBase {
     if (this.min === undefined || value < this.min) {
       this.min = value;
     }
-    const stringValue = renderTimeString(value, {
+    const stringValue = renderDateTimeField(this.asField(), value, {
       isDate: false,
       timeframe: this.timeframe,
     }).toString();

@@ -16,6 +16,7 @@ import {getChartLayoutSettings} from '@/component/chart/chart-layout-settings';
 import {createMeasureAxis} from '@/component/vega/measure-axis';
 import type {
   Axis,
+  Config,
   Data,
   GroupMark,
   Item,
@@ -27,16 +28,15 @@ import type {
   Spec,
   SymbolMark,
 } from 'vega';
-import {renderNumericField} from '@/component/render-numeric-field';
+import {
+  renderNumericField,
+  renderDateTimeField,
+} from '@/component/render-numeric-field';
 import {getMarkName} from '@/component/vega/vega-utils';
 import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips-entries';
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
-import {
-  NULL_SYMBOL,
-  renderTimeString,
-  type RenderTimeStringOptions,
-} from '@/util';
+import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
@@ -95,7 +95,8 @@ export interface LineChartSettings {
 
 export function generateLineChartVegaSpecV2(
   metadata: RenderMetadata,
-  plugin: LineChartPluginInstance
+  plugin: LineChartPluginInstance,
+  vegaConfig?: Config
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -204,6 +205,7 @@ export function generateLineChartVegaSpecV2(
     getYMinMax: () => [yDomainMin, yDomainMax],
     // TODO: whats the use case for auto setting this with limited series? why does limiting series mean it should be independent? do we need an "auto" setting? like SeriesIndependence setting has?
     independentY: settings.yChannel.independent || isLimitingSeries,
+    vegaConfig,
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
@@ -246,6 +248,7 @@ export function generateLineChartVegaSpecV2(
         fieldRef: yRef,
         brushMeasureRangeSourceId,
         axisSettings: chartSettings.yAxis,
+        vegaConfig,
       })
     : null;
 
@@ -767,7 +770,10 @@ export function generateLineChartVegaSpecV2(
       resize: true,
       contains: 'padding',
     },
-    padding: chartSettings.padding,
+    padding: {
+      ...chartSettings.padding,
+      bottom: chartSettings.xAxis.hidden ? 0 : chartSettings.xAxis.height,
+    },
     data: [valuesData, nonNullXValues, xValuesAggregated],
     scales: [
       {
@@ -1157,7 +1163,7 @@ export function generateLineChartVegaSpecV2(
         const title = xIsDateorTime
           ? x === NULL_SYMBOL
             ? NULL_SYMBOL
-            : renderTimeString(new Date(x), {
+            : renderDateTimeField(xField, new Date(x), {
                 isDate: xField.isDate(),
                 timeframe: xField.isTime() ? xField.timeframe : undefined,
                 extractFormat,
@@ -1200,7 +1206,7 @@ export function generateLineChartVegaSpecV2(
         const title = xIsDateorTime
           ? itemData.x === NULL_SYMBOL
             ? NULL_SYMBOL
-            : renderTimeString(new Date(itemData.x), {
+            : renderDateTimeField(xField, new Date(itemData.x), {
                 isDate: xField.isDate(),
                 timeframe: xField.isTime() ? xField.timeframe : undefined,
                 extractFormat,

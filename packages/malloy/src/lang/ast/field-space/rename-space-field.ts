@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {DocumentLocation, FieldDef} from '../../../model/malloy_types';
+import type {
+  Annotation,
+  DocumentLocation,
+  FieldDef,
+} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 
@@ -29,18 +33,29 @@ export class RenameSpaceField extends SpaceField {
   constructor(
     private readonly otherField: SpaceField,
     private readonly newName: string,
-    private readonly location: DocumentLocation
+    private readonly location: DocumentLocation,
+    private note: Annotation | undefined
   ) {
     super();
   }
 
   fieldDef(): FieldDef | undefined {
-    const renamedFieldRaw = this.otherField.fieldDef();
-    if (renamedFieldRaw === undefined) {
+    const returnFieldDef = this.otherField.fieldDef();
+    if (returnFieldDef === undefined) {
       return undefined;
     }
+    if (this.note) {
+      if (returnFieldDef.annotation) {
+        returnFieldDef.annotation = {
+          ...this.note,
+          inherits: returnFieldDef.annotation,
+        };
+      } else {
+        returnFieldDef.annotation = this.note;
+      }
+    }
     return {
-      ...renamedFieldRaw,
+      ...returnFieldDef,
       as: this.newName,
       location: this.location,
     };

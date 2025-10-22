@@ -31,6 +31,7 @@ import {
   runQuery,
 } from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
+import {API} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -714,6 +715,22 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
 
   test.when(
     !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('truncate week', async () => {
+    // the 19th in mexico is a wednesday, so trunc to the 15th
+    const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
+    // Find the sunday before then
+    const mex_sunday = mex_19.minus({days: mex_19.weekday % 7});
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
+        timezone: '${zone}'
+        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
+        select: mex_week is utc_midnight.week
+      }`
+    ).malloyResultMatches(runtime, {mex_week: mex_sunday.toJSDate()});
+  });
+
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
   )('cast timestamp to date', async () => {
     // At midnight in london it is the 19th in Mexico, so when we cast that
     // to a date, it should be the 19th.
@@ -736,6 +753,67 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
   });
+
+  // Test for timezone rendering issue with nested queries
+  test.when(runtime.supportsNesting)(
+    'nested queries preserve timezone in rendering',
+    async () => {
+      const result = await runQuery(
+        runtime,
+        `run: ${dbName}.table('malloytest.flights') extend {
+        view: arrivals is {
+          group_by: arr_time.hour
+          order_by: arr_time desc
+          limit: 1
+        }
+      } -> {
+        nest: arrive_utc is arrivals
+        nest: arrive_yekaterinburg is arrivals + { timezone: 'Asia/Yekaterinburg' }
+      }`
+      );
+
+      // First, check that the raw result has the correct timezone metadata
+      const rawFields = result.resultExplore.structDef.fields;
+      const rawArriveUtc = rawFields.find(f => f.name === 'arrive_utc');
+      const rawArriveYek = rawFields.find(
+        f => f.name === 'arrive_yekaterinburg'
+      );
+
+      expect(rawArriveUtc).toBeDefined();
+      expect(rawArriveYek).toBeDefined();
+
+      // Check timezone properties on raw array/record fields
+      expect(rawArriveUtc!['queryTimezone']).toBeUndefined(); // Should be undefined for UTC
+      expect(rawArriveYek!['queryTimezone']).toBe('Asia/Yekaterinburg');
+
+      // Now check that the wrapped result also preserves timezone metadata
+      const wrappedResult = API.util.wrapResult(result);
+      const wrappedFields = wrappedResult.schema.fields;
+      const wrappedArriveUtc = wrappedFields.find(f => f.name === 'arrive_utc');
+      const wrappedArriveYek = wrappedFields.find(
+        f => f.name === 'arrive_yekaterinburg'
+      );
+
+      expect(wrappedArriveUtc).toBeDefined();
+      expect(wrappedArriveYek).toBeDefined();
+
+      // Check timezone properties in the wrapped result
+      // For nested views, the timezone should be in the annotations
+      const arriveUtcAnnotations = wrappedArriveUtc?.annotations;
+      const arriveYekAnnotations = wrappedArriveYek?.annotations;
+
+      // Check if timezone info is present in annotations
+      const utcTimezoneAnnotation = arriveUtcAnnotations?.find(ann =>
+        ann.value.includes('query_timezone')
+      );
+      const yekTimezoneAnnotation = arriveYekAnnotations?.find(ann =>
+        ann.value.includes('query_timezone')
+      );
+
+      expect(utcTimezoneAnnotation).toBeUndefined(); // UTC should have no timezone annotation
+      expect(yekTimezoneAnnotation?.value).toContain('Asia/Yekaterinburg');
+    }
+  );
 });
 
 afterAll(async () => {

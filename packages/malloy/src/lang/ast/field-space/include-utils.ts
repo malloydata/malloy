@@ -20,7 +20,7 @@ import {
 } from '../source-query-elements/include-item';
 import type {FieldReference} from '../query-items/field-references';
 import {WildcardFieldReference} from '../query-items/field-references';
-import {pathEq} from '../../../model/composite_source_utils';
+import {pathEq} from '../../composite-source-utils';
 import type {MalloyElement} from '../types/malloy-element';
 
 export interface JoinIncludeProcessingState {

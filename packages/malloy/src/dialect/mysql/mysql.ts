@@ -101,6 +101,24 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'tinyint(1)': {type: 'boolean'},
 };
 
+function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
+  switch (malloyType.type) {
+    case 'number':
+      return malloyType.numberType === 'integer' ? 'INT' : 'DOUBLE';
+    case 'string':
+      return 'CHAR(255)'; // JSON_TABLE needs a length
+    case 'boolean':
+      return 'INT'; // or TINYINT(1) if you prefer
+    case 'record':
+    case 'array':
+      return 'JSON';
+    case 'timestamp':
+      return 'DATETIME';
+    default:
+      return malloyType.type.toUpperCase();
+  }
+}
+
 export class MySQLDialect extends Dialect {
   name = 'mysql';
   defaultNumberType = 'DOUBLE PRECISION';
@@ -133,14 +151,16 @@ export class MySQLDialect extends Dialect {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
-        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+        return malloyType.numberType === 'integer' ? 'SIGNED' : 'DOUBLE';
       case 'string':
-        return 'TEXT';
+        return 'CHAR';
+      case 'boolean':
+        return 'SIGNED';
       case 'record':
       case 'array':
         return 'JSON';
-      case 'date':
       case 'timestamp':
+        return 'DATETIME';
       default:
         return malloyType.type;
     }
@@ -179,10 +199,9 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    const separator = limit ? ',xrmmex' : ',';
+    const separator = ',';
     let gc = `GROUP_CONCAT(
       IF(group_set=${groupSet},
         JSON_OBJECT(${this.mapFields(fieldList)})
@@ -191,10 +210,6 @@ export class MySQLDialect extends Dialect {
       ${orderBy}
       SEPARATOR '${separator}'
     )`;
-    if (limit) {
-      gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
-      gc = `REPLACE(${gc},'${separator}',',')`;
-    }
     gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
@@ -231,10 +246,11 @@ export class MySQLDialect extends Dialect {
       return 'JSON';
     } else return t;
   }
+
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
-      let fType = this.malloyTypeToSQLType(f.typeDef);
+      let fType = malloyTypeToJSONTableType(f.typeDef);
       if (
         f.typeDef.type === 'sql native' &&
         f.typeDef.rawType &&
@@ -299,10 +315,10 @@ export class MySQLDialect extends Dialect {
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const sqlDistinctKey = `CONCAT(${key}, '')`;
-    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(65, 0)) * 4294967296`;
-    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(65, 0))`;
+    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(55, 10)) * 4294967296`;
+    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(55, 10))`;
     const hashkey = `(${upperPart} + ${lowerPart})`;
-    const v = `COALESCE(${value},0)`;
+    const v = `CAST(COALESCE(${value},0) as DECIMAL(55, 10))`;
     const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
     if (funcName === 'SUM') {
       return sqlSum;
@@ -374,25 +390,38 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
-  // truncToUnit(sql, unit: string): string {
-  //   return `EXTRACT(${unit} FROM ${sql})`;
-  // }
   sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
-    // LTNOTE: how come this can be undefined?
-    let truncThis = trunc.e.sql || 'why could this be undefined';
-    if (trunc.units === 'week') {
-      truncThis = `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`;
-    }
+    const truncThis = trunc.e.sql || 'internal-error-in-sql-generation';
+    const week = trunc.units === 'week';
+
+    // Only do timezone conversion for timestamps, not dates
     if (TD.isTimestamp(trunc.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
+        // Convert timestamp to the query timezone (civil time)
         const civilSource = `(CONVERT_TZ(${truncThis}, 'UTC','${tz}'))`;
-        const civilTrunc = `${this.truncToUnit(civilSource, trunc.units)}`;
+
+        // For week truncation, we need to adjust to Sunday in the civil timezone
+        // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
+        const adjustedSource = week
+          ? `DATE_SUB(${civilSource}, INTERVAL DAYOFWEEK(${civilSource}) - 1 DAY)`
+          : civilSource;
+
+        // Truncate to the appropriate unit in civil time
+        const civilTrunc = `${this.truncToUnit(adjustedSource, trunc.units)}`;
+
+        // Convert the truncated civil time back to UTC
         const truncTsTz = `CONVERT_TZ(${civilTrunc}, '${tz}', 'UTC')`;
         return `(${truncTsTz})`; // TODO: should it cast?
       }
     }
-    const result = `${this.truncToUnit(truncThis, trunc.units)}`;
+
+    // For dates (civil time) or timestamps without query timezone
+    // do the week adjustment before truncating
+    const adjustedThis = week
+      ? `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`
+      : truncThis;
+    const result = `${this.truncToUnit(adjustedThis, trunc.units)}`;
     return result;
   }
 

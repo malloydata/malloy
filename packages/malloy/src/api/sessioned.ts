@@ -8,6 +8,7 @@
 import * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
 import {v4 as uuidv4} from 'uuid';
+import {Timer} from '../timing';
 
 interface SessionInfoForCompileModel {
   type: 'compile_model';
@@ -26,7 +27,7 @@ interface SessionInfoForCompileQuery {
   type: 'compile_query';
   modelURL: string;
   queryString: string;
-  query: Malloy.Query;
+  query?: Malloy.Query;
 }
 
 type SessionInfo =
@@ -42,6 +43,8 @@ type SessionState =
 interface SessionStateBase {
   expires?: Date;
   sessionId: string;
+  timer: Timer;
+  waitingTimer?: Timer;
 }
 
 interface SessionStateForCompileModel extends SessionStateBase {
@@ -129,6 +132,7 @@ class SessionManager {
       state,
       expires,
       sessionId: this.newSessionId(),
+      timer: new Timer('compile_model'),
     };
   }
 
@@ -145,6 +149,7 @@ class SessionManager {
       state,
       expires,
       sessionId: this.newSessionId(),
+      timer: new Timer('compile_source'),
     };
   }
 
@@ -161,6 +166,7 @@ class SessionManager {
       state,
       expires,
       sessionId: this.newSessionId(),
+      timer: new Timer('compile_query'),
     };
   }
 
@@ -196,6 +202,10 @@ class SessionManager {
       this.findCompileModelSession(options.session_id, sessionInfo);
     this.purgeExpired({except: options?.session_id});
     if (session) {
+      if (session.waitingTimer) {
+        session.timer.contribute([session.waitingTimer.stop()]);
+        session.waitingTimer = undefined;
+      }
       if (options?.ttl) {
         session.expires = this.getExpires(options.ttl);
       }
@@ -205,10 +215,21 @@ class SessionManager {
       this.sessions.set(session.sessionId, session);
     }
     const result = Core.statedCompileModel(session.state);
-    if (result.model || this.hasErrors(result.logs)) {
+    session.timer.incorporate(result.timing_info);
+    const done = result.model || this.hasErrors(result.logs);
+    if (done) {
       this.killSession(session.sessionId);
     }
-    return {...result, session_id: session.sessionId};
+    // TODO not really using it as "stop", but more like "current"
+    const timingInfo = session.timer.stop();
+    if (!done) {
+      session.waitingTimer = new Timer('session_wait');
+    }
+    return {
+      ...result,
+      session_id: session.sessionId,
+      timing_info: timingInfo,
+    };
   }
 
   private findCompileSourceSession(
@@ -236,6 +257,10 @@ class SessionManager {
       this.findCompileSourceSession(options.session_id, sessionInfo);
     this.purgeExpired({except: options?.session_id});
     if (session) {
+      if (session.waitingTimer) {
+        session.timer.contribute([session.waitingTimer.stop()]);
+        session.waitingTimer = undefined;
+      }
       if (options?.ttl) {
         session.expires = this.getExpires(options.ttl);
       }
@@ -245,10 +270,20 @@ class SessionManager {
       this.sessions.set(session.sessionId, session);
     }
     const result = Core.statedCompileSource(session.state, request.name);
-    if (result.source || this.hasErrors(result.logs)) {
+    session.timer.incorporate(result.timing_info);
+    const done = result.source || this.hasErrors(result.logs);
+    if (done) {
       this.killSession(session.sessionId);
     }
-    return {...result, session_id: session.sessionId};
+    const timingInfo = session.timer.stop();
+    if (!done) {
+      session.waitingTimer = new Timer('session_wait');
+    }
+    return {
+      ...result,
+      session_id: session.sessionId,
+      timing_info: timingInfo,
+    };
   }
 
   private findCompileQuerySession(
@@ -265,7 +300,12 @@ class SessionManager {
     request: Malloy.CompileQueryRequest,
     options?: OptionsBase
   ): Malloy.CompileQueryResponse & {session_id: string} {
-    const queryString = Malloy.queryToMalloy(request.query);
+    const queryString =
+      request.query_malloy ??
+      (request.query ? Malloy.queryToMalloy(request.query) : undefined);
+    if (queryString === undefined) {
+      throw new Error('Expected query_malloy or query');
+    }
     const sessionInfo: SessionInfoForCompileQuery = {
       type: 'compile_query',
       modelURL: request.model_url,
@@ -277,6 +317,10 @@ class SessionManager {
       this.findCompileQuerySession(options.session_id, sessionInfo);
     this.purgeExpired({except: options?.session_id});
     if (session) {
+      if (session.waitingTimer) {
+        session.timer.contribute([session.waitingTimer.stop()]);
+        session.waitingTimer = undefined;
+      }
       if (options?.ttl) {
         session.expires = this.getExpires(options.ttl);
       }
@@ -286,10 +330,20 @@ class SessionManager {
       this.sessions.set(session.sessionId, session);
     }
     const result = Core.statedCompileQuery(session.state);
-    if (result.result || this.hasErrors(result.logs)) {
+    session.timer.incorporate(result.timing_info);
+    const done = result.result || this.hasErrors(result.logs);
+    if (done) {
       this.killSession(session.sessionId);
     }
-    return {...result, session_id: session.sessionId};
+    const timingInfo = session.timer.stop();
+    if (!done) {
+      session.waitingTimer = new Timer('session_wait');
+    }
+    return {
+      ...result,
+      session_id: session.sessionId,
+      timing_info: timingInfo,
+    };
   }
 }
 

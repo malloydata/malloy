@@ -192,8 +192,7 @@ export abstract class Dialect {
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string;
 
   abstract sqlAnyValueTurtle(

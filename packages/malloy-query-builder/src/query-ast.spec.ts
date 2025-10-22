@@ -8,7 +8,11 @@
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {flights_model} from './flights_model';
 import './expects';
-import type {ASTOrderByViewOperation} from './query-ast';
+import type {
+  ASTAggregateViewOperation,
+  ASTArrowQueryDefinition,
+  ASTOrderByViewOperation,
+} from './query-ast';
 import {ASTQuery} from './query-ast';
 
 function dedent(strs: TemplateStringsArray) {
@@ -356,7 +360,10 @@ describe('query builder', () => {
                         {
                           filter: {
                             kind: 'filter_string',
-                            field_reference: {name: 'carrier'},
+                            expression: {
+                              kind: 'field_reference',
+                              name: 'carrier',
+                            },
                             filter: 'WN, AA',
                           },
                         },
@@ -406,7 +413,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: 'WN, AA',
                 },
               },
@@ -450,7 +460,11 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'state', path: ['origin']},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'state',
+                    path: ['origin'],
+                  },
                   filter: 'TX',
                 },
               },
@@ -497,7 +511,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: 'WN, AA',
                 },
               },
@@ -553,7 +570,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: "'",
                 },
               },
@@ -561,7 +581,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: '\'"',
                 },
               },
@@ -569,7 +592,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: '`',
                 },
               },
@@ -577,7 +603,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: "`'",
                 },
               },
@@ -585,7 +614,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: '`\'"',
                 },
               },
@@ -593,7 +625,10 @@ describe('query builder', () => {
                 kind: 'where',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: "`'\"\"\"'''",
                 },
               },
@@ -632,7 +667,8 @@ describe('query builder', () => {
       segment.addDrill({
         filter: {
           kind: 'filter_string',
-          field_reference: {
+          expression: {
+            kind: 'field_reference',
             name: 'carrier',
           },
           filter: 'WN, AA',
@@ -641,7 +677,8 @@ describe('query builder', () => {
       segment.addDrill({
         filter: {
           kind: 'literal_equality',
-          field_reference: {
+          expression: {
+            kind: 'field_reference',
             name: 'nickname',
             path: ['top_carriers'],
           },
@@ -668,7 +705,10 @@ describe('query builder', () => {
                 kind: 'drill',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'carrier'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                   filter: 'WN, AA',
                 },
               },
@@ -676,7 +716,8 @@ describe('query builder', () => {
                 kind: 'drill',
                 filter: {
                   kind: 'literal_equality',
-                  field_reference: {
+                  expression: {
+                    kind: 'field_reference',
                     name: 'nickname',
                     path: ['top_carriers'],
                   },
@@ -718,7 +759,8 @@ describe('query builder', () => {
     const drill = segment.addDrill({
       filter: {
         kind: 'literal_equality',
-        field_reference: {
+        expression: {
+          kind: 'field_reference',
           name: 'nickname',
           path: ['top_carriers'],
         },
@@ -728,7 +770,7 @@ describe('query builder', () => {
         },
       },
     });
-    expect(drill.filter.fieldReference.getFieldInfo()).toMatchObject({
+    expect(drill.filter.expression.getFieldInfo()).toMatchObject({
       kind: 'dimension',
       type: {kind: 'string_type'},
     });
@@ -766,7 +808,10 @@ describe('query builder', () => {
                 kind: 'having',
                 filter: {
                   kind: 'filter_string',
-                  field_reference: {name: 'flight_count'},
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'flight_count',
+                  },
                   filter: '>100',
                 },
               },
@@ -775,6 +820,161 @@ describe('query builder', () => {
         },
       },
       malloy: 'run: flights -> { having: flight_count ~ f`>100` }',
+    });
+  });
+  test('add a calculate moving average', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addCalculateMovingAverage(
+        'flight_count_smoothed',
+        'flight_count',
+        [],
+        7,
+        0
+      );
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'calculate',
+                name: 'flight_count_smoothed',
+                field: {
+                  expression: {
+                    kind: 'moving_average',
+                    field_reference: {
+                      name: 'flight_count',
+                      path: [],
+                    },
+                    rows_preceding: 7,
+                    rows_following: 0,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy:
+        'run: flights -> { calculate: flight_count_smoothed is avg_moving(flight_count, 7, 0) }',
+    });
+  });
+  test('convert an aggregate to a moving average', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'carrier',
+                },
+              },
+            },
+            {
+              kind: 'aggregate',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'flight_count',
+                  path: [],
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+    expect((q: ASTArrowQueryDefinition) => {
+      const segment = q.getOrAddDefaultSegment();
+      const aggregateOperation = segment.operations.index(
+        1
+      ) as ASTAggregateViewOperation;
+      aggregateOperation.convertToCalculateMovingAverage(
+        'flight_count_7d',
+        7,
+        0,
+        ['carrier']
+      );
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+              {
+                kind: 'calculate',
+                name: 'flight_count_7d',
+                field: {
+                  expression: {
+                    kind: 'moving_average',
+                    field_reference: {
+                      name: 'flight_count',
+                      path: [],
+                    },
+                    rows_preceding: 7,
+                    rows_following: 0,
+                    partition_fields: [
+                      {
+                        name: 'carrier',
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: `run: flights -> {
+  group_by: carrier
+  calculate: flight_count_7d is avg_moving(flight_count, 7, 0) { partition_by: carrier }
+}`,
     });
   });
   test('add a date group by', () => {
@@ -3051,7 +3251,10 @@ describe('query builder', () => {
                   filter: {
                     kind: 'filter_string',
                     filter: '> 10',
-                    field_reference: {name: 'd1'},
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                    },
                   },
                 },
                 {
@@ -3059,7 +3262,10 @@ describe('query builder', () => {
                   filter: {
                     kind: 'filter_string',
                     filter: '> 10',
-                    field_reference: {name: 'm1'},
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'm1',
+                    },
                   },
                 },
                 {kind: 'limit', limit: 10},
@@ -3242,7 +3448,11 @@ describe('query builder', () => {
                   kind: 'where',
                   filter: {
                     kind: 'filter_string',
-                    field_reference: {name: 'd1', path: ['r1']},
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                      path: ['r1'],
+                    },
                     filter: 'WN, AA',
                   },
                 },
@@ -3286,7 +3496,11 @@ describe('query builder', () => {
                   kind: 'where',
                   filter: {
                     kind: 'filter_string',
-                    field_reference: {name: 'd1', path: ['rr1']},
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'd1',
+                      path: ['rr1'],
+                    },
                     filter: 'WN, AA',
                   },
                 },
