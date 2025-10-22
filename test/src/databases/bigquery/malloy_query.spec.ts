@@ -766,3 +766,7 @@ describe('unsupported type tests', () => {
     expect(result.data.value[0]['geo']).toBeDefined();
   });
 });
+
+afterAll(async () => {
+  await runtimeList.closeAll();
+});

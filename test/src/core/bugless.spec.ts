@@ -51,3 +51,7 @@ describe('misc tests for regressions that have no better home', () => {
     }
   });
 });
+
+afterAll(async () => {
+  await runtime.connection.close();
+});
