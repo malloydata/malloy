@@ -56,22 +56,25 @@ function floorDate(date: Date, interval: DateInterval): Date {
     case 'day':
       d.setUTCHours(0, 0, 0, 0);
       break;
-    case 'week':
+    case 'week': {
       d.setUTCHours(0, 0, 0, 0);
       // Adjust to start of week (Sunday)
       const day = d.getUTCDay();
       d.setUTCDate(d.getUTCDate() - day);
       break;
-    case 'month':
+    }
+    case 'month': {
       d.setUTCDate(1);
       d.setUTCHours(0, 0, 0, 0);
       break;
-    case 'quarter':
+    }
+    case 'quarter': {
       const month = d.getUTCMonth();
       const quarterMonth = Math.floor(month / 3) * 3;
       d.setUTCMonth(quarterMonth, 1);
       d.setUTCHours(0, 0, 0, 0);
       break;
+    }
     case 'year':
       d.setUTCMonth(0, 1);
       d.setUTCHours(0, 0, 0, 0);
@@ -99,13 +102,13 @@ function offsetDate(date: Date, interval: DateInterval, amount: number): Date {
       date.setUTCDate(date.getUTCDate() + amount);
       break;
     case 'week':
-      date.setUTCDate(date.getUTCDate() + (amount * 7));
+      date.setUTCDate(date.getUTCDate() + amount * 7);
       break;
     case 'month':
       date.setUTCMonth(date.getUTCMonth() + amount);
       break;
     case 'quarter':
-      date.setUTCMonth(date.getUTCMonth() + (amount * 3));
+      date.setUTCMonth(date.getUTCMonth() + amount * 3);
       break;
     case 'year':
       date.setUTCFullYear(date.getUTCFullYear() + amount);
