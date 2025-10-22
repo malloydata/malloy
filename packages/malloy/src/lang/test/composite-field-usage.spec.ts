@@ -1109,7 +1109,7 @@ describe('field usage with compiler extensions', () => {
     });
     expect(found, message).toBeTruthy();
   });
-  it('transitive joins activated, in order', async () => {
+  it('transitive joins activated, in order', () => {
     const joinModel = model`
         source: root is a extend { dimension: id is 1 }
         source: branch is a extend { dimension: id is 1, root_id is 1}
@@ -1133,7 +1133,7 @@ describe('field usage with compiler extensions', () => {
       ]);
     }
   });
-  it('generateds activation for nested join', async () => {
+  it('generateds activation for nested join', () => {
     const joinModel = model`
         source: person0 is a extend {
           dimension: brother_id is 1, parent_id is 1, id is 1, name is astr
@@ -1158,7 +1158,7 @@ describe('field usage with compiler extensions', () => {
       ]);
     }
   });
-  it('with joins generate both references', async () => {
+  it('with joins generate both references', () => {
     const joinModel = model`
       source: hasKey is a extend { primary_key: ai }
       source: withJoin is a extend { join_one: b is hasKey with ai }
@@ -1173,7 +1173,7 @@ describe('field usage with compiler extensions', () => {
     );
     expect(found, message).toBeTruthy();
   });
-  it('nested query unique key requirements propagate to parent', async () => {
+  it('nested query unique key requirements propagate to parent', () => {
     const nestedModel = model`
       run: a -> {
         group_by: ai

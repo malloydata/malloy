@@ -102,3 +102,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     expect(model3._modelDef.contents['a']).not.toBeDefined();
   });
 });
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});

@@ -606,3 +606,7 @@ describe('drill query', () => {
     });
   });
 });
+
+afterAll(async () => {
+  await duckdb.connection.close();
+});
