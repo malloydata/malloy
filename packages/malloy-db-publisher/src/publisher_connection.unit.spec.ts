@@ -5,31 +5,33 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as malloy from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {PublisherConnection} from './publisher_connection';
-import {fileURLToPath} from 'url';
-import * as util from 'util';
-import * as fs from 'fs';
 import type {ConnectionAttributes} from './client';
-import {Configuration, ConnectionsApi} from './client';
+import {Configuration, ConnectionsApi, ConnectionsTestApi} from './client';
 import type {AxiosResponse} from 'axios';
 import type {
-  TableSourceDef,
   SQLSourceDef,
   MalloyQueryData,
   QueryDataRow,
 } from '@malloydata/malloy';
 
-// mocks client code for testing
+// mocks client code for testing - only for unit tests
 jest.mock('./client', () => {
   const mockConnectionsApi = {
     getConnection: jest.fn(),
-    getTest: jest.fn(),
+    getTable: jest.fn(),
     getTablesource: jest.fn(),
     getSqlsource: jest.fn(),
     getQuerydata: jest.fn(),
     getTemporarytable: jest.fn(),
+    postSqlsource: jest.fn(),
+    postQuerydata: jest.fn(),
+    postTemporarytable: jest.fn(),
+  };
+
+  const mockConnectionsTestApi = {
+    testConnectionConfiguration: jest.fn(),
   };
 
   return {
@@ -37,6 +39,9 @@ jest.mock('./client', () => {
       basePath: 'http://test.com/api/v0',
     })),
     ConnectionsApi: jest.fn().mockImplementation(() => mockConnectionsApi),
+    ConnectionsTestApi: jest
+      .fn()
+      .mockImplementation(() => mockConnectionsTestApi),
   };
 });
 
@@ -46,6 +51,7 @@ describe('db:Publisher', () => {
   describe('unit', () => {
     describe('create', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let mockConnectionsTestApi: jest.Mocked<ConnectionsTestApi>;
       let _mockConfiguration: jest.Mocked<Configuration>;
 
       beforeEach(() => {
@@ -53,6 +59,9 @@ describe('db:Publisher', () => {
         mockConnectionsApi = new ConnectionsApi(
           new Configuration()
         ) as jest.Mocked<ConnectionsApi>;
+        mockConnectionsTestApi = new ConnectionsTestApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsTestApi>;
         _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
@@ -70,7 +79,13 @@ describe('db:Publisher', () => {
 
         const mockConnectionResponse: AxiosResponse = {
           data: {
+            name: 'test-connection',
+            type: 'bigquery',
             attributes: mockConnectionAttributes,
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
           },
           status: 200,
           statusText: 'OK',
@@ -79,7 +94,10 @@ describe('db:Publisher', () => {
         };
 
         const mockTestResponse: AxiosResponse = {
-          data: undefined,
+          data: {
+            status: 'ok',
+            errorMessage: '',
+          },
           status: 200,
           statusText: 'OK',
           headers: {},
@@ -89,7 +107,9 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getTest.mockResolvedValueOnce(mockTestResponse);
+        mockConnectionsTestApi.testConnectionConfiguration.mockResolvedValueOnce(
+          mockTestResponse
+        );
 
         const connection = await PublisherConnection.create('test-connection', {
           connectionUri:
@@ -144,7 +164,13 @@ describe('db:Publisher', () => {
 
         const mockConnectionResponse: AxiosResponse = {
           data: {
+            name: 'test-connection',
+            type: 'bigquery',
             attributes: mockConnectionAttributes,
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
           },
           status: 200,
           statusText: 'OK',
@@ -153,7 +179,10 @@ describe('db:Publisher', () => {
         };
 
         const mockTestResponse: AxiosResponse = {
-          data: undefined,
+          data: {
+            status: 'ok',
+            errorMessage: '',
+          },
           status: 200,
           statusText: 'OK',
           headers: {},
@@ -163,7 +192,9 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getTest.mockResolvedValueOnce(mockTestResponse);
+        mockConnectionsTestApi.testConnectionConfiguration.mockResolvedValueOnce(
+          mockTestResponse
+        );
 
         const connection = await PublisherConnection.create('test-connection', {
           connectionUri:
@@ -198,18 +229,6 @@ describe('db:Publisher', () => {
       });
 
       it('should fetch table schema successfully', async () => {
-        const mockTableSchema: TableSourceDef = {
-          type: 'table',
-          name: 'test_table',
-          tablePath: 'test_path',
-          connection: 'test-connection',
-          dialect: 'bigquery',
-          fields: [
-            {name: 'id', type: 'number'},
-            {name: 'name', type: 'string'},
-          ],
-        };
-
         const mockConnectionResponse: AxiosResponse = {
           data: {
             attributes: {
@@ -227,7 +246,11 @@ describe('db:Publisher', () => {
 
         const mockTableResponse: AxiosResponse = {
           data: {
-            source: JSON.stringify(mockTableSchema),
+            resource: 'test_path',
+            columns: [
+              {name: 'id', type: 'number'},
+              {name: 'name', type: 'string'},
+            ],
           },
           status: 200,
           statusText: 'OK',
@@ -238,9 +261,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getTablesource.mockResolvedValueOnce(
-          mockTableResponse
-        );
+        mockConnectionsApi.getTable.mockResolvedValueOnce(mockTableResponse);
 
         const connection = await PublisherConnection.create('test-connection', {
           connectionUri:
@@ -253,11 +274,21 @@ describe('db:Publisher', () => {
           'test_path'
         );
 
-        expect(schema).toEqual(mockTableSchema);
-        expect(mockConnectionsApi.getTablesource).toHaveBeenCalledWith(
+        expect(schema).toEqual({
+          type: 'table',
+          name: 'test_key',
+          tablePath: 'test_path',
+          connection: 'test-connection',
+          dialect: 'bigquery',
+          fields: [
+            {name: 'id', type: 'number'},
+            {name: 'name', type: 'string'},
+          ],
+        });
+        expect(mockConnectionsApi.getTable).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'test_key',
+          'test_path',
           'test_path',
           {
             headers: {
@@ -268,19 +299,59 @@ describe('db:Publisher', () => {
       });
 
       it('should handle API errors', async () => {
-        await setupAndTestApiError(
-          mockConnectionsApi,
-          'getTablesource',
-          connection => connection.fetchTableSchema('test_key', 'test_path')
+        await setupAndTestApiError(mockConnectionsApi, 'getTable', connection =>
+          connection.fetchTableSchema('test_key', 'test_path')
         );
       });
 
       it('should handle invalid JSON response', async () => {
-        await setupAndTestInvalidJsonResponse(
-          mockConnectionsApi,
-          'getTablesource',
-          connection => connection.fetchTableSchema('test_key', 'test_path')
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        const mockInvalidResponse: AxiosResponse = {
+          data: {resource: 'invalid json', columns: null},
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
         );
+        mockConnectionsApi.getTable.mockResolvedValueOnce(mockInvalidResponse);
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        const schema = await connection.fetchTableSchema(
+          'test_key',
+          'test_path'
+        );
+
+        expect(schema).toEqual({
+          type: 'table',
+          name: 'test_key',
+          tablePath: 'test_path',
+          connection: 'test-connection',
+          dialect: 'bigquery',
+          fields: [],
+        });
       });
     });
 
@@ -341,7 +412,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getSqlsource.mockResolvedValueOnce(mockSqlResponse);
+        mockConnectionsApi.postSqlsource.mockResolvedValueOnce(mockSqlResponse);
 
         const connection = await PublisherConnection.create('test-connection', {
           connectionUri:
@@ -355,10 +426,12 @@ describe('db:Publisher', () => {
         });
 
         expect(schema).toEqual(mockSqlSchema);
-        expect(mockConnectionsApi.getSqlsource).toHaveBeenCalledWith(
+        expect(mockConnectionsApi.postSqlsource).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'SELECT * FROM test_table',
+          {
+            sqlStatement: 'SELECT * FROM test_table',
+          },
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -370,7 +443,7 @@ describe('db:Publisher', () => {
       it('should handle API errors', async () => {
         await setupAndTestApiError(
           mockConnectionsApi,
-          'getSqlsource',
+          'postSqlsource',
           connection =>
             connection.fetchSelectSchema({
               selectStr: 'SELECT * FROM test_table',
@@ -382,7 +455,7 @@ describe('db:Publisher', () => {
       it('should handle invalid JSON response', async () => {
         await setupAndTestInvalidJsonResponse(
           mockConnectionsApi,
-          'getSqlsource',
+          'postSqlsource',
           connection =>
             connection.fetchSelectSchema({
               selectStr: 'SELECT * FROM test_table',
@@ -445,7 +518,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+        mockConnectionsApi.postQuerydata.mockResolvedValueOnce(
           mockQueryResponse
         );
 
@@ -458,11 +531,11 @@ describe('db:Publisher', () => {
         const result = await connection.runSQL('SELECT * FROM test_table');
 
         expect(result).toEqual(mockQueryData);
-        expect(mockConnectionsApi.getQuerydata).toHaveBeenCalledWith(
+        expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'SELECT * FROM test_table',
-          '{}',
+          {sqlStatement: 'SELECT * FROM test_table'},
+          JSON.stringify({}),
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -508,7 +581,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+        mockConnectionsApi.postQuerydata.mockResolvedValueOnce(
           mockQueryResponse
         );
 
@@ -529,10 +602,10 @@ describe('db:Publisher', () => {
         );
 
         expect(result).toEqual(mockQueryData);
-        expect(mockConnectionsApi.getQuerydata).toHaveBeenCalledWith(
+        expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'SELECT * FROM test_table',
+          {sqlStatement: 'SELECT * FROM test_table'},
           JSON.stringify(options),
           {
             headers: {
@@ -545,7 +618,7 @@ describe('db:Publisher', () => {
       it('should handle API errors', async () => {
         await setupAndTestApiError(
           mockConnectionsApi,
-          'getQuerydata',
+          'postQuerydata',
           connection => connection.runSQL('SELECT * FROM test_table')
         );
       });
@@ -553,7 +626,7 @@ describe('db:Publisher', () => {
       it('should handle invalid JSON response', async () => {
         await setupAndTestInvalidJsonResponse(
           mockConnectionsApi,
-          'getQuerydata',
+          'postQuerydata',
           connection => connection.runSQL('SELECT * FROM test_table'),
           {data: 'invalid json'}
         );
@@ -613,7 +686,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+        mockConnectionsApi.postQuerydata.mockResolvedValueOnce(
           mockQueryResponse
         );
 
@@ -631,10 +704,10 @@ describe('db:Publisher', () => {
         }
 
         expect(results).toEqual(mockQueryData.rows);
-        expect(mockConnectionsApi.getQuerydata).toHaveBeenCalledWith(
+        expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'SELECT * FROM test_table',
+          {sqlStatement: 'SELECT * FROM test_table'},
           '{}',
           {
             headers: {
@@ -681,7 +754,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getQuerydata.mockResolvedValueOnce(
+        mockConnectionsApi.postQuerydata.mockResolvedValueOnce(
           mockQueryResponse
         );
 
@@ -707,10 +780,10 @@ describe('db:Publisher', () => {
         }
 
         expect(results).toEqual(mockQueryData.rows);
-        expect(mockConnectionsApi.getQuerydata).toHaveBeenCalledWith(
+        expect(mockConnectionsApi.postQuerydata).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'SELECT * FROM test_table',
+          {sqlStatement: 'SELECT * FROM test_table'},
           JSON.stringify(options),
           {
             headers: {
@@ -723,7 +796,7 @@ describe('db:Publisher', () => {
       it('should handle API errors', async () => {
         await setupAndTestApiError(
           mockConnectionsApi,
-          'getQuerydata',
+          'postQuerydata',
           async connection => {
             const stream = connection.runSQLStream('SELECT * FROM test_table');
             const results: QueryDataRow[] = [];
@@ -737,7 +810,7 @@ describe('db:Publisher', () => {
       it('should handle invalid JSON response', async () => {
         await setupAndTestInvalidJsonResponse(
           mockConnectionsApi,
-          'getQuerydata',
+          'postQuerydata',
           async connection => {
             const stream = connection.runSQLStream('SELECT * FROM test_table');
             const results: QueryDataRow[] = [];
@@ -795,7 +868,7 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getTemporarytable.mockResolvedValueOnce(
+        mockConnectionsApi.postTemporarytable.mockResolvedValueOnce(
           mockTableResponse
         );
 
@@ -810,10 +883,10 @@ describe('db:Publisher', () => {
         );
 
         expect(tableName).toBe('temp_table_123');
-        expect(mockConnectionsApi.getTemporarytable).toHaveBeenCalledWith(
+        expect(mockConnectionsApi.postTemporarytable).toHaveBeenCalledWith(
           'test-project',
           'test-connection',
-          'SELECT * FROM test_table',
+          {sqlStatement: 'SELECT * FROM test_table'},
           {
             headers: {
               Authorization: 'Bearer test-token',
@@ -825,7 +898,7 @@ describe('db:Publisher', () => {
       it('should handle API errors', async () => {
         await setupAndTestApiError(
           mockConnectionsApi,
-          'getTemporarytable',
+          'postTemporarytable',
           connection =>
             connection.manifestTemporaryTable('SELECT * FROM test_table')
         );
@@ -833,6 +906,99 @@ describe('db:Publisher', () => {
     });
 
     describe('test', () => {
+      let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let mockConnectionsTestApi: jest.Mocked<ConnectionsTestApi>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
+
+      beforeEach(() => {
+        // Get fresh instances of the mocks
+        mockConnectionsApi = new ConnectionsApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsApi>;
+        mockConnectionsTestApi = new ConnectionsTestApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsTestApi>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+      });
+
+      afterEach(() => {
+        jest.clearAllMocks();
+      });
+
+      it('should test connection successfully', async () => {
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            name: 'test-connection',
+            type: 'bigquery',
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        const mockTestResponse: AxiosResponse = {
+          data: {
+            status: 'ok',
+            errorMessage: '',
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsTestApi.testConnectionConfiguration.mockResolvedValueOnce(
+          mockTestResponse
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        await expect(connection.test()).resolves.not.toThrow();
+        expect(
+          mockConnectionsTestApi.testConnectionConfiguration
+        ).toHaveBeenCalledWith(
+          {
+            name: 'test-connection',
+            type: 'bigquery',
+            attributes: {
+              dialectName: 'bigquery',
+              isPool: false,
+              canPersist: true,
+              canStream: true,
+            },
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
+          },
+          {
+            headers: {
+              Authorization: 'Bearer test-token',
+            },
+          }
+        );
+      });
+    });
+
+    describe('estimateQueryCost', () => {
       let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
       let _mockConfiguration: jest.Mocked<Configuration>;
 
@@ -844,28 +1010,24 @@ describe('db:Publisher', () => {
         _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
       });
 
-      afterEach(() => {
-        jest.clearAllMocks();
-      });
-
-      it('should test connection successfully', async () => {
-        const mockConnectionResponse: AxiosResponse = {
-          data: {
-            attributes: {
-              dialectName: 'bigquery',
-              isPool: false,
-              canPersist: true,
-              canStream: true,
-            },
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as AxiosResponse['config'],
+      it('should return empty object for query cost estimation', async () => {
+        const mockConnectionAttributes: ConnectionAttributes = {
+          dialectName: 'bigquery',
+          isPool: false,
+          canPersist: true,
+          canStream: true,
         };
 
-        const mockTestResponse: AxiosResponse = {
-          data: undefined,
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            name: 'test-connection',
+            type: 'bigquery',
+            attributes: mockConnectionAttributes,
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
+          },
           status: 200,
           statusText: 'OK',
           headers: {},
@@ -875,7 +1037,6 @@ describe('db:Publisher', () => {
         mockConnectionsApi.getConnection.mockResolvedValueOnce(
           mockConnectionResponse
         );
-        mockConnectionsApi.getTest.mockResolvedValueOnce(mockTestResponse);
 
         const connection = await PublisherConnection.create('test-connection', {
           connectionUri:
@@ -883,139 +1044,63 @@ describe('db:Publisher', () => {
           accessToken: 'test-token',
         });
 
-        await expect(connection.test()).resolves.not.toThrow();
-        expect(mockConnectionsApi.getTest).toHaveBeenCalledWith(
-          'test-project',
-          'test-connection',
-          {
-            headers: {
-              Authorization: 'Bearer test-token',
-            },
-          }
+        const cost = await connection.estimateQueryCost(
+          'SELECT * FROM test_table'
         );
+
+        expect(cost).toEqual({});
       });
     });
-  });
 
-  describe.skip('integration', () => {
-    let conn: PublisherConnection;
-    let runtime: malloy.Runtime;
+    describe('close', () => {
+      let mockConnectionsApi: jest.Mocked<ConnectionsApi>;
+      let _mockConfiguration: jest.Mocked<Configuration>;
 
-    beforeEach(async () => {
-      conn = await PublisherConnection.create(
-        'bigquery',
-        //{
-        //connectionUri: 'http://localhost:4000/api/v0/projects/malloy-samples/connections/bigquery',
-        //}
-        {
+      beforeEach(() => {
+        // Get fresh instances of the mocks
+        mockConnectionsApi = new ConnectionsApi(
+          new Configuration()
+        ) as jest.Mocked<ConnectionsApi>;
+        _mockConfiguration = new Configuration() as jest.Mocked<Configuration>;
+      });
+
+      it('should close connection successfully', async () => {
+        const mockConnectionAttributes: ConnectionAttributes = {
+          dialectName: 'bigquery',
+          isPool: false,
+          canPersist: true,
+          canStream: true,
+        };
+
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            name: 'test-connection',
+            type: 'bigquery',
+            attributes: mockConnectionAttributes,
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+
+        const connection = await PublisherConnection.create('test-connection', {
           connectionUri:
-            'http://demo.data.pathways.localhost:8000/api/v0/projects/malloy-samples/connections/bigquery',
-          accessToken: 'xyz',
-        }
-      );
-      const files = {
-        readURL: async (url: URL) => {
-          const filePath = fileURLToPath(url);
-          return await util.promisify(fs.readFile)(filePath, 'utf8');
-        },
-      };
-      runtime = new malloy.Runtime({
-        urlReader: files,
-        connection: conn,
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        // close() should not throw and should return void
+        await expect(connection.close()).resolves.toBeUndefined();
       });
-    });
-
-    afterEach(async () => {
-      await conn.close();
-    });
-
-    it('tests the connection', async () => {
-      await conn.test();
-    });
-
-    it('correctly identifies the dialect', () => {
-      expect(conn.dialectName).toBe('standardsql');
-    });
-
-    it('correctly identifies the connection as a pooled connection', () => {
-      expect(conn.isPool()).toBe(false);
-    });
-
-    it('correctly identifies the connection as a streaming connection', () => {
-      expect(conn.canStream()).toBe(true);
-    });
-
-    it('correctly identifies the connection as a persistSQLResults connection', () => {
-      expect(conn.canPersist()).toBe(true);
-    });
-
-    it('fetches the table schema', async () => {
-      const schema = await conn.fetchTableSchema(
-        'bigquery',
-        'bigquery-public-data.hacker_news.full'
-      );
-      expect(schema.type).toBe('table');
-      expect(schema.dialect).toBe('standardsql');
-      expect(schema.tablePath).toBe('bigquery-public-data.hacker_news.full');
-      expect(schema.fields.length).toBe(14);
-      expect(schema.fields[0].name).toBe('title');
-      expect(schema.fields[0].type).toBe('string');
-    });
-
-    it('fetches the sql source schema', async () => {
-      const schema = await conn.fetchSelectSchema({
-        connection: 'bigquery',
-        selectStr: 'SELECT * FROM bigquery-public-data.hacker_news.full',
-      });
-      expect(schema.type).toBe('sql_select');
-      expect(schema.dialect).toBe('standardsql');
-      expect(schema.fields.length).toBe(14);
-      expect(schema.fields[0].name).toBe('title');
-      expect(schema.fields[0].type).toBe('string');
-    });
-
-    it('runs a SQL query', async () => {
-      const res = await conn.runSQL('SELECT 1 as T');
-      expect(res.rows[0]['T']).toBe(1);
-    });
-
-    it('runs a Malloy query', async () => {
-      const sql = await runtime
-        .loadModel(
-          "source: stories is bigquery.table('bigquery-public-data.hacker_news.full')"
-        )
-        .loadQuery(
-          'run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 10 }'
-        )
-        .getSQL();
-      const res = await conn.runSQL(sql);
-      expect(res.totalRows).toBe(10);
-      let total = 0;
-      for (const row of res.rows) {
-        total += +(row['cnt'] ?? 0);
-      }
-      expect(total).toBe(1836679);
-    });
-
-    it('runs a Malloy query on an sql source', async () => {
-      const sql = await runtime
-        .loadModel(
-          "source: stories is bigquery.sql('SELECT * FROM bigquery-public-data.hacker_news.full')"
-        )
-        .loadQuery(
-          'run:  stories -> { aggregate: cnt is count() group_by: `by` order_by: cnt desc limit: 20 }'
-        )
-        .getSQL();
-      const res = await conn.runSQL(sql);
-      expect(res.totalRows).toBe(20);
-      expect(res.rows[0]['cnt']).toBe(1346912);
-    });
-
-    it('get temporary table name', async () => {
-      const sql = 'SELECT 1 as T';
-      const tempTableName = await conn.manifestTemporaryTable(sql);
-      expect(tempTableName).toBeDefined();
-      expect(tempTableName.startsWith('lofty-complex-452701')).toBe(true);
     });
   });
 });
