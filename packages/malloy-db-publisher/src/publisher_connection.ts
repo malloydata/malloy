@@ -6,7 +6,6 @@
  */
 
 import type {
-  Connection,
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
@@ -20,8 +19,14 @@ import type {
   TestableConnection,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
-import type {ConnectionAttributes, RawAxiosRequestConfig} from './client';
-import {Configuration, ConnectionsApi} from './client';
+import type {
+  Column,
+  Connection,
+  ConnectionAttributes,
+  PostSqlsourceRequest,
+  RawAxiosRequestConfig,
+} from './client';
+import {Configuration, ConnectionsApi, ConnectionsTestApi} from './client';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -39,7 +44,9 @@ export class PublisherConnection
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
+  private connectionsTestApi: ConnectionsTestApi;
   private connectionAttributes: ConnectionAttributes;
+  private connectionData: Connection;
   private accessToken: string | undefined;
 
   static async create(name: string, options: PublisherConnectionOptions) {
@@ -66,16 +73,25 @@ export class PublisherConnection
       basePath: apiUrl,
     });
     const connectionsApi = new ConnectionsApi(configuration);
+    const connectionsTestApi = new ConnectionsTestApi(configuration);
     const response = await connectionsApi.getConnection(projectName, name, {
       headers: PublisherConnection.getAuthHeaders(options.accessToken),
     });
-    const connectionAttributes = response.data
-      .attributes as ConnectionAttributes;
+    if (!response || !response.data) {
+      throw new Error(
+        `Failed to get connection: ${name} from project: ${projectName}`
+      );
+    }
+    const connectionData = response.data as Connection;
+    const connectionAttributes =
+      connectionData.attributes as ConnectionAttributes;
     const connection = new PublisherConnection(
       name,
       projectName,
       connectionsApi,
+      connectionsTestApi,
       connectionAttributes,
+      connectionData,
       options.accessToken
     );
     await connection.test();
@@ -94,14 +110,18 @@ export class PublisherConnection
     name: string,
     projectName: string,
     connectionsApi: ConnectionsApi,
+    connectionsTestApi: ConnectionsTestApi,
     connectionAttributes: ConnectionAttributes,
+    connectionData: Connection,
     accessToken: string | undefined
   ) {
     super();
     this.name = name;
     this.projectName = projectName;
     this.connectionsApi = connectionsApi;
+    this.connectionsTestApi = connectionsTestApi;
     this.connectionAttributes = connectionAttributes;
+    this.connectionData = connectionData;
     this.accessToken = accessToken;
   }
 
@@ -125,25 +145,41 @@ export class PublisherConnection
     tableKey: string,
     tablePath: string
   ): Promise<TableSourceDef> {
-    const response = await this.connectionsApi.getTablesource(
+    const response = await this.connectionsApi.getTable(
       this.projectName,
       this.name,
-      tableKey,
+      tablePath.split('/')[0],
       tablePath,
       {
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    return JSON.parse(response.data.source as string) as TableSourceDef;
+    // Convert the Table response to TableSourceDef format
+    const tableData = response.data;
+    return {
+      type: 'table',
+      name: tableKey,
+      tablePath: tablePath,
+      connection: this.name,
+      dialect: this.dialectName,
+      fields:
+        tableData.columns?.map((col: Column) => ({
+          name: col.name,
+          type: col.type,
+        })) || [],
+    } as TableSourceDef;
   }
 
   public async fetchSelectSchema(
     sqlRef: SQLSourceRequest
   ): Promise<SQLSourceDef> {
-    const response = await this.connectionsApi.getSqlsource(
+    const request: PostSqlsourceRequest = {
+      sqlStatement: sqlRef.selectStr,
+    };
+    const response = await this.connectionsApi.postSqlsource(
       this.projectName,
       this.name,
-      sqlRef.selectStr,
+      request,
       {
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
@@ -162,10 +198,13 @@ export class PublisherConnection
   ): Promise<MalloyQueryData> {
     // TODO: Add support for abortSignal.
     options.abortSignal = undefined;
-    const response = await this.connectionsApi.getQuerydata(
+    const request: PostSqlsourceRequest = {
+      sqlStatement: sql,
+    };
+    const response = await this.connectionsApi.postQuerydata(
       this.projectName,
       this.name,
-      sql,
+      request,
       JSON.stringify(options),
       {
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
@@ -181,10 +220,13 @@ export class PublisherConnection
     // TODO: Add support for abortSignal.
     options.abortSignal = undefined;
     // TODO: Add real streaming support to publisher API.
-    const response = await this.connectionsApi.getQuerydata(
+    const request: PostSqlsourceRequest = {
+      sqlStatement: sqlCommand,
+    };
+    const response = await this.connectionsApi.postQuerydata(
       this.projectName,
       this.name,
-      sqlCommand,
+      request,
       JSON.stringify(options),
       {
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
@@ -199,16 +241,22 @@ export class PublisherConnection
   }
 
   public async test(): Promise<void> {
-    await this.connectionsApi.getTest(this.projectName, this.name, {
-      headers: PublisherConnection.getAuthHeaders(this.accessToken),
-    });
+    await this.connectionsTestApi.testConnectionConfiguration(
+      this.connectionData,
+      {
+        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+      }
+    );
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const response = await this.connectionsApi.getTemporarytable(
+    const request: PostSqlsourceRequest = {
+      sqlStatement: sqlCommand,
+    };
+    const response = await this.connectionsApi.postTemporarytable(
       this.projectName,
       this.name,
-      sqlCommand,
+      request,
       {
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
