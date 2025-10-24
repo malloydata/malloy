@@ -1295,4 +1295,27 @@ describe('field usage with compiler extensions', () => {
       }
     }
   });
+
+  test('coalesce across joined sources', () => {
+    const query = model`
+      source: c is a
+      source: abc is a extend {
+        join_one: c with astr
+        join_one: b with astr
+      }
+      run: abc -> {
+        select:
+          result1 is null ?? af ?? b.af ?? c.af
+      }
+    `;
+    expect(query).toTranslate();
+    const mq = query.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    let [found, message] = checkForFieldUsage(mq, {path: ['af']});
+    expect(found, message).toBeTruthy();
+    [found, message] = checkForFieldUsage(mq, {path: ['b', 'af']});
+    expect(found, message).toBeTruthy();
+    [found, message] = checkForFieldUsage(mq, {path: ['c', 'af']});
+    expect(found, message).toBeTruthy();
+  });
 });
