@@ -65,12 +65,19 @@ export interface AttachedDatabase {
      * @memberof AttachedDatabase
      */
     'postgresConnection'?: PostgresConnection;
+    /**
+     * 
+     * @type {MotherDuckConnection}
+     * @memberof AttachedDatabase
+     */
+    'motherDuckConnection'?: MotherDuckConnection;
 }
 
 export const AttachedDatabaseTypeEnum = {
     Bigquery: 'bigquery',
     Snowflake: 'snowflake',
-    Postgres: 'postgres'
+    Postgres: 'postgres',
+    Motherduck: 'motherduck'
 } as const;
 
 export type AttachedDatabaseTypeEnum = typeof AttachedDatabaseTypeEnum[keyof typeof AttachedDatabaseTypeEnum];
@@ -461,6 +468,25 @@ export interface ModelError {
      * @memberof ModelError
      */
     'details'?: string;
+}
+/**
+ * MotherDuck database connection configuration
+ * @export
+ * @interface MotherDuckConnection
+ */
+export interface MotherDuckConnection {
+    /**
+     * MotherDuck access token
+     * @type {string}
+     * @memberof MotherDuckConnection
+     */
+    'accessToken'?: string;
+    /**
+     * MotherDuck database name
+     * @type {string}
+     * @memberof MotherDuckConnection
+     */
+    'database'?: string;
 }
 /**
  * MySQL database connection configuration
@@ -948,6 +974,12 @@ export interface Table {
      * @memberof Table
      */
     'resource'?: string;
+    /**
+     * Table source as a JSON string.
+     * @type {string}
+     * @memberof Table
+     */
+    'source'?: string;
     /**
      * Table fields
      * @type {Array<Column>}
