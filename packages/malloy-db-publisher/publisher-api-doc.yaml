@@ -1216,7 +1216,6 @@ paths:
         "501":
           $ref: "#/components/responses/NotImplemented"
 
-
   /projects/{projectName}/packages/{packageName}/databases:
     get:
       tags:
@@ -1280,14 +1279,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Connection'
+              $ref: "#/components/schemas/Connection"
       responses:
         "200":
           description: Connection test result
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectionStatus'
+                $ref: "#/components/schemas/ConnectionStatus"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1843,6 +1842,17 @@ components:
           type: string
           description: Trino password for authentication
 
+    MotherDuckConnection:
+      type: object
+      description: MotherDuck database connection configuration
+      properties:
+        accessToken:
+          type: string
+          description: MotherDuck access token
+        database:
+          type: string
+          description: MotherDuck database name
+
     DuckdbConnection:
       type: object
       description: DuckDB database connection configuration
@@ -1861,7 +1871,7 @@ components:
         type:
           type: string
           description: Type of database connection
-          enum: [bigquery, snowflake, postgres]
+          enum: [bigquery, snowflake, postgres, motherduck]
         attributes:
           $ref: "#/components/schemas/ConnectionAttributes"
         bigqueryConnection:
@@ -1870,7 +1880,8 @@ components:
           $ref: "#/components/schemas/SnowflakeConnection"
         postgresConnection:
           $ref: "#/components/schemas/PostgresConnection"
-
+        motherDuckConnection:
+          $ref: "#/components/schemas/MotherDuckConnection"
 
     # TODO: What is this?  Can we remove it?
     SqlSource:
@@ -1889,6 +1900,9 @@ components:
         resource:
           type: string
           description: Resource path to the table.
+        source:
+          type: string
+          description: Table source as a JSON string.
         columns:
           description: Table fields
           type: array

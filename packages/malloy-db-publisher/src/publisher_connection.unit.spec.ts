@@ -251,6 +251,17 @@ describe('db:Publisher', () => {
               {name: 'id', type: 'number'},
               {name: 'name', type: 'string'},
             ],
+            source: JSON.stringify({
+              type: 'table',
+              name: 'test_key',
+              tablePath: 'test_path',
+              connection: 'test-connection',
+              dialect: 'bigquery',
+              fields: [
+                {name: 'id', type: 'number'},
+                {name: 'name', type: 'string'},
+              ],
+            }),
           },
           status: 200,
           statusText: 'OK',
@@ -321,7 +332,11 @@ describe('db:Publisher', () => {
         };
 
         const mockInvalidResponse: AxiosResponse = {
-          data: {resource: 'invalid json', columns: null},
+          data: {
+            resource: 'invalid json',
+            columns: null,
+            source: 'invalid json',
+          },
           status: 200,
           statusText: 'OK',
           headers: {},
@@ -339,19 +354,9 @@ describe('db:Publisher', () => {
           accessToken: 'test-token',
         });
 
-        const schema = await connection.fetchTableSchema(
-          'test_key',
-          'test_path'
-        );
-
-        expect(schema).toEqual({
-          type: 'table',
-          name: 'test_key',
-          tablePath: 'test_path',
-          connection: 'test-connection',
-          dialect: 'bigquery',
-          fields: [],
-        });
+        await expect(
+          connection.fetchTableSchema('test_key', 'test_path')
+        ).rejects.toThrow(SyntaxError);
       });
     });
 
