@@ -20,7 +20,6 @@ import type {
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import type {
-  Column,
   Connection,
   ConnectionAttributes,
   PostSqlsourceRequest,
@@ -142,32 +141,19 @@ export class PublisherConnection
   }
 
   public async fetchTableSchema(
-    tableKey: string,
+    _tableKey: string,
     tablePath: string
   ): Promise<TableSourceDef> {
     const response = await this.connectionsApi.getTable(
       this.projectName,
       this.name,
-      tablePath.split('/')[0],
+      tablePath.split('.')[0],
       tablePath,
       {
         headers: PublisherConnection.getAuthHeaders(this.accessToken),
       }
     );
-    // Convert the Table response to TableSourceDef format
-    const tableData = response.data;
-    return {
-      type: 'table',
-      name: tableKey,
-      tablePath: tablePath,
-      connection: this.name,
-      dialect: this.dialectName,
-      fields:
-        tableData.columns?.map((col: Column) => ({
-          name: col.name,
-          type: col.type,
-        })) || [],
-    } as TableSourceDef;
+    return JSON.parse(response.data.source as string) as TableSourceDef;
   }
 
   public async fetchSelectSchema(

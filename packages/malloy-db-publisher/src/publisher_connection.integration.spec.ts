@@ -98,10 +98,61 @@ describe.skip('db:Publisher Integration Tests', () => {
     );
     expect(schema.type).toBe('table');
     expect(schema.dialect).toBe('standardsql');
-    expect(schema.tablePath).toBe('ecommerce_bq.users');
+    expect(schema.tablePath).toBe('{{projectId}}.ecommerce_bq.users');
     expect(schema.fields.length).toBe(14);
     expect(schema.fields[0].name).toBe('id');
     expect(schema.fields[0].type).toBe('number');
+  });
+
+  it('verifies fetchTableSchema returns complete TableSourceDef structure', async () => {
+    if (!conn) {
+      pending('Publisher service not available');
+      return;
+    }
+    const schema = await conn.fetchTableSchema(
+      'ecommerce_bq',
+      'ecommerce_bq.users'
+    );
+
+    // Verify top-level required fields
+    expect(schema).toHaveProperty('type');
+    expect(schema).toHaveProperty('dialect');
+    expect(schema).toHaveProperty('tablePath');
+    expect(schema).toHaveProperty('connection');
+    expect(schema).toHaveProperty('fields');
+
+    // Verify field values
+    expect(schema.type).toBe('table');
+    expect(schema.dialect).toBe('standardsql');
+    expect(schema.tablePath).toBe('{{projectId}}.ecommerce_bq.users');
+    expect(schema.connection).toBe('bq_demo');
+    expect(Array.isArray(schema.fields)).toBe(true);
+    expect(schema.fields.length).toBeGreaterThan(0);
+
+    // Verify each field has required properties
+    schema.fields.forEach((field, _index) => {
+      expect(field).toHaveProperty('name');
+      expect(field).toHaveProperty('type');
+      expect(typeof field.name).toBe('string');
+      expect(typeof field.type).toBe('string');
+      expect(field.name.length).toBeGreaterThan(0);
+      expect(field.type.length).toBeGreaterThan(0);
+    });
+
+    // Verify the schema structure matches expected TableSourceDef format
+    expect(schema).toEqual({
+      type: 'table',
+      name: 'users',
+      dialect: 'standardsql',
+      tablePath: '{{projectId}}.ecommerce_bq.users',
+      connection: 'bq_demo',
+      fields: expect.arrayContaining([
+        expect.objectContaining({
+          name: expect.any(String),
+          type: expect.any(String),
+        }),
+      ]),
+    });
   });
 
   it('fetches the sql source schema', async () => {
