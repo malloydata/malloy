@@ -218,34 +218,50 @@ export class RedshiftConnection
       ? explicitType
       : this.determineRedshiftSQLType(value);
 
-    // prevents a path from being locked into the 'string' type
-    // if the first value seen is null
+    // Prevents a path from being locked into the 'string' type
+    // if the first value seen is null. Or if we already have
+    // a type for the path, null value should not be inferred
+    // as a conflict.
     const isNullFallback =
       !explicitType && newType === 'varchar' && value === null;
+    if (isNullFallback) {
+      return true;
+    }
+
+    // At the top level if there is a super type with a primitive
+    // inferred type, then we just assign it as super type. The reason
+    // is that when we access the field as a string we won't do an
+    // explicit cast to string (because it is at the top level). So
+    // we might do a min(top_level_super_field) which will fail.
+    const isTopLevel = !path.includes('.');
+    if (isTopLevel && this.PRIMITIVE_TYPES.includes(newType)) {
+      pathToType.set(path, 'super');
+      return true;
+    }
 
     // Path seen before. Check if the type is different.
     if (pathToType.has(path)) {
       const existingType = pathToType.get(path) ?? '';
       // Conflict if types differ, and the new type isn't just a null fallback
-      if (existingType !== newType && !isNullFallback) {
-        // if both types are primitive types (number, boolean, string),
-        // then we default as varchar and add to the pathToType map
+      if (existingType !== newType) {
+        // If both types are primitive types (number, boolean, string),
+        // then it is safe to resolve as varchar.
         if (
           this.PRIMITIVE_TYPES.includes(existingType) &&
           this.PRIMITIVE_TYPES.includes(newType)
         ) {
           pathToType.set(path, 'varchar');
         } else {
-          // else remove the path and mark as mixed.
+          // We have a conflict that can't be resolved easily. So
+          // we will remove the path and mark as mixed.
           pathToType.delete(path);
           pathsWithAmbiguousTypes.add(path);
-          return false; // Became ambiguous, return false
+          return false;
         }
       }
-    } else if (!isNullFallback) {
-      // Path not seen before. Set the type, unless it's a null fallback.
-      pathToType.set(path, newType);
     }
+
+    pathToType.set(path, newType);
     return true; // Not ambiguous, return true
   }
 
@@ -434,9 +450,8 @@ export class RedshiftConnection
   ): void {
     if (superValue === null) {
       return;
-      // handle object
     } else if (typeof superValue === 'object' && !Array.isArray(superValue)) {
-      // track current path as an object
+      // handle object. track current path as an object
       const shouldProceed = this.updatePathType(
         currentPath,
         superValue,
@@ -457,10 +472,8 @@ export class RedshiftConnection
           pathsWithAmbiguousTypes
         );
       }
-    }
-    // Handle array
-    else if (Array.isArray(superValue)) {
-      // Track current path as an array
+    } else if (Array.isArray(superValue)) {
+      // Handle array. Track current path as an array
       const shouldProceed = this.updatePathType(
         currentPath,
         superValue,
@@ -483,9 +496,8 @@ export class RedshiftConnection
           pathsWithAmbiguousTypes
         );
       }
-    }
-    // Handle leaf node (primitive or null)
-    else {
+    } else {
+      // Handle leaf node (primitive or null)
       this.updatePathType(
         currentPath,
         superValue,
@@ -576,8 +588,8 @@ export class RedshiftConnection
         elementTypeDef: {type: 'record_element'},
         fields: [],
       };
-      // leaf node - use the actual type
     } else {
+      // leaf node - keep as sql native for SUPER columns to preserve casting info
       return {
         ...this.dialect.sqlTypeToMalloyType(fieldType),
         name: fieldName,

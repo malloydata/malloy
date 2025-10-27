@@ -85,7 +85,6 @@ const redshiftToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'interval day to second': {type: 'string'}, //?
   'boolean': {type: 'boolean'},
   'hllsketch': {type: 'string'}, //?
-  'super': {type: 'string'}, //?
   'varbyte': {type: 'string'}, //?
   'geography': {type: 'string'}, //?
   'geometry': {type: 'string'}, //?
