@@ -103,6 +103,5 @@
     "yargs": "^17.7.2"
   },
   "dependencies": {
-    "clinic": "^13.0.0"
   }
 }

@@ -17,13 +17,12 @@
     "test": "jest --config=../jest.config.js",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "profile": "npx clinic flame -- node dist/profile.js",
+    "profile": "./scripts/flame_profile.sh",
     "time": "ts-node src/timer.ts"
   },
   "dependencies": {
     "@malloydata/malloy": "0.0.319",
-    "@malloydata/malloy-interfaces": "0.0.319",
-    "clinic": "^13.0.0"
+    "@malloydata/malloy-interfaces": "0.0.319"
   },
   "version": "0.0.319"
 }
