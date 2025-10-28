@@ -48,11 +48,9 @@ function invertCompare(no: NumberRangeOperator): NumberRangeOperator {
 }
 
 function unlike(disLiked: string[], x: string) {
-  const orNull = ` OR ${x} IS NULL`;
-  if (disLiked.length === 1) {
-    return `${disLiked[0]}${orNull}`;
-  }
-  return `(${disLiked.join(' AND ')})${orNull}`;
+  const unlikeSQL =
+    disLiked.length === 1 ? disLiked[0] : `(${disLiked.join(' AND ')})`;
+  return `(${unlikeSQL} OR ${x} IS NULL)`;
 }
 
 /*
@@ -93,10 +91,10 @@ export const FilterCompilers = {
           (nc.operator === '=' && nc.not) || (nc.operator === '!=' && !nc.not);
         const optList = nc.values.join(', ');
         if (nc.values.length === 1) {
-          if (notEqual) return `${x} != ${optList} OR ${x} IS NULL`;
+          if (notEqual) return `(${x} != ${optList} OR ${x} IS NULL)`;
           return `${x} = ${optList}`;
         }
-        if (notEqual) return `${x} NOT IN (${optList}) OR ${x} IS NULL`;
+        if (notEqual) return `(${x} NOT IN (${optList}) OR ${x} IS NULL)`;
         return `${x} IN (${optList})`;
       }
       case '>':
@@ -396,7 +394,7 @@ export class TemporalFilterCompiler {
         const m = this.moment(tc.in);
         if (m.begin.sql === m.end) {
           return tc.not
-            ? `${x} != ${this.time(m.end)} OR ${x} IS NULL`
+            ? `(${x} != ${this.time(m.end)} OR ${x} IS NULL)`
             : `${x} = ${this.time(m.end)}`;
         }
         return this.isIn(tc.not, m.begin.sql, m.end);

@@ -411,8 +411,8 @@ function suggestNewVersion(
       expr instanceof FieldReference
         ? `${expr.refString}.${func}()`
         : expr instanceof ExprIdReference
-        ? `${expr.fieldReference.refString}.${func}()`
-        : `${longLocality}.${func}(${expr.code})`;
+          ? `${expr.fieldReference.refString}.${func}()`
+          : `${longLocality}.${func}(${expr.code})`;
     const shortSuggestion = `${shortLocality}.${func}(${expr.code})`;
     let result = `${joinError}; use \`${longSuggestion}\``;
     if (shortUsageError === undefined && shortLocality !== longLocality) {

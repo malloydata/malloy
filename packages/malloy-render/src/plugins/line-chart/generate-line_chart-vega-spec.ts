@@ -742,12 +742,12 @@ export function generateLineChartVegaSpecV2(
             ? // For YoY mode, calculate domain from actual data
               {data: 'values', field: 'x'}
             : shouldShareXDomain
-            ? xIsDateorTime
-              ? [Number(xField.minValue), Number(xField.maxValue)]
-              : xIsBoolean
-              ? [true, false]
-              : [...xField.valueSet]
-            : {data: 'values', field: 'x'},
+              ? xIsDateorTime
+                ? [Number(xField.minValue), Number(xField.maxValue)]
+                : xIsBoolean
+                  ? [true, false]
+                  : [...xField.valueSet]
+              : {data: 'values', field: 'x'},
         range: [0, {signal: 'mainPlotWidth'}],
         paddingOuter: 0.05,
       },

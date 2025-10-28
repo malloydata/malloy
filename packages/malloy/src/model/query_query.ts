@@ -353,8 +353,8 @@ export class QueryQuery extends QueryField {
     return fs.type === 'index'
       ? fs.indexFields
       : isQuerySegment(fs)
-      ? fs.queryFields
-      : [];
+        ? fs.queryFields
+        : [];
   }
 
   private getDrillExpression(f: QueryFieldDef): Malloy.Expression | undefined {
@@ -1445,9 +1445,8 @@ export class QueryQuery extends QueryField {
               limitSimpleFilters.push(filterClause);
             } else {
               // its a complex
-              limitComplexClauses[
-                result.groupSet
-              ] = `CASE WHEN ${filterClause} THEN 1 ELSE 0 END`;
+              limitComplexClauses[result.groupSet] =
+                `CASE WHEN ${filterClause} THEN 1 ELSE 0 END`;
             }
           }
         }

@@ -71,8 +71,8 @@ export class QueryReference extends MalloyElement implements QueryElement {
       const unRefedQuery = isRefOk
         ? query
         : refIsStructDef(query.structRef)
-        ? query
-        : {...query, structRef: inputStruct};
+          ? query
+          : {...query, structRef: inputStruct};
       return {
         query: unRefedQuery,
         outputStruct,

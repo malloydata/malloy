@@ -1,3 +1,4 @@
+/* eslint-disable n/no-process-exit */
 /*
  * Copyright 2023 Google LLC
  *

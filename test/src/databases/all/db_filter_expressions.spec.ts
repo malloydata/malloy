@@ -336,10 +336,17 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     test('not <=1', async () => {
       await expect(`
+          run: nums -> {
+            where: n ~ f'not <=1'
+            select: n; order_by: n asc
+          }`).malloyResultMatches(nums, [{n: 2}, {n: 3}, {n: 4}]);
+    });
+    test('not null and not 0,1,2', async () => {
+      await expect(`
         run: nums -> {
-          where: n ~ f'not <=1'
+          where: n ~ f'not null and not 0,1,2'
           select: n; order_by: n asc
-        }`).malloyResultMatches(nums, [{n: 2}, {n: 3}, {n: 4}]);
+        }`).malloyResultMatches(nums, [{n: 3}, {n: 4}]);
     });
   });
 
