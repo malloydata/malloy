@@ -28,9 +28,13 @@ import type {
 import {Configuration, ConnectionsApi, ConnectionsTestApi} from './client';
 
 interface PublisherConnectionOptions {
-  connectionUri: string;
+  connectionUri?: string;
   accessToken?: string;
+  baseUri?: string;
+  projectName?: string;
+  connectionName?: string;
 }
+
 
 export class PublisherConnection
   extends BaseConnection
@@ -49,27 +53,38 @@ export class PublisherConnection
   private accessToken: string | undefined;
 
   static async create(name: string, options: PublisherConnectionOptions) {
-    const url = new URL(options.connectionUri);
-    const urlParts = url.pathname.split('/');
-    if (urlParts.length !== 7) {
-      const fmt = '/api/v0/projects/{projectName}/connections/{connectionName}';
-      throw new Error(
-        `Invalid connection URI: ${options.connectionUri}. Expected format: ${fmt}`
-      );
+    let projectName = options.projectName;
+    let connectionName = options.connectionName;
+    let basePath = options.baseUri;
+
+    if (options.connectionUri) {
+      const url = new URL(options.connectionUri);
+      const urlParts = url.pathname.split('/');
+      if (urlParts.length !== 7) {
+        const fmt =
+          '/api/v0/projects/{projectName}/connections/{connectionName}';
+        throw new Error(
+          `Invalid connection URI: ${options.connectionUri}. Expected format: ${fmt}`
+        );
+      }
+      const apiTag = urlParts[1];
+      const versionTag = urlParts[2];
+      projectName = urlParts[4];
+      connectionName = urlParts[6];
+      basePath = `${url.origin}/${apiTag}/${versionTag}`;
     }
-    const apiTag = urlParts[1];
-    const versionTag = urlParts[2];
-    const projectName = urlParts[4];
-    const connectionName = urlParts[6];
+
+    if (!projectName) {
+      throw new Error('ProjectName is missing.');
+    }
 
     if (name !== connectionName) {
       throw new Error(
         `Connection name mismatch: ${name} !== ${connectionName}. Connection name must match the URI path.`
       );
     }
-    const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
-      basePath: apiUrl,
+      basePath,
     });
     const connectionsApi = new ConnectionsApi(configuration);
     const connectionsTestApi = new ConnectionsTestApi(configuration);
