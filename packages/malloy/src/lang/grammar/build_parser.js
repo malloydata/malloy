@@ -27,6 +27,7 @@
 
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable n/no-process-exit */
 const {readFileSync, writeFileSync, existsSync, rmSync} = require('fs');
 const {v5: uuidv5} = require('uuid');
 const path = require('path');
@@ -85,7 +86,6 @@ for (const target of build) {
   console.log(`-- Create ${target.makes} from ${target.src}`);
   if (!run(`${target.run} ${target.src}`)) {
     rmSync(digestFile);
-    // eslint-disable-next-line no-process-exit
     process.exit(1);
   }
   newDigest = true;

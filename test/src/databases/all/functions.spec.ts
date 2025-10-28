@@ -146,8 +146,8 @@ expressionModels.forEach((x, databaseName) => {
           databaseName === 'postgres'
             ? 'const'
             : databaseName === 'mysql'
-            ? 'cons1'
-            : 'construe',
+              ? 'cons1'
+              : 'construe',
         ],
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
@@ -241,10 +241,10 @@ expressionModels.forEach((x, databaseName) => {
           databaseName === 'postgres'
             ? '\\0 - a - b - c'
             : databaseName === 'trino' ||
-              databaseName === 'presto' ||
-              databaseName === 'mysql'
-            ? '0 - 1 - 2 - 3'
-            : 'axbxc - a - b - c',
+                databaseName === 'presto' ||
+                databaseName === 'mysql'
+              ? '0 - 1 - 2 - 3'
+              : 'axbxc - a - b - c',
         ],
         [
           "replace('aaaa', '', 'c')",

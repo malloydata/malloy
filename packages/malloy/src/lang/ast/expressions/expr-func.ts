@@ -251,8 +251,8 @@ export class ExprFunc extends ExpressionDef {
         error.maxEvalSpace === 'literal'
           ? 'literal'
           : error.maxEvalSpace === 'constant'
-          ? 'literal or constant'
-          : 'literal, constant or output';
+            ? 'literal or constant'
+            : 'literal, constant or output';
       const arg = this.args[adjustedIndex];
       arg.logError(
         'invalid-function-argument-evaluation-space',
@@ -454,8 +454,8 @@ export class ExprFunc extends ExpressionDef {
       maxEvalSpace === 'constant'
         ? 'constant'
         : expressionIsScalar(expressionType)
-        ? maxEvalSpace
-        : 'output';
+          ? maxEvalSpace
+          : 'output';
     const aggregateFunctionUsage: FieldUsage[] = [];
     if (isAsymmetric || isAnalytic) {
       const funcUsage: FieldUsage = {path: structPath || [], at: this.location};

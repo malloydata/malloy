@@ -88,7 +88,7 @@ for (const target of build) {
   console.log(`-- Create ${target.makes} from ${target.src}`);
   if (!run(`${target.run} ${target.src}`)) {
     rmSync(digestFile);
-    // eslint-disable-next-line no-process-exit
+    // eslint-disable-next-line n/no-process-exit
     process.exit(1);
   }
   newDigest = true;

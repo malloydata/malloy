@@ -409,8 +409,8 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
             field.numberType === 'float'
               ? 'decimal'
               : field.numberType === 'integer'
-              ? 'integer'
-              : undefined,
+                ? 'integer'
+                : undefined,
         };
       case 'boolean':
         return {kind: 'boolean_type'};

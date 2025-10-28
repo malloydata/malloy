@@ -30,14 +30,14 @@ type NonOptionalASTNode<T> = T extends undefined ? never : ASTNode<T>;
 type LiteralOrNode<T> = T extends string
   ? T
   : T extends number
-  ? T
-  : T extends string[]
-  ? T
-  : T extends boolean
-  ? T
-  : undefined extends T
-  ? NonOptionalASTNode<T> | undefined
-  : ASTNode<T>;
+    ? T
+    : T extends string[]
+      ? T
+      : T extends boolean
+        ? T
+        : undefined extends T
+          ? NonOptionalASTNode<T> | undefined
+          : ASTNode<T>;
 
 abstract class ASTNode<T> {
   /**

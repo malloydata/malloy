@@ -916,8 +916,8 @@ export function generateBarChartVegaSpecV2(
             })
             .join(' - ')
         : seriesField
-        ? row.column(seriesField.name).value ?? NULL_SYMBOL
-        : null;
+          ? row.column(seriesField.name).value ?? NULL_SYMBOL
+          : null;
 
       return (
         skipX(getXValue(row)) ||
@@ -944,8 +944,8 @@ export function generateBarChartVegaSpecV2(
             })
             .join(' - ')
         : seriesField
-        ? row.column(seriesField.name).value ?? NULL_SYMBOL
-        : yField.name;
+          ? row.column(seriesField.name).value ?? NULL_SYMBOL
+          : yField.name;
 
       if (skipRecord(row)) continue;
 

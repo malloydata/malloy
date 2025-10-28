@@ -534,8 +534,8 @@ export function makeLogMessage<T extends MessageCode>(
       ? format(parameters)
       : format
     : typeof parameters === 'string'
-    ? parameters
-    : undefined;
+      ? parameters
+      : undefined;
   if (info === undefined) {
     throw new Error(`No message formatter for error code \`${code}\`.`);
   }

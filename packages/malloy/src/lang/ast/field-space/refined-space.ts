@@ -185,8 +185,8 @@ function editJoinsFromIncludeState(
   const isJoin = path.length > 0;
   if (isJoin) {
     if (joinedState.fieldsToInclude) {
-      fields = from.fields.filter(
-        f => joinedState.fieldsToInclude?.has(f.as ?? f.name)
+      fields = from.fields.filter(f =>
+        joinedState.fieldsToInclude?.has(f.as ?? f.name)
       );
     } else {
       fields = from.fields;
