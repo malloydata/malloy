@@ -1,0 +1,37 @@
+{
+  "name": "@malloy-examples/nivo-plugin",
+  "version": "1.0.0",
+  "description": "Example Nivo chart plugins for Malloy",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublish": "npm run build"
+  },
+  "keywords": [
+    "malloy",
+    "nivo",
+    "visualization",
+    "plugin",
+    "charts"
+  ],
+  "author": "Malloy Community",
+  "license": "MIT",
+  "peerDependencies": {
+    "@malloydata/render": "^0.0.319",
+    "@malloydata/malloy-tag": "^0.0.319",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "@nivo/bar": "^0.87.0",
+    "@nivo/core": "^0.87.0",
+    "@nivo/pie": "^0.87.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.0.0"
+  }
+}

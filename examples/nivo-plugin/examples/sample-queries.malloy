@@ -1,0 +1,115 @@
+/*
+ * Sample Malloy Queries Using Nivo Plugins
+ *
+ * These examples demonstrate how to use Nivo visualization plugins
+ * by tagging fields in your Malloy queries.
+ */
+
+// Example 1: Bar Chart - Sales by Product
+source: sales is table('duckdb:sales.parquet') {
+  dimension:
+    product_name is product
+    category
+
+  measure:
+    total_revenue is sum(revenue)
+    total_units is sum(units_sold)
+}
+
+// Bar chart showing revenue by product
+query: product_revenue is sales -> {
+  nest: by_product is {
+    group_by: product_name
+    aggregate: total_revenue
+  } # nivo_bar_chart
+}
+
+// Bar chart with multiple measures
+query: product_performance is sales -> {
+  nest: performance is {
+    group_by: product_name
+    aggregate:
+      total_revenue
+      total_units
+  } # nivo_bar_chart
+}
+
+// Example 2: Pie Chart - Market Share by Category
+query: category_market_share is sales -> {
+  nest: by_category is {
+    group_by: category
+    aggregate: revenue_share is sum(revenue)
+  } # nivo_pie_chart
+}
+
+// Example 3: Horizontal Bar Chart with Custom Options
+// Note: Plugin options would be configured in renderer initialization
+query: top_products is sales -> {
+  nest: top_10 is {
+    group_by: product_name
+    aggregate: total_revenue
+    order_by: total_revenue desc
+    limit: 10
+  } # nivo_bar_chart
+}
+
+// Example 4: Donut Chart (Pie with inner radius)
+// Configure innerRadius > 0 in plugin options to create donut chart
+query: regional_sales is sales -> {
+  nest: by_region is {
+    group_by: region
+    aggregate: total is sum(revenue)
+  } # nivo_pie_chart
+}
+
+// Example 5: Time Series Bar Chart
+query: monthly_sales is sales -> {
+  nest: by_month is {
+    group_by: sale_month is month(sale_date)
+    aggregate: monthly_revenue is sum(revenue)
+    order_by: sale_month
+  } # nivo_bar_chart
+}
+
+// Example 6: Stacked Bar Chart (Multiple Series)
+query: sales_by_category_and_region is sales -> {
+  nest: analysis is {
+    group_by: category
+    nest: by_region is {
+      group_by: region
+      aggregate: revenue is sum(revenue)
+    }
+  } # nivo_bar_chart
+}
+
+/*
+ * Advanced Usage: Combining Multiple Visualizations
+ *
+ * You can create dashboards with multiple Nivo visualizations
+ * by using different tags on different nested fields.
+ */
+
+query: sales_dashboard is sales -> {
+  nest:
+    // Bar chart of top products
+    top_products is {
+      group_by: product_name
+      aggregate: revenue is sum(revenue)
+      order_by: revenue desc
+      limit: 5
+    } # nivo_bar_chart
+
+    // Pie chart of category distribution
+    category_split is {
+      group_by: category
+      aggregate: total is sum(revenue)
+    } # nivo_pie_chart
+
+    // Another bar chart for regional comparison
+    regional_performance is {
+      group_by: region
+      aggregate:
+        revenue is sum(revenue)
+        units is sum(units_sold)
+    } # nivo_bar_chart
+}
