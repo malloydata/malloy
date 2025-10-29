@@ -348,3 +348,7 @@ describe('tags in results', () => {
     expect(tags.has('n4')).toBeTruthy();
   });
 });
+
+afterAll(async () => {
+  await runtime.connection.close();
+});

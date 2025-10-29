@@ -74,10 +74,7 @@ describe('experimental dialects', () => {
     }
   }
 
-  const connection = new DuckdbXConnection(
-    duckdbX,
-    'test/data/duckdb/duckdb_test.db'
-  );
+  const connection = new DuckdbXConnection(duckdbX, ':memory:');
 
   class DuckdbXDialect extends DuckDBDialect {
     experimental = true;

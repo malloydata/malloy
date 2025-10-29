@@ -45,3 +45,7 @@ describe('turducken', () => {
     expect(qsql).toContain(`FROM (${sql}) as base`);
   });
 });
+
+afterAll(async () => {
+  await runtime.connection.close();
+});

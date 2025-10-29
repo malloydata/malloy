@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {error, errorMessage, markSource} from './test-translator';
+import {error, errorMessage, markSource, model} from './test-translator';
 import './parse-expects';
 
 describe('lenses', () => {
@@ -475,5 +475,21 @@ describe('partial views', () => {
         }
       `
     ).toTranslate();
+  });
+  test('2537 trailing refinement reflected in output struct', () => {
+    // in 2357, foo->with_trailing_aggs has an id and an agg
+    // but -> { select: agg } is a compile error as if agg is not present
+    const m = model`
+      source: foo is a extend {
+        view: trailing_aggs is { aggregate: agg is count() }
+        view: with_trailing_aggs is { group_by: ai } + trailing_aggs
+      }
+      run: foo->with_trailing_aggs`;
+    expect(m).toTranslate();
+    const q = m.translator.getQuery(0);
+    expect(q).toBeDefined();
+    const qop = q!.pipeline[0];
+    const queryFields = qop.outputStruct.fields.map(f => f.name);
+    expect(queryFields).toEqual(['ai', 'agg']);
   });
 });
