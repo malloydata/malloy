@@ -440,7 +440,7 @@ export class SnowflakeConnection
     };
     // create temp table with same schema as the query
     const tempTableName = this.getTempViewName(sqlRef.selectStr);
-    this.runSQL(
+    await this.runSQL(
       `CREATE OR REPLACE TEMP VIEW ${tempTableName} AS (${sqlRef.selectStr});`
     );
 
