@@ -4,12 +4,13 @@ This example demonstrates how to integrate [Nivo](https://nivo.rocks/) - a power
 
 ## Overview
 
-This example includes two complete plugin implementations:
+This example includes three complete plugin implementations:
 
 1. **Nivo Bar Chart Plugin** - Visualize categorical data with customizable bar charts
 2. **Nivo Pie Chart Plugin** - Show proportions and distributions with pie/donut charts
+3. **Nivo Marimekko Chart Plugin** - Display two-dimensional data with variable-width stacked bars
 
-Both plugins demonstrate the DOM-based rendering approach, using React and ReactDOM to render Nivo components within Malloy's visualization framework.
+All plugins demonstrate the DOM-based rendering approach, using React and ReactDOM to render Nivo components within Malloy's visualization framework.
 
 ## Features
 
@@ -38,12 +39,14 @@ import { MalloyRenderer } from '@malloydata/render';
 import {
   NivoBarChartPluginFactory,
   NivoPieChartPluginFactory,
+  NivoMarimekkoPluginFactory,
 } from '@malloy-examples/nivo-plugin';
 
 const renderer = new MalloyRenderer({
   plugins: [
     NivoBarChartPluginFactory,
-    NivoPieChartPluginFactory
+    NivoPieChartPluginFactory,
+    NivoMarimekkoPluginFactory
   ],
   pluginOptions: {
     nivo_bar_chart: {
@@ -54,6 +57,11 @@ const renderer = new MalloyRenderer({
     nivo_pie_chart: {
       colorScheme: 'nivo',
       innerRadius: 0.5  // Creates donut chart
+    },
+    nivo_marimekko: {
+      colorScheme: 'category10',
+      layout: 'horizontal',
+      enableLegends: true
     }
   }
 });
@@ -81,6 +89,17 @@ query: sales -> {
     group_by: category
     aggregate: total_revenue
   } # nivo_pie_chart
+}
+
+// Marimekko chart visualization
+query: sales -> {
+  nest: by_region is {
+    group_by: region
+    nest: by_product is {
+      group_by: product
+      aggregate: revenue is sum(revenue)
+    }
+  } # nivo_marimekko
 }
 ```
 
@@ -146,6 +165,60 @@ query: market_share is sales -> {
     group_by: category
     aggregate: share is sum(revenue)
   } # nivo_pie_chart
+}
+```
+
+### Nivo Marimekko Chart Plugin
+
+**Tag**: `#nivo_marimekko`
+
+**Requirements**:
+- Field must be a repeated record
+- Works best with nested data (two levels of grouping)
+- Can also work with flat data containing multiple numeric fields
+
+**What is a Marimekko Chart?**
+A Marimekko (or Mekko) chart is a two-dimensional stacked chart where both the width and height of segments vary. It's ideal for showing:
+- Market share across multiple dimensions (product + region)
+- Budget allocation across categories and time periods
+- Resource distribution across departments and projects
+
+**Options**:
+```typescript
+{
+  colorScheme?: string;          // Color scheme (default: 'nivo')
+  enableLegends?: boolean;       // Show/hide legends (default: true)
+  layout?: 'horizontal' | 'vertical';  // Chart orientation (default: 'horizontal')
+  offset?: 'none' | 'expand';    // Stacking type (default: 'none')
+  innerPadding?: number;         // Padding between segments (default: 9)
+  outerPadding?: number;         // Outer padding (default: 9)
+}
+```
+
+**Example (Nested Data)**:
+```malloy
+query: regional_product_sales is sales -> {
+  nest: by_region is {
+    group_by: region
+    nest: by_product is {
+      group_by: product_name
+      aggregate: revenue is sum(revenue)
+    }
+  } # nivo_marimekko
+}
+```
+
+**Example (Flat Data)**:
+```malloy
+query: multi_measure_by_category is sales -> {
+  nest: analysis is {
+    group_by: category
+    aggregate:
+      q1_sales is sum(q1_revenue)
+      q2_sales is sum(q2_revenue)
+      q3_sales is sum(q3_revenue)
+      q4_sales is sum(q4_revenue)
+  } # nivo_marimekko
 }
 ```
 

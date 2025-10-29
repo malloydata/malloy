@@ -6,3 +6,4 @@
 
 export { NivoBarChartPluginFactory } from './nivo-bar-chart-plugin';
 export { NivoPieChartPluginFactory } from './nivo-pie-chart-plugin';
+export { NivoMarimekkoPluginFactory } from './nivo-marimekko-plugin';

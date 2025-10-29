@@ -82,6 +82,30 @@ query: sales_by_category_and_region is sales -> {
   } # nivo_bar_chart
 }
 
+// Example 7: Marimekko Chart - Multi-Dimensional Analysis
+// Perfect for showing market share across multiple dimensions
+query: market_analysis is sales -> {
+  nest: by_region is {
+    group_by: region
+    nest: by_product is {
+      group_by: product_name
+      aggregate: market_share is sum(revenue)
+    }
+  } # nivo_marimekko
+}
+
+// Example 8: Marimekko with Flat Data
+query: quarterly_performance is sales -> {
+  nest: by_category is {
+    group_by: category
+    aggregate:
+      q1 is sum(q1_revenue)
+      q2 is sum(q2_revenue)
+      q3 is sum(q3_revenue)
+      q4 is sum(q4_revenue)
+  } # nivo_marimekko
+}
+
 /*
  * Advanced Usage: Combining Multiple Visualizations
  *
@@ -104,6 +128,15 @@ query: sales_dashboard is sales -> {
       group_by: category
       aggregate: total is sum(revenue)
     } # nivo_pie_chart
+
+    // Marimekko for regional product breakdown
+    regional_breakdown is {
+      group_by: region
+      nest: by_product is {
+        group_by: product_name
+        aggregate: revenue is sum(revenue)
+      }
+    } # nivo_marimekko
 
     // Another bar chart for regional comparison
     regional_performance is {

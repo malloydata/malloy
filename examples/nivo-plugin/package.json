@@ -7,7 +7,12 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration"
   },
   "keywords": [
     "malloy",
@@ -27,6 +32,7 @@
   "dependencies": {
     "@nivo/bar": "^0.87.0",
     "@nivo/core": "^0.87.0",
+    "@nivo/marimekko": "^0.87.0",
     "@nivo/pie": "^0.87.0"
   },
   "devDependencies": {
