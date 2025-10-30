@@ -21,37 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DuckDBDialect} from './duckdb';
-import type {Dialect} from './dialect';
-import {PostgresDialect} from './postgres';
-import {SnowflakeDialect} from './snowflake';
-import {StandardSQLDialect} from './standardsql';
-import {PrestoDialect, TrinoDialect} from './trino';
-import {MySQLDialect} from './mysql';
-import {DatabricksDialect} from './databricks';
-const dialectMap = new Map<string, Dialect>();
+import {DatabricksConnection} from './databricks_connection';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-export function getDialect(name: string): Dialect {
-  const d = dialectMap.get(name);
-  if (d === undefined) {
-    throw new Error(`Unknown Dialect ${name}`);
-  }
-  return d;
-}
+const [describe] = describeIfDatabaseAvailable(['postgres']);
 
-export function registerDialect(d: Dialect): void {
-  dialectMap.set(d.name, d);
-}
+/*
+ * !IMPORTANT
+ *
+ * The connection is reused for each test, so if you do not name your tables
+ * and keys uniquely for each test you will see cross test interactions.
+ */
 
-export function getDialects(): Dialect[] {
-  return [...dialectMap.values()];
-}
+describe('DataBricksConnection', () => {
+  let connection: DatabricksConnection;
 
-registerDialect(new PostgresDialect());
-registerDialect(new StandardSQLDialect());
-registerDialect(new DuckDBDialect());
-registerDialect(new SnowflakeDialect());
-registerDialect(new TrinoDialect());
-registerDialect(new PrestoDialect());
-registerDialect(new MySQLDialect());
-registerDialect(new DatabricksDialect());
+  beforeAll(async () => {
+    connection = new DatabricksConnection('databricks', {
+      'host': 'todo',
+      'path': 'todo',
+      'token': 'todo',
+      'name': 'test',
+      'defaultCatalog': 'workspace',
+    });
+
+    await connection.runSQL('SELECT 1');
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('can execute select 1', async () => {
+    const result = await connection.runSQL('SELECT 1');
+    expect(result.rows).toEqual([{1: 1}]);
+  });
+});
