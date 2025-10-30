@@ -36,8 +36,8 @@ import {
   StreamingConnection,
   StructDef,
   mkArrayDef,
-  DatabricksDialect
 } from '@malloydata/malloy';
+import { DatabricksDialect } from '../../malloy/src/dialect/';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {Client} from 'pg';
 import {DBSQLClient} from '@databricks/sql';
