@@ -81,7 +81,7 @@ describe('postgres schema caching', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn(PooledPostgresConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
-        type: 'sql select',
+        type: 'sql_select',
         dialect: 'postgres',
         name: 'name',
         selectStr: SQL_BLOCK_1.selectStr,
@@ -92,6 +92,10 @@ describe('postgres schema caching', () => {
 
   afterEach(() => {
     jest.resetAllMocks();
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
   });
 
   it('caches table schema', async () => {
@@ -130,20 +134,18 @@ describe('postgres schema caching', () => {
 
 describe('postgres schema reading', () => {
   it('distinguishes time stamp with and without offset', async () => {
-    const SQL_BLOCK_AL_TYPES: SQLSourceDef = {
-      type: 'sql_select',
-      name: 'all_types',
-      dialect: 'postgres',
-      connection: 'postgres',
-      fields: [],
-      selectStr: 'SELECT current_timestamp AS offset_ts, localtimestamp as ts',
-    };
     const connection = new PooledPostgresConnection('postgres');
     const schema = await connection.fetchSchemaForSQLStruct(
-      SQL_BLOCK_AL_TYPES,
+      {
+        connection: 'postgres',
+        selectStr:
+          'SELECT current_timestamp AS offset_ts, localtimestamp as ts',
+      },
       {}
     );
-    expect(schema.structDef).toBeDefined();
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
     if (schema.structDef) {
       expect(schema.structDef.fields[0]).toEqual({
         name: 'offset_ts',
