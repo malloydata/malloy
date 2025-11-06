@@ -34,10 +34,13 @@ jest.mock('./client', () => {
     testConnectionConfiguration: jest.fn(),
   };
 
+  const mockConfigurationConstructor = jest.fn().mockImplementation(params => ({
+    basePath: params?.basePath || 'http://test.com/api/v0',
+    baseOptions: params?.baseOptions || {},
+  }));
+
   return {
-    Configuration: jest.fn().mockImplementation(() => ({
-      basePath: 'http://test.com/api/v0',
-    })),
+    Configuration: mockConfigurationConstructor,
     ConnectionsApi: jest.fn().mockImplementation(() => mockConnectionsApi),
     ConnectionsTestApi: jest
       .fn()
@@ -208,6 +211,66 @@ describe('db:Publisher', () => {
           {
             headers: {},
           }
+        );
+      });
+
+      it('should configure timeout correctly', async () => {
+        const mockConnectionAttributes: ConnectionAttributes = {
+          dialectName: 'bigquery',
+          isPool: false,
+          canPersist: true,
+          canStream: true,
+        };
+
+        const mockConnectionResponse: AxiosResponse = {
+          data: {
+            name: 'test-connection',
+            type: 'bigquery',
+            attributes: mockConnectionAttributes,
+            bigqueryConnection: {
+              defaultProjectId: 'test-project',
+              billingProjectId: 'test-project',
+            },
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        const mockTestResponse: AxiosResponse = {
+          data: {
+            status: 'ok',
+            errorMessage: '',
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as AxiosResponse['config'],
+        };
+
+        mockConnectionsApi.getConnection.mockResolvedValueOnce(
+          mockConnectionResponse
+        );
+        mockConnectionsTestApi.testConnectionConfiguration.mockResolvedValueOnce(
+          mockTestResponse
+        );
+
+        await PublisherConnection.create('test-connection', {
+          connectionUri:
+            'http://test.com/api/v0/projects/test-project/connections/test-connection',
+          accessToken: 'test-token',
+        });
+
+        // Verify Configuration was called with correct timeout
+        const {Configuration} = jest.requireMock('./client');
+        expect(Configuration).toHaveBeenCalledWith(
+          expect.objectContaining({
+            basePath: 'http://test.com/api/v0',
+            baseOptions: expect.objectContaining({
+              timeout: 600000, // 10 minutes in milliseconds
+            }),
+          })
         );
       });
     });
