@@ -51,7 +51,6 @@ import {
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
-
 import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
 import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
@@ -681,12 +680,15 @@ class TrinoPrestoSchemaParser extends TinyParser {
           this.next('(', 'id', ')');
         }
       } else if (sqlType === 'timestamp') {
+        const tsType: AtomicTypeDef = {type: 'timestamp'};
         if (this.peek().text === '(') {
           this.next('(', 'id', ')');
         }
         if (this.peek().text === 'with') {
           this.nextText('with', 'time', 'zone');
+          tsType.offset = true;
         }
+        return tsType;
       }
       const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
       if (typeDef.type === 'number' && sqlType === 'decimal') {

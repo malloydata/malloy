@@ -698,20 +698,21 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('truncate day', async () => {
-    // At midnight in london it the 19th in Mexico, so that truncates to
-    // midnight on the 19th
-    const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
-    await expect(
-      `run: ${dbName}.sql("SELECT 1 as x") -> {
+  test.when(!brokenIn('presto', dbName) /* mtoy */)(
+    'truncate day',
+    async () => {
+      // At midnight in london it the 19th in Mexico, so that truncates to
+      // midnight on the 19th
+      const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
         timezone: '${zone}'
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_day is utc_midnight.day
       }`
-    ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
-  });
+      ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
+    }
+  );
 
   test.when(
     !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */

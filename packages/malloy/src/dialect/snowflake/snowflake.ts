@@ -92,10 +92,12 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestampntz': {type: 'timestamp'},
   'timestamp_ntz': {type: 'timestamp'},
   'timestamp without time zone': {type: 'timestamp'},
-  'timestamptz': {type: 'timestamp'},
-  'timestamp_tz': {type: 'timestamp'},
-  'timestamp with time zone': {type: 'timestamp'},
-  /* timestamp_ltz is not supported in malloy snowflake dialect */
+  'timestamptz': {type: 'timestamp', offset: true},
+  'timestamp_tz': {type: 'timestamp', offset: true},
+  'timestamp with time zone': {type: 'timestamp', offset: true},
+  'timestamp_ltz': {type: 'timestamp'},
+  'timestampltz': {type: 'timestamp'},
+  'timestamp with local time zone': {type: 'timestamp'},
 };
 
 export class SnowflakeDialect extends Dialect {
@@ -497,6 +499,8 @@ ${indent(sql)}
         : `ARRAY(${recordScehma})`;
     } else if (isBasicArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
+    } else if (malloyType.type === 'timestamp' && malloyType.offset) {
+      return 'TIMESTAMP_TZ';
     }
     return malloyType.type;
   }

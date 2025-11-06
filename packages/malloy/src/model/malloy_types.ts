@@ -814,8 +814,10 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
       return timeframe ? {name, type: 'date', timeframe} : ret;
     }
     case 'timestamp': {
-      const timeframe = atd.timeframe;
-      return timeframe ? {name, type: 'timestamp', timeframe} : ret;
+      const ret: TimestampFieldDef = {name, type: 'timestamp'};
+      if (atd.timeframe) ret.timeframe = atd.timeframe;
+      if (atd.offset) ret.offset = atd.offset;
+      return ret;
     }
   }
   return ret;
@@ -1018,6 +1020,7 @@ export type DateFieldDef = DateTypeDef & AtomicFieldDef;
 export interface TimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
+  offset?: boolean;
 }
 export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
 

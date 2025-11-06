@@ -113,6 +113,12 @@ describe('Trino connection', () => {
       });
     });
 
+    it('parses timestamp with time zone', () => {
+      expect(
+        connection.malloyTypeFromTrinoType('timestamp(3) with time zone)')
+      ).toEqual({type: 'timestamp', offset: true});
+    });
+
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
         'type': 'array',

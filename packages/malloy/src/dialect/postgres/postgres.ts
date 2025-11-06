@@ -69,6 +69,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
+// TODO there needs be an audit of this data structure
 const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
@@ -77,10 +78,10 @@ const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'integer': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
   'double precision': {type: 'number', numberType: 'float'},
-  'timestamp without time zone': {type: 'timestamp'}, // maybe not
+  'timestamp without time zone': {type: 'timestamp'},
+  'timestamp with time zone': {type: 'timestamp', offset: true},
   'oid': {type: 'string'},
   'boolean': {type: 'boolean'},
-  // ARRAY: "string",
   'timestamp': {type: 'timestamp'},
   '"char"': {type: 'string'},
   'character': {type: 'string'},
@@ -412,7 +413,8 @@ export class PostgresDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+  sqlTypeToMalloyType(rawSqlType: string): BasicAtomicTypeDef {
+    const sqlType = rawSqlType.toLowerCase();
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

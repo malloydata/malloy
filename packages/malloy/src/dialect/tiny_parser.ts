@@ -102,7 +102,7 @@ export class TinyParser {
     for (const txt of texts) {
       next = this.getNext();
       expected = txt;
-      if (next.text !== txt) {
+      if (next.text.toUpperCase() !== txt.toUpperCase()) {
         next = undefined;
         break;
       }

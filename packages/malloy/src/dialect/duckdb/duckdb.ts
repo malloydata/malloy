@@ -367,6 +367,9 @@ export class DuckDBDialect extends PostgresBase {
     } else if (malloyType.type === 'string') {
       return 'varchar';
     }
+    if (malloyType.type === 'timestamp' && malloyType.offset === true) {
+      return 'timestamp with time zone';
+    }
     return malloyType.type;
   }
 
@@ -383,7 +386,11 @@ export class DuckDBDialect extends PostgresBase {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+  sqlTypeToMalloyType(rawSqlType: string): BasicAtomicTypeDef {
+    const sqlType = rawSqlType.toUpperCase();
+    if (sqlType === 'TIMESTAMP WITH TIME ZONE') {
+      return {type: 'timestamp', offset: true};
+    }
     // Remove decimal precision
     const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params
@@ -499,10 +506,11 @@ class DuckDBTypeParser extends TinyParser {
       this.next();
       baseType = {type: 'number', numberType: 'float'};
     } else if (id === 'TIMESTAMP') {
-      if (this.peek().text === 'WITH') {
-        this.nextText('WITH', 'TIME', 'ZONE');
-      }
       baseType = {type: 'timestamp'};
+      if (this.peek().text.toUpperCase() === 'WITH') {
+        this.nextText('WITH', 'TIME', 'ZONE');
+        baseType.offset = true;
+      }
     } else if (duckDBToMalloyTypes[id]) {
       baseType = duckDBToMalloyTypes[id];
     } else if (id === 'STRUCT') {

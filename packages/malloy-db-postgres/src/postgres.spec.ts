@@ -1,5 +1,4 @@
-/*
- * Copyright 2023 Google LLC
+/* Copyright 2023 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -21,7 +20,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PostgresConnection} from './postgres_connection';
+import {PooledPostgresConnection} from './postgres_connection';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
@@ -34,13 +33,31 @@ const [describe] = describeIfDatabaseAvailable(['postgres']);
  * and keys uniquely for each test you will see cross test interactions.
  */
 
-describe('PostgresConnection', () => {
-  let connection: PostgresConnection;
+describe('postgres schema caching', () => {
+  let connection: PooledPostgresConnection;
   let getTableSchema: jest.SpyInstance;
   let getSQLBlockSchema: jest.SpyInstance;
 
+  const SQL_BLOCK_1: SQLSourceDef = {
+    type: 'sql_select',
+    name: 'block1',
+    dialect: 'postgres',
+    connection: 'mock_postgres',
+    fields: [],
+    selectStr: "SELECT 'block1' AS sql_block1",
+  };
+
+  const SQL_BLOCK_2: SQLSourceDef = {
+    type: 'sql_select',
+    name: 'block2',
+    dialect: 'postgres',
+    connection: 'mock_postgres',
+    fields: [],
+    selectStr: "SELECT 'block2' AS sql_block2",
+  };
+
   beforeAll(async () => {
-    connection = new PostgresConnection('duckdb');
+    connection = new PooledPostgresConnection('mock_postgres');
     await connection.runSQL('SELECT 1');
   });
 
@@ -51,24 +68,24 @@ describe('PostgresConnection', () => {
   beforeEach(async () => {
     getTableSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'fetchTableSchema')
+      .spyOn(PooledPostgresConnection.prototype as any, 'fetchTableSchema')
       .mockResolvedValue({
         type: 'table',
         dialect: 'postgres',
         name: 'name',
         tablePath: 'test',
-        connection: 'postgres',
+        connection: 'mock_postgres',
       });
 
     getSQLBlockSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'fetchSelectSchema')
+      .spyOn(PooledPostgresConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
         type: 'sql select',
         dialect: 'postgres',
         name: 'name',
         selectStr: SQL_BLOCK_1.selectStr,
-        connection: 'postgres',
+        connection: 'mock_postgres',
         fields: [],
       });
   });
@@ -111,44 +128,33 @@ describe('PostgresConnection', () => {
   });
 });
 
-const SQL_BLOCK_1: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block1',
-  dialect: 'postgres',
-  connection: 'postgres',
-  fields: [],
-  selectStr: `
-SELECT
-created_at,
-sale_price,
-inventory_item_id
-FROM 'order_items.parquet'
-SELECT
-id,
-product_department,
-product_category,
-created_at AS inventory_items_created_at
-FROM "inventory_items.parquet"
-`,
-};
-
-const SQL_BLOCK_2: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block2',
-  dialect: 'postgres',
-  connection: 'postgres',
-  fields: [],
-  selectStr: `
-SELECT
-created_at,
-sale_price,
-inventory_item_id
-FROM read_parquet('order_items2.parquet', arg='value')
-SELECT
-id,
-product_department,
-product_category,
-created_at AS inventory_items_created_at
-FROM read_parquet("inventory_items2.parquet")
-`,
-};
+describe('postgres schema reading', () => {
+  it('distinguishes time stamp with and without offset', async () => {
+    const SQL_BLOCK_AL_TYPES: SQLSourceDef = {
+      type: 'sql_select',
+      name: 'all_types',
+      dialect: 'postgres',
+      connection: 'postgres',
+      fields: [],
+      selectStr: 'SELECT current_timestamp AS offset_ts, localtimestamp as ts',
+    };
+    const connection = new PooledPostgresConnection('postgres');
+    const schema = await connection.fetchSchemaForSQLStruct(
+      SQL_BLOCK_AL_TYPES,
+      {}
+    );
+    expect(schema.structDef).toBeDefined();
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'offset_ts',
+        type: 'timestamp',
+        offset: true,
+      });
+      expect(schema.structDef.fields[1]).toEqual({
+        name: 'ts',
+        type: 'timestamp',
+      });
+    }
+    await connection.close();
+  });
+});
