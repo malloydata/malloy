@@ -121,4 +121,26 @@ describe('db:Snowflake', () => {
     const y = await conn.fetchSelectSchema(x);
     expect(y.fields[0].name).toEqual('ONE_23');
   });
+
+  it('parses all three timestamp types', async () => {
+    const x: malloy.SQLSourceDef = {
+      type: 'sql_select',
+      name: 'three_timestamps',
+      connection: conn.name,
+      dialect: conn.dialectName,
+      selectStr: `
+        SELECT
+          TO_TIMESTAMP_NTZ('2024-01-01 12:34:56') AS TS_NTZ,
+          TO_TIMESTAMP_LTZ('2024-01-01 12:34:56') AS TS_LTZ,
+          TO_TIMESTAMP_TZ('2024-01-01 12:34:56 +00:00') AS TS_TZ
+      `,
+      fields: [],
+    };
+    const y = await conn.fetchSelectSchema(x);
+    expect(y.fields).toEqual([
+      {name: 'TS_NTZ', type: 'timestamp'},
+      {name: 'TS_LTZ', type: 'timestamp'},
+      {name: 'TS_TZ', type: 'timestamp', offset: true},
+    ]);
+  });
 });
