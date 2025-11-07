@@ -70,6 +70,9 @@ export class PublisherConnection
     const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
       basePath: apiUrl,
+      baseOptions: {
+        timeout: 600000,
+      },
     });
     const connectionsApi = new ConnectionsApi(configuration);
     const connectionsTestApi = new ConnectionsTestApi(configuration);
