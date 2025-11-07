@@ -374,107 +374,111 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
+    const factsSrc =
+      db.dialect.booleanType === 'supported'
+        ? 'facts'
+        : 'facts extend {rename: sqlb is b; dimension: b is sqlb ? pick true when =true pick false when =false else null}';
     test.when(testBoolean)('true', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'tRuE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('=true', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'=TRUE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('not =true', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'not =true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
     test.when(testBoolean)('false', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'FalSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('=false', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'=FALSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
     test.when(testBoolean)('null', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'Null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'null'}]);
     });
     test.when(testBoolean)('not null', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'nOt NuLL'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
     test.when(testBoolean)('not true', async () => {
       await expect(`
-    run: facts -> {
+    run: ${factsSrc} -> {
       where: b ~ f'not true'
       select: t; order_by: t asc
     }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('not false', async () => {
       await expect(`
-    run: facts -> {
+    run: ${factsSrc} -> {
       where: b ~ f'not false'
       select: t; order_by: t asc
     }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('not =false', async () => {
       await expect(`
-    run: facts -> {
+    run: ${factsSrc} -> {
       where: b ~ f'not =false'
       select: t; order_by: t asc
     }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('true (non-column)', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('not true (non-column)', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'not true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('false (non-column)', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'false'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('not false (non-column)', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'not false'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('empty boolean filter', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f''
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [
