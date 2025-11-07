@@ -23,9 +23,13 @@
   },
   "dependencies": {
     "@databricks/sql": "^1.9.0",
-    "@malloydata/malloy": "^0.0.236",
+    "@malloydata/malloy": "0.0.321",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/jest-expect-message": "^1.0.4"
   }
 }
