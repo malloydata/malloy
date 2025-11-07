@@ -78,7 +78,7 @@ export function isStringFilter(sc: Object): sc is StringFilter {
   );
 }
 
-export type BooleanOperator = 'true' | 'false' | 'false_or_null';
+export type BooleanOperator = 'true' | 'false' | '=true' | '=false';
 
 export interface BooleanCondition extends Negatable {
   operator: BooleanOperator;
@@ -90,7 +90,7 @@ export function isBooleanFilter(bc: Object): bc is BooleanFilter {
   return (
     'operator' in bc &&
     typeof bc.operator === 'string' &&
-    ['null', 'true', 'false', 'false_or_null'].includes(bc.operator)
+    ['null', 'true', 'false', '=false', '=true'].includes(bc.operator)
   );
 }
 

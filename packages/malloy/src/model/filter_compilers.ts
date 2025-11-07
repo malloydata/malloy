@@ -131,19 +131,53 @@ export const FilterCompilers = {
           .join(` ${nc.operator.toUpperCase()} `);
     }
   },
-  booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
-    switch (bc.operator) {
-      case 'true':
-        return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
-      case 'false':
-        return bc.not
-          ? `COALESCE(${x} != false, true)`
-          : `COALESCE(${x} = false, false)`;
-      case 'false_or_null':
-        return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
-      case 'null':
-        return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
+  booleanCompile(bc: BooleanFilter, x: string, d: Dialect): string {
+    const px = `(${x})`;
+    /*
+     * We have the following truth table for boolean filters.
+     * The default malloy operations treat null as false. The '='
+     * variants exist for cases where that is not desired.
+     *
+     * filter expression | x=true | x=false | x=null
+     * true              |   T    |   F     |   F
+     * not true          |   F    |   T     |   T
+     * =true             |   T    |   F     |   NULL
+     * not =true         |   F    |   T     |   NULL
+     * false             |   F    |   T     |   T
+     * not false         |   T    |   F     |   F
+     * =false            |   F    |   T     |   NULL
+     * not =false        |   T    |   F     |   NULL
+     */
+
+    if (bc.operator === '=true') {
+      return bc.not ? `NOT ${px}` : x;
+    } else if (bc.operator === '=false') {
+      return bc.not ? x : `NOT ${px}`;
+    } else if (bc.operator === 'null') {
+      return bc.not ? `${px} IS NOT NULL` : `${px} IS NULL`;
     }
+
+    // For some databases checking NULL combined with a boolean check
+    // is faster than a COALESCE, for now, just detect if the expression
+    // is just a column reference, and if so, don't use COALECSE.
+    const quoteChar = d.sqlMaybeQuoteIdentifier('select')[0];
+    const isColumn = x.match(`^[()${quoteChar}\\w.]+$`);
+
+    if (isColumn) {
+      if (bc.operator === 'true') {
+        return bc.not
+          ? `${px} IS NULL OR ${px} = false`
+          : `${px} IS NOT NULL AND ${px}`;
+      }
+      return bc.not
+        ? `${px} IS NOT NULL AND ${px}` // not false: exclude null
+        : `${px} IS NULL OR ${px} = false`; // false: include null
+    }
+    if (bc.operator === 'true') {
+      return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
+    }
+    // else bc.operator === 'false'
+    return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
     switch (sc.operator) {
