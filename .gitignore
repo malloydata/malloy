@@ -64,6 +64,7 @@ snowflake.log
 packages/malloy-interfaces/generated-types/
 packages/malloy-query-builder/docs/
 packages/malloy-query-builder/flow/
+.claude
 
 packages/malloy-tag/src/.antlr
 packages/malloy-tag/src/lib

@@ -166,6 +166,13 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
           ? {type: 'sql native', rawType: td.rawType}
           : {type: 'sql native'};
       }
+      case 'timestamp': {
+        return {
+          type: 'timestamp',
+          ...(td.timeframe === undefined ? {} : {timeframe: td.timeframe}),
+          ...(td.offset === undefined ? {} : {offset: td.offset}),
+        };
+      }
       default:
         return {type: td.type};
     }

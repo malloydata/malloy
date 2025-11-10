@@ -1030,7 +1030,17 @@ export class QueryQuery extends QueryField {
       throw new Error('Internal Error, queries must start from a basetable');
     }
 
-    for (const childJoin of ji.children) {
+    // Sort children to ensure array joins are processed before table joins that might reference them
+    //
+    const sortedChildren = [...ji.children].sort((a, b) => {
+      const aIsArray = a.queryStruct.structDef.type === 'array';
+      const bIsArray = b.queryStruct.structDef.type === 'array';
+      if (aIsArray && !bIsArray) return -1;
+      if (!aIsArray && bIsArray) return 1;
+      return 0;
+    });
+
+    for (const childJoin of sortedChildren) {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, 0);
     }
     return s;

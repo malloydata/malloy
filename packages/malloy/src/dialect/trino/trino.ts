@@ -100,9 +100,6 @@ const trinoToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'FLOAT64': {type: 'number', numberType: 'float'},
   'NUMERIC': {type: 'number', numberType: 'float'},
   'BIGNUMERIC': {type: 'number', numberType: 'float'},
-  'TIMESTAMP': {type: 'timestamp'},
-  'BOOLEAN': {type: 'boolean'},
-  'BOOL': {type: 'boolean'},
   'JSON': {type: 'json'},*/
   // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
   // BYTES
@@ -561,7 +558,11 @@ ${indent(sql)}
   }
 
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
+    const matchType = sqlType.toLowerCase();
+    if (matchType.startsWith('timestamp with time zone')) {
+      return {type: 'timestamp', offset: true};
+    }
+    const baseSqlType = matchType.match(/^\w+/)?.at(0) ?? matchType;
     return (
       trinoToMalloyTypes[baseSqlType] ?? {
         type: 'sql native',
@@ -622,19 +623,28 @@ ${indent(sql)}
     if (TD.isTimestamp(df.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
-        // get a civil version of the time in the query time zone
-        const civilSource = `(CAST(${truncThis} AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE '${tz}')`;
-        // do truncation in that time space
-        let civilTrunc = `DATE_TRUNC('${df.units}', ${civilSource})`;
+        // Step 1: Convert plain TIMESTAMP to TIMESTAMP WITH TIME ZONE in UTC
+        // with_timezone() attaches a timezone to a plain timestamp, saying "this civil time is in this zone"
+        const tsWithUtc = `with_timezone(${truncThis}, 'UTC')`;
+
+        // Step 2: Convert to the query timezone
+        // at_timezone() converts a TIMESTAMP WITH TIME ZONE to a different timezone
+        // This preserves the instant in time but changes the display (civil time)
+        const inQueryTz = `at_timezone(${tsWithUtc}, '${tz}')`;
+
+        // Step 3: Truncate in the query timezone's civil time
+        let civilTrunc = `DATE_TRUNC('${df.units}', ${inQueryTz})`;
         if (week) {
           civilTrunc = `(${civilTrunc} - INTERVAL '1' DAY)`;
         }
-        // make a tstz from the civil time ... "AT TIME ZONE" of
-        // a TIMESTAMP will produce a TIMESTAMP WITH TIME ZONE in that zone
-        // where the civil appearance is the same as the TIMESTAMP
-        const truncTsTz = `${civilTrunc} AT TIME ZONE '${tz}'`;
-        // Now just make a system TIMESTAMP from that
-        return `CAST(${truncTsTz} AS TIMESTAMP)`;
+
+        // Step 4: Convert back to UTC to preserve the instant in time
+        // This ensures when we return to JavaScript/Malloy, the UTC instant is correct
+        const backToUtc = `at_timezone(${civilTrunc}, 'UTC')`;
+
+        // Step 5: Cast to plain TIMESTAMP for return
+        // The civil time in this TIMESTAMP will be the UTC representation of the instant
+        return `CAST(${backToUtc} AS TIMESTAMP)`;
       }
     }
 

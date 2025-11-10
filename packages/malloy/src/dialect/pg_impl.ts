@@ -104,10 +104,11 @@ export abstract class PostgresBase extends Dialect {
       return `DATE '${lt.literal}'`;
     }
     const tz = lt.timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMPTZ '${lt.literal} ${tz}'::TIMESTAMP`;
-    }
-    return `TIMESTAMP '${lt.literal}'`;
+    // if there is a literal timezone, and a query time zone, what do we do?
+    // the decision here is the literal timeezone wins, not sure if that's right
+    return tz
+      ? `TIMESTAMPTZ '${lt.literal} ${tz}'`
+      : `TIMESTAMP '${lt.literal}'`;
   }
 
   sqlLiteralRecord(_lit: RecordLiteralNode): string {

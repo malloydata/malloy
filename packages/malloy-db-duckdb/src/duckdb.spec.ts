@@ -187,10 +187,22 @@ describe('DuckDBConnection', () => {
 
     it('parses a simple type', () => {
       const structDef = makeStructDef();
-      connection.fillStructDefFromTypeMap(structDef, {test: 'varchar(60)'});
+      connection.fillStructDefFromTypeMap(structDef, {test: 'VARCHAR(60)'});
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'string',
+      });
+    });
+
+    it('parses timestamp with time zone', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {
+        test: 'TIMESTAMP WITH TIME ZONE',
+      });
+      expect(structDef.fields[0]).toEqual({
+        name: 'test',
+        type: 'timestamp',
+        offset: true,
       });
     });
 
