@@ -1085,7 +1085,7 @@ paths:
           description: Name of the package
           required: true
           schema:
-            $ref: "#/components/schemas/IdentifierPattern"
+            $ref: "#/components/schemas/VersionIdPattern"
         - name: path
           in: path
           description: Path to the model within the package
@@ -1691,7 +1691,8 @@ components:
         type:
           type: string
           description: Type of database connection
-          enum: [postgres, bigquery, snowflake, trino, mysql, duckdb]
+          enum:
+            [postgres, bigquery, snowflake, trino, mysql, duckdb, motherduck]
         attributes:
           $ref: "#/components/schemas/ConnectionAttributes"
         postgresConnection:
@@ -1706,6 +1707,8 @@ components:
           $ref: "#/components/schemas/MysqlConnection"
         duckdbConnection:
           $ref: "#/components/schemas/DuckdbConnection"
+        motherduckConnection:
+          $ref: "#/components/schemas/MotherDuckConnection"
 
     ConnectionAttributes:
       type: object
@@ -1803,6 +1806,12 @@ components:
         password:
           type: string
           description: Snowflake password for authentication
+        privateKey:
+          type: string
+          description: Snowflake private key for authentication
+        privateKeyPass:
+          type: string
+          description: Passphrase for the Snowflake private key
         warehouse:
           type: string
           description: Snowflake warehouse name
@@ -1841,6 +1850,9 @@ components:
         password:
           type: string
           description: Trino password for authentication
+        peakaKey:
+          type: string
+          description: Peaka API key for authentication with Peaka-hosted Trino clusters
 
     MotherDuckConnection:
       type: object
@@ -1858,7 +1870,8 @@ components:
       description: DuckDB database connection configuration
       properties:
         attachedDatabases:
-          array:
+          type: array
+          items:
             $ref: "#/components/schemas/AttachedDatabase"
 
     AttachedDatabase:
@@ -1867,11 +1880,12 @@ components:
       properties:
         name:
           type: string
-          description: Name of the connection
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          example: "test_connection, _connection, test_connection_1"
         type:
           type: string
           description: Type of database connection
-          enum: [bigquery, snowflake, postgres, motherduck]
+          enum: [bigquery, snowflake, postgres]
         attributes:
           $ref: "#/components/schemas/ConnectionAttributes"
         bigqueryConnection:
@@ -1880,8 +1894,6 @@ components:
           $ref: "#/components/schemas/SnowflakeConnection"
         postgresConnection:
           $ref: "#/components/schemas/PostgresConnection"
-        motherDuckConnection:
-          $ref: "#/components/schemas/MotherDuckConnection"
 
     # TODO: What is this?  Can we remove it?
     SqlSource:

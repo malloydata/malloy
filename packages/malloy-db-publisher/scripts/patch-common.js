@@ -7,7 +7,6 @@
  * 1. configuration.baseOptions (including timeout) is merged into axios requests in common.ts
  * 2. RawAxiosRequestConfig is exported from index.ts
  *
- * This is a JavaScript version that can run without ts-node.
  */
 
 const fs = require('fs');
