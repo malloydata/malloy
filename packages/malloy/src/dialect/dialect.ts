@@ -279,7 +279,7 @@ export abstract class Dialect {
   abstract sqlTruncExpr(qi: QueryInfo, toTrunc: TimeTruncExpr): string;
   abstract sqlTimeExtractExpr(qi: QueryInfo, xFrom: TimeExtractExpr): string;
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
-  abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
+  abstract sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string;
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
 
@@ -306,7 +306,7 @@ export abstract class Dialect {
       case 'timeDiff':
         return this.sqlMeasureTimeExpr(df);
       case 'delta':
-        return this.sqlAlterTimeExpr(df);
+        return this.sqlAlterTimeExpr(df, qi);
       case 'trunc':
         return this.sqlTruncExpr(qi, df);
       case 'extract':

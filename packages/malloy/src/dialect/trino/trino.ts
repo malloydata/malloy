@@ -413,7 +413,7 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+  sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string {
     let timeframe = df.units;
     let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {

@@ -41,7 +41,7 @@ import {
 import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType} from '../dialect';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
 import {inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -413,7 +413,7 @@ export class DuckDBDialect extends PostgresBase {
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+  sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string {
     let timeframe = df.units;
     let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {

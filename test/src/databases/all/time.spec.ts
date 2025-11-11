@@ -814,6 +814,34 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       expect(yekTimezoneAnnotation?.value).toContain('Asia/Yekaterinburg');
     }
   );
+
+  test.skip('intervals are evalutated in query timezone', async () => {
+    await expect(
+      `source: onerow is ${dbName}.sql("SELECT 1") extend {
+        dimension:
+          // Dublin is UTC+1 in June and UTC in November
+          november is @2024-11-01 00:00:00[Europe/Dublin]
+          june1_correct is @2024-06-01 00:00:00[Europe/Dublin],
+          by_month is november - 5 months,
+          by_week is november - 22 weeks,
+          by_day is november - 154 days,
+          by_hour is november - 3696 hours,  // 154 * 24
+      }
+      run: onerow -> {
+        timezone: 'Europe/Dublin'
+        select:
+          month_ok is by_month = june1_correct, by_month
+          week_ok is by_week = june1_correct, by_week
+          day_ok is by_day = june1_correct, by_day
+          hour_ok is by_hour = june1_correct, by_hour
+      }`
+    ).malloyResultMatches(runtime, {
+      month_ok: true,
+      week_ok: true,
+      day_ok: true,
+      hour_ok: true,
+    });
+  });
 });
 
 afterAll(async () => {

@@ -594,7 +594,7 @@ export class TemporalFilterCompiler {
         delta: this.n(n),
       },
     };
-    return {...ret, sql: this.d.sqlAlterTimeExpr(ret)};
+    return {...ret, sql: this.d.sqlAlterTimeExpr(ret, this.qi)};
   }
 
   private dayofWeek(e: Expr): Translated<TimeExtractExpr> {
@@ -665,7 +665,7 @@ export class TemporalFilterCompiler {
           ...beginExpr,
           kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},
         };
-        return {begin: beginExpr, end: this.d.sqlAlterTimeExpr(endExpr)};
+        return {begin: beginExpr, end: this.d.sqlAlterTimeExpr(endExpr, this.qi)};
       }
       case 'today':
         return this.thisUnit('day');
