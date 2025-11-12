@@ -397,8 +397,8 @@ export abstract class Dialect {
     const needed =
       TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
 
-    // Use query timezone, default to UTC for consistency
-    const tz = needed ? qtz(qi) || 'UTC' : undefined;
+    // Use query timezone if specified
+    const tz = needed ? qtz(qi) : undefined;
 
     return {needed, tz};
   }

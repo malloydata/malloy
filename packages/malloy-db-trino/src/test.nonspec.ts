@@ -54,7 +54,7 @@ describe('Trino connection', () => {
       host: 'http://localhost',
       port: 8080,
       schema: 'malloytest',
-      timezone: 'America/Costa_Rica',
+      timezone: 'UTC',
       user: 'root',
     });
 

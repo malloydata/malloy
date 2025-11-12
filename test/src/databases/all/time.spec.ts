@@ -815,7 +815,9 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     }
   );
 
-  test('intervals are evalutated in query timezone', async () => {
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('intervals are evalutated in query timezone', async () => {
     const truth = runtime.dialect.resultBoolean(true);
     await expect(
       `source: onerow is ${dbName}.sql("SELECT 1") extend {

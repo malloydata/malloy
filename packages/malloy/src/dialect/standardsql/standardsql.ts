@@ -128,6 +128,30 @@ export class StandardSQLDialect extends Dialect {
     return `\`${tablePath}\``;
   }
 
+  // BigQuery needs UTC default because it uses DATETIME for civil time operations
+  override needsCivilTimeComputation(
+    typeDef: AtomicTypeDef,
+    truncateTo: TimestampUnit | undefined,
+    offsetUnit: TimestampUnit | undefined,
+    qi: QueryInfo
+  ): {needed: boolean; tz: string | undefined} {
+    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
+
+    const isCalendarTruncate =
+      truncateTo !== undefined && calendarUnits.includes(truncateTo);
+
+    const isCalendarOffset =
+      offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
+
+    const needed =
+      TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
+
+    // BigQuery defaults to UTC if no timezone specified
+    const tz = needed ? qtz(qi) || 'UTC' : undefined;
+
+    return {needed, tz};
+  }
+
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(GENERATE_ARRAY(0,${groupSetCount},1)))`;
   }
