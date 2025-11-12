@@ -36,6 +36,10 @@ import type {
   ArrayLiteralNode,
   BasicAtomicTypeDef,
   OrderBy,
+  TimestampUnit,
+  TimeExpr,
+  HasTimeValue,
+  GenericSQLExpr,
 } from '../model/malloy_types';
 import {isRawCast, isBasicAtomic} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
@@ -283,6 +287,68 @@ export abstract class Dialect {
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
 
+  /**
+   * Unified function for truncation and/or offset operations.
+   * Allows dialects to optimize combined operations (e.g., trunc('month', x) - 6 months).
+   * Default implementation delegates to existing sqlTruncExpr/sqlAlterTimeExpr methods.
+   *
+   * @param baseExpr The time expression to operate on (already compiled, with .sql populated)
+   * @param qi Query information including timezone
+   * @param truncateTo Optional truncation unit (year, month, day, etc.)
+   * @param offset Optional offset to apply (after truncation if both present)
+   */
+  sqlTruncAndOffset(
+    baseExpr: TimeExpr,
+    qi: QueryInfo,
+    truncateTo?: TimestampUnit,
+    offset?: {
+      op: '+' | '-';
+      magnitude: string;
+      unit: TimestampUnit;
+    }
+  ): string {
+    let sql = baseExpr.sql!;
+
+    // Apply truncation if specified
+    let offsetExpr: TimeExpr = baseExpr;
+    if (truncateTo !== undefined) {
+      const truncExpr: TimeTruncExpr & HasTimeValue = {
+        node: 'trunc',
+        e: baseExpr,
+        units: truncateTo,
+        typeDef: baseExpr.typeDef,
+      };
+      sql = this.sqlTruncExpr(qi, truncExpr);
+      truncExpr.sql = sql;
+      offsetExpr = truncExpr; // use this for offset if there is offset
+    }
+
+    // Apply offset if specified
+    if (offset !== undefined) {
+      // Create a fake delta expression node
+      const fakeDelta: GenericSQLExpr = {
+        node: 'genericSQLExpr',
+        kids: {args: []},
+        src: [offset.magnitude],
+        sql: offset.magnitude,
+        typeDef: {type: 'number'},
+      };
+
+      const deltaExpr: TimeDeltaExpr = {
+        node: 'delta',
+        kids: {
+          base: offsetExpr,
+          delta: fakeDelta,
+        },
+        op: offset.op,
+        units: offset.unit,
+      };
+      sql = this.sqlAlterTimeExpr(deltaExpr, qi);
+    }
+
+    return sql;
+  }
+
   abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
   abstract sqlLiteralString(literal: string): string;
   abstract sqlLiteralRegexp(literal: string): string;
@@ -305,10 +371,27 @@ export abstract class Dialect {
         return this.sqlNowExpr();
       case 'timeDiff':
         return this.sqlMeasureTimeExpr(df);
-      case 'delta':
-        return this.sqlAlterTimeExpr(df, qi);
+      case 'delta': {
+        // Optimize: if delta's base is a trunc, combine them
+        const base = df.kids.base;
+        if (base.node === 'trunc') {
+          // Combined trunc + offset - pass the base of the truncation
+          return this.sqlTruncAndOffset(base.e, qi, base.units, {
+            op: df.op,
+            magnitude: df.kids.delta.sql!,
+            unit: df.units,
+          });
+        }
+        // Just offset, no truncation - pass the delta's base
+        return this.sqlTruncAndOffset(base, qi, undefined, {
+          op: df.op,
+          magnitude: df.kids.delta.sql!,
+          unit: df.units,
+        });
+      }
       case 'trunc':
-        return this.sqlTruncExpr(qi, df);
+        // Just truncation, no offset
+        return this.sqlTruncAndOffset(df.e, qi, df.units);
       case 'extract':
         return this.sqlTimeExtractExpr(qi, df);
       case 'cast':

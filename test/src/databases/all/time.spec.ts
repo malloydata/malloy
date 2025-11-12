@@ -815,31 +815,33 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     }
   );
 
-  test.skip('intervals are evalutated in query timezone', async () => {
+  test('intervals are evalutated in query timezone', async () => {
     await expect(
       `source: onerow is ${dbName}.sql("SELECT 1") extend {
         dimension:
           // Dublin is UTC+1 in June and UTC in November
           november is @2024-11-01 00:00:00[Europe/Dublin]
           june1_correct is @2024-06-01 00:00:00[Europe/Dublin],
+          august1_correct is @2024-08-01 00:00:00[Europe/Dublin],
           by_month is november - 5 months,
-          by_week is november - 22 weeks,
-          by_day is november - 154 days,
-          by_hour is november - 3696 hours,  // 154 * 24
+          by_day is november - 153 days,
+          by_hour is november - 3673 hours, // 153 days * 24 hours + 1 hour fall back
+          by_quarter is november - 1 quarter, // 3 months back crosses DST boundary
       }
       run: onerow -> {
         timezone: 'Europe/Dublin'
         select:
+          june1_correct,
           month_ok is by_month = june1_correct, by_month
-          week_ok is by_week = june1_correct, by_week
           day_ok is by_day = june1_correct, by_day
           hour_ok is by_hour = june1_correct, by_hour
+          quarter_ok is by_quarter = august1_correct, by_quarter
       }`
     ).malloyResultMatches(runtime, {
       month_ok: true,
-      week_ok: true,
       day_ok: true,
       hour_ok: true,
+      quarter_ok: true,
     });
   });
 });

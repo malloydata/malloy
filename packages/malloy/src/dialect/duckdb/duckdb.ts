@@ -30,6 +30,8 @@ import type {
   BasicAtomicTypeDef,
   RecordLiteralNode,
   OrderBy,
+  TimestampUnit,
+  TimeExpr,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -42,7 +44,7 @@ import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {inDays} from '../dialect';
+import {inDays, qtz} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -424,7 +426,106 @@ export class DuckDBDialect extends PostgresBase {
       n = `${n}*7`;
     }
     const interval = `INTERVAL (${n}) ${timeframe}`;
+
+    // Only apply timezone-aware wall-clock arithmetic to calendar-based units
+    // month/year use #months basis, day uses #days basis (calendar arithmetic)
+    // hour/minute/second use #microseconds basis (fixed duration arithmetic)
+    const isCalendarUnit =
+      timeframe === 'month' || timeframe === 'year' || timeframe === 'day';
+    if (isCalendarUnit && TD.isTimestamp(df.kids.base.typeDef)) {
+      const tz = qtz(qi);
+      if (tz) {
+        // Convert to wall-clock in query TZ, do arithmetic, convert back to UTC TIMESTAMP
+        return `(((${df.kids.base.sql}::TIMESTAMPTZ AT TIME ZONE '${tz}') ${df.op} ${interval}) AT TIME ZONE '${tz}')::TIMESTAMP`;
+      }
+    }
+
+    // Fall back to existing behavior for dates, no timezone, or fixed durations
     return `${df.kids.base.sql} ${df.op} ${interval}`;
+  }
+
+  sqlTruncAndOffset(
+    baseExpr: TimeExpr,
+    qi: QueryInfo,
+    truncateTo?: TimestampUnit,
+    offset?: {
+      op: '+' | '-';
+      magnitude: string;
+      unit: TimestampUnit;
+    }
+  ): string {
+    // DuckDB doesn't support INTERVAL weeks for offsets, convert to days
+    let offsetUnit = offset?.unit;
+    let offsetMag = offset?.magnitude;
+    if (offsetUnit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `(${offsetMag})*7`;
+    }
+
+    // Determine if we need timezone-aware handling
+    // Calendar units for offsets: month, quarter, year, day
+    const isCalendarOffset =
+      offsetUnit &&
+      (offsetUnit === 'month' ||
+        offsetUnit === 'quarter' ||
+        offsetUnit === 'year' ||
+        offsetUnit === 'day');
+
+    // Any truncation on timestamp needs TZ handling
+    const needsTzAware =
+      TD.isTimestamp(baseExpr.typeDef) &&
+      (truncateTo !== undefined || isCalendarOffset);
+
+    const tz = needsTzAware ? qtz(qi) : undefined;
+
+    if (tz) {
+      // Build optimized timezone-aware expression
+      let expr = `(${baseExpr.sql})::TIMESTAMPTZ AT TIME ZONE '${tz}'`;
+
+      // Apply truncation in timezone-aware space
+      if (truncateTo) {
+        // Week adjustment: add 1 day before trunc, subtract after
+        if (truncateTo === 'week') {
+          expr = `(${expr} + INTERVAL '1' DAY)`;
+        }
+        expr = `DATE_TRUNC('${truncateTo}', ${expr})`;
+        if (truncateTo === 'week') {
+          expr = `(${expr} - INTERVAL '1' DAY)`;
+        }
+      }
+
+      // Apply offset in timezone-aware space
+      if (offset && offsetUnit) {
+        const interval = `INTERVAL (${offsetMag}) ${offsetUnit}`;
+        expr = `(${expr} ${offset.op} ${interval})`;
+      }
+
+      // Convert back to UTC TIMESTAMP
+      return `((${expr}) AT TIME ZONE '${tz}')::TIMESTAMP`;
+    }
+
+    // No timezone - generate simple SQL
+    let sql = baseExpr.sql!;
+
+    // Apply truncation if specified
+    if (truncateTo) {
+      // Week adjustment for DuckDB
+      if (truncateTo === 'week') {
+        sql = `(${sql} + INTERVAL '1' DAY)`;
+      }
+      sql = `DATE_TRUNC('${truncateTo}', ${sql})`;
+      if (truncateTo === 'week') {
+        sql = `(${sql} - INTERVAL '1' DAY)`;
+      }
+    }
+
+    // Apply offset if specified
+    if (offset && offsetUnit) {
+      const interval = `INTERVAL (${offsetMag}) ${offsetUnit}`;
+      sql = `${sql} ${offset.op} ${interval}`;
+    }
+
+    return sql;
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
