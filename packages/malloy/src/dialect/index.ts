@@ -54,3 +54,4 @@ export {getMalloyStandardFunctions} from './functions';
 export type {MalloyStandardFunctionImplementations} from './functions';
 export type {TinyToken} from './tiny_parser';
 export {TinyParser} from './tiny_parser';
+export {DatabricksDialect} from './databricks';
