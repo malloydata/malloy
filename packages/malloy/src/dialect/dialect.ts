@@ -26,9 +26,7 @@ import type {
   Sampling,
   AtomicTypeDef,
   MeasureTimeExpr,
-  TimeTruncExpr,
   TimeExtractExpr,
-  TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
   TimeLiteralNode,
@@ -38,10 +36,8 @@ import type {
   OrderBy,
   TimestampUnit,
   TimeExpr,
-  HasTimeValue,
-  GenericSQLExpr,
 } from '../model/malloy_types';
-import {isRawCast, isBasicAtomic} from '../model/malloy_types';
+import {isRawCast, isBasicAtomic, TD} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {
@@ -280,17 +276,139 @@ export abstract class Dialect {
   }
 
   abstract sqlNowExpr(): string;
-  abstract sqlTruncExpr(qi: QueryInfo, toTrunc: TimeTruncExpr): string;
   abstract sqlTimeExtractExpr(qi: QueryInfo, xFrom: TimeExtractExpr): string;
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
-  abstract sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string;
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
 
   /**
+   * Converts a UTC timestamp expression to civil (local) time in the specified timezone.
+   * Used when performing timezone-aware calendar arithmetic.
+   *
+   * Example outputs:
+   * - BigQuery: `DATETIME(timestamp_expr, 'Europe/Dublin')`
+   * - PostgreSQL: `(timestamp_expr)::TIMESTAMPTZ AT TIME ZONE 'Europe/Dublin'`
+   * - DuckDB: `(timestamp_expr)::TIMESTAMPTZ AT TIME ZONE 'Europe/Dublin'`
+   * - Trino: `timestamp_expr AT TIME ZONE 'Europe/Dublin'`
+   *
+   * @param expr The SQL expression for the UTC timestamp
+   * @param timezone The target timezone (e.g., 'Europe/Dublin', 'America/Los_Angeles')
+   * @returns SQL expression representing the timestamp in civil (local) time
+   */
+  abstract sqlConvertToCivilTime(expr: string, timezone: string): string;
+
+  /**
+   * Converts a civil (local) time expression back to a UTC timestamp.
+   * The inverse of sqlConvertToCivilTime.
+   *
+   * Example outputs:
+   * - BigQuery: `TIMESTAMP(datetime_expr, 'Europe/Dublin')`
+   * - PostgreSQL: `((datetime_expr) AT TIME ZONE 'Europe/Dublin')::TIMESTAMP`
+   * - DuckDB: `((datetime_expr) AT TIME ZONE 'Europe/Dublin')::TIMESTAMP`
+   * - Trino: `CAST(at_timezone(timestamptz_expr, 'UTC') AS TIMESTAMP)`
+   *
+   * @param expr The SQL expression for the civil time
+   * @param timezone The timezone of the civil time
+   * @returns SQL expression representing the UTC timestamp
+   */
+  abstract sqlConvertFromCivilTime(expr: string, timezone: string): string;
+
+  /**
+   * Truncates a time expression to the specified unit.
+   *
+   * @param expr The SQL expression to truncate
+   * @param unit The unit to truncate to (year, month, day, hour, etc.)
+   * @param typeDef The Malloy type of the expression (date, timestamp, etc.)
+   * @param inCivilTime If true, the expression is already in civil (local) time and should not
+   *                    be converted. If false, may need timezone conversion for timestamps.
+   * @param timezone Optional timezone for the operation. Only provided when timezone-aware
+   *                 truncation is needed but inCivilTime is false.
+   * @returns SQL expression representing the truncated time
+   */
+  abstract sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
+  ): string;
+
+  /**
+   * Adds or subtracts a time interval from a time expression.
+   *
+   * @param expr The SQL expression to offset
+   * @param op The operation: '+' for addition, '-' for subtraction
+   * @param magnitude The SQL expression for the interval magnitude (e.g., '6', '(delta_val)')
+   * @param unit The interval unit (year, month, day, hour, etc.)
+   * @param typeDef The Malloy type of the expression (date, timestamp, etc.)
+   * @param inCivilTime If true, the expression is already in civil (local) time and should not
+   *                    be converted. If false, may need timezone conversion for timestamps.
+   * @param timezone Optional timezone for the operation. Only provided when timezone-aware
+   *                 offset is needed but inCivilTime is false.
+   * @returns SQL expression representing the offset time
+   */
+  abstract sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
+  ): string;
+
+  /**
+   * Determines whether a truncation and/or offset operation needs to be performed in
+   * civil (local) time, and if so, which timezone to use.
+   *
+   * Calendar-based operations (day, week, month, quarter, year) typically need civil time
+   * computation because these units can cross DST boundaries, changing the UTC offset.
+   *
+   * Default implementation:
+   * - Returns true for timestamps with truncation or calendar-unit offsets
+   * - Uses the query timezone from QueryInfo, or 'UTC' if none specified
+   * - Returns false for dates or sub-day offsets (hour, minute, second)
+   *
+   * Dialects can override this if they have different rules about which operations
+   * require civil time computation.
+   *
+   * @param typeDef The Malloy type of the base expression
+   * @param truncateTo The truncation unit, if any
+   * @param offsetUnit The offset unit, if any
+   * @param qi Query information including timezone settings
+   * @returns Object with `needed` boolean and optional `tz` string
+   */
+  needsCivilTimeComputation(
+    typeDef: AtomicTypeDef,
+    truncateTo: TimestampUnit | undefined,
+    offsetUnit: TimestampUnit | undefined,
+    qi: QueryInfo
+  ): {needed: boolean; tz: string | undefined} {
+    // Calendar units that can cross DST boundaries
+    const isCalendarOffset =
+      offsetUnit !== undefined &&
+      ['day', 'week', 'month', 'quarter', 'year'].includes(offsetUnit);
+
+    // Timestamps with truncation or calendar offsets need civil time computation
+    const needed =
+      TD.isTimestamp(typeDef) && (truncateTo !== undefined || isCalendarOffset);
+
+    // Use query timezone, default to UTC for consistency
+    const tz = needed ? qtz(qi) || 'UTC' : undefined;
+
+    return {needed, tz};
+  }
+
+  /**
    * Unified function for truncation and/or offset operations.
-   * Allows dialects to optimize combined operations (e.g., trunc('month', x) - 6 months).
-   * Default implementation delegates to existing sqlTruncExpr/sqlAlterTimeExpr methods.
+   * Optimizes combined operations (e.g., trunc('month', x) - 6 months) by performing
+   * both operations in civil time when needed, avoiding redundant timezone conversions.
+   *
+   * Uses dialect-specific primitives:
+   * - needsCivilTimeComputation: Determines if operation needs civil time
+   * - sqlConvertToCivilTime/sqlConvertFromCivilTime: Timezone conversion
+   * - sqlTruncate: Truncation operation
+   * - sqlOffsetTime: Interval arithmetic
    *
    * @param baseExpr The time expression to operate on (already compiled, with .sql populated)
    * @param qi Query information including timezone
@@ -307,43 +425,54 @@ export abstract class Dialect {
       unit: TimestampUnit;
     }
   ): string {
-    let sql = baseExpr.sql!;
+    // Determine if we need to work in civil (local) time
+    const {needed: needsCivil, tz} = this.needsCivilTimeComputation(
+      baseExpr.typeDef,
+      truncateTo,
+      offset?.unit,
+      qi
+    );
 
-    // Apply truncation if specified
-    let offsetExpr: TimeExpr = baseExpr;
-    if (truncateTo !== undefined) {
-      const truncExpr: TimeTruncExpr & HasTimeValue = {
-        node: 'trunc',
-        e: baseExpr,
-        units: truncateTo,
-        typeDef: baseExpr.typeDef,
-      };
-      sql = this.sqlTruncExpr(qi, truncExpr);
-      truncExpr.sql = sql;
-      offsetExpr = truncExpr; // use this for offset if there is offset
+    if (needsCivil && tz) {
+      // Civil time path: convert to local time, operate, convert back to UTC
+      let expr = this.sqlConvertToCivilTime(baseExpr.sql!, tz);
+
+      if (truncateTo) {
+        expr = this.sqlTruncate(expr, truncateTo, baseExpr.typeDef, true, tz);
+      }
+
+      if (offset) {
+        expr = this.sqlOffsetTime(
+          expr,
+          offset.op,
+          offset.magnitude,
+          offset.unit,
+          baseExpr.typeDef,
+          true,
+          tz
+        );
+      }
+
+      return this.sqlConvertFromCivilTime(expr, tz);
     }
 
-    // Apply offset if specified
-    if (offset !== undefined) {
-      // Create a fake delta expression node
-      const fakeDelta: GenericSQLExpr = {
-        node: 'genericSQLExpr',
-        kids: {args: []},
-        src: [offset.magnitude],
-        sql: offset.magnitude,
-        typeDef: {type: 'number'},
-      };
+    // Simple path: no civil time conversion needed
+    let sql = baseExpr.sql!;
 
-      const deltaExpr: TimeDeltaExpr = {
-        node: 'delta',
-        kids: {
-          base: offsetExpr,
-          delta: fakeDelta,
-        },
-        op: offset.op,
-        units: offset.unit,
-      };
-      sql = this.sqlAlterTimeExpr(deltaExpr, qi);
+    if (truncateTo) {
+      sql = this.sqlTruncate(sql, truncateTo, baseExpr.typeDef, false, qtz(qi));
+    }
+
+    if (offset) {
+      sql = this.sqlOffsetTime(
+        sql,
+        offset.op,
+        offset.magnitude,
+        offset.unit,
+        baseExpr.typeDef,
+        false,
+        qtz(qi)
+      );
     }
 
     return sql;

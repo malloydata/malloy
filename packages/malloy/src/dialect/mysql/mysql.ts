@@ -33,8 +33,6 @@ import type {
   MeasureTimeExpr,
   TimeLiteralNode,
   RegexMatchExpr,
-  TimeDeltaExpr,
-  TimeTruncExpr,
   TimeExtractExpr,
   TypecastExpr,
   BasicAtomicTypeDef,
@@ -390,44 +388,31 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
-  sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
-    const truncThis = trunc.e.sql || 'internal-error-in-sql-generation';
-    const week = trunc.units === 'week';
-
-    // Only do timezone conversion for timestamps, not dates
-    if (TD.isTimestamp(trunc.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        // Convert timestamp to the query timezone (civil time)
-        const civilSource = `(CONVERT_TZ(${truncThis}, 'UTC','${tz}'))`;
-
-        // For week truncation, we need to adjust to Sunday in the civil timezone
-        // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
-        const adjustedSource = week
-          ? `DATE_SUB(${civilSource}, INTERVAL DAYOFWEEK(${civilSource}) - 1 DAY)`
-          : civilSource;
-
-        // Truncate to the appropriate unit in civil time
-        const civilTrunc = `${this.truncToUnit(adjustedSource, trunc.units)}`;
-
-        // Convert the truncated civil time back to UTC
-        const truncTsTz = `CONVERT_TZ(${civilTrunc}, '${tz}', 'UTC')`;
-        return `(${truncTsTz})`; // TODO: should it cast?
-      }
-    }
-
-    // For dates (civil time) or timestamps without query timezone
-    // do the week adjustment before truncating
-    const adjustedThis = week
-      ? `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`
-      : truncThis;
-    const result = `${this.truncToUnit(adjustedThis, trunc.units)}`;
-    return result;
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    return `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`;
   }
 
-  truncToUnit(expr: string, units: string) {
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    return `CONVERT_TZ(${expr}, '${timezone}', 'UTC')`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // For week truncation, adjust to Sunday first
+    // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
+    const adjustedExpr =
+      unit === 'week'
+        ? `DATE_SUB(${expr}, INTERVAL DAYOFWEEK(${expr}) - 1 DAY)`
+        : expr;
+
+    // Generate truncation using DATE_FORMAT
     let format = "'%Y-%m-%d %H:%i:%s'";
-    switch (units) {
+    switch (unit) {
       case 'minute':
         format = "'%Y-%m-%d %H:%i:00'";
         break;
@@ -442,14 +427,38 @@ export class MySQLDialect extends Dialect {
         format = "'%Y-%m-01 00:00:00'";
         break;
       case 'quarter':
-        format = `CASE WHEN MONTH(${expr}) > 9 THEN '%Y-10-01 00:00:00' WHEN MONTH(${expr}) > 6 THEN '%Y-07-01 00:00:00' WHEN MONTH(${expr}) > 3 THEN '%Y-04-01 00:00:00' ELSE '%Y-01-01 00:00:00' end`;
+        format = `CASE WHEN MONTH(${adjustedExpr}) > 9 THEN '%Y-10-01 00:00:00' WHEN MONTH(${adjustedExpr}) > 6 THEN '%Y-07-01 00:00:00' WHEN MONTH(${adjustedExpr}) > 3 THEN '%Y-04-01 00:00:00' ELSE '%Y-01-01 00:00:00' end`;
         break;
       case 'year':
         format = "'%Y-01-01 00:00:00'";
         break;
     }
 
-    return `TIMESTAMP(DATE_FORMAT(${expr}, ${format}))`;
+    return `TIMESTAMP(DATE_FORMAT(${adjustedExpr}, ${format}))`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Convert quarter/week to supported units
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'quarter') {
+      offsetUnit = 'month';
+      offsetMag = `${magnitude}*3`;
+    } else if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `${magnitude}*7`;
+    }
+
+    const interval = `INTERVAL ${offsetMag} ${offsetUnit}`;
+    return `(${expr} ${op} ${interval})`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
@@ -462,20 +471,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return `${msUnits}(${extractFrom})`;
-  }
-
-  sqlAlterTimeExpr(df: TimeDeltaExpr, _qi: QueryInfo): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `${n}*3`;
-    } else if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `${n}*7`;
-    }
-    const interval = `INTERVAL ${n} ${timeframe} `;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {

@@ -25,9 +25,7 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeTruncExpr,
   TimeExtractExpr,
-  TimeDeltaExpr,
   TypecastExpr,
   TimeLiteralNode,
   MeasureTimeExpr,
@@ -317,13 +315,44 @@ ${indent(sql)}
 `;
   }
 
-  sqlTruncExpr(qi: QueryInfo, te: TimeTruncExpr): string {
-    const tz = qtz(qi);
-    let truncThis = te.e.sql;
-    if (tz && TD.isTimestamp(te.e.typeDef)) {
-      truncThis = `CONVERT_TIMEZONE('${tz}',${truncThis})`;
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    // 2-arg form: converts FROM UTC TO specified timezone
+    return `CONVERT_TIMEZONE('${timezone}', ${expr})`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    // 3-arg form: converts FROM specified timezone TO UTC
+    return `CONVERT_TIMEZONE('${timezone}', 'UTC', ${expr})`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Snowflake's DATE_TRUNC starts weeks on Monday
+    // Malloy wants Sunday, so we need to adjust
+    if (unit === 'week') {
+      // Add 1 day before truncating, subtract after
+      return `DATEADD(day, -1, DATE_TRUNC('${unit}', DATEADD(day, 1, ${expr})))`;
     }
-    return `DATE_TRUNC('${te.units}',${truncThis})`;
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: string,
+    typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    const funcName = typeDef.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
+    const n = op === '+' ? magnitude : `-(${magnitude})`;
+    return `${funcName}(${unit}, ${n}, ${expr})`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
@@ -335,12 +364,6 @@ ${indent(sql)}
       extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
     }
     return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
-  }
-
-  sqlAlterTimeExpr(df: TimeDeltaExpr, _qi: QueryInfo): string {
-    const add = df.typeDef?.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
-    const n = df.op === '+' ? df.kids.delta.sql : `-(${df.kids.delta.sql})`;
-    return `${add}(${df.units},${n},${df.kids.base.sql})`;
   }
 
   private atTz(sqlExpr: string, tz: string | undefined): string {
