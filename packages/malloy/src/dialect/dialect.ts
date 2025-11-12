@@ -385,13 +385,17 @@ export abstract class Dialect {
     qi: QueryInfo
   ): {needed: boolean; tz: string | undefined} {
     // Calendar units that can cross DST boundaries
-    const isCalendarOffset =
-      offsetUnit !== undefined &&
-      ['day', 'week', 'month', 'quarter', 'year'].includes(offsetUnit);
+    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
 
-    // Timestamps with truncation or calendar offsets need civil time computation
+    const isCalendarTruncate =
+      truncateTo !== undefined && calendarUnits.includes(truncateTo);
+
+    const isCalendarOffset =
+      offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
+
+    // Timestamps with calendar truncation or calendar offsets need civil time computation
     const needed =
-      TD.isTimestamp(typeDef) && (truncateTo !== undefined || isCalendarOffset);
+      TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
 
     // Use query timezone, default to UTC for consistency
     const tz = needed ? qtz(qi) || 'UTC' : undefined;

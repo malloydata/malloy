@@ -321,8 +321,9 @@ ${indent(sql)}
   }
 
   sqlConvertFromCivilTime(expr: string, timezone: string): string {
-    // 3-arg form: converts FROM specified timezone TO UTC
-    return `CONVERT_TIMEZONE('${timezone}', 'UTC', ${expr})`;
+    // After civil time operations, we have a TIMESTAMP_TZ
+    // Cast to TIMESTAMP_NTZ first, then convert from timezone to UTC
+    return `CONVERT_TIMEZONE('${timezone}', 'UTC', (${expr})::TIMESTAMP_NTZ)`;
   }
 
   sqlTruncate(
