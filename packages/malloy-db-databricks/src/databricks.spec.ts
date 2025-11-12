@@ -38,12 +38,14 @@ describe('DataBricksConnection', () => {
 
   beforeAll(async () => {
     connection = new DatabricksConnection('databricks', {
-      'host': 'todo',
-      'path': 'todo',
-      'token': 'todo',
-      'name': 'test',
-      'defaultCatalog': 'workspace',
-    });
+        host: process.env['DATABRICKS_HOST'] ?? '',
+        path: process.env['DATABRICKS_PATH'] ?? '',
+        token: process.env['DATABRICKS_TOKEN'] ?? '',
+        name: process.env['DATABRICKS_NAME'] ?? 'test',
+        defaultCatalog: process.env['DATABRICKS_CATALOG'] ?? 'samples',
+        defaultSchema: process.env['DATABRICKS_SCHEMA'] ?? 'default',
+      });
+
 
     await connection.runSQL('SELECT 1');
   });

@@ -54,6 +54,7 @@ export interface DatabricksConnectionOptions extends ConnectionConfig {
   oauthClientId?: string;
   oauthClientSecret?: string;
   defaultCatalog: string;
+  defaultSchema: string;
 }
 
 export class DatabricksConnection
@@ -67,6 +68,7 @@ export class DatabricksConnection
     path: '',
     name: '',
     defaultCatalog: '',
+    defaultSchema: '',
   };
 
   private readonly dialect = new DatabricksDialect();
