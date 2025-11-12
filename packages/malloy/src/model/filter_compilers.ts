@@ -665,7 +665,10 @@ export class TemporalFilterCompiler {
           ...beginExpr,
           kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},
         };
-        return {begin: beginExpr, end: this.d.sqlAlterTimeExpr(endExpr, this.qi)};
+        return {
+          begin: beginExpr,
+          end: this.d.sqlAlterTimeExpr(endExpr, this.qi),
+        };
       }
       case 'today':
         return this.thisUnit('day');

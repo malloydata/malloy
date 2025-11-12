@@ -464,7 +464,7 @@ export class MySQLDialect extends Dialect {
     return `${msUnits}(${extractFrom})`;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string {
+  sqlAlterTimeExpr(df: TimeDeltaExpr, _qi: QueryInfo): string {
     let timeframe = df.units;
     let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {

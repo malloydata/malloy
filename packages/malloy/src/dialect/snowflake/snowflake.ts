@@ -337,7 +337,7 @@ ${indent(sql)}
     return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string {
+  sqlAlterTimeExpr(df: TimeDeltaExpr, _qi: QueryInfo): string {
     const add = df.typeDef?.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
     const n = df.op === '+' ? df.kids.delta.sql : `-(${df.kids.delta.sql})`;
     return `${add}(${df.units},${n},${df.kids.base.sql})`;

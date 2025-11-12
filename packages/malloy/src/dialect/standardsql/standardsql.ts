@@ -304,7 +304,7 @@ ${indent(sql)}
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr, qi: QueryInfo): string {
+  sqlAlterTimeExpr(df: TimeDeltaExpr, _qi: QueryInfo): string {
     const from = df.kids.base;
     let dataType: string = from?.typeDef.type;
     let sql = from.sql;
