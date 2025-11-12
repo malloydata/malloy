@@ -639,8 +639,8 @@ ${indent(sql)}
     }
     const tz = lit.timezone || qtz(qi);
     if (tz) {
-      // Interpret the literal in the given timezone, convert to UTC, cast to plain TIMESTAMP
-      return `CAST(at_timezone(TIMESTAMP '${lit.literal}' AT TIME ZONE '${tz}', 'UTC') AS TIMESTAMP)`;
+      // Interpret wall clock time in timezone, convert to UTC wall clock, cast to TIMESTAMP
+      return `CAST(at_timezone(with_timezone(TIMESTAMP '${lit.literal}', '${tz}'), 'UTC') AS TIMESTAMP)`;
     }
     return `TIMESTAMP '${lit.literal}'`;
   }
