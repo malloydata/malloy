@@ -393,12 +393,14 @@ export abstract class Dialect {
     const isCalendarOffset =
       offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
 
-    // Timestamps with calendar truncation or calendar offsets need civil time computation
-    const needed =
-      TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
+    const tz = qtz(qi);
 
-    // Use query timezone if specified
-    const tz = needed ? qtz(qi) : undefined;
+    // Timestamps with calendar truncation/offset need civil time computation
+    // BUT only if there's actually a timezone to convert to/from
+    const needed =
+      TD.isTimestamp(typeDef) &&
+      (isCalendarTruncate || isCalendarOffset) &&
+      tz !== undefined;
 
     return {needed, tz};
   }
