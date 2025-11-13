@@ -818,7 +818,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   test('intervals are evalutated in query timezone', async () => {
     const truth = runtime.dialect.resultBoolean(true);
     await expect(
-      `source: onerow is ${dbName}.sql("SELECT 1") extend {
+      `source: onerow is ${dbName}.sql("SELECT 1 as rownum") extend {
         dimension:
           // Dublin is UTC+1 in June and UTC in November
           november is @2024-11-01 00:00:00[Europe/Dublin]

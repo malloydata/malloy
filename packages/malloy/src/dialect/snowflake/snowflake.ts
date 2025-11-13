@@ -316,13 +316,13 @@ ${indent(sql)}
   }
 
   sqlConvertToCivilTime(expr: string, timezone: string): string {
-    // 2-arg form: converts FROM UTC TO specified timezone
-    return `CONVERT_TIMEZONE('${timezone}', ${expr})`;
+    // 3-arg form: explicitly convert from UTC to specified timezone
+    return `CONVERT_TIMEZONE('UTC', '${timezone}', ${expr})`;
   }
 
   sqlConvertFromCivilTime(expr: string, timezone: string): string {
-    // After civil time operations, we have a TIMESTAMP_TZ
-    // Cast to TIMESTAMP_NTZ first, then convert from timezone to UTC
+    // After civil time operations, we have a TIMESTAMP_NTZ in the target timezone
+    // Convert from timezone to UTC, returning TIMESTAMP_NTZ
     return `CONVERT_TIMEZONE('${timezone}', 'UTC', (${expr})::TIMESTAMP_NTZ)`;
   }
 
@@ -333,12 +333,8 @@ ${indent(sql)}
     _inCivilTime: boolean,
     _timezone?: string
   ): string {
-    // Snowflake's DATE_TRUNC starts weeks on Monday
-    // Malloy wants Sunday, so we need to adjust
-    if (unit === 'week') {
-      // Add 1 day before truncating, subtract after
-      return `DATEADD(day, -1, DATE_TRUNC('${unit}', DATEADD(day, 1, ${expr})))`;
-    }
+    // Snowflake session is configured with WEEK_START=7 (Sunday)
+    // so DATE_TRUNC already truncates to Sunday - no adjustment needed
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 
@@ -416,21 +412,19 @@ ${indent(sql)}
   }
 
   sqlLiteralTime(qi: QueryInfo, lf: TimeLiteralNode): string {
-    const tz = qtz(qi);
-    // just making it explicit that timestring does not have timezone info
-    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
-    // now do the hack to add timezone to a timestamp ntz
-    const targetTimeZone = lf.timezone ?? tz;
-    if (targetTimeZone) {
-      const targetTimeZoneSuffix = `TO_CHAR(CONVERT_TIMEZONE('${targetTimeZone}', '1970-01-01 00:00:00'), 'TZHTZM')`;
-      const retTimeString = `TO_CHAR(${ret}, 'YYYY-MM-DD HH24:MI:SS.FF9')`;
-      ret = `${retTimeString} || ${targetTimeZoneSuffix}`;
-      ret = `(${ret})::TIMESTAMP_TZ`;
+    if (TD.isDate(lf.typeDef)) {
+      return `TO_DATE('${lf.literal}')`;
     }
 
-    if (TD.isDate(lf.typeDef)) {
-      return `TO_DATE(${ret})`;
+    const tz = qtz(qi);
+    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
+    const targetTimeZone = lf.timezone ?? tz;
+
+    if (targetTimeZone) {
+      // Interpret the literal as being in targetTimeZone, convert to UTC
+      ret = `CONVERT_TIMEZONE('${targetTimeZone}', 'UTC', ${ret})`;
     }
+
     return ret;
   }
 
