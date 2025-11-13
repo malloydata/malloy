@@ -30,7 +30,7 @@ import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerM
  */
 export interface AttachedDatabase {
     /**
-     * Name of the connection
+     * 
      * @type {string}
      * @memberof AttachedDatabase
      */
@@ -65,19 +65,12 @@ export interface AttachedDatabase {
      * @memberof AttachedDatabase
      */
     'postgresConnection'?: PostgresConnection;
-    /**
-     * 
-     * @type {MotherDuckConnection}
-     * @memberof AttachedDatabase
-     */
-    'motherDuckConnection'?: MotherDuckConnection;
 }
 
 export const AttachedDatabaseTypeEnum = {
     Bigquery: 'bigquery',
     Snowflake: 'snowflake',
-    Postgres: 'postgres',
-    Motherduck: 'motherduck'
+    Postgres: 'postgres'
 } as const;
 
 export type AttachedDatabaseTypeEnum = typeof AttachedDatabaseTypeEnum[keyof typeof AttachedDatabaseTypeEnum];
@@ -296,6 +289,12 @@ export interface Connection {
      * @memberof Connection
      */
     'duckdbConnection'?: DuckdbConnection;
+    /**
+     * 
+     * @type {MotherDuckConnection}
+     * @memberof Connection
+     */
+    'motherduckConnection'?: MotherDuckConnection;
 }
 
 export const ConnectionTypeEnum = {
@@ -304,7 +303,8 @@ export const ConnectionTypeEnum = {
     Snowflake: 'snowflake',
     Trino: 'trino',
     Mysql: 'mysql',
-    Duckdb: 'duckdb'
+    Duckdb: 'duckdb',
+    Motherduck: 'motherduck'
 } as const;
 
 export type ConnectionTypeEnum = typeof ConnectionTypeEnum[keyof typeof ConnectionTypeEnum];
@@ -414,10 +414,10 @@ export type DatabaseTypeEnum = typeof DatabaseTypeEnum[keyof typeof DatabaseType
 export interface DuckdbConnection {
     /**
      * 
-     * @type {any}
+     * @type {Array<AttachedDatabase>}
      * @memberof DuckdbConnection
      */
-    'attachedDatabases'?: any;
+    'attachedDatabases'?: Array<AttachedDatabase>;
 }
 /**
  * Malloy model metadata and status information
@@ -900,6 +900,18 @@ export interface SnowflakeConnection {
      */
     'password'?: string;
     /**
+     * Snowflake private key for authentication
+     * @type {string}
+     * @memberof SnowflakeConnection
+     */
+    'privateKey'?: string;
+    /**
+     * Passphrase for the Snowflake private key
+     * @type {string}
+     * @memberof SnowflakeConnection
+     */
+    'privateKeyPass'?: string;
+    /**
      * Snowflake warehouse name
      * @type {string}
      * @memberof SnowflakeConnection
@@ -1098,6 +1110,12 @@ export interface TrinoConnection {
      * @memberof TrinoConnection
      */
     'password'?: string;
+    /**
+     * Peaka API key for authentication with Peaka-hosted Trino clusters
+     * @type {string}
+     * @memberof TrinoConnection
+     */
+    'peakaKey'?: string;
 }
 /**
  * Named model view definition

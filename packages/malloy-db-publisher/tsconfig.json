@@ -5,6 +5,8 @@
     "outDir": "dist",
     "composite": true
   },
+  "include": ["src/**/*"],
+  "exclude": ["scripts", "dist", "node_modules"],
   "references": [
     {
       "path": "../malloy"
