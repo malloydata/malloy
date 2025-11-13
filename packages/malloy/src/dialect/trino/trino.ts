@@ -682,6 +682,23 @@ export class PrestoDialect extends TrinoDialect {
     return 'CAST(UUID() AS VARCHAR)';
   }
 
+  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
+    if (TD.isDate(lit.typeDef)) {
+      return `DATE '${lit.literal}'`;
+    }
+    const tz = lit.timezone || qtz(qi);
+    if (tz) {
+      // Presto: Create TIMESTAMPTZ literal, convert to UTC, cast to TIMESTAMP
+      return `CAST(TIMESTAMP '${lit.literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+    }
+    return `TIMESTAMP '${lit.literal}'`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, _timezone: string): string {
+    // Presto: Use AT TIME ZONE operator instead of at_timezone function
+    return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+  }
+
   sqlUnnestAlias(
     source: string,
     alias: string,
