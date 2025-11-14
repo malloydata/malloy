@@ -359,8 +359,6 @@ describe.skip('db:Publisher Integration Tests', () => {
       expect(errorMessage).toBeDefined();
       expect(typeof errorMessage).toBe('string');
       expect(errorMessage.length).toBeGreaterThan(0);
-      // Log the actual error message for debugging
-      console.log('Error message for california_schools:', errorMessage);
       // Error message should indicate table not found or similar
       // Note: The actual error might be a 502 status code or other HTTP error
       const hasErrorIndicator =
@@ -404,8 +402,6 @@ describe.skip('db:Publisher Integration Tests', () => {
       expect(errorMessage).toBeDefined();
       expect(typeof errorMessage).toBe('string');
       expect(errorMessage.length).toBeGreaterThan(0);
-      // Log the actual error message for debugging
-      console.log('Error message for salifornia_schools.frpm1:', errorMessage);
       // Error message should indicate table/dataset not found or similar
       // Note: The actual error might be a 502 status code or other HTTP error
       const hasErrorIndicator =
@@ -459,14 +455,12 @@ describe.skip('db:Publisher Integration Tests', () => {
       });
       // If it doesn't throw, check if the schema contains an error indicator
       // This might happen if the API returns an error message in the schema
-      console.log('Schema result for california_schools:', schema);
       // The schema should indicate an error or be invalid
       expect(schema).toBeDefined();
     } catch (error) {
       // If it throws, that's also valid
       expect(error).toBeInstanceOf(Error);
       const errorMessage = (error as Error).message;
-      console.log('Error message for california_schools schema:', errorMessage);
       expect(errorMessage).toBeDefined();
     }
   });
@@ -485,17 +479,12 @@ describe.skip('db:Publisher Integration Tests', () => {
       });
       // If it doesn't throw, check if the schema contains an error indicator
       // This might happen if the API returns an error message in the schema
-      console.log('Schema result for salifornia_schools.frpm1:', schema);
       // The schema should indicate an error or be invalid
       expect(schema).toBeDefined();
     } catch (error) {
       // If it throws, that's also valid
       expect(error).toBeInstanceOf(Error);
       const errorMessage = (error as Error).message;
-      console.log(
-        'Error message for salifornia_schools.frpm1 schema:',
-        errorMessage
-      );
       expect(errorMessage).toBeDefined();
       // Error message should indicate dataset not found
       expect(
