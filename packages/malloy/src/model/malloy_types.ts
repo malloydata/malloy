@@ -499,35 +499,37 @@ export interface DocumentLocation {
   range: DocumentRange;
 }
 
+/** Lightweight definition for IDE features - only stores what's needed for hover and go-to-definition */
+export interface LightweightDefinition {
+  type: string;
+  annotation?: Annotation;
+  location?: DocumentLocation;
+}
+
 interface DocumentReferenceBase {
   text: string;
   location: DocumentLocation;
-  definition: HasLocation;
+  definition: LightweightDefinition;
 }
 
 export interface DocumentExploreReference extends DocumentReferenceBase {
   type: 'exploreReference';
-  definition: StructDef;
 }
 
 export interface DocumentJoinReference extends DocumentReferenceBase {
   type: 'joinReference';
-  definition: FieldDef;
 }
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
   type: 'sqlBlockReference';
-  definition: SQLSourceDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {
   type: 'queryReference';
-  definition: Query;
 }
 
 export interface DocumentFieldReference extends DocumentReferenceBase {
   type: 'fieldReference';
-  definition: FieldDef;
 }
 
 export type DocumentReference =
