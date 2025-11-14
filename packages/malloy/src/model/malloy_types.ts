@@ -499,7 +499,18 @@ export interface DocumentLocation {
   range: DocumentRange;
 }
 
-/** Lightweight definition for IDE features - only stores what's needed for hover and go-to-definition */
+/**
+ * Used by the IDE to get information about what a reference refers to. Was once the
+ * entire definition, which created very large model files where the definition
+ * of an object would be repeated N+1 times, where N is the number of references.
+ *
+ * The IDE currently only uses these three fields, so as a stop-gap measure we
+ * create a LightweightDefinition with just these three fields.
+ *
+ * I believe there are future plans for the IDE to need more information about
+ * the references, and in that case, this should include something like an
+ * index or pointer to the full definition elsewhere in the model.
+ */
 export interface LightweightDefinition {
   type: string;
   annotation?: Annotation;
