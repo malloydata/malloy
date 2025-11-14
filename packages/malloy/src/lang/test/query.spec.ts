@@ -2853,4 +2853,9 @@ describe('query:', () => {
       );
     });
   });
+  test('malformed query source does not die with "Unknown Dialect"', () => {
+    expect('source: nsq is a->no_such_query').toLog(
+      errorMessage("'no_such_query' is not defined")
+    );
+  });
 });
