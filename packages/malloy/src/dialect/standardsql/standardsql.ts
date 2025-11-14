@@ -128,15 +128,15 @@ export class StandardSQLDialect extends Dialect {
     return `\`${tablePath}\``;
   }
 
-  // In addition to using "civil" space for units where a query time zone is
-  // set, BigQuery also uses civil space for unit operations not supported
-  // by the TIMESTAMP functions.
-  override needsCivilTimeComputation(
+  needsCivilTimeComputation(
     typeDef: AtomicTypeDef,
     truncateTo: TimestampUnit | undefined,
     offsetUnit: TimestampUnit | undefined,
     qi: QueryInfo
   ): {needed: boolean; tz: string | undefined} {
+    // In addition to using "civil" space for units where a query time zone is
+    // set, BigQuery also uses civil space for unit operations not supported
+    // by the TIMESTAMP functions.
     const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
 
     const isCalendarTruncate =
