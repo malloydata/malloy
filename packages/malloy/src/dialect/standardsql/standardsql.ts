@@ -128,7 +128,9 @@ export class StandardSQLDialect extends Dialect {
     return `\`${tablePath}\``;
   }
 
-  // BigQuery needs UTC default because it uses DATETIME for civil time operations
+  // In addition to using "civil" space for units where a query time zone is
+  // set, BigQuery also uses civil space for unit operations not supported
+  // by the TIMESTAMP functions.
   override needsCivilTimeComputation(
     typeDef: AtomicTypeDef,
     truncateTo: TimestampUnit | undefined,
@@ -146,7 +148,6 @@ export class StandardSQLDialect extends Dialect {
     const needed =
       TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
 
-    // BigQuery defaults to UTC if no timezone specified
     const tz = needed ? qtz(qi) || 'UTC' : undefined;
 
     return {needed, tz};

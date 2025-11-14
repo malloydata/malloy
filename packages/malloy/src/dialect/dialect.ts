@@ -406,11 +406,15 @@ export abstract class Dialect {
   }
 
   /**
-   * Unified function for truncation and/or offset operations.
-   * Optimizes combined operations (e.g., trunc('month', x) - 6 months) by performing
-   * both operations in civil time when needed, avoiding redundant timezone conversions.
+   * Unified function for truncation and/or offset operations. This turns out to
+   * be a very common operation and one which can be optimized by doing it together.
    *
-   * Uses dialect-specific primitives:
+   * Much of the complexity has to do with getting timezone values set up so that
+   * they will truncate/offset in the query timezone instead of UTC.
+   *
+   * The intention is that this implementation will work for all dialects, and all
+   * the dialect peculiarities are handled with the new primitives introduced to
+   * support this function:
    * - needsCivilTimeComputation: Determines if operation needs civil time
    * - sqlConvertToCivilTime/sqlConvertFromCivilTime: Timezone conversion
    * - sqlTruncate: Truncation operation

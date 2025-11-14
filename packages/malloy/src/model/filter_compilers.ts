@@ -794,7 +794,7 @@ export class TemporalFilterCompiler {
       unit: 'day',
     });
 
-    // Build AST node for begin (truncate now to day, then add offset)
+    // Build an Expr node for begin (truncate now to day, then add offset)
     const truncatedNow: TimeTruncExpr = {node: 'trunc', e: now, units: 'day'};
     const beginNode: TimeDeltaExpr = {
       node: 'delta',

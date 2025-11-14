@@ -412,12 +412,10 @@ ${indent(sql)}
   WITHIN`.split(/\s/);
 
   sqlConvertToCivilTime(expr: string, timezone: string): string {
-    // AT TIME ZONE converts TIMESTAMP to TIMESTAMPTZ in the specified timezone
     return `${expr} AT TIME ZONE '${timezone}'`;
   }
 
   sqlConvertFromCivilTime(expr: string, _timezone: string): string {
-    // Use at_timezone to convert TIMESTAMPTZ to UTC, then cast to plain TIMESTAMP
     return `CAST(at_timezone(${expr}, 'UTC') AS TIMESTAMP)`;
   }
 
@@ -688,14 +686,12 @@ export class PrestoDialect extends TrinoDialect {
     }
     const tz = lit.timezone || qtz(qi);
     if (tz) {
-      // Presto: Create TIMESTAMPTZ literal, convert to UTC, cast to TIMESTAMP
       return `CAST(TIMESTAMP '${lit.literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
     }
     return `TIMESTAMP '${lit.literal}'`;
   }
 
   sqlConvertFromCivilTime(expr: string, _timezone: string): string {
-    // Presto: Use AT TIME ZONE operator instead of at_timezone function
     return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;
   }
 
