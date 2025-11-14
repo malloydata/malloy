@@ -14,7 +14,6 @@ import type {
   Moment,
   TemporalFilter,
   TemporalLiteral,
-  TemporalUnit,
 } from '@malloydata/malloy-filter';
 import {
   isNumberFilter,
@@ -435,19 +434,38 @@ export class TemporalFilterCompiler {
       }
       case 'for': {
         const start = this.moment(tc.begin);
-        const end = this.delta(start.begin, '+', tc.n, tc.units);
-        return this.isIn(tc.not, start.begin.sql, end.sql);
+        // start.begin could be any moment (literal, "last monday", etc.)
+        // so we can't optimize through its already-generated SQL
+        const endSql = this.d.sqlTruncAndOffset(
+          mkTemporal(start.begin, 'timestamp'),
+          this.qi,
+          undefined,
+          {
+            op: '+',
+            magnitude: tc.n,
+            unit: tc.units,
+          }
+        );
+        return this.isIn(tc.not, start.begin.sql, endSql);
       }
       case 'in_last': {
         // last N units means "N - 1 UNITS AGO FOR N UNITS"
         const back = Number(tc.n) - 1;
-        const thisUnit = this.nowDot(tc.units);
+        const now = this.nowExpr();
         const start =
           back > 0
-            ? this.delta(thisUnit, '-', back.toString(), tc.units)
-            : thisUnit;
-        const end = this.delta(thisUnit, '+', '1', tc.units);
-        return this.isIn(tc.not, start.sql, end.sql);
+            ? this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+                op: '-',
+                magnitude: back.toString(),
+                unit: tc.units,
+              })
+            : this.d.sqlTruncAndOffset(now, this.qi, tc.units);
+        const end = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '+',
+          magnitude: '1',
+          unit: tc.units,
+        });
+        return this.isIn(tc.not, start, end);
       }
       case 'to': {
         const firstMoment = this.moment(tc.fromMoment);
@@ -455,20 +473,28 @@ export class TemporalFilterCompiler {
         return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.begin.sql);
       }
       case 'last': {
-        const thisUnit = this.nowDot(tc.units);
-        const start = this.delta(thisUnit, '-', tc.n, tc.units);
-        return this.isIn(tc.not, start.sql, thisUnit.sql);
+        const now = this.nowExpr();
+        const start = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '-',
+          magnitude: tc.n,
+          unit: tc.units,
+        });
+        const end = this.d.sqlTruncAndOffset(now, this.qi, tc.units);
+        return this.isIn(tc.not, start, end);
       }
       case 'next': {
-        const thisUnit = this.nowDot(tc.units);
-        const start = this.delta(thisUnit, '+', '1', tc.units);
-        const end = this.delta(
-          thisUnit,
-          '+',
-          (Number(tc.n) + 1).toString(),
-          tc.units
-        );
-        return this.isIn(tc.not, start.sql, end.sql);
+        const now = this.nowExpr();
+        const start = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '+',
+          magnitude: '1',
+          unit: tc.units,
+        });
+        const end = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '+',
+          magnitude: (Number(tc.n) + 1).toString(),
+          unit: tc.units,
+        });
+        return this.isIn(tc.not, start, end);
       }
       case 'null':
         return tc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
@@ -579,24 +605,6 @@ export class TemporalFilterCompiler {
     return {node: 'numberLiteral', literal, sql: literal};
   }
 
-  private delta(
-    from: Expr,
-    op: '+' | '-',
-    n: string,
-    units: TemporalUnit
-  ): Translated<TimeDeltaExpr> {
-    const ret: TimeDeltaExpr = {
-      node: 'delta',
-      op,
-      units,
-      kids: {
-        base: mkTemporal(from, 'timestamp'),
-        delta: this.n(n),
-      },
-    };
-    return {...ret, sql: this.d.sqlAlterTimeExpr(ret)};
-  }
-
   private dayofWeek(e: Expr): Translated<TimeExtractExpr> {
     const t: TimeExtractExpr = {
       node: 'extract',
@@ -606,32 +614,54 @@ export class TemporalFilterCompiler {
     return {...t, sql: this.d.sqlTimeExtractExpr(this.qi, t)};
   }
 
-  private nowDot(units: TimestampUnit): Translated<TimeTruncExpr> {
-    const nowTruncExpr: TimeTruncExpr = {
-      node: 'trunc',
-      e: this.nowExpr(),
-      units,
-    };
-    return {...nowTruncExpr, sql: this.d.sqlTruncExpr(this.qi, nowTruncExpr)};
-  }
-
   private thisUnit(units: TimestampUnit): MomentIs {
-    const thisUnit = this.nowDot(units);
-    const nextUnit = this.delta(thisUnit, '+', '1', units);
-    return {begin: thisUnit, end: nextUnit.sql};
+    const now = this.nowExpr();
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, units);
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '+',
+      magnitude: '1',
+      unit: units,
+    });
+    const beginNode: TimeTruncExpr = {node: 'trunc', e: now, units};
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 
   private lastUnit(units: TimestampUnit): MomentIs {
-    const thisUnit = this.nowDot(units);
-    const lastUnit = this.delta(thisUnit, '-', '1', units);
-    return {begin: lastUnit, end: thisUnit.sql};
+    const now = this.nowExpr();
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '-',
+      magnitude: '1',
+      unit: units,
+    });
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, units);
+    const beginNode: TimeDeltaExpr = {
+      node: 'delta',
+      op: '-',
+      units,
+      kids: {base: now, delta: this.n('1')},
+    };
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 
   private nextUnit(units: TimestampUnit): MomentIs {
-    const thisUnit = this.nowDot(units);
-    const nextUnit = this.delta(thisUnit, '+', '1', units);
-    const next2Unit = this.delta(thisUnit, '+', '2', units);
-    return {begin: nextUnit, end: next2Unit.sql};
+    const now = this.nowExpr();
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '+',
+      magnitude: '1',
+      unit: units,
+    });
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '+',
+      magnitude: '2',
+      unit: units,
+    });
+    const beginNode: TimeDeltaExpr = {
+      node: 'delta',
+      op: '+',
+      units,
+      kids: {base: now, delta: this.n('1')},
+    };
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 
   mod7(n: string): string {
@@ -648,24 +678,36 @@ export class TemporalFilterCompiler {
         return this.expandLiteral(m);
       case 'ago':
       case 'from_now': {
-        const nowTruncExpr = this.nowDot(m.units);
-        const nowTrunc = mkTemporal(nowTruncExpr, 'timestamp');
-        const beginExpr = this.delta(
-          nowTrunc,
-          m.moment === 'ago' ? '-' : '+',
-          m.n,
-          m.units
-        );
-        // Now the end is one unit after that .. either n-1 units ago or n+1 units from now
-        if (m.moment === 'ago' && m.n === '1') {
-          return {begin: beginExpr, end: nowTruncExpr.sql};
-        }
-        const oneDifferent = Number(m.n) + (m.moment === 'ago' ? -1 : 1);
-        const endExpr = {
-          ...beginExpr,
-          kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},
+        const now = this.nowExpr();
+        const op = m.moment === 'ago' ? '-' : '+';
+        const beginSql = this.d.sqlTruncAndOffset(now, this.qi, m.units, {
+          op,
+          magnitude: m.n,
+          unit: m.units,
+        });
+        const beginNode: TimeDeltaExpr = {
+          node: 'delta',
+          op,
+          units: m.units,
+          kids: {base: now, delta: this.n(m.n)},
         };
-        return {begin: beginExpr, end: this.d.sqlAlterTimeExpr(endExpr)};
+
+        // Now the end is one unit after that .. either n-1 units ago or n+1 units from now
+        let endSql: string;
+        if (m.moment === 'ago' && m.n === '1') {
+          endSql = this.d.sqlTruncAndOffset(now, this.qi, m.units);
+        } else {
+          const oneDifferent = Number(m.n) + (m.moment === 'ago' ? -1 : 1);
+          endSql = this.d.sqlTruncAndOffset(now, this.qi, m.units, {
+            op,
+            magnitude: oneDifferent.toString(),
+            unit: m.units,
+          });
+        }
+        return {
+          begin: {...beginNode, sql: beginSql},
+          end: endSql,
+        };
       }
       case 'today':
         return this.thisUnit('day');
@@ -716,7 +758,7 @@ export class TemporalFilterCompiler {
   ): MomentIs {
     const direction = which || 'last';
     const dow = this.dayofWeek(this.nowExpr());
-    const todayBegin = this.thisUnit('day').begin;
+    const now = this.nowExpr();
 
     // destDay comes in as 1-7 (Malloy format), convert to 0-6
     const destDayZeroBased = destDay - 1;
@@ -740,19 +782,30 @@ export class TemporalFilterCompiler {
       endOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}`;
     }
 
-    const begin = this.delta(
-      todayBegin,
-      direction === 'next' ? '+' : '-',
-      beginOffset,
-      'day'
-    );
-    const end = this.delta(
-      todayBegin,
-      direction === 'next' ? '+' : '-',
-      endOffset,
-      'day'
-    );
+    const op = direction === 'next' ? '+' : '-';
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, 'day', {
+      op,
+      magnitude: beginOffset,
+      unit: 'day',
+    });
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, 'day', {
+      op,
+      magnitude: endOffset,
+      unit: 'day',
+    });
 
-    return {begin, end: end.sql};
+    // Build an Expr node for begin (truncate now to day, then add offset)
+    const truncatedNow: TimeTruncExpr = {node: 'trunc', e: now, units: 'day'};
+    const beginNode: TimeDeltaExpr = {
+      node: 'delta',
+      op,
+      units: 'day',
+      kids: {
+        base: mkTemporal(truncatedNow, 'timestamp'),
+        delta: this.n(beginOffset),
+      },
+    };
+
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 }

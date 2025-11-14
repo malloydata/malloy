@@ -235,7 +235,7 @@ export interface NowNode extends ExprLeaf {
   typeDef: {type: 'timestamp'};
 }
 
-interface HasTimeValue {
+export interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
 export type TimeExpr = Expr & HasTimeValue;

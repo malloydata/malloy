@@ -1091,6 +1091,25 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           }
         `).malloyResultMatches(exactTimeModel, {n: 'exact'});
       });
+      test.when(tzTesting)(
+        'month offsets cross DST boundary in query time zone',
+        async () => {
+          // November 15, 2024 - Dublin is UTC+0 (no DST)
+          nowIs('2024-11-15 12:00:00', 'Europe/Dublin');
+
+          // 2 months ago = September 2024 - Dublin is UTC+1 (DST)
+          // The month arithmetic must happen in Dublin civil time
+          // September 1 00:00:00 Dublin = August 31 23:00:00 UTC (due to DST offset)
+          // October 1 00:00:00 Dublin = September 30 23:00:00 UTC
+          const rangeQuery = mkRangeQuery(
+            "f'2 months ago'",
+            '2024-09-01 00:00:00', // Interpreted as Dublin time
+            '2024-10-01 00:00:00', // Interpreted as Dublin time
+            'Europe/Dublin'
+          );
+          await expect(rangeQuery).malloyResultMatches(db, inRange);
+        }
+      );
     });
   });
 });
