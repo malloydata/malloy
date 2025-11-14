@@ -1843,7 +1843,7 @@ export const TD = {
   isSQL: (td: UTD): td is NativeUnsupportedTypeDef => td?.type === 'sql native',
   isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
   isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
-  isTemporal(td: UTD): td is TimestampTypeDef {
+  isTemporal(td: UTD): td is TemporalTypeDef {
     const typ = td?.type ?? '';
     return isTemporalType(typ);
   },

@@ -103,7 +103,11 @@ export abstract class TimeLiteral extends ExpressionDef {
       literal: val,
       typeDef:
         typ === 'timestamp'
-          ? {type: typ, timeframe: units}
+          ? {
+              type: typ,
+              timeframe: units,
+              ...(this.timeZone ? {offset: true} : {}),
+            }
           : {
               type: typ,
               timeframe:

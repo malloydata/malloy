@@ -622,7 +622,19 @@ ${indent(sql)}
     // Only do timezone conversion for timestamps, not dates
     if (TD.isTimestamp(df.e.typeDef)) {
       const tz = qtz(qi);
-      if (tz) {
+
+      // Check if this is an offset timestamp
+      if (df.e.typeDef.offset) {
+        // Offset timestamps truncate in their embedded timezone, NOT query timezone
+        // They're already TIMESTAMP WITH TIME ZONE, so just truncate directly
+        let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
+        if (week) {
+          result = `(${result} - INTERVAL '1' DAY)`;
+        }
+        // Result is still TIMESTAMP WITH TIME ZONE, which is what we want
+        return result;
+      } else if (tz) {
+        // Plain timestamp with query timezone: do the full conversion
         // Step 1: Convert plain TIMESTAMP to TIMESTAMP WITH TIME ZONE in UTC
         // with_timezone() attaches a timezone to a plain timestamp, saying "this civil time is in this zone"
         const tsWithUtc = `with_timezone(${truncThis}, 'UTC')`;
@@ -661,9 +673,11 @@ ${indent(sql)}
     let extractFrom = from.e.sql || '';
     if (TD.isTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
-      if (tz) {
+      // Only apply query timezone to plain timestamps, not offset timestamps
+      if (tz && !from.e.typeDef.offset) {
         extractFrom = `at_timezone(${extractFrom},'${tz}')`;
       }
+      // Offset timestamps already have timezone info, extract directly
     }
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;

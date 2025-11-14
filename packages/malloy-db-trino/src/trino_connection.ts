@@ -56,6 +56,7 @@ import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
 import type {ConnectionOptions} from 'trino-client';
 import {Trino, BasicAuth} from 'trino-client';
+import {DateTime as LuxonDateTime} from 'luxon';
 
 export interface TrinoManagerOptions {
   credentials?: {
@@ -316,6 +317,20 @@ export abstract class TrinoPrestoConnection
       return Number(rawRow);
     } else if (colSchema.type === 'timestamp' && typeof rawRow === 'string') {
       // timestamps come back as strings
+      if (colSchema.offset) {
+        // TIMESTAMP WITH TIME ZONE format: "2020-02-20 00:00:00 America/Mexico_City"
+        const trinoTzPattern = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
+        const match = (rawRow as string).match(trinoTzPattern);
+        if (match) {
+          const [, dateTimePart, tzName] = match;
+          // Use Luxon to parse with timezone awareness
+          const dt = LuxonDateTime.fromSQL(dateTimePart, {zone: tzName});
+          if (dt.isValid) {
+            return dt.toJSDate();
+          }
+        }
+      }
+      // For plain timestamps or fallback, use standard Date parsing
       return new Date(rawRow as string);
     } else {
       return rawRow as QueryValue;

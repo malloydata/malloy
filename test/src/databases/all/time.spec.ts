@@ -631,9 +631,7 @@ const utc_2020 = LuxonDateTime.fromObject(
 );
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )(`${dbName} - default timezone is UTC`, async () => {
+  test(`${dbName} - default timezone is UTC`, async () => {
     // this makes sure that the tests which use the test timezome are actually
     // testing something ... file this under "abundance of caution". It
     // really tests nothing, but I feel calmer with this here.
@@ -650,9 +648,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     expect(have.valueOf()).toEqual(utc_2020.valueOf());
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('literal with zone name', async () => {
+  test('literal with zone name', async () => {
     const query = runtime.loadQuery(
       `
         run: ${dbName}.sql("SELECT 1 as one") -> {
@@ -669,9 +665,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   const q = runtime.getQuoter();
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('literal timestamps', async () => {
+  test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
         run: ${dbName}.sql("SELECT 1 as one") -> {
@@ -714,9 +708,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     }
   );
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('truncate week', async () => {
+  test('truncate week', async () => {
     // the 19th in mexico is a wednesday, so trunc to the 15th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
     // Find the sunday before then
@@ -730,9 +722,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_week: mex_sunday.toJSDate()});
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('cast timestamp to date', async () => {
+  test('cast timestamp to date', async () => {
     // At midnight in london it is the 19th in Mexico, so when we cast that
     // to a date, it should be the 19th.
     await expect(
@@ -744,9 +734,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_day: 19});
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('cast date to timestamp', async () => {
+  test('cast date to timestamp', async () => {
     await expect(
       `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
         timezone: '${zone}'
