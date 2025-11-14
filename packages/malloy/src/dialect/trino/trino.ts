@@ -26,13 +26,11 @@ import type {
   Expr,
   Sampling,
   AtomicTypeDef,
-  TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
   TimeLiteralNode,
   TimeExtractExpr,
-  TimeTruncExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -410,21 +408,52 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `${n}*3`;
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    return `${expr} AT TIME ZONE '${timezone}'`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, _timezone: string): string {
+    return `CAST(at_timezone(${expr}, 'UTC') AS TIMESTAMP)`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Trino starts weeks on Monday, Malloy wants Sunday
+    // Add 1 day before truncating, subtract 1 day after
+    if (unit === 'week') {
+      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
     }
-    if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `${n}*7`;
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Convert quarter/week to supported units
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'quarter') {
+      offsetUnit = 'month';
+      offsetMag = `${magnitude}*3`;
+    } else if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `${magnitude}*7`;
     }
-    if (df.op === '-') {
-      n = `(${n})*-1`;
-    }
-    return `DATE_ADD('${timeframe}', ${n}, ${df.kids.base.sql})`;
+
+    // Handle subtraction by negating
+    const n = op === '-' ? `(${offsetMag})*-1` : offsetMag;
+    return `DATE_ADD('${offsetUnit}', ${n}, ${expr})`;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
@@ -609,63 +638,10 @@ ${indent(sql)}
     }
     const tz = lit.timezone || qtz(qi);
     if (tz) {
-      return `TIMESTAMP '${lit.literal} ${tz}'`;
+      // Interpret wall clock time in timezone, convert to UTC wall clock, cast to TIMESTAMP
+      return `CAST(at_timezone(with_timezone(TIMESTAMP '${lit.literal}', '${tz}'), 'UTC') AS TIMESTAMP)`;
     }
     return `TIMESTAMP '${lit.literal}'`;
-  }
-
-  sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
-    // adjusting for monday/sunday weeks
-    const week = df.units === 'week';
-    const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
-
-    // Only do timezone conversion for timestamps, not dates
-    if (TD.isTimestamp(df.e.typeDef)) {
-      const tz = qtz(qi);
-
-      // Check if this is an offset timestamp
-      if (df.e.typeDef.offset) {
-        // Offset timestamps truncate in their embedded timezone, NOT query timezone
-        // They're already TIMESTAMP WITH TIME ZONE, so just truncate directly
-        let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
-        if (week) {
-          result = `(${result} - INTERVAL '1' DAY)`;
-        }
-        // Result is still TIMESTAMP WITH TIME ZONE, which is what we want
-        return result;
-      } else if (tz) {
-        // Plain timestamp with query timezone: do the full conversion
-        // Step 1: Convert plain TIMESTAMP to TIMESTAMP WITH TIME ZONE in UTC
-        // with_timezone() attaches a timezone to a plain timestamp, saying "this civil time is in this zone"
-        const tsWithUtc = `with_timezone(${truncThis}, 'UTC')`;
-
-        // Step 2: Convert to the query timezone
-        // at_timezone() converts a TIMESTAMP WITH TIME ZONE to a different timezone
-        // This preserves the instant in time but changes the display (civil time)
-        const inQueryTz = `at_timezone(${tsWithUtc}, '${tz}')`;
-
-        // Step 3: Truncate in the query timezone's civil time
-        let civilTrunc = `DATE_TRUNC('${df.units}', ${inQueryTz})`;
-        if (week) {
-          civilTrunc = `(${civilTrunc} - INTERVAL '1' DAY)`;
-        }
-
-        // Step 4: Convert back to UTC to preserve the instant in time
-        // This ensures when we return to JavaScript/Malloy, the UTC instant is correct
-        const backToUtc = `at_timezone(${civilTrunc}, 'UTC')`;
-
-        // Step 5: Cast to plain TIMESTAMP for return
-        // The civil time in this TIMESTAMP will be the UTC representation of the instant
-        return `CAST(${backToUtc} AS TIMESTAMP)`;
-      }
-    }
-
-    // For dates (civil time) or timestamps without query timezone
-    let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
-    if (week) {
-      result = `(${result} - INTERVAL '1' DAY)`;
-    }
-    return result;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
@@ -705,6 +681,21 @@ export class PrestoDialect extends TrinoDialect {
 
   sqlGenerateUUID(): string {
     return 'CAST(UUID() AS VARCHAR)';
+  }
+
+  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
+    if (TD.isDate(lit.typeDef)) {
+      return `DATE '${lit.literal}'`;
+    }
+    const tz = lit.timezone || qtz(qi);
+    if (tz) {
+      return `CAST(TIMESTAMP '${lit.literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+    }
+    return `TIMESTAMP '${lit.literal}'`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, _timezone: string): string {
+    return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;
   }
 
   sqlUnnestAlias(

@@ -187,7 +187,11 @@ export class StaticSpace implements FieldSpace {
             found instanceof StructSpaceFieldBase
               ? 'joinReference'
               : 'fieldReference',
-          definition,
+          definition: {
+            type: definition.type,
+            annotation: definition.annotation,
+            location: definition.location,
+          },
           location: head.location,
           text: head.refString,
         });

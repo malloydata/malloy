@@ -42,10 +42,11 @@ describe('BigQuery double truncation', () => {
         }
       `;
       const result = await runtime.loadQuery(src).run();
-      const truncs = (result.sql.match(/TIMESTAMP_TRUNC/gi) || []).length;
-      if (truncs !== 1) {
-        fail(`Expected 1 TIMESTAMP_TRUNC, got ${truncs}\n${result.sql}`);
-      }
+      // Check for either TIMESTAMP_TRUNC or DATETIME_TRUNC (civil time path)
+      const truncs = (
+        result.sql.match(/(TIMESTAMP_TRUNC|DATETIME_TRUNC)/gi) || []
+      ).length;
+      expect(truncs).toBe(1);
     }
   });
 });

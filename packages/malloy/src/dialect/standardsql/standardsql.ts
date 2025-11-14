@@ -25,9 +25,7 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeTruncExpr,
   TimeExtractExpr,
-  TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
   TimeLiteralNode,
@@ -35,6 +33,7 @@ import type {
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
+  TimestampUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -59,10 +58,6 @@ function timestampMeasureable(units: string): boolean {
     'hour',
     'day',
   ].includes(units);
-}
-
-function dateMeasureable(units: string): boolean {
-  return ['day', 'week', 'month', 'quarter', 'year'].includes(units);
 }
 
 const extractMap: Record<string, string> = {
@@ -131,6 +126,31 @@ export class StandardSQLDialect extends Dialect {
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
+  }
+
+  needsCivilTimeComputation(
+    typeDef: AtomicTypeDef,
+    truncateTo: TimestampUnit | undefined,
+    offsetUnit: TimestampUnit | undefined,
+    qi: QueryInfo
+  ): {needed: boolean; tz: string | undefined} {
+    // In addition to using "civil" space for units where a query time zone is
+    // set, BigQuery also uses civil space for unit operations not supported
+    // by the TIMESTAMP functions.
+    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
+
+    const isCalendarTruncate =
+      truncateTo !== undefined && calendarUnits.includes(truncateTo);
+
+    const isCalendarOffset =
+      offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
+
+    const needed =
+      TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
+
+    const tz = needed ? qtz(qi) || 'UTC' : undefined;
+
+    return {needed, tz};
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -285,18 +305,6 @@ ${indent(sql)}
     return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
-    const tz = qtz(qi);
-    const tzAdd = tz ? `, "${tz}"` : '';
-    if (TD.isDate(trunc.e.typeDef)) {
-      if (dateMeasureable(trunc.units)) {
-        return `DATE_TRUNC(${trunc.e.sql},${trunc.units})`;
-      }
-      return `TIMESTAMP(${trunc.e.sql}${tzAdd})`;
-    }
-    return `TIMESTAMP_TRUNC(${trunc.e.sql},${trunc.units}${tzAdd})`;
-  }
-
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const extractTo = extractMap[te.units] || te.units;
     const tz = TD.isTimestamp(te.e.typeDef) && qtz(qi);
@@ -304,27 +312,61 @@ ${indent(sql)}
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    const from = df.kids.base;
-    let dataType: string = from?.typeDef.type;
-    let sql = from.sql;
-    if (df.units !== 'day' && timestampMeasureable(df.units)) {
-      // The units must be done in timestamp, no matter the input type
-      if (dataType !== 'timestamp') {
-        sql = `TIMESTAMP(${sql})`;
-        dataType = 'timestamp';
-      }
-    } else if (dataType === 'timestamp') {
-      sql = `DATETIME(${sql})`;
-      dataType = 'datetime';
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    return `DATETIME(${expr}, '${timezone}')`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    return `TIMESTAMP(${expr}, '${timezone}')`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
+  ): string {
+    if (inCivilTime) {
+      // Operating on DATETIME (civil time)
+      return `DATETIME_TRUNC(${expr}, ${unit})`;
     }
-    const funcTail = df.op === '+' ? '_ADD' : '_SUB';
-    const funcName = `${dataType.toUpperCase()}${funcTail}`;
-    const newTime = `${funcName}(${sql}, INTERVAL ${df.kids.delta.sql} ${df.units})`;
-    if (dataType === from.typeDef.type) {
-      return newTime;
+
+    // Operating on DATE or TIMESTAMP
+    if (TD.isDate(typeDef)) {
+      return `DATE_TRUNC(${expr}, ${unit})`;
     }
-    return `${from.typeDef.type.toUpperCase()}(${newTime})`;
+
+    // TIMESTAMP truncation with optional timezone
+    const tzParam = timezone ? `, '${timezone}'` : '';
+    return `TIMESTAMP_TRUNC(${expr}, ${unit}${tzParam})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    if (inCivilTime) {
+      // Operating on DATETIME (civil time)
+      const funcName = op === '+' ? 'DATETIME_ADD' : 'DATETIME_SUB';
+      return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
+    }
+
+    // Operating on DATE or TIMESTAMP
+    const baseType = typeDef.type;
+    if (baseType === 'date') {
+      const funcName = op === '+' ? 'DATE_ADD' : 'DATE_SUB';
+      return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
+    }
+
+    // TIMESTAMP with sub-day units only (calendar units go through civil time)
+    const funcName = op === '+' ? 'TIMESTAMP_ADD' : 'TIMESTAMP_SUB';
+    return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
   }
 
   ignoreInProject(fieldName: string): boolean {

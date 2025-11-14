@@ -102,7 +102,7 @@ class PrestoRunner implements BaseRunner {
       host: config.server,
       port: config.port,
       schema: config.schema,
-      timezone: 'America/Costa_Rica',
+      timezone: 'UTC',
       user: config.user || 'anyone',
       extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
     };

@@ -25,13 +25,13 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
   TimeExtractExpr,
+  TimestampUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -278,18 +278,53 @@ export class PostgresDialect extends PostgresBase {
     throw new Error('Not implemented Yet');
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `${n}*3`;
-    } else if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `${n}*7`;
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    return `(${expr})::TIMESTAMPTZ AT TIME ZONE '${timezone}'`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // PostgreSQL starts weeks on Monday, Malloy wants Sunday
+    // Add 1 day before truncating, subtract 1 day after
+    if (unit === 'week') {
+      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
     }
-    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>(${n})::integer)`;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Convert quarter/week to supported units
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'quarter') {
+      offsetUnit = 'month';
+      offsetMag = `(${magnitude})*3`;
+    } else if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `(${magnitude})*7`;
+    }
+
+    // Map to make_interval parameter name
+    const intervalParam = pgMakeIntervalMap[offsetUnit];
+    const interval = `make_interval(${intervalParam}=>(${offsetMag})::integer)`;
+    return `(${expr} ${op} ${interval})`;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
