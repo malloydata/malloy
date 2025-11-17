@@ -24,12 +24,12 @@
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
   OrderBy,
+  TimestampUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -413,18 +413,48 @@ export class DuckDBDialect extends PostgresBase {
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `${n}*3`;
-    } else if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `${n}*7`;
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    return `(${expr})::TIMESTAMPTZ AT TIME ZONE '${timezone}'`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // DuckDB starts weeks on Monday, Malloy wants Sunday
+    // Add 1 day before truncating, subtract 1 day after
+    if (unit === 'week') {
+      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
     }
-    const interval = `INTERVAL (${n}) ${timeframe}`;
-    return `${df.kids.base.sql} ${df.op} ${interval}`;
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // DuckDB doesn't support INTERVAL '1' WEEK, convert to days
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `(${magnitude})*7`;
+    }
+
+    const interval = `INTERVAL (${offsetMag}) ${offsetUnit}`;
+    return `(${expr} ${op} ${interval})`;
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {

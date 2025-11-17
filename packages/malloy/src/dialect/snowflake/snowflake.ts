@@ -25,9 +25,7 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeTruncExpr,
   TimeExtractExpr,
-  TimeDeltaExpr,
   TypecastExpr,
   TimeLiteralNode,
   MeasureTimeExpr,
@@ -317,13 +315,41 @@ ${indent(sql)}
 `;
   }
 
-  sqlTruncExpr(qi: QueryInfo, te: TimeTruncExpr): string {
-    const tz = qtz(qi);
-    let truncThis = te.e.sql;
-    if (tz && TD.isTimestamp(te.e.typeDef)) {
-      truncThis = `CONVERT_TIMEZONE('${tz}',${truncThis})`;
-    }
-    return `DATE_TRUNC('${te.units}',${truncThis})`;
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    // 3-arg form: explicitly convert from UTC to specified timezone
+    return `CONVERT_TIMEZONE('UTC', '${timezone}', ${expr})`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    // After civil time operations, we have a TIMESTAMP_NTZ in the target timezone
+    // Convert from timezone to UTC, returning TIMESTAMP_NTZ
+    return `CONVERT_TIMEZONE('${timezone}', 'UTC', (${expr})::TIMESTAMP_NTZ)`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Snowflake session is configured with WEEK_START=7 (Sunday)
+    // so DATE_TRUNC already truncates to Sunday - no adjustment needed
+    return `DATE_TRUNC('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: string,
+    typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    const funcName = typeDef.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
+    const n = op === '+' ? magnitude : `-(${magnitude})`;
+    return `${funcName}(${unit}, ${n}, ${expr})`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
@@ -335,12 +361,6 @@ ${indent(sql)}
       extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
     }
     return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
-  }
-
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    const add = df.typeDef?.type === 'date' ? 'DATEADD' : 'TIMESTAMPADD';
-    const n = df.op === '+' ? df.kids.delta.sql : `-(${df.kids.delta.sql})`;
-    return `${add}(${df.units},${n},${df.kids.base.sql})`;
   }
 
   private atTz(sqlExpr: string, tz: string | undefined): string {
@@ -392,21 +412,19 @@ ${indent(sql)}
   }
 
   sqlLiteralTime(qi: QueryInfo, lf: TimeLiteralNode): string {
-    const tz = qtz(qi);
-    // just making it explicit that timestring does not have timezone info
-    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
-    // now do the hack to add timezone to a timestamp ntz
-    const targetTimeZone = lf.timezone ?? tz;
-    if (targetTimeZone) {
-      const targetTimeZoneSuffix = `TO_CHAR(CONVERT_TIMEZONE('${targetTimeZone}', '1970-01-01 00:00:00'), 'TZHTZM')`;
-      const retTimeString = `TO_CHAR(${ret}, 'YYYY-MM-DD HH24:MI:SS.FF9')`;
-      ret = `${retTimeString} || ${targetTimeZoneSuffix}`;
-      ret = `(${ret})::TIMESTAMP_TZ`;
+    if (TD.isDate(lf.typeDef)) {
+      return `TO_DATE('${lf.literal}')`;
     }
 
-    if (TD.isDate(lf.typeDef)) {
-      return `TO_DATE(${ret})`;
+    const tz = qtz(qi);
+    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
+    const targetTimeZone = lf.timezone ?? tz;
+
+    if (targetTimeZone) {
+      // Interpret the literal as being in targetTimeZone, convert to UTC
+      ret = `CONVERT_TIMEZONE('${targetTimeZone}', 'UTC', ${ret})`;
     }
+
     return ret;
   }
 

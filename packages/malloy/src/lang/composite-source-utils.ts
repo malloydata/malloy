@@ -1240,7 +1240,7 @@ function isSingleValueFilterNode(e: Expr): string[] | undefined {
       if (
         (result.parsed.operator === 'null' && !result.parsed.not) ||
         (result.kind === 'boolean' &&
-          ['false', 'true'].includes(result.parsed.operator) &&
+          ['true', '=false', '=true'].includes(result.parsed.operator) &&
           !result.parsed.not) ||
         (result.kind === 'date' &&
           result.parsed.operator === 'in' &&

@@ -87,45 +87,54 @@ function sqlSumDistinct(
 }
 
 /**
- * Converts an expression to SQL.
- * This function was extracted from QueryField.exprToSQL to break circular dependencies.
+ * Deep copies an expression tree, preserving structure and types.
  */
-export function exprToSQL(
+function deepCopyExpr<T extends Expr>(expr: T): T {
+  if (exprHasE(expr)) {
+    return {...expr, e: deepCopyExpr(expr.e)};
+  } else if (exprHasKids(expr)) {
+    const copiedKids = {};
+    for (const [name, kidExpr] of Object.entries(expr.kids)) {
+      if (kidExpr === null) {
+        copiedKids[name] = null;
+      } else if (Array.isArray(kidExpr)) {
+        copiedKids[name] = kidExpr.map(e => deepCopyExpr(e));
+      } else {
+        copiedKids[name] = deepCopyExpr(kidExpr);
+      }
+    }
+    return {...expr, kids: copiedKids};
+  }
+  return {...expr};
+}
+
+/**
+ * Compiles an expression tree by mutating it in-place to set all .sql fields.
+ * Assumes the expression tree is already a copy that can be mutated.
+ */
+function compileExpr<T extends Expr>(
   resultSet: FieldInstanceResult,
   context: QueryStruct,
-  exprToTranslate: Expr,
-  state: GenerateState = new GenerateState()
-): string {
-  // Wrap non leaf sub expressions in parenthesis
-  const subExpr = function (e: Expr) {
-    const sql = exprToSQL(resultSet, context, e, state);
-    if (exprHasKids(e)) {
-      return `(${sql})`;
-    }
-    return sql;
-  };
-
+  expr: T,
+  state: GenerateState = new GenerateState(),
+  wrap = true
+): T {
   /*
    * Translate the children first, and stash the translation
    * in the nodes themselves, so that if we call into the dialect
    * it will have access to the translated children.
    */
-  let expr = exprToTranslate;
-  if (exprHasE(exprToTranslate)) {
-    expr = {...exprToTranslate};
-    const eSql = subExpr(expr.e);
-    expr.e = {...expr.e, sql: eSql};
-  } else if (exprHasKids(exprToTranslate)) {
-    expr = {...exprToTranslate};
-    const oldKids = exprToTranslate.kids;
-    for (const [name, kidExpr] of Object.entries(oldKids)) {
+  if (exprHasE(expr)) {
+    compileExpr(resultSet, context, expr.e, state);
+  } else if (exprHasKids(expr)) {
+    for (const kidExpr of Object.values(expr.kids)) {
       if (kidExpr === null) continue;
       if (Array.isArray(kidExpr)) {
-        expr.kids[name] = kidExpr.map(e => {
-          return {...e, sql: subExpr(e)};
-        });
+        for (const e of kidExpr) {
+          compileExpr(resultSet, context, e, state);
+        }
       } else {
-        expr.kids[name] = {...oldKids[name], sql: subExpr(kidExpr)};
+        compileExpr(resultSet, context, kidExpr, state);
       }
     }
   }
@@ -136,148 +145,173 @@ export function exprToSQL(
   const qi = resultSet.getQueryInfo();
   const dialectSQL = context.dialect.exprToSQL(qi, expr);
   if (dialectSQL) {
-    return dialectSQL;
+    expr.sql = wrap && exprHasKids(expr) ? `(${dialectSQL})` : dialectSQL;
+    return expr;
   }
 
-  switch (expr.node) {
-    case 'field':
-      return generateFieldFragment(resultSet, context, expr, state);
-    case 'parameter':
-      return generateParameterFragment(resultSet, context, expr, state);
-    case 'filteredExpr':
-      return generateFilterFragment(resultSet, context, expr, state);
-    case 'all':
-    case 'exclude':
-      return generateUngroupedFragment(resultSet, context, expr, state);
-    case 'genericSQLExpr':
-      return Array.from(
-        stringsFromSQLExpression(resultSet, context, expr, state)
-      ).join('');
-    case 'aggregate': {
-      let agg = '';
-      if (expr.function === 'sum') {
-        agg = generateSumFragment(resultSet, context, expr, state);
-      } else if (expr.function === 'avg') {
-        agg = generateAvgFragment(resultSet, context, expr, state);
-      } else if (expr.function === 'count') {
-        agg = generateCountFragment(resultSet, context, expr, state);
-      } else if (
-        expr.function === 'min' ||
-        expr.function === 'max' ||
-        expr.function === 'distinct'
-      ) {
-        agg = generateSymmetricFragment(resultSet, context, expr, state);
-      } else {
-        throw new Error(
-          `Internal Error: Unknown aggregate function ${expr.function}`
-        );
-      }
-      if (resultSet.root().isComplexQuery) {
-        let groupSet = resultSet.groupSet;
-        if (state.totalGroupSet !== -1) {
-          groupSet = state.totalGroupSet;
+  const sql = (() => {
+    switch (expr.node) {
+      case 'field':
+        return generateFieldFragment(resultSet, context, expr, state);
+      case 'parameter':
+        return generateParameterFragment(resultSet, context, expr, state);
+      case 'filteredExpr':
+        return generateFilterFragment(resultSet, context, expr, state);
+      case 'all':
+      case 'exclude':
+        return generateUngroupedFragment(resultSet, context, expr, state);
+      case 'genericSQLExpr':
+        return Array.from(
+          stringsFromSQLExpression(resultSet, context, expr, state)
+        ).join('');
+      case 'aggregate': {
+        let agg = '';
+        if (expr.function === 'sum') {
+          agg = generateSumFragment(resultSet, context, expr, state);
+        } else if (expr.function === 'avg') {
+          agg = generateAvgFragment(resultSet, context, expr, state);
+        } else if (expr.function === 'count') {
+          agg = generateCountFragment(resultSet, context, expr, state);
+        } else if (
+          expr.function === 'min' ||
+          expr.function === 'max' ||
+          expr.function === 'distinct'
+        ) {
+          agg = generateSymmetricFragment(resultSet, context, expr, state);
+        } else {
+          throw new Error(
+            `Internal Error: Unknown aggregate function ${expr.function}`
+          );
         }
-        return caseGroup([groupSet], agg);
+        if (resultSet.root().isComplexQuery) {
+          let groupSet = resultSet.groupSet;
+          if (state.totalGroupSet !== -1) {
+            groupSet = state.totalGroupSet;
+          }
+          return caseGroup([groupSet], agg);
+        }
+        return agg;
       }
-      return agg;
-    }
-    case 'function_parameter':
-      throw new Error(
-        'Internal Error: Function parameter fragment remaining during SQL generation'
-      );
-    case 'outputField':
-      return generateOutputFieldFragment(resultSet, context, expr, state);
-    case 'function_call':
-      return generateFunctionCallExpression(resultSet, context, expr, state);
-    case 'spread':
-      throw new Error(
-        "Internal Error: expandFunctionCall() failed to process node: 'spread'"
-      );
-    case 'source-reference':
-      return generateSourceReference(resultSet, context, expr);
-    case '+':
-    case '-':
-    case '*':
-    case '%':
-    case '/':
-    case '>':
-    case '<':
-    case '>=':
-    case '<=':
-    case '=':
-      return `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
-    // Malloy inequality comparisons always return a boolean
-    case '!=': {
-      const notEqual = `${expr.kids.left.sql}!=${expr.kids.right.sql}`;
-      return `COALESCE(${notEqual},true)`;
-    }
-    case 'and':
-    case 'or':
-      return `${expr.kids.left.sql} ${expr.node} ${expr.kids.right.sql}`;
-    case 'coalesce':
-      return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
-    case 'in': {
-      const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
-      return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
-    }
-    case 'like':
-    case '!like': {
-      const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
-      const compare =
-        expr.kids.right.node === 'stringLiteral'
-          ? context.dialect.sqlLike(
-              likeIt,
-              expr.kids.left.sql ?? '',
-              expr.kids.right.literal
-            )
-          : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
-      return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
-    }
-    case '()':
-      return `(${expr.e.sql})`;
-    case 'not':
-      // Malloy not operator always returns a boolean
-      return `COALESCE(NOT ${expr.e.sql},TRUE)`;
-    case 'unary-':
-      return `-${expr.e.sql}`;
-    case 'is-null':
-      return `${expr.e.sql} IS NULL`;
-    case 'is-not-null':
-      return `${expr.e.sql} IS NOT NULL`;
-    case 'true':
-    case 'false':
-      return expr.node;
-    case 'null':
-      return 'NULL';
-    case 'case':
-      return generateCaseSQL(expr);
-    case '':
-      return '';
-    case 'filterCondition':
-      // our child will be translated at the top of this function
-      if (expr.e.sql) {
-        expr.sql = expr.e.sql;
-        return expr.sql;
+      case 'function_parameter':
+        throw new Error(
+          'Internal Error: Function parameter fragment remaining during SQL generation'
+        );
+      case 'outputField':
+        return generateOutputFieldFragment(resultSet, context, expr, state);
+      case 'function_call':
+        return generateFunctionCallExpression(resultSet, context, expr, state);
+      case 'spread':
+        throw new Error(
+          "Internal Error: expandFunctionCall() failed to process node: 'spread'"
+        );
+      case 'source-reference':
+        return generateSourceReference(resultSet, context, expr);
+      case '+':
+      case '-':
+      case '*':
+      case '%':
+      case '/':
+      case '>':
+      case '<':
+      case '>=':
+      case '<=':
+      case '=':
+        return `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
+      // Malloy inequality comparisons always return a boolean
+      case '!=': {
+        const notEqual = `${expr.kids.left.sql}!=${expr.kids.right.sql}`;
+        return `COALESCE(${notEqual},true)`;
       }
-      return '';
-    case 'functionDefaultOrderBy':
-    case 'functionOrderBy':
-      return '';
-    // TODO: throw an error here; not simple because we call into this
-    // code currently before the composite source is resolved in some cases
-    case 'compositeField':
-      return '{COMPOSITE_FIELD}';
-    case 'filterMatch':
-      return generateAppliedFilter(context, expr, qi);
-    case 'filterLiteral':
-      return 'INTERNAL ERROR FILTER EXPRESSION VALUE SHOULD NOT BE USED';
-    default:
-      throw new Error(
-        `Internal Error: Unknown expression node '${
-          expr.node
-        }' ${JSON.stringify(expr, undefined, 2)}`
-      );
-  }
+      case 'and':
+      case 'or':
+        return `${expr.kids.left.sql} ${expr.node} ${expr.kids.right.sql}`;
+      case 'coalesce':
+        return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
+      case 'in': {
+        const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
+        return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
+      }
+      case 'like':
+      case '!like': {
+        const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
+        const compare =
+          expr.kids.right.node === 'stringLiteral'
+            ? context.dialect.sqlLike(
+                likeIt,
+                expr.kids.left.sql ?? '',
+                expr.kids.right.literal
+              )
+            : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
+        return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
+      }
+      case '()':
+        return `(${expr.e.sql})`;
+      case 'not':
+        // Malloy not operator always returns a boolean
+        return `COALESCE(NOT ${expr.e.sql},TRUE)`;
+      case 'unary-':
+        return `-${expr.e.sql}`;
+      case 'is-null':
+        return `${expr.e.sql} IS NULL`;
+      case 'is-not-null':
+        return `${expr.e.sql} IS NOT NULL`;
+      case 'true':
+      case 'false':
+        return expr.node;
+      case 'null':
+        return 'NULL';
+      case 'case':
+        return generateCaseSQL(expr);
+      case '':
+        return '';
+      case 'filterCondition':
+        // our child will be translated at the top of this function
+        if (expr.e.sql) {
+          expr.sql = expr.e.sql;
+          return expr.sql;
+        }
+        return '';
+      case 'functionDefaultOrderBy':
+      case 'functionOrderBy':
+        return '';
+      // TODO: throw an error here; not simple because we call into this
+      // code currently before the composite source is resolved in some cases
+      case 'compositeField':
+        return '{COMPOSITE_FIELD}';
+      case 'filterMatch':
+        return generateAppliedFilter(context, expr, qi);
+      case 'filterLiteral':
+        return 'INTERNAL ERROR FILTER EXPRESSION VALUE SHOULD NOT BE USED';
+      default:
+        throw new Error(
+          `Internal Error: Unknown expression node '${
+            expr.node
+          }' ${JSON.stringify(expr, undefined, 2)}`
+        );
+    }
+  })();
+
+  expr.sql = wrap && exprHasKids(expr) ? `(${sql})` : sql;
+  return expr;
+}
+
+/**
+ * Converts an expression to SQL.
+ * This function was extracted from QueryField.exprToSQL to break circular dependencies.
+ */
+export function exprToSQL(
+  resultSet: FieldInstanceResult,
+  context: QueryStruct,
+  exprToTranslate: Expr,
+  state: GenerateState = new GenerateState()
+): string {
+  // Make a deep copy that we can mutate during compilation
+  const exprCopy = deepCopyExpr(exprToTranslate);
+
+  // Compile the copy, setting .sql on all nodes
+  const compiled = compileExpr(resultSet, context, exprCopy, state, false);
+
+  return compiled.sql!;
 }
 
 function generateAppliedFilter(

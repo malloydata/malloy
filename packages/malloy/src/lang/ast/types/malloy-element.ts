@@ -143,14 +143,22 @@ export abstract class MalloyElement {
         this.addReference({
           type: 'queryReference',
           text: key,
-          definition: result.entry,
+          definition: {
+            type: result.entry.type,
+            annotation: result.entry.annotation,
+            location: result.entry.location,
+          },
           location: reference.location,
         });
       } else if (result && isSourceDef(result.entry)) {
         this.addReference({
           type: 'exploreReference',
           text: key,
-          definition: result.entry,
+          definition: {
+            type: result.entry.type,
+            annotation: result.entry.annotation,
+            location: result.entry.location,
+          },
           location: reference.location,
         });
       }

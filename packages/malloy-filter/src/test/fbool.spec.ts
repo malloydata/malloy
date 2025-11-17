@@ -64,11 +64,14 @@ describe('boolean filter expressions', () => {
   test('true', () => {
     expect('true').isBooleanFilter({operator: 'true'});
   });
+  test('=true', () => {
+    expect('=true').isBooleanFilter({operator: '=true'});
+  });
   test('false', () => {
-    expect('false').isBooleanFilter({operator: 'false_or_null'});
+    expect('false').isBooleanFilter({operator: 'false'});
   });
   test('=false', () => {
-    expect('=false').isBooleanFilter({operator: 'false'});
+    expect('=false').isBooleanFilter({operator: '=false'});
   });
   test('null', () => {
     expect('null').isBooleanFilter({operator: 'null'});
@@ -77,6 +80,23 @@ describe('boolean filter expressions', () => {
     expect('not null').isBooleanFilter({operator: 'null', not: true});
   });
   test('not false', () => {
-    expect('not false').isBooleanFilter({operator: 'false_or_null', not: true});
+    expect('not false').isBooleanFilter({operator: 'false', not: true});
+  });
+  test('not true', () => {
+    expect('not true').isBooleanFilter({operator: 'true', not: true});
+  });
+  test('not =true', () => {
+    expect('not =true').isBooleanFilter({operator: '=true', not: true});
+  });
+  test('not =false', () => {
+    expect('not =false').isBooleanFilter({operator: '=false', not: true});
+  });
+  test('illegal boolean', () => {
+    const res = BooleanFilterExpression.parse('tru');
+    expect(res.parsed).toBeNull();
+    expect(res.log.length).toBe(1);
+    expect(res.log[0].message).toBe(
+      "Illegal boolean filter 'tru'. Must be one of true,=true,false,=false,null"
+    );
   });
 });

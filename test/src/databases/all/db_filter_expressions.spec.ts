@@ -350,8 +350,23 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
   });
 
-  const testBoolean = db.dialect.booleanType === 'supported';
+  const testBoolean = db.dialect.booleanType !== 'none';
   describe('boolean filter expressions', () => {
+    /*
+     * We have the following truth table for boolean filters.
+     * The default malloy operations treat null as false. The '='
+     * variants exist for cases where that is not desired.
+     *
+     * filter expression | x=true | x=false | x=null
+     * true              |   T    |   F     |   F
+     * not true          |   F    |   T     |   T
+     * =true             |   T    |   F     |   NULL
+     * not =true         |   F    |   T     |   NULL
+     * false             |   F    |   T     |   T
+     * not false         |   T    |   F     |   F
+     * =false            |   F    |   T     |   NULL
+     * not =false        |   T    |   F     |   NULL
+     */
     const facts = db.loadModel(`
       source: facts is ${dbName}.sql("""
         SELECT true as ${q`b`}, 'true' as ${q`t`}
@@ -359,65 +374,111 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
+    const factsSrc =
+      db.dialect.booleanType === 'supported'
+        ? 'facts'
+        : 'facts extend {rename: sqlb is b; dimension: b is sqlb ? pick true when =true pick false when =false else null}';
     test.when(testBoolean)('true', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'tRuE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
+    test.when(testBoolean)('=true', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: b ~ f'=TRUE'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'true'}]);
+    });
+    test.when(testBoolean)('not =true', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: b ~ f'not =true'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'false'}]);
+    });
     test.when(testBoolean)('false', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'FalSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('=false', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'=FALSE'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
     test.when(testBoolean)('null', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'Null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'null'}]);
     });
     test.when(testBoolean)('not null', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f'nOt NuLL'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
     test.when(testBoolean)('not true', async () => {
       await expect(`
-    run: facts -> {
+    run: ${factsSrc} -> {
       where: b ~ f'not true'
       select: t; order_by: t asc
     }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('not false', async () => {
       await expect(`
-    run: facts -> {
+    run: ${factsSrc} -> {
       where: b ~ f'not false'
       select: t; order_by: t asc
     }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('not =false', async () => {
       await expect(`
-    run: facts -> {
+    run: ${factsSrc} -> {
       where: b ~ f'not =false'
       select: t; order_by: t asc
-    }`).malloyResultMatches(facts, [{t: 'null'}, {t: 'true'}]);
+    }`).malloyResultMatches(facts, [{t: 'true'}]);
+    });
+    test.when(testBoolean)('true (non-column)', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: (pick b when 1=1 else false) ~ f'true'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'true'}]);
+    });
+    test.when(testBoolean)('not true (non-column)', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: (pick b when 1=1 else false) ~ f'not true'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+    });
+    test.when(testBoolean)('false (non-column)', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: (pick b when 1=1 else false) ~ f'false'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+    });
+    test.when(testBoolean)('not false (non-column)', async () => {
+      await expect(`
+        run: ${factsSrc} -> {
+          where: (pick b when 1=1 else false) ~ f'not false'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
     test.when(testBoolean)('empty boolean filter', async () => {
       await expect(`
-        run: facts -> {
+        run: ${factsSrc} -> {
           where: b ~ f''
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [
@@ -1030,6 +1091,25 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           }
         `).malloyResultMatches(exactTimeModel, {n: 'exact'});
       });
+      test.when(tzTesting)(
+        'month offsets cross DST boundary in query time zone',
+        async () => {
+          // November 15, 2024 - Dublin is UTC+0 (no DST)
+          nowIs('2024-11-15 12:00:00', 'Europe/Dublin');
+
+          // 2 months ago = September 2024 - Dublin is UTC+1 (DST)
+          // The month arithmetic must happen in Dublin civil time
+          // September 1 00:00:00 Dublin = August 31 23:00:00 UTC (due to DST offset)
+          // October 1 00:00:00 Dublin = September 30 23:00:00 UTC
+          const rangeQuery = mkRangeQuery(
+            "f'2 months ago'",
+            '2024-09-01 00:00:00', // Interpreted as Dublin time
+            '2024-10-01 00:00:00', // Interpreted as Dublin time
+            'Europe/Dublin'
+          );
+          await expect(rangeQuery).malloyResultMatches(db, inRange);
+        }
+      );
     });
   });
 });

@@ -73,7 +73,7 @@ export class ErrorFactory {
   }
 
   static didCreate(s: StructDef | JoinFieldDef): boolean {
-    return s.type === 'table' && 'errorFactory' in s;
+    return 'errorFactory' in s;
   }
 
   static get query(): Query {
