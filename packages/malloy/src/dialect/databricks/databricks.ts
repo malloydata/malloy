@@ -341,24 +341,6 @@ export class DatabricksDialect extends Dialect {
     throw new Error(`Unknown or unhandled databricks time unit: ${df.units}`);
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-
-    // Handle quarter and week conversions
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `(${n}*3)`;
-    } else if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `(${n}*7)`;
-    }
-
-    return `DATEADD(${timeframe}, ${n}${df.op === '+' ? '' : '*-1'}, ${
-      df.kids.base.sql
-    })`;
-  }
-
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     // In Spark SQL, we can use the same functions: concat, md5, substring, conv, etc.
     // Create a distinct key expression by converting the key to a string.
@@ -493,23 +475,6 @@ export class DatabricksDialect extends Dialect {
     return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlTruncExpr(qi: QueryInfo, toTrunc: TimeTruncExpr): string {
-    // adjusting for sunday/monday weeks
-    const week = toTrunc.units === 'week';
-    const truncThis = week ? `DATE_ADD(${toTrunc.e.sql}, 1)` : toTrunc.e.sql;
-    if (TD.isTimestamp(toTrunc.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        return `DATE_TRUNC('${toTrunc.units}', from_utc_timestamp(${truncThis}, '${tz}'))`;
-      }
-    }
-    let result = `DATE_TRUNC('${toTrunc.units}', ${truncThis})`;
-    if (week) {
-      result = `DATE_SUB(${result}, 1)`;
-    }
-    return result;
-  }
-
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     // convert from utc
     // we're probly getting this in utc time, convert to local time
@@ -536,6 +501,62 @@ export class DatabricksDialect extends Dialect {
       return `to_utc_timestamp(timestamp'${lt.literal}', '${tz}')`;
     }
     return `timestamp '${lt.literal}'`;
+  }
+
+  sqlConvertToCivilTime(expr: string, timezone: string): string {
+    return `from_utc_timestamp(${expr}, '${timezone}')`;
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+    return `to_utc_timestamp(${expr}, '${timezone}')`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    if (unit === 'week') {
+      return `(date_trunc('week', ${expr} + INTERVAL 1 DAY) - INTERVAL 1 DAY)`;
+    }
+    return `date_trunc('${unit}', ${expr})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    const sign = op === '-' ? '-' : '+';
+
+    switch (unit) {
+      case 'year':
+        return `add_months(${expr}, ${sign}${magnitude} * 12)`;
+      case 'quarter':
+        return `add_months(${expr}, ${sign}${magnitude} * 3)`;
+      case 'month':
+        return `add_months(${expr}, ${sign}${magnitude})`;
+
+      case 'week':
+        return `${expr} ${sign} INTERVAL ${magnitude} WEEK`;
+      case 'day':
+        return `${expr} ${sign} INTERVAL ${magnitude} DAY`;
+      case 'hour':
+        return `${expr} ${sign} INTERVAL ${magnitude} HOUR`;
+      case 'minute':
+        return `${expr} ${sign} INTERVAL ${magnitude} MINUTE`;
+      case 'second':
+        return `${expr} ${sign} INTERVAL ${magnitude} SECOND`;
+
+      default:
+        throw new Error(`Unsupported offset unit '${unit}'`);
+    }
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
