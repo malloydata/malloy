@@ -447,6 +447,7 @@ struct TimestampLiteral {
   1: required string timestamp_value,
   2: optional TimestampTimeframe granularity,
   3: optional string timezone,
+  4: optional bool offset,
 }
 
 struct NullLiteral {

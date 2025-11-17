@@ -29,9 +29,9 @@ import type {
   TypecastExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
-  TimeLiteralNode,
   TimeExtractExpr,
   BasicAtomicTypeDef,
+  TimestampTypeDef,
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {
@@ -408,11 +408,27 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `${expr} AT TIME ZONE '${timezone}'`;
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // Trino's AT TIME ZONE always produces TIMESTAMP WITH TIME ZONE
+    // Reinterprets the instant in the target timezone
+    return {
+      sql: `${expr} AT TIME ZONE '${timezone}'`,
+      typeDef: {type: 'timestamp', offset: true},
+    };
   }
 
-  sqlConvertFromCivilTime(expr: string, _timezone: string): string {
+  sqlConvertFromCivilTime(
+    expr: string,
+    _timezone: string,
+    destTypeDef: TimestampTypeDef
+  ): string {
+    if (destTypeDef.offset) {
+      return expr;
+    }
     return `CAST(at_timezone(${expr}, 'UTC') AS TIMESTAMP)`;
   }
 
@@ -632,16 +648,30 @@ ${indent(sql)}
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
-    if (TD.isDate(lit.typeDef)) {
-      return `DATE '${lit.literal}'`;
-    }
-    const tz = lit.timezone || qtz(qi);
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
     if (tz) {
       // Interpret wall clock time in timezone, convert to UTC wall clock, cast to TIMESTAMP
-      return `CAST(at_timezone(with_timezone(TIMESTAMP '${lit.literal}', '${tz}'), 'UTC') AS TIMESTAMP)`;
+      return `CAST(at_timezone(with_timezone(TIMESTAMP '${literal}', '${tz}'), 'UTC') AS TIMESTAMP)`;
     }
-    return `TIMESTAMP '${lit.literal}'`;
+    return `TIMESTAMP '${literal}'`;
+  }
+
+  sqlOffsetTimestampLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    // Use with_timezone to create a TIMESTAMP WITH TIME ZONE
+    return `with_timezone(TIMESTAMP '${literal}', '${timezone}')`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
@@ -683,18 +713,38 @@ export class PrestoDialect extends TrinoDialect {
     return 'CAST(UUID() AS VARCHAR)';
   }
 
-  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
-    if (TD.isDate(lit.typeDef)) {
-      return `DATE '${lit.literal}'`;
-    }
-    const tz = lit.timezone || qtz(qi);
-    if (tz) {
-      return `CAST(TIMESTAMP '${lit.literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
-    }
-    return `TIMESTAMP '${lit.literal}'`;
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
   }
 
-  sqlConvertFromCivilTime(expr: string, _timezone: string): string {
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
+    if (tz) {
+      return `CAST(TIMESTAMP '${literal} ${tz}' AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+    }
+    return `TIMESTAMP '${literal}'`;
+  }
+
+  sqlOffsetTimestampLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    return `TIMESTAMP '${literal} ${timezone}'`;
+  }
+
+  sqlConvertFromCivilTime(
+    expr: string,
+    _timezone: string,
+    destTypeDef: TimestampTypeDef
+  ): string {
+    if (destTypeDef.offset) {
+      return expr;
+    }
     return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;
   }
 

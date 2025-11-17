@@ -11,9 +11,8 @@ import type {
   ModelMaterializer,
   QueryMaterializer,
   LogMessage,
-  Dialect,
 } from '@malloydata/malloy';
-import {API, MalloyError} from '@malloydata/malloy';
+import {API, MalloyError, Dialect} from '@malloydata/malloy';
 import type {Tag} from '@malloydata/malloy-tag';
 
 type JestMatcherResult = {
@@ -130,17 +129,9 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
   return lovely;
 }
 
-type TL = 'timeLiteral';
-
 function lit(d: Dialect, t: string, type: 'timestamp' | 'date'): string {
-  const typeDef: {type: 'timestamp' | 'date'} = {type};
-  const timeLiteral: TL = 'timeLiteral';
-  const n = {
-    node: timeLiteral,
-    typeDef,
-    literal: t,
-  };
-  return d.sqlLiteralTime({}, n);
+  const node = Dialect.makeTimeLiteralNode(d, t, undefined, undefined, type);
+  return d.exprToSQL({}, node) || '';
 }
 
 type SQLDataType = 'string' | 'number' | 'timestamp' | 'date' | 'boolean';

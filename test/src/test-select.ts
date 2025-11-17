@@ -265,7 +265,7 @@ export class TestSelect {
 
     return {
       expr: {
-        node: 'timeLiteral',
+        node: 'dateLiteral',
         literal: value,
         typeDef: {type: 'date'},
       },
@@ -294,7 +294,7 @@ export class TestSelect {
 
     return {
       expr: {
-        node: 'timeLiteral',
+        node: 'timestampLiteral',
         literal: value,
         typeDef: {type: 'timestamp'},
       },

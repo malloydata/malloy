@@ -420,29 +420,6 @@ export class DuckDBDialect extends PostgresBase {
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `(${expr})::TIMESTAMPTZ AT TIME ZONE '${timezone}'`;
-  }
-
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
-    return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;
-  }
-
-  sqlTruncate(
-    expr: string,
-    unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
-  ): string {
-    // DuckDB starts weeks on Monday, Malloy wants Sunday
-    // Add 1 day before truncating, subtract 1 day after
-    if (unit === 'week') {
-      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
-    }
-    return `DATE_TRUNC('${unit}', ${expr})`;
-  }
-
   sqlOffsetTime(
     expr: string,
     op: '+' | '-',

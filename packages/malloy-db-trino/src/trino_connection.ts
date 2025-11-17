@@ -319,7 +319,8 @@ export abstract class TrinoPrestoConnection
       // timestamps come back as strings
       if (colSchema.offset) {
         // TIMESTAMP WITH TIME ZONE format: "2020-02-20 00:00:00 America/Mexico_City"
-        const trinoTzPattern = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
+        const trinoTzPattern =
+          /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
         const match = (rawRow as string).match(trinoTzPattern);
         if (match) {
           const [, dateTimePart, tzName] = match;
@@ -330,8 +331,8 @@ export abstract class TrinoPrestoConnection
           }
         }
       }
-      // For plain timestamps or fallback, use standard Date parsing
-      return new Date(rawRow as string);
+      // For plain timestamps, Trino returns UTC values - append 'Z' to parse as UTC
+      return new Date(rawRow + 'Z');
     } else {
       return rawRow as QueryValue;
     }

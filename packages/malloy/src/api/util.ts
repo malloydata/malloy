@@ -13,12 +13,7 @@ import type {
 } from '../connection';
 import type {Result} from '../malloy';
 import type {Expr} from '../model';
-import {
-  isDateUnit,
-  type QueryData,
-  type QueryDataRow,
-  type QueryValue,
-} from '../model';
+import {type QueryData, type QueryDataRow, type QueryValue} from '../model';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
@@ -297,29 +292,27 @@ export function nodeToLiteralValue(
       return {kind: 'boolean_literal', boolean_value: true};
     case 'false':
       return {kind: 'boolean_literal', boolean_value: false};
-    case 'timeLiteral': {
-      if (expr.typeDef.type === 'date') {
-        if (
-          expr.typeDef.timeframe === undefined ||
-          isDateUnit(expr.typeDef.timeframe)
-        ) {
-          return {
-            kind: 'date_literal',
-            date_value: expr.literal,
-            timezone: expr.timezone,
-            granularity: expr.typeDef.timeframe,
-          };
-        }
-        return undefined;
-      } else {
-        return {
-          kind: 'timestamp_literal',
-          timestamp_value: expr.literal,
-          timezone: expr.timezone,
-          granularity: expr.typeDef.timeframe,
-        };
-      }
-    }
+    case 'dateLiteral':
+      return {
+        kind: 'date_literal',
+        date_value: expr.literal,
+        granularity: expr.typeDef.timeframe,
+      };
+    case 'timestampLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: expr.literal,
+        timezone: expr.timezone,
+        granularity: expr.typeDef.timeframe,
+      };
+    case 'offsetTimestampLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: expr.literal,
+        timezone: expr.timezone,
+        granularity: expr.typeDef.timeframe,
+        offset: true,
+      };
     default:
       return undefined;
   }

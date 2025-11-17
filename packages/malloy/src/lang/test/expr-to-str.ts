@@ -39,8 +39,12 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
       return `${e.literal}`;
     case 'stringLiteral':
       return `{"${e.literal}"}`;
-    case 'timeLiteral':
+    case 'dateLiteral':
       return `@${e.literal}`;
+    case 'timestampLiteral':
+      return e.timezone ? `@${e.literal}[${e.timezone}]` : `@${e.literal}`;
+    case 'offsetTimestampLiteral':
+      return `@${e.literal}[${e.timezone}]`;
     case 'recordLiteral': {
       const parts: string[] = [];
       for (const [name, val] of Object.entries(e.kids)) {

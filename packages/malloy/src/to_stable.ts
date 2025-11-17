@@ -149,10 +149,23 @@ function convertParameterDefaultValue(
         kind: 'filter_expression_literal',
         filter_expression_value: value.filterSrc,
       };
-    case 'timeLiteral':
+    case 'dateLiteral':
+      return {
+        kind: 'date_literal',
+        date_value: value.literal,
+      };
+    case 'timestampLiteral':
       return {
         kind: 'timestamp_literal',
         timestamp_value: value.literal,
+        timezone: value.timezone,
+      };
+    case 'offsetTimestampLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: value.literal,
+        timezone: value.timezone,
+        offset: true,
       };
     case 'true':
       return {kind: 'boolean_literal', boolean_value: true};

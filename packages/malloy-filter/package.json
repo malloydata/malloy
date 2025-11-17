@@ -28,6 +28,7 @@
     "nearley": "^2.20.1"
   },
   "devDependencies": {
+    "@types/luxon": "^3.5.0",
     "@types/moo": "^0.5.10",
     "@types/nearley": "^2.11.5",
     "rimraf": "^6.0.1"

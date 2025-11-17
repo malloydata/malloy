@@ -31,12 +31,12 @@
 import type {
   Sampling,
   MeasureTimeExpr,
-  TimeLiteralNode,
   RegexMatchExpr,
   TimeExtractExpr,
   TypecastExpr,
   BasicAtomicTypeDef,
   AtomicTypeDef,
+  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -388,11 +388,23 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`;
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // MySQL has no offset timestamp type, so typeDef.offset will never be true
+    return {
+      sql: `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`,
+      typeDef: {type: 'timestamp'},
+    };
   }
 
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: TimestampTypeDef
+  ): string {
     return `CONVERT_TZ(${expr}, '${timezone}', 'UTC')`;
   }
 
@@ -498,15 +510,28 @@ export class MySQLDialect extends Dialect {
     return `REGEXP_LIKE(${df.kids.expr.sql}, ${df.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {
-    if (TD.isDate(lt.typeDef)) {
-      return `DATE '${lt.literal}'`;
-    }
-    const tz = lt.timezone || qtz(qi);
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
     if (tz) {
-      return ` CONVERT_TZ('${lt.literal}', '${tz}', 'UTC')`;
+      return `CONVERT_TZ('${literal}', '${tz}', 'UTC')`;
     }
-    return `TIMESTAMP '${lt.literal}'`;
+    return `TIMESTAMP '${literal}'`;
+  }
+
+  sqlOffsetTimestampLiteral(
+    _qi: QueryInfo,
+    _literal: string,
+    _timezone: string
+  ): string {
+    throw new Error('MySQL does not support offset timestamps');
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {

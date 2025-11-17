@@ -20,7 +20,7 @@ import type {
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
 import {getId, getPlainString} from './parse-utils';
 import type {DocumentLocation} from '../model/malloy_types';
-import {isTimestampUnit} from '../model/malloy_types';
+import {isTimestampUnit, isTimeLiteral} from '../model/malloy_types';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParseInfo} from './utils';
 import {getSourceInfo, rangeFromContext} from './utils';
@@ -808,19 +808,12 @@ export class MalloyToQuery
     }
     const value = def.getValue();
     const granularity = value.timeframe;
-    if (value.value.node !== 'timeLiteral') {
+    const node = value.value;
+    if (!isTimeLiteral(node)) {
       return null;
     }
-    const timeValue = value.value.literal;
-    const timezone = value.value.timezone;
-    if (value.type === 'timestamp') {
-      return {
-        kind: 'timestamp_literal',
-        timestamp_value: timeValue,
-        granularity,
-        timezone,
-      };
-    } else {
+
+    if (node.node === 'dateLiteral') {
       if (
         granularity === 'hour' ||
         granularity === 'minute' ||
@@ -829,9 +822,24 @@ export class MalloyToQuery
         return null;
       return {
         kind: 'date_literal',
-        date_value: timeValue,
+        date_value: node.literal,
         granularity,
-        timezone,
+      };
+    } else if (node.node === 'timestampLiteral') {
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: node.literal,
+        granularity,
+        timezone: node.timezone,
+      };
+    } else {
+      // offsetTimestampLiteral
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: node.literal,
+        granularity,
+        timezone: node.timezone,
+        offset: true,
       };
     }
   }

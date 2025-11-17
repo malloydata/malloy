@@ -21,16 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DateTime as LuxonDateTime} from 'luxon';
 import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
   TimeExtractExpr,
   TypecastExpr,
-  TimeLiteralNode,
   MeasureTimeExpr,
   RegexMatchExpr,
   BasicAtomicTypeDef,
+  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -101,6 +102,7 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
   experimental = false;
+  hasOffsetTimestamp = true;
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
@@ -317,12 +319,32 @@ ${indent(sql)}
 `;
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    // 3-arg form: explicitly convert from UTC to specified timezone
-    return `CONVERT_TIMEZONE('UTC', '${timezone}', ${expr})`;
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // For offset timestamps (TIMESTAMP_TZ): use 2-arg form
+    // Returns TIMESTAMP_TZ with timezone preserved
+    if (TD.isTimestamp(typeDef) && typeDef.offset) {
+      return {
+        sql: `CONVERT_TIMEZONE('${timezone}', ${expr})`,
+        typeDef: {type: 'timestamp', offset: true},
+      };
+    }
+    // For plain timestamps (TIMESTAMP_NTZ): use 3-arg form
+    // Must cast to TIMESTAMP_NTZ first, returns TIMESTAMP_NTZ
+    return {
+      sql: `CONVERT_TIMEZONE('UTC', '${timezone}', (${expr})::TIMESTAMP_NTZ)`,
+      typeDef: {type: 'timestamp'},
+    };
   }
 
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: TimestampTypeDef
+  ): string {
     // After civil time operations, we have a TIMESTAMP_NTZ in the target timezone
     // Convert from timezone to UTC, returning TIMESTAMP_NTZ
     return `CONVERT_TIMEZONE('${timezone}', 'UTC', (${expr})::TIMESTAMP_NTZ)`;
@@ -337,6 +359,8 @@ ${indent(sql)}
   ): string {
     // Snowflake session is configured with WEEK_START=7 (Sunday)
     // so DATE_TRUNC already truncates to Sunday - no adjustment needed
+    // Unlike PostgreSQL/DuckDB, Snowflake's DATE_TRUNC preserves the input type
+    // (TIMESTAMP_NTZ → TIMESTAMP_NTZ, TIMESTAMP_TZ → TIMESTAMP_TZ)
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 
@@ -413,21 +437,46 @@ ${indent(sql)}
     return `${castFunc}(${src} AS ${dstSQLType})`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lf: TimeLiteralNode): string {
-    if (TD.isDate(lf.typeDef)) {
-      return `TO_DATE('${lf.literal}')`;
-    }
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `TO_DATE('${literal}')`;
+  }
 
-    const tz = qtz(qi);
-    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
-    const targetTimeZone = lf.timezone ?? tz;
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
+    let ret = `'${literal}'::TIMESTAMP_NTZ`;
 
-    if (targetTimeZone) {
-      // Interpret the literal as being in targetTimeZone, convert to UTC
-      ret = `CONVERT_TIMEZONE('${targetTimeZone}', 'UTC', ${ret})`;
+    if (tz) {
+      // Interpret the literal as being in query timezone, convert to UTC
+      ret = `CONVERT_TIMEZONE('${tz}', 'UTC', ${ret})`;
     }
 
     return ret;
+  }
+
+  sqlOffsetTimestampLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    // Use TIMESTAMP_TZ_FROM_PARTS to create offset timestamp
+    const dt = LuxonDateTime.fromFormat(literal, 'yyyy-LL-dd HH:mm:ss');
+    if (!dt.isValid) {
+      throw new Error(`Invalid timestamp literal: ${literal}`);
+    }
+
+    const year = dt.year;
+    const month = dt.month;
+    const day = dt.day;
+    const hour = dt.hour;
+    const minute = dt.minute;
+    const second = dt.second;
+    const nanosecond = dt.millisecond * 1000000;
+
+    return `TIMESTAMP_TZ_FROM_PARTS(${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}, ${nanosecond}, '${timezone}')`;
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {

@@ -21,9 +21,10 @@ import {
   isTemporalFilter,
   isBooleanFilter,
 } from '@malloydata/malloy-filter';
-import type {Dialect, QueryInfo} from '../dialect';
+import type {Dialect} from '../dialect';
+import {type QueryInfo} from '../dialect';
 import type {
-  TimeLiteralNode,
+  TimeLiteralExpr,
   TimeDeltaExpr,
   Expr,
   TimeTruncExpr,
@@ -31,6 +32,7 @@ import type {
   NumberLiteralNode,
   TimestampUnit,
   TimeExtractExpr,
+  TimestampLiteralNode,
 } from './malloy_types';
 import {mkTemporal} from './malloy_types';
 import {DateTime as LuxonDateTime} from 'luxon';
@@ -581,16 +583,19 @@ export class TemporalFilterCompiler {
     }
   }
 
-  private literalNode(literal: string): Translated<TimeLiteralNode> {
-    const literalNode: TimeLiteralNode = {
-      node: 'timeLiteral',
-      typeDef: {type: 'timestamp'},
+  private literalNode(literal: string): Translated<TimeLiteralExpr> {
+    // Filter expressions only contain civil time literals (no timezone in the string).
+    // Always create a plain timestampLiteral node, with timezone field for conversion.
+    const node: TimestampLiteralNode = {
+      node: 'timestampLiteral',
       literal,
+      typeDef: {type: 'timestamp'},
     };
     if (this.qi.queryTimezone) {
-      literalNode.timezone = this.qi.queryTimezone;
+      node.timezone = this.qi.queryTimezone;
     }
-    return {...literalNode, sql: this.d.sqlLiteralTime(this.qi, literalNode)};
+    const sql = this.d.sqlTimestampLiteral(this.qi, literal, node.timezone);
+    return {...node, sql};
   }
 
   private nowExpr(): Translated<NowNode> {

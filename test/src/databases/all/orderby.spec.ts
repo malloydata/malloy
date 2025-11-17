@@ -25,6 +25,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
+import {Dialect} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -277,33 +278,33 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ]);
       }
     );
-    const y2020 = runtime.dialect.sqlLiteralTime(
-      {},
-      {
-        node: 'timeLiteral',
-        literal: '2020-01-01 00:00:00',
-        typeDef: {type: 'timestamp'},
-      }
+    const y2020Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2020-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
     );
+    const y2020 = runtime.dialect.exprToSQL({}, y2020Node) || '';
     const d2020 = new Date('2020-01-01 00:00:00Z');
     const d2022 = new Date('2022-01-01 00:00:00Z');
     const d2025 = new Date('2025-01-01 00:00:00Z');
-    const y2025 = runtime.dialect.sqlLiteralTime(
-      {},
-      {
-        node: 'timeLiteral',
-        literal: '2025-01-01 00:00:00',
-        typeDef: {type: 'timestamp'},
-      }
+    const y2025Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2025-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
     );
-    const y2022 = runtime.dialect.sqlLiteralTime(
-      {},
-      {
-        node: 'timeLiteral',
-        literal: '2022-01-01 00:00:00',
-        typeDef: {type: 'timestamp'},
-      }
+    const y2025 = runtime.dialect.exprToSQL({}, y2025Node) || '';
+    const y2022Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2022-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
     );
+    const y2022 = runtime.dialect.exprToSQL({}, y2022Node) || '';
     const times = `${databaseName}.sql("""
       SELECT ${y2020} as ${q`t`}
       UNION ALL SELECT ${y2025}

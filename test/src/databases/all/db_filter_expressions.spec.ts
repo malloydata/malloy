@@ -9,6 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
+import {Dialect} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -491,17 +492,25 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
 
   describe('temporal filters', () => {
     function tsLit(at: LuxonDateTime): string {
-      const typeDef: {type: 'timestamp' | 'date'} = {type: 'timestamp'};
-      const node: {node: 'timeLiteral'} = {node: 'timeLiteral'};
       const timeStr = at.toUTC().toFormat(fTimestamp);
-      const n = {...node, typeDef, literal: timeStr};
-      return db.dialect.sqlLiteralTime({}, n);
+      const node = Dialect.makeTimeLiteralNode(
+        db.dialect,
+        timeStr,
+        undefined,
+        undefined,
+        'timestamp'
+      );
+      return db.dialect.exprToSQL({}, node) || '';
     }
     function lit(t: string, type: 'timestamp' | 'date'): string {
-      const typeDef: {type: 'timestamp' | 'date'} = {type};
-      const node: {node: 'timeLiteral'} = {node: 'timeLiteral'};
-      const n = {...node, typeDef, literal: t};
-      return db.dialect.sqlLiteralTime({}, n);
+      const node = Dialect.makeTimeLiteralNode(
+        db.dialect,
+        t,
+        undefined,
+        undefined,
+        type
+      );
+      return db.dialect.exprToSQL({}, node) || '';
     }
 
     const fTimestamp = 'yyyy-LL-dd HH:mm:ss';
@@ -1050,9 +1059,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         {n: 'z-null'}
       );
     });
-    const tzTesting = dbName !== 'presto' && dbName !== 'trino';
+    const tzTesting = true;
     describe('query time zone', () => {
-      test.when(tzTesting)('day literal in query time zone', async () => {
+      test.when(tzTesting)('date literal in query time zone', async () => {
         const rangeQuery = mkRangeQuery(
           "f'2024-01-01'",
           '2024-01-01 00:00:00',
@@ -1061,26 +1070,32 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         );
         await expect(rangeQuery).malloyResultMatches(db, inRange);
       });
-      test.when(tzTesting)('day literal in query time zone', async () => {
-        nowIs('2024-01-15 00:34:56', 'America/Mexico_City');
-        const rangeQuery = mkRangeQuery(
-          "f'today'",
-          '2024-01-15 00:00:00',
-          '2024-01-16 00:00:00',
-          'America/Mexico_City'
-        );
-        await expect(rangeQuery).malloyResultMatches(db, inRange);
-      });
-      test.when(tzTesting)('day literal in query time zone', async () => {
-        nowIs('2024-01-01 00:00:00', 'America/Mexico_City');
-        const rangeQuery = mkRangeQuery(
-          "f'next wednesday'",
-          '2024-01-03 00:00:00',
-          '2024-01-04 00:00:00',
-          'America/Mexico_City'
-        );
-        await expect(rangeQuery).malloyResultMatches(db, inRange);
-      });
+      test.when(tzTesting)(
+        'timestamp literal today in query time zone',
+        async () => {
+          nowIs('2024-01-15 00:34:56', 'America/Mexico_City');
+          const rangeQuery = mkRangeQuery(
+            "f'today'",
+            '2024-01-15 00:00:00',
+            '2024-01-16 00:00:00',
+            'America/Mexico_City'
+          );
+          await expect(rangeQuery).malloyResultMatches(db, inRange);
+        }
+      );
+      test.when(tzTesting)(
+        'timestamp literal next week in query time zone',
+        async () => {
+          nowIs('2024-01-01 00:00:00', 'America/Mexico_City');
+          const rangeQuery = mkRangeQuery(
+            "f'next wednesday'",
+            '2024-01-03 00:00:00',
+            '2024-01-04 00:00:00',
+            'America/Mexico_City'
+          );
+          await expect(rangeQuery).malloyResultMatches(db, inRange);
+        }
+      );
       test.when(tzTesting)('day literal in query time zone', async () => {
         const exactTimeModel = mkEqTime('2024-01-15 12:00:00');
         await expect(`

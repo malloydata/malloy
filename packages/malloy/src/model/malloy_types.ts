@@ -82,7 +82,9 @@ export type Expr =
   | TimeExtractExpr
   | TimeDeltaExpr
   | TimeTruncExpr
-  | TimeLiteralNode
+  | DateLiteralNode
+  | TimestampLiteralNode
+  | OffsetTimestampLiteralNode
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
@@ -343,11 +345,37 @@ export interface FilterLiteralExpr extends ExprLeaf {
   filterSrc: string;
 }
 
-export interface TimeLiteralNode extends ExprLeaf {
-  node: 'timeLiteral';
+export interface DateLiteralNode extends ExprLeaf {
+  node: 'dateLiteral';
   literal: string;
-  typeDef: TemporalTypeDef;
-  timezone?: string;
+  typeDef: DateTypeDef;
+}
+
+export interface TimestampLiteralNode extends ExprLeaf {
+  node: 'timestampLiteral';
+  literal: string;
+  typeDef: TimestampTypeDef;
+  timezone?: string; // Used for SQL generation (CONVERT_TZ, etc.)
+}
+
+export interface OffsetTimestampLiteralNode extends ExprLeaf {
+  node: 'offsetTimestampLiteral';
+  literal: string;
+  typeDef: TimestampTypeDef & {offset: true};
+  timezone: string; // Always required for offset timestamps
+}
+
+export type TimeLiteralExpr =
+  | DateLiteralNode
+  | TimestampLiteralNode
+  | OffsetTimestampLiteralNode;
+
+export function isTimeLiteral(e: Expr): e is TimeLiteralExpr {
+  return (
+    e.node === 'dateLiteral' ||
+    e.node === 'timestampLiteral' ||
+    e.node === 'offsetTimestampLiteral'
+  );
 }
 
 export interface StringLiteralNode extends ExprLeaf {
