@@ -729,7 +729,7 @@ export class PrestoDialect extends TrinoDialect {
     return `TIMESTAMP '${literal}'`;
   }
 
-  sqlOffsetTimestampLiteral(
+  sqlTimestamptzLiteral(
     _qi: QueryInfo,
     literal: string,
     timezone: string
