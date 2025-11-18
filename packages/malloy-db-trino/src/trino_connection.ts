@@ -317,7 +317,7 @@ export abstract class TrinoPrestoConnection
       return Number(rawRow);
     } else if (colSchema.type === 'timestamp' && typeof rawRow === 'string') {
       // timestamps come back as strings
-      if (colSchema.offset) {
+      if (colSchema.timestamptz) {
         // TIMESTAMP WITH TIME ZONE format: "2020-02-20 00:00:00 America/Mexico_City"
         const trinoTzPattern =
           /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
@@ -702,7 +702,7 @@ class TrinoPrestoSchemaParser extends TinyParser {
         }
         if (this.peek().text === 'with') {
           this.nextText('with', 'time', 'zone');
-          tsType.offset = true;
+          tsType.timestamptz = true;
         }
         return tsType;
       }

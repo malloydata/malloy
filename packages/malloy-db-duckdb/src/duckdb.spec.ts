@@ -202,7 +202,7 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         name: 'test',
         type: 'timestamp',
-        offset: true,
+        timestamptz: true,
       });
     });
 
