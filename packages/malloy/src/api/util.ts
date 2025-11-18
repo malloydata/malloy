@@ -305,13 +305,13 @@ export function nodeToLiteralValue(
         timezone: expr.timezone,
         granularity: expr.typeDef.timeframe,
       };
-    case 'offsetTimestampLiteral':
+    case 'timestamptzLiteral':
       return {
         kind: 'timestamp_literal',
         timestamp_value: expr.literal,
         timezone: expr.timezone,
         granularity: expr.typeDef.timeframe,
-        offset: true,
+        timestamptz: true,
       };
     default:
       return undefined;

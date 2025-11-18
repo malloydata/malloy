@@ -84,7 +84,7 @@ export type Expr =
   | TimeTruncExpr
   | DateLiteralNode
   | TimestampLiteralNode
-  | OffsetTimestampLiteralNode
+  | TimestamptzLiteralNode
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
@@ -358,23 +358,23 @@ export interface TimestampLiteralNode extends ExprLeaf {
   timezone?: string; // Used for SQL generation (CONVERT_TZ, etc.)
 }
 
-export interface OffsetTimestampLiteralNode extends ExprLeaf {
-  node: 'offsetTimestampLiteral';
+export interface TimestamptzLiteralNode extends ExprLeaf {
+  node: 'timestamptzLiteral';
   literal: string;
-  typeDef: TimestampTypeDef & {offset: true};
-  timezone: string; // Always required for offset timestamps
+  typeDef: TimestampTypeDef & {timestamptz: true};
+  timezone: string; // Always required for timestamptz
 }
 
 export type TimeLiteralExpr =
   | DateLiteralNode
   | TimestampLiteralNode
-  | OffsetTimestampLiteralNode;
+  | TimestamptzLiteralNode;
 
 export function isTimeLiteral(e: Expr): e is TimeLiteralExpr {
   return (
     e.node === 'dateLiteral' ||
     e.node === 'timestampLiteral' ||
-    e.node === 'offsetTimestampLiteral'
+    e.node === 'timestamptzLiteral'
   );
 }
 
@@ -857,7 +857,7 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
     case 'timestamp': {
       const ret: TimestampFieldDef = {name, type: 'timestamp'};
       if (atd.timeframe) ret.timeframe = atd.timeframe;
-      if (atd.offset) ret.offset = atd.offset;
+      if (atd.timestamptz) ret.timestamptz = atd.timestamptz;
       return ret;
     }
   }
@@ -1061,7 +1061,7 @@ export type DateFieldDef = DateTypeDef & AtomicFieldDef;
 export interface TimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
-  offset?: boolean;
+  timestamptz?: boolean;
 }
 export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
 

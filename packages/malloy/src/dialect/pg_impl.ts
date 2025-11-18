@@ -29,7 +29,7 @@ export const timeExtractMap: Record<string, string> = {
  * same implementations for the much of the SQL code generation
  */
 export abstract class PostgresBase extends Dialect {
-  hasOffsetTimestamp = true;
+  hasTimestamptz = true;
 
   sqlNowExpr(): string {
     return 'LOCALTIMESTAMP';
@@ -85,7 +85,7 @@ export abstract class PostgresBase extends Dialect {
     return `TIMESTAMP '${literal}'`;
   }
 
-  sqlOffsetTimestampLiteral(
+  sqlTimestamptzLiteral(
     _qi: QueryInfo,
     literal: string,
     timezone: string
@@ -112,8 +112,8 @@ export abstract class PostgresBase extends Dialect {
     typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
     // PostgreSQL/DuckDB: AT TIME ZONE is polymorphic
-    // For offset timestamps (TIMESTAMPTZ): AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
-    if (TD.isTimestamp(typeDef) && typeDef.offset) {
+    // For timestamptz (TIMESTAMPTZ): AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
+    if (TD.isTimestamp(typeDef) && typeDef.timestamptz) {
       return {
         sql: `(${expr}) AT TIME ZONE '${timezone}'`,
         typeDef: {type: 'timestamp'},
@@ -132,7 +132,7 @@ export abstract class PostgresBase extends Dialect {
     timezone: string,
     destTypeDef: TimestampTypeDef
   ): string {
-    if (destTypeDef.offset) {
+    if (destTypeDef.timestamptz) {
       return `(${expr}) AT TIME ZONE '${timezone}'`;
     }
     return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;

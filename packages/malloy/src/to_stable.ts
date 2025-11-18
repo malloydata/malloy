@@ -160,12 +160,12 @@ function convertParameterDefaultValue(
         timestamp_value: value.literal,
         timezone: value.timezone,
       };
-    case 'offsetTimestampLiteral':
+    case 'timestamptzLiteral':
       return {
         kind: 'timestamp_literal',
         timestamp_value: value.literal,
         timezone: value.timezone,
-        offset: true,
+        timestamptz: true,
       };
     case 'true':
       return {kind: 'boolean_literal', boolean_value: true};

@@ -1602,7 +1602,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': true,
         'array': false,
       },
-      'offset': {
+      'timestamptz': {
         'type': 'boolean',
         'optional': true,
         'array': false,
@@ -2536,7 +2536,7 @@ export type TimestampLiteral = {
   timestamp_value: string;
   granularity?: TimestampTimeframe;
   timezone?: string;
-  offset?: boolean;
+  timestamptz?: boolean;
 };
 
 export type TimestampTimeframe =

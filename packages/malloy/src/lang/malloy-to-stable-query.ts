@@ -833,13 +833,13 @@ export class MalloyToQuery
         timezone: node.timezone,
       };
     } else {
-      // offsetTimestampLiteral
+      // timestamptzLiteral
       return {
         kind: 'timestamp_literal',
         timestamp_value: node.literal,
         granularity,
         timezone: node.timezone,
-        offset: true,
+        timestamptz: true,
       };
     }
   }

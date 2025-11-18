@@ -91,9 +91,9 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestampntz': {type: 'timestamp'},
   'timestamp_ntz': {type: 'timestamp'},
   'timestamp without time zone': {type: 'timestamp'},
-  'timestamptz': {type: 'timestamp', offset: true},
-  'timestamp_tz': {type: 'timestamp', offset: true},
-  'timestamp with time zone': {type: 'timestamp', offset: true},
+  'timestamptz': {type: 'timestamp', timestamptz: true},
+  'timestamp_tz': {type: 'timestamp', timestamptz: true},
+  'timestamp with time zone': {type: 'timestamp', timestamptz: true},
   'timestamp_ltz': {type: 'timestamp'},
   'timestampltz': {type: 'timestamp'},
   'timestamp with local time zone': {type: 'timestamp'},
@@ -102,7 +102,7 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
   experimental = false;
-  hasOffsetTimestamp = true;
+  hasTimestamptz = true;
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
@@ -324,12 +324,12 @@ ${indent(sql)}
     timezone: string,
     typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
-    // For offset timestamps (TIMESTAMP_TZ): use 2-arg form
+    // For timestamptz (TIMESTAMP_TZ): use 2-arg form
     // Returns TIMESTAMP_TZ with timezone preserved
-    if (TD.isTimestamp(typeDef) && typeDef.offset) {
+    if (TD.isTimestamp(typeDef) && typeDef.timestamptz) {
       return {
         sql: `CONVERT_TIMEZONE('${timezone}', ${expr})`,
-        typeDef: {type: 'timestamp', offset: true},
+        typeDef: {type: 'timestamp', timestamptz: true},
       };
     }
     // For plain timestamps (TIMESTAMP_NTZ): use 3-arg form
@@ -457,12 +457,12 @@ ${indent(sql)}
     return ret;
   }
 
-  sqlOffsetTimestampLiteral(
+  sqlTimestamptzLiteral(
     _qi: QueryInfo,
     literal: string,
     timezone: string
   ): string {
-    // Use TIMESTAMP_TZ_FROM_PARTS to create offset timestamp
+    // Use TIMESTAMP_TZ_FROM_PARTS to create timestamptz
     const dt = LuxonDateTime.fromFormat(literal, 'yyyy-LL-dd HH:mm:ss');
     if (!dt.isValid) {
       throw new Error(`Invalid timestamp literal: ${literal}`);
@@ -566,7 +566,7 @@ ${indent(sql)}
         : `ARRAY(${recordScehma})`;
     } else if (isBasicArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
-    } else if (malloyType.type === 'timestamp' && malloyType.offset) {
+    } else if (malloyType.type === 'timestamp' && malloyType.timestamptz) {
       return 'TIMESTAMP_TZ';
     }
     return malloyType.type;

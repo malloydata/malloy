@@ -93,8 +93,8 @@ export class ExprGranularTime extends ExpressionDef {
       } else {
         tsVal = {...exprVal, timeframe: timeframe};
         timeType = {type: 'timestamp', timeframe};
-        if (exprVal.offset) {
-          timeType.offset = true;
+        if (exprVal.timestamptz) {
+          timeType.timestamptz = true;
         }
       }
       if (this.truncate) {

@@ -122,7 +122,7 @@ export type {
   SourceComponentInfo,
   DateLiteralNode,
   TimestampLiteralNode,
-  OffsetTimestampLiteralNode,
+  TimestamptzLiteralNode,
   TimeLiteralExpr,
   TypecastExpr,
 } from './model';

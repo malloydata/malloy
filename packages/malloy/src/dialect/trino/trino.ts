@@ -417,7 +417,7 @@ ${indent(sql)}
     // Reinterprets the instant in the target timezone
     return {
       sql: `${expr} AT TIME ZONE '${timezone}'`,
-      typeDef: {type: 'timestamp', offset: true},
+      typeDef: {type: 'timestamp', timestamptz: true},
     };
   }
 
@@ -426,7 +426,7 @@ ${indent(sql)}
     _timezone: string,
     destTypeDef: TimestampTypeDef
   ): string {
-    if (destTypeDef.offset) {
+    if (destTypeDef.timestamptz) {
       return expr;
     }
     return `CAST(at_timezone(${expr}, 'UTC') AS TIMESTAMP)`;
@@ -605,7 +605,7 @@ ${indent(sql)}
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     const matchType = sqlType.toLowerCase();
     if (matchType.startsWith('timestamp with time zone')) {
-      return {type: 'timestamp', offset: true};
+      return {type: 'timestamp', timestamptz: true};
     }
     const baseSqlType = matchType.match(/^\w+/)?.at(0) ?? matchType;
     return (
@@ -665,7 +665,7 @@ ${indent(sql)}
     return `TIMESTAMP '${literal}'`;
   }
 
-  sqlOffsetTimestampLiteral(
+  sqlTimestamptzLiteral(
     _qi: QueryInfo,
     literal: string,
     timezone: string
@@ -679,11 +679,11 @@ ${indent(sql)}
     let extractFrom = from.e.sql || '';
     if (TD.isTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
-      // Only apply query timezone to plain timestamps, not offset timestamps
-      if (tz && !from.e.typeDef.offset) {
+      // Only apply query timezone to plain timestamps, not timestamptz
+      if (tz && !from.e.typeDef.timestamptz) {
         extractFrom = `at_timezone(${extractFrom},'${tz}')`;
       }
-      // Offset timestamps already have timezone info, extract directly
+      // Timestamptz already has timezone info, extract directly
     }
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
@@ -742,7 +742,7 @@ export class PrestoDialect extends TrinoDialect {
     _timezone: string,
     destTypeDef: TimestampTypeDef
   ): string {
-    if (destTypeDef.offset) {
+    if (destTypeDef.timestamptz) {
       return expr;
     }
     return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;

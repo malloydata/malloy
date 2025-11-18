@@ -43,7 +43,7 @@ export function exprToStr(e: Expr, symbols: ESymbols): string {
       return `@${e.literal}`;
     case 'timestampLiteral':
       return e.timezone ? `@${e.literal}[${e.timezone}]` : `@${e.literal}`;
-    case 'offsetTimestampLiteral':
+    case 'timestamptzLiteral':
       return `@${e.literal}[${e.timezone}]`;
     case 'recordLiteral': {
       const parts: string[] = [];

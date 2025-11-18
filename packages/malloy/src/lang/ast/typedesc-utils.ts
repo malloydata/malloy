@@ -170,7 +170,7 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
         return {
           type: 'timestamp',
           ...(td.timeframe === undefined ? {} : {timeframe: td.timeframe}),
-          ...(td.offset === undefined ? {} : {offset: td.offset}),
+          ...(td.timestamptz === undefined ? {} : {timestamptz: td.timestamptz}),
         };
       }
       default:

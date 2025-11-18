@@ -133,8 +133,8 @@ export abstract class Dialect {
   // Some dialects don't supporrt arrays (mysql)
   supportsArraysInData = true;
 
-  // Does the dialect support offset timestamps (TIMESTAMP WITH TIME ZONE)?
-  hasOffsetTimestamp = false;
+  // Does the dialect support timestamptz (TIMESTAMP WITH TIME ZONE)?
+  hasTimestamptz = false;
 
   // can read some version of ga_sample
   readsNestedData = true;
@@ -188,7 +188,7 @@ export abstract class Dialect {
     typ: TemporalFieldType
   ): TimeLiteralExpr {
     // ConstantFieldSpace.dialectObj() returns undefined, so constants default to false
-    const hasOffsetTimestamp = dialect?.hasOffsetTimestamp ?? false;
+    const hasTimestamptz = dialect?.hasTimestamptz ?? false;
 
     if (typ === 'date') {
       return {
@@ -203,21 +203,21 @@ export abstract class Dialect {
     }
 
     // typ === 'timestamp'
-    if (timezone && hasOffsetTimestamp) {
-      // Dialect supports offset timestamps - create offsetTimestampLiteral
+    if (timezone && hasTimestamptz) {
+      // Dialect supports timestamptz - create timestamptzLiteral
       return {
-        node: 'offsetTimestampLiteral',
+        node: 'timestamptzLiteral',
         literal,
         typeDef: {
           type: 'timestamp',
           timeframe: units,
-          offset: true,
+          timestamptz: true,
         },
         timezone,
       };
     }
 
-    // Plain timestamp (either no timezone, or dialect doesn't support offset)
+    // Plain timestamp (either no timezone, or dialect doesn't support timestamptz)
     if (timezone) {
       return {
         node: 'timestampLiteral',
@@ -358,7 +358,7 @@ export abstract class Dialect {
    * truncation and interval arithmetic happen. Operations like sqlTruncate and sqlOffsetTime
    * are aware of the civil space and work correctly within it.
    *
-   * @param expr The SQL expression for the Malloy timestamp (plain or offset)
+   * @param expr The SQL expression for the Malloy timestamp (plain or timestamptz)
    * @param timezone The target timezone for civil operations
    * @param typeDef The Malloy type of the input expression
    * @returns Object with SQL expression and the SQL type it evaluates to (the civil type)
@@ -373,12 +373,12 @@ export abstract class Dialect {
    * Converts from civil time back to a Malloy timestamp type.
    *
    * This is the inverse of sqlConvertToCivilTime. Takes a value in the dialect's
-   * civil space and converts it back to either a plain timestamp (UTC) or an
-   * offset timestamp, depending on the destination type.
+   * civil space and converts it back to either a plain timestamp (UTC) or a
+   * timestamptz, depending on the destination type.
    *
    * @param expr The SQL expression in civil time
    * @param timezone The timezone of the civil time
-   * @param destTypeDef The destination Malloy timestamp type (plain or offset)
+   * @param destTypeDef The destination Malloy timestamp type (plain or timestamptz)
    * @returns SQL expression representing the Malloy timestamp
    */
   abstract sqlConvertFromCivilTime(
@@ -611,7 +611,7 @@ export abstract class Dialect {
    * @returns SQL that produces a TIMESTAMP WITH TIME ZONE value representing
    *   the civil time in the specified timezone
    */
-  abstract sqlOffsetTimestampLiteral(
+  abstract sqlTimestamptzLiteral(
     qi: QueryInfo,
     literal: string,
     timezone: string
@@ -680,8 +680,8 @@ export abstract class Dialect {
         return this.sqlDateLiteral(qi, df.literal);
       case 'timestampLiteral':
         return this.sqlTimestampLiteral(qi, df.literal, df.timezone);
-      case 'offsetTimestampLiteral':
-        return this.sqlOffsetTimestampLiteral(qi, df.literal, df.timezone);
+      case 'timestamptzLiteral':
+        return this.sqlTimestamptzLiteral(qi, df.literal, df.timezone);
       case 'stringLiteral':
         return this.sqlLiteralString(df.literal);
       case 'numberLiteral':

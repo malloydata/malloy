@@ -317,7 +317,7 @@ ${indent(sql)}
     timezone: string,
     _typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
-    // BigQuery has no offset timestamp type, so typeDef.offset will never be true
+    // BigQuery has no timestamptz type, so typeDef.timestamptz will never be true
     return {
       sql: `DATETIME(${expr}, '${timezone}')`,
       typeDef: {type: 'timestamp'},
@@ -423,12 +423,12 @@ ${indent(sql)}
     return `TIMESTAMP(${timestampArgs})`;
   }
 
-  sqlOffsetTimestampLiteral(
+  sqlTimestamptzLiteral(
     _qi: QueryInfo,
     _literal: string,
     _timezone: string
   ): string {
-    throw new Error('BigQuery does not support offset timestamps');
+    throw new Error('BigQuery does not support timestamptz');
   }
 
   sqlMeasureTimeExpr(measure: MeasureTimeExpr): string {

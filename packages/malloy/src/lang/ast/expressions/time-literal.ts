@@ -148,7 +148,7 @@ export abstract class TimeLiteral extends ExpressionDef {
         granularity,
         timezone: node.timezone,
       };
-    } else if (node.node === 'offsetTimestampLiteral') {
+    } else if (node.node === 'timestamptzLiteral') {
       return {
         kind: 'timestamp_literal',
         timestamp_value: node.literal,

@@ -393,7 +393,7 @@ export class MySQLDialect extends Dialect {
     timezone: string,
     _typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
-    // MySQL has no offset timestamp type, so typeDef.offset will never be true
+    // MySQL has no timestamptz type, so typeDef.timestamptz will never be true
     return {
       sql: `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`,
       typeDef: {type: 'timestamp'},
@@ -526,12 +526,12 @@ export class MySQLDialect extends Dialect {
     return `TIMESTAMP '${literal}'`;
   }
 
-  sqlOffsetTimestampLiteral(
+  sqlTimestamptzLiteral(
     _qi: QueryInfo,
     _literal: string,
     _timezone: string
   ): string {
-    throw new Error('MySQL does not support offset timestamps');
+    throw new Error('MySQL does not support timestamptz');
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
