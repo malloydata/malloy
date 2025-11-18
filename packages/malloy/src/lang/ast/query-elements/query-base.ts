@@ -34,13 +34,17 @@ import {
   type Query,
   type SourceDef,
 } from '../../../model/malloy_types';
+import type {ParameterSpace} from '../field-space/parameter-space';
 import {ErrorFactory} from '../error-factory';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
 import type {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
-  abstract queryComp(isRefOk: boolean): QueryComp;
+  abstract queryComp(
+    isRefOk: boolean,
+    parameterSpace: ParameterSpace | undefined
+  ): QueryComp;
 
   protected expandFieldUsage(
     inputSource: SourceDef,
@@ -82,7 +86,7 @@ export abstract class QueryBase extends MalloyElement {
   }
 
   query(): Query {
-    const {query} = this.queryComp(true);
+    const {query} = this.queryComp(true, undefined);
 
     return {
       ...query,
