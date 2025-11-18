@@ -35,6 +35,7 @@ import type {
   ReduceSegment,
   StructDef,
   JoinFieldDef,
+  SourceDef,
 } from '../../model/malloy_types';
 
 const ERR_NAME = '~malformed~';
@@ -70,6 +71,10 @@ export class ErrorFactory {
       errorFactory: true,
     };
     return factoryJoin;
+  }
+
+  static didCreateSourceDef(s: SourceDef): boolean {
+    return 'errorFactory' in s;
   }
 
   static didCreate(s: StructDef | JoinFieldDef): boolean {

@@ -53,6 +53,7 @@ import type {NameSpace} from './name-space';
 import type {Noteable} from './noteable';
 import {isNoteable, extendNoteMethod} from './noteable';
 import {v5 as uuidv5} from 'uuid';
+import {ErrorFactory} from '../error-factory';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -628,7 +629,8 @@ export class Document extends MalloyElement implements NameSpace {
         `Cannot redefine '${str}', which is in global namespace`
       );
     }
-    if (isSourceDef(ent.entry)) {
+
+    if (isSourceDef(ent.entry) && !ErrorFactory.didCreateSourceDef(ent.entry)) {
       this.checkExperimentalDialect(this, ent.entry.dialect);
     }
 
