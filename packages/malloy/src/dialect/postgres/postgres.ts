@@ -470,7 +470,7 @@ export class PostgresDialect extends PostgresBase {
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const units = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql;
-    if (TD.isTimestamp(from.e.typeDef)) {
+    if (TD.isAnyTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;

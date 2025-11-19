@@ -149,8 +149,7 @@ describe('postgres schema reading', () => {
     if (schema.structDef) {
       expect(schema.structDef.fields[0]).toEqual({
         name: 'offset_ts',
-        type: 'timestamp',
-        timestamptz: true,
+        type: 'timestamptz',
       });
       expect(schema.structDef.fields[1]).toEqual({
         name: 'ts',

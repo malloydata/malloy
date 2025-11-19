@@ -247,6 +247,24 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       expect(await eq).isSqlEq();
     });
   });
+
+  test.when(runtime.dialect.hasTimestamptz)(
+    'extract from timestamptz without query timezone',
+    async () => {
+      // TIMESTAMPTZ representing midnight UTC
+      // Without query timezone, extract should happen in UTC (or stored tz for Trino)
+      // Expected: hour = 0, day = 20
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
+          select:
+            utc_hour is hour(utc_tstz)
+            utc_day is day(utc_tstz)
+        }`
+      ).malloyResultMatches(runtime, {utc_hour: 0, utc_day: 20});
+    }
+  );
+
   describe('date truncation', () => {
     test('date trunc day', async () => {
       const eq = sqlEq('t_date.day', '@2021-02-24');
@@ -689,6 +707,24 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
+
+  test.when(runtime.dialect.hasTimestamptz)(
+    'extract from timestamptz with query timezone',
+    async () => {
+      // TIMESTAMPTZ representing midnight UTC
+      // With query timezone America/Mexico_City (-06:00), midnight UTC = 6pm Feb 19
+      // Expected: hour = 18, day = 19
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
+          select:
+            mex_hour is hour(utc_tstz)
+            mex_day is day(utc_tstz)
+        }`
+      ).malloyResultMatches(runtime, {mex_hour: 18, mex_day: 19});
+    }
+  );
 
   test('truncate day', async () => {
     // At midnight in london it the 19th in Mexico, so that truncates to
