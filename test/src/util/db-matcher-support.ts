@@ -178,10 +178,7 @@ export function mkSQLSource(
         valStr = 'NULL';
       } else if (schema[colName] === 'timestamp' && typeof val === 'string') {
         valStr = lit(dialect, val, 'timestamp');
-      } else if (
-        schema[colName] === 'timestamptz' &&
-        typeof val === 'string'
-      ) {
+      } else if (schema[colName] === 'timestamptz' && typeof val === 'string') {
         valStr = lit(dialect, val, 'timestamptz');
       } else if (schema[colName] === 'date' && typeof val === 'string') {
         valStr = lit(dialect, val, 'date');

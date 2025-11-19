@@ -331,7 +331,14 @@ export type FilterExprType =
   | 'timestamp'
   | 'timestamptz';
 export function isFilterExprType(s: string): s is FilterExprType {
-  return ['string', 'number', 'boolean', 'date', 'timestamp', 'timestamptz'].includes(s);
+  return [
+    'string',
+    'number',
+    'boolean',
+    'date',
+    'timestamp',
+    'timestamptz',
+  ].includes(s);
 }
 
 export interface FilterMatchExpr extends ExprWithKids {
@@ -755,15 +762,27 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
   ].includes(s);
 }
 export function canOrderBy(s: string) {
-  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp', 'timestamptz'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'boolean',
+    'date',
+    'timestamp',
+    'timestamptz',
+  ].includes(s);
 }
 
 export function isCastType(s: string): s is CastType {
-  return ['string', 'number', 'date', 'timestamp', 'timestamptz', 'boolean', 'json'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'timestamp',
+    'timestamptz',
+    'boolean',
+    'json',
+  ].includes(s);
 }
 
 /**
@@ -1635,7 +1654,10 @@ export interface ConnectionDef extends NamedObject {
   type: 'connection';
 }
 
-export type TemporalTypeDef = DateTypeDef | TimestampTypeDef | TimestamptzTypeDef;
+export type TemporalTypeDef =
+  | DateTypeDef
+  | TimestampTypeDef
+  | TimestamptzTypeDef;
 export type BasicAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef

@@ -12,7 +12,6 @@ import type {
   RecordLiteralNode,
   RegexMatchExpr,
   TimeExtractExpr,
-  TimestampTypeDef,
   TimestampUnit,
   TypecastExpr,
 } from '../model/malloy_types';

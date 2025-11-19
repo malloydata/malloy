@@ -58,7 +58,6 @@ import type {
   SQLSourceDef,
   AtomicFieldDef,
   DateFieldDef,
-  TimestampFieldDef,
   ATimestampFieldDef,
   SourceDef,
   QueryToMaterialize,

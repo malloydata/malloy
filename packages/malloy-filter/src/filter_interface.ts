@@ -303,5 +303,12 @@ export type FilterableType =
   | 'timestamptz'
   | 'date';
 export function isFilterable(s: string): s is FilterableType {
-  return ['string', 'number', 'boolean', 'timestamp', 'timestamptz', 'date'].includes(s);
+  return [
+    'string',
+    'number',
+    'boolean',
+    'timestamp',
+    'timestamptz',
+    'date',
+  ].includes(s);
 }

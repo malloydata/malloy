@@ -11,7 +11,6 @@ import type {
   StringFieldDef,
   JSONFieldDef,
   NumberFieldDef,
-  TimestampFieldDef,
   ATimestampFieldDef,
   NativeUnsupportedFieldDef,
   JoinFieldDef,

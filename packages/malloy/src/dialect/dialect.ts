@@ -35,7 +35,6 @@ import type {
   BasicAtomicTypeDef,
   OrderBy,
   TimestampUnit,
-  TimestampTypeDef,
   ATimestampTypeDef,
   TimeExpr,
   TemporalFieldType,
