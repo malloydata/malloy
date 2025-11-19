@@ -8,6 +8,7 @@
 import type {
   ArrayLiteralNode,
   AtomicTypeDef,
+  ATimestampTypeDef,
   RecordLiteralNode,
   RegexMatchExpr,
   TimeExtractExpr,
@@ -38,7 +39,7 @@ export abstract class PostgresBase extends Dialect {
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const units = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql;
-    if (TD.isTimestamp(from.e.typeDef)) {
+    if (TD.isAnyTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
@@ -50,14 +51,38 @@ export abstract class PostgresBase extends Dialect {
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const expr = cast.e.sql || '';
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      const tstz = `${expr}::TIMESTAMPTZ`;
-      return `CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return `CAST((${expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+
+    // Timezone-aware casts when query timezone is set
+    if (tz && srcTypeDef && dstTypeDef) {
+      // TIMESTAMP → DATE: convert via TIMESTAMPTZ to query timezone
+      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `CAST((${expr}::TIMESTAMPTZ) AT TIME ZONE '${tz}' AS DATE)`;
+      }
+
+      // TIMESTAMPTZ → DATE: convert to query timezone
+      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `CAST((${expr}) AT TIME ZONE '${tz}' AS DATE)`;
+      }
+
+      // DATE → TIMESTAMP: interpret date in query timezone, return UTC timestamp
+      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `CAST((${expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+      }
+
+      // DATE → TIMESTAMPTZ: interpret date in query timezone
+      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return `(${expr})::TIMESTAMP AT TIME ZONE '${tz}'`;
+      }
+
+      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone (returns TIMESTAMP)
+      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `(${expr}) AT TIME ZONE '${tz}'`;
+      }
     }
+
+    // No special handling needed, or no query timezone
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
       return `${castFunc}(${expr} AS ${dstSQLType})`;
@@ -113,7 +138,7 @@ export abstract class PostgresBase extends Dialect {
   ): {sql: string; typeDef: AtomicTypeDef} {
     // PostgreSQL/DuckDB: AT TIME ZONE is polymorphic
     // For timestamptz (TIMESTAMPTZ): AT TIME ZONE converts to plain TIMESTAMP (civil in timezone)
-    if (TD.isTimestamp(typeDef) && typeDef.timestamptz) {
+    if (typeDef.type === 'timestamptz') {
       return {
         sql: `(${expr}) AT TIME ZONE '${timezone}'`,
         typeDef: {type: 'timestamp'},
@@ -130,9 +155,9 @@ export abstract class PostgresBase extends Dialect {
   sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    destTypeDef: TimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string {
-    if (destTypeDef.timestamptz) {
+    if (destTypeDef.type === 'timestamptz') {
       return `(${expr}) AT TIME ZONE '${timezone}'`;
     }
     return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;

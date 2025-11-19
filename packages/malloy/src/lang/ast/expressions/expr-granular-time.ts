@@ -91,10 +91,12 @@ export class ExprGranularTime extends ExpressionDef {
         tsVal = {...exprVal, timeframe: timeframe};
         timeType = {type: 'date', timeframe};
       } else {
+        // timestamp or timestamptz
         tsVal = {...exprVal, timeframe: timeframe};
-        timeType = {type: 'timestamp', timeframe};
-        if (exprVal.timestamptz) {
-          timeType.timestamptz = true;
+        if (exprVal.type === 'timestamptz') {
+          timeType = {type: 'timestamptz', timeframe};
+        } else {
+          timeType = {type: 'timestamp', timeframe};
         }
       }
       if (this.truncate) {

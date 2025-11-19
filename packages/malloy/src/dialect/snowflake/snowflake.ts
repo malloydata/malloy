@@ -91,9 +91,9 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestampntz': {type: 'timestamp'},
   'timestamp_ntz': {type: 'timestamp'},
   'timestamp without time zone': {type: 'timestamp'},
-  'timestamptz': {type: 'timestamp', timestamptz: true},
-  'timestamp_tz': {type: 'timestamp', timestamptz: true},
-  'timestamp with time zone': {type: 'timestamp', timestamptz: true},
+  'timestamptz': {type: 'timestamptz'},
+  'timestamp_tz': {type: 'timestamptz'},
+  'timestamp with time zone': {type: 'timestamptz'},
   'timestamp_ltz': {type: 'timestamp'},
   'timestampltz': {type: 'timestamp'},
   'timestamp with local time zone': {type: 'timestamp'},
@@ -326,10 +326,10 @@ ${indent(sql)}
   ): {sql: string; typeDef: AtomicTypeDef} {
     // For timestamptz (TIMESTAMP_TZ): use 2-arg form
     // Returns TIMESTAMP_TZ with timezone preserved
-    if (TD.isTimestamp(typeDef) && typeDef.timestamptz) {
+    if (typeDef.type === 'timestamptz') {
       return {
         sql: `CONVERT_TIMEZONE('${timezone}', ${expr})`,
-        typeDef: {type: 'timestamp', timestamptz: true},
+        typeDef: {type: 'timestamptz'},
       };
     }
     // For plain timestamps (TIMESTAMP_NTZ): use 3-arg form
@@ -405,7 +405,7 @@ ${indent(sql)}
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const src = cast.e.sql || '';
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (TD.eq(srcTypeDef, dstTypeDef)) {
       return src;
     }
@@ -421,16 +421,40 @@ ${indent(sql)}
     }
 
     const tz = qtz(qi);
-    // casting timestamps and dates
-    if (op === 'timestamp::date') {
-      let castExpr = src;
-      if (tz) {
-        castExpr = `CONVERT_TIMEZONE('${tz}', ${castExpr})`;
+
+    // Timezone-aware casts when query timezone is set
+    if (tz && srcTypeDef && dstTypeDef) {
+      // TIMESTAMP → DATE: convert to query timezone, then to date
+      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `TO_DATE(CONVERT_TIMEZONE('${tz}', ${src}))`;
       }
-      return `TO_DATE(${castExpr})`;
-    } else if (op === 'date::timestamp') {
-      const retExpr = `TO_TIMESTAMP(${src})`;
-      return this.atTz(retExpr, tz);
+
+      // TIMESTAMPTZ → DATE: convert to query timezone, then to date
+      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `TO_DATE(CONVERT_TIMEZONE('${tz}', ${src}))`;
+      }
+
+      // DATE → TIMESTAMP: interpret date in query timezone, return UTC timestamp
+      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        const retExpr = `TO_TIMESTAMP(${src})`;
+        return this.atTz(retExpr, tz);
+      }
+
+      // DATE → TIMESTAMPTZ: interpret date in query timezone
+      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        const retExpr = `TO_TIMESTAMP(${src})`;
+        return this.atTz(retExpr, tz);
+      }
+
+      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone, get UTC wall clock
+      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `CONVERT_TIMEZONE('${tz}', ${src})::TIMESTAMP_NTZ`;
+      }
+
+      // TIMESTAMP → TIMESTAMPTZ: interpret as UTC, convert to TIMESTAMPTZ
+      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return this.atTz(src, tz);
+      }
     }
 
     const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
@@ -566,7 +590,7 @@ ${indent(sql)}
         : `ARRAY(${recordScehma})`;
     } else if (isBasicArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
-    } else if (malloyType.type === 'timestamp' && malloyType.timestamptz) {
+    } else if (malloyType.type === 'timestamptz') {
       return 'TIMESTAMP_TZ';
     }
     return malloyType.type;

@@ -201,8 +201,7 @@ describe('DuckDBConnection', () => {
       });
       expect(structDef.fields[0]).toEqual({
         name: 'test',
-        type: 'timestamp',
-        timestamptz: true,
+        type: 'timestamptz',
       });
     });
 

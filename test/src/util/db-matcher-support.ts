@@ -129,12 +129,22 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
   return lovely;
 }
 
-function lit(d: Dialect, t: string, type: 'timestamp' | 'date'): string {
+function lit(
+  d: Dialect,
+  t: string,
+  type: 'timestamp' | 'timestamptz' | 'date'
+): string {
   const node = Dialect.makeTimeLiteralNode(d, t, undefined, undefined, type);
   return d.exprToSQL({}, node) || '';
 }
 
-type SQLDataType = 'string' | 'number' | 'timestamp' | 'date' | 'boolean';
+type SQLDataType =
+  | 'string'
+  | 'number'
+  | 'timestamp'
+  | 'timestamptz'
+  | 'date'
+  | 'boolean';
 type SQLRow = unknown[];
 
 /**
@@ -168,6 +178,11 @@ export function mkSQLSource(
         valStr = 'NULL';
       } else if (schema[colName] === 'timestamp' && typeof val === 'string') {
         valStr = lit(dialect, val, 'timestamp');
+      } else if (
+        schema[colName] === 'timestamptz' &&
+        typeof val === 'string'
+      ) {
+        valStr = lit(dialect, val, 'timestamptz');
       } else if (schema[colName] === 'date' && typeof val === 'string') {
         valStr = lit(dialect, val, 'date');
       }

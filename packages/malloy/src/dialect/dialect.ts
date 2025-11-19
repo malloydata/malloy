@@ -36,6 +36,7 @@ import type {
   OrderBy,
   TimestampUnit,
   TimestampTypeDef,
+  ATimestampTypeDef,
   TimeExpr,
   TemporalFieldType,
 } from '../model/malloy_types';
@@ -209,9 +210,8 @@ export abstract class Dialect {
         node: 'timestamptzLiteral',
         literal,
         typeDef: {
-          type: 'timestamp',
+          type: 'timestamptz',
           timeframe: units,
-          timestamptz: true,
         },
         timezone,
       };
@@ -384,7 +384,7 @@ export abstract class Dialect {
   abstract sqlConvertFromCivilTime(
     expr: string,
     timezone: string,
-    destTypeDef: TimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string;
 
   /**
@@ -472,7 +472,7 @@ export abstract class Dialect {
     // Timestamps with calendar truncation/offset need civil time computation
     // BUT only if there's actually a timezone to convert to/from
     const needed =
-      TD.isTimestamp(typeDef) &&
+      TD.isAnyTimestamp(typeDef) &&
       (isCalendarTruncate || isCalendarOffset) &&
       tz !== undefined;
 
@@ -518,7 +518,7 @@ export abstract class Dialect {
     }
   ): string {
     // Determine if we need to work in civil (local) time
-    if (TD.isTimestamp(baseExpr.typeDef)) {
+    if (TD.isAnyTimestamp(baseExpr.typeDef)) {
       const {needed: needsCivil, tz} = this.needsCivilTimeComputation(
         baseExpr.typeDef,
         truncateTo,

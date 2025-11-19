@@ -701,7 +701,8 @@ export class QueryQuery extends QueryField {
               });
               break;
             case 'date':
-            case 'timestamp': {
+            case 'timestamp':
+            case 'timestamptz': {
               const timeframe = fOut.timeframe;
               const fd: TemporalTypeDef = {type: fOut.type};
               if (timeframe) {

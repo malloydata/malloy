@@ -14,7 +14,8 @@ export type ParsedFilter =
   | {kind: 'number'; parsed: Filter.NumberFilter | null}
   | {kind: 'boolean'; parsed: Filter.BooleanFilter | null}
   | {kind: 'date'; parsed: Filter.TemporalFilter | null}
-  | {kind: 'timestamp'; parsed: Filter.TemporalFilter | null};
+  | {kind: 'timestamp'; parsed: Filter.TemporalFilter | null}
+  | {kind: 'timestamptz'; parsed: Filter.TemporalFilter | null};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -5205,6 +5206,7 @@ function serializeFilter(filter: ParsedFilter) {
     case 'boolean':
       return Filter.BooleanFilterExpression.unparse(filter.parsed);
     case 'timestamp':
+    case 'timestamptz':
     case 'date':
       return Filter.TemporalFilterExpression.unparse(filter.parsed);
   }
@@ -5236,6 +5238,7 @@ function parseFilter(
       return {kind, parsed: result.parsed};
     }
     case 'timestamp':
+    case 'timestamptz':
     case 'date': {
       const result = Filter.TemporalFilterExpression.parse(filterString);
       handleError(result.log);

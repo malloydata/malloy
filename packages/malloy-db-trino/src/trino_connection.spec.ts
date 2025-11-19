@@ -116,7 +116,7 @@ describe('Trino connection', () => {
     it('parses timestamp with time zone', () => {
       expect(
         connection.malloyTypeFromTrinoType('timestamp(3) with time zone)')
-      ).toEqual({type: 'timestamp', timestamptz: true});
+      ).toEqual({type: 'timestamptz'});
     });
 
     it('parses deep nesting', () => {

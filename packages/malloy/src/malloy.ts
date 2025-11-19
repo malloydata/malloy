@@ -59,6 +59,7 @@ import type {
   AtomicFieldDef,
   DateFieldDef,
   TimestampFieldDef,
+  ATimestampFieldDef,
   SourceDef,
   QueryToMaterialize,
   DependencyTree,
@@ -1731,6 +1732,8 @@ export class Explore extends Entity implements Taggable {
               return [name, new DateField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === 'timestamp') {
               return [name, new TimestampField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === 'timestamptz') {
+              return [name, new TimestampField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === 'boolean') {
               return [name, new BooleanField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === 'json') {
@@ -1969,6 +1972,7 @@ export enum AtomicFieldType {
   Boolean = 'boolean',
   Date = 'date',
   Timestamp = 'timestamp',
+  Timestamptz = 'timestamptz',
   Json = 'json',
   NativeUnsupported = 'sql native',
   Error = 'error',
@@ -1998,6 +2002,8 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.Date;
       case 'timestamp':
         return AtomicFieldType.Timestamp;
+      case 'timestamptz':
+        return AtomicFieldType.Timestamptz;
       case 'number':
         return AtomicFieldType.Number;
       case 'json':
@@ -2187,9 +2193,9 @@ export class DateField extends AtomicField {
 }
 
 export class TimestampField extends AtomicField {
-  private fieldTimestampDef: TimestampFieldDef;
+  private fieldTimestampDef: ATimestampFieldDef;
   constructor(
-    fieldTimestampDef: TimestampFieldDef,
+    fieldTimestampDef: ATimestampFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {

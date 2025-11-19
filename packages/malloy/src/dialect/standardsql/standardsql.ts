@@ -146,7 +146,7 @@ export class StandardSQLDialect extends Dialect {
       offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
 
     const needed =
-      TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
+      TD.isAnyTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
 
     const tz = needed ? qtz(qi) || 'UTC' : undefined;
 
@@ -307,7 +307,7 @@ ${indent(sql)}
 
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const extractTo = extractMap[te.units] || te.units;
-    const tz = TD.isTimestamp(te.e.typeDef) && qtz(qi);
+    const tz = TD.isAnyTimestamp(te.e.typeDef) && qtz(qi);
     const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }

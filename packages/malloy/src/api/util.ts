@@ -111,7 +111,8 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       return {kind: 'null_cell'};
     } else if (
       field.type.kind === 'date_type' ||
-      field.type.kind === 'timestamp_type'
+      field.type.kind === 'timestamp_type' ||
+      field.type.kind === 'timestamptz_type'
     ) {
       const time_value = valueToDate(value).toISOString();
       if (field.type.kind === 'date_type') {
@@ -299,19 +300,12 @@ export function nodeToLiteralValue(
         granularity: expr.typeDef.timeframe,
       };
     case 'timestampLiteral':
-      return {
-        kind: 'timestamp_literal',
-        timestamp_value: expr.literal,
-        timezone: expr.timezone,
-        granularity: expr.typeDef.timeframe,
-      };
     case 'timestamptzLiteral':
       return {
         kind: 'timestamp_literal',
         timestamp_value: expr.literal,
         timezone: expr.timezone,
         granularity: expr.typeDef.timeframe,
-        timestamptz: true,
       };
     default:
       return undefined;

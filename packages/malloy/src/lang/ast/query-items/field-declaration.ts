@@ -31,6 +31,7 @@ import {
   isAtomicFieldType,
   isAtomic,
   mkFieldDef,
+  TD,
 } from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
@@ -141,10 +142,7 @@ export abstract class AtomicFieldDeclaration
     if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
       const ret = mkFieldDef(TDU.atomicDef(exprValue), exprName);
-      if (
-        (ret.type === 'date' || ret.type === 'timestamp') &&
-        isGranularResult(exprValue)
-      ) {
+      if (TD.isTemporal(ret) && isGranularResult(exprValue)) {
         ret.timeframe = exprValue.timeframe;
       }
       ret.location = this.location;

@@ -193,6 +193,7 @@ union FilterableType {
   3: required NumberType number_type;
   6: required DateType date_type;
   7: required TimestampType timestamp_type;
+  8: required TimestamptzType timestamptz_type;
 }
 
 union AtomicType {
@@ -205,6 +206,7 @@ union AtomicType {
   7: required TimestampType timestamp_type,
   9: required ArrayType array_type,
   10: required RecordType record_type,
+  11: required TimestamptzType timestamptz_type,
 }
 
 union ParameterType {
@@ -218,6 +220,7 @@ union ParameterType {
   9: required ArrayType array_type,
   10: required RecordType record_type,
   11: required FilterExpressionType filter_expression_type,
+  12: required TimestamptzType timestamptz_type,
 }
 
 struct SQLNativeType {
@@ -248,6 +251,10 @@ struct DateType {
 }
 
 struct TimestampType {
+  2: optional TimestampTimeframe timeframe,
+}
+
+struct TimestamptzType {
   2: optional TimestampTimeframe timeframe,
 }
 
@@ -447,7 +454,6 @@ struct TimestampLiteral {
   1: required string timestamp_value,
   2: optional TimestampTimeframe granularity,
   3: optional string timezone,
-  4: optional bool timestamptz,
 }
 
 struct NullLiteral {

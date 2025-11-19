@@ -825,21 +825,13 @@ export class MalloyToQuery
         date_value: node.literal,
         granularity,
       };
-    } else if (node.node === 'timestampLiteral') {
-      return {
-        kind: 'timestamp_literal',
-        timestamp_value: node.literal,
-        granularity,
-        timezone: node.timezone,
-      };
     } else {
-      // timestamptzLiteral
+      // timestampLiteral or timestamptzLiteral
       return {
         kind: 'timestamp_literal',
         timestamp_value: node.literal,
         granularity,
         timezone: node.timezone,
-        timestamptz: true,
       };
     }
   }

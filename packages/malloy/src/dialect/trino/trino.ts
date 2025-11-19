@@ -26,6 +26,7 @@ import type {
   Expr,
   Sampling,
   AtomicTypeDef,
+  ATimestampTypeDef,
   TypecastExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
@@ -411,24 +412,35 @@ ${indent(sql)}
   sqlConvertToCivilTime(
     expr: string,
     timezone: string,
-    _typeDef: AtomicTypeDef
+    typeDef: AtomicTypeDef
   ): {sql: string; typeDef: AtomicTypeDef} {
-    // Trino's AT TIME ZONE always produces TIMESTAMP WITH TIME ZONE
-    // Reinterprets the instant in the target timezone
+    // Trino civil time = TIMESTAMPTZ with query timezone as stored timezone
+    // Operations (extract, truncate, etc.) happen in the stored timezone
+    if (typeDef.type === 'timestamp') {
+      // TIMESTAMP (UTC wall clock) → TIMESTAMPTZ in query timezone
+      return {
+        sql: `at_timezone(with_timezone(${expr}, 'UTC'), '${timezone}')`,
+        typeDef: {type: 'timestamptz'},
+      };
+    }
+    // TIMESTAMPTZ → TIMESTAMPTZ in query timezone (same instant, different stored tz)
     return {
-      sql: `${expr} AT TIME ZONE '${timezone}'`,
-      typeDef: {type: 'timestamp', timestamptz: true},
+      sql: `at_timezone(${expr}, '${timezone}')`,
+      typeDef: {type: 'timestamptz'},
     };
   }
 
   sqlConvertFromCivilTime(
     expr: string,
     _timezone: string,
-    destTypeDef: TimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string {
-    if (destTypeDef.timestamptz) {
+    // From civil TIMESTAMPTZ (in query timezone) to destination type
+    if (destTypeDef.type === 'timestamptz') {
+      // Already TIMESTAMPTZ, keep as-is
       return expr;
     }
+    // To TIMESTAMP: convert to UTC and cast to plain TIMESTAMP
     return `CAST(at_timezone(${expr}, 'UTC') AS TIMESTAMP)`;
   }
 
@@ -473,15 +485,44 @@ ${indent(sql)}
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
     const expr = cast.e.sql || '';
-    if (op === 'timestamp::date' && tz) {
-      const tstz = `CAST(${expr} as TIMESTAMP)`;
-      return `CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return `CAST(CONCAT(CAST(CAST(${expr} AS TIMESTAMP) AS VARCHAR), ' ${tz}') AS TIMESTAMP WITH TIME ZONE)`;
+
+    // Timezone-aware casts when query timezone is set
+    if (tz && srcTypeDef && dstTypeDef) {
+      // TIMESTAMP → DATE: interpret as UTC, convert to query timezone
+      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `CAST(at_timezone(with_timezone(${expr}, 'UTC'), '${tz}') AS DATE)`;
+      }
+
+      // TIMESTAMPTZ → DATE: convert to query timezone
+      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `CAST(at_timezone(${expr}, '${tz}') AS DATE)`;
+      }
+
+      // DATE → TIMESTAMP: interpret date in query timezone, return UTC wall clock
+      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `CAST(at_timezone(with_timezone(CAST(${expr} AS TIMESTAMP), '${tz}'), 'UTC') AS TIMESTAMP)`;
+      }
+
+      // DATE → TIMESTAMPTZ: interpret date in query timezone
+      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return `with_timezone(CAST(${expr} AS TIMESTAMP), '${tz}')`;
+      }
+
+      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone wall clock
+      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `CAST(at_timezone(${expr}, '${tz}') AS TIMESTAMP)`;
+      }
+
+      // TIMESTAMP → TIMESTAMPTZ: interpret TIMESTAMP as being in query timezone
+      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return `with_timezone(${expr}, '${tz}')`;
+      }
     }
+
+    // No special handling needed, or no query timezone
     if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
       return `${castFunc}(${expr} AS ${dstSQLType})`;
@@ -566,6 +607,8 @@ ${indent(sql)}
         return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
       case 'string':
         return 'VARCHAR';
+      case 'timestamptz':
+        return 'TIMESTAMP WITH TIME ZONE';
       case 'record': {
         const typeSpec: string[] = [];
         for (const f of malloyType.fields) {
@@ -605,7 +648,7 @@ ${indent(sql)}
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     const matchType = sqlType.toLowerCase();
     if (matchType.startsWith('timestamp with time zone')) {
-      return {type: 'timestamp', timestamptz: true};
+      return {type: 'timestamptz'};
     }
     const baseSqlType = matchType.match(/^\w+/)?.at(0) ?? matchType;
     return (
@@ -677,14 +720,21 @@ ${indent(sql)}
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const pgUnits = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql || '';
-    if (TD.isTimestamp(from.e.typeDef)) {
+
+    if (TD.isAnyTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
-      // Only apply query timezone to plain timestamps, not timestamptz
-      if (tz && !from.e.typeDef.timestamptz) {
-        extractFrom = `at_timezone(${extractFrom},'${tz}')`;
+      if (tz) {
+        // Convert both TIMESTAMP and TIMESTAMPTZ to query timezone for extraction
+        if (from.e.typeDef.type === 'timestamp') {
+          // TIMESTAMP: interpret as UTC, convert to query timezone
+          extractFrom = `at_timezone(with_timezone(${extractFrom}, 'UTC'), '${tz}')`;
+        } else {
+          // TIMESTAMPTZ: convert to query timezone
+          extractFrom = `at_timezone(${extractFrom}, '${tz}')`;
+        }
       }
-      // Timestamptz already has timezone info, extract directly
     }
+
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
   }
@@ -740,9 +790,9 @@ export class PrestoDialect extends TrinoDialect {
   sqlConvertFromCivilTime(
     expr: string,
     _timezone: string,
-    destTypeDef: TimestampTypeDef
+    destTypeDef: ATimestampTypeDef
   ): string {
-    if (destTypeDef.timestamptz) {
+    if (destTypeDef.type === 'timestamptz') {
       return expr;
     }
     return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;

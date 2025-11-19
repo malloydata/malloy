@@ -52,6 +52,7 @@ export const numberT = mkTypeDesc('number');
 export const stringT = mkTypeDesc('string');
 export const dateT = mkTypeDesc('date');
 export const timestampT = mkTypeDesc('timestamp');
+export const timestamptzT = mkTypeDesc('timestamptz');
 export const boolT = mkTypeDesc('boolean');
 export const errorT = mkTypeDesc('error');
 export const aggregateBoolT = mkTypeDesc('boolean', 'aggregate');
@@ -170,9 +171,12 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
         return {
           type: 'timestamp',
           ...(td.timeframe === undefined ? {} : {timeframe: td.timeframe}),
-          ...(td.timestamptz === undefined
-            ? {}
-            : {timestamptz: td.timestamptz}),
+        };
+      }
+      case 'timestamptz': {
+        return {
+          type: 'timestamptz',
+          ...(td.timeframe === undefined ? {} : {timeframe: td.timeframe}),
         };
       }
       default:

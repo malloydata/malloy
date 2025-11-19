@@ -738,6 +738,74 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
   });
 
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast timestamptz to date',
+    async () => {
+      // TIMESTAMPTZ representing midnight UTC on Feb 20
+      // In Mexico City, this is 6pm on Feb 19
+      // So casting to date in Mexico timezone should give Feb 19
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
+          select: mex_day is day(utc_midnight::date)
+        }`
+      ).malloyResultMatches(runtime, {mex_day: 19});
+    }
+  );
+
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast date to timestamptz',
+    async () => {
+      // DATE '2020-02-20' interpreted as midnight in Mexico City
+      // Should create TIMESTAMPTZ representing that instant
+      await expect(
+        `run: ${dbName}.sql(""" SELECT DATE '2020-02-20' AS ${q`mex_20`} """) -> {
+          timezone: '${zone}'
+          select: mex_tstz is mex_20::timestamptz
+        }`
+      ).malloyResultMatches(runtime, {mex_tstz: zone_2020.toJSDate()});
+    }
+  );
+
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast timestamp to timestamptz',
+    async () => {
+      // TIMESTAMP '2020-02-20 00:00:00' (UTC wall clock = midnight UTC)
+      // Interpreted as UTC instant, converted to TIMESTAMPTZ
+      const utc_midnight = LuxonDateTime.fromISO('2020-02-20T00:00:00', {
+        zone: 'UTC',
+      });
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_ts is @2020-02-20 00:00:00[UTC] }
+          select: utc_tstz is utc_ts::timestamptz
+        }`
+      ).malloyResultMatches(runtime, {utc_tstz: utc_midnight.toJSDate()});
+    }
+  );
+
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast timestamptz to timestamp',
+    async () => {
+      // TIMESTAMPTZ representing midnight UTC on Feb 20
+      // In Mexico City, this is 6pm on Feb 19
+      // Casting to timestamp with Mexico query timezone should give
+      // the UTC wall clock of 6pm Feb 19 in Mexico = midnight Feb 20 UTC
+      const mex_evening = LuxonDateTime.fromISO('2020-02-19T18:00:00', {
+        zone: 'UTC',
+      });
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
+          select: mex_ts is utc_midnight::timestamp
+        }`
+      ).malloyResultMatches(runtime, {mex_ts: mex_evening.toJSDate()});
+    }
+  );
+
   // Test for timezone rendering issue with nested queries
   test.when(runtime.supportsNesting)(
     'nested queries preserve timezone in rendering',

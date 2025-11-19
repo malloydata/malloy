@@ -315,9 +315,12 @@ export abstract class TrinoPrestoConnection
     } else if (colSchema.type === 'number' && typeof rawRow === 'string') {
       // decimal numbers come back as strings
       return Number(rawRow);
-    } else if (colSchema.type === 'timestamp' && typeof rawRow === 'string') {
+    } else if (
+      (colSchema.type === 'timestamp' || colSchema.type === 'timestamptz') &&
+      typeof rawRow === 'string'
+    ) {
       // timestamps come back as strings
-      if (colSchema.timestamptz) {
+      if (colSchema.type === 'timestamptz') {
         // TIMESTAMP WITH TIME ZONE format: "2020-02-20 00:00:00 America/Mexico_City"
         const trinoTzPattern =
           /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
@@ -696,15 +699,14 @@ class TrinoPrestoSchemaParser extends TinyParser {
           this.next('(', 'id', ')');
         }
       } else if (sqlType === 'timestamp') {
-        const tsType: AtomicTypeDef = {type: 'timestamp'};
         if (this.peek().text === '(') {
           this.next('(', 'id', ')');
         }
         if (this.peek().text === 'with') {
           this.nextText('with', 'time', 'zone');
-          tsType.timestamptz = true;
+          return {type: 'timestamptz'};
         }
-        return tsType;
+        return {type: 'timestamp'};
       }
       const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
       if (typeDef.type === 'number' && sqlType === 'decimal') {
