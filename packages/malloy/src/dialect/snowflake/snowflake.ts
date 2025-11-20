@@ -335,31 +335,34 @@ ${indent(sql)}
     qi?: QueryInfo
   ): string {
     if (unit === 'week') {
-      // Snowflake DATE_TRUNC('week') uses the session WEEK_START parameter
-      // Instead of relying on session config, calculate offset from Sunday (default)
-      // and adjust the truncation result
+      // Snowflake DATE_TRUNC('week') defaults to Monday (WEEK_START=0)
+      // Calculate offset from Monday and adjust the truncation result
       const weekStartDay = qi?.weekStartDay || 'sunday';
 
-      // Map days to offset from Sunday (0 = Sunday, Snowflake's default)
-      const dayOffsets: Record<string, number> = {
-        sunday: 0,
-        monday: 1,
-        tuesday: 2,
-        wednesday: 3,
-        thursday: 4,
-        friday: 5,
-        saturday: 6,
+      // Map days to offset from Monday (Snowflake's default when no WEEK_START is set)
+      // Negative offset means the desired day comes before Monday
+      const dayOffsetsFromMonday: Record<string, number> = {
+        sunday: -1,
+        monday: 0,
+        tuesday: 1,
+        wednesday: 2,
+        thursday: 3,
+        friday: 4,
+        saturday: 5,
       };
 
-      const offset = dayOffsets[weekStartDay];
+      const offset = dayOffsetsFromMonday[weekStartDay];
 
       if (offset === 0) {
-        // Default Sunday start, use DATE_TRUNC directly
+        // Monday start (Snowflake default), use DATE_TRUNC directly
         return `DATE_TRUNC('${unit}', ${expr})`;
       }
 
-      // For other days: shift forward by offset, truncate to week (Sunday), then shift back
-      return `DATEADD(DAY, -${offset}, DATE_TRUNC('${unit}', DATEADD(DAY, ${offset}, ${expr})))`;
+      // For other days: shift by offset, truncate to week (Monday), then shift back
+      const days = Math.abs(offset);
+      const op = offset > 0 ? '+' : '-';
+      const reverseOp = offset > 0 ? '-' : '+';
+      return `DATEADD(DAY, ${reverseOp}${days}, DATE_TRUNC('${unit}', DATEADD(DAY, ${op}${days}, ${expr})))`;
     }
 
     return `DATE_TRUNC('${unit}', ${expr})`;
