@@ -179,7 +179,7 @@ export abstract class ExpressionDef extends MalloyElement {
 
 export class ExprDuration extends ExpressionDef {
   elementType = 'duration';
-  legalChildTypes = [TDU.timestampT, TDU.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly n: ExpressionDef,
     readonly timeframe: TimestampUnit

@@ -24,6 +24,7 @@
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {castTo, resolution, timeOffset} from '../time-utils';
+import {TD} from '../../../model/malloy_types';
 import type {BinaryMalloyOperator} from '../types/binary_operators';
 import type {ExprValue} from '../types/expr-value';
 import {computedErrorExprValue} from '../types/expr-value';
@@ -74,10 +75,10 @@ export class ForRange extends ExpressionDef {
     // to do the computaion with timestamps.
     let rangeType = resolution(units);
 
-    // Next, if the beginning of the range is a timestamp, then we
-    // also have to do the computation as a timestamp
-    if (startV.type === 'timestamp') {
-      rangeType = 'timestamp';
+    // Next, if the beginning of the range is a timestamp or timestamptz, then we
+    // also have to do the computation as a timestamp (or timestamptz)
+    if (TD.isAnyTimestamp(startV)) {
+      rangeType = startV.type;
     }
 
     // everything is dates, do date math

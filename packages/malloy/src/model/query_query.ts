@@ -43,6 +43,7 @@ import {
   isIndexSegment,
   isBaseTable,
   expressionIsAnalytic,
+  isTemporalType,
 } from './malloy_types';
 import {
   AndChain,
@@ -701,7 +702,8 @@ export class QueryQuery extends QueryField {
               });
               break;
             case 'date':
-            case 'timestamp': {
+            case 'timestamp':
+            case 'timestamptz': {
               const timeframe = fOut.timeframe;
               const fd: TemporalTypeDef = {type: fOut.type};
               if (timeframe) {
@@ -1030,7 +1032,17 @@ export class QueryQuery extends QueryField {
       throw new Error('Internal Error, queries must start from a basetable');
     }
 
-    for (const childJoin of ji.children) {
+    // Sort children to ensure array joins are processed before table joins that might reference them
+    //
+    const sortedChildren = [...ji.children].sort((a, b) => {
+      const aIsArray = a.queryStruct.structDef.type === 'array';
+      const bIsArray = b.queryStruct.structDef.type === 'array';
+      if (aIsArray && !bIsArray) return -1;
+      if (!aIsArray && bIsArray) return 1;
+      return 0;
+    });
+
+    for (const childJoin of sortedChildren) {
       s += this.generateSQLJoinBlock(stageWriter, childJoin, 0);
     }
     return s;
@@ -2191,7 +2203,7 @@ class QueryQueryIndexStage extends QueryQuery {
           dialect.castToString(`MAX(${fields[i].expression})`)
         )}\n`;
       }
-      if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
+      if (isTemporalType(fields[i].type)) {
         s += `    WHEN ${i} THEN ${dialect.concat(
           `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
           "' to '",

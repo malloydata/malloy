@@ -82,7 +82,9 @@ export type Expr =
   | TimeExtractExpr
   | TimeDeltaExpr
   | TimeTruncExpr
-  | TimeLiteralNode
+  | DateLiteralNode
+  | TimestampLiteralNode
+  | TimestamptzLiteralNode
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
@@ -326,9 +328,17 @@ export type FilterExprType =
   | 'number'
   | 'boolean'
   | 'date'
-  | 'timestamp';
+  | 'timestamp'
+  | 'timestamptz';
 export function isFilterExprType(s: string): s is FilterExprType {
-  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
+  return [
+    'string',
+    'number',
+    'boolean',
+    'date',
+    'timestamp',
+    'timestamptz',
+  ].includes(s);
 }
 
 export interface FilterMatchExpr extends ExprWithKids {
@@ -343,11 +353,37 @@ export interface FilterLiteralExpr extends ExprLeaf {
   filterSrc: string;
 }
 
-export interface TimeLiteralNode extends ExprLeaf {
-  node: 'timeLiteral';
+export interface DateLiteralNode extends ExprLeaf {
+  node: 'dateLiteral';
   literal: string;
-  typeDef: TemporalTypeDef;
-  timezone?: string;
+  typeDef: DateTypeDef;
+}
+
+export interface TimestampLiteralNode extends ExprLeaf {
+  node: 'timestampLiteral';
+  literal: string;
+  typeDef: TimestampTypeDef;
+  timezone?: string; // Used for SQL generation (CONVERT_TZ, etc.)
+}
+
+export interface TimestamptzLiteralNode extends ExprLeaf {
+  node: 'timestamptzLiteral';
+  literal: string;
+  typeDef: TimestamptzTypeDef;
+  timezone: string; // Always required for timestamptz
+}
+
+export type TimeLiteralExpr =
+  | DateLiteralNode
+  | TimestampLiteralNode
+  | TimestamptzLiteralNode;
+
+export function isTimeLiteral(e: Expr): e is TimeLiteralExpr {
+  return (
+    e.node === 'dateLiteral' ||
+    e.node === 'timestampLiteral' ||
+    e.node === 'timestamptzLiteral'
+  );
 }
 
 export interface StringLiteralNode extends ExprLeaf {
@@ -449,6 +485,7 @@ export type ParameterType =
   | 'boolean'
   | 'date'
   | 'timestamp'
+  | 'timestamptz'
   | 'filter expression'
   | 'error';
 
@@ -459,6 +496,7 @@ export function isParameterType(t: string): t is ParameterType {
     'boolean',
     'date',
     'timestamp',
+    'timestamptz',
     'filter expression',
     'error',
   ].includes(t);
@@ -692,9 +730,9 @@ export function hasExpression<T extends FieldDef>(
   return 'e' in f && f.e !== undefined;
 }
 
-export type TemporalFieldType = 'date' | 'timestamp';
+export type TemporalFieldType = 'date' | 'timestamp' | 'timestamptz';
 export function isTemporalType(s: string): s is TemporalFieldType {
-  return s === 'date' || s === 'timestamp';
+  return s === 'date' || s === 'timestamp' || s === 'timestamptz';
 }
 export type CastType =
   | 'string'
@@ -714,6 +752,7 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'number',
     'date',
     'timestamp',
+    'timestamptz',
     'boolean',
     'json',
     'sql native',
@@ -723,15 +762,27 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
   ].includes(s);
 }
 export function canOrderBy(s: string) {
-  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'boolean',
+    'date',
+    'timestamp',
+    'timestamptz',
+  ].includes(s);
 }
 
 export function isCastType(s: string): s is CastType {
-  return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'timestamp',
+    'timestamptz',
+    'boolean',
+    'json',
+  ].includes(s);
 }
 
 /**
@@ -827,8 +878,14 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
       return timeframe ? {name, type: 'date', timeframe} : ret;
     }
     case 'timestamp': {
-      const timeframe = atd.timeframe;
-      return timeframe ? {name, type: 'timestamp', timeframe} : ret;
+      const ret: TimestampFieldDef = {name, type: 'timestamp'};
+      if (atd.timeframe) ret.timeframe = atd.timeframe;
+      return ret;
+    }
+    case 'timestamptz': {
+      const ret: TimestamptzFieldDef = {name, type: 'timestamptz'};
+      if (atd.timeframe) ret.timeframe = atd.timeframe;
+      return ret;
     }
   }
   return ret;
@@ -1033,6 +1090,16 @@ export interface TimestampTypeDef {
   timeframe?: TimestampUnit;
 }
 export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
+
+export interface TimestamptzTypeDef {
+  type: 'timestamptz';
+  timeframe?: TimestampUnit;
+}
+export type TimestamptzFieldDef = TimestamptzTypeDef & AtomicFieldDef;
+
+// Union type for both timestamp types
+export type ATimestampTypeDef = TimestampTypeDef | TimestamptzTypeDef;
+export type ATimestampFieldDef = TimestampFieldDef | TimestamptzFieldDef;
 
 /** parameter to order a query */
 export interface OrderBy {
@@ -1587,7 +1654,10 @@ export interface ConnectionDef extends NamedObject {
   type: 'connection';
 }
 
-export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
+export type TemporalTypeDef =
+  | DateTypeDef
+  | TimestampTypeDef
+  | TimestamptzTypeDef;
 export type BasicAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
@@ -1853,7 +1923,12 @@ export const TD = {
   isSQL: (td: UTD): td is NativeUnsupportedTypeDef => td?.type === 'sql native',
   isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
   isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
-  isTemporal(td: UTD): td is TimestampTypeDef {
+  isTimestamptz: (td: UTD): td is TimestamptzTypeDef =>
+    td?.type === 'timestamptz',
+  isAnyTimestamp(td: UTD): td is ATimestampTypeDef {
+    return td?.type === 'timestamp' || td?.type === 'timestamptz';
+  },
+  isTemporal(td: UTD): td is TemporalTypeDef {
     const typ = td?.type ?? '';
     return isTemporalType(typ);
   },

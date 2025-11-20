@@ -27,5 +27,8 @@
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "luxon": "^3.5.0",
     "mysql2": "^3.11.3"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.5.0"
   }
 }

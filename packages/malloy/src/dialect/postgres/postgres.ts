@@ -69,6 +69,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
+// TODO there needs be an audit of this data structure
 const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
@@ -77,10 +78,10 @@ const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'integer': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
   'double precision': {type: 'number', numberType: 'float'},
-  'timestamp without time zone': {type: 'timestamp'}, // maybe not
+  'timestamp without time zone': {type: 'timestamp'},
+  'timestamp with time zone': {type: 'timestamptz'},
   'oid': {type: 'string'},
   'boolean': {type: 'boolean'},
-  // ARRAY: "string",
   'timestamp': {type: 'timestamp'},
   '"char"': {type: 'string'},
   'character': {type: 'string'},
@@ -277,29 +278,6 @@ export class PostgresDialect extends PostgresBase {
     throw new Error('Not implemented Yet');
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `(${expr})::TIMESTAMPTZ AT TIME ZONE '${timezone}'`;
-  }
-
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
-    return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;
-  }
-
-  sqlTruncate(
-    expr: string,
-    unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
-  ): string {
-    // PostgreSQL starts weeks on Monday, Malloy wants Sunday
-    // Add 1 day before truncating, subtract 1 day after
-    if (unit === 'week') {
-      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
-    }
-    return `DATE_TRUNC('${unit}', ${expr})`;
-  }
-
   sqlOffsetTime(
     expr: string,
     op: '+' | '-',
@@ -447,7 +425,8 @@ export class PostgresDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+  sqlTypeToMalloyType(rawSqlType: string): BasicAtomicTypeDef {
+    const sqlType = rawSqlType.toLowerCase();
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (
@@ -491,7 +470,7 @@ export class PostgresDialect extends PostgresBase {
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const units = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql;
-    if (TD.isTimestamp(from.e.typeDef)) {
+    if (TD.isAnyTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;

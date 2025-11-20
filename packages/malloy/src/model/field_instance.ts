@@ -20,6 +20,7 @@ import {
   hasExpression,
   isAtomic,
   mergeUniqueKeyRequirement,
+  isTemporalType,
 } from './malloy_types';
 import {AndChain, caseGroup, type GenerateState} from './utils';
 import {JoinInstance} from './join_instance';
@@ -442,7 +443,7 @@ export class FieldInstanceResult implements FieldInstance {
             continue;
           }
           firstField ||= fi.fieldUsage.resultIndex;
-          if (['date', 'timestamp'].indexOf(fi.f.fieldDef.type) > -1) {
+          if (isTemporalType(fi.f.fieldDef.type)) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
           } else if (isBasicAggregate(fi.f)) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];

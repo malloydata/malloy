@@ -75,6 +75,8 @@ function typeDefFromField(type: Malloy.AtomicType): AtomicTypeDef {
       return {type: 'boolean'};
     case 'timestamp_type':
       return {type: 'timestamp', timeframe: type.timeframe};
+    case 'timestamptz_type':
+      return {type: 'timestamptz', timeframe: type.timeframe};
     case 'date_type':
       return {type: 'date', timeframe: type.timeframe};
     case 'sql_native_type':

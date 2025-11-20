@@ -399,8 +399,8 @@ describe('api', () => {
                 },
                 {
                   default_value: {
-                    kind: 'timestamp_literal',
-                    timestamp_value: '2020-01-01',
+                    kind: 'date_literal',
+                    date_value: '2020-01-01',
                   },
                   name: 'date_1',
                   type: {

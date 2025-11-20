@@ -149,10 +149,17 @@ function convertParameterDefaultValue(
         kind: 'filter_expression_literal',
         filter_expression_value: value.filterSrc,
       };
-    case 'timeLiteral':
+    case 'dateLiteral':
+      return {
+        kind: 'date_literal',
+        date_value: value.literal,
+      };
+    case 'timestampLiteral':
+    case 'timestamptzLiteral':
       return {
         kind: 'timestamp_literal',
         timestamp_value: value.literal,
+        timezone: value.timezone,
       };
     case 'true':
       return {kind: 'boolean_literal', boolean_value: true};
@@ -432,6 +439,11 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
       case 'timestamp':
         return {
           kind: 'timestamp_type',
+          timeframe: convertTimestampTimeframe(field.timeframe),
+        };
+      case 'timestamptz':
+        return {
+          kind: 'timestamptz_type',
           timeframe: convertTimestampTimeframe(field.timeframe),
         };
       case 'json':

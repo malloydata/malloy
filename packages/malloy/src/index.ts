@@ -120,7 +120,10 @@ export type {
   StringLiteralNode,
   ArrayLiteralNode,
   SourceComponentInfo,
-  TimeLiteralNode,
+  DateLiteralNode,
+  TimestampLiteralNode,
+  TimestamptzLiteralNode,
+  TimeLiteralExpr,
   TypecastExpr,
 } from './model';
 export {

@@ -265,7 +265,7 @@ export class TestSelect {
 
     return {
       expr: {
-        node: 'timeLiteral',
+        node: 'dateLiteral',
         literal: value,
         typeDef: {type: 'date'},
       },
@@ -294,9 +294,45 @@ export class TestSelect {
 
     return {
       expr: {
-        node: 'timeLiteral',
+        node: 'timestampLiteral',
         literal: value,
         typeDef: {type: 'timestamp'},
+      },
+      malloyType,
+      needsCast: false,
+    };
+  }
+
+  mk_timestamptz(value: string | null): TypedValue {
+    const malloyType: AtomicTypeDef = {type: 'timestamptz'};
+
+    if (value === null) {
+      const castExpr: TypecastExpr = {
+        node: 'cast',
+        e: nullExpr,
+        dstType: {type: 'timestamptz'},
+        safe: false,
+      };
+
+      return {
+        expr: castExpr,
+        malloyType,
+        needsCast: true,
+      };
+    }
+
+    const match = value.match(/^(.+?)\s*\[(.+?)\]$/);
+    if (!match) {
+      throw new Error(`Invalid timestamptz format: ${value}. Expected format: 'YYYY-MM-DD
+  HH:MM:SS [Timezone]'`);
+    }
+    const [, ts, timezone] = match;
+    return {
+      expr: {
+        node: 'timestamptzLiteral',
+        literal: ts.trim(),
+        typeDef: {type: 'timestamptz'},
+        timezone,
       },
       malloyType,
       needsCast: false,

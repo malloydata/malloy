@@ -51,12 +51,12 @@ import {
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
-
 import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
 import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
 import type {ConnectionOptions} from 'trino-client';
 import {Trino, BasicAuth} from 'trino-client';
+import {DateTime as LuxonDateTime} from 'luxon';
 
 export interface TrinoManagerOptions {
   credentials?: {
@@ -315,9 +315,27 @@ export abstract class TrinoPrestoConnection
     } else if (colSchema.type === 'number' && typeof rawRow === 'string') {
       // decimal numbers come back as strings
       return Number(rawRow);
-    } else if (colSchema.type === 'timestamp' && typeof rawRow === 'string') {
+    } else if (
+      (colSchema.type === 'timestamp' || colSchema.type === 'timestamptz') &&
+      typeof rawRow === 'string'
+    ) {
       // timestamps come back as strings
-      return new Date(rawRow as string);
+      if (colSchema.type === 'timestamptz') {
+        // TIMESTAMP WITH TIME ZONE format: "2020-02-20 00:00:00 America/Mexico_City"
+        const trinoTzPattern =
+          /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
+        const match = (rawRow as string).match(trinoTzPattern);
+        if (match) {
+          const [, dateTimePart, tzName] = match;
+          // Use Luxon to parse with timezone awareness
+          const dt = LuxonDateTime.fromSQL(dateTimePart, {zone: tzName});
+          if (dt.isValid) {
+            return dt.toJSDate();
+          }
+        }
+      }
+      // For plain timestamps, Trino returns UTC values - append 'Z' to parse as UTC
+      return new Date(rawRow + 'Z');
     } else {
       return rawRow as QueryValue;
     }
@@ -686,7 +704,9 @@ class TrinoPrestoSchemaParser extends TinyParser {
         }
         if (this.peek().text === 'with') {
           this.nextText('with', 'time', 'zone');
+          return {type: 'timestamptz'};
         }
+        return {type: 'timestamp'};
       }
       const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
       if (typeDef.type === 'number' && sqlType === 'decimal') {

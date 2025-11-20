@@ -40,6 +40,7 @@ import {
   isJoined,
   isQuerySegment,
   isSourceDef,
+  isTimeLiteral,
   isTurtle,
 } from '../model/malloy_types';
 import {isNotUndefined} from './utils';
@@ -1266,7 +1267,7 @@ function isSingleValueFilterNode(e: Expr): string[] | undefined {
       e.kids.left.node === 'field' &&
       (e.kids.right.node === 'true' ||
         e.kids.right.node === 'false' ||
-        e.kids.right.node === 'timeLiteral' ||
+        isTimeLiteral(e.kids.right) ||
         e.kids.right.node === 'numberLiteral' ||
         e.kids.right.node === 'stringLiteral')
     ) {

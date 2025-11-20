@@ -30,7 +30,7 @@ import type {
   TimeDeltaExpr,
   ExpressionValueType,
 } from '../../model/malloy_types';
-import {mkTemporal, isCastType, isDateUnit} from '../../model/malloy_types';
+import {mkTemporal, isCastType, isDateUnit, TD} from '../../model/malloy_types';
 
 import type {TimeResult} from './types/time-result';
 
@@ -98,7 +98,7 @@ export function mkTimeResult(
   tt: TimestampUnit | undefined
 ): TimeResult {
   if (tt) {
-    if (t.type === 'timestamp') {
+    if (TD.isAnyTimestamp(t)) {
       return {...t, timeframe: tt};
     }
     if (isDateUnit(tt)) {
