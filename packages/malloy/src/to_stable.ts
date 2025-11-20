@@ -220,10 +220,19 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
         timezoneAnnotation = {value: timezoneTag.toString()};
       }
 
+      // Check if this field has weekStartDay information (for RecordDef/RepeatedRecordDef)
+      let weekStartAnnotation: Malloy.Annotation | undefined;
+      if (isRecordOrRepeatedRecord(field) && field.weekStartDay) {
+        const weekStartTag = Tag.withPrefix('#(malloy) ');
+        weekStartTag.set(['week_start_day'], field.weekStartDay);
+        weekStartAnnotation = {value: weekStartTag.toString()};
+      }
+
       const fieldAnnotations = [
         ...(annotations ?? []),
         ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
         ...(timezoneAnnotation ? [timezoneAnnotation] : []),
+        ...(weekStartAnnotation ? [weekStartAnnotation] : []),
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: aggregate ? 'measure' : 'dimension',
@@ -388,6 +397,11 @@ export function getResultStructMetadataAnnotation(
   // Include queryTimezone if present on the field
   if (field.queryTimezone) {
     tag.set(['query_timezone'], field.queryTimezone);
+    hasAny = true;
+  }
+  // Include weekStartDay if present on the field
+  if (field.weekStartDay) {
+    tag.set(['week_start_day'], field.weekStartDay);
     hasAny = true;
   }
   return hasAny

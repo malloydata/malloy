@@ -171,6 +171,7 @@ exploreStatement
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
   | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
+  | weekStartStatement                       # defExploreWeekStart
   | ANNOTATION+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
   ;
@@ -426,6 +427,7 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  | weekStartStatement
   | drillStatement
   | queryAnnotation
   | ignoredModelAnnotations
@@ -525,6 +527,10 @@ sampleStatement
 
 timezoneStatement
   : TIMEZONE string
+  ;
+
+weekStartStatement
+  : WEEK_START id
   ;
 
 queryAnnotation

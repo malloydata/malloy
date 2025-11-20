@@ -25,6 +25,7 @@ import type {
   AccessModifierLabel,
   Annotation,
   SourceDef,
+  WeekDay,
 } from '../../../model/malloy_types';
 import {expressionIsCalculation} from '../../../model/malloy_types';
 
@@ -38,6 +39,7 @@ import {Views} from '../source-properties/views';
 import type {SourceDesc} from '../types/source-desc';
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
+import {WeekStartStatement} from '../source-properties/week-start-statement';
 import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import type {MakeEntry} from '../types/space-entry';
@@ -80,6 +82,7 @@ export class RefinedSource extends Source {
     const fields: MakeEntry[] = [];
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
+    let newWeekStart: WeekDay | undefined;
 
     const inlineAccessModifiers: {
       access: AccessModifierLabel;
@@ -122,6 +125,8 @@ export class RefinedSource extends Source {
         filters.push(el);
       } else if (el instanceof TimezoneStatement) {
         newTimezone = el.tz;
+      } else if (el instanceof WeekStartStatement) {
+        newWeekStart = el.normalizedWeekDay;
       } else {
         errTo.logError(
           'unexpected-source-property',
@@ -153,6 +158,9 @@ export class RefinedSource extends Source {
     );
     if (newTimezone) {
       fs.setTimezone(newTimezone);
+    }
+    if (newWeekStart) {
+      fs.setWeekStart(newWeekStart);
     }
     if (pList) {
       fs.addParameters(pList);

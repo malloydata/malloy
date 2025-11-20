@@ -331,10 +331,36 @@ ${indent(sql)}
     unit: string,
     _typeDef: AtomicTypeDef,
     _inCivilTime: boolean,
-    _timezone?: string
+    _timezone?: string,
+    qi?: QueryInfo
   ): string {
-    // Snowflake session is configured with WEEK_START=7 (Sunday)
-    // so DATE_TRUNC already truncates to Sunday - no adjustment needed
+    if (unit === 'week') {
+      // Snowflake session is configured with WEEK_START=7 (Sunday) for consistency
+      // with Malloy's default and to ensure DAYOFWEEK extraction works correctly
+      const weekStartDay = qi?.weekStartDay || 'sunday';
+
+      if (weekStartDay === 'sunday') {
+        // Default Sunday start, use DATE_TRUNC directly
+        return `DATE_TRUNC('${unit}', ${expr})`;
+      }
+
+      // For non-Sunday week starts, calculate offset from Sunday and adjust
+      const dayOffsetsFromSunday: Record<string, number> = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+      };
+
+      const offset = dayOffsetsFromSunday[weekStartDay];
+
+      // Shift forward by offset, truncate to week (Sunday), then shift back
+      return `DATEADD(DAY, -${offset}, DATE_TRUNC('${unit}', DATEADD(DAY, ${offset}, ${expr})))`;
+    }
+
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 

@@ -122,6 +122,7 @@ type MessageParameterTypes = {
   'syntax-error': {message: string};
   'internal-translator-error': {message: string};
   'invalid-timezone': {timezone: string};
+  'invalid-week-start': {weekDay: string};
   // Old Style
   'aggregate-source-not-found': string;
   'name-conflict-with-global': string;
@@ -461,6 +462,8 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'syntax-error': e => e.message,
   'internal-translator-error': e => `Internal Translator Error: ${e.message}`,
   'invalid-timezone': e => `Invalid timezone: ${e.timezone}`,
+  'invalid-week-start': e =>
+    `Invalid week start day: ${e.weekDay}. Must be one of: sunday, monday, tuesday, wednesday, thursday, friday, saturday`,
   'case-then-type-does-not-match': e =>
     `Case then type ${e.thenType} does not match return type ${e.returnType}`,
   'case-else-type-does-not-match': e =>

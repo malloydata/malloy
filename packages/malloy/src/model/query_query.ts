@@ -194,6 +194,15 @@ export class QueryQuery extends QueryField {
       firstStage.queryTimezone = sourceDef.queryTimezone;
     }
 
+    if (
+      isSourceDef(sourceDef) &&
+      sourceDef.weekStartDay &&
+      isQuerySegment(firstStage) &&
+      firstStage.weekStartDay === undefined
+    ) {
+      firstStage.weekStartDay = sourceDef.weekStartDay;
+    }
+
     switch (firstStage.type) {
       case 'reduce':
         return new QueryQueryReduce(
@@ -623,9 +632,10 @@ export class QueryQuery extends QueryField {
           '<nosource>'
         );
 
-        // Get the timezone from the nested query
+        // Get the timezone and week start from the nested query
         const nestedQueryInfo = fi.getQueryInfo();
         const queryTimezone = nestedQueryInfo.queryTimezone;
+        const weekStartDay = nestedQueryInfo.weekStartDay;
 
         if (repeatedResultType === 'nested') {
           const multiLineNest: RepeatedRecordDef = {
@@ -640,6 +650,7 @@ export class QueryQuery extends QueryField {
             }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
+            ...(weekStartDay && {weekStartDay}),
           };
           fields.push(multiLineNest);
         } else {
@@ -654,6 +665,7 @@ export class QueryQuery extends QueryField {
             }),
             resultMetadata,
             ...(queryTimezone && {queryTimezone}),
+            ...(weekStartDay && {weekStartDay}),
           };
           fields.push(oneLineNest);
         }
@@ -745,6 +757,7 @@ export class QueryQuery extends QueryField {
       connection: this.parent.connectionName,
       resultMetadata: this.getResultMetadata(this.rootResult),
       queryTimezone: resultStruct.getQueryInfo().queryTimezone,
+      weekStartDay: resultStruct.getQueryInfo().weekStartDay,
     };
     if (this.parent.structDef.modelAnnotation) {
       outputStruct.modelAnnotation = this.parent.structDef.modelAnnotation;

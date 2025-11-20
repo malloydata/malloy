@@ -401,14 +401,28 @@ export class MySQLDialect extends Dialect {
     unit: string,
     _typeDef: AtomicTypeDef,
     _inCivilTime: boolean,
-    _timezone?: string
+    _timezone?: string,
+    qi?: QueryInfo
   ): string {
-    // For week truncation, adjust to Sunday first
-    // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
-    const adjustedExpr =
-      unit === 'week'
-        ? `DATE_SUB(${expr}, INTERVAL DAYOFWEEK(${expr}) - 1 DAY)`
-        : expr;
+    // For week truncation, adjust to the desired week start day
+    // DAYOFWEEK returns 1=Sunday, 2=Monday, 3=Tuesday, etc.
+    let adjustedExpr = expr;
+    if (unit === 'week') {
+      const weekDay = qi?.weekStartDay || 'sunday';
+      const dayNumbers: Record<string, number> = {
+        sunday: 1,
+        monday: 2,
+        tuesday: 3,
+        wednesday: 4,
+        thursday: 5,
+        friday: 6,
+        saturday: 7,
+      };
+      const targetDayNumber = dayNumbers[weekDay];
+      // Adjust to the week start day: subtract (DAYOFWEEK - targetDayNumber) days
+      // Use MOD to handle negative values properly
+      adjustedExpr = `DATE_SUB(${expr}, INTERVAL MOD(DAYOFWEEK(${expr}) - ${targetDayNumber} + 7, 7) DAY)`;
+    }
 
     // Generate truncation using DATE_FORMAT
     let format = "'%Y-%m-%d %H:%i:%s'";

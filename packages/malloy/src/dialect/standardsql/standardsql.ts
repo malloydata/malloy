@@ -325,21 +325,29 @@ ${indent(sql)}
     unit: TimestampUnit,
     typeDef: AtomicTypeDef,
     inCivilTime: boolean,
-    timezone?: string
+    timezone?: string,
+    qi?: QueryInfo
   ): string {
+    // BigQuery TRUNC functions default to Sunday for WEEK
+    // For custom week start, the day goes inside WEEK() like: WEEK(MONDAY)
+    let truncUnit = unit;
+    if (unit.toUpperCase() === 'WEEK' && qi?.weekStartDay) {
+      truncUnit = `WEEK(${qi.weekStartDay.toUpperCase()})` as TimestampUnit;
+    }
+
     if (inCivilTime) {
       // Operating on DATETIME (civil time)
-      return `DATETIME_TRUNC(${expr}, ${unit})`;
+      return `DATETIME_TRUNC(${expr}, ${truncUnit})`;
     }
 
     // Operating on DATE or TIMESTAMP
     if (TD.isDate(typeDef)) {
-      return `DATE_TRUNC(${expr}, ${unit})`;
+      return `DATE_TRUNC(${expr}, ${truncUnit})`;
     }
 
     // TIMESTAMP truncation with optional timezone
     const tzParam = timezone ? `, '${timezone}'` : '';
-    return `TIMESTAMP_TRUNC(${expr}, ${unit}${tzParam})`;
+    return `TIMESTAMP_TRUNC(${expr}, ${truncUnit}${tzParam})`;
   }
 
   sqlOffsetTime(
