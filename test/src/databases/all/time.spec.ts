@@ -776,6 +776,14 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
   });
+  test('return date 2020-02-20', async () => {
+    await expect(
+      `run: ${dbName}.sql(${selectMidnight}) -> {
+        timezone: '${zone}'
+        select: d2020 is date_2020
+      }`
+    ).malloyResultMatches(runtime, {d2020: '2020-02-20'});
+  });
   test('cast date to timestamptz', async () => {
     await expect(
       `run: ${dbName}.sql(${selectMidnight}) -> {
