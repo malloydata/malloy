@@ -383,7 +383,7 @@ ${indent(sql)}
     let extractFrom = from.e.sql;
     const tz = qtz(qi);
 
-    if (tz && TD.isTimestamp(from.e.typeDef)) {
+    if (tz && TD.isAnyTimestamp(from.e.typeDef)) {
       extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
     }
     return `EXTRACT(${extractUnits} FROM ${extractFrom})`;

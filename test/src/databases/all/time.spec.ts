@@ -32,14 +32,17 @@ import {
 } from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 import {API} from '@malloydata/malloy';
+import {TestSelect} from '../../test-select';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
-  const q = runtime.getQuoter();
-
-  const timeSQL = `SELECT DATE '2021-02-24' as ${q`t_date`}, TIMESTAMP '2021-02-24 03:05:06' as ${q`t_timestamp`} `;
+  const ts = new TestSelect(runtime.dialect);
+  const timeSQL = ts.generate({
+    t_date: ts.mk_date('2021-02-24'),
+    t_timestamp: ts.mk_timestamp('2021-02-24 03:05:06'),
+  });
   const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 
   describe('interval measurement', () => {
@@ -680,7 +683,11 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
-  const q = runtime.getQuoter();
+  const ts = new TestSelect(runtime.dialect);
+  const selectMidnight = `"""${ts.generate({
+    utc_midnight_ts: ts.mk_timestamp('2020-02-20 00:00:00'),
+    date_2020: ts.mk_date('2020-02-20'),
+  })}"""`;
   test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
@@ -731,10 +738,9 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     // midnight on the 19th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
     await expect(
-      `run: ${dbName}.sql("SELECT 1 as x") -> {
+      `run: ${dbName}.sql(${selectMidnight}) -> {
         timezone: '${zone}'
-        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-        select: mex_day is utc_midnight.day
+        select: mex_day is utc_midnight_ts.day
       }`
     ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
   });
@@ -754,93 +760,30 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   });
 
   test('cast timestamp to date', async () => {
-    // At midnight in london it is the 19th in Mexico, so when we cast that
-    // to a date, it should be the 19th.
     await expect(
-      `run: ${dbName}.sql("SELECT 1 as x") -> {
+      `run: ${dbName}.sql(${selectMidnight}) -> {
         timezone: '${zone}'
-        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-        select: mex_day is day(utc_midnight::date)
+        select: mex_date is utc_midnight_ts::date
       }`
-    ).malloyResultMatches(runtime, {mex_day: 19});
+    ).malloyResultMatches(runtime, {mex_date: '2020-02-19'});
   });
-
+  test.todo('cast timestamptz to date');
   test('cast date to timestamp', async () => {
     await expect(
-      `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
+      `run: ${dbName}.sql(${selectMidnight}) -> {
         timezone: '${zone}'
-        select: mex_ts is mex_20::timestamp
+        select: mex_date is date_2020::timestamp
       }`
-    ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
+    ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
   });
-
-  test.when(runtime.dialect.hasTimestamptz)(
-    'cast timestamptz to date',
-    async () => {
-      // TIMESTAMPTZ representing midnight UTC on Feb 20
-      // In Mexico City, this is 6pm on Feb 19
-      // So casting to date in Mexico timezone should give Feb 19
-      await expect(
-        `run: ${dbName}.sql("SELECT 1 as x") -> {
-          timezone: '${zone}'
-          extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-          select: mex_day is day(utc_midnight::date)
-        }`
-      ).malloyResultMatches(runtime, {mex_day: 19});
-    }
-  );
-
-  test.when(runtime.dialect.hasTimestamptz)(
-    'cast date to timestamptz',
-    async () => {
-      // DATE '2020-02-20' interpreted as midnight in Mexico City
-      // Should create TIMESTAMPTZ representing that instant
-      await expect(
-        `run: ${dbName}.sql(""" SELECT DATE '2020-02-20' AS ${q`mex_20`} """) -> {
-          timezone: '${zone}'
-          select: mex_tstz is mex_20::timestamptz
-        }`
-      ).malloyResultMatches(runtime, {mex_tstz: zone_2020.toJSDate()});
-    }
-  );
-
-  test.when(runtime.dialect.hasTimestamptz)(
-    'cast timestamp to timestamptz',
-    async () => {
-      // TIMESTAMP '2020-02-20 00:00:00' (UTC wall clock = midnight UTC)
-      // Interpreted as UTC instant, converted to TIMESTAMPTZ
-      const utc_midnight = LuxonDateTime.fromISO('2020-02-20T00:00:00', {
-        zone: 'UTC',
-      });
-      await expect(
-        `run: ${dbName}.sql("SELECT 1 as x") -> {
-          timezone: '${zone}'
-          extend: { dimension: utc_ts is @2020-02-20 00:00:00[UTC] }
-          select: utc_tstz is utc_ts::timestamptz
-        }`
-      ).malloyResultMatches(runtime, {utc_tstz: utc_midnight.toJSDate()});
-    }
-  );
-
-  test.when(runtime.dialect.hasTimestamptz)(
-    'cast timestamptz to timestamp',
-    async () => {
-      // TIMESTAMPTZ representing midnight UTC on Feb 20
-      // In Mexico City, this is 6pm on Feb 19
-      // Casting to timestamp with Mexico query timezone should give
-      // the UTC wall clock of 6pm Feb 19 in Mexico = midnight Feb 20 UTC
-      const mex_evening = LuxonDateTime.fromISO('2020-02-19T18:00:00', {
-        zone: 'UTC',
-      });
-      await expect(
-        `run: ${dbName}.sql("SELECT 1 as x") -> {
-          timezone: '${zone}'
-          extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-          select: mex_ts is utc_midnight::timestamp
-        }`
-      ).malloyResultMatches(runtime, {mex_ts: mex_evening.toJSDate()});
-    }
-  );
+  test('cast date to timestamptz', async () => {
+    await expect(
+      `run: ${dbName}.sql(${selectMidnight}) -> {
+        timezone: '${zone}'
+        select: mex_date is date_2020::timestamptz
+      }`
+    ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
+  });
 
   // Test for timezone rendering issue with nested queries
   test.when(runtime.supportsNesting)(

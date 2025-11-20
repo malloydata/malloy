@@ -207,8 +207,23 @@ expect.extend({
           }
           const got = result.data.path(...resultPath).value;
           const pGot = JSON.stringify(got);
-          const mustBe = value instanceof Date ? value.getTime() : value;
-          const actuallyGot = got instanceof Date ? got.getTime() : got;
+
+          let mustBe = value;
+          let actuallyGot = got;
+
+          // If expected is a Date, compare timestamps (existing behavior)
+          if (value instanceof Date) {
+            mustBe = value.getTime();
+            actuallyGot = got instanceof Date ? got.getTime() : got;
+          }
+          // If expected is a date string like 'YYYY-MM-DD', compare as date strings
+          else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            if (got instanceof Date) {
+              actuallyGot = got.toISOString().split('T')[0];
+            }
+            // mustBe stays as the string value
+          }
+
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
             fails.push(`${expected} Got: Non Numeric '${pGot}'`);
           } else if (!objectsMatch(actuallyGot, mustBe)) {

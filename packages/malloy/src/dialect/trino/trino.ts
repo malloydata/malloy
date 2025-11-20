@@ -786,6 +786,19 @@ export class PrestoDialect extends TrinoDialect {
     return `TIMESTAMP '${literal} ${timezone}'`;
   }
 
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // Presto's AT TIME ZONE operator (not function) produces TIMESTAMPTZ
+    // Reinterprets the instant in the target timezone
+    return {
+      sql: `${expr} AT TIME ZONE '${timezone}'`,
+      typeDef: {type: 'timestamptz'},
+    };
+  }
+
   sqlConvertFromCivilTime(
     expr: string,
     _timezone: string,
@@ -795,6 +808,56 @@ export class PrestoDialect extends TrinoDialect {
       return expr;
     }
     return `CAST(${expr} AT TIME ZONE 'UTC' AS TIMESTAMP)`;
+  }
+
+  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const tz = qtz(qi);
+    const expr = cast.e.sql || '';
+
+    // Timezone-aware casts when query timezone is set
+    // Presto uses AT TIME ZONE operator instead of Trino's with_timezone/at_timezone functions
+    if (tz && srcTypeDef && dstTypeDef) {
+      // TIMESTAMP → DATE: interpret as UTC, convert to query timezone
+      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `CAST((${expr} AT TIME ZONE 'UTC') AT TIME ZONE '${tz}' AS DATE)`;
+      }
+
+      // TIMESTAMPTZ → DATE: convert to query timezone
+      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `CAST(${expr} AT TIME ZONE '${tz}' AS DATE)`;
+      }
+
+      // DATE → TIMESTAMP: interpret date in query timezone, return UTC wall clock
+      // Presto doesn't have a way to interpret TIMESTAMP in a non-UTC timezone,
+      // so we build a TIMESTAMPTZ literal string and cast it
+      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        const tstzLiteral = `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${tz}' AS TIMESTAMP WITH TIME ZONE)`;
+        return `CAST(${tstzLiteral} AS TIMESTAMP)`;
+      }
+
+      // DATE → TIMESTAMPTZ: interpret date in query timezone
+      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return `CAST(CAST(${expr} AS VARCHAR) || ' 00:00:00 ${tz}' AS TIMESTAMP WITH TIME ZONE)`;
+      }
+
+      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone wall clock
+      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `CAST(${expr} AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+      }
+
+      // TIMESTAMP → TIMESTAMPTZ: interpret TIMESTAMP as UTC
+      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return `${expr} AT TIME ZONE 'UTC'`;
+      }
+    }
+
+    // No special handling needed, or no query timezone
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
+      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
+      return `${castFunc}(${expr} AS ${dstSQLType})`;
+    }
+    return expr;
   }
 
   sqlUnnestAlias(
