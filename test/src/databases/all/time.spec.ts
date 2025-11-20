@@ -39,11 +39,17 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
   const ts = new TestSelect(runtime.dialect);
-  const timeSQL = ts.generate({
+  const timestamptz = runtime.dialect.hasTimestamptz;
+  const timeSchema = {
     t_date: ts.mk_date('2021-02-24'),
     t_timestamp: ts.mk_timestamp('2021-02-24 03:05:06'),
-    t_timestamptz: ts.mk_timestamptz('2021-02-24 03:05:06 [UTC]'),
-  });
+  };
+  if (timestamptz) {
+    timeSchema['t_timestamptz'] = ts.mk_timestamptz(
+      '2021-02-24 03:05:06 [UTC]'
+    );
+  }
+  const timeSQL = ts.generate(timeSchema);
   const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 
   describe('interval measurement', () => {
@@ -183,10 +189,8 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       expect(await eq).isSqlEq();
     });
 
-    test.when(runtime.dialect.hasTimestamptz)(
-      'trunc timestamptz day',
-      async () => {
-        await expect(`
+    test.when(timestamptz)('trunc timestamptz day', async () => {
+      await expect(`
           run: ${dbName}.sql("""${timeSQL}""") -> {
             select: result is t_timestamptz.day
           }
