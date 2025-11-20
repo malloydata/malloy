@@ -115,7 +115,7 @@ describe.each(runtimes.runtimeList)(
     });
 
     it(`runs the date_parse function - ${databaseName}`, async () => {
-      const expected = Date.parse('15 Sep 2024 00:00:00 UTC');
+      const expected = '2024-09-15T00:00:00Z';
 
       await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
       select: x is date_parse('2024-09-15', '%Y-%m-%d')::date

@@ -140,7 +140,7 @@ describe('db:Snowflake', () => {
     expect(y.fields).toEqual([
       {name: 'TS_NTZ', type: 'timestamp'},
       {name: 'TS_LTZ', type: 'timestamp'},
-      {name: 'TS_TZ', type: 'timestamp', timestamptz: true},
+      {name: 'TS_TZ', type: 'timestamptz'},
     ]);
   });
 });

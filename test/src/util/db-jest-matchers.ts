@@ -211,10 +211,17 @@ expect.extend({
           let mustBe = value;
           let actuallyGot = got;
 
-          // If expected is a Date, compare timestamps (existing behavior)
-          if (value instanceof Date) {
-            mustBe = value.getTime();
-            actuallyGot = got instanceof Date ? got.getTime() : got;
+          // If the value is a Date this is some sort of temporal column.
+          // If the expected looks like a 'YYYY-MM-DD' value, then expect the
+          // Date to be YYYY-MM-DD 00:00:00Z
+          // When comparing Date values, we use getTime to verify in a safe way
+          // that the correct instant is returned.
+          if (got instanceof Date) {
+            actuallyGot = got.getTime();
+            mustBe = typeof value === 'string' ? new Date(value) : value;
+            if (mustBe instanceof Date) {
+              mustBe = mustBe.getTime();
+            }
           }
           // If expected is a date string like 'YYYY-MM-DD', compare as date strings
           else if (

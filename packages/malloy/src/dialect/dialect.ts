@@ -346,6 +346,55 @@ export abstract class Dialect {
   abstract sqlNowExpr(): string;
   abstract sqlTimeExtractExpr(qi: QueryInfo, xFrom: TimeExtractExpr): string;
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
+  /**
+   * Generate SQL for type casting expressions.
+   *
+   * Most casts are simple: `CAST(expr AS type)` or `TRY_CAST(expr AS type)` for safe casts.
+   *
+   * However, when a query timezone is set, casts between temporal types (date, timestamp, timestamptz)
+   * require special handling to ensure correct timezone semantics:
+   *
+   * **Timezone-Aware Cast Semantics:**
+   *
+   * 1. **TIMESTAMP → DATE**:
+   *    - TIMESTAMP represents UTC wall clock
+   *    - Convert to query timezone, then extract date
+   *    - Example: TIMESTAMP '2020-02-20 00:00:00' with tz 'America/Mexico_City' → '2020-02-19'
+   *
+   * 2. **TIMESTAMPTZ → DATE**:
+   *    - TIMESTAMPTZ represents absolute instant
+   *    - Convert to query timezone, then extract date
+   *    - Example: TIMESTAMPTZ '2020-02-20 00:00:00 UTC' with tz 'America/Mexico_City' → '2020-02-19'
+   *
+   * 3. **DATE → TIMESTAMP**:
+   *    - DATE represents civil date
+   *    - Interpret as midnight in query timezone, return UTC wall clock
+   *    - Example: DATE '2020-02-20' with tz 'America/Mexico_City' → TIMESTAMP '2020-02-20 06:00:00' (UTC)
+   *
+   * 4. **DATE → TIMESTAMPTZ**:
+   *    - DATE represents civil date
+   *    - Interpret as midnight in query timezone, create instant
+   *    - Example: DATE '2020-02-20' with tz 'America/Mexico_City' → instant at 2020-02-20 06:00:00 UTC
+   *
+   * 5. **TIMESTAMPTZ → TIMESTAMP**:
+   *    - TIMESTAMPTZ represents absolute instant
+   *    - Extract wall clock in query timezone, return as TIMESTAMP
+   *    - Example: TIMESTAMPTZ '2020-02-20 00:00:00 UTC' with tz 'America/Mexico_City' → TIMESTAMP '2020-02-19 18:00:00'
+   *
+   * 6. **TIMESTAMP → TIMESTAMPTZ**:
+   *    - TIMESTAMP represents UTC wall clock
+   *    - Interpret as being in query timezone
+   *    - Example: TIMESTAMP '2020-02-20 00:00:00' with tz 'America/Mexico_City' → instant at 2020-02-20 06:00:00 UTC
+   *
+   * **Implementation Notes:**
+   *
+   * - Dialects without timestamptz support (MySQL, BigQuery, StandardSQL) only need cases 1-3
+   * - Without query timezone, most casts are simple `CAST(expr AS type)`
+   *
+   * @param qi - Query info containing timezone and other context
+   * @param cast - The typecast expression to generate SQL for
+   * @returns SQL string for the cast operation
+   */
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
 

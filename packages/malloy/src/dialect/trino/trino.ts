@@ -860,6 +860,29 @@ export class PrestoDialect extends TrinoDialect {
     return expr;
   }
 
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const pgUnits = timeExtractMap[from.units] || from.units;
+    let extractFrom = from.e.sql || '';
+
+    if (TD.isAnyTimestamp(from.e.typeDef)) {
+      const tz = qtz(qi);
+      if (tz) {
+        // Convert both TIMESTAMP and TIMESTAMPTZ to query timezone for extraction
+        if (from.e.typeDef.type === 'timestamp') {
+          // TIMESTAMP: interpret as UTC, convert to query timezone
+          // Presto uses AT TIME ZONE operator
+          extractFrom = `(${extractFrom} AT TIME ZONE 'UTC') AT TIME ZONE '${tz}'`;
+        } else {
+          // TIMESTAMPTZ: convert to query timezone
+          extractFrom = `${extractFrom} AT TIME ZONE '${tz}'`;
+        }
+      }
+    }
+
+    const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
+    return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+  }
+
   sqlUnnestAlias(
     source: string,
     alias: string,
