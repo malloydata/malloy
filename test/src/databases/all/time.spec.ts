@@ -183,12 +183,14 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       expect(await eq).isSqlEq();
     });
 
-    test('trunc timestamptz day', async () => {
-      await expect(`
-        run: ${dbName}.sql("""${timeSQL}""") -> {
-          select: result is t_timestamptz.day
-        }
-      `).malloyResultMatches(runtime, {result: '2021-02-24 00:00:00Z'});
+    test.when(runtime.dialect.hasTimestamptz)(
+      'trunc timestamptz day',
+      async () => {
+        await expect(`
+          run: ${dbName}.sql("""${timeSQL}""") -> {
+            select: result is t_timestamptz.day
+          }
+        `).malloyResultMatches(runtime, {result: '2021-02-24 00:00:00Z'});
     });
 
     test('trunc week', async () => {
