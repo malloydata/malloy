@@ -335,34 +335,30 @@ ${indent(sql)}
     qi?: QueryInfo
   ): string {
     if (unit === 'week') {
-      // Snowflake DATE_TRUNC('week') defaults to Monday (WEEK_START=0)
-      // Calculate offset from Monday and adjust the truncation result
+      // Snowflake session is configured with WEEK_START=7 (Sunday) for consistency
+      // with Malloy's default and to ensure DAYOFWEEK extraction works correctly
       const weekStartDay = qi?.weekStartDay || 'sunday';
 
-      // Map days to offset from Monday (Snowflake's default when no WEEK_START is set)
-      // Negative offset means the desired day comes before Monday
-      const dayOffsetsFromMonday: Record<string, number> = {
-        sunday: -1,
-        monday: 0,
-        tuesday: 1,
-        wednesday: 2,
-        thursday: 3,
-        friday: 4,
-        saturday: 5,
-      };
-
-      const offset = dayOffsetsFromMonday[weekStartDay];
-
-      if (offset === 0) {
-        // Monday start (Snowflake default), use DATE_TRUNC directly
+      if (weekStartDay === 'sunday') {
+        // Default Sunday start, use DATE_TRUNC directly
         return `DATE_TRUNC('${unit}', ${expr})`;
       }
 
-      // For other days: shift by offset, truncate to week (Monday), then shift back
-      const days = Math.abs(offset);
-      const op = offset > 0 ? '+' : '-';
-      const reverseOp = offset > 0 ? '-' : '+';
-      return `DATEADD(DAY, ${reverseOp}${days}, DATE_TRUNC('${unit}', DATEADD(DAY, ${op}${days}, ${expr})))`;
+      // For non-Sunday week starts, calculate offset from Sunday and adjust
+      const dayOffsetsFromSunday: Record<string, number> = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+      };
+
+      const offset = dayOffsetsFromSunday[weekStartDay];
+
+      // Shift forward by offset, truncate to week (Sunday), then shift back
+      return `DATEADD(DAY, -${offset}, DATE_TRUNC('${unit}', DATEADD(DAY, ${offset}, ${expr})))`;
     }
 
     return `DATE_TRUNC('${unit}', ${expr})`;

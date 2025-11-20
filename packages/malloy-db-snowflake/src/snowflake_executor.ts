@@ -189,7 +189,9 @@ export class SnowflakeExecutor {
     );
     // set utc as the default timezone which is the malloy convention
     await this._execute("ALTER SESSION SET TIMEZONE = 'UTC';", conn);
-    // Note: WEEK_START is now handled per-query in the dialect's sqlTruncate method
+    // Set WEEK_START to 7 (Sunday) as the default. This affects both DATE_TRUNC('week')
+    // and DAYOFWEEK extraction. Non-Sunday week starts are handled dynamically in sqlTruncate.
+    await this._execute('ALTER SESSION SET WEEK_START = 7;', conn);
     // so javascript can parse the dates
     await this._execute(
       "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
