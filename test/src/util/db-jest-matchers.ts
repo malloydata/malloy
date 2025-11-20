@@ -217,7 +217,10 @@ expect.extend({
             actuallyGot = got instanceof Date ? got.getTime() : got;
           }
           // If expected is a date string like 'YYYY-MM-DD', compare as date strings
-          else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          else if (
+            typeof value === 'string' &&
+            /^\d{4}-\d{2}-\d{2}$/.test(value)
+          ) {
             if (got instanceof Date) {
               actuallyGot = got.toISOString().split('T')[0];
             }
