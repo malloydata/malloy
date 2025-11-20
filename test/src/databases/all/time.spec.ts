@@ -784,14 +784,17 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).malloyResultMatches(runtime, {d2020: '2020-02-20'});
   });
-  test('cast date to timestamptz', async () => {
-    await expect(
-      `run: ${dbName}.sql(${selectMidnight}) -> {
-        timezone: '${zone}'
-        select: mex_date is date_2020::timestamptz
-      }`
-    ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
-  });
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast date to timestamptz',
+    async () => {
+      await expect(
+        `run: ${dbName}.sql(${selectMidnight}) -> {
+          timezone: '${zone}'
+          select: mex_date is date_2020::timestamptz
+        }`
+      ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
+    }
+  );
 
   // Test for timezone rendering issue with nested queries
   test.when(runtime.supportsNesting)(
