@@ -332,11 +332,36 @@ ${indent(sql)}
     _typeDef: AtomicTypeDef,
     _inCivilTime: boolean,
     _timezone?: string,
-    _qi?: QueryInfo
+    qi?: QueryInfo
   ): string {
-    // Snowflake week start is configured at the session level via WEEK_START parameter
-    // The session configuration is set in snowflake_executor.ts based on QueryInfo
-    // So DATE_TRUNC will use the session's configured week start
+    if (unit === 'week') {
+      // Snowflake DATE_TRUNC('week') uses the session WEEK_START parameter
+      // Instead of relying on session config, calculate offset from Sunday (default)
+      // and adjust the truncation result
+      const weekStartDay = qi?.weekStartDay || 'sunday';
+      
+      // Map days to offset from Sunday (0 = Sunday, Snowflake's default)
+      const dayOffsets: Record<string, number> = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+      };
+      
+      const offset = dayOffsets[weekStartDay];
+      
+      if (offset === 0) {
+        // Default Sunday start, use DATE_TRUNC directly
+        return `DATE_TRUNC('${unit}', ${expr})`;
+      }
+      
+      // For other days: shift forward by offset, truncate to week (Sunday), then shift back
+      return `DATEADD(DAY, -${offset}, DATE_TRUNC('${unit}', DATEADD(DAY, ${offset}, ${expr})))`;
+    }
+    
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 

@@ -49,9 +49,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       )
       .run();
 
-    expect(result.data.path(0, 'week_start').value?.toString()).toContain(
-      '2024-01-14'
-    ); // Sunday before Jan 15, 2024
+    const weekStart = result.data.path(0, 'week_start').value as Date;
+    expect(weekStart.toISOString()).toContain('2024-01-14'); // Sunday before Jan 15, 2024
   });
 
   test('source-level week_start: monday', async () => {
@@ -76,9 +75,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       )
       .run();
 
-    expect(result.data.path(0, 'week_start').value?.toString()).toContain(
-      '2024-01-15'
-    ); // Monday Jan 15, 2024
+    const weekStart = result.data.path(0, 'week_start').value as Date;
+    expect(weekStart.toISOString()).toContain('2024-01-15'); // Monday Jan 15, 2024
   });
 
   test('query-level week_start: tuesday', async () => {
@@ -102,9 +100,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       )
       .run();
 
-    expect(result.data.path(0, 'week_start').value?.toString()).toContain(
-      '2024-01-16'
-    ); // Tuesday before Jan 17, 2024
+    const weekStart = result.data.path(0, 'week_start').value as Date;
+    expect(weekStart.toISOString()).toContain('2024-01-16'); // Tuesday before Jan 17, 2024
   });
 
   test('query-level overrides source-level', async () => {
@@ -130,9 +127,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       )
       .run();
 
-    expect(result.data.path(0, 'week_start').value?.toString()).toContain(
-      '2024-01-13'
-    ); // Saturday before Jan 15, 2024
+    const weekStart = result.data.path(0, 'week_start').value as Date;
+    expect(weekStart.toISOString()).toContain('2024-01-13'); // Saturday before Jan 15, 2024
   });
 
   test('week grouping with wednesday start', async () => {
@@ -151,7 +147,7 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       .loadQuery(
         `
         run: test_dates -> {
-          group_by: week is test_date.week
+          group_by: week_value is test_date.week
           aggregate: count_dates is count()
         }
       `
@@ -186,9 +182,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       .run();
 
     expect(result.data.toObject()).toHaveLength(1);
-    expect(result.data.path(0, 'test_date').value?.toString()).toContain(
-      '2024-01-15'
-    );
+    const testDate = result.data.path(0, 'test_date').value as Date;
+    expect(testDate.toISOString()).toContain('2024-01-15');
   });
 
   test('all seven days as week start', async () => {
@@ -223,10 +218,10 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
         )
         .run();
 
-      const weekStart = result.data.path(0, 'week_start').value;
+      const weekStart = result.data.path(0, 'week_start').value as Date;
       expect(weekStart).toBeDefined();
-      // Just verify it returns a date without error
-      expect(weekStart?.toString()).toMatch(/\d{4}-\d{2}-\d{2}/);
+      // Just verify it returns a date in ISO format without error
+      expect(weekStart.toISOString()).toMatch(/\d{4}-\d{2}-\d{2}/);
     }
   });
 
