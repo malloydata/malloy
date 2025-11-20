@@ -29,7 +29,7 @@ import type {
   TimestampUnit,
   TimeLiteralExpr,
 } from '../../../model/malloy_types';
-import {isTemporalType} from '../../../model/malloy_types';
+import {isTemporalType, TD} from '../../../model/malloy_types';
 
 import type {ExprValue} from '../types/expr-value';
 import {literalTimeResult} from '../types/expr-value';
@@ -271,7 +271,7 @@ class GranularLiteral extends TimeLiteral {
       }
 
       if (
-        testValue.type === 'timestamp' &&
+        TD.isAnyTimestamp(testValue) &&
         op === '=' &&
         this.units === undefined
       ) {
@@ -285,7 +285,7 @@ class GranularLiteral extends TimeLiteral {
         return super.apply(fs, op, left);
       }
 
-      if (testValue.type === 'timestamp') {
+      if (TD.isAnyTimestamp(testValue)) {
         const newStart = getMorphicValue(rangeStart, 'timestamp');
         const newEnd = getMorphicValue(rangeEnd, 'timestamp');
         if (newStart && newEnd) {

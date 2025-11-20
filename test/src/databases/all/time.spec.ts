@@ -42,6 +42,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
   const timeSQL = ts.generate({
     t_date: ts.mk_date('2021-02-24'),
     t_timestamp: ts.mk_timestamp('2021-02-24 03:05:06'),
+    t_timestamptz: ts.mk_timestamptz('2021-02-24 03:05:06 [UTC]'),
   });
   const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 
@@ -180,6 +181,14 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     test('trunc day', async () => {
       const eq = sqlEq('t_timestamp.day', '@2021-02-24 00:00:00');
       expect(await eq).isSqlEq();
+    });
+
+    test('trunc timestamptz day', async () => {
+      await expect(`
+        run: ${dbName}.sql("""${timeSQL}""") -> {
+          select: result is t_timestamptz.day
+        }
+      `).malloyResultMatches(runtime, {result: '2021-02-24 00:00:00Z'});
     });
 
     test('trunc week', async () => {

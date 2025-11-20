@@ -152,11 +152,11 @@ export class ExprGranularTime extends ExpressionDef {
   toRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
     const one: Expr = {node: 'numberLiteral', literal: '1'};
-    if (begin.type === 'timestamp') {
-      const beginTS = ExprTime.fromValue('timestamp', begin);
+    if (TD.isAnyTimestamp(begin)) {
+      const beginTS = ExprTime.fromValue(begin.type, begin);
       const endTS = new ExprTime(
-        'timestamp',
-        timeOffset('timestamp', begin.value, '+', one, this.units),
+        begin.type,
+        timeOffset(begin.type, begin.value, '+', one, this.units),
         [begin]
       );
       return new Range(beginTS, endTS);

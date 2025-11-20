@@ -43,6 +43,8 @@ import {
   isIndexSegment,
   isBaseTable,
   expressionIsAnalytic,
+  TD,
+  isTemporalType,
 } from './malloy_types';
 import {
   AndChain,
@@ -2202,7 +2204,7 @@ class QueryQueryIndexStage extends QueryQuery {
           dialect.castToString(`MAX(${fields[i].expression})`)
         )}\n`;
       }
-      if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
+      if (isTemporalType(fields[i].type)) {
         s += `    WHEN ${i} THEN ${dialect.concat(
           `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
           "' to '",
