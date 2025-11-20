@@ -136,8 +136,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       .loadModel(
         `
         source: test_dates is ${dbName}.sql("""
-          SELECT TIMESTAMP '2024-01-15 12:00:00' as test_date
-          UNION ALL SELECT TIMESTAMP '2024-01-17 12:00:00'
+          SELECT TIMESTAMP '2024-01-11 12:00:00' as test_date
+          UNION ALL SELECT TIMESTAMP '2024-01-15 12:00:00'
           UNION ALL SELECT TIMESTAMP '2024-01-24 12:00:00'
         """) extend {
           week_start: wednesday
@@ -155,8 +155,8 @@ describe.each(runtimes.runtimeList)('%s week_start', (dbName, runtime) => {
       .run();
 
     expect(result.data.toObject()).toHaveLength(2);
-    // Jan 15 and 17 are in the same week (starting Wed Jan 10)
-    // Jan 24 is in a different week (starting Wed Jan 24)
+    // Jan 11 (Thu) and Jan 15 (Mon) are in the same week (starting Wed Jan 10)
+    // Jan 24 (Wed) is in a different week (starting Wed Jan 24)
   });
 
   test('week filtering with thursday start', async () => {
