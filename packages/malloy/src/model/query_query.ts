@@ -43,7 +43,6 @@ import {
   isIndexSegment,
   isBaseTable,
   expressionIsAnalytic,
-  TD,
   isTemporalType,
 } from './malloy_types';
 import {
