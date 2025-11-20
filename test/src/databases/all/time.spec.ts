@@ -767,7 +767,18 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`
     ).malloyResultMatches(runtime, {mex_date: '2020-02-19'});
   });
-  test.todo('cast timestamptz to date');
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast timestamptz to date',
+    async () => {
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
+          select: mex_date is utc_tstz::date
+        }`
+      ).malloyResultMatches(runtime, {mex_date: '2020-02-19'});
+    }
+  );
   test('cast date to timestamp', async () => {
     await expect(
       `run: ${dbName}.sql(${selectMidnight}) -> {
