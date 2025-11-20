@@ -29,6 +29,7 @@ import {PrimaryKey} from '../source-properties/primary-key';
 import {Views} from '../source-properties/views';
 import type {MalloyElement} from './malloy-element';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
+import {WeekStartStatement} from '../source-properties/week-start-statement';
 import {ObjectAnnotation} from './annotation-elements';
 import {JoinStatement} from '../source-properties/join';
 
@@ -41,7 +42,8 @@ export type SourceProperty =
   | PrimaryKey
   | ObjectAnnotation
   | Views
-  | TimezoneStatement;
+  | TimezoneStatement
+  | WeekStartStatement;
 export function isSourceProperty(p: MalloyElement): p is SourceProperty {
   return (
     p instanceof Filter ||
@@ -52,6 +54,7 @@ export function isSourceProperty(p: MalloyElement): p is SourceProperty {
     p instanceof PrimaryKey ||
     p instanceof ObjectAnnotation ||
     p instanceof Views ||
-    p instanceof TimezoneStatement
+    p instanceof TimezoneStatement ||
+    p instanceof WeekStartStatement
   );
 }

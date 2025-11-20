@@ -63,6 +63,7 @@ TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
 VIEW: V I E W SPACE_CHAR* ':' ;
 TIMEZONE: T I M E Z O N E SPACE_CHAR* ':';
+WEEK_START: W E E K '_' S T A R T SPACE_CHAR* ':';
 
 // bare keywords
 ALL: A L L;

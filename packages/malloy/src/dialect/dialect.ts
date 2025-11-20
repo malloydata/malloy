@@ -36,6 +36,7 @@ import type {
   OrderBy,
   TimestampUnit,
   TimeExpr,
+  WeekDay,
 } from '../model/malloy_types';
 import {isRawCast, isBasicAtomic, TD} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
@@ -57,6 +58,7 @@ export type DialectFieldList = DialectField[];
  */
 export interface QueryInfo {
   queryTimezone?: string;
+  weekStartDay?: WeekDay;
   systemTimezone?: string;
 }
 
@@ -323,6 +325,7 @@ export abstract class Dialect {
    *                    be converted. If false, may need timezone conversion for timestamps.
    * @param timezone Optional timezone for the operation. Only provided when timezone-aware
    *                 truncation is needed but inCivilTime is false.
+   * @param qi Optional QueryInfo with additional context like weekStartDay
    * @returns SQL expression representing the truncated time
    */
   abstract sqlTruncate(
@@ -330,7 +333,8 @@ export abstract class Dialect {
     unit: TimestampUnit,
     typeDef: AtomicTypeDef,
     inCivilTime: boolean,
-    timezone?: string
+    timezone?: string,
+    qi?: QueryInfo
   ): string;
 
   /**
@@ -448,7 +452,14 @@ export abstract class Dialect {
       let expr = this.sqlConvertToCivilTime(baseExpr.sql!, tz);
 
       if (truncateTo) {
-        expr = this.sqlTruncate(expr, truncateTo, baseExpr.typeDef, true, tz);
+        expr = this.sqlTruncate(
+          expr,
+          truncateTo,
+          baseExpr.typeDef,
+          true,
+          tz,
+          qi
+        );
       }
 
       if (offset) {
@@ -470,7 +481,14 @@ export abstract class Dialect {
     let sql = baseExpr.sql!;
 
     if (truncateTo) {
-      sql = this.sqlTruncate(sql, truncateTo, baseExpr.typeDef, false, qtz(qi));
+      sql = this.sqlTruncate(
+        sql,
+        truncateTo,
+        baseExpr.typeDef,
+        false,
+        qtz(qi),
+        qi
+      );
     }
 
     if (offset) {
@@ -714,5 +732,29 @@ export abstract class Dialect {
       return bv ? 1 : 0;
     }
     return bv ? true : false;
+  }
+
+  /**
+   * Helper method to calculate week start offset.
+   * Default implementation calculates offset from Monday (ISO standard).
+   * Subclasses can override if their database uses a different baseline.
+   *
+   * @param weekDay The desired week start day
+   * @returns Number of days offset from Monday (positive = later, negative = earlier)
+   */
+  protected getWeekStartOffsetFromMonday(weekDay?: WeekDay): number {
+    if (!weekDay) {
+      weekDay = 'sunday'; // Default to Sunday for backward compatibility
+    }
+    const offsets: Record<WeekDay, number> = {
+      sunday: 1,
+      monday: 0,
+      tuesday: -1,
+      wednesday: -2,
+      thursday: -3,
+      friday: -4,
+      saturday: -5,
+    };
+    return offsets[weekDay];
   }
 }

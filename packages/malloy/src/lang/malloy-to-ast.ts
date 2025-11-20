@@ -839,6 +839,25 @@ export class MalloyToAST
     return this.astAt(timezoneStatement, cx);
   }
 
+  visitDefExploreWeekStart(
+    cx: parse.DefExploreWeekStartContext
+  ): ast.WeekStartStatement {
+    return this.visitWeekStartStatement(cx.weekStartStatement());
+  }
+
+  visitWeekStartStatement(
+    cx: parse.WeekStartStatementContext
+  ): ast.WeekStartStatement {
+    const weekDay = cx.id().text;
+    const stmt = this.astAt(new ast.WeekStartStatement(weekDay), cx.id());
+    if (!stmt.isValid) {
+      this.astError(stmt, 'invalid-week-start', {
+        weekDay: weekDay,
+      });
+    }
+    return stmt;
+  }
+
   visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOpDesc {
     const qProps = this.only<ast.QueryProperty>(
       pcx.queryStatement().map(qcx => this.astAt(this.visit(qcx), qcx)),

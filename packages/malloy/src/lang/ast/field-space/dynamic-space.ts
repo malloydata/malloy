@@ -46,6 +46,7 @@ export abstract class DynamicSpace
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
+  protected newWeekStart?: model.WeekDay;
   protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
   protected newNotes = new Map<string, model.Annotation>();
 
@@ -95,6 +96,10 @@ export abstract class DynamicSpace
 
   setTimezone(tz: string): void {
     this.newTimezone = tz;
+  }
+
+  setWeekStart(weekDay: model.WeekDay): void {
+    this.newWeekStart = weekDay;
   }
 
   structDef(): model.SourceDef {
@@ -186,6 +191,9 @@ export abstract class DynamicSpace
     }
     if (this.newTimezone && model.isSourceDef(this.sourceDef)) {
       this.sourceDef.queryTimezone = this.newTimezone;
+    }
+    if (this.newWeekStart && model.isSourceDef(this.sourceDef)) {
+      this.sourceDef.weekStartDay = this.newWeekStart;
     }
     return this.sourceDef;
   }

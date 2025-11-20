@@ -27,6 +27,18 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 // clang-format off
 
 /**
+ * Valid days of the week for week_start configuration
+ */
+export type WeekDay =
+  | 'sunday'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday';
+
+/**
  * Field computations are compiled into an expression tree of "Expr"
  * type nodes. Each node is one of these three interfaces. The
  * final type "Expr" is a union type of all known nodes, so
@@ -869,6 +881,7 @@ export interface RecordDef
   type: 'record';
   join: 'one';
   queryTimezone?: string;
+  weekStartDay?: WeekDay;
 }
 
 // While repeated records are mostly treated like arrays of records,
@@ -901,6 +914,7 @@ export interface RepeatedRecordDef
   type: 'array';
   join: 'many';
   queryTimezone?: string;
+  weekStartDay?: WeekDay;
 }
 export type ArrayTypeDef = BasicArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = BasicArrayDef | RepeatedRecordDef;
@@ -1233,6 +1247,7 @@ export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   extendSource?: FieldDef[];
   limit?: number;
   queryTimezone?: string;
+  weekStartDay?: WeekDay;
   alwaysJoins?: string[];
   fieldUsage?: FieldUsage[];
   referencedAt?: DocumentLocation;
@@ -1270,6 +1285,7 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   arguments?: Record<string, Argument>;
   parameters?: Record<string, Parameter>;
   queryTimezone?: string;
+  weekStartDay?: WeekDay;
   connection: string;
   primaryKey?: PrimaryKeyRef;
   dialect: string;

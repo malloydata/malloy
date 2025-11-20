@@ -228,9 +228,9 @@ export class FieldInstanceResult implements FieldInstance {
       !isIndexSegment(this.firstSegment) &&
       !isRawSegment(this.firstSegment)
     ) {
-      const {queryTimezone} = this.firstSegment;
-      if (queryTimezone) {
-        return {queryTimezone};
+      const {queryTimezone, weekStartDay} = this.firstSegment;
+      if (queryTimezone || weekStartDay) {
+        return {queryTimezone, weekStartDay};
       }
     }
 

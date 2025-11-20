@@ -515,6 +515,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (this.newTimezone) {
       segment.queryTimezone = this.newTimezone;
     }
+    if (this.newWeekStart) {
+      segment.weekStartDay = this.newWeekStart;
+    }
     return segment;
   }
 

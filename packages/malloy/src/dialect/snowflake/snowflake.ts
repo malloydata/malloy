@@ -331,10 +331,12 @@ ${indent(sql)}
     unit: string,
     _typeDef: AtomicTypeDef,
     _inCivilTime: boolean,
-    _timezone?: string
+    _timezone?: string,
+    _qi?: QueryInfo
   ): string {
-    // Snowflake session is configured with WEEK_START=7 (Sunday)
-    // so DATE_TRUNC already truncates to Sunday - no adjustment needed
+    // Snowflake week start is configured at the session level via WEEK_START parameter
+    // The session configuration is set in snowflake_executor.ts based on QueryInfo
+    // So DATE_TRUNC will use the session's configured week start
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 

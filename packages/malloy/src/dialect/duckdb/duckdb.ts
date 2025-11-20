@@ -41,7 +41,7 @@ import {
 import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType} from '../dialect';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
 import {inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -426,12 +426,20 @@ export class DuckDBDialect extends PostgresBase {
     unit: TimestampUnit,
     _typeDef: AtomicTypeDef,
     _inCivilTime: boolean,
-    _timezone?: string
+    _timezone?: string,
+    qi?: QueryInfo
   ): string {
-    // DuckDB starts weeks on Monday, Malloy wants Sunday
-    // Add 1 day before truncating, subtract 1 day after
     if (unit === 'week') {
-      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
+      // DuckDB DATE_TRUNC('week') defaults to Monday (ISO standard)
+      // Calculate offset needed based on desired week start day
+      const offset = this.getWeekStartOffsetFromMonday(qi?.weekStartDay);
+      if (offset === 0) {
+        return `DATE_TRUNC('${unit}', ${expr})`;
+      }
+      const days = Math.abs(offset);
+      const addOp = offset > 0 ? '+' : '-';
+      const subOp = offset > 0 ? '-' : '+';
+      return `(DATE_TRUNC('${unit}', (${expr} ${addOp} INTERVAL '${days}' DAY)) ${subOp} INTERVAL '${days}' DAY)`;
     }
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
