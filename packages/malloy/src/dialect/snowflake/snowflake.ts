@@ -339,7 +339,7 @@ ${indent(sql)}
       // Instead of relying on session config, calculate offset from Sunday (default)
       // and adjust the truncation result
       const weekStartDay = qi?.weekStartDay || 'sunday';
-      
+
       // Map days to offset from Sunday (0 = Sunday, Snowflake's default)
       const dayOffsets: Record<string, number> = {
         sunday: 0,
@@ -350,18 +350,18 @@ ${indent(sql)}
         friday: 5,
         saturday: 6,
       };
-      
+
       const offset = dayOffsets[weekStartDay];
-      
+
       if (offset === 0) {
         // Default Sunday start, use DATE_TRUNC directly
         return `DATE_TRUNC('${unit}', ${expr})`;
       }
-      
+
       // For other days: shift forward by offset, truncate to week (Sunday), then shift back
       return `DATEADD(DAY, -${offset}, DATE_TRUNC('${unit}', DATEADD(DAY, ${offset}, ${expr})))`;
     }
-    
+
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 
