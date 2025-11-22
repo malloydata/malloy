@@ -139,7 +139,7 @@ describe('db:Snowflake', () => {
     const y = await conn.fetchSelectSchema(x);
     expect(y.fields).toEqual([
       {name: 'TS_NTZ', type: 'timestamp'},
-      {name: 'TS_LTZ', type: 'timestamp'},
+      {name: 'TS_LTZ', type: 'sql native', rawType: 'timestamp_ltz'},
       {name: 'TS_TZ', type: 'timestamptz'},
     ]);
   });
