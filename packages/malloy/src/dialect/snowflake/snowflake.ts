@@ -94,9 +94,7 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestamptz': {type: 'timestamptz'},
   'timestamp_tz': {type: 'timestamptz'},
   'timestamp with time zone': {type: 'timestamptz'},
-  'timestamp_ltz': {type: 'timestamp'},
-  'timestampltz': {type: 'timestamp'},
-  'timestamp with local time zone': {type: 'timestamp'},
+  /* timestamp_ltz is not supported in malloy snowflake dialect */
 };
 
 export class SnowflakeDialect extends Dialect {
