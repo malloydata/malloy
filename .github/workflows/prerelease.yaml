@@ -1,5 +1,6 @@
 name: npmjs.com Pre-release
-permissions: {}
+permissions:
+  id-token: write
 
 on:
   workflow_dispatch:
@@ -18,6 +19,7 @@ jobs:
       - name: npm install, build, and publish
         run: |
           echo BRANCH_NAME=$BRANCH_NAME
+          npm install -g npm@latest
           npm ci --loglevel error
           npm run build
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
