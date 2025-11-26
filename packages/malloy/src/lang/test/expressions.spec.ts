@@ -1555,5 +1555,26 @@ describe('sql native fields in schema', () => {
         )
       );
     });
+
+    describe('malloy cast types', () => {
+      test('cast to string', () => {
+        expect(expr`ai::string`).toTranslate();
+      });
+      test('cast to number', () => {
+        expect(expr`astr::number`).toTranslate();
+      });
+      test('cast to boolean', () => {
+        expect(expr`ai::boolean`).toTranslate();
+      });
+      test('cast to date', () => {
+        expect(expr`ats::date`).toTranslate();
+      });
+      test('cast to timestamp', () => {
+        expect(expr`ad::timestamp`).toTranslate();
+      });
+      test('cast to timestamptz', () => {
+        expect(expr`ats::timestamptz`).toTranslate();
+      });
+    });
   });
 });

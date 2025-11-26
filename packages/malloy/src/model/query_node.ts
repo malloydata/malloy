@@ -11,7 +11,7 @@ import type {
   StringFieldDef,
   JSONFieldDef,
   NumberFieldDef,
-  TimestampFieldDef,
+  ATimestampFieldDef,
   NativeUnsupportedFieldDef,
   JoinFieldDef,
   Argument,
@@ -186,7 +186,7 @@ export class QueryFieldStruct extends QueryField {
   }
 }
 
-export class QueryFieldTimestamp extends QueryAtomicField<TimestampFieldDef> {}
+export class QueryFieldTimestamp extends QueryAtomicField<ATimestampFieldDef> {}
 
 export class QueryFieldUnsupported extends QueryAtomicField<NativeUnsupportedFieldDef> {}
 /*
@@ -661,6 +661,7 @@ export class QueryStruct {
       case 'date':
         return new QueryFieldDate(field, this, referenceId);
       case 'timestamp':
+      case 'timestamptz':
         return new QueryFieldTimestamp(field, this, referenceId);
       case 'number':
         return new QueryFieldNumber(field, this, referenceId);

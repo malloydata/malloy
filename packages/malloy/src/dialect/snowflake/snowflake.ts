@@ -21,16 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DateTime as LuxonDateTime} from 'luxon';
 import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
   TimeExtractExpr,
   TypecastExpr,
-  TimeLiteralNode,
   MeasureTimeExpr,
   RegexMatchExpr,
   BasicAtomicTypeDef,
+  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -90,15 +91,16 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'timestampntz': {type: 'timestamp'},
   'timestamp_ntz': {type: 'timestamp'},
   'timestamp without time zone': {type: 'timestamp'},
-  'timestamptz': {type: 'timestamp'},
-  'timestamp_tz': {type: 'timestamp'},
-  'timestamp with time zone': {type: 'timestamp'},
+  'timestamptz': {type: 'timestamptz'},
+  'timestamp_tz': {type: 'timestamptz'},
+  'timestamp with time zone': {type: 'timestamptz'},
   /* timestamp_ltz is not supported in malloy snowflake dialect */
 };
 
 export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
   experimental = false;
+  hasTimestamptz = true;
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
@@ -315,12 +317,32 @@ ${indent(sql)}
 `;
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    // 3-arg form: explicitly convert from UTC to specified timezone
-    return `CONVERT_TIMEZONE('UTC', '${timezone}', ${expr})`;
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // For timestamptz (TIMESTAMP_TZ): use 2-arg form
+    // Returns TIMESTAMP_TZ with timezone preserved
+    if (typeDef.type === 'timestamptz') {
+      return {
+        sql: `CONVERT_TIMEZONE('${timezone}', ${expr})`,
+        typeDef: {type: 'timestamptz'},
+      };
+    }
+    // For plain timestamps (TIMESTAMP_NTZ): use 3-arg form
+    // Must cast to TIMESTAMP_NTZ first, returns TIMESTAMP_NTZ
+    return {
+      sql: `CONVERT_TIMEZONE('UTC', '${timezone}', (${expr})::TIMESTAMP_NTZ)`,
+      typeDef: {type: 'timestamp'},
+    };
   }
 
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: TimestampTypeDef
+  ): string {
     // After civil time operations, we have a TIMESTAMP_NTZ in the target timezone
     // Convert from timezone to UTC, returning TIMESTAMP_NTZ
     return `CONVERT_TIMEZONE('${timezone}', 'UTC', (${expr})::TIMESTAMP_NTZ)`;
@@ -335,6 +357,8 @@ ${indent(sql)}
   ): string {
     // Snowflake session is configured with WEEK_START=7 (Sunday)
     // so DATE_TRUNC already truncates to Sunday - no adjustment needed
+    // Unlike PostgreSQL/DuckDB, Snowflake's DATE_TRUNC preserves the input type
+    // (TIMESTAMP_NTZ → TIMESTAMP_NTZ, TIMESTAMP_TZ → TIMESTAMP_TZ)
     return `DATE_TRUNC('${unit}', ${expr})`;
   }
 
@@ -357,7 +381,7 @@ ${indent(sql)}
     let extractFrom = from.e.sql;
     const tz = qtz(qi);
 
-    if (tz && TD.isTimestamp(from.e.typeDef)) {
+    if (tz && TD.isAnyTimestamp(from.e.typeDef)) {
       extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
     }
     return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
@@ -379,7 +403,7 @@ ${indent(sql)}
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const src = cast.e.sql || '';
-    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    const {srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     if (TD.eq(srcTypeDef, dstTypeDef)) {
       return src;
     }
@@ -395,37 +419,86 @@ ${indent(sql)}
     }
 
     const tz = qtz(qi);
-    // casting timestamps and dates
-    if (op === 'timestamp::date') {
-      let castExpr = src;
-      if (tz) {
-        castExpr = `CONVERT_TIMEZONE('${tz}', ${castExpr})`;
+
+    // Timezone-aware casts when query timezone is set
+    if (tz && srcTypeDef && dstTypeDef) {
+      // TIMESTAMP → DATE: convert to query timezone, then to date
+      if (TD.isTimestamp(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `TO_DATE(CONVERT_TIMEZONE('${tz}', ${src}))`;
       }
-      return `TO_DATE(${castExpr})`;
-    } else if (op === 'date::timestamp') {
-      const retExpr = `TO_TIMESTAMP(${src})`;
-      return this.atTz(retExpr, tz);
+
+      // TIMESTAMPTZ → DATE: convert to query timezone, then to date
+      if (TD.isTimestamptz(srcTypeDef) && TD.isDate(dstTypeDef)) {
+        return `TO_DATE(CONVERT_TIMEZONE('${tz}', ${src}))`;
+      }
+
+      // DATE → TIMESTAMP: interpret date in query timezone, return UTC timestamp
+      if (TD.isDate(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        const retExpr = `TO_TIMESTAMP(${src})`;
+        return this.atTz(retExpr, tz);
+      }
+
+      // DATE → TIMESTAMPTZ: interpret date in query timezone
+      if (TD.isDate(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        const retExpr = `TO_TIMESTAMP(${src})`;
+        return this.atTz(retExpr, tz);
+      }
+
+      // TIMESTAMPTZ → TIMESTAMP: convert to query timezone, get UTC wall clock
+      if (TD.isTimestamptz(srcTypeDef) && TD.isTimestamp(dstTypeDef)) {
+        return `CONVERT_TIMEZONE('${tz}', ${src})::TIMESTAMP_NTZ`;
+      }
+
+      // TIMESTAMP → TIMESTAMPTZ: interpret as UTC, convert to TIMESTAMPTZ
+      if (TD.isTimestamp(srcTypeDef) && TD.isTimestamptz(dstTypeDef)) {
+        return this.atTz(src, tz);
+      }
     }
 
     const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
     return `${castFunc}(${src} AS ${dstSQLType})`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lf: TimeLiteralNode): string {
-    if (TD.isDate(lf.typeDef)) {
-      return `TO_DATE('${lf.literal}')`;
-    }
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `TO_DATE('${literal}')`;
+  }
 
-    const tz = qtz(qi);
-    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
-    const targetTimeZone = lf.timezone ?? tz;
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
+    let ret = `'${literal}'::TIMESTAMP_NTZ`;
 
-    if (targetTimeZone) {
-      // Interpret the literal as being in targetTimeZone, convert to UTC
-      ret = `CONVERT_TIMEZONE('${targetTimeZone}', 'UTC', ${ret})`;
+    if (tz) {
+      // Interpret the literal as being in query timezone, convert to UTC
+      ret = `CONVERT_TIMEZONE('${tz}', 'UTC', ${ret})`;
     }
 
     return ret;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    // Use TIMESTAMP_TZ_FROM_PARTS to create timestamptz
+    const dt = LuxonDateTime.fromFormat(literal, 'yyyy-LL-dd HH:mm:ss');
+    if (!dt.isValid) {
+      throw new Error(`Invalid timestamp literal: ${literal}`);
+    }
+
+    const year = dt.year;
+    const month = dt.month;
+    const day = dt.day;
+    const hour = dt.hour;
+    const minute = dt.minute;
+    const second = dt.second;
+    const nanosecond = dt.millisecond * 1000000;
+
+    return `TIMESTAMP_TZ_FROM_PARTS(${year}, ${month}, ${day}, ${hour}, ${minute}, ${second}, ${nanosecond}, '${timezone}')`;
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
@@ -515,6 +588,8 @@ ${indent(sql)}
         : `ARRAY(${recordScehma})`;
     } else if (isBasicArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
+    } else if (malloyType.type === 'timestamptz') {
+      return 'TIMESTAMP_TZ';
     }
     return malloyType.type;
   }

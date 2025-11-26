@@ -28,12 +28,12 @@ import type {
   TimeExtractExpr,
   TypecastExpr,
   RegexMatchExpr,
-  TimeLiteralNode,
   MeasureTimeExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
   TimestampUnit,
+  TimestampTypeDef,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -146,7 +146,7 @@ export class StandardSQLDialect extends Dialect {
       offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
 
     const needed =
-      TD.isTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
+      TD.isAnyTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
 
     const tz = needed ? qtz(qi) || 'UTC' : undefined;
 
@@ -307,16 +307,28 @@ ${indent(sql)}
 
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const extractTo = extractMap[te.units] || te.units;
-    const tz = TD.isTimestamp(te.e.typeDef) && qtz(qi);
+    const tz = TD.isAnyTimestamp(te.e.typeDef) && qtz(qi);
     const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `DATETIME(${expr}, '${timezone}')`;
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // BigQuery has no timestamptz type, so typeDef.timestamptz will never be true
+    return {
+      sql: `DATETIME(${expr}, '${timezone}')`,
+      typeDef: {type: 'timestamp'},
+    };
   }
 
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: TimestampTypeDef
+  ): string {
     return `TIMESTAMP(${expr}, '${timezone}')`;
   }
 
@@ -394,19 +406,29 @@ ${indent(sql)}
     return `REGEXP_CONTAINS(${match.kids.expr.sql},${match.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
-    if (TD.isDate(lit.typeDef)) {
-      return `DATE('${lit.literal}')`;
-    } else if (TD.isTimestamp(lit.typeDef)) {
-      let timestampArgs = `'${lit.literal}'`;
-      const tz = lit.timezone || qtz(qi);
-      if (tz && tz !== 'UTC') {
-        timestampArgs += `,'${tz}'`;
-      }
-      return `TIMESTAMP(${timestampArgs})`;
-    } else {
-      throw new Error(`Unsupported Literal time format ${lit.typeDef}`);
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE('${literal}')`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    let timestampArgs = `'${literal}'`;
+    const tz = timezone || qtz(qi);
+    if (tz && tz !== 'UTC') {
+      timestampArgs += `,'${tz}'`;
     }
+    return `TIMESTAMP(${timestampArgs})`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    _literal: string,
+    _timezone: string
+  ): string {
+    throw new Error('BigQuery does not support timestamptz');
   }
 
   sqlMeasureTimeExpr(measure: MeasureTimeExpr): string {

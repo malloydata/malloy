@@ -13,12 +13,7 @@ import type {
 } from '../connection';
 import type {Result} from '../malloy';
 import type {Expr} from '../model';
-import {
-  isDateUnit,
-  type QueryData,
-  type QueryDataRow,
-  type QueryValue,
-} from '../model';
+import {type QueryData, type QueryDataRow, type QueryValue} from '../model';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
@@ -116,7 +111,8 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       return {kind: 'null_cell'};
     } else if (
       field.type.kind === 'date_type' ||
-      field.type.kind === 'timestamp_type'
+      field.type.kind === 'timestamp_type' ||
+      field.type.kind === 'timestamptz_type'
     ) {
       const time_value = valueToDate(value).toISOString();
       if (field.type.kind === 'date_type') {
@@ -297,29 +293,20 @@ export function nodeToLiteralValue(
       return {kind: 'boolean_literal', boolean_value: true};
     case 'false':
       return {kind: 'boolean_literal', boolean_value: false};
-    case 'timeLiteral': {
-      if (expr.typeDef.type === 'date') {
-        if (
-          expr.typeDef.timeframe === undefined ||
-          isDateUnit(expr.typeDef.timeframe)
-        ) {
-          return {
-            kind: 'date_literal',
-            date_value: expr.literal,
-            timezone: expr.timezone,
-            granularity: expr.typeDef.timeframe,
-          };
-        }
-        return undefined;
-      } else {
-        return {
-          kind: 'timestamp_literal',
-          timestamp_value: expr.literal,
-          timezone: expr.timezone,
-          granularity: expr.typeDef.timeframe,
-        };
-      }
-    }
+    case 'dateLiteral':
+      return {
+        kind: 'date_literal',
+        date_value: expr.literal,
+        granularity: expr.typeDef.timeframe,
+      };
+    case 'timestampLiteral':
+    case 'timestamptzLiteral':
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: expr.literal,
+        timezone: expr.timezone,
+        granularity: expr.typeDef.timeframe,
+      };
     default:
       return undefined;
   }

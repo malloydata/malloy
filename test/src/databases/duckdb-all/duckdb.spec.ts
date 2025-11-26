@@ -22,7 +22,7 @@
  */
 
 import {DateTime} from 'luxon';
-import {RuntimeList} from '../../runtimes';
+import {RuntimeList, runtimeFor} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
 
@@ -118,11 +118,17 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   });
 
   it('supports timezones', async () => {
-    await runtime.connection.runSQL("SET TimeZone='CET'");
-    const result = await runtime.connection.runSQL(
-      "SELECT current_setting('TimeZone')"
-    );
-    expect(result.rows[0]).toEqual({"current_setting('TimeZone')": 'CET'});
+    // Use isolated connection to avoid affecting other tests
+    const isolatedRuntime = runtimeFor(dbName);
+    try {
+      await isolatedRuntime.connection.runSQL("SET TimeZone='CET'");
+      const result = await isolatedRuntime.connection.runSQL(
+        "SELECT current_setting('TimeZone')"
+      );
+      expect(result.rows[0]).toEqual({"current_setting('TimeZone')": 'CET'});
+    } finally {
+      await isolatedRuntime.connection.close();
+    }
   });
 
   it('supports varchars with parameters', async () => {

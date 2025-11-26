@@ -207,8 +207,33 @@ expect.extend({
           }
           const got = result.data.path(...resultPath).value;
           const pGot = JSON.stringify(got);
-          const mustBe = value instanceof Date ? value.getTime() : value;
-          const actuallyGot = got instanceof Date ? got.getTime() : got;
+
+          let mustBe = value;
+          let actuallyGot = got;
+
+          // If the value is a Date this is some sort of temporal column.
+          // If the expected looks like a 'YYYY-MM-DD' value, then expect the
+          // Date to be YYYY-MM-DD 00:00:00Z
+          // When comparing Date values, we use getTime to verify in a safe way
+          // that the correct instant is returned.
+          if (got instanceof Date) {
+            actuallyGot = got.getTime();
+            mustBe = typeof value === 'string' ? new Date(value) : value;
+            if (mustBe instanceof Date) {
+              mustBe = mustBe.getTime();
+            }
+          }
+          // If expected is a date string like 'YYYY-MM-DD', compare as date strings
+          else if (
+            typeof value === 'string' &&
+            /^\d{4}-\d{2}-\d{2}$/.test(value)
+          ) {
+            if (got instanceof Date) {
+              actuallyGot = got.toISOString().split('T')[0];
+            }
+            // mustBe stays as the string value
+          }
+
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
             fails.push(`${expected} Got: Non Numeric '${pGot}'`);
           } else if (!objectsMatch(actuallyGot, mustBe)) {

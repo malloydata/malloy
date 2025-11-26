@@ -367,6 +367,9 @@ export class DuckDBDialect extends PostgresBase {
     } else if (malloyType.type === 'string') {
       return 'varchar';
     }
+    if (malloyType.type === 'timestamptz') {
+      return 'timestamp with time zone';
+    }
     return malloyType.type;
   }
 
@@ -383,7 +386,11 @@ export class DuckDBDialect extends PostgresBase {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+  sqlTypeToMalloyType(rawSqlType: string): BasicAtomicTypeDef {
+    const sqlType = rawSqlType.toUpperCase();
+    if (sqlType === 'TIMESTAMP WITH TIME ZONE') {
+      return {type: 'timestamptz'};
+    }
     // Remove decimal precision
     const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params
@@ -411,29 +418,6 @@ export class DuckDBDialect extends PostgresBase {
     // Parentheses, Commas:  DECIMAL(1, 1)
     // Brackets:             INT[ ]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
-  }
-
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `(${expr})::TIMESTAMPTZ AT TIME ZONE '${timezone}'`;
-  }
-
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
-    return `((${expr}) AT TIME ZONE '${timezone}')::TIMESTAMP`;
-  }
-
-  sqlTruncate(
-    expr: string,
-    unit: TimestampUnit,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
-  ): string {
-    // DuckDB starts weeks on Monday, Malloy wants Sunday
-    // Add 1 day before truncating, subtract 1 day after
-    if (unit === 'week') {
-      return `(DATE_TRUNC('${unit}', (${expr} + INTERVAL '1' DAY)) - INTERVAL '1' DAY)`;
-    }
-    return `DATE_TRUNC('${unit}', ${expr})`;
   }
 
   sqlOffsetTime(
@@ -529,10 +513,12 @@ class DuckDBTypeParser extends TinyParser {
       this.next();
       baseType = {type: 'number', numberType: 'float'};
     } else if (id === 'TIMESTAMP') {
-      if (this.peek().text === 'WITH') {
+      if (this.peek().text.toUpperCase() === 'WITH') {
         this.nextText('WITH', 'TIME', 'ZONE');
+        baseType = {type: 'timestamptz'};
+      } else {
+        baseType = {type: 'timestamp'};
       }
-      baseType = {type: 'timestamp'};
     } else if (duckDBToMalloyTypes[id]) {
       baseType = duckDBToMalloyTypes[id];
     } else if (id === 'STRUCT') {
