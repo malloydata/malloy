@@ -15,7 +15,8 @@
     {"path": "packages/malloy-malloy-sql"},
     {"path": "test"},
     {"path": "packages/malloy-filter"},
-    {"path": "packages/malloy-render"}
+    {"path": "packages/malloy-render"},
+    {"path": "packages/malloy-db-databricks"}
   ],
   "files": [],
   "include": [],

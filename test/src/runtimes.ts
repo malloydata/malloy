@@ -43,6 +43,8 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {DatabricksConnection} from '@malloydata/db-databricks/src/databricks_connection';
+
 import {
   MySQLConnection,
   MySQLExecutor,
@@ -252,6 +254,18 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
         );
         break;
+      case 'databricks':
+        case 'databricks':
+          connection = new DatabricksConnection('databricks', {
+            host: process.env['DATABRICKS_HOST'] ?? '',
+            path: process.env['DATABRICKS_PATH'] ?? '',
+            token: process.env['DATABRICKS_TOKEN'] ?? '',
+            name: process.env['DATABRICKS_NAME'] ?? 'test',
+            defaultCatalog: process.env['DATABRICKS_CATALOG'] ?? 'samples',
+            defaultSchema: process.env['DATABRICKS_SCHEMA'] ?? 'default',
+          });
+          break;
+
       default:
         throw new Error(`Unknown runtime "${dbName}`);
     }
@@ -284,6 +298,7 @@ export const allDatabases = [
   'snowflake',
   'trino',
   'mysql',
+  'databricks',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
