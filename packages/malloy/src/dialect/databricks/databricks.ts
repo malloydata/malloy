@@ -20,7 +20,6 @@ import {
   ArrayLiteralNode,
   RegexMatchExpr,
   TimeExtractExpr,
-  TimeLiteralNode,
   TimeTruncExpr,
   TD,
 } from '../../model/malloy_types';
@@ -492,36 +491,73 @@ export class DatabricksDialect extends Dialect {
     } FROM (${extractFrom}))`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {
-    if (TD.isDate(lt.typeDef)) {
-      return `DATE '${lt.literal}'`;
-    }
-    const tz = lt.timezone || qtz(qi);
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
     if (tz) {
-      return `to_utc_timestamp(timestamp'${lt.literal}', '${tz}')`;
+      return `to_utc_timestamp(timestamp'${literal}', '${tz}')`;
     }
-    return `timestamp '${lt.literal}'`;
+    return `timestamp '${literal}'`;
   }
 
-  sqlConvertToCivilTime(expr: string, timezone: string): string {
-    return `from_utc_timestamp(${expr}, '${timezone}')`;
+  sqlTimestamptzLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string {
+    const tz = timezone || qtz(qi);
+    if (tz) {
+      return `to_utc_timestamp(timestamp'${literal}', '${tz}')`;
+    }
+    return `timestamp '${literal}'`;
   }
 
-  sqlConvertFromCivilTime(expr: string, timezone: string): string {
+  sqlConvertToCivilTime(expr: string, timezone: string, typeDef: AtomicTypeDef): {sql: string; typeDef: AtomicTypeDef} {
+    return {
+      sql: `from_utc_timestamp(${expr}, '${timezone}')`,
+      typeDef: {type: 'timestamp'}
+    };
+  }
+
+  sqlConvertFromCivilTime(expr: string, timezone: string, _destTypeDef: AtomicTypeDef): string {
     return `to_utc_timestamp(${expr}, '${timezone}')`;
   }
 
   sqlTruncate(
     expr: string,
     unit: string,
-    _typeDef: AtomicTypeDef,
-    _inCivilTime: boolean,
-    _timezone?: string
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
   ): string {
-    if (unit === 'week') {
-      return `(date_trunc('week', ${expr} + INTERVAL 1 DAY) - INTERVAL 1 DAY)`;
+    let truncExpr = expr;
+
+    // If we need to work in civil time and have a timezone, convert first
+    if (inCivilTime && timezone) {
+      truncExpr = `from_utc_timestamp(${expr}, '${timezone}')`;
     }
-    return `date_trunc('${unit}', ${expr})`;
+
+    // Perform the truncation
+    let result: string;
+    if (unit === 'week') {
+      result = `(date_trunc('week', ${truncExpr} + INTERVAL 1 DAY) - INTERVAL 1 DAY)`;
+    } else {
+      result = `date_trunc('${unit}', ${truncExpr})`;
+    }
+
+    // If we converted to civil time, convert back to UTC
+    if (inCivilTime && timezone) {
+      result = `to_utc_timestamp(${result}, '${timezone}')`;
+    }
+
+    return result;
   }
 
   sqlOffsetTime(
