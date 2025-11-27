@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@databricks/sql": "^1.9.0",
-    "@malloydata/malloy": "0.0.324",
+    "@malloydata/malloy": "0.0.325",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"
