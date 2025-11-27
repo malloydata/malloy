@@ -56,7 +56,7 @@
     "@storybook/theming": "^8.5.8",
     "@storybook/types": "^8.5.8",
     "@types/luxon": "^3.5.0",
-    "esbuild": "0.19.11",
+    "esbuild": "0.25.0",
     "storybook": "^8.5.8",
     "vite": "^5.1.5",
     "vite-plugin-dts": "^4.5.4",
