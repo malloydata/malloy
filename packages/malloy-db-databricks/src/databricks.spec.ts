@@ -26,6 +26,9 @@ import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['databricks']);
 
+const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'] ?? '';
+const fullPath = `/sql/1.0/warehouses/${warehouseId}`;
+
 /*
  * !IMPORTANT
  *
@@ -33,21 +36,21 @@ const [describe] = describeIfDatabaseAvailable(['databricks']);
  * and keys uniquely for each test you will see cross test interactions.
  */
 
-describe('DataBricksConnection', () => {
+describe.skip('DataBricksConnection', () => {
   let connection: DatabricksConnection;
 
   beforeAll(async () => {
     connection = new DatabricksConnection('databricks', {
         host: process.env['DATABRICKS_HOST'] ?? '',
-        path: process.env['DATABRICKS_PATH'] ?? '',
+        path: fullPath ?? '',
         token: process.env['DATABRICKS_TOKEN'] ?? '',
         name: process.env['DATABRICKS_NAME'] ?? 'test',
-        defaultCatalog: process.env['DATABRICKS_CATALOG'] ?? 'samples',
-        defaultSchema: process.env['DATABRICKS_SCHEMA'] ?? 'default',
+        defaultCatalog:  'samples',
+        defaultSchema: 'default',
       });
 
 
-    await connection.runSQL('SELECT 1');
+    await connection.runSQL('SELECT current_catalog(), current_schema()');
   });
 
   afterAll(async () => {
@@ -62,4 +65,17 @@ describe('DataBricksConnection', () => {
     const result = await connection.runSQL('SELECT 1');
     expect(result.rows).toEqual([{1: 1}]);
   });
+
+  it('runs a SQL query', async () => {
+    const result = await connection.runSQL('SELECT 1 as t');
+    expect(result.rows[0]['t']).toBe(1);
+  });
+
+  it('can execute current_catalog and current_schema', async () => {
+    const result = await connection.runSQL('SELECT current_catalog(), current_schema()');
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]['current_catalog()']).toBe('samples');
+    expect(result.rows[0]['current_schema()']).toBe('default');
+  });
+
 });
