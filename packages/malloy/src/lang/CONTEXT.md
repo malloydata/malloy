@@ -71,7 +71,7 @@ The translator produces **Intermediate Representation (IR)** - a serializable, d
 - Can be cached, transmitted, and reused
 - Defined in `packages/malloy/src/model/malloy_types.ts`
 
-For detailed information about IR structure and types, see `../model/CONTEXT.md`.
+For detailed information about IR structure and types, see [../model/CONTEXT.md](../model/CONTEXT.md).
 
 ## File Organization
 

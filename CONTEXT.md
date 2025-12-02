@@ -16,13 +16,13 @@ Malloy Source → Parser → AST → IR Generation → SQL Compilation → Datab
 
 The Malloy compiler is split into two distinct parts:
 
-1. **Translator** (`packages/malloy/src/lang/`) - See `packages/malloy/CONTEXT.md`
+1. **Translator** (`packages/malloy/src/lang/`) - See [packages/malloy/CONTEXT.md](packages/malloy/CONTEXT.md)
    - Uses ANTLR-generated parser to create parse tree
    - Generates Abstract Syntax Tree (AST) from parse tree
    - Transforms AST into Intermediate Representation (IR)
    - IR is a serializable data format that fully describes the semantic model
 
-2. **Compiler** (`packages/malloy/src/model/`) - See `packages/malloy/CONTEXT.md`
+2. **Compiler** (`packages/malloy/src/model/`) - See [packages/malloy/CONTEXT.md](packages/malloy/CONTEXT.md)
    - Takes IR and translates it to SQL queries
    - Produces SQL + metadata needed to feed query results back into Malloy or render them
      with Malloy semantics.
@@ -54,7 +54,7 @@ Objects in Malloy (sources, queries, joins, measures, dimensions, `group_by`, `a
 - In block declarations, block-level annotations apply to all items, and each item can have its own
 - `##` marks **model-level annotations** that apply to the entire model
 
-**Annotations are just text** - the design intentionally leaves room for multiple DSLs. Each application extracts its annotations via pattern matching and defines its own syntax. For details on the Malloy Tag Language used for parsing annotations, see `packages/malloy-tag/CONTEXT.md`.
+**Annotations are just text** - the design intentionally leaves room for multiple DSLs. Each application extracts its annotations via pattern matching and defines its own syntax. For details on the Malloy Tag Language used for parsing annotations, see [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md).
 
 ## Data Model and Type System
 
@@ -108,10 +108,10 @@ Each database has its own package with connection handling and dialect-specific 
 
 ### Supporting Libraries
 - `malloy-interfaces/` - TypeScript interfaces and Thrift-generated types
-- `malloy-render/` - Data visualization and rendering (see `packages/malloy-render/CONTEXT.md`)
+- `malloy-render/` - Data visualization and rendering (see [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md))
 - `malloy-syntax-highlight/` - Language syntax highlighting
 - `malloy-filter/` - Query filtering utilities
-- `malloy-tag/` - Tagged template literal support (see `packages/malloy-tag/CONTEXT.md`)
+- `malloy-tag/` - Tagged template literal support (see [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md))
 - `malloy-query-builder/` - Programmatic query building
 - `malloy-malloy-sql/` - SQL integration utilities
 
@@ -186,7 +186,7 @@ npm run ci-bigquery          # CI: BigQuery-specific tests
 npm run ci-postgres          # CI: PostgreSQL-specific tests
 ```
 
-For more details on test organization and infrastructure, see `test/CONTEXT.md`.
+For more details on test organization and infrastructure, see [test/CONTEXT.md](test/CONTEXT.md).
 
 ### Code Quality
 ```bash
@@ -212,10 +212,10 @@ For new files, this is the current correct copyright text (here in C/Java/Javasc
 ## Subsystem Context
 
 For deeper context on specific subsystems, see:
-- `packages/malloy/CONTEXT.md` - Core language package (translator and compiler)
-- `packages/malloy-tag/CONTEXT.md` - Tag language for annotation parsing
-- `packages/malloy-render/CONTEXT.md` - Data visualization and rendering
-- `test/CONTEXT.md` - Test organization and infrastructure
+- [packages/malloy/CONTEXT.md](packages/malloy/CONTEXT.md) - Core language package (translator and compiler)
+- [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md) - Tag language for annotation parsing
+- [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md) - Data visualization and rendering
+- [test/CONTEXT.md](test/CONTEXT.md) - Test organization and infrastructure
 
 ## Maintaining the CONTEXT Tree
 

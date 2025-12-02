@@ -32,7 +32,7 @@ The translator takes Malloy source code and transforms it into an Intermediate R
 - IR fully describes the semantic model independent of SQL
 - IR can be cached, transmitted, and reused across compilations
 
-For detailed information about the translator, see `src/lang/CONTEXT.md`.
+For detailed information about the translator, see [src/lang/CONTEXT.md](src/lang/CONTEXT.md).
 
 ### Phase 2: Compilation (src/model/)
 The compiler takes IR and generates SQL queries for specific database dialects.
@@ -48,10 +48,10 @@ The compiler takes IR and generates SQL queries for specific database dialects.
 - Includes metadata to interpret and render results
 - Dialect-agnostic until final SQL generation step
 
-For detailed information about the compiler, see `src/model/CONTEXT.md`.
+For detailed information about the compiler, see [src/model/CONTEXT.md](src/model/CONTEXT.md).
 
 ## Subsystem Context
 
 For deeper details on specific subsystems:
-- `src/lang/CONTEXT.md` - Translator architecture (grammar, AST, IR generation)
-- `src/model/CONTEXT.md` - Compiler architecture (SQL generation, expression compilation)
+- [src/lang/CONTEXT.md](src/lang/CONTEXT.md) - Translator architecture (grammar, AST, IR generation)
+- [src/model/CONTEXT.md](src/model/CONTEXT.md) - Compiler architecture (SQL generation, expression compilation)
