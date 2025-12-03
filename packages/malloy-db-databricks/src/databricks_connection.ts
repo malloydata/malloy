@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -48,8 +48,8 @@ import {ConnectionOptions} from '@databricks/sql/dist/contracts/IDBSQLClient';
 const DEFAULT_PAGE_SIZE = 1000;
 
 export interface DatabricksConnectionOptions extends ConnectionConfig {
-  host: string;
-  path: string;
+  host?: string;
+  path?: string;
   token?: string;
   oauthClientId?: string;
   oauthClientSecret?: string;
@@ -214,6 +214,11 @@ export class DatabricksConnection
   ): Promise<MalloyQueryData> {
     if (!this.client) {
       throw new Error('Databricks connection not established');
+    }
+
+    // Add validation for required fields
+    if (!this.config.host || !this.config.path) {
+      throw new Error('Databricks host and path are required');
     }
 
     const queryConfig = await this.readQueryConfig();

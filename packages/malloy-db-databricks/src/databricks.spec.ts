@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -26,7 +26,7 @@ import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['databricks']);
 
-const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'] ?? '';
+const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'];
 const fullPath = `/sql/1.0/warehouses/${warehouseId}`;
 
 /*
@@ -36,15 +36,15 @@ const fullPath = `/sql/1.0/warehouses/${warehouseId}`;
  * and keys uniquely for each test you will see cross test interactions.
  */
 
-describe.skip('DataBricksConnection', () => {
+describe('DataBricksConnection', () => {
   let connection: DatabricksConnection;
 
   beforeAll(async () => {
     connection = new DatabricksConnection('databricks', {
-        host: process.env['DATABRICKS_HOST'] ?? '',
-        path: fullPath ?? '',
-        token: process.env['DATABRICKS_TOKEN'] ?? '',
-        name: process.env['DATABRICKS_NAME'] ?? 'test',
+        host: process.env['DATABRICKS_HOST'],
+        path: fullPath,
+        token: process.env['DATABRICKS_TOKEN'],
+        name:  'databricks',
         defaultCatalog:  'samples',
         defaultSchema: 'default',
       });
