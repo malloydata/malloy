@@ -466,7 +466,8 @@ Hides a field from being rendered in tables or dashboards, though it remains in 
 **Example:**
 
 ```
-dimension: internal_id is id # hidden
+# hidden
+dimension: internal_id is id
 ```
 
 ### `# label`
@@ -476,7 +477,8 @@ Overrides the default display name (label/title) for a field or dashboard item.
 **Example:**
 
 ```
-measure: total_revenue is sales.sum() # label="Total Sales ($)"
+# label="Total Sales ($)"
+measure: total_revenue is sales.sum()
 ```
 
 ### `# break`
