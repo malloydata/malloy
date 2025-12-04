@@ -39,6 +39,10 @@ However, Malloy lets you **extend** sources by adding other types of fields:
 - **Measures**: Aggregate expressions like `sum(x + y)` computed from a set of rows
 - **Calculations**: Like measures, but implemented with window functions
 
+### Symmetric Aggregates
+
+Malloy uses **symmetric aggregates** to handle joined data correctly. Aggregation paths like `line_items.amount.sum()` specify which grain to aggregate at. This lets you query normalized (joined) data as if it were denormalized and get correct results - Malloy avoids double-counting automatically.
+
 ### Nested Data Access
 
 The Malloy language uses dotted path notation to access nested data. Nested data might be actually be part of a row through a record data type (or array, or array of records), or it might be in a separate table where the nesting is hidden by "normalizing" the nested portion of the data which is then joined onto the current table. Unlike SQL, the access path to nested data is identical no matter which way the nesting is stored in the database.
@@ -218,6 +222,10 @@ For deeper context on specific subsystems, see:
 - [test/CONTEXT.md](test/CONTEXT.md) - Test organization and infrastructure
 
 ## Maintaining the CONTEXT Tree
+
+The idea is, for any given file of interest, you could walk up the directory path from the directory containg the file, reading all the CONTEXT.md files, and get
+both a good overview of the context you need for that file, as well as then the pointers to other CONTEXT.md files which might be interesting,
+without having to load all CONTEXT.md files at all times.
 
 ### Verification Task
 
