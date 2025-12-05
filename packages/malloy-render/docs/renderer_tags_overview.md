@@ -258,10 +258,18 @@ Explicitly renders data as a table. This is often the default for nested results
 
 **Properties:**
 
-- `.pivot`: Pivots the table, turning unique values from dimension columns into new columns.
-  - Syntax: `# pivot` (uses all dimensions automatically) or `# pivot { dimensions=["dim1", "dim2"] }` (uses specified dimensions).
 - `.flatten`: Flattens a _single-row_ nested record's fields into the parent table as columns. The nested query should not have `group_by`.
   - Syntax: `# flatten` (applied to the `nest:` definition)
+- `.pivot`: Transforms a nested query into horizontal columns where dimension values become column headers
+  -  Dimensions (fields in `group_by`) become column headers
+  -  Measures (fields in `aggregate`) become cell values
+  - Column headers display as "DimensionValue: measure_name"
+  -  Maximum 30 pivot columns.
+  - Syntax: `# pivot` (applied to a `nest:` or a query)
+    - `.dimensions`: Specifies which fields to use as pivot dimensions. If not specified, all `group_by` fields are used.
+    - Syntax: `# pivot { dimensions=[field1, field2] }`
+- `.transpose`: Rotates a table so rows become columns and columns become rows. Original column names become row headers, original row values become column headers. Maximum 20 transpose columns.
+  - Syntax: `# transpose` (applied to the view)
 - `.size=fill`: Makes the table attempt to fill the width of its container.
   - Syntax: `# table.size=fill`
 - `# column` (applied to a specific field within the view): Controls individual column appearance.
@@ -274,26 +282,63 @@ Explicitly renders data as a table. This is often the default for nested results
 
 **Examples:**
 
-```
+```malloy
+// Column width and flatten
 view: detailed_table is {
   group_by:
     category
-    # column { width=lg } // Make brand column wider
+    # column { width=lg }
     brand
+  aggregate: total_sales
+
+  # flatten
+  nest: metrics is {
+    aggregate: avg_price, total_cost
+  }
+}
+
+// Pivot - dimensions auto-detected from group_by
+view: sales_by_category is {
+  group_by: category
+  aggregate: total_sales is sales.sum()
+
+  # pivot
+  nest: by_department is {
+    group_by: department
+    aggregate:
+      avg_price is price.avg()
+      total_units is units.sum()
+  }
+}
+// Creates columns: Men: avg_price | Men: total_units | Women: avg_price | Women: total_units
+
+// Pivot with explicit dimensions
+view: regional_sales is {
+  group_by: year
+  # pivot { dimensions=[region] }
+  nest: by_region is {
+    group_by: region
+    aggregate:
+      total_sales is sales.sum()
+      avg_margin is margin.avg()
+  }
+}
+
+// Transpose - swap rows and columns
+# transpose
+view: metrics_summary is {
+  group_by: category
   aggregate:
-    total_sales
-
-// Flatten metrics from a nested query
-nest: metrics is { # flatten
-aggregate: avg_price, total_cost
+    avg_price is price.avg()
+    total_sales is sales.sum()
+    product_count is count()
 }
-
-// Pivot sales by year
-nest: sales_by_year is { # pivot
-group_by: sale_year.year
-aggregate: yearly_sales is sum(sales)
-}
-}
+// Instead of categories as rows, displays as:
+// |               | Jeans  | Outerwear |
+// |---------------|--------|-----------|
+// | avg_price     | 97.41  | 145.37    |
+// | total_sales   | 104,776| 92,269    |
+// | product_count | 1,024  | 856       |
 ```
 
 ### `# list`
@@ -334,19 +379,6 @@ view: brand_counts is {
   }
 }
 // Output might look like: Clothing: Brand A (15), Brand B (12), Brand C (10)
-```
-
-### `# transpose`
-
-Transposes a table result, swapping rows and columns. Useful for viewing single-row results with many measures.
-
-**Example:**
-
-```
-# transpose
-view: metrics is {
-  aggregate: total_sales, avg_cost, num_users
-}
 ```
 
 ---

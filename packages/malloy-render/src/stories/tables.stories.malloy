@@ -131,7 +131,6 @@ source: products is duckdb.table("static/data/products.parquet") extend {
   view: date_and_time is {
     group_by:
       `@2001-02-03` is @2001-02-03
-      `@2001-02-03.minute` is @2001-02-03.minute
       `@2001-02-03.week` is @2001-02-03.week
       `@2001-02-03.month` is @2001-02-03.month
       `@2001-02-03.quarter` is @2001-02-03.quarter
@@ -249,6 +248,48 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {
   #(story)
   view: null_field is {select: *}
+}
+
+source: pivot_test is duckdb.table("static/data/products.parquet") extend {
+  #(story) story="Pivot Table"
+  view: pivot_by_department is {
+    group_by: category
+    aggregate: total_cost is cost.sum()
+    # pivot
+    nest: by_dept is {
+      group_by: department
+      aggregate:
+        avg_retail is retail_price.avg()
+        total_cost is cost.sum()
+    }
+    limit: 5
+  }
+
+  #(story) story="Pivot with Explicit Dimensions"
+  view: pivot_explicit_dims is {
+    group_by: category
+    aggregate: total_cost is cost.sum()
+    // Use explicit dimensions to pivot only by department
+    # pivot { dimensions=[department] }
+    nest: by_dept is {
+      group_by: department
+      aggregate:
+        avg_retail is retail_price.avg()
+        total_cost is cost.sum()
+    }
+    limit: 3
+  }
+
+  #(story) story="Transpose Table"
+  # transpose
+  view: transposed is {
+    group_by: category
+    aggregate:
+      avg_retail is retail_price.avg()
+      total_cost is cost.sum()
+      product_count is count()
+    limit: 5
+  }
 }
 
 source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_column, '123e4567-e89b-12d3-a456-426614174000'::UUID AS uuid_column, {'name': 'foo'} AS user") extend {

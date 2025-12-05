@@ -2,6 +2,7 @@ import {createContext, useContext} from 'solid-js';
 import type {SetStoreFunction, Store} from 'solid-js/store';
 import {createStore} from 'solid-js/store';
 import type {TableLayout} from './table-layout';
+import type {PivotConfig} from './pivot-utils';
 
 type TableStore = {
   headerSizes: Record<string, number>;
@@ -19,6 +20,8 @@ export type TableContext = {
   headerSizeStore: ReturnType<typeof createStore<Record<string, number>>>;
   currentRow: number[];
   currentExplore: string[];
+  /** Map of field key to pivot configuration */
+  pivotConfigs: Map<string, PivotConfig>;
 };
 
 export const TableContext = createContext<TableContext>();

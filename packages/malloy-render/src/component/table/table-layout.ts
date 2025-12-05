@@ -23,6 +23,7 @@
 
 import type {Field, NestField} from '../../data_tree';
 import type {FieldHeaderRangeMap} from '../types';
+import type {PivotConfig} from './pivot-utils';
 
 type LayoutEntry = {
   field: Field;
@@ -138,4 +139,108 @@ export function getTableLayout(rootField: NestField): TableLayout {
   }
 
   return layout;
+}
+
+/**
+ * Adjusts a table layout to account for pivot column expansion.
+ * Pivot fields may have more columns than their original nested structure.
+ *
+ * @param layout The original table layout
+ * @param pivotConfigs Map of field keys to their pivot configurations
+ * @returns Adjusted layout with correct column counts for pivot fields
+ */
+export function adjustLayoutForPivots(
+  layout: TableLayout,
+  pivotConfigs: Map<string, PivotConfig>
+): TableLayout {
+  if (pivotConfigs.size === 0) {
+    return layout;
+  }
+
+  // Calculate column adjustments needed for each pivot field
+  const adjustments: Array<{startCol: number; delta: number}> = [];
+
+  for (const [fieldKey, pivotConfig] of pivotConfigs) {
+    const fieldRange = layout.fieldHeaderRangeMap[fieldKey];
+    if (!fieldRange) continue;
+
+    const currentCols = fieldRange.abs[1] - fieldRange.abs[0] + 1;
+    const neededCols = pivotConfig.columnFields.length;
+    const delta = neededCols - currentCols;
+
+    if (delta !== 0) {
+      adjustments.push({
+        startCol: fieldRange.abs[0],
+        delta,
+      });
+    }
+  }
+
+  if (adjustments.length === 0) {
+    return layout;
+  }
+
+  // Sort adjustments by start column (process from left to right)
+  adjustments.sort((a, b) => a.startCol - b.startCol);
+
+  // Create new field header range map with adjusted columns
+  const newFieldHeaderRangeMap: FieldHeaderRangeMap = {};
+
+  for (const key in layout.fieldHeaderRangeMap) {
+    const range = layout.fieldHeaderRangeMap[key];
+    const [absStart] = range.abs;
+    let absEnd = range.abs[1];
+    const [relStart] = range.rel;
+    let relEnd = range.rel[1];
+
+    // Calculate cumulative adjustment for this field's position
+    let cumulativeAdjustment = 0;
+    for (const adj of adjustments) {
+      if (adj.startCol < absStart) {
+        // This adjustment is before our field, shift our position
+        cumulativeAdjustment += adj.delta;
+      } else if (adj.startCol >= absStart && adj.startCol <= absEnd) {
+        // This adjustment is within our field (we're a parent or this is the pivot field)
+        // Expand our end position
+        absEnd += adj.delta;
+        relEnd += adj.delta;
+      }
+    }
+
+    newFieldHeaderRangeMap[key] = {
+      abs: [absStart + cumulativeAdjustment, absEnd + cumulativeAdjustment],
+      rel: [relStart, relEnd],
+      depth: range.depth,
+    };
+  }
+
+  // Calculate new total header size
+  const newTotalHeaderSize =
+    Math.max(...Object.values(newFieldHeaderRangeMap).map(f => f.abs[1])) + 1;
+
+  // Create new layout with adjusted values
+  const newLayout: TableLayout = {
+    fields: {},
+    fieldHeaderRangeMap: newFieldHeaderRangeMap,
+    fieldLayout(f: Field) {
+      const key = f.key;
+      return this.fields[key];
+    },
+    totalHeaderSize: newTotalHeaderSize,
+    maxDepth: layout.maxDepth,
+  };
+
+  // Update layout entries with new column ranges
+  for (const key in newFieldHeaderRangeMap) {
+    const oldEntry = layout.fields[key];
+    if (oldEntry) {
+      newLayout.fields[key] = {
+        ...oldEntry,
+        absoluteColumnRange: newFieldHeaderRangeMap[key].abs,
+        relativeColumnRange: newFieldHeaderRangeMap[key].rel,
+      };
+    }
+  }
+
+  return newLayout;
 }
