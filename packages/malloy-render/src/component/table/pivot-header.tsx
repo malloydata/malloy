@@ -4,56 +4,52 @@
  */
 
 import {For} from 'solid-js';
-import type {PivotConfig, PivotedColumnField} from './pivot-utils';
+import type {PivotConfig, PivotedField} from './pivot-utils';
 
 /**
- * Renders combined headers: dimension values + measure names in one row.
- * Format: "DimValue: measure_name" for each column.
+ * Renders the dimension values row with colspan spanning measure columns.
+ * Example: "MEN" spans 2 columns if there are 2 measures.
  */
-const PivotCombinedHeaderRow = (props: {
+const PivotDimensionHeaderRow = (props: {
   pivotConfig: PivotConfig;
   startColumn: number;
 }) => {
-  // Build combined header label from dimension values + measure name
-  const buildHeaderLabel = (col: PivotedColumnField): string => {
-    const dimParts: string[] = [];
-    for (const dimValue of col.pivotedField.values) {
+  const buildDimensionLabel = (pf: PivotedField): string => {
+    const parts: string[] = [];
+    for (const dimValue of pf.values) {
       if (dimValue && !dimValue.isNull()) {
-        dimParts.push(String(dimValue.value));
+        parts.push(String(dimValue.value));
       }
     }
-    const customLabel = col.field.tag.text('label');
-    const measureName = customLabel ?? col.field.name;
-
-    if (dimParts.length > 0) {
-      return `${dimParts.join(', ')}: ${measureName}`;
-    }
-    return measureName;
+    return parts.join(', ') || '';
   };
+
+  const measureCount = props.pivotConfig.nonDimensions.length;
 
   return (
     <div
-      class="table-row pivot-header-row"
+      class="table-row pivot-header-row pivot-dimension-row"
       style={{
         'grid-column': `${props.startColumn + 1} / span ${props.pivotConfig.columnFields.length}`,
         'display': 'grid',
         'grid-template-columns': 'subgrid',
       }}
     >
-      <For each={props.pivotConfig.columnFields}>
-        {(col, idx) => {
-          const isFirst = idx() === 0;
-          const isLast = idx() === props.pivotConfig.columnFields.length - 1;
-          const isNumeric = col.field.isNumber();
-          const label = buildHeaderLabel(col);
+      <For each={props.pivotConfig.pivotedFields}>
+        {(pf, pfIdx) => {
+          const isFirst = pfIdx() === 0;
+          const isLast = pfIdx() === props.pivotConfig.pivotedFields.length - 1;
+          const label = buildDimensionLabel(pf);
 
           return (
             <div
-              class="column-cell th"
+              class="column-cell th pivot-dimension-header"
               classList={{
-                'numeric': isNumeric,
                 'hide-start-gutter': isFirst,
                 'hide-end-gutter': isLast,
+              }}
+              style={{
+                'grid-column': `span ${measureCount}`,
               }}
             >
               <div class="cell-content header">
@@ -68,19 +64,70 @@ const PivotCombinedHeaderRow = (props: {
 };
 
 /**
+ * Renders the measure names row (repeated for each dimension group).
+ * Example: "avg_retail | total_cost | avg_retail | total_cost"
+ */
+const PivotMeasureHeaderRow = (props: {
+  pivotConfig: PivotConfig;
+  startColumn: number;
+}) => {
+  return (
+    <div
+      class="table-row pivot-header-row pivot-measure-row"
+      style={{
+        'grid-column': `${props.startColumn + 1} / span ${props.pivotConfig.columnFields.length}`,
+        'display': 'grid',
+        'grid-template-columns': 'subgrid',
+      }}
+    >
+      <For each={props.pivotConfig.columnFields}>
+        {(col, idx) => {
+          const isFirst = idx() === 0;
+          const isLast = idx() === props.pivotConfig.columnFields.length - 1;
+          const isNumeric = col.field.isNumber();
+          const customLabel = col.field.tag.text('label');
+          const measureName = customLabel ?? col.field.name;
+
+          return (
+            <div
+              class="column-cell th"
+              classList={{
+                'numeric': isNumeric,
+                'hide-start-gutter': isFirst,
+                'hide-end-gutter': isLast,
+              }}
+            >
+              <div class="cell-content header">
+                {measureName.replace(/_/g, '_\u200b')}
+              </div>
+            </div>
+          );
+        }}
+      </For>
+    </div>
+  );
+};
+
+/**
  * Renders all header rows for a pivot field.
- * Uses a single combined row with "DimValue: measure_name" format
- * for better readability.
+ * Row 1: Dimension values with colspan (e.g., "MEN" spanning 2 columns)
+ * Row 2: Measure names repeated (e.g., "avg_retail | total_cost")
  */
 export const PivotHeaders = (props: {
   pivotConfig: PivotConfig;
   startColumn: number;
 }) => {
   return (
-    <PivotCombinedHeaderRow
-      pivotConfig={props.pivotConfig}
-      startColumn={props.startColumn}
-    />
+    <>
+      <PivotDimensionHeaderRow
+        pivotConfig={props.pivotConfig}
+        startColumn={props.startColumn}
+      />
+      <PivotMeasureHeaderRow
+        pivotConfig={props.pivotConfig}
+        startColumn={props.startColumn}
+      />
+    </>
   );
 };
 
