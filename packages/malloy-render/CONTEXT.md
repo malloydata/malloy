@@ -73,9 +73,34 @@ The render package integrates with:
 - **Web applications** - Can be embedded in web apps
 - **Reports** - Generates static visualizations
 
+## Architecture
+
+### Two Renderers
+- **New renderer** (`src/component/`) - Solid.js-based, the default
+- **Legacy renderer** (`src/html/`) - HTML string-based, activated with `## renderer_legacy` model tag
+
+### Tag System
+Render annotations use a tag API to check for rendering hints:
+- `field.tag.has('pivot')` - Check if a tag exists
+- `field.tag.text('label')` - Get a text property
+- `field.tag.textArray('pivot', 'dimensions')` - Get array property with path
+- `field.tag.tag('table', 'size')` - Navigate nested tag properties
+
+Tags like `# pivot`, `# transpose`, `# flatten` are standalone tags (not properties of `# table`).
+
+### Table Layout
+The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
+- `getTableLayout()` - Creates base layout from field structure
+- `adjustLayoutForPivots()` - Adjusts column counts for pivot expansion
+- Column ranges are tracked for each field to support nested tables
+
+### Testing
+Use Storybook (`npm run storybook`) to test visual changes. Stories are in `src/stories/*.stories.malloy`.
+
 ## Important Notes
 
 - Rendering is **separate from query execution** - it only processes results
 - The renderer is **stateless** - same results produce same visualizations
 - Visualizations respect **user accessibility** preferences where possible
 - The package is designed to be **embeddable** in various contexts
+- **Never run the full test suite** without restrictions - use targeted tests or storybook
