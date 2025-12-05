@@ -341,6 +341,21 @@ const MalloyTableRoot = (_props: {
     return false;
   };
 
+  // Check if a field is a sibling of a pivot field (same parent, same depth)
+  const isSiblingOfPivotField = (field: Field, depth: number): boolean => {
+    const parent = field.parent;
+    if (!parent) return false;
+    // Check if any pivot field has the same parent and depth
+    for (const [pivotKey] of tableCtx.pivotConfigs.entries()) {
+      const pivotLayout = tableCtx.layout.fieldHeaderRangeMap[pivotKey];
+      const pivotField = root.fieldAt(pivotKey);
+      if (pivotLayout && pivotLayout.depth === depth && pivotField.parent === parent) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
       .sort((a, b) => {
@@ -358,7 +373,9 @@ const MalloyTableRoot = (_props: {
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
         // Exclude children of pivot fields - they get special pivot headers
         const isChildOfPivot = isChildOfPivotField(field);
-        return isPartOfTable && !isChildOfPivot;
+        // Exclude siblings of pivot fields - they render in pivot header rows
+        const isSiblingOfPivot = isSiblingOfPivotField(field, value.depth);
+        return isPartOfTable && !isChildOfPivot && !isSiblingOfPivot;
       })
       .map(([key, value]) => ({
         fieldKey: key,
@@ -372,20 +389,69 @@ const MalloyTableRoot = (_props: {
     return Math.max(...pinnedFields().map(f => f.depth));
   });
 
-  // Get pivot fields with their layout info for rendering pivot headers
+  // Get pivot fields with their layout info and sibling fields for rendering pivot headers
   const pivotFieldsWithLayout = createMemo(() => {
     const result: Array<{
       field: Field;
       config: PivotConfig;
       startColumn: number;
+      totalColumns: number;
+      siblingFields: Array<{
+        field: Field;
+        startColumn: number;
+        endColumn: number;
+      }>;
     }> = [];
+
     for (const [key, config] of tableCtx.pivotConfigs.entries()) {
       const fieldLayout = tableCtx.layout.fieldHeaderRangeMap[key];
       if (fieldLayout) {
+        const pivotField = root.fieldAt(key);
+        const parent = pivotField.parent;
+        const pivotDepth = fieldLayout.depth;
+
+        // Find sibling fields (same parent, same depth, not a pivot)
+        const siblingFields: Array<{
+          field: Field;
+          startColumn: number;
+          endColumn: number;
+        }> = [];
+
+        if (parent) {
+          for (const [sibKey, sibLayout] of Object.entries(
+            tableCtx.layout.fieldHeaderRangeMap
+          )) {
+            if (sibKey === key) continue; // Skip the pivot field itself
+            if (sibLayout.depth !== pivotDepth) continue;
+            const sibField = root.fieldAt(sibKey);
+            if (sibField.parent !== parent) continue;
+            if (tableCtx.pivotConfigs.has(sibKey)) continue; // Skip other pivots
+
+            siblingFields.push({
+              field: sibField,
+              startColumn: sibLayout.abs[0],
+              endColumn: sibLayout.abs[1],
+            });
+          }
+        }
+
+        // Sort siblings by column position
+        siblingFields.sort((a, b) => a.startColumn - b.startColumn);
+
+        // Calculate total columns for this level
+        const totalColumns =
+          Math.max(
+            ...Object.entries(tableCtx.layout.fieldHeaderRangeMap)
+              .filter(([, v]) => v.depth === pivotDepth)
+              .map(([, v]) => v.abs[1])
+          ) + 1;
+
         result.push({
           field: config.field,
           config,
           startColumn: fieldLayout.abs[0],
+          totalColumns,
+          siblingFields,
         });
       }
     }
@@ -696,7 +762,9 @@ const MalloyTableRoot = (_props: {
             {pivotInfo => (
               <PivotHeaders
                 pivotConfig={pivotInfo.config}
-                startColumn={pivotInfo.startColumn}
+                pivotStartColumn={pivotInfo.startColumn}
+                totalColumns={pivotInfo.totalColumns}
+                siblingFields={pivotInfo.siblingFields}
               />
             )}
           </For>

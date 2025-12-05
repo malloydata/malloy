@@ -4,15 +4,27 @@
  */
 
 import {For} from 'solid-js';
+import type {Field} from '../../data_tree';
 import type {PivotConfig, PivotedField} from './pivot-utils';
 
 /**
- * Renders the dimension values row with colspan spanning measure columns.
- * Example: "MEN" spans 2 columns if there are 2 measures.
+ * Info about a sibling field (non-pivot field at same depth as pivot).
+ */
+export type SiblingFieldInfo = {
+  field: Field;
+  startColumn: number;
+  endColumn: number;
+};
+
+/**
+ * Renders the dimension values row spanning the full table width.
+ * Non-pivot columns get empty space, pivot columns get dimension headers.
  */
 const PivotDimensionHeaderRow = (props: {
   pivotConfig: PivotConfig;
-  startColumn: number;
+  pivotStartColumn: number;
+  totalColumns: number;
+  siblingFields: SiblingFieldInfo[];
 }) => {
   const buildDimensionLabel = (pf: PivotedField): string => {
     const parts: string[] = [];
@@ -30,16 +42,35 @@ const PivotDimensionHeaderRow = (props: {
     <div
       class="table-row pivot-header-row pivot-dimension-row"
       style={{
-        'grid-column': `${props.startColumn + 1} / span ${props.pivotConfig.columnFields.length}`,
+        'grid-column': `1 / span ${props.totalColumns}`,
         'display': 'grid',
         'grid-template-columns': 'subgrid',
       }}
     >
+      {/* Empty space for sibling columns before pivot */}
+      <For each={props.siblingFields}>
+        {sibling => {
+          const colSpan = sibling.endColumn - sibling.startColumn + 1;
+          return (
+            <div
+              class="column-cell th pivot-sibling-spacer"
+              style={{
+                'grid-column': `${sibling.startColumn + 1} / span ${colSpan}`,
+              }}
+            >
+              {/* Empty - sibling headers render in measure row */}
+            </div>
+          );
+        }}
+      </For>
+      {/* Pivot dimension headers */}
       <For each={props.pivotConfig.pivotedFields}>
         {(pf, pfIdx) => {
           const isFirst = pfIdx() === 0;
           const isLast = pfIdx() === props.pivotConfig.pivotedFields.length - 1;
           const label = buildDimensionLabel(pf);
+          // Calculate the actual grid column for this pivoted field
+          const colOffset = pfIdx() * measureCount;
 
           return (
             <div
@@ -49,7 +80,7 @@ const PivotDimensionHeaderRow = (props: {
                 'hide-end-gutter': isLast,
               }}
               style={{
-                'grid-column': `span ${measureCount}`,
+                'grid-column': `${props.pivotStartColumn + 1 + colOffset} / span ${measureCount}`,
               }}
             >
               <div class="cell-content header">
@@ -64,22 +95,50 @@ const PivotDimensionHeaderRow = (props: {
 };
 
 /**
- * Renders the measure names row (repeated for each dimension group).
- * Example: "avg_retail | total_cost | avg_retail | total_cost"
+ * Renders the measure names row spanning the full table width.
+ * Includes both sibling field headers and pivot measure headers.
  */
 const PivotMeasureHeaderRow = (props: {
   pivotConfig: PivotConfig;
-  startColumn: number;
+  pivotStartColumn: number;
+  totalColumns: number;
+  siblingFields: SiblingFieldInfo[];
 }) => {
   return (
     <div
       class="table-row pivot-header-row pivot-measure-row"
       style={{
-        'grid-column': `${props.startColumn + 1} / span ${props.pivotConfig.columnFields.length}`,
+        'grid-column': `1 / span ${props.totalColumns}`,
         'display': 'grid',
         'grid-template-columns': 'subgrid',
       }}
     >
+      {/* Sibling field headers */}
+      <For each={props.siblingFields}>
+        {sibling => {
+          const colSpan = sibling.endColumn - sibling.startColumn + 1;
+          const isNumeric = sibling.field.isNumber();
+          const customLabel = sibling.field.tag.text('label');
+          const name = customLabel ?? sibling.field.name;
+
+          return (
+            <div
+              class="column-cell th"
+              classList={{
+                numeric: isNumeric,
+              }}
+              style={{
+                'grid-column': `${sibling.startColumn + 1} / span ${colSpan}`,
+              }}
+            >
+              <div class="cell-content header">
+                {name.replace(/_/g, '_\u200b')}
+              </div>
+            </div>
+          );
+        }}
+      </For>
+      {/* Pivot measure headers */}
       <For each={props.pivotConfig.columnFields}>
         {(col, idx) => {
           const isFirst = idx() === 0;
@@ -96,6 +155,9 @@ const PivotMeasureHeaderRow = (props: {
                 'hide-start-gutter': isFirst,
                 'hide-end-gutter': isLast,
               }}
+              style={{
+                'grid-column': `${props.pivotStartColumn + 1 + idx()}`,
+              }}
             >
               <div class="cell-content header">
                 {measureName.replace(/_/g, '_\u200b')}
@@ -110,22 +172,28 @@ const PivotMeasureHeaderRow = (props: {
 
 /**
  * Renders all header rows for a pivot field.
- * Row 1: Dimension values with colspan (e.g., "MEN" spanning 2 columns)
- * Row 2: Measure names repeated (e.g., "avg_retail | total_cost")
+ * Row 1: Empty for siblings + dimension values with colspan
+ * Row 2: Sibling headers + measure names repeated
  */
 export const PivotHeaders = (props: {
   pivotConfig: PivotConfig;
-  startColumn: number;
+  pivotStartColumn: number;
+  totalColumns: number;
+  siblingFields: SiblingFieldInfo[];
 }) => {
   return (
     <>
       <PivotDimensionHeaderRow
         pivotConfig={props.pivotConfig}
-        startColumn={props.startColumn}
+        pivotStartColumn={props.pivotStartColumn}
+        totalColumns={props.totalColumns}
+        siblingFields={props.siblingFields}
       />
       <PivotMeasureHeaderRow
         pivotConfig={props.pivotConfig}
-        startColumn={props.startColumn}
+        pivotStartColumn={props.pivotStartColumn}
+        totalColumns={props.totalColumns}
+        siblingFields={props.siblingFields}
       />
     </>
   );
