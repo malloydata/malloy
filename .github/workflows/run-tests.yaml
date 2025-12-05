@@ -47,6 +47,13 @@ jobs:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-databricks:
+    needs: check-permission
+    uses: './.github/workflows/db-databricks.yaml'
+    secrets:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
   # db-motherduck:
   #   needs: check-permission
   #   uses: './.github/workflows/db-motherduck.yaml'
@@ -74,6 +81,7 @@ jobs:
       - main
       - db-snowflake
       - db-bigquery
+      - db-databricks
       - db-duckdb
       - db-presto
       - db-duckdb-wasm

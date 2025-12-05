@@ -44,7 +44,7 @@ describe('DataBricksConnection', () => {
         host: process.env['DATABRICKS_HOST'],
         path: fullPath,
         token: process.env['DATABRICKS_TOKEN'],
-        name:  'databricks',
+        name:  'test',
         defaultCatalog:  'samples',
         defaultSchema: 'default',
       });

@@ -1,0 +1,39 @@
+name: 'DB:Databricks'
+permissions: {}
+
+on:
+  workflow_call:
+    secrets:
+      DATABRICKS_HOST:
+        required: true
+      DATABRICKS_PATH:
+        required: true
+      DATABRICKS_TOKEN:
+        required: true
+      DATABRICKS_CATALOG:
+        required: false
+      DATABRICKS_SCHEMA:
+        required: false
+
+jobs:
+  test-databricks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run ci-databricks
+        env:
+          CI: true
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
