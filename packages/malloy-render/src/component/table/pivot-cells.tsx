@@ -36,8 +36,7 @@ const PivotCell = (props: {
     if (config.onClick) {
       config.onClick({
         field: props.columnField.field,
-        displayValue:
-          typeof renderValue !== 'function' ? renderValue : null,
+        displayValue: typeof renderValue !== 'function' ? renderValue : null,
         value: props.cell.value,
         fieldPath: props.columnField.field.path,
         isHeader: false,

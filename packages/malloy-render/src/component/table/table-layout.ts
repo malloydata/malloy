@@ -188,8 +188,10 @@ export function adjustLayoutForPivots(
 
   for (const key in layout.fieldHeaderRangeMap) {
     const range = layout.fieldHeaderRangeMap[key];
-    let [absStart, absEnd] = range.abs;
-    let [relStart, relEnd] = range.rel;
+    const [absStart] = range.abs;
+    let absEnd = range.abs[1];
+    const [relStart] = range.rel;
+    let relEnd = range.rel[1];
 
     // Calculate cumulative adjustment for this field's position
     let cumulativeAdjustment = 0;

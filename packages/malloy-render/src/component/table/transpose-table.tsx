@@ -4,7 +4,11 @@
  */
 
 import {For, createMemo, type Component, type JSX} from 'solid-js';
-import type {RecordOrRepeatedRecordCell, Field, RecordCell} from '../../data_tree';
+import type {
+  RecordOrRepeatedRecordCell,
+  Field,
+  RecordCell,
+} from '../../data_tree';
 import {applyRenderer} from '../renderer/apply-renderer';
 import {useConfig} from '../render';
 import {MalloyViz} from '@/api/malloy-viz';
@@ -76,9 +80,7 @@ const TransposeTable: Component<{
 
           return (
             <div class="column-cell th transpose-column-header">
-              <div class="cell-content header">
-                {String(headerValue)}
-              </div>
+              <div class="cell-content header">{String(headerValue)}</div>
             </div>
           );
         }}
@@ -86,7 +88,7 @@ const TransposeTable: Component<{
 
       {/* Data rows: field name + values across columns */}
       <For each={visibleFields()}>
-        {(field, rowIdx) => (
+        {(field, _rowIdx) => (
           <>
             {/* Row header: field name */}
             <div
@@ -102,9 +104,9 @@ const TransposeTable: Component<{
 
             {/* Data cells for this field across all rows */}
             <For each={rows()}>
-              {(row, colIdx) => {
+              {(row, _colIdx) => {
                 const cell = row.column(field.name);
-                const {renderValue, renderAs} = applyRenderer({
+                const {renderValue} = applyRenderer({
                   dataColumn: cell,
                   tag: field.tag,
                   customProps: {},

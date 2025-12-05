@@ -56,7 +56,9 @@ const PivotCombinedHeaderRow = (props: {
                 'hide-end-gutter': isLast,
               }}
             >
-              <div class="cell-content header">{label.replace(/_/g, '_\u200b')}</div>
+              <div class="cell-content header">
+                {label.replace(/_/g, '_\u200b')}
+              </div>
             </div>
           );
         }}

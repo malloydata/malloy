@@ -227,7 +227,12 @@ export function sortPivotedFields(
       const aValue = a.fieldValueMap.get(dim.field.name);
       const bValue = b.fieldValueMap.get(dim.field.name);
 
-      if (aValue && bValue && aValue.field.isBasic() && bValue.field.isBasic()) {
+      if (
+        aValue &&
+        bValue &&
+        aValue.field.isBasic() &&
+        bValue.field.isBasic()
+      ) {
         // Handle nulls
         if (aValue.isNull()) {
           if (bValue.isNull()) {
