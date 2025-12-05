@@ -15,21 +15,8 @@ Malloy queries return structured data with metadata about how it should be displ
 ### Solid.js
 The rendering system uses **Solid.js** as its reactive UI framework.
 
-**Why Solid.js:**
-- Fine-grained reactivity for efficient updates
-- Small bundle size
-- Excellent performance for data-heavy applications
-- Simple, React-like API
-
 ### Vega
 The package uses **Vega** for declarative data visualizations.
-
-**Vega capabilities:**
-- Grammar of graphics approach
-- Declarative visualization specifications
-- Wide range of chart types
-- Interactive visualizations
-- Composable and extensible
 
 ## Rendering Process
 
@@ -80,13 +67,13 @@ The render package integrates with:
 - **Legacy renderer** (`src/html/`) - HTML string-based, activated with `## renderer_legacy` model tag
 
 ### Tag System
-Render annotations use a tag API to check for rendering hints:
+Render annotations use the Malloy Tag API to check for rendering hints. For tag language syntax, see [packages/malloy-tag/CONTEXT.md](../malloy-tag/CONTEXT.md).
+
+Common API patterns in the renderer:
 - `field.tag.has('pivot')` - Check if a tag exists
 - `field.tag.text('label')` - Get a text property
 - `field.tag.textArray('pivot', 'dimensions')` - Get array property with path
 - `field.tag.tag('table', 'size')` - Navigate nested tag properties
-
-Tags like `# pivot`, `# transpose`, `# flatten` are standalone tags (not properties of `# table`).
 
 ### Table Layout
 The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
