@@ -349,7 +349,11 @@ const MalloyTableRoot = (_props: {
     for (const [pivotKey] of tableCtx.pivotConfigs.entries()) {
       const pivotLayout = tableCtx.layout.fieldHeaderRangeMap[pivotKey];
       const pivotField = root.fieldAt(pivotKey);
-      if (pivotLayout && pivotLayout.depth === depth && pivotField.parent === parent) {
+      if (
+        pivotLayout &&
+        pivotLayout.depth === depth &&
+        pivotField.parent === parent
+      ) {
         return true;
       }
     }
