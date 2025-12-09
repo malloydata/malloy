@@ -887,6 +887,21 @@ describe('source:', () => {
     test('rename', () => {
       expect('source: c is a extend { rename: nn is ai }').toTranslate();
     });
+    test('rename measure to existing field name causes error', () => {
+      expect(
+        markSource`
+          ##! experimental.access_modifiers
+          source: sales is a include {
+            private: *
+            public: astr, ad
+          } extend {
+            measure: af_sum is sum(af)
+          } extend {
+            rename: ${'af is af_sum'}
+          }
+        `
+      ).toLog(errorMessage("Can't rename to 'af', field already exists"));
+    });
     test('accept single', () => {
       const onlyAstr = new TestTranslator(
         'source: c is a extend { accept: astr }'

@@ -53,6 +53,16 @@ export class RenameField extends MalloyElement implements Noteable, MakeEntry {
       );
       return;
     }
+
+    // Check if the new name would shadow an existing field
+    if (fs.entry(this.newName)) {
+      this.logError(
+        'invalid-rename-with-same-name',
+        `Can't rename to '${this.newName}', field already exists`
+      );
+      return;
+    }
+
     const oldValue = this.oldName.getField(fs);
     /*
 
