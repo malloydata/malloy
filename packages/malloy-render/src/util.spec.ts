@@ -208,6 +208,6 @@ describe('formatBigNumber', () => {
 
   test('should handle very large numbers', () => {
     expect(formatBigNumber(999999999999999)).toBe('1000T');
-    expect(formatBigNumber(1234567890123456789)).toBe('1234.6Q');
+    expect(formatBigNumber(1.234567890123456e15)).toBe('1.2Q');
   });
 });
