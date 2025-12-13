@@ -129,3 +129,78 @@ describe('tagFromAnnotations original behavior', () => {
     expect(tag.text('size')).toBe('lg');
   });
 });
+
+describe('formatBigNumber', () => {
+  // Import the function
+  const {formatBigNumber} = require('./util');
+
+  test('should format thousands with K suffix', () => {
+    expect(formatBigNumber(1000)).toBe('1K');
+    expect(formatBigNumber(1500)).toBe('1.5K');
+    expect(formatBigNumber(9999)).toBe('10K');
+    expect(formatBigNumber(1234)).toBe('1.2K');
+  });
+
+  test('should format millions with M suffix', () => {
+    expect(formatBigNumber(1000000)).toBe('1M');
+    expect(formatBigNumber(1500000)).toBe('1.5M');
+    expect(formatBigNumber(2300000)).toBe('2.3M');
+    expect(formatBigNumber(1234567)).toBe('1.2M');
+  });
+
+  test('should format billions with B suffix', () => {
+    expect(formatBigNumber(1000000000)).toBe('1B');
+    expect(formatBigNumber(1500000000)).toBe('1.5B');
+    expect(formatBigNumber(7890000000)).toBe('7.9B');
+    expect(formatBigNumber(1234567890)).toBe('1.2B');
+  });
+
+  test('should format trillions with T suffix', () => {
+    expect(formatBigNumber(1000000000000)).toBe('1T');
+    expect(formatBigNumber(1500000000000)).toBe('1.5T');
+    expect(formatBigNumber(12340000000000)).toBe('12.3T');
+    expect(formatBigNumber(9876543210123)).toBe('9.9T');
+  });
+
+  test('should not abbreviate numbers less than 1000', () => {
+    expect(formatBigNumber(0)).toBe('0');
+    expect(formatBigNumber(1)).toBe('1');
+    expect(formatBigNumber(999)).toBe('999');
+    expect(formatBigNumber(500)).toBe('500');
+    expect(formatBigNumber(42)).toBe('42');
+  });
+
+  test('should handle negative numbers correctly', () => {
+    expect(formatBigNumber(-1000)).toBe('-1K');
+    expect(formatBigNumber(-1500)).toBe('-1.5K');
+    expect(formatBigNumber(-1500000)).toBe('-1.5M');
+    expect(formatBigNumber(-2000000000)).toBe('-2B');
+    expect(formatBigNumber(-3500000000000)).toBe('-3.5T');
+    expect(formatBigNumber(-999)).toBe('-999');
+  });
+
+  test('should strip trailing .0 from formatted numbers', () => {
+    expect(formatBigNumber(1000)).toBe('1K'); // Not "1.0K"
+    expect(formatBigNumber(2000000)).toBe('2M'); // Not "2.0M"
+    expect(formatBigNumber(3000000000)).toBe('3B'); // Not "3.0B"
+    expect(formatBigNumber(4000000000000)).toBe('4T'); // Not "4.0T"
+  });
+
+  test('should round to 1 decimal place', () => {
+    expect(formatBigNumber(1234)).toBe('1.2K');
+    expect(formatBigNumber(1256)).toBe('1.3K');
+    expect(formatBigNumber(1999)).toBe('2K');
+    expect(formatBigNumber(1999999)).toBe('2M');
+  });
+
+  test('should handle edge cases', () => {
+    expect(formatBigNumber(0.5)).toBe('0.5');
+    expect(formatBigNumber(-0.5)).toBe('-0.5');
+    expect(formatBigNumber(999.99)).toBe('999.99');
+  });
+
+  test('should handle very large numbers', () => {
+    expect(formatBigNumber(999999999999999)).toBe('1000T');
+    expect(formatBigNumber(1234567890123456)).toBe('1234.6T');
+  });
+});

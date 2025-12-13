@@ -329,3 +329,32 @@ export function walkFields(e: NestField, cb: (f: Field) => void) {
 export function notUndefined<T>(x: T | undefined): x is T {
   return x !== undefined;
 }
+
+export function formatBigNumber(value: number): string {
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  let formattedNumber: string;
+  let suffix = '';
+
+  if (absValue >= 1_000_000_000_000) {
+    formattedNumber = (absValue / 1_000_000_000_000).toFixed(1);
+    suffix = 'T';
+  } else if (absValue >= 1_000_000_000) {
+    formattedNumber = (absValue / 1_000_000_000).toFixed(1);
+    suffix = 'B';
+  } else if (absValue >= 1_000_000) {
+    formattedNumber = (absValue / 1_000_000).toFixed(1);
+    suffix = 'M';
+  } else if (absValue >= 1_000) {
+    formattedNumber = (absValue / 1_000).toFixed(1);
+    suffix = 'K';
+  } else {
+    return value.toLocaleString('en-US');
+  }
+
+  // Remove trailing .0
+  formattedNumber = formattedNumber.replace(/\.0$/, '');
+
+  return `${sign}${formattedNumber}${suffix}`;
+}
