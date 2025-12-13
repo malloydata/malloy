@@ -27,6 +27,7 @@ import type {RendererOptions} from './renderer_types';
 import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
+import {formatBigNumber} from '../util';
 import type {Cell, Field} from '../data_tree';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
@@ -43,6 +44,9 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     }
 
     if (this.options.value_format) {
+      if (this.options.value_format === 'big') {
+        return formatBigNumber(data.value);
+      }
       try {
         return format(this.options.value_format, data.value);
       } catch {
