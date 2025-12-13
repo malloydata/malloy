@@ -337,7 +337,10 @@ export function formatBigNumber(value: number): string {
   let formattedNumber: string;
   let suffix = '';
 
-  if (absValue >= 1_000_000_000_000) {
+  if (absValue >= 1_000_000_000_000_000) {
+    formattedNumber = (absValue / 1_000_000_000_000_000).toFixed(1);
+    suffix = 'Q';
+  } else if (absValue >= 1_000_000_000_000) {
     formattedNumber = (absValue / 1_000_000_000_000).toFixed(1);
     suffix = 'T';
   } else if (absValue >= 1_000_000_000) {

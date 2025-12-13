@@ -162,6 +162,13 @@ describe('formatBigNumber', () => {
     expect(formatBigNumber(9876543210123)).toBe('9.9T');
   });
 
+  test('should format quadrillions with Q suffix', () => {
+    expect(formatBigNumber(1000000000000000)).toBe('1Q');
+    expect(formatBigNumber(1500000000000000)).toBe('1.5Q');
+    expect(formatBigNumber(2340000000000000)).toBe('2.3Q');
+    expect(formatBigNumber(9876543210123456)).toBe('9.9Q');
+  });
+
   test('should not abbreviate numbers less than 1000', () => {
     expect(formatBigNumber(0)).toBe('0');
     expect(formatBigNumber(1)).toBe('1');
@@ -201,6 +208,6 @@ describe('formatBigNumber', () => {
 
   test('should handle very large numbers', () => {
     expect(formatBigNumber(999999999999999)).toBe('1000T');
-    expect(formatBigNumber(1234567890123456)).toBe('1234.6T');
+    expect(formatBigNumber(1234567890123456789)).toBe('1234.6Q');
   });
 });
