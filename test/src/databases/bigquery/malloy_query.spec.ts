@@ -27,7 +27,8 @@ import {testModel} from '../../models/faa_model';
 import type {BigQueryTestConnection} from '../../runtimes';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const bigquery = 'bigquery';
 const runtimeList = new RuntimeList([bigquery]);
@@ -54,6 +55,7 @@ const [describe] = describeIfDatabaseAvailable([bigquery]);
 
 describe('BigQuery expression tests', () => {
   const faa = runtime.loadModel(testModel);
+  const faaTestModel = wrapTestModel(runtime, testModel);
 
   // EXPLORE flights
   //  ->{
@@ -436,7 +438,7 @@ describe('BigQuery expression tests', () => {
           num_providers
         order_by: 2 desc
       }
-    `).malloyResultMatches(faa, {num_providers: 296});
+    `).toMatchResult(faaTestModel, {num_providers: 296});
   });
 });
 
@@ -466,6 +468,7 @@ query: ca_airports is airports->by_fac_type + { where: state ? 'CA' | 'NY'}
 
 describe('airport_tests', () => {
   let model: malloy.ModelMaterializer;
+  const airportTestModel = wrapTestModel(runtime, airportModelText);
   beforeAll(async () => {
     model = runtime.loadModel(airportModelText);
   });
@@ -563,7 +566,7 @@ describe('airport_tests', () => {
           sum_state is by_state.sum(by_state.airport_count),
           sum_fac is by_state.by_fac_type.sum(by_state.by_fac_type.airport_count)
       }
-    `).malloyResultMatches(model, {sum_state: 19793, sum_fac: 19793});
+    `).toMatchResult(airportTestModel, {sum_state: 19793, sum_fac: 19793});
   });
 
   it('pipeline_as_declared_turtle', async () => {
@@ -575,11 +578,13 @@ describe('airport_tests', () => {
           select: a
         }
       } -> pipe_turtle
-    `).malloyResultMatches(model, {a: 19793});
+    `).toMatchResult(airportTestModel, {a: 19793});
   });
 
   it('pipeline Turtle', async () => {
-    await expect(`
+    const result = await runQuery(
+      model,
+      `
       run: bigquery.table('malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
@@ -596,7 +601,13 @@ describe('airport_tests', () => {
           aggregate: total_airports is a.sum()
         }
       }
-    `).malloyResultMatches(model, {'pipe_turtle.total_airports': 1845});
+    `
+    );
+    const row = result.data.value[0] as {
+      pipe_turtle: {state: string; total_airports: number}[];
+    };
+    // The state with the most airports (first in desc order) has 1845 airports
+    expect(row.pipe_turtle[0]).toMatchObject({total_airports: 1845});
   });
 
   it.skip('crossjoined turtles', async () => {

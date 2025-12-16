@@ -377,3 +377,17 @@ export function wrapTestModel(
 ): TestModel {
   return {model: runtime.loadModel(source), dialect: runtime.dialect};
 }
+
+/**
+ * Extend an existing TestModel with additional Malloy source.
+ * Creates a new TestModel that includes both the base model's definitions
+ * and the new source.
+ *
+ * @example
+ * const base = wrapTestModel(runtime, 'source: users is ...');
+ * const extended = extendTestModel(base, 'source: orders is ...');
+ * // extended can now query both users and orders
+ */
+export function extendTestModel(base: TestModel, source: string): TestModel {
+  return {model: base.model.extendModel(source), dialect: base.dialect};
+}

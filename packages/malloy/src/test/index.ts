@@ -6,7 +6,7 @@
 // Test data creation
 export {TV} from './test-values';
 export type {TypedValue} from './test-values';
-export {mkTestModel, wrapTestModel} from './test-models';
+export {mkTestModel, wrapTestModel, extendTestModel} from './test-models';
 export type {TestModelSources, TestModel} from './test-models';
 
 // Query execution

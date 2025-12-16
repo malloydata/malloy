@@ -23,7 +23,9 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
+import '../../util/db-jest-matchers'; // For isSqlEq matcher
 import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -56,6 +58,7 @@ source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const expressionModel = runtime.loadModel(modelText(databaseName));
+  const testModel = wrapTestModel(runtime, modelText(databaseName));
   // basic calculations for sum, filtered sum, without a join.
 
   const q = runtime.getQuoter();
@@ -71,7 +74,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           boeing_seats3 is total_seats { where: manufacturer ? 'BOEING'},
           percent_boeing_floor,
       }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       total_seats: 452415,
       total_seats2: 452415,
       boeing_seats: 252771,
@@ -87,7 +90,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           # ThisShouldNotAffectTheQuery
           group_by: aircraft_models.seats
         }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       seats: 0,
     });
   });
@@ -100,7 +103,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           percent_boeing_floor
           percent_boeing_floor2 is floor(boeing_seats / total_seats * 100)
       }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       percent_boeing_floor: 55,
       percent_boeing_floor2: 55,
     });
@@ -109,7 +112,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   it('computes mod correctly', async () => {
     await expect(`
       run: ${databaseName}.sql("SELECT 10 as ten") -> {select: mod is 10 % 3}
-    `).malloyResultMatches(runtime, {mod: 1});
+    `).toMatchResult(testModel, {mod: 1});
   });
 
   // Model based version of sums.
@@ -120,7 +123,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aircraft_models.total_seats
           aircraft_models.boeing_seats
       }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       total_seats: 18294,
       boeing_seats: 6244,
     });
@@ -128,7 +131,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // simple turtle expressions
   it('simple turtle', async () => {
-    await expect(`
+    const result = await runQuery(
+      expressionModel,
+      `
       // # test.debug
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         group_by: popular_name
@@ -140,14 +145,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
         limit: 3
       }
-    `).malloyResultMatches(expressionModel, {
+    `
+    );
+    expect(result.data[0]).toHavePath({
       'by_state.state': 'TX',
       'by_state.airport_count': 1845,
     });
   });
 
   it('double turtle', async () => {
-    await expect(`
+    const result = await runQuery(
+      expressionModel,
+      `
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         aggregate: airport_count.sum()
         nest: o is {
@@ -164,11 +173,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         }
       }
-    `).malloyResultMatches(expressionModel, {
+    `
+    );
+    expect(result.data[0]).toHavePath({
       'o.by_state.state': 'TX',
       'o.by_state.airport_count': 1845,
       'o.airport_count': 11146,
-      'o.inline/inline_sum': 11146,
+      'o.inline.inline_sum': 11146,
       'airport_count': 19701,
     });
   });
@@ -190,26 +201,29 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: o.by_state.airport_count.sum()
       }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       'airport_count': 5023,
     });
   });
 
   // turtle expressions
   it('model: turtle', async () => {
-    await expect('run: aircraft->by_manufacturer').malloyResultMatches(
-      expressionModel,
-      {manufacturer: 'CESSNA'}
-    );
+    await expect('run: aircraft->by_manufacturer').toMatchResult(testModel, {
+      manufacturer: 'CESSNA',
+    });
   });
 
   // filtered turtle expressions
   test.when(runtime.supportsNesting)('model: filtered turtle', async () => {
-    await expect(`
+    const result = await runQuery(
+      expressionModel,
+      `
       run: aircraft->{
         nest: b is by_manufacturer + { where: aircraft_models.manufacturer ?~'B%'}
       }
-    `).malloyResultMatches(expressionModel, {'b.manufacturer': 'BEECH'});
+    `
+    );
+    expect(result.data[0]).toHavePath({'b.manufacturer': 'BEECH'});
   });
 
   // having.
@@ -222,11 +236,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: 2
         limit: 2
       }
-    `).malloyResultMatches(expressionModel, {aircraft_count: 91});
+    `).toMatchResult(testModel, {aircraft_count: 91});
   });
 
   test.when(runtime.supportsNesting)('model: having in a nest', async () => {
-    await expect(`
+    const result = await runQuery(
+      expressionModel,
+      `
       run: aircraft->{
         top: 10
         order_by: 1
@@ -240,13 +256,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: aircraft_count
         }
       }
-    `).malloyResultMatches(expressionModel, {'by_state.state': 'VA'});
+    `
+    );
+    expect(result.data[0]).toHavePath({'by_state.state': 'VA'});
   });
 
   test.when(runtime.supportsNesting)(
     'model: turtle having on main',
     async () => {
-      await expect(`
+      const result = await runQuery(
+        expressionModel,
+        `
       run: aircraft->{
         order_by: 2 asc
         having: aircraft_count ? >500
@@ -265,7 +285,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         }
       }
-    `).malloyResultMatches(expressionModel, {
+    `
+      );
+      expect(result.data[0]).toHavePath({
         'by_state.by_city.city': 'ALBUQUERQUE',
       });
     }
@@ -275,7 +297,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   test.when(runtime.supportsNesting)(
     'model: having float group by partition',
     async () => {
-      await expect(`${modelText(databaseName)}
+      await expect(`
         run: aircraft_models->{
           order_by: 1
           where: seats_bucketed > 0
@@ -286,19 +308,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             group_by: engines
             aggregate: aircraft_model_count
           }
-      }`).malloyResultMatches(runtime, {aircraft_model_count: 448});
+      }`).toMatchResult(testModel, {aircraft_model_count: 448});
     }
   );
 
   test.when(runtime.supportsNesting)(
     'model: having on just aggregation with a nest',
     async () => {
-      await expect(`${modelText(databaseName)}
+      await expect(`
       run: ${databaseName}.table('malloytest.state_facts') -> {
           having: count(airport_count) > 0
           aggregate: row_count is count()
           nest: state
-      }`).malloyResultMatches(runtime, {row_count: 51});
+      }`).toMatchResult(testModel, {row_count: 51});
     }
   );
 
@@ -317,7 +339,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           max_model is max(model),
           boeing_max_model is max(model) { where: manufacturer ? 'BOEING'},
       }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       distinct_seats: 187,
       boeing_distinct_seats: 85,
       min_seats: 0,
@@ -350,7 +372,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           t_timestamp_month is t_timestamp.month,
           t_timestamp_year is t_timestamp.year,
       }
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
         t_date: new Date('2020-03-02'),
         t_date_month: new Date('2020-03-01'),
         t_date_year: new Date('2020-01-01'),
@@ -406,7 +428,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     await expect(`
       run: aircraft extend { where: aircraft_models.manufacturer ? ~'B%' }
         -> {aggregate: m_count is count(aircraft_models.manufacturer) }
-    `).malloyResultMatches(expressionModel, {m_count: 63});
+    `).toMatchResult(testModel, {m_count: 63});
   });
 
   const nativeInt = databaseName === 'mysql' ? 'signed' : 'integer';
@@ -415,7 +437,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: aircraft -> {
         group_by: a is "312"::"${nativeInt}"
       }
-    `).malloyResultMatches(expressionModel, {a: 312});
+    `).toMatchResult(testModel, {a: 312});
   });
 
   it('case expressions', async () => {
@@ -429,7 +451,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by:
           valuey is case manufacturer when 'BOEING' then 'BOEING' else 'NOT BOEING' end
       }
-    `).malloyResultMatches(expressionModel, [
+    `).toEqualResult(testModel, [
       {other: 'BOEING', nully: 'BOEING', valuey: 'BOEING'},
       {other: 'OTHER', nully: null, valuey: 'NOT BOEING'},
     ]);
@@ -444,7 +466,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `;
     if (runtime.dialect.supportsSafeCast) {
-      await expect(safeCast).malloyResultMatches(runtime, {
+      await expect(safeCast).toMatchResult(testModel, {
         bad_date: null,
         bad_number: null,
         good_number: 312,
@@ -469,7 +491,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: avg_a_year_built1 is floor(a_year_built.avg())
         aggregate: avg_a_year_built2 is floor(a.avg(a_year_built))
       }
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
       avg_a_year_built1: 1969,
       avg_a_year_built2: 1969,
     });
@@ -484,7 +506,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: a -> {
           group_by: string_1 is sql_string("UPPER(\${manufacturer})")
         }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
       });
     });
@@ -498,7 +520,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: seats
           group_by: number_1 is sql_number("\${seats} * 2")
         }
-  `).malloyResultMatches(expressionModel, {
+  `).toMatchResult(testModel, {
         seats: 29,
         number_1: 58,
       });
@@ -515,7 +537,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         run: a -> {
           aggregate: s is number_1.sum()
         }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         s: 58,
       });
     });
@@ -529,7 +551,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: boolean_1 is sql_boolean("\${seats} > 20")
           group_by: boolean_2 is sql_boolean("\${engines} = 2")
         }
-  `).malloyResultMatches(expressionModel, {
+  `).toMatchResult(testModel, {
         boolean_1: runtime.dialect.resultBoolean(true),
         boolean_2: runtime.dialect.resultBoolean(false),
       });
@@ -543,7 +565,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: a -> {
           group_by: date_1 is sql_date("\${last_action_date}")
         }
-  `).malloyResultMatches(expressionModel, {
+  `).toMatchResult(testModel, {
         date_1: new Date('2000-01-04T00:00:00.000Z'),
       });
     });
@@ -556,7 +578,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: a -> {
         group_by: timestamp_1 is sql_timestamp("\${last_action_date}")
         }
-  `).malloyResultMatches(expressionModel, {
+  `).toMatchResult(testModel, {
         timestamp_1: new Date('2000-01-04T00:00:00.000Z'),
       });
     });
@@ -569,7 +591,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: a -> {
           group_by: string_1 is sql_string('UPPER(\${TABLE}.${q`manufacturer`})')
         }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
       });
     });
@@ -582,7 +604,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: a -> {
           group_by: string_1 is sql_string("UPPER(\${manufacturer})")
         }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
       });
     });
@@ -599,7 +621,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         run: a -> {
           group_by: string_1 is sql_string("UPPER(\${a0.manufacturer})")
         }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
       });
     });
@@ -616,7 +638,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         run: a -> {
           group_by: number_1 is sql_number("\${seats} + \${a0.seats}")
         }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         number_1: 58,
       });
     });
@@ -668,7 +690,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: 2 desc, 1
             limit: 3
         }
-      `).malloyResultMatches(expressionModel, {first_three: 'SAB'});
+      `).toMatchResult(testModel, {first_three: 'SAB'});
     }
   );
 
@@ -690,7 +712,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           model.model_count
           aircraft_count
       }
-    `).malloyResultMatches(expressionModel, {
+    `).toMatchResult(testModel, {
       model_count: 244,
       aircraft_count: 3599,
     });
@@ -727,7 +749,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: b_models.b_count
         -- aggregate: b_models.bo_models.bo_count
       }
-    `).malloyResultMatches(runtime, {model_count: 60461, b_count: 355});
+    `).toMatchResult(testModel, {model_count: 60461, b_count: 355});
     }
   );
 
@@ -755,11 +777,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           a is a.state_count
           al is a.al.state_count
       }
-    `).malloyResultMatches(runtime, {allx: 51, a: 4, al: 1});
+    `).toMatchResult(testModel, {allx: 51, a: 4, al: 1});
   });
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const testModel = wrapTestModel(runtime, '');
   const q = runtime.getQuoter();
   const sqlEq = mkSqlEqWith(runtime, databaseName, {
     malloy: `extend {
@@ -837,7 +860,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: double_quote is "${back}${dq}"
         }`
-      ).malloyResultMatches(runtime, {double_quote: '"'});
+      ).toMatchResult(testModel, {double_quote: '"'});
     });
     test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
@@ -856,7 +879,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           else_pass is string_value ?? 'incorrect'
           literal_null is null ?? 'correct'
       }`
-    ).malloyResultMatches(runtime, {
+    ).toMatchResult(testModel, {
       found_null: 'correct',
       else_pass: 'correct',
       literal_null: 'correct',
@@ -881,38 +904,38 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         await expect(`run: ${nulls} -> {
           select:
             null_boolean is tf
-        }`).malloyResultMatches(runtime, {null_boolean: null});
+        }`).toMatchResult(testModel, {null_boolean: null});
       });
       it('not boolean', async () => {
         await expect(`run: ${nulls} -> {
           select:
             not_null_boolean is not tf
-        }`).malloyResultMatches(runtime, {not_null_boolean: is_true});
+        }`).toMatchResult(testModel, {not_null_boolean: is_true});
       });
       it('numeric != non-null to null', async () => {
         await expect(
           `run: ${nulls} -> { select: val_ne_null is x != 9 }`
-        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+        ).toMatchResult(testModel, {val_ne_null: is_true});
       });
       it('string !~ non-null to null', async () => {
         await expect(
           `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
-        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+        ).toMatchResult(testModel, {val_ne_null: is_true});
       });
       it('regex !~ non-null to null', async () => {
         await expect(
           `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
-        ).malloyResultMatches(runtime, {val_ne_null: is_true});
+        ).toMatchResult(testModel, {val_ne_null: is_true});
       });
       it('numeric != null-to-null', async () => {
         await expect(
           `run: ${nulls} -> { select: null_ne_null is x != y }`
-        ).malloyResultMatches(runtime, {null_ne_null: is_true});
+        ).toMatchResult(testModel, {null_ne_null: is_true});
       });
       it('string !~ null-to-null', async () => {
         await expect(
           `run: ${nulls} -> { select: null_ne_null is a !~ b }`
-        ).malloyResultMatches(runtime, {null_ne_null: is_true});
+        ).toMatchResult(testModel, {null_ne_null: is_true});
       });
     });
   }
@@ -926,7 +949,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           no_paren is false and fot
           paren is    false and (fot)
       }`
-    ).malloyResultMatches(runtime, {
+    ).toMatchResult(testModel, {
       paren: runtime.dialect.resultBoolean(false),
       no_paren: runtime.dialect.resultBoolean(false),
     });

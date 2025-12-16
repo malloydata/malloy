@@ -6,7 +6,9 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {mkTestModel, wrapTestModel} from '@malloydata/malloy/test';
+import type {TestModel} from '@malloydata/malloy/test';
 import {databasesFromEnvironmentOr} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 import {Dialect} from '@malloydata/malloy';
@@ -24,37 +26,39 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const zipMe = s.split(',');
       return zipMe.map(s => ({nm: s}));
     }
+    // Use wrapTestModel with original SQL for backslash escaping
     const xbq = db.dialect.sqlLiteralString('x\\');
-    const abc = db.loadModel(`
-      source: abc is ${dbName}.sql("""
+    const abcTestModel = wrapTestModel(
+      db,
+      `source: abc is ${dbName}.sql("""
         SELECT 'abc' as ${q`s`}, 'abc' as ${q`nm`}
         UNION ALL SELECT 'def', 'def'
         UNION ALL SELECT ${xbq}, 'xback'
         UNION ALL SELECT '', 'z-empty'
         UNION ALL SELECT null, 'z-null'
-      """)
-    `);
+      """)`
+    );
 
     test('is abc', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'abc';
           select: s
-        }`).malloyResultMatches(abc, [{s: 'abc'}]);
+        }`).toEqualResult(abcTestModel, [{s: 'abc'}]);
     });
     test('empty string filter expression', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'';
           select: *; order_by: nm asc
-        }`).malloyResultMatches(abc, got('abc,def,xback,z-empty,z-null'));
+        }`).toMatchResult(abcTestModel, ...got('abc,def,xback,z-empty,z-null'));
     });
     test('abc,def', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'abc,def';
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('abc,def'));
+        }`).toEqualResult(abcTestModel, got('abc,def'));
     });
     test('-abc', async () => {
       await expect(`
@@ -62,7 +66,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-abc',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
+        }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
     });
     test('-starts', async () => {
       await expect(`
@@ -70,7 +74,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-a%',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
+        }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
     });
     test('-contains', async () => {
       await expect(`
@@ -78,7 +82,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-%b%',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
+        }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
     });
     test('-end', async () => {
       await expect(`
@@ -86,7 +90,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-%c',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
+        }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
     });
     test('unlike', async () => {
       await expect(`
@@ -94,7 +98,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-a%c',
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('def,xback,z-empty,z-null'));
+        }`).toEqualResult(abcTestModel, got('def,xback,z-empty,z-null'));
     });
     test('simple but not ___,-abc', async () => {
       await expect(`
@@ -102,19 +106,19 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'___,-abc';
           select: s
-        }`).malloyResultMatches(abc, [{s: 'def'}]);
+        }`).toEqualResult(abcTestModel, [{s: 'def'}]);
     });
     test('empty', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('z-empty,z-null'));
+        }`).toEqualResult(abcTestModel, got('z-empty,z-null'));
       await expect(`
           run: abc -> {
             where: s ~ f'EmpTy'
             select: nm; order_by: nm asc
-          }`).malloyResultMatches(abc, got('z-empty,z-null'));
+          }`).toEqualResult(abcTestModel, got('z-empty,z-null'));
     });
     test('-empty', async () => {
       await expect(`
@@ -122,19 +126,19 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-empty'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('abc,def,xback'));
+        }`).toEqualResult(abcTestModel, got('abc,def,xback'));
     });
     test('null', async () => {
       await expect(`
         run: abc -> {
           where: s ~ f'null'
           select: nm
-        }`).malloyResultMatches(abc, got('z-null'));
+        }`).toEqualResult(abcTestModel, got('z-null'));
       await expect(`
         run: abc -> {
           where: s ~ f'nULl'
           select: nm
-        }`).malloyResultMatches(abc, got('z-null'));
+        }`).toEqualResult(abcTestModel, got('z-null'));
     });
     test('-null', async () => {
       await expect(`
@@ -142,7 +146,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'-null'
           select: nm; order_by: nm asc
-        }`).malloyResultMatches(abc, got('abc,def,xback,z-empty'));
+        }`).toEqualResult(abcTestModel, got('abc,def,xback,z-empty'));
     });
     test('starts', async () => {
       await expect(`
@@ -150,7 +154,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'a%';
           select: s
-        }`).malloyResultMatches(abc, [{s: 'abc'}]);
+        }`).toEqualResult(abcTestModel, [{s: 'abc'}]);
     });
     test('contains', async () => {
       await expect(`
@@ -158,7 +162,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'%b%,%e%';
           select: *; order_by: nm asc
-        }`).malloyResultMatches(abc, [{s: 'abc'}, {s: 'def'}]);
+        }`).toMatchResult(abcTestModel, {s: 'abc'}, {s: 'def'});
     });
     test('simple ends', async () => {
       await expect(`
@@ -166,7 +170,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'%c';
           select: s
-        }`).malloyResultMatches(abc, [{s: 'abc'}]);
+        }`).toEqualResult(abcTestModel, [{s: 'abc'}]);
     });
     test('ends in backslash', async () => {
       await expect(`
@@ -174,7 +178,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'%\\\\'
           select: nm
-        }`).malloyResultMatches(abc, got('xback'));
+        }`).toEqualResult(abcTestModel, got('xback'));
     });
     test('= x backslash', async () => {
       await expect(`
@@ -182,14 +186,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: abc -> {
           where: s ~ f'x\\\\'
           select: nm
-        }`).malloyResultMatches(abc, got('xback'));
+        }`).toEqualResult(abcTestModel, got('xback'));
     });
     test('string or with pipe', async () => {
       await expect(`
     run: abc -> {
       where: s ~ f'abc | def'
       select: nm; order_by: nm asc
-    }`).malloyResultMatches(abc, got('abc,def'));
+    }`).toEqualResult(abcTestModel, got('abc,def'));
     });
 
     test('string and with semicolon', async () => {
@@ -197,27 +201,27 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     run: abc -> {
       where: s ~ f'%b% ; %c'
       select: nm; order_by: nm asc
-    }`).malloyResultMatches(abc, got('abc'));
+    }`).toEqualResult(abcTestModel, got('abc'));
     });
   });
 
   describe('numeric filter expressions', () => {
-    const nums = db.loadModel(`
-      source: nums is ${dbName}.sql("""
-        SELECT 0 as ${q`n`}, '0' as ${q`t`}
-        UNION ALL SELECT 1, '1'
-        UNION ALL SELECT 2, '2'
-        UNION ALL SELECT 3, '3'
-        UNION ALL SELECT 4, '4'
-        UNION ALL SELECT NULL, 'null'
-      """)
-    `);
+    const numsTestModel = mkTestModel(db, {
+      nums: [
+        {n: 0, t: '0'},
+        {n: 1, t: '1'},
+        {n: 2, t: '2'},
+        {n: 3, t: '3'},
+        {n: 4, t: '4'},
+        {n: null, t: 'null'},
+      ],
+    });
     test('numeric filters are case insensitive', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'([1 tO 3] aNd [1 To 4]) oR NuLl'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [
+        }`).toEqualResult(numsTestModel, [
         {t: '1'},
         {t: '2'},
         {t: '3'},
@@ -229,7 +233,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: nums -> {
           where: n ~ f''
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [
+        }`).toEqualResult(numsTestModel, [
         {t: '0'},
         {t: '1'},
         {t: '2'},
@@ -243,14 +247,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: nums -> {
           where: n ~ f'2'
           select: n
-        }`).malloyResultMatches(nums, [{n: 2}]);
+        }`).toEqualResult(numsTestModel, [{n: 2}]);
     });
     test('!= 2', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'!= 2'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [
+        }`).toEqualResult(numsTestModel, [
         {t: '0'},
         {t: '1'},
         {t: '3'},
@@ -263,91 +267,91 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: nums -> {
           where: n ~ f'[1 to 3]'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}, {t: '3'}]);
+        }`).toEqualResult(numsTestModel, [{t: '1'}, {t: '2'}, {t: '3'}]);
     });
     test('not [1 to 3]', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'not [1 to 3]'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '0'}, {t: '4'}]);
+        }`).toEqualResult(numsTestModel, [{t: '0'}, {t: '4'}]);
     });
     test('123', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'1,2,3'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}, {t: '3'}]);
+        }`).toEqualResult(numsTestModel, [{t: '1'}, {t: '2'}, {t: '3'}]);
     });
     test('not 123', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'not 1,2,3'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '0'}, {t: '4'}, {t: 'null'}]);
+        }`).toEqualResult(numsTestModel, [{t: '0'}, {t: '4'}, {t: 'null'}]);
     });
     test('(1 to 3]', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'(1 to 3]'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '2'}, {t: '3'}]);
+        }`).toEqualResult(numsTestModel, [{t: '2'}, {t: '3'}]);
     });
     test('[1 to 3)', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'[1 to 3)'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}]);
+        }`).toEqualResult(numsTestModel, [{t: '1'}, {t: '2'}]);
     });
     test('(1 to 3)', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'(1 to 3)'
           select: t; order_by: t asc
-        }`).malloyResultMatches(nums, [{t: '2'}]);
+        }`).toEqualResult(numsTestModel, [{t: '2'}]);
     });
     test('>3', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'>3'
           select: n
-        }`).malloyResultMatches(nums, [{n: 4}]);
+        }`).toEqualResult(numsTestModel, [{n: 4}]);
     });
     test('>=3', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'>=3'
           select: n; order_by:n asc
-        }`).malloyResultMatches(nums, [{n: 3}, {n: 4}]);
+        }`).toEqualResult(numsTestModel, [{n: 3}, {n: 4}]);
     });
     test('<1', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'<1'
           select: n
-        }`).malloyResultMatches(nums, [{n: 0}]);
+        }`).toEqualResult(numsTestModel, [{n: 0}]);
     });
     test('<=1', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'<=1'
           select: n; order_by: n asc
-        }`).malloyResultMatches(nums, [{n: 0}, {n: 1}]);
+        }`).toEqualResult(numsTestModel, [{n: 0}, {n: 1}]);
     });
     test('not <=1', async () => {
       await expect(`
           run: nums -> {
             where: n ~ f'not <=1'
             select: n; order_by: n asc
-          }`).malloyResultMatches(nums, [{n: 2}, {n: 3}, {n: 4}]);
+          }`).toEqualResult(numsTestModel, [{n: 2}, {n: 3}, {n: 4}]);
     });
     test('not null and not 0,1,2', async () => {
       await expect(`
         run: nums -> {
           where: n ~ f'not null and not 0,1,2'
           select: n; order_by: n asc
-        }`).malloyResultMatches(nums, [{n: 3}, {n: 4}]);
+        }`).toEqualResult(numsTestModel, [{n: 3}, {n: 4}]);
     });
   });
 
@@ -368,13 +372,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
      * =false            |   F    |   T     |   NULL
      * not =false        |   T    |   F     |   NULL
      */
-    const facts = db.loadModel(`
-      source: facts is ${dbName}.sql("""
-        SELECT true as ${q`b`}, 'true' as ${q`t`}
-        UNION ALL SELECT false, 'false'
-        UNION ALL SELECT NULL, 'null'
-      """)
-    `);
+    const factsTestModel = mkTestModel(db, {
+      facts: [
+        {b: true, t: 'true'},
+        {b: false, t: 'false'},
+        {b: null, t: 'null'},
+      ],
+    });
     const factsSrc =
       db.dialect.booleanType === 'supported'
         ? 'facts'
@@ -384,105 +388,105 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         run: ${factsSrc} -> {
           where: b ~ f'tRuE'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'true'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'true'}]);
     });
     test.when(testBoolean)('=true', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f'=TRUE'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'true'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'true'}]);
     });
     test.when(testBoolean)('not =true', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f'not =true'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'false'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'false'}]);
     });
     test.when(testBoolean)('false', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f'FalSE'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('=false', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f'=FALSE'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'false'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'false'}]);
     });
     test.when(testBoolean)('null', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f'Null'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'null'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'null'}]);
     });
     test.when(testBoolean)('not null', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f'nOt NuLL'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'false'}, {t: 'true'}]);
     });
     test.when(testBoolean)('not true', async () => {
       await expect(`
     run: ${factsSrc} -> {
       where: b ~ f'not true'
       select: t; order_by: t asc
-    }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+    }`).toEqualResult(factsTestModel, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('not false', async () => {
       await expect(`
     run: ${factsSrc} -> {
       where: b ~ f'not false'
       select: t; order_by: t asc
-    }`).malloyResultMatches(facts, [{t: 'true'}]);
+    }`).toEqualResult(factsTestModel, [{t: 'true'}]);
     });
     test.when(testBoolean)('not =false', async () => {
       await expect(`
     run: ${factsSrc} -> {
       where: b ~ f'not =false'
       select: t; order_by: t asc
-    }`).malloyResultMatches(facts, [{t: 'true'}]);
+    }`).toEqualResult(factsTestModel, [{t: 'true'}]);
     });
     test.when(testBoolean)('true (non-column)', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'true'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'true'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'true'}]);
     });
     test.when(testBoolean)('not true (non-column)', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'not true'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('false (non-column)', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'false'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'false'}, {t: 'null'}]);
     });
     test.when(testBoolean)('not false (non-column)', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: (pick b when 1=1 else false) ~ f'not false'
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [{t: 'true'}]);
+        }`).toEqualResult(factsTestModel, [{t: 'true'}]);
     });
     test.when(testBoolean)('empty boolean filter', async () => {
       await expect(`
         run: ${factsSrc} -> {
           where: b ~ f''
           select: t; order_by: t asc
-        }`).malloyResultMatches(facts, [
+        }`).toEqualResult(factsTestModel, [
         {t: 'false'},
         {t: 'null'},
         {t: 'true'},
@@ -528,7 +532,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
      * { t: 1 second before end,   n: 'last' }
      * { t: end,                   n: 'post-range' }
      * { t: NULL                   n: 'z-null' }
-     * Use malloyResultMatches(range, inRange) or (range, notInRange)
+     * Use toEqualResult(rangeQuery, inRange) or (rangeQuery, notInRange)
      *
      * If a timezone is provided then ...
      * - the start and end times are considered to be in that timezone
@@ -540,7 +544,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       start: string,
       end: string,
       queryTimezone?: string
-    ): string {
+    ): TestModel {
       const zone = queryTimezone ?? 'UTC';
 
       // Convert the civil time to the desired timezone
@@ -554,8 +558,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         ? `timezone: '${queryTimezone}';`
         : '';
 
-      return `
-        run: ${dbName}.sql("""
+      const rangeModel = `
+        query: rangeQuery is ${dbName}.sql("""
           SELECT ${tsLit(b4)} AS ${q`t`}, 'before' AS ${q`n`}
           UNION ALL SELECT ${tsLit(begin)}, 'first'
           UNION ALL SELECT ${tsLit(last)} , 'last'
@@ -568,9 +572,10 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           order_by: n
         }
       `;
+      return wrapTestModel(db, rangeModel);
     }
 
-    function mkDateRange(start: string, end: string) {
+    function mkDateRange(start: string, end: string): TestModel {
       const begin = LuxonDateTime.fromFormat(start, fDate);
       const b4 = begin.minus({day: 1});
       const last = LuxonDateTime.fromFormat(end, fDate).minus({day: 1});
@@ -586,10 +591,11 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           UNION ALL SELECT NULL, 'z-null'
         """)
         -> {select: t,n; order_by: n}`;
-      return db.loadModel(rangeModel);
+      return wrapTestModel(db, rangeModel);
     }
-    function mkEqTime(exact: string) {
-      return db.loadModel(
+    function mkEqTime(exact: string): TestModel {
+      return wrapTestModel(
+        db,
         `query: eqtime is ${dbName}.sql("""
           SELECT ${lit(exact, 'timestamp')} AS ${q`t`}, 'exact' as ${q`n`}
         """) -> {select: t, n}`
@@ -612,19 +618,19 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const range = mkDateRange('2001-01-01', '2001-04-01');
       await expect(`
         run: range + { where: t ~ f'AFTER 2001-Q1' }
-      `).malloyResultMatches(range, {n: 'post-range'});
+      `).toMatchResult(range, {n: 'post-range'});
     });
     test('date before month', async () => {
       const range = mkDateRange('2001-01-01', '2001-02-01');
       await expect(`
         run: range + { where: t ~ f'before 2001-01' }
-      `).malloyResultMatches(range, {n: 'before'});
+      `).toMatchResult(range, {n: 'before'});
     });
     test('date in year', async () => {
       const range = mkDateRange('2001-01-01', '2002-01-01');
       await expect(`
         run: range + { where: t ~ f'2001' }
-      `).malloyResultMatches(range, inRange);
+      `).toMatchResult(range, ...inRange);
     });
     test('2 days ago', async () => {
       nowIs('2001-01-15 12:00:00');
@@ -633,7 +639,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-13 00:00:00',
         '2001-01-14 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('2 days', async () => {
       nowIs('2001-01-15 12:00:00');
@@ -642,7 +648,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-14 00:00:00',
         '2001-01-16 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('2 days from now', async () => {
       nowIs('2001-01-15 12:00:00');
@@ -651,7 +657,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-17 00:00:00',
         '2001-01-18 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('2000 to 2001', async () => {
       const rangeQuery = mkRangeQuery(
@@ -659,7 +665,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2000-01-01 00:00:00',
         '2001-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next 2 days', async () => {
       nowIs('2001-01-01 12:00:00');
@@ -668,7 +674,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-02 00:00:00',
         '2001-01-04 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last 2 months', async () => {
       nowIs('2001-01-01 12:00:00');
@@ -677,7 +683,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2000-11-01 00:00:00',
         '2001-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('before y2k', async () => {
       const rangeQuery = mkRangeQuery(
@@ -685,7 +691,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, [{n: 'before'}]);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, {n: 'before'});
     });
     test('after y2k', async () => {
       const rangeQuery = mkRangeQuery(
@@ -693,7 +699,9 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, [{n: 'post-range'}]);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, {
+        n: 'post-range',
+      });
     });
     test('y2k for 1 minute', async () => {
       const rangeQuery = mkRangeQuery(
@@ -701,7 +709,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-01 00:01:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('y2k for 2 hour', async () => {
       const rangeQuery = mkRangeQuery(
@@ -709,7 +717,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-01 02:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('y2k for 1 day', async () => {
       const rangeQuery = mkRangeQuery(
@@ -717,7 +725,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-02 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('y2k for 1 week', async () => {
       const rangeQuery = mkRangeQuery(
@@ -725,7 +733,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-08 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('y2k for 1 month', async () => {
       const rangeQuery = mkRangeQuery(
@@ -733,7 +741,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-02-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('y2k for 1 quarter', async () => {
       const rangeQuery = mkRangeQuery(
@@ -741,7 +749,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-04-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('y2k for 1 year', async () => {
       const rangeQuery = mkRangeQuery(
@@ -749,7 +757,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('null', async () => {
       const rangeQuery = mkRangeQuery(
@@ -757,7 +765,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, [{n: 'z-null'}]);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, {n: 'z-null'});
     });
     test('not null', async () => {
       const rangeQuery = mkRangeQuery(
@@ -765,12 +773,13 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, [
+      await expect('run: rangeQuery').toMatchResult(
+        rangeQuery,
         {n: 'before'},
         {n: 'first'},
         {n: 'last'},
-        {n: 'post-range'},
-      ]);
+        {n: 'post-range'}
+      );
     });
     test('empty temporal filter', async () => {
       const rangeQuery = mkRangeQuery(
@@ -778,13 +787,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, [
+      await expect('run: rangeQuery').toMatchResult(
+        rangeQuery,
         {n: 'before'},
         {n: 'first'},
         {n: 'last'},
         {n: 'post-range'},
-        {n: 'z-null'},
-      ]);
+        {n: 'z-null'}
+      );
     });
     test('year literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -792,7 +802,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('not month literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -800,7 +810,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-06-01 00:00:00',
         '2001-07-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, notInRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...notInRange);
     });
     test('day literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -808,7 +818,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-06-15 00:00:00',
         '2001-06-16 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('hour literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -816,7 +826,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-03 04:00:00',
         '2001-02-03 05:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('minute literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -824,7 +834,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-03 04:05:00',
         '2001-02-03 04:06:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('quarter literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -832,7 +842,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-04-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('week literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -840,19 +850,19 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-01 00:00:00',
         '2023-01-08 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('full second literal', async () => {
       const eqtime = mkEqTime('2023-01-01 01:02:03');
       await expect(`
         run: eqtime + { where: t ~ f'2023-01-01 01:02:03' }
-      `).malloyResultMatches(eqtime, [{n: 'exact'}]);
+      `).toMatchResult(eqtime, {n: 'exact'});
     });
     test('subsecond literal', async () => {
       const eqtime = mkEqTime('2023-01-01 01:02:03.04');
       await expect(`
         run: eqtime + { where: t ~ f'2023-01-01 01:02:03.04' }
-      `).malloyResultMatches(eqtime, [{n: 'exact'}]);
+      `).toMatchResult(eqtime, {n: 'exact'});
     });
     test('today', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -861,7 +871,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-03 00:00:00',
         '2001-02-04 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('yesterday', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -870,7 +880,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-02 00:00:00',
         '2001-02-03 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('tomorrow', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -879,7 +889,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-04 00:00:00',
         '2001-02-05 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('this week', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -888,7 +898,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-01 00:00:00',
         '2023-01-08 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last month', async () => {
       nowIs('2001-02-01 12:00:00');
@@ -897,7 +907,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-02-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next quarter', async () => {
       nowIs('2001-01-02 12:00:00');
@@ -906,7 +916,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-04-01 00:00:00',
         '2001-07-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('this year', async () => {
       nowIs('2001-01-02 12:00:00');
@@ -915,7 +925,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     // 2023-01-01 is a sunday
     test('(last) sunday', async () => {
@@ -925,7 +935,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-01 00:00:00',
         '2023-01-02 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last monday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -934,7 +944,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-02 00:00:00',
         '2023-01-03 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last-tuesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -943,7 +953,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-27 00:00:00',
         '2022-12-28 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last-wednesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -952,7 +962,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-28 00:00:00',
         '2022-12-29 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last-thursday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -961,7 +971,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-29 00:00:00',
         '2022-12-30 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last-friday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -970,7 +980,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-30 00:00:00',
         '2022-12-31 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('last saturday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -979,7 +989,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-31 00:00:00',
         '2023-01-01 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next sunday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -988,7 +998,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-08 00:00:00',
         '2023-01-09 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next monday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -997,7 +1007,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-09 00:00:00',
         '2023-01-10 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next tuesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1006,7 +1016,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-10 00:00:00',
         '2023-01-11 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next wednesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1015,7 +1025,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-04 00:00:00',
         '2023-01-05 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next thursday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1024,7 +1034,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-05 00:00:00',
         '2023-01-06 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next friday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1033,7 +1043,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-06 00:00:00',
         '2023-01-07 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('next saturday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1042,7 +1052,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-07 00:00:00',
         '2023-01-08 00:00:00'
       );
-      await expect(rangeQuery).malloyResultMatches(db, inRange);
+      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
     });
     test('temporal filters are case insensitive', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1051,8 +1061,8 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-04 00:00:00',
         '2023-01-05 00:00:00'
       );
-      await expect(rangeQuery).matchesRows(
-        db,
+      await expect('run: rangeQuery').toMatchResult(
+        rangeQuery,
         {n: 'before'},
         {n: 'first'},
         {n: 'last'},
@@ -1068,7 +1078,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           '2024-01-02 00:00:00',
           'America/Mexico_City'
         );
-        await expect(rangeQuery).malloyResultMatches(db, inRange);
+        await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
       });
       test.when(tzTesting)(
         'timestamp literal today in query time zone',
@@ -1080,7 +1090,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             '2024-01-16 00:00:00',
             'America/Mexico_City'
           );
-          await expect(rangeQuery).malloyResultMatches(db, inRange);
+          await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
         }
       );
       test.when(tzTesting)(
@@ -1093,7 +1103,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             '2024-01-04 00:00:00',
             'America/Mexico_City'
           );
-          await expect(rangeQuery).malloyResultMatches(db, inRange);
+          await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
         }
       );
       test.when(tzTesting)('day literal in query time zone', async () => {
@@ -1104,7 +1114,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             where: t ~ f'2024-01-15 06:00:00'  // 6 AM Mexico City = Noon UTC
             select: t, n
           }
-        `).malloyResultMatches(exactTimeModel, {n: 'exact'});
+        `).toMatchResult(exactTimeModel, {n: 'exact'});
       });
       test.when(tzTesting)(
         'month offsets cross DST boundary in query time zone',
@@ -1122,7 +1132,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             '2024-10-01 00:00:00', // Interpreted as Dublin time
             'Europe/Dublin'
           );
-          await expect(rangeQuery).malloyResultMatches(db, inRange);
+          await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
         }
       );
     });

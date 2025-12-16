@@ -69,6 +69,22 @@ declare global {
         rows: ExpectedRow[],
         options?: MatcherOptions
       ): Promise<R>;
+
+      /**
+       * Jest matcher for checking nested values using dotted path syntax.
+       * Navigates into nested arrays by taking the first element at each level.
+       *
+       * @example
+       * const result = await runQuery(tm, 'run: ...');
+       * expect(result.data[0]).toHavePath({'by_state.state': 'TX'});
+       * expect(result.data[0]).toHavePath({
+       *   'o.by_state.state': 'TX',
+       *   'o.by_state.airport_count': 1845,
+       * });
+       *
+       * @param paths - Object with dotted path keys and expected values
+       */
+      toHavePath(paths: Record<string, unknown>): R;
     }
   }
 }
@@ -750,6 +766,74 @@ expect.extend({
     return {
       pass: true,
       message: () => 'All rows matched expected results exactly',
+    };
+  },
+
+  /**
+   * Navigate a dotted path through an object, taking the first element of arrays.
+   * For path 'a.b.c', navigates: obj -> obj.a (or obj.a[0] if array) -> .b -> .c
+   */
+  toHavePath(
+    received: Record<string, unknown>,
+    paths: Record<string, unknown>
+  ): JestMatcherResult {
+    const fails: string[] = [];
+
+    for (const [path, expected] of Object.entries(paths)) {
+      const segments = path.split('.');
+      let current: unknown = received;
+
+      for (const segment of segments) {
+        if (current === null || current === undefined) {
+          fails.push(`Path '${path}': cannot navigate through null/undefined`);
+          break;
+        }
+        // If current is an array, take first element then access property
+        if (Array.isArray(current)) {
+          if (current.length === 0) {
+            fails.push(`Path '${path}': empty array at '${segment}'`);
+            current = undefined;
+            break;
+          }
+          current = current[0];
+        }
+        if (typeof current === 'object' && current !== null) {
+          current = (current as Record<string, unknown>)[segment];
+        } else {
+          fails.push(
+            `Path '${path}': cannot access '${segment}' on ${typeof current}`
+          );
+          current = undefined;
+          break;
+        }
+      }
+
+      // Final value might be in an array too
+      if (Array.isArray(current) && current.length > 0) {
+        current = current[0];
+      }
+
+      if (current !== expected) {
+        fails.push(`Path '${path}':`);
+        fails.push(
+          this.utils.EXPECTED_COLOR(`  Expected: ${humanReadable(expected)}`)
+        );
+        fails.push(
+          this.utils.RECEIVED_COLOR(`  Received: ${humanReadable(current)}`)
+        );
+      }
+    }
+
+    if (fails.length > 0) {
+      return {
+        pass: false,
+        message: () => fails.join('\n'),
+      };
+    }
+
+    return {
+      pass: true,
+      message: () => 'All paths matched expected values',
     };
   },
 });
