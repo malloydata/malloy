@@ -10,7 +10,7 @@
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {wrapTestModel, resultIs} from '@malloydata/malloy/test';
 
 const [describe, databases] = describeIfDatabaseAvailable(['presto', 'trino']);
 const runtimes = new RuntimeList(databases);
@@ -117,7 +117,7 @@ describe.each(runtimes.runtimeList)(
     });
 
     it(`runs the date_parse function - ${databaseName}`, async () => {
-      const expected = '2024-09-15T00:00:00Z';
+      const expected = resultIs.date('2024-09-15');
 
       await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
       select: x is date_parse('2024-09-15', '%Y-%m-%d')::date

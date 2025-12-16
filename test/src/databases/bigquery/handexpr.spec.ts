@@ -25,7 +25,7 @@
 
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
 
 import {RuntimeList} from '../../runtimes';
 
@@ -175,7 +175,9 @@ describe.each(runtimes.runtimeList)(
     });
 
     it(`hand: turtle is pipeline - ${databaseName}`, async () => {
-      await expect(`
+      const result = await runQuery(
+        testModel.model,
+        `
       run: aircraft -> {
         aggregate: aircraft_count
         nest: pipe is {
@@ -187,7 +189,9 @@ describe.each(runtimes.runtimeList)(
           aggregate: total_aircraft is aircraft_count.sum()
         }
       }
-    `).toMatchResult(testModel, {pipe: [{total_aircraft: 61}]});
+    `
+      );
+      expect(result.data[0]).toHavePath({'pipe.total_aircraft': 61});
     });
 
     // Hand model basic calculations for sum, filtered sum, without a join.

@@ -888,7 +888,6 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   );
 
   test('intervals are evalutated in query timezone', async () => {
-    const truth = runtime.dialect.resultBoolean(true);
     await expect(
       `source: onerow is ${dbName}.sql("SELECT 1 as rownum") extend {
         dimension:
@@ -911,10 +910,10 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           quarter_ok is by_quarter = august1_correct, by_quarter
       }`
     ).toMatchResult(testModel, {
-      month_ok: truth,
-      day_ok: truth,
-      hour_ok: truth,
-      quarter_ok: truth,
+      month_ok: true,
+      day_ok: true,
+      hour_ok: true,
+      quarter_ok: true,
     });
   });
 });

@@ -552,8 +552,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: boolean_2 is sql_boolean("\${engines} = 2")
         }
   `).toMatchResult(testModel, {
-        boolean_1: runtime.dialect.resultBoolean(true),
-        boolean_2: runtime.dialect.resultBoolean(false),
+        boolean_1: true,
+        boolean_2: false,
       });
     });
 
@@ -898,7 +898,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           5,
           null, null, null, null, null
       """) extend { where: n > 0 }`;
-      const is_true = runtime.dialect.resultBoolean(true);
 
       it('select boolean', async () => {
         await expect(`run: ${nulls} -> {
@@ -910,32 +909,32 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         await expect(`run: ${nulls} -> {
           select:
             not_null_boolean is not tf
-        }`).toMatchResult(testModel, {not_null_boolean: is_true});
+        }`).toMatchResult(testModel, {not_null_boolean: true});
       });
       it('numeric != non-null to null', async () => {
         await expect(
           `run: ${nulls} -> { select: val_ne_null is x != 9 }`
-        ).toMatchResult(testModel, {val_ne_null: is_true});
+        ).toMatchResult(testModel, {val_ne_null: true});
       });
       it('string !~ non-null to null', async () => {
         await expect(
           `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
-        ).toMatchResult(testModel, {val_ne_null: is_true});
+        ).toMatchResult(testModel, {val_ne_null: true});
       });
       it('regex !~ non-null to null', async () => {
         await expect(
           `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
-        ).toMatchResult(testModel, {val_ne_null: is_true});
+        ).toMatchResult(testModel, {val_ne_null: true});
       });
       it('numeric != null-to-null', async () => {
         await expect(
           `run: ${nulls} -> { select: null_ne_null is x != y }`
-        ).toMatchResult(testModel, {null_ne_null: is_true});
+        ).toMatchResult(testModel, {null_ne_null: true});
       });
       it('string !~ null-to-null', async () => {
         await expect(
           `run: ${nulls} -> { select: null_ne_null is a !~ b }`
-        ).toMatchResult(testModel, {null_ne_null: is_true});
+        ).toMatchResult(testModel, {null_ne_null: true});
       });
     });
   }
@@ -950,8 +949,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           paren is    false and (fot)
       }`
     ).toMatchResult(testModel, {
-      paren: runtime.dialect.resultBoolean(false),
-      no_paren: runtime.dialect.resultBoolean(false),
+      paren: false,
+      no_paren: false,
     });
   });
 });

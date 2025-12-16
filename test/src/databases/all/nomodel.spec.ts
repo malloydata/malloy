@@ -26,7 +26,8 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -119,6 +120,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it.when(lotsSQL !== undefined)(
     `big symmetric sum - ${databaseName}`,
     async () => {
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
       source: lots_of_numbers is ${databaseName}.sql(""" ${lotsSQL} """) extend {
         measure:
@@ -131,11 +133,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: b -> {
         aggregate: lots_of_numbers.total_n
       }
-    `).malloyResultMatches(runtime, {total_n: 549755289600});
+    `).toMatchResult(testModel, {total_n: 549755289600});
     }
   );
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.table('malloytest.aircraft') -> {
         group_by: r is 1.0
@@ -145,11 +148,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           zero_bare  is 0 - zero
           zero_paren is 0 - (zero)
       }
-    `).malloyResultMatches(runtime, {zero_bare: 0, zero_paren: 0});
+    `).toMatchResult(testModel, {zero_bare: 0, zero_paren: 0});
   });
 
   // Issue: #151
   it(`bug 151 which used to throw unknown dialect is still fixed- ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       query: q is ${databaseName}.table('malloytest.aircraft')->{
         where: state is not null
@@ -161,18 +165,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           group_by: state
         }
       } -> foo
-      `).malloyResultMatches(runtime, {state: 'WY'});
+      `).toMatchResult(testModel, {state: 'WY'});
   });
 
   // Issue #149
   it(`refine query from query  - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.table('malloytest.state_facts')
         -> {group_by: state; order_by: 1 desc; limit: 1}
         extend {
           dimension: lower_state is lower(state)
         } -> {select: lower_state}
-    `).malloyResultMatches(runtime, {lower_state: 'wy'});
+    `).toMatchResult(testModel, {lower_state: 'wy'});
   });
 
   // issue #157
@@ -195,6 +200,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`join_many - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: m is ${databaseName}.table('malloytest.aircraft_models') extend {
         join_many:
@@ -204,20 +210,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         measure: avg_seats is floor(avg(seats))
       }
       run: m->{aggregate: avg_seats, a.avg_year}
-      `).malloyResultMatches(runtime, {avg_year: 1969, avg_seats: 7});
+      `).toMatchResult(testModel, {avg_year: 1969, avg_seats: 7});
   });
 
   it(`join_many condition no primary key - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.airports')
       source: b is ${databaseName}.table('malloytest.state_facts') extend {
         join_many: a on state=a.state
       }
       run: b->{aggregate: c is airport_count.sum()}
-    `).malloyResultMatches(runtime, {c: 19701});
+    `).toMatchResult(testModel, {c: 19701});
   });
 
   it(`join_many filter multiple values - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.airports') extend {
         where: state = 'NH' | 'CA'
@@ -228,14 +236,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: c is airport_count.sum()
         group_by: a.state
       }
-    `).malloyResultMatches(runtime, [
+    `).toMatchResult(
+      testModel,
       {state: null, c: 18605},
       {state: 'CA', c: 984},
-      {state: 'NH', c: 112},
-    ]);
+      {state: 'NH', c: 112}
+    );
   });
 
   it(`join_one condition no primary key - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.state_facts')
       source: b is ${databaseName}.table('malloytest.airports') extend {
@@ -244,10 +254,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: b -> {
         aggregate: c is a.airport_count.sum()
       }
-    `).malloyResultMatches(runtime, {c: 19701});
+    `).toMatchResult(testModel, {c: 19701});
   });
 
   it(`join_one filter multiple values - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.state_facts') extend {
         where: state = 'TX' | 'LA'
@@ -259,17 +270,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: c is a.airport_count.sum()
         group_by: a.state
       }
-    `).malloyResultMatches(runtime, [
+    `).toMatchResult(
+      testModel,
       {state: 'TX', c: 1845},
       {state: 'LA', c: 500},
-      {state: null, c: 0},
-    ]);
+      {state: null, c: 0}
+    );
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.state_facts') extend {
         dimension: x is airport_count/10000
@@ -287,7 +300,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           left_small_sum is round(x.sum() * 10000)
           right_small_sum is round(x.sum() * 10000)
       }
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
       row_count: 51 * 51,
       left_sum: 19701,
       right_sum: 19701,
@@ -300,6 +313,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       query: q is ${databaseName}.table('malloytest.state_facts')->{
         aggregate: r is airport_count.sum()
@@ -314,7 +328,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_sum is a.r.sum()
           sum_sum is sum(airport_count + a.r)
       }
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
       row_count: 51,
       left_sum: 19701,
       right_sum: 19701,
@@ -326,6 +340,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.state_facts')
       source: f is a extend {
@@ -337,7 +352,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
       }
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
       row_count: 51 * 2,
       left_sum: 19701,
       right_sum: 1560,
@@ -345,6 +360,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`symmetric sum and average large  - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: a is ${databaseName}.table('malloytest.airports') extend {
         primary_key: code
@@ -366,7 +382,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: b -> {aggregate: a.total_elevation, a.total_little_elevation, a.average_elevation, a.total_big_elevation, a.average_big_elevation}
       // run: two_rows
 
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
       total_elevation: 22629146,
       total_little_elevation: 226.2915,
       average_elevation: 1143,
@@ -428,6 +444,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       ${matrixModel}
       run: ac_states -> {
@@ -441,7 +458,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           am_states.am_count
 
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
       ac_count: 28,
       ac_sum: 10402,
       am_count: 4,
@@ -454,6 +471,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       ${matrixModel}
       run: ac_states -> {
@@ -467,7 +485,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           am_states.am_count
 
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
       ac_count: 49,
       ac_sum: 21336,
       am_count: 4,
@@ -480,6 +498,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       ${matrixModel}
       run: ac_states -> {
@@ -493,7 +512,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           am_states.am_count
 
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
       ac_count: 28,
       ac_sum: 10402,
       am_count: 12,
@@ -508,6 +527,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       // a cross join produces a Many to Many result.
       // symmetric aggregate are needed on both sides of the join
       // Check the row count and that sums on each side work properly.
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
       ${matrixModel}
       run: ac_states -> {
@@ -521,7 +541,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           am_states.am_count
 
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
         ac_count: 49,
         ac_sum: 21336,
         am_count: 12,
@@ -534,6 +554,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // in a joined table when the joined is leafiest
     //  we need to make sure we don't count rows that
     //  don't match the join.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         select: *
@@ -550,7 +571,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           leafy_count is am_states.count()
           root_count is count()
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
       leafy_count: 0,
       root_count: 1,
     });
@@ -560,6 +581,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // in a joined table when the joined is leafiest
     //  we need to make sure we don't count rows that
     //  don't match the join.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state
@@ -572,7 +594,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         group_by: state, c
         aggregate: p.d.sum()
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
       state: 'TX',
       c: 1845,
       d: 1845,
@@ -598,6 +620,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       // in a joined table when the joined is leafiest
       //  we need to make sure we don't count rows that
       //  don't match the join.
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state,popular_name
@@ -619,7 +642,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           leafy_count is am_states.nested_state.count()
           root_count is count()
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
         leafy_count: 0,
         root_count: 1,
         state: 'CA',
@@ -630,6 +653,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.table('malloytest.flights') -> {
         index: *
@@ -639,7 +663,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         order_by: fieldValue
         where: fieldName = 'carrier'
       }
-      `).malloyResultMatches(runtime, {
+      `).toMatchResult(testModel, {
       fieldValue: 'AA',
     });
   });
@@ -650,7 +674,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       // a cross join produces a Many to Many result.
       // symmetric aggregate are needed on both sides of the join
       // Check the row count and that sums on each side work properly.
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         # test.verbose
         run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: state
@@ -659,22 +686,26 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
           }
         }
-      `).malloyResultMatches(runtime, {'ugly.foo': null});
+      `
+      );
+      expect(result.data[0]).toHavePath({'ugly.foo': null});
     }
   );
 
   it(`sql block- ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: one is ${databaseName}.sql("""
         SELECT 2 as ${q`a`}
       """)
       run: one -> {
         select: a
-      }`).malloyResultMatches(runtime, {a: 2});
+      }`).toMatchResult(testModel, {a: 2});
   });
 
   // average should only include non-null values in the denominator
   it(`avg ignore null- ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       source: one is ${databaseName}.sql("""
         SELECT 2 as ${q`a`}
@@ -686,7 +717,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate:
           avg_a is a.avg()
           avg_b is x1.a.avg()
-      }`).malloyResultMatches(runtime, {avg_a: 3});
+      }`).toMatchResult(testModel, {avg_a: 3});
   });
 
   it(`limit - not provided - ${databaseName}`, async () => {
@@ -705,6 +736,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`ungrouped top level - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend {
         measure: total_births is births.sum()
@@ -712,12 +744,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       } -> {
         group_by: state
         aggregate: births_per_100k
-      }`).malloyResultMatches(runtime, {births_per_100k: 9742});
+      }`).toMatchResult(testModel, {births_per_100k: 9742});
   });
 
   test.when(runtime.supportsNesting)(
     `ungrouped top level with nested  - ${databaseName}`,
     async () => {
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend {
         measure: total_births is births.sum()
@@ -730,11 +763,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate: total_births
         }
         limit: 1000
-      }`).malloyResultMatches(runtime, {births_per_100k: 9742});
+      }`).toMatchResult(testModel, {births_per_100k: 9742});
     }
   );
 
   it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run : ${databaseName}.table('malloytest.state_facts') extend {
         measure: m is all(births.sum())
@@ -743,16 +777,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         order_by: state
         group_by: state
         aggregate: m
-      }`).malloyResultMatches(runtime, [
+      }`).toMatchResult(
+      testModel,
       {state: 'CA', m: 52504699},
-      {state: 'NY', m: 52504699},
-    ]);
+      {state: 'NY', m: 52504699}
+    );
   });
 
   test.when(runtime.supportsNesting)(
     `ungrouped nested with no grouping above - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         // # test.debug
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -763,14 +801,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             group_by: popular_name
             aggregate: births_per_100k
           }
-        }`).malloyResultMatches(runtime, {'by_name.births_per_100k': 66703});
+        }`
+      );
+      expect(result.data[0]).toHavePath({'by_name.births_per_100k': 66703});
     }
   );
 
   test.when(runtime.supportsNesting)(
     `ungrouped - partial grouping - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.airports') extend {
           measure: c is count()
         } -> {
@@ -792,7 +835,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
               all_top is exclude(c, state, faa_region, fac_type)
           }
         }
-      `).malloyResultMatches(runtime, {
+      `
+      );
+      expect(result.data[0]).toHavePath({
         'fac_type.all_': 1845,
         'fac_type.all_state_region': 1845,
         'fac_type.all_of_this_type': 1782,
@@ -804,7 +849,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   test.when(runtime.supportsNesting)(
     `ungrouped - all nested - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.airports') extend {
           measure: c is count()
         } -> {
@@ -823,7 +871,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
               all_major is all(c,major)
           }
         }
-      `).malloyResultMatches(runtime, {
+      `
+      );
+      expect(result.data[0]).toHavePath({
         'fac_type.all_': 1845,
         'fac_type.all_major': 1819,
       });
@@ -833,7 +883,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   test.when(runtime.supportsNesting)(
     `ungrouped nested  - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -844,14 +897,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: births_per_100k
           }
         }
-      `).malloyResultMatches(runtime, {'by_state.births_per_100k': 36593});
+      `
+      );
+      expect(result.data[0]).toHavePath({'by_state.births_per_100k': 36593});
     }
   );
 
   test.when(runtime.supportsNesting)(
     `ungrouped nested expression  - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -862,14 +920,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: births_per_100k
           }
         }
-      `).malloyResultMatches(runtime, {'by_state.births_per_100k': 36593});
+      `
+      );
+      expect(result.data[0]).toHavePath({'by_state.births_per_100k': 36593});
     }
   );
 
   test.when(runtime.supportsNesting)(
     `ungrouped nested group by float  - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: ug is all(total_births)
@@ -880,7 +943,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: ug
           }
         }
-      `).malloyResultMatches(runtime, {'by_state.ug': 62742230});
+      `
+      );
+      expect(result.data[0]).toHavePath({'by_state.ug': 62742230});
     }
   );
 
@@ -932,6 +997,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   });
 
   it(`all with parameters - basic  - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend  {
         measure: total_births is births.sum()
@@ -942,7 +1008,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           all_births is all(total_births)
           all_name is exclude(total_births, state)
       }
-    `).malloyResultMatches(runtime, {
+    `).toMatchResult(testModel, {
       all_births: 295727065,
       all_name: 197260594,
     });
@@ -951,7 +1017,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(runtime.supportsNesting)(
     `all with parameters - nest  - ${databaseName}`,
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           dimension: abc is floor(airport_count/300)
@@ -966,7 +1035,9 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
               all_name is exclude(total_births, state)
           }
         }
-      `).malloyResultMatches(runtime, {
+      `
+      );
+      expect(result.data[0]).toHavePath({
         'by_stuff.all_births': 119809719,
         'by_stuff.all_name': 61091215,
       });
@@ -976,13 +1047,18 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(
     runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
   )(`single value to udf - ${databaseName}`, async () => {
-    await expect(`
+    const testModel = wrapTestModel(runtime, '');
+    const result = await runQuery(
+      testModel.model,
+      `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> { nest: fun }
-      `).malloyResultMatches(runtime, {'fun.t1': 52});
+      `
+    );
+    expect(result.data[0]).toHavePath({'fun.t1': 52});
   });
 
   test.when(
@@ -991,7 +1067,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     `Multi value to udf - ${databaseName}`,
 
     async () => {
-      await expect(`
+      const testModel = wrapTestModel(runtime, '');
+      const result = await runQuery(
+        testModel.model,
+        `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -1001,14 +1080,19 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           group_by: two is 2
           nest: fun
         }
-      `).malloyResultMatches(runtime, {'fun.t1': 52});
+      `
+      );
+      expect(result.data[0]).toHavePath({'fun.t1': 52});
     }
   );
 
   test.when(
     runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
   )(`Multi value to udf group by - ${databaseName}`, async () => {
-    await expect(`
+    const testModel = wrapTestModel(runtime, '');
+    const result = await runQuery(
+      testModel.model,
+      `
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -1017,11 +1101,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         } -> {
           nest: fun
         }
-      `).malloyResultMatches(runtime, {'fun.t1': 52});
+      `
+    );
+    expect(result.data[0]).toHavePath({'fun.t1': 52});
   });
 
   // not sure this works on all dialect.
   it("stage names don't conflict- ${databaseName}", async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
         source: airports is ${databaseName}.table('malloytest.state_facts') extend {
         }
@@ -1045,32 +1132,35 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         run: u -> {
           aggregate: c is count()
         }
-    `).malloyResultMatches(runtime, {c: 102});
+    `).toMatchResult(testModel, {c: 102});
   });
 
   const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
 
   it(`sql as source - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${sql1234} -> {
         select: a
         order_by: 1
       }
-    `).malloyResultMatches(runtime, {a: 1});
+    `).toMatchResult(testModel, {a: 1});
   });
 
   // have to add an order_by: otherwise it isn't deterministic.
   it(`sql directly - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(
       `run: ${sql1234}->{
         select: *
         order_by: a asc
       }`
-    ).malloyResultMatches(runtime, {a: 1});
+    ).toMatchResult(testModel, {a: 1});
   });
 
   // weirdly '*' must be the first thing in the select list in MySQL
   it(`sql with turducken- ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     const turduckenQuery = `
       run: ${databaseName}.sql("""
         SELECT
@@ -1086,21 +1176,23 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           select: *; where: popular_name = 'Emma'
           order_by: state_count DESC
         }`;
-    await expect(turduckenQuery).malloyResultMatches(runtime, {state_count: 6});
+    await expect(turduckenQuery).toMatchResult(testModel, {state_count: 6});
   });
 
   // local declarations
   it(`local declarations external query - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${sql1234} -> {
         extend: { dimension: c is a + 1 }
         select: c
         order_by: 1
       }
-    `).malloyResultMatches(runtime, {c: 2});
+    `).toMatchResult(testModel, {c: 2});
   });
 
   it(`local declarations named query - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${sql1234} extend {
         view: bar is {
@@ -1109,10 +1201,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           order_by: 1
         }
       } -> bar
-    `).malloyResultMatches(runtime, {c: 2});
+    `).toMatchResult(testModel, {c: 2});
   });
 
   it(`local declarations refined named query - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${sql1234} extend {
         view: bar is {
@@ -1126,10 +1219,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           order_by: 1
         }
       } -> baz
-    `).malloyResultMatches(runtime, {d: 3});
+    `).toMatchResult(testModel, {d: 3});
   });
 
   it(`regexp match- ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.sql("""
         SELECT 'hello mom' as ${q`a`}, 'cheese tastes good' as ${q`b`}
@@ -1138,10 +1232,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         aggregate: llo is count() {where: a ~ r'llo'}
         aggregate: m2 is count() {where: a !~ r'bozo'}
       }
-    `).malloyResultMatches(runtime, {llo: 2, m2: 1});
+    `).toMatchResult(testModel, {llo: 2, m2: 1});
   });
 
   it(`substitution precedence- ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
       run: ${databaseName}.sql("""
         SELECT 5 as ${q`a`}, 2 as ${q`b`}
@@ -1151,12 +1246,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         select: x is  a * c
         order_by: x desc
       }
-      `).malloyResultMatches(runtime, {x: 30});
+      `).toMatchResult(testModel, {x: 30});
   });
 
   test.when(runtime.supportsNesting && runtime.dialect.supportsArraysInData)(
     `array unnest - ${databaseName}`,
     async () => {
+      const testModel = wrapTestModel(runtime, '');
       const splitFN = getSplitFunction(databaseName);
       await expect(`
       run: ${databaseName}.sql("""
@@ -1169,7 +1265,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         group_by: words.value
         aggregate: c is count()
       }
-      `).malloyResultMatches(runtime, {c: 145});
+      `).toMatchResult(testModel, {c: 145});
     }
   );
 
@@ -1177,6 +1273,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(runtime.supportsNesting && runtime.dialect.supportsArraysInData)(
     `array unnest x 2 - ${databaseName}`,
     async () => {
+      const testModel = wrapTestModel(runtime, '');
       const splitFN = getSplitFunction(databaseName);
       await expect(`
       run: ${databaseName}.sql("""
@@ -1191,7 +1288,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           b is count()
           c is words.count()
           a is abreak.count()
-      }`).malloyResultMatches(runtime, {b: 3552, c: 4586, a: 6601});
+      }`).toMatchResult(testModel, {b: 3552, c: 4586, a: 6601});
     }
   );
 
@@ -1201,13 +1298,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       databaseName !== 'presto' &&
       databaseName !== 'trino'
   )(`can unnest simply from file - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
           aggregate:
             h is hits.count()
         }
-      `).malloyResultMatches(runtime, {h: 13233});
+      `).toMatchResult(testModel, {h: 13233});
   });
 
   test.when(
@@ -1216,6 +1314,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       databaseName !== 'presto' &&
       databaseName !== 'trino'
   )(`can unnest from file - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
@@ -1228,7 +1327,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             c is count()
             p is hits.product.count()
         }
-      `).malloyResultMatches(runtime, {h: 1192, c: 681, p: 1192});
+      `).toMatchResult(testModel, {h: 1192, c: 681, p: 1192});
   });
 
   test.when(
@@ -1237,6 +1336,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       databaseName !== 'presto' &&
       databaseName !== 'trino'
   )(`can double unnest - ${databaseName}`, async () => {
+    const testModel = wrapTestModel(runtime, '');
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
 
@@ -1244,7 +1344,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           aggregate:
             p is floor(hits.product.productPrice.avg())
         }
-      `).malloyResultMatches(runtime, {p: 23001594});
+      `).toMatchResult(testModel, {p: 23001594});
   });
 
   test.when(runtime.supportsNesting)(
@@ -1464,30 +1564,34 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const tick = "'";
     const back = '\\';
     test('backslash quote', async () => {
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
         run: ${databaseName}.sql('SELECT 1 as one') -> {
           select: tick is '${back}${tick}'
         }
-      `).malloyResultMatches(runtime, {tick});
+      `).toMatchResult(testModel, {tick});
     });
     test('backslash backslash', async () => {
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
         run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: back is '${back}${back}'
         }
-      `).malloyResultMatches(runtime, {back});
+      `).toMatchResult(testModel, {back});
     });
 
     test('source with reserve word', async () => {
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
         source: create is ${databaseName}.table('malloytest.state_facts')
         run: create -> {
           aggregate: c is count()
         }
-      `).malloyResultMatches(runtime, {c: 51});
+      `).toMatchResult(testModel, {c: 51});
     });
 
     test.when(runtime.supportsNesting)('spaces in names', async () => {
+      const testModel = wrapTestModel(runtime, '');
       await expect(`
         source: \`space race\` is ${databaseName}.table('malloytest.state_facts') extend {
           join_one: \`j space\` is ${databaseName}.table('malloytest.state_facts') on \`j space\`.state=state
@@ -1506,7 +1610,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           }
         }
         run: \`space race\` -> \`q u e r y\`
-      `).malloyResultMatches(runtime, {'c o u n t': 24});
+      `).toMatchResult(testModel, {'c o u n t': 24});
     });
   });
 });
