@@ -22,8 +22,8 @@
  */
 
 import {RuntimeList} from '../../runtimes';
-import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
+import '@malloydata/malloy/test/matchers';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
 const runtimes = new RuntimeList(databases);
@@ -34,6 +34,7 @@ afterAll(async () => {
 
 describe('dialect specific function tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
+  const testModel = runtime?.loadModel('');
 
   it('runs the max_by function - bigquery', async () => {
     await expect(`run: bigquery.sql("""
@@ -44,7 +45,7 @@ describe('dialect specific function tests for standardsql', () => {
     aggregate:
       m1 is max_by(x, y)
       m2 is max_by(y, x)
-    }`).malloyResultMatches(runtime!, {m1: 1, m2: 1});
+    }`).toMatchResult(testModel!, {m1: 1, m2: 1});
   });
 
   it('runs the max_by function by grouping - bigquery', async () => {
@@ -59,10 +60,11 @@ describe('dialect specific function tests for standardsql', () => {
     aggregate:
       m1 is max_by(x, y)
       m2 is max_by(y, x)
-    }`).malloyResultMatches(runtime!, [
+    }`).toMatchResult(
+      testModel!,
       {z: 10, m1: 22, m2: 1},
-      {z: 20, m1: 15, m2: 100},
-    ]);
+      {z: 20, m1: 15, m2: 100}
+    );
   });
 
   it('runs the min_by function - bigquery', async () => {
@@ -74,6 +76,6 @@ describe('dialect specific function tests for standardsql', () => {
     aggregate:
       m1 is min_by(x, y)
       m2 is min_by(y, x)
-    }`).malloyResultMatches(runtime!, {m1: 55, m2: 100});
+    }`).toMatchResult(testModel!, {m1: 55, m2: 100});
   });
 });

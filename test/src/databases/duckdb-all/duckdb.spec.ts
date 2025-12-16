@@ -23,8 +23,8 @@
 
 import {DateTime} from 'luxon';
 import {RuntimeList, runtimeFor} from '../../runtimes';
-import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
+import '@malloydata/malloy/test/matchers';
 
 // TODO identify which tests need to run on wasm and move them into their own file
 const runtimes = ['duckdb', 'duckdb_wasm'];
@@ -33,13 +33,15 @@ const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);
 
 describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
+  const testModel = runtime.loadModel('');
+
   it('can open tables with wildcards', async () => {
     await expect(`
       run: duckdb.table('test/data/duckdb/flights/part.*.parquet') -> {
         top: 1
         group_by: carrier;
       }
-    `).malloyResultMatches(runtime, {carrier: 'AA'});
+    `).toMatchResult(testModel, {carrier: 'AA'});
   });
 
   it('accepts all schema numbers', async () => {
@@ -81,8 +83,8 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
           .join('\n')}
       }
     `;
-    await expect(query).malloyResultMatches(
-      runtime,
+    await expect(query).toMatchResult(
+      testModel,
       allNumeric.reduce<Record<string, number>>((building, ent) => {
         building[`sum_a${ent.toLowerCase()}`] = 1;
         return building;
@@ -98,7 +100,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
           n2 is 1234.0 / 1000
   }
     `;
-    await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
+    await expect(query).toMatchResult(testModel, {n1: 1.234, n2: 1.234});
   });
 
   it('dayname', async () => {
@@ -107,14 +109,14 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
         select:
           x is dayname(@2024-09-12)
           y is dayname(@2024-09-10 12:22:22)
-      }`).malloyResultMatches(runtime, {x: 'Thursday', y: 'Tuesday'});
+      }`).toMatchResult(testModel, {x: 'Thursday', y: 'Tuesday'});
   });
 
   it('can open json files', async () => {
     await expect(`
       run: duckdb.table('test/data/duckdb/test.json') -> {
         select: *
-      }`).malloyResultMatches(runtime, {foo: 'bar'});
+      }`).toMatchResult(testModel, {foo: 'bar'});
   });
 
   it('supports timezones', async () => {
@@ -134,7 +136,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   it('supports varchars with parameters', async () => {
     await expect(
       "run: duckdb.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")"
-    ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
+    ).toMatchResult(testModel, {abc: 'a', abc3: 'a3'});
   });
 
   it('raw query as head works', async () => {
@@ -143,50 +145,42 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
         query: q is duckdb.sql("SELECT 1 as one")
         run: q -> { group_by: one }
       `
-    ).malloyResultMatches(runtime, {one: 1});
+    ).toMatchResult(testModel, {one: 1});
     await expect(
       `
         query: q is duckdb.sql("SELECT 1 as one")
         query: q2 is q -> { group_by: one }
         run: q2 -> { select: one }
       `
-    ).malloyResultMatches(runtime, {one: 1});
+    ).toMatchResult(testModel, {one: 1});
     await expect(
       `
         query: q is duckdb.sql("SELECT 1 as one") -> { group_by: two is one + 1 }
         run: q -> { group_by: two }
       `
-    ).malloyResultMatches(runtime, {two: 2});
+    ).toMatchResult(testModel, {two: 2});
     await expect(
       `
         query: q is duckdb.sql("SELECT 1 as one") -> { group_by: two is one + 1 }
         run: q
       `
-    ).malloyResultMatches(runtime, {two: 2});
+    ).toMatchResult(testModel, {two: 2});
   });
 
   describe('time oddities', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(
-      {
-        year: 2020,
-        month: 2,
-        day: 20,
-        hour: 0,
-        minute: 0,
-        second: 0,
-      },
-      {
-        zone,
-      }
+      {year: 2020, month: 2, day: 20, hour: 0, minute: 0, second: 0},
+      {zone}
     );
+
     test('can cast TIMESTAMPTZ to timestamp', async () => {
       await expect(`
         run: duckdb.sql("""
               SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
           """) -> {
             select: mex_220 is t_tstz::timestamp
-          }`).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
+          }`).toMatchResult(testModel, {mex_220: zone_2020.toJSDate()});
     });
   });
 });

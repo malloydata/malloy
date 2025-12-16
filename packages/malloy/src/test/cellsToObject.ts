@@ -54,14 +54,38 @@ function cellToValue(cell: Malloy.Cell, fieldInfo: Malloy.FieldInfo): unknown {
       return cell.array_value.map(c => cellToValue(c, elementFieldInfo));
     }
     case 'record_cell': {
-      if (fieldInfo.kind !== 'join') {
-        throw new Error(`Expected join for record, got ${fieldInfo.kind}`);
+      // Records can come from either a join or a dimension with record_type
+      // record_type.fields returns DimensionInfo[], schema.fields returns FieldInfo[]
+      let fields: readonly {name: string}[];
+      let getFieldInfo: (i: number) => Malloy.FieldInfo;
+
+      if (fieldInfo.kind === 'join') {
+        fields = fieldInfo.schema.fields;
+        getFieldInfo = i => fieldInfo.schema.fields[i];
+      } else if (
+        fieldInfo.kind === 'dimension' &&
+        fieldInfo.type.kind === 'record_type'
+      ) {
+        // Capture the record type to help TypeScript narrow
+        const recordType = fieldInfo.type;
+        fields = recordType.fields;
+        // DimensionInfo needs to be wrapped as a FieldInfo
+        getFieldInfo = i => ({
+          kind: 'dimension' as const,
+          name: recordType.fields[i].name,
+          type: recordType.fields[i].type,
+        });
+      } else {
+        throw new Error(
+          `Expected join or dimension with record_type for record, got ${fieldInfo.kind}`
+        );
       }
-      const fields = fieldInfo.schema.fields;
       const result: Record<string, unknown> = {};
       for (let i = 0; i < fields.length; i++) {
-        const f = fields[i];
-        result[f.name] = cellToValue(cell.record_value[i], f);
+        result[fields[i].name] = cellToValue(
+          cell.record_value[i],
+          getFieldInfo(i)
+        );
       }
       return result;
     }

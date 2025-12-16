@@ -133,9 +133,17 @@ export const resultIs = {
   /**
    * Match a timestamp value.
    * With the normalized API, timestamps are ISO strings.
-   * Compares using Date objects for precise comparison.
+   * Accepts string or Date for expected value, allowing tests to express
+   * expectations in their natural timezone.
+   *
+   * @example
+   * // Express expected time in Mexico City timezone
+   * const zone_2020 = DateTime.fromObject({year: 2020, month: 2, day: 20}, {zone: 'America/Mexico_City'});
+   * await expect(query).toMatchResult(tm, {
+   *   mex_220: resultIs.timestamp(zone_2020.toJSDate())
+   * });
    */
-  timestamp(expected: string | null): ResultMatcher {
+  timestamp(expected: string | Date | null): ResultMatcher {
     return {
       __resultMatcher: true,
       match(actual: unknown) {
@@ -150,7 +158,8 @@ export const resultIs = {
         if (actual === null) {
           return {
             pass: false,
-            expected: expected,
+            expected:
+              expected instanceof Date ? expected.toISOString() : expected,
             actual: 'null',
           };
         }
@@ -158,13 +167,15 @@ export const resultIs = {
         if (typeof actual !== 'string') {
           return {
             pass: false,
-            expected: expected,
+            expected:
+              expected instanceof Date ? expected.toISOString() : expected,
             actual: `non-string: ${String(actual)}`,
           };
         }
 
         // Parse both into Date objects for precise comparison
-        const expectedDate = new Date(expected);
+        const expectedDate =
+          expected instanceof Date ? expected : new Date(expected);
         const actualDate = new Date(actual);
 
         const pass = expectedDate.getTime() === actualDate.getTime();

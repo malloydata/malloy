@@ -23,65 +23,66 @@
  */
 
 import {runtimeFor} from '../runtimes';
-import '../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
 
 const runtime = runtimeFor('duckdb');
 
 // uncomment out the skip if you want to play with the matchers
-describe.skip('malloyResultMatches', () => {
+describe.skip('toMatchResult', () => {
   const sampleSource = `duckdb.sql("""
           SELECT 42 as num, 'whynot' as reason
           UNION ALL SELECT 49, 'because'""")`;
   const model = runtime.loadModel(`source: sampleSource is ${sampleSource}`);
-  const runtimeOrModel = runtime || model;
+  const testModel = runtime.loadModel('');
 
   test('simple', async () => {
     await expect(`
       run: ${sampleSource}
-    `).malloyResultMatches(runtime, {num: 42, reason: 'whynot'});
+    `).toMatchResult(testModel, {num: 42, reason: 'whynot'});
   });
 
   test('nested', async () => {
     await expect(`
         run: sampleSource -> {
             nest: the_nest is {
-                select: nestNum is num, nestWhy is reasons
+                select: nestNum is num, nestWhy is reason
             }
         }
-    `).malloyResultMatches(model, {
-      'the_nest.nestNum': 42,
-      'theNest.nestWhy': 'whynot',
+    `).toMatchResult(model, {
+      the_nest: [{nestNum: 42, nestWhy: 'whynot'}],
     });
   });
 
   test('multiple rows', async () => {
     await expect(`
         run: ${sampleSource}
-    `).malloyResultMatches(runtime, [
+    `).toMatchResult(
+      testModel,
       {num: 42, reason: 'whynot'},
-      {num: 49, reason: 'because'},
-    ]);
+      {num: 49, reason: 'because'}
+    );
   });
 
-  test('malloyResultMatches with an error', async () => {
+  test('toMatchResult with an error', async () => {
     await expect(`
         rug: ${sampleSource}
-    `).malloyResultMatches(runtime, [
+    `).toMatchResult(
+      testModel,
       {num: 42, reason: 'whynot'},
-      {num: 49, reason: 'because'},
-    ]);
+      {num: 49, reason: 'because'}
+    );
   });
 
   test('wrong data', async () => {
     await expect(`
       run: ${sampleSource}
-    `).malloyResultMatches(runtime, {num: 24, reason: 'i said so'});
+    `).toMatchResult(testModel, {num: 24, reason: 'i said so'});
   });
 
   test('failing exactly one row', async () => {
     await expect(`
       run: ${sampleSource}
-    `).malloyResultMatches(runtimeOrModel, [{}]);
+    `).toEqualResult(testModel, [{}]);
   });
 });
 

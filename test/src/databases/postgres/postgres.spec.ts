@@ -23,11 +23,11 @@
 
 /* eslint-disable no-console */
 
+import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
 import type {AtomicField, Runtime} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
-import '../../util/db-jest-matchers';
-import {DateTime} from 'luxon';
+import '@malloydata/malloy/test/matchers';
 
 const [describe] = describeIfDatabaseAvailable(['postgres']);
 
@@ -37,6 +37,7 @@ describe('Postgres tests', () => {
   if (runtime === undefined) {
     throw new Error("Couldn't build runtime");
   }
+  const testModel = runtime.loadModel('');
 
   // Idempotently create schema and tables with capital letters to use in tests.
   beforeAll(async () => {
@@ -60,13 +61,13 @@ describe('Postgres tests', () => {
   it('run an sql query', async () => {
     await expect(
       'run: postgres.sql("SELECT 1 as n") -> { select: n }'
-    ).malloyResultMatches(runtime, {n: 1});
+    ).toMatchResult(testModel, {n: 1});
   });
 
   it('mixed case col names are properly quoted so they retain case in results', async () => {
     await expect(`
       run: postgres.sql('SELECT 1 as "upperLower"') -> { select: upperLower }
-    `).malloyResultMatches(runtime, {upperLower: 1});
+    `).toMatchResult(testModel, {upperLower: 1});
   });
 
   it('fields which are sql keywords are quoted', async () => {
@@ -76,7 +77,7 @@ describe('Postgres tests', () => {
         select
         create is select + 1
     }
-  `).malloyResultMatches(runtime, {select: 1, create: 2});
+  `).toMatchResult(testModel, {select: 1, create: 2});
   });
 
   async function oneExists(rt: Runtime, tn: string): Promise<boolean> {
@@ -95,7 +96,7 @@ describe('Postgres tests', () => {
     if (await oneExists(runtime, 'public."UpperTablePublic"')) {
       await expect(`
         run: postgres.table('public.UpperTablePublic') -> { select: one }
-      `).malloyResultMatches(runtime, {one: 1});
+      `).toMatchResult(testModel, {one: 1});
     }
   });
 
@@ -103,7 +104,7 @@ describe('Postgres tests', () => {
     if (await oneExists(runtime, '"UpperSchema"."UpperSchemaUpperTable"')) {
       await expect(`
         run: postgres.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
-      `).malloyResultMatches(runtime, {one: 1});
+      `).toMatchResult(testModel, {one: 1});
     }
   });
 
@@ -117,7 +118,7 @@ describe('Postgres tests', () => {
   it('supports varchars with parameters', async () => {
     await expect(
       "run: postgres.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")"
-    ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
+    ).toMatchResult(testModel, {abc: 'a', abc3: 'a3'});
   });
 
   it('can compute symmetric aggregates on double precisions numbers', async () => {
@@ -131,23 +132,15 @@ describe('Postgres tests', () => {
       group_by: id
       aggregate: tenx is 10 * values.total_value
     }
-    `).malloyResultMatches(runtime, {tenx: 10});
+    `).toMatchResult(testModel, {tenx: 10});
   });
   describe('time', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(
-      {
-        year: 2020,
-        month: 2,
-        day: 20,
-        hour: 0,
-        minute: 0,
-        second: 0,
-      },
-      {
-        zone,
-      }
+      {year: 2020, month: 2, day: 20, hour: 0, minute: 0, second: 0},
+      {zone}
     );
+
     test('can cast TIMESTAMPTZ to timestamp', async () => {
       await expect(
         `run: postgres.sql("""
@@ -155,7 +148,7 @@ describe('Postgres tests', () => {
           """) -> {
             select: mex_220 is t_tstz::timestamp
           }`
-      ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
+      ).toMatchResult(testModel, {mex_220: zone_2020.toJSDate()});
     });
   });
 

@@ -171,6 +171,27 @@ function humanReadable(thing: unknown): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
 
+/** Structured match result for color-coded error formatting */
+interface MatchResult {
+  pass: boolean;
+  path?: string;
+  expected?: string;
+  actual?: string;
+}
+
+function matchFail(
+  path: string,
+  expected: unknown,
+  actual: unknown
+): MatchResult {
+  return {
+    pass: false,
+    path,
+    expected: humanReadable(expected),
+    actual: humanReadable(actual),
+  };
+}
+
 /**
  * Compare two values with partial matching.
  * If expected is an object, all expected keys must match, but actual can have extra keys.
@@ -179,14 +200,16 @@ function partialMatch(
   actual: unknown,
   expected: unknown,
   path: string
-): {pass: boolean; message?: string} {
+): MatchResult {
   // Handle ResultMatcher
   if (isResultMatcher(expected)) {
     const result = expected.match(actual);
     if (!result.pass) {
       return {
         pass: false,
-        message: `${path}: expected ${result.expected}, got ${result.actual}`,
+        path,
+        expected: result.expected,
+        actual: result.actual,
       };
     }
     return {pass: true};
@@ -197,9 +220,53 @@ function partialMatch(
     if (actual === null) {
       return {pass: true};
     }
+    return matchFail(path, null, actual);
+  }
+
+  // Handle Date objects - type-driven comparison
+  // Works for date, timestamp, and timestamptz fields
+  if (expected instanceof Date) {
+    if (actual === null) {
+      return {
+        pass: false,
+        path,
+        expected: expected.toISOString(),
+        actual: 'null',
+      };
+    }
+
+    // Try to convert actual to a Date
+    let actualDate: Date;
+    if (actual instanceof Date) {
+      actualDate = actual;
+    } else if (typeof actual === 'string') {
+      actualDate = new Date(actual);
+      if (isNaN(actualDate.getTime())) {
+        return {
+          pass: false,
+          path,
+          expected: `date/time value like ${expected.toISOString()}`,
+          actual: `'${actual}' (not a valid date)`,
+        };
+      }
+    } else {
+      return {
+        pass: false,
+        path,
+        expected: `date/time value like ${expected.toISOString()}`,
+        actual: humanReadable(actual),
+      };
+    }
+
+    // Compare by timestamp value
+    if (expected.getTime() === actualDate.getTime()) {
+      return {pass: true};
+    }
     return {
       pass: false,
-      message: `${path}: expected null, got ${humanReadable(actual)}`,
+      path,
+      expected: expected.toISOString(),
+      actual: actualDate.toISOString(),
     };
   }
 
@@ -214,10 +281,7 @@ function partialMatch(
     if (actual === expected) {
       return {pass: true};
     }
-    return {
-      pass: false,
-      message: `${path}: expected ${humanReadable(expected)}, got ${humanReadable(actual)}`,
-    };
+    return matchFail(path, expected, actual);
   }
 
   // Handle arrays
@@ -225,13 +289,17 @@ function partialMatch(
     if (!Array.isArray(actual)) {
       return {
         pass: false,
-        message: `${path}: expected array, got ${typeof actual}`,
+        path,
+        expected: `array with ${expected.length} elements`,
+        actual: `${typeof actual}`,
       };
     }
     if (actual.length !== expected.length) {
       return {
         pass: false,
-        message: `${path}: expected ${expected.length} elements, got ${actual.length}`,
+        path,
+        expected: `${expected.length} elements`,
+        actual: `${actual.length} elements`,
       };
     }
     for (let i = 0; i < expected.length; i++) {
@@ -252,7 +320,9 @@ function partialMatch(
     ) {
       return {
         pass: false,
-        message: `${path}: expected object, got ${humanReadable(actual)}`,
+        path,
+        expected: 'object',
+        actual: humanReadable(actual),
       };
     }
     for (const [key, value] of Object.entries(expected)) {
@@ -267,7 +337,9 @@ function partialMatch(
 
   return {
     pass: false,
-    message: `${path}: unsupported type ${typeof expected}`,
+    path,
+    expected: 'supported type',
+    actual: `unsupported type ${typeof expected}`,
   };
 }
 
@@ -279,14 +351,16 @@ function exactMatch(
   actual: unknown,
   expected: unknown,
   path: string
-): {pass: boolean; message?: string} {
+): MatchResult {
   // Handle ResultMatcher
   if (isResultMatcher(expected)) {
     const result = expected.match(actual);
     if (!result.pass) {
       return {
         pass: false,
-        message: `${path}: expected ${result.expected}, got ${result.actual}`,
+        path,
+        expected: result.expected,
+        actual: result.actual,
       };
     }
     return {pass: true};
@@ -297,9 +371,53 @@ function exactMatch(
     if (actual === null) {
       return {pass: true};
     }
+    return matchFail(path, null, actual);
+  }
+
+  // Handle Date objects - type-driven comparison
+  // Works for date, timestamp, and timestamptz fields
+  if (expected instanceof Date) {
+    if (actual === null) {
+      return {
+        pass: false,
+        path,
+        expected: expected.toISOString(),
+        actual: 'null',
+      };
+    }
+
+    // Try to convert actual to a Date
+    let actualDate: Date;
+    if (actual instanceof Date) {
+      actualDate = actual;
+    } else if (typeof actual === 'string') {
+      actualDate = new Date(actual);
+      if (isNaN(actualDate.getTime())) {
+        return {
+          pass: false,
+          path,
+          expected: `date/time value like ${expected.toISOString()}`,
+          actual: `'${actual}' (not a valid date)`,
+        };
+      }
+    } else {
+      return {
+        pass: false,
+        path,
+        expected: `date/time value like ${expected.toISOString()}`,
+        actual: humanReadable(actual),
+      };
+    }
+
+    // Compare by timestamp value
+    if (expected.getTime() === actualDate.getTime()) {
+      return {pass: true};
+    }
     return {
       pass: false,
-      message: `${path}: expected null, got ${humanReadable(actual)}`,
+      path,
+      expected: expected.toISOString(),
+      actual: actualDate.toISOString(),
     };
   }
 
@@ -314,10 +432,7 @@ function exactMatch(
     if (actual === expected) {
       return {pass: true};
     }
-    return {
-      pass: false,
-      message: `${path}: expected ${humanReadable(expected)}, got ${humanReadable(actual)}`,
-    };
+    return matchFail(path, expected, actual);
   }
 
   // Handle arrays
@@ -325,13 +440,17 @@ function exactMatch(
     if (!Array.isArray(actual)) {
       return {
         pass: false,
-        message: `${path}: expected array, got ${typeof actual}`,
+        path,
+        expected: `array with ${expected.length} elements`,
+        actual: `${typeof actual}`,
       };
     }
     if (actual.length !== expected.length) {
       return {
         pass: false,
-        message: `${path}: expected ${expected.length} elements, got ${actual.length}`,
+        path,
+        expected: `${expected.length} elements`,
+        actual: `${actual.length} elements`,
       };
     }
     for (let i = 0; i < expected.length; i++) {
@@ -352,7 +471,9 @@ function exactMatch(
     ) {
       return {
         pass: false,
-        message: `${path}: expected object, got ${humanReadable(actual)}`,
+        path,
+        expected: 'object',
+        actual: humanReadable(actual),
       };
     }
 
@@ -364,7 +485,9 @@ function exactMatch(
       if (!expectedKeys.includes(key)) {
         return {
           pass: false,
-          message: `${path}: unexpected field '${key}'`,
+          path,
+          expected: `no field '${key}'`,
+          actual: `unexpected field '${key}'`,
         };
       }
     }
@@ -374,7 +497,9 @@ function exactMatch(
       if (!actualKeys.includes(key)) {
         return {
           pass: false,
-          message: `${path}: missing field '${key}'`,
+          path,
+          expected: `field '${key}'`,
+          actual: `missing field '${key}'`,
         };
       }
     }
@@ -392,7 +517,9 @@ function exactMatch(
 
   return {
     pass: false,
-    message: `${path}: unsupported type ${typeof expected}`,
+    path,
+    expected: 'supported type',
+    actual: `unsupported type ${typeof expected}`,
   };
 }
 
@@ -461,8 +588,15 @@ expect.extend({
       // Compare each expected row
       for (let i = 0; i < expectedRows.length; i++) {
         const matchResult = partialMatch(got[i], expectedRows[i], `Row ${i}`);
-        if (!matchResult.pass && matchResult.message) {
-          fails.push(matchResult.message);
+        if (!matchResult.pass) {
+          // Format with colors
+          fails.push(`${matchResult.path}:`);
+          fails.push(
+            this.utils.EXPECTED_COLOR(`  Expected: ${matchResult.expected}`)
+          );
+          fails.push(
+            this.utils.RECEIVED_COLOR(`  Received: ${matchResult.actual}`)
+          );
         }
       }
     }
@@ -518,8 +652,15 @@ expect.extend({
     const rowsToCheck = Math.min(got.length, expectedRows.length);
     for (let i = 0; i < rowsToCheck; i++) {
       const matchResult = exactMatch(got[i], expectedRows[i], `Row ${i}`);
-      if (!matchResult.pass && matchResult.message) {
-        fails.push(matchResult.message);
+      if (!matchResult.pass) {
+        // Format with colors
+        fails.push(`${matchResult.path}:`);
+        fails.push(
+          this.utils.EXPECTED_COLOR(`  Expected: ${matchResult.expected}`)
+        );
+        fails.push(
+          this.utils.RECEIVED_COLOR(`  Received: ${matchResult.actual}`)
+        );
       }
     }
 
