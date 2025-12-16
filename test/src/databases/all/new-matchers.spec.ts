@@ -1,0 +1,196 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
+import {mkTestModel, tsMk, resultIs} from '@malloydata/malloy/test';
+
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
+describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
+  describe('mkTestModel and tsMk', () => {
+    test('basic types with type inference', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {t_int: 1, t_string: 'a', t_bool: true},
+          {t_int: 2, t_string: 'b', t_bool: false},
+        ],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(
+        tm,
+        {t_int: 1, t_string: 'a', t_bool: resultIs.bool(true)},
+        {t_int: 2, t_string: 'b', t_bool: resultIs.bool(false)}
+      );
+    });
+
+    test('floats need tsMk.float for explicit cast', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{f: tsMk.float(1.5)}],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {f: 1.5});
+    });
+
+    test('NULL handling with typed nulls', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {
+            t_int: tsMk.int(null),
+            t_string: tsMk.string(null),
+            t_bool: tsMk.bool(null),
+            t_float: tsMk.float(null),
+          },
+        ],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {
+        t_int: null,
+        t_string: null,
+        t_bool: null,
+        t_float: null,
+      });
+    });
+
+    test('date literals need tsMk.date', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {
+            d1: tsMk.date('2024-01-15'),
+            d2: tsMk.date('2024-12-31'),
+          },
+        ],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {
+        d1: resultIs.date('2024-01-15'),
+        d2: resultIs.date('2024-12-31'),
+      });
+    });
+
+    test('arrays with type inference', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {
+            string_array: ['a', 'b', 'c'],
+            number_array: [1, 2, 3],
+          },
+        ],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {
+        string_array: ['a', 'b', 'c'],
+        number_array: [1, 2, 3],
+      });
+    });
+  });
+
+  describe('toMatchResult (partial matching)', () => {
+    test('passes with extra fields', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{id: 1, name: 'alice', extra: 'ignored'}],
+      });
+      // Only checking name, ignoring extra fields
+      await expect('run: data -> { select: * }').toMatchResult(tm, {
+        name: 'alice',
+      });
+    });
+
+    test('empty match {} checks for at least one row', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{id: 1}],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {});
+    });
+
+    test('variadic rows', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {id: 1, name: 'alice'},
+          {id: 2, name: 'bob'},
+          {id: 3, name: 'charlie'},
+        ],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(
+        tm,
+        {name: 'alice'},
+        {name: 'bob'},
+        {name: 'charlie'}
+      );
+    });
+  });
+
+  describe('toEqualResult (exact matching)', () => {
+    test('exact field match', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{id: 1, name: 'alice'}],
+      });
+      // Select only name, expect exact match
+      await expect('run: data -> { select: name }').toEqualResult(tm, [
+        {name: 'alice'},
+      ]);
+    });
+
+    test('exact row count', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {id: 1, name: 'alice'},
+          {id: 2, name: 'bob'},
+        ],
+      });
+      await expect('run: data -> { select: name }').toEqualResult(tm, [
+        {name: 'alice'},
+        {name: 'bob'},
+      ]);
+    });
+  });
+
+  describe('resultIs matchers', () => {
+    test('resultIs.date compares dates correctly', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{d: tsMk.date('2024-01-15')}],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {
+        d: resultIs.date('2024-01-15'),
+      });
+    });
+
+    test('resultIs.bool handles database boolean values', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{a: true, b: false}],
+      });
+      await expect('run: data -> { select: * }').toMatchResult(tm, {
+        a: resultIs.bool(true),
+        b: resultIs.bool(false),
+      });
+    });
+  });
+
+  describe('multiple sources', () => {
+    test('can define multiple sources in one model', async () => {
+      const tm = mkTestModel(runtime, {
+        users: [
+          {id: 1, name: 'alice'},
+          {id: 2, name: 'bob'},
+        ],
+        orders: [
+          {user_id: 1, amount: tsMk.float(99.99)},
+          {user_id: 2, amount: tsMk.float(49.99)},
+        ],
+      });
+
+      await expect('run: users -> { select: * }').toMatchResult(
+        tm,
+        {name: 'alice'},
+        {name: 'bob'}
+      );
+
+      await expect('run: orders -> { select: * }').toMatchResult(
+        tm,
+        {amount: 99.99},
+        {amount: 49.99}
+      );
+    });
+  });
+});
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
