@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {ModelMaterializer, QueryMaterializer, LogMessage} from '..';
+import type {QueryMaterializer, LogMessage, Dialect} from '..';
 import {API, MalloyError} from '..';
 import type {Tag} from '@malloydata/malloy-tag';
 import {inspect} from 'util';
 import {isResultMatcher} from './resultIs';
 import {cellsToObjects} from './cellsToObject';
+import type {TestModel} from './test-models';
 
 /** Expected row shape for result matching */
 export type ExpectedRow = Record<string, unknown>;
@@ -17,9 +18,6 @@ export type ExpectedRow = Record<string, unknown>;
 export interface MatcherOptions {
   debug?: boolean;
 }
-
-/** Test runner - can be a ModelMaterializer */
-export type TestRunner = ModelMaterializer;
 
 type JestMatcherResult = {
   pass: boolean;
@@ -50,7 +48,7 @@ declare global {
        * @param rows - Expected row values (variadic), last arg can be options
        */
       toMatchResult(
-        tm: TestRunner,
+        tm: TestModel,
         ...rowsOrOptions: (ExpectedRow | MatcherOptions)[]
       ): Promise<R>;
 
@@ -67,7 +65,7 @@ declare global {
        * @param options - Optional matcher options
        */
       toEqualResult(
-        tm: TestRunner,
+        tm: TestModel,
         rows: ExpectedRow[],
         options?: MatcherOptions
       ): Promise<R>;
@@ -113,13 +111,13 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
 }
 
 async function runQuery(
-  tm: TestRunner,
+  tm: TestModel,
   src: string
 ): Promise<Partial<QueryRunResult>> {
   let query: QueryMaterializer;
   let queryTestTag: Tag | undefined = undefined;
   try {
-    query = tm.loadQuery(src);
+    query = tm.model.loadQuery(src);
     const queryTags = (await query.getPreparedQuery()).tagParse().tag;
     queryTestTag = queryTags.tag('test');
   } catch (e) {
@@ -199,7 +197,8 @@ function matchFail(
 function partialMatch(
   actual: unknown,
   expected: unknown,
-  path: string
+  path: string,
+  dialect: Dialect
 ): MatchResult {
   // Handle ResultMatcher
   if (isResultMatcher(expected)) {
@@ -270,12 +269,33 @@ function partialMatch(
     };
   }
 
-  // Handle primitives
+  // Handle booleans - convert expected for dialects with simulated booleans
+  // Note: wrapResult() may have already normalized 0/1 back to false/true,
+  // so check if actual is already a boolean first
+  if (typeof expected === 'boolean') {
+    if (typeof actual === 'boolean') {
+      // Both are booleans, compare directly
+      if (actual === expected) {
+        return {pass: true};
+      }
+      return matchFail(path, expected, actual);
+    }
+    // Actual is not boolean (raw 0/1 from database), convert expected
+    const expectedValue =
+      dialect.booleanType === 'simulated'
+        ? dialect.resultBoolean(expected)
+        : expected;
+    if (actual === expectedValue) {
+      return {pass: true};
+    }
+    return matchFail(path, expected, actual);
+  }
+
+  // Handle other primitives
   // Note: dates/timestamps are normalized to ISO strings by the new API
   if (
     typeof expected === 'string' ||
     typeof expected === 'number' ||
-    typeof expected === 'boolean' ||
     typeof expected === 'bigint'
   ) {
     if (actual === expected) {
@@ -303,7 +323,12 @@ function partialMatch(
       };
     }
     for (let i = 0; i < expected.length; i++) {
-      const result = partialMatch(actual[i], expected[i], `${path}[${i}]`);
+      const result = partialMatch(
+        actual[i],
+        expected[i],
+        `${path}[${i}]`,
+        dialect
+      );
       if (!result.pass) {
         return result;
       }
@@ -327,7 +352,12 @@ function partialMatch(
     }
     for (const [key, value] of Object.entries(expected)) {
       const actualValue = (actual as Record<string, unknown>)[key];
-      const result = partialMatch(actualValue, value, `${path}.${key}`);
+      const result = partialMatch(
+        actualValue,
+        value,
+        `${path}.${key}`,
+        dialect
+      );
       if (!result.pass) {
         return result;
       }
@@ -350,7 +380,8 @@ function partialMatch(
 function exactMatch(
   actual: unknown,
   expected: unknown,
-  path: string
+  path: string,
+  dialect: Dialect
 ): MatchResult {
   // Handle ResultMatcher
   if (isResultMatcher(expected)) {
@@ -421,12 +452,33 @@ function exactMatch(
     };
   }
 
-  // Handle primitives
+  // Handle booleans - convert expected for dialects with simulated booleans
+  // Note: wrapResult() may have already normalized 0/1 back to false/true,
+  // so check if actual is already a boolean first
+  if (typeof expected === 'boolean') {
+    if (typeof actual === 'boolean') {
+      // Both are booleans, compare directly
+      if (actual === expected) {
+        return {pass: true};
+      }
+      return matchFail(path, expected, actual);
+    }
+    // Actual is not boolean (raw 0/1 from database), convert expected
+    const expectedValue =
+      dialect.booleanType === 'simulated'
+        ? dialect.resultBoolean(expected)
+        : expected;
+    if (actual === expectedValue) {
+      return {pass: true};
+    }
+    return matchFail(path, expected, actual);
+  }
+
+  // Handle other primitives
   // Note: dates/timestamps are normalized to ISO strings by the new API
   if (
     typeof expected === 'string' ||
     typeof expected === 'number' ||
-    typeof expected === 'boolean' ||
     typeof expected === 'bigint'
   ) {
     if (actual === expected) {
@@ -454,7 +506,12 @@ function exactMatch(
       };
     }
     for (let i = 0; i < expected.length; i++) {
-      const result = exactMatch(actual[i], expected[i], `${path}[${i}]`);
+      const result = exactMatch(
+        actual[i],
+        expected[i],
+        `${path}[${i}]`,
+        dialect
+      );
       if (!result.pass) {
         return result;
       }
@@ -507,7 +564,7 @@ function exactMatch(
     // Compare values
     for (const [key, value] of Object.entries(expected)) {
       const actualValue = (actual as Record<string, unknown>)[key];
-      const result = exactMatch(actualValue, value, `${path}.${key}`);
+      const result = exactMatch(actualValue, value, `${path}.${key}`, dialect);
       if (!result.pass) {
         return result;
       }
@@ -538,7 +595,7 @@ function isOptions(arg: unknown): arg is MatcherOptions {
 expect.extend({
   async toMatchResult(
     querySrc: string,
-    tm: TestRunner,
+    tm: TestModel,
     ...rowsOrOptions: (ExpectedRow | MatcherOptions)[]
   ): Promise<JestMatcherResult> {
     // Parse args - last might be options
@@ -587,7 +644,12 @@ expect.extend({
     } else {
       // Compare each expected row
       for (let i = 0; i < expectedRows.length; i++) {
-        const matchResult = partialMatch(got[i], expectedRows[i], `Row ${i}`);
+        const matchResult = partialMatch(
+          got[i],
+          expectedRows[i],
+          `Row ${i}`,
+          tm.dialect
+        );
         if (!matchResult.pass) {
           // Format with colors
           fails.push(`${matchResult.path}:`);
@@ -625,7 +687,7 @@ expect.extend({
 
   async toEqualResult(
     querySrc: string,
-    tm: TestRunner,
+    tm: TestModel,
     expectedRows: ExpectedRow[],
     options: MatcherOptions = {}
   ): Promise<JestMatcherResult> {
@@ -651,7 +713,12 @@ expect.extend({
     // Compare each row exactly
     const rowsToCheck = Math.min(got.length, expectedRows.length);
     for (let i = 0; i < rowsToCheck; i++) {
-      const matchResult = exactMatch(got[i], expectedRows[i], `Row ${i}`);
+      const matchResult = exactMatch(
+        got[i],
+        expectedRows[i],
+        `Row ${i}`,
+        tm.dialect
+      );
       if (!matchResult.pass) {
         // Format with colors
         fails.push(`${matchResult.path}:`);

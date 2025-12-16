@@ -6,8 +6,8 @@
 // Test data creation
 export {TV} from './test-values';
 export type {TypedValue} from './test-values';
-export {mkTestModel} from './test-models';
-export type {TestModelSources} from './test-models';
+export {mkTestModel, wrapTestModel} from './test-models';
+export type {TestModelSources, TestModel} from './test-models';
 
 // Query execution
 export {runQuery} from './runQuery';
@@ -18,7 +18,7 @@ export {resultIs, isResultMatcher} from './resultIs';
 export type {ResultMatcher} from './resultIs';
 
 // Jest matcher types (matchers registered via separate import)
-export type {ExpectedRow, MatcherOptions, TestRunner} from './resultMatchers';
+export type {ExpectedRow, MatcherOptions} from './resultMatchers';
 
 /*
  * Legacy exports - kept for backwards compatibility

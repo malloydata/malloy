@@ -5,9 +5,10 @@
 
 import {runtimeFor} from '../runtimes';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtime = runtimeFor('duckdb');
-const testModel = runtime.loadModel('');
+const testModel = wrapTestModel(runtime, '');
 
 describe('misc tests for regressions that have no better home', () => {
   test('rename a field in a join', async () => {

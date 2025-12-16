@@ -26,6 +26,7 @@
 import {describeIfDatabaseAvailable} from '../../util';
 import {RuntimeList} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
@@ -47,7 +48,7 @@ describe('JSON tests', () => {
   });
 
   runtimes.runtimeMap.forEach((runtime, databaseName) => {
-    const testModel = runtime.loadModel('');
+    const testModel = wrapTestModel(runtime, '');
 
     // Issue: #151
     it(`JSON Scalar  - ${databaseName}`, async () => {

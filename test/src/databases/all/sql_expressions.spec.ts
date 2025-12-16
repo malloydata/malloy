@@ -27,6 +27,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -37,7 +38,7 @@ afterAll(async () => {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
-  const testModel = runtime.loadModel('');
+  const testModel = wrapTestModel(runtime, '');
   it(`sql expression with turducken - ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql(

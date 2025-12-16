@@ -15,6 +15,15 @@ import type {
 import {constantExprToSQL, mkFieldDef} from '..';
 import type {TypedValue} from './test-values';
 
+/**
+ * A test model combines a ModelMaterializer with the dialect used to create it.
+ * This allows matchers to handle dialect-specific behaviors like simulated booleans.
+ */
+export interface TestModel {
+  model: ModelMaterializer;
+  dialect: Dialect;
+}
+
 // Valid value types for inferrable types
 type PrimitiveValue = string | number | boolean | null;
 
@@ -319,12 +328,12 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
  *
  * @param runtime - SingleConnectionRuntime with dialect and connection info
  * @param sources - Object mapping source names to arrays of test data rows
- * @returns ModelMaterializer with the test data sources defined
+ * @returns TestModel with the model and dialect
  */
 export function mkTestModel(
   runtime: SingleConnectionRuntime,
   sources: TestModelSources
-): ModelMaterializer {
+): TestModel {
   const dialect = runtime.dialect;
   const connectionName = runtime.connection.name;
 
@@ -341,5 +350,30 @@ export function mkTestModel(
   }
 
   const modelText = sourceDefinitions.join('\n');
-  return runtime.loadModel(modelText);
+  return {
+    model: runtime.loadModel(modelText),
+    dialect,
+  };
+}
+
+/**
+ * Create a TestModel from a Malloy source string.
+ * Use this when you want to load existing tables or custom Malloy definitions
+ * and use them with the test matchers.
+ *
+ * @example
+ * const tm = wrapTestModel(runtime, `
+ *   source: users is ${db}.table('users')
+ * `);
+ * await expect('run: users -> { select: * }').toMatchResult(tm, {...});
+ *
+ * // Empty string for raw SQL queries:
+ * const tm = wrapTestModel(runtime, '');
+ * await expect(`run: ${db}.sql("""...""")`).toMatchResult(tm, {...});
+ */
+export function wrapTestModel(
+  runtime: SingleConnectionRuntime,
+  source: string
+): TestModel {
+  return {model: runtime.loadModel(source), dialect: runtime.dialect};
 }

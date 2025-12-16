@@ -21,8 +21,8 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       });
       await expect('run: data -> { select: * }').toMatchResult(
         tm,
-        {t_int: 1, t_string: 'a', t_bool: resultIs.bool(true)},
-        {t_int: 2, t_string: 'b', t_bool: resultIs.bool(false)}
+        {t_int: 1, t_string: 'a', t_bool: true},
+        {t_int: 2, t_string: 'b', t_bool: false}
       );
     });
 
@@ -153,13 +153,14 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       });
     });
 
-    test('resultIs.bool handles database boolean values', async () => {
+    test('plain booleans work with dialect boolean handling', async () => {
       const tm = mkTestModel(runtime, {
         data: [{a: true, b: false}],
       });
+      // Booleans are handled by dialect.resultBoolean() in the matcher
       await expect('run: data -> { select: * }').toMatchResult(tm, {
-        a: resultIs.bool(true),
-        b: resultIs.bool(false),
+        a: true,
+        b: false,
       });
     });
   });

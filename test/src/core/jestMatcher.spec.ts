@@ -24,6 +24,7 @@
 
 import {runtimeFor} from '../runtimes';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtime = runtimeFor('duckdb');
 
@@ -32,8 +33,11 @@ describe.skip('toMatchResult', () => {
   const sampleSource = `duckdb.sql("""
           SELECT 42 as num, 'whynot' as reason
           UNION ALL SELECT 49, 'because'""")`;
-  const model = runtime.loadModel(`source: sampleSource is ${sampleSource}`);
-  const testModel = runtime.loadModel('');
+  const model = wrapTestModel(
+    runtime,
+    `source: sampleSource is ${sampleSource}`
+  );
+  const testModel = wrapTestModel(runtime, '');
 
   test('simple', async () => {
     await expect(`

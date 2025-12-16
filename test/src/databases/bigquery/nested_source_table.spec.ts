@@ -25,6 +25,7 @@
 /* eslint-disable no-console */
 
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
@@ -131,8 +132,8 @@ const runtimes = new RuntimeList(databases);
 describe.each(runtimes.runtimeList)(
   'Nested Source Table - %s',
   (databaseName, runtime) => {
-    const gaModel = runtime.loadModel(modelText(databaseName));
-    const testModel = runtime.loadModel('');
+    const gaModel = wrapTestModel(runtime, modelText(databaseName));
+    const testModel = wrapTestModel(runtime, '');
     test(`repeated child of record - ${databaseName}`, async () => {
       await expect('run: ga_sessions->by_page_title').toMatchResult(gaModel, {
         pageTitle: 'Shopping Cart',

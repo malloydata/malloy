@@ -26,6 +26,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -61,8 +62,8 @@ afterAll(async () => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const joinModel = runtime.loadModel(modelText(databaseName));
-  const testModel = runtime.loadModel('');
+  const joinModel = wrapTestModel(runtime, modelText(databaseName));
+  const testModel = wrapTestModel(runtime, '');
 
   it('model source refine join', async () => {
     await expect(`

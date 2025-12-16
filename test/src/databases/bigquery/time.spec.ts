@@ -23,7 +23,7 @@
 
 import {RuntimeList} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
-import {resultIs} from '@malloydata/malloy/test';
+import {resultIs, wrapTestModel} from '@malloydata/malloy/test';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
@@ -35,7 +35,7 @@ afterAll(async () => {
 
 describe('time specific tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
-  const testModel = runtime?.loadModel('');
+  const testModel = runtime && wrapTestModel(runtime, '');
 
   const utc_2020 = resultIs.timestamp('2020-02-20T00:00:00.000Z');
 

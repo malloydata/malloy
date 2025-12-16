@@ -25,6 +25,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -34,7 +35,7 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  const testModel = runtime.loadModel('');
+  const testModel = wrapTestModel(runtime, '');
   test.when(runtime.dialect.supportsTempTables)(
     `basic index  - ${databaseName}`,
     async () => {

@@ -6,12 +6,10 @@
 /**
  * Result matcher for explicit type comparisons in test assertions.
  * Used when comparing result values that need special handling
- * (dates, booleans, timestamps, bigints).
+ * (dates, timestamps, bigints).
  *
- * Note: With the new malloy-interfaces API, data is already normalized:
- * - Booleans are always boolean (not MySQL 0/1)
- * - Timestamps are ISO strings
- * - Dates are ISO strings (but we extract just the date portion for comparison)
+ * Note: Booleans are handled directly by the matcher using dialect.resultBoolean(),
+ * so no explicit bool matcher is needed. Just use plain true/false in expectations.
  */
 export interface ResultMatcher {
   __resultMatcher: true;
@@ -37,10 +35,9 @@ export function isResultMatcher(value: unknown): value is ResultMatcher {
  * @example
  * import { resultIs } from '@malloydata/malloy/test';
  *
- * await expect('run: users -> { select: created, active }')
+ * await expect('run: users -> { select: created }')
  *   .toMatchResult(tm, {
- *     created: resultIs.date('2024-01-01'),
- *     active: resultIs.bool(true)
+ *     created: resultIs.date('2024-01-01')
  *   });
  */
 export const resultIs = {
@@ -84,47 +81,6 @@ export const resultIs = {
           pass: actualDate === expected,
           expected: expected,
           actual: actualDate,
-        };
-      },
-    };
-  },
-
-  /**
-   * Match a boolean value.
-   * With the normalized API, booleans are always true boolean values.
-   */
-  bool(expected: boolean | null): ResultMatcher {
-    return {
-      __resultMatcher: true,
-      match(actual: unknown) {
-        if (expected === null) {
-          return {
-            pass: actual === null,
-            expected: 'null',
-            actual: String(actual),
-          };
-        }
-
-        if (actual === null) {
-          return {
-            pass: false,
-            expected: String(expected),
-            actual: 'null',
-          };
-        }
-
-        if (typeof actual !== 'boolean') {
-          return {
-            pass: false,
-            expected: String(expected),
-            actual: `non-boolean: ${String(actual)}`,
-          };
-        }
-
-        return {
-          pass: actual === expected,
-          expected: String(expected),
-          actual: String(actual),
         };
       },
     };

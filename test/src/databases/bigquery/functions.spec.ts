@@ -24,6 +24,7 @@
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
 const runtimes = new RuntimeList(databases);
@@ -34,7 +35,7 @@ afterAll(async () => {
 
 describe('dialect specific function tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
-  const testModel = runtime?.loadModel('');
+  const testModel = runtime && wrapTestModel(runtime, '');
 
   it('runs the max_by function - bigquery', async () => {
     await expect(`run: bigquery.sql("""

@@ -28,6 +28,7 @@ import {RuntimeList} from '../../runtimes';
 import type {AtomicField, Runtime} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['postgres']);
 
@@ -37,7 +38,7 @@ describe('Postgres tests', () => {
   if (runtime === undefined) {
     throw new Error("Couldn't build runtime");
   }
-  const testModel = runtime.loadModel('');
+  const testModel = wrapTestModel(runtime, '');
 
   // Idempotently create schema and tables with capital letters to use in tests.
   beforeAll(async () => {

@@ -25,6 +25,7 @@ import {DateTime} from 'luxon';
 import {RuntimeList, runtimeFor} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 // TODO identify which tests need to run on wasm and move them into their own file
 const runtimes = ['duckdb', 'duckdb_wasm'];
@@ -33,7 +34,7 @@ const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);
 
 describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
-  const testModel = runtime.loadModel('');
+  const testModel = wrapTestModel(runtime, '');
 
   it('can open tables with wildcards', async () => {
     await expect(`

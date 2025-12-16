@@ -25,6 +25,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -41,7 +42,7 @@ async function getError<T>(fn: () => Promise<T>) {
 }
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  const testModel = runtime.loadModel('');
+  const testModel = wrapTestModel(runtime, '');
   it(`properly quotes nested field names in ${databaseName}`, async () => {
     const one = runtime.dialect.sqlMaybeQuoteIdentifier('one');
     await expect(`

@@ -7,19 +7,19 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
 import {databasesFromEnvironmentOr} from '../../util';
 import {TestSelect} from '../../test-select';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
-  const d = runtime.dialect;
   const ts = new TestSelect(runtime.dialect);
-  const testModel = runtime.loadModel('');
+  const testModel = wrapTestModel(runtime, '');
 
   // Basic Type Tests
   test(`${db} inferred basic types`, async () => {
     const sql = ts.generate(
-      {t_int: 1, t_string: 'a', t_bool: d.resultBoolean(true), t_float: 1.5},
-      {t_int: 2, t_string: 'b', t_bool: d.resultBoolean(false), t_float: 2.5}
+      {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},
+      {t_int: 2, t_string: 'b', t_bool: false, t_float: 2.5}
     );
     await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},

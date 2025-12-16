@@ -25,7 +25,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {resultIs} from '@malloydata/malloy/test';
+import {wrapTestModel, resultIs} from '@malloydata/malloy/test';
 import {Dialect} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -35,10 +35,13 @@ afterAll(async () => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const orderByModel = runtime.loadModel(`
+  const orderByModel = wrapTestModel(
+    runtime,
+    `
     source: models is ${databaseName}.table('malloytest.aircraft_models') extend {
       measure: model_count is count()
-    }`);
+    }`
+  );
 
   it(`boolean type - ${databaseName}`, async () => {
     await expect(`
@@ -47,7 +50,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is count()
       }
     `).toMatchResult(orderByModel, {
-      big: resultIs.bool(false),
+      big: false,
       model_count: 58451,
     });
   });
@@ -64,7 +67,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is model_count.sum()
       }
     `).toMatchResult(orderByModel, {
-      big: resultIs.bool(false),
+      big: false,
       model_count: 58500,
     });
   });
