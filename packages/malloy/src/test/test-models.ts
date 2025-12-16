@@ -13,7 +13,7 @@ import type {
   RecordLiteralNode,
 } from '..';
 import {constantExprToSQL, mkFieldDef} from '..';
-import type {TypedValue} from './tsMk';
+import type {TypedValue} from './test-values';
 
 // Valid value types for inferrable types
 type PrimitiveValue = string | number | boolean | null;
@@ -40,7 +40,7 @@ export interface TestModelSources {
 const nullExpr: Expr = {node: 'null'};
 
 /**
- * Check if a value is a TypedValue (explicit type hint from tsMk).
+ * Check if a value is a TypedValue (explicit type hint from TV).
  */
 function isTypedValue(value: unknown): value is TypedValue {
   return (
@@ -301,15 +301,15 @@ function generateSQL(dialect: Dialect, rows: TestDataRow[]): string {
  * Create a queryable model with test data sources.
  *
  * @example
- * import { mkTestModel, tsMk } from '@malloydata/malloy/test';
+ * import { mkTestModel, TV } from '@malloydata/malloy/test';
  *
  * const tm = mkTestModel(runtime, {
  *   users: [
- *     {id: tsMk.int(1), name: 'alice'},
- *     {id: tsMk.int(2), name: 'bob'}
+ *     {id: TV.int(1), name: 'alice'},
+ *     {id: TV.int(2), name: 'bob'}
  *   ],
  *   orders: [
- *     {user_id: tsMk.int(1), amount: 99.99}
+ *     {user_id: TV.int(1), amount: 99.99}
  *   ]
  * });
  *
@@ -333,8 +333,8 @@ export function mkTestModel(
 
   for (const [sourceName, rows] of Object.entries(sources)) {
     const sql = generateSQL(dialect, rows);
-    // Escape triple quotes in SQL if present
-    const escapedSql = sql.replace(/"""/g, '\\"""');
+    // Escape backslashes first, then triple quotes for Malloy SQL block
+    const escapedSql = sql.replace(/\\/g, '\\\\').replace(/"""/g, '\\"""');
     sourceDefinitions.push(
       `source: ${sourceName} is ${connectionName}.sql("""${escapedSql}""")`
     );

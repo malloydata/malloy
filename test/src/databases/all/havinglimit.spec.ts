@@ -22,157 +22,173 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import {runQuery} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-
-// // No prebuilt shared model, each test is complete.  Makes debugging easier.
-// function rootDbPath(databaseName: string) {
-//   return databaseName === 'bigquery' ? 'malloydata-org.' : '';
-// }
 
 afterAll(async () => {
   await runtimes.closeAll();
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  // const q = runtime.getQuoter();
+  const testModel = runtime.loadModel('');
 
   describe('limits', () => {
     test('limit only', async () => {
-      await expect(`
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: popular_name
-        aggregate: c is count()
-        limit: 3
-      }
-      `).malloyResultMatches(runtime, [{}, {}, {}]);
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: c is count()
+          limit: 3
+        }
+        `
+      );
+      expect(data.length).toBe(3);
     });
 
     test('limit nest one', async () => {
-      await expect(`
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: popular_name
-        aggregate: c is count()
-        limit: 3
-        nest: one is {
-          group_by: state
-          limit: 2
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: c is count()
+          limit: 3
+          nest: one is {
+            group_by: state
+            limit: 2
+          }
         }
-      }
-      `).malloyResultMatches(runtime, [
-        {popular_name: 'Isabella', one: [{'state': 'AZ'}, {}]},
-        {},
-        {},
-      ]);
+        `
+      );
+      expect(data.length).toBe(3);
+      expect(data[0]).toMatchObject({popular_name: 'Isabella'});
+      expect(data[0]).toHaveProperty('one.length', 2);
+      expect(data[0]).toHaveProperty('one.0.state', 'AZ');
     });
 
     test('limit nest with having', async () => {
-      await expect(`
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: popular_name
-        aggregate: c is count()
-        having: c % 2 = 1
-        limit: 3
-        nest: one is {
-          group_by: state
-          limit: 2
-        }
-      }
-      `).malloyResultMatches(runtime, [
-        {popular_name: 'Sophia', one: [{'state': 'AK'}, {}]},
-        {},
-        {},
-      ]);
-    });
-
-    test('limit two nests with having', async () => {
-      await expect(`
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        nest: name is {
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: popular_name
           aggregate: c is count()
           having: c % 2 = 1
           limit: 3
+          nest: one is {
+            group_by: state
+            limit: 2
+          }
         }
-        nest: by_state is {
-          group_by: state
-          limit: 2
+        `
+      );
+      expect(data.length).toBe(3);
+      expect(data[0]).toMatchObject({popular_name: 'Sophia'});
+      expect(data[0]).toHaveProperty('one.length', 2);
+      expect(data[0]).toHaveProperty('one.0.state', 'AK');
+    });
+
+    test('limit two nests with having', async () => {
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          nest: name is {
+            group_by: popular_name
+            aggregate: c is count()
+            having: c % 2 = 1
+            limit: 3
+          }
+          nest: by_state is {
+            group_by: state
+            limit: 2
+          }
         }
-      }
-      `).malloyResultMatches(runtime, [
-        {
-          'name': [{popular_name: 'Sophia'}, {}, {}],
-          'by_state': [{'state': 'AK'}, {}],
-        },
-      ]);
+        `
+      );
+      expect(data.length).toBe(1);
+      expect(data[0]).toHaveProperty('name.length', 3);
+      expect(data[0]).toHaveProperty('name.0.popular_name', 'Sophia');
+      expect(data[0]).toHaveProperty('by_state.length', 2);
+      expect(data[0]).toHaveProperty('by_state.0.state', 'AK');
     });
 
     test('limit 2 stage second with nest with having', async () => {
-      await expect(`
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        select: *
-      } -> {
-        group_by: popular_name
-        aggregate: c is count()
-        having: c % 2 = 1
-        limit: 3
-        nest: one is {
-          group_by: state
-          limit: 2
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          select: *
+        } -> {
+          group_by: popular_name
+          aggregate: c is count()
+          having: c % 2 = 1
+          limit: 3
+          nest: one is {
+            group_by: state
+            limit: 2
+          }
         }
-      }
-      `).malloyResultMatches(runtime, [
-        {popular_name: 'Sophia', one: [{'state': 'AK'}, {}]},
-        {},
-        {},
-      ]);
+        `
+      );
+      expect(data.length).toBe(3);
+      expect(data[0]).toMatchObject({popular_name: 'Sophia'});
+      expect(data[0]).toHaveProperty('one.length', 2);
+      expect(data[0]).toHaveProperty('one.0.state', 'AK');
     });
 
     test('limit index 2 stage', async () => {
-      await expect(`
-      //# test.debug
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        index: *
-      } -> {
-        group_by: fieldName
-        aggregate: cardinality is count(fieldValue)
-        limit: 2
-        nest: values is {
-          group_by: fieldValue
-          aggregate: weight is weight.sum()
-          limit: 3
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          index: *
+        } -> {
+          group_by: fieldName
+          aggregate: cardinality is count(fieldValue)
+          limit: 2
+          nest: values is {
+            group_by: fieldValue
+            aggregate: weight is weight.sum()
+            limit: 3
+          }
         }
-      }
-      `).malloyResultMatches(runtime, [
-        {fieldName: 'state', values: [{}, {}, {}]},
-        {
-          fieldName: 'popular_name',
-          values: [{fieldValue: 'Isabella', weight: 24}, {}, {}],
-        },
-      ]);
+        `
+      );
+      expect(data.length).toBe(2);
+      expect(data[0]).toMatchObject({fieldName: 'state'});
+      expect(data[0]).toHaveProperty('values.length', 3);
+      expect(data[1]).toMatchObject({fieldName: 'popular_name'});
+      expect(data[1]).toHaveProperty('values.length', 3);
+      expect(data[1]).toHaveProperty('values.0.fieldValue', 'Isabella');
+      expect(data[1]).toHaveProperty('values.0.weight', 24);
     });
+
     test('limit select - in pipeline', async () => {
-      await expect(`
-      //# test.debug
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: popular_name
-        aggregate: c is count()
-        having: c % 2 = 1
-        limit: 100
-        nest: one is {
-          group_by: state
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: c is count()
+          having: c % 2 = 1
+          limit: 100
+          nest: one is {
+            group_by: state
+            limit: 2
+          }
+        } -> {
+          select: popular_name
           limit: 2
         }
-      } -> {
-        select: popular_name
-        limit: 2
-      }
-      `).malloyResultMatches(runtime, [{}, {}]);
+        `
+      );
+      expect(data.length).toBe(2);
     });
 
     test.when(
@@ -180,22 +196,26 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         runtime.dialect.supportsPipelinesInViews &&
         databaseName !== 'trino'
     )('limit select - nested pipeline', async () => {
-      await expect(`
-      //# test.debug
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: popular_name
-        aggregate: c is count()
-        having: c % 2 = 1
-        limit: 1
-        nest: one is {
-          group_by: state
-          limit: 20
-        } -> {
-          select: state
-          limit: 2
+      const {data} = await runQuery(
+        testModel,
+        `
+        run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: popular_name
+          aggregate: c is count()
+          having: c % 2 = 1
+          limit: 1
+          nest: one is {
+            group_by: state
+            limit: 20
+          } -> {
+            select: state
+            limit: 2
+          }
         }
-      }
-      `).malloyResultMatches(runtime, [{one: [{}, {}]}]);
+        `
+      );
+      expect(data.length).toBe(1);
+      expect(data[0]).toHaveProperty('one.length', 2);
     });
   });
 });

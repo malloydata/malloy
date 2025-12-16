@@ -5,6 +5,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./test": "./dist/test/index.js",
+    "./test/matchers": "./dist/test/matchers.js",
     "./connection": "./dist/connection/index.js",
     "./package.json": "./package.json"
   },
@@ -15,6 +16,9 @@
       ],
       "test": [
         "./dist/test/index.d.ts"
+      ],
+      "test/matchers": [
+        "./dist/test/matchers.d.ts"
       ],
       "connection": [
         "./dist/connection/index.d.ts"

@@ -24,7 +24,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -41,6 +41,7 @@ async function getError<T>(fn: () => Promise<T>) {
 }
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const testModel = runtime.loadModel('');
   it(`properly quotes nested field names in ${databaseName}`, async () => {
     const one = runtime.dialect.sqlMaybeQuoteIdentifier('one');
     await expect(`
@@ -53,7 +54,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: \`#\` is count(one)
           }
         }
-      }`).matchesRows(runtime, {
+      }`).toMatchResult(testModel, {
       foo: [{'one': 1, '#': 1, 'deepfoo': [{'one': 1, '#': 1}]}],
     });
   });

@@ -6,7 +6,12 @@
 /**
  * Result matcher for explicit type comparisons in test assertions.
  * Used when comparing result values that need special handling
- * (dates, booleans from MySQL 0/1, timestamps, bigints).
+ * (dates, booleans, timestamps, bigints).
+ *
+ * Note: With the new malloy-interfaces API, data is already normalized:
+ * - Booleans are always boolean (not MySQL 0/1)
+ * - Timestamps are ISO strings
+ * - Dates are ISO strings (but we extract just the date portion for comparison)
  */
 export interface ResultMatcher {
   __resultMatcher: true;
@@ -35,14 +40,14 @@ export function isResultMatcher(value: unknown): value is ResultMatcher {
  * await expect('run: users -> { select: created, active }')
  *   .toMatchResult(tm, {
  *     created: resultIs.date('2024-01-01'),
- *     active: resultIs.bool(true)  // handles MySQL 0/1
+ *     active: resultIs.bool(true)
  *   });
  */
 export const resultIs = {
   /**
    * Match a date value.
    * Compares as date strings (YYYY-MM-DD format).
-   * Handles Date objects by extracting just the date portion.
+   * The actual value is an ISO string from which we extract just the date portion.
    */
   date(expected: string | null): ResultMatcher {
     return {
@@ -56,31 +61,29 @@ export const resultIs = {
           };
         }
 
-        let actualStr: string;
-        if (actual instanceof Date) {
-          // Extract date portion in UTC
-          actualStr = actual.toISOString().split('T')[0];
-        } else if (typeof actual === 'string') {
-          // If it's already a string, use it directly
-          actualStr = actual.split('T')[0];
-        } else if (actual === null) {
+        if (actual === null) {
           return {
             pass: false,
             expected: expected,
             actual: 'null',
           };
-        } else {
+        }
+
+        if (typeof actual !== 'string') {
           return {
             pass: false,
             expected: expected,
-            actual: `non-date: ${String(actual)}`,
+            actual: `non-string: ${String(actual)}`,
           };
         }
 
+        // Extract date portion from ISO string (e.g., "2024-01-01T00:00:00.000Z" -> "2024-01-01")
+        const actualDate = actual.split('T')[0];
+
         return {
-          pass: actualStr === expected,
+          pass: actualDate === expected,
           expected: expected,
-          actual: actualStr,
+          actual: actualDate,
         };
       },
     };
@@ -88,7 +91,7 @@ export const resultIs = {
 
   /**
    * Match a boolean value.
-   * Handles MySQL's 0/1 representation of booleans.
+   * With the normalized API, booleans are always true boolean values.
    */
   bool(expected: boolean | null): ResultMatcher {
     return {
@@ -102,19 +105,15 @@ export const resultIs = {
           };
         }
 
-        let actualBool: boolean;
-        if (typeof actual === 'boolean') {
-          actualBool = actual;
-        } else if (typeof actual === 'number') {
-          // MySQL returns 0/1 for booleans
-          actualBool = actual !== 0;
-        } else if (actual === null) {
+        if (actual === null) {
           return {
             pass: false,
             expected: String(expected),
             actual: 'null',
           };
-        } else {
+        }
+
+        if (typeof actual !== 'boolean') {
           return {
             pass: false,
             expected: String(expected),
@@ -123,9 +122,9 @@ export const resultIs = {
         }
 
         return {
-          pass: actualBool === expected,
+          pass: actual === expected,
           expected: String(expected),
-          actual: String(actualBool),
+          actual: String(actual),
         };
       },
     };
@@ -133,7 +132,8 @@ export const resultIs = {
 
   /**
    * Match a timestamp value.
-   * Compares as timestamp strings or Date objects.
+   * With the normalized API, timestamps are ISO strings.
+   * Compares using Date objects for precise comparison.
    */
   timestamp(expected: string | null): ResultMatcher {
     return {
@@ -155,23 +155,18 @@ export const resultIs = {
           };
         }
 
-        // Parse expected into a Date for comparison
-        const expectedDate = new Date(expected);
-        let actualDate: Date;
-
-        if (actual instanceof Date) {
-          actualDate = actual;
-        } else if (typeof actual === 'string') {
-          actualDate = new Date(actual);
-        } else {
+        if (typeof actual !== 'string') {
           return {
             pass: false,
             expected: expected,
-            actual: `non-timestamp: ${String(actual)}`,
+            actual: `non-string: ${String(actual)}`,
           };
         }
 
-        // Compare using getTime() for precise comparison
+        // Parse both into Date objects for precise comparison
+        const expectedDate = new Date(expected);
+        const actualDate = new Date(actual);
+
         const pass = expectedDate.getTime() === actualDate.getTime();
         return {
           pass,

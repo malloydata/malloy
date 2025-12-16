@@ -4,17 +4,20 @@
  */
 
 // Test data creation
-export {tsMk} from './tsMk';
-export type {TypedValue} from './tsMk';
-export {mkTestModel} from './mkTestModel';
-export type {TestModelSources} from './mkTestModel';
+export {TV} from './test-values';
+export type {TypedValue} from './test-values';
+export {mkTestModel} from './test-models';
+export type {TestModelSources} from './test-models';
+
+// Query execution
+export {runQuery} from './runQuery';
+export type {QueryResult} from './runQuery';
 
 // Result type matchers
 export {resultIs, isResultMatcher} from './resultIs';
 export type {ResultMatcher} from './resultIs';
 
-// Jest matchers - importing registers them with Jest
-import './resultMatchers';
+// Jest matcher types (matchers registered via separate import)
 export type {ExpectedRow, MatcherOptions, TestRunner} from './resultMatchers';
 
 /*

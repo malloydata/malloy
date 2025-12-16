@@ -5,12 +5,13 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import {mkTestModel, tsMk, resultIs} from '@malloydata/malloy/test';
+import {mkTestModel, TV, resultIs} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
-  describe('mkTestModel and tsMk', () => {
+  describe('mkTestModel and TV', () => {
     test('basic types with type inference', async () => {
       const tm = mkTestModel(runtime, {
         data: [
@@ -25,9 +26,9 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       );
     });
 
-    test('floats need tsMk.float for explicit cast', async () => {
+    test('floats need TV.float for explicit cast', async () => {
       const tm = mkTestModel(runtime, {
-        data: [{f: tsMk.float(1.5)}],
+        data: [{f: TV.float(1.5)}],
       });
       await expect('run: data -> { select: * }').toMatchResult(tm, {f: 1.5});
     });
@@ -36,10 +37,10 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       const tm = mkTestModel(runtime, {
         data: [
           {
-            t_int: tsMk.int(null),
-            t_string: tsMk.string(null),
-            t_bool: tsMk.bool(null),
-            t_float: tsMk.float(null),
+            t_int: TV.int(null),
+            t_string: TV.string(null),
+            t_bool: TV.bool(null),
+            t_float: TV.float(null),
           },
         ],
       });
@@ -51,12 +52,12 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
       });
     });
 
-    test('date literals need tsMk.date', async () => {
+    test('date literals need TV.date', async () => {
       const tm = mkTestModel(runtime, {
         data: [
           {
-            d1: tsMk.date('2024-01-15'),
-            d2: tsMk.date('2024-12-31'),
+            d1: TV.date('2024-01-15'),
+            d2: TV.date('2024-12-31'),
           },
         ],
       });
@@ -145,7 +146,7 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
   describe('resultIs matchers', () => {
     test('resultIs.date compares dates correctly', async () => {
       const tm = mkTestModel(runtime, {
-        data: [{d: tsMk.date('2024-01-15')}],
+        data: [{d: TV.date('2024-01-15')}],
       });
       await expect('run: data -> { select: * }').toMatchResult(tm, {
         d: resultIs.date('2024-01-15'),
@@ -171,8 +172,8 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
           {id: 2, name: 'bob'},
         ],
         orders: [
-          {user_id: 1, amount: tsMk.float(99.99)},
-          {user_id: 2, amount: tsMk.float(49.99)},
+          {user_id: 1, amount: TV.float(99.99)},
+          {user_id: 2, amount: TV.float(49.99)},
         ],
       });
 

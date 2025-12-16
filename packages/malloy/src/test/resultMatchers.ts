@@ -3,16 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  Result,
-  ModelMaterializer,
-  QueryMaterializer,
-  LogMessage,
-} from '..';
-import {MalloyError} from '..';
+import type {ModelMaterializer, QueryMaterializer, LogMessage} from '..';
+import {API, MalloyError} from '..';
 import type {Tag} from '@malloydata/malloy-tag';
 import {inspect} from 'util';
-import {isResultMatcher, type ResultMatcher} from './resultIs';
+import {isResultMatcher} from './resultIs';
+import {cellsToObjects} from './cellsToObject';
 
 /** Expected row shape for result matching */
 export type ExpectedRow = Record<string, unknown>;
@@ -81,7 +77,7 @@ declare global {
 
 interface QueryRunResult {
   fail: JestMatcherResult;
-  result: Result;
+  data: Record<string, unknown>[];
   query: QueryMaterializer;
   queryTestTag: Tag;
 }
@@ -141,9 +137,19 @@ async function runQuery(
     };
   }
 
-  let result: Result;
   try {
-    result = await query.run();
+    const result = await query.run();
+    // Use wrapResult to normalize data across all databases
+    // This handles BigQuery timestamp wrappers, MySQL boolean 0/1, etc.
+    const malloyResult = API.util.wrapResult(result);
+    if (!malloyResult.data) {
+      return {
+        fail: {pass: false, message: () => 'Query returned no data'},
+        query,
+      };
+    }
+    const data = cellsToObjects(malloyResult.data, malloyResult.schema);
+    return {data, queryTestTag, query};
   } catch (e) {
     const cleanSrc = src.replace(/^\n+/m, '').trimEnd();
     let failMsg = `QUERY RUN FAILED:\n${cleanSrc}`;
@@ -159,8 +165,6 @@ async function runQuery(
     }
     return {fail: {pass: false, message: () => failMsg}, query};
   }
-
-  return {result, queryTestTag, query};
 }
 
 function humanReadable(thing: unknown): string {
@@ -200,36 +204,13 @@ function partialMatch(
   }
 
   // Handle primitives
+  // Note: dates/timestamps are normalized to ISO strings by the new API
   if (
     typeof expected === 'string' ||
     typeof expected === 'number' ||
     typeof expected === 'boolean' ||
     typeof expected === 'bigint'
   ) {
-    // Special handling for Date comparisons with string dates
-    if (actual instanceof Date && typeof expected === 'string') {
-      // Check if expected looks like a date string
-      if (/^\d{4}-\d{2}-\d{2}$/.test(expected)) {
-        const actualStr = actual.toISOString().split('T')[0];
-        if (actualStr === expected) {
-          return {pass: true};
-        }
-        return {
-          pass: false,
-          message: `${path}: expected ${expected}, got ${actualStr}`,
-        };
-      }
-      // Try parsing as full timestamp
-      const expectedDate = new Date(expected);
-      if (actual.getTime() === expectedDate.getTime()) {
-        return {pass: true};
-      }
-      return {
-        pass: false,
-        message: `${path}: expected ${expected}, got ${actual.toISOString()}`,
-      };
-    }
-
     if (actual === expected) {
       return {pass: true};
     }
@@ -264,7 +245,11 @@ function partialMatch(
 
   // Handle objects (partial match - expected keys must match, extra keys allowed)
   if (typeof expected === 'object') {
-    if (typeof actual !== 'object' || actual === null || Array.isArray(actual)) {
+    if (
+      typeof actual !== 'object' ||
+      actual === null ||
+      Array.isArray(actual)
+    ) {
       return {
         pass: false,
         message: `${path}: expected object, got ${humanReadable(actual)}`,
@@ -319,34 +304,13 @@ function exactMatch(
   }
 
   // Handle primitives
+  // Note: dates/timestamps are normalized to ISO strings by the new API
   if (
     typeof expected === 'string' ||
     typeof expected === 'number' ||
     typeof expected === 'boolean' ||
     typeof expected === 'bigint'
   ) {
-    // Special handling for Date comparisons with string dates
-    if (actual instanceof Date && typeof expected === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(expected)) {
-        const actualStr = actual.toISOString().split('T')[0];
-        if (actualStr === expected) {
-          return {pass: true};
-        }
-        return {
-          pass: false,
-          message: `${path}: expected ${expected}, got ${actualStr}`,
-        };
-      }
-      const expectedDate = new Date(expected);
-      if (actual.getTime() === expectedDate.getTime()) {
-        return {pass: true};
-      }
-      return {
-        pass: false,
-        message: `${path}: expected ${expected}, got ${actual.toISOString()}`,
-      };
-    }
-
     if (actual === expected) {
       return {pass: true};
     }
@@ -381,7 +345,11 @@ function exactMatch(
 
   // Handle objects (exact match - keys must match exactly)
   if (typeof expected === 'object') {
-    if (typeof actual !== 'object' || actual === null || Array.isArray(actual)) {
+    if (
+      typeof actual !== 'object' ||
+      actual === null ||
+      Array.isArray(actual)
+    ) {
       return {
         pass: false,
         message: `${path}: expected object, got ${humanReadable(actual)}`,
@@ -461,26 +429,31 @@ expect.extend({
     }
 
     querySrc = querySrc.trimEnd().replace(/^\n*/, '');
-    const {fail, result, queryTestTag, query} = await runQuery(tm, querySrc);
+    const {fail, data, queryTestTag, query} = await runQuery(tm, querySrc);
     if (fail) return fail;
-    if (!result) {
+    if (!data) {
       return {
         pass: false,
-        message: () => 'runQuery returned no results and no errors',
+        message: () => 'runQuery returned no data and no errors',
       };
     }
 
-    const got = result.data.toObject();
+    const got = data;
     const fails: string[] = [];
     const debug = options.debug || queryTestTag?.has('debug');
 
     // Check row count
     if (expectedRows.length > 0 && got.length < expectedRows.length) {
-      fails.push(`Expected at least ${expectedRows.length} rows, got ${got.length}`);
+      fails.push(
+        `Expected at least ${expectedRows.length} rows, got ${got.length}`
+      );
     }
 
     // Check empty match {} means "at least one row"
-    if (expectedRows.length === 1 && Object.keys(expectedRows[0]).length === 0) {
+    if (
+      expectedRows.length === 1 &&
+      Object.keys(expectedRows[0]).length === 0
+    ) {
       if (got.length === 0) {
         fails.push('Expected at least one row, got 0');
       }
@@ -495,7 +468,7 @@ expect.extend({
     }
 
     if (debug && fails.length === 0) {
-      fails.push(`Test forced failure (# test.debug)`);
+      fails.push('Test forced failure (# test.debug)');
       fails.push(`Result: ${humanReadable(got)}`);
     }
 
@@ -523,16 +496,16 @@ expect.extend({
     options: MatcherOptions = {}
   ): Promise<JestMatcherResult> {
     querySrc = querySrc.trimEnd().replace(/^\n*/, '');
-    const {fail, result, queryTestTag, query} = await runQuery(tm, querySrc);
+    const {fail, data, queryTestTag, query} = await runQuery(tm, querySrc);
     if (fail) return fail;
-    if (!result) {
+    if (!data) {
       return {
         pass: false,
-        message: () => 'runQuery returned no results and no errors',
+        message: () => 'runQuery returned no data and no errors',
       };
     }
 
-    const got = result.data.toObject();
+    const got = data;
     const fails: string[] = [];
     const debug = options.debug || queryTestTag?.has('debug');
 
@@ -551,7 +524,7 @@ expect.extend({
     }
 
     if (debug && fails.length === 0) {
-      fails.push(`Test forced failure (# test.debug)`);
+      fails.push('Test forced failure (# test.debug)');
       fails.push(`Result: ${humanReadable(got)}`);
     }
 

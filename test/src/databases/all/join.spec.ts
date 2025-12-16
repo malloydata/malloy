@@ -25,7 +25,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -62,6 +62,7 @@ afterAll(async () => {
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const joinModel = runtime.loadModel(modelText(databaseName));
+  const testModel = runtime.loadModel('');
 
   it('model source refine join', async () => {
     await expect(`
@@ -73,7 +74,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aircraft_count
           aircraft_models.model_count
       }
-    `).malloyResultMatches(joinModel, {model_count: 1416});
+    `).toMatchResult(joinModel, {model_count: 1416});
   });
 
   it('model source refine in query join', async () => {
@@ -85,7 +86,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aircraft_count
           aircraft_models.model_count
       }
-    `).malloyResultMatches(joinModel, {model_count: 1416});
+    `).toMatchResult(joinModel, {model_count: 1416});
   });
 
   it('model: join fact table query', async () => {
@@ -103,7 +104,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: 2 desc
         limit: 1
       }
-    `).malloyResultMatches(joinModel, {num_models: 1147});
+    `).toMatchResult(joinModel, {num_models: 1147});
   });
 
   it('model: source based on query', async () => {
@@ -119,7 +120,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: 2 desc
           limit: 1
         }
-    `).malloyResultMatches(joinModel, {num_models: 1147});
+    `).toMatchResult(joinModel, {num_models: 1147});
   });
 
   it('model: funnel - merge two queries', async () => {
@@ -141,7 +142,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: 2 desc
           limit: 1
         }
-    `).malloyResultMatches(joinModel, {
+    `).toMatchResult(joinModel, {
       num_models: 1147,
       total_seats: 252771,
     });
@@ -159,7 +160,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: 2 desc
         limit: 1
       }
-    `).malloyResultMatches(joinModel, {
+    `).toMatchResult(joinModel, {
       num_models: 1147,
       total_seats: 252771,
     });
@@ -175,7 +176,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: 2 desc
         limit: 1
       }
-    `).malloyResultMatches(joinModel, {
+    `).toMatchResult(joinModel, {
       num_models: 1147,
       total_seats: 252771,
     });
@@ -191,7 +192,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }->{
         select: f_sum2 is f_sum+1
       }
-  `).malloyResultMatches(joinModel, {f_sum2: 60462});
+  `).toMatchResult(joinModel, {f_sum2: 60462});
   });
 
   test.when(runtime.supportsNesting && runtime.dialect.supportsLeftJoinUnnest)(
@@ -219,7 +220,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
           limit: 5
         }
-      `).malloyResultMatches(joinModel, [{}, {}, {}, {}, {}]);
+      `).toMatchResult(joinModel, {}, {}, {}, {}, {});
     }
   );
 
@@ -237,7 +238,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: flight_count is count()
         limit: 5
       }
-    `).malloyResultMatches(runtime, [{}, {}, {}, {}, {}]);
+    `).toMatchResult(testModel, {}, {}, {}, {}, {});
   });
 
   // I don't know what join issue 440 was, there was a change of repos and that
@@ -260,7 +261,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: testtwo is aircraft_models.seats
         limit: 1
       }
-    `).malloyResultMatches(runtime, [{}]);
+    `).toMatchResult(testModel, {});
   });
 
   it('join issue1092', async () => {
@@ -269,7 +270,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         extend: {join_one: sf is ${databaseName}.table('malloytest.state_facts') on sf.state = state}
         aggregate: x is sf.births.sum() { where:  state = 'CA' }
       }
-    `).malloyResultMatches(runtime, [{}]);
+    `).toMatchResult(testModel, {});
   });
 
   it('always join in query', async () => {
@@ -280,7 +281,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: c is count()
       }
-    `).malloyResultMatches(joinModel, {c: 51 * 51});
+    `).toMatchResult(joinModel, {c: 51 * 51});
   });
 
   it('not always join in extend', async () => {
@@ -293,7 +294,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: c is count()
       }
-    `).malloyResultMatches(joinModel, {c: 51});
+    `).toMatchResult(joinModel, {c: 51});
   });
 
   it('always inner join has side effects (in group_by)', async () => {
@@ -305,7 +306,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: c is count()
       }
-    `).malloyResultMatches(joinModel, {c: 0});
+    `).toMatchResult(joinModel, {c: 0});
   });
 
   it.when(runtime.dialect.nestedArrays)(
@@ -315,7 +316,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: ${databaseName}.sql("SELECT 1 as n")
         extend { dimension: a1 is [[1]], a2 is [[2]] }
         -> { select: pick_a1 is pick a1.each when true else a2.each }
-      `).matchesRows(runtime, {pick_a1: [1]});
+      `).toMatchResult(testModel, {pick_a1: [1]});
     }
   );
 });

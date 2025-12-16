@@ -18,20 +18,20 @@ export interface TypedValue {
 const nullExpr: Expr = {node: 'null'};
 
 /**
- * Type hint functions for test data.
+ * Test Values - type hint functions for test data.
  * Use these when type inference isn't sufficient (nulls, specific numeric types, temporals).
  *
  * @example
- * import { tsMk, mkQuerySpace } from '@malloydata/malloy/test';
+ * import { TV, mkTestModel } from '@malloydata/malloy/test';
  *
- * const model = mkQuerySpace(runtime, {
+ * const model = mkTestModel(runtime, {
  *   users: [
- *     {id: tsMk.int(1), name: 'alice', created: tsMk.timestamp('2024-01-01 00:00:00')},
- *     {id: tsMk.int(2), name: null, created: tsMk.timestamp(null)}  // typed nulls
+ *     {id: TV.int(1), name: 'alice', created: TV.timestamp('2024-01-01 00:00:00')},
+ *     {id: TV.int(2), name: null, created: TV.timestamp(null)}  // typed nulls
  *   ]
  * });
  */
-export const tsMk = {
+export const TV = {
   /**
    * Create an integer value.
    * Use for explicit integer type or typed nulls.
@@ -197,18 +197,19 @@ export const tsMk = {
       return {expr: castExpr, malloyType, needsCast: true};
     }
 
-    const match = value.match(/^(.+?)\s*\[(.+?)\]$/);
+    // Use character classes to avoid polynomial regex backtracking (CodeQL warning)
+    const match = value.match(/^([^[]+)\[([^\]]+)\]$/);
     if (!match) {
       throw new Error(
         `Invalid timestamptz format: ${value}. Expected format: 'YYYY-MM-DD HH:MM:SS [Timezone]'`
       );
     }
-    const [, ts, timezone] = match;
+    const [, tsPart, timezone] = match;
 
     return {
       expr: {
         node: 'timestamptzLiteral',
-        literal: ts.trim(),
+        literal: tsPart.trim(),
         typeDef: {type: 'timestamptz'},
         timezone,
       },

@@ -4,9 +4,10 @@
  */
 
 import {runtimeFor} from '../runtimes';
-import '../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
 
 const runtime = runtimeFor('duckdb');
+const testModel = runtime.loadModel('');
 
 describe('misc tests for regressions that have no better home', () => {
   test('rename a field in a join', async () => {
@@ -16,7 +17,7 @@ describe('misc tests for regressions that have no better home', () => {
       run: duckdb.table('malloytest.flights') extend {
         join_one: carriers on carrier = carriers.code
       } -> { group_by: carriers.airline; limit: 1 }
-    `).malloyResultMatches(runtime, [{}]);
+    `).toMatchResult(testModel, {});
   });
 
   test('result data structure contains time zones for nested queries', async () => {
