@@ -19,6 +19,9 @@ export interface MatcherOptions {
   debug?: boolean;
 }
 
+/** Match mode: partial allows extra fields, exact requires exact fields */
+type MatchMode = 'partial' | 'exact';
+
 type JestMatcherResult = {
   pass: boolean;
   message: () => string;
@@ -286,15 +289,17 @@ function cellToValue(cell: Malloy.Cell): unknown {
 }
 
 /**
- * Compare a cell against an expected value with partial matching.
+ * Compare a cell against an expected value.
  * Uses schema type info for intelligent date/timestamp comparison.
+ * @param mode - 'partial' allows extra fields in records, 'exact' requires exact match
  */
-function partialMatchCell(
+function matchCell(
   cell: Malloy.Cell,
   fieldInfo: Malloy.FieldInfo,
   expected: unknown,
   path: string,
-  dialect: Dialect
+  dialect: Dialect,
+  mode: MatchMode
 ): MatchResult {
   // Handle null
   if (cell.kind === 'null_cell') {
@@ -413,7 +418,15 @@ function partialMatchCell(
 
   // Handle number cells
   if (cell.kind === 'number_cell') {
-    const actual = cell.number_value;
+    let actual: unknown = cell.number_value;
+    // Handle simulated booleans (MySQL returns 1/0 for booleans)
+    if (
+      typeof expected === 'boolean' &&
+      dialect.booleanType === 'simulated' &&
+      typeof actual === 'number'
+    ) {
+      actual = actual !== 0;
+    }
     if (actual === expected) {
       return {pass: true};
     }
@@ -423,14 +436,13 @@ function partialMatchCell(
   // Handle JSON cells
   if (cell.kind === 'json_cell') {
     const actual = JSON.parse(cell.json_value);
-    // For JSON, do a deep partial match on the parsed value
-    return partialMatchValue(actual, expected, path, dialect);
+    return matchValue(actual, expected, path, dialect, mode);
   }
 
   // Handle SQL native cells
   if (cell.kind === 'sql_native_cell') {
     const actual = JSON.parse(cell.sql_native_value);
-    return partialMatchValue(actual, expected, path, dialect);
+    return matchValue(actual, expected, path, dialect, mode);
   }
 
   // Handle array cells
@@ -475,12 +487,13 @@ function partialMatchCell(
     }
 
     for (let i = 0; i < expected.length; i++) {
-      const result = partialMatchCell(
+      const result = matchCell(
         actualArray[i],
         elementFieldInfo,
         expected[i],
         `${path}[${i}]`,
-        dialect
+        dialect,
+        mode
       );
       if (!result.pass) {
         return result;
@@ -531,10 +544,31 @@ function partialMatchCell(
       fieldIndexMap.set(fields[i].name, i);
     }
 
-    // For partial match, only check expected keys
-    for (const [key, expectedValue] of Object.entries(
-      expected as Record<string, unknown>
-    )) {
+    const expectedObj = expected as Record<string, unknown>;
+
+    // For exact mode, check that keys match exactly
+    if (mode === 'exact') {
+      const expectedKeys = Object.keys(expectedObj).sort();
+      const actualKeys = fields.map(f => f.name).sort();
+
+      for (const key of actualKeys) {
+        if (!expectedKeys.includes(key)) {
+          return matchFailStr(
+            path,
+            `no field '${key}'`,
+            `unexpected field '${key}'`
+          );
+        }
+      }
+      for (const key of expectedKeys) {
+        if (!actualKeys.includes(key)) {
+          return matchFailStr(path, `field '${key}'`, `missing field '${key}'`);
+        }
+      }
+    }
+
+    // Check expected keys
+    for (const [key, expectedValue] of Object.entries(expectedObj)) {
       const fieldIndex = fieldIndexMap.get(key);
       if (fieldIndex === undefined) {
         return matchFailStr(
@@ -545,12 +579,13 @@ function partialMatchCell(
       }
       const childCell = cell.record_value[fieldIndex];
       const childFieldInfo = getChildFieldInfo(fieldIndex);
-      const result = partialMatchCell(
+      const result = matchCell(
         childCell,
         childFieldInfo,
         expectedValue,
         `${path}.${key}`,
-        dialect
+        dialect,
+        mode
       );
       if (!result.pass) {
         return result;
@@ -568,14 +603,16 @@ function partialMatchCell(
 }
 
 /**
- * Compare two plain values with partial matching.
+ * Compare two plain values.
  * Used for JSON/SQL native values that have already been parsed.
+ * @param mode - 'partial' allows extra fields in objects, 'exact' requires exact match
  */
-function partialMatchValue(
+function matchValue(
   actual: unknown,
   expected: unknown,
   path: string,
-  dialect: Dialect
+  dialect: Dialect,
+  mode: MatchMode
 ): MatchResult {
   // Handle null
   if (expected === null) {
@@ -641,11 +678,12 @@ function partialMatchValue(
       );
     }
     for (let i = 0; i < expected.length; i++) {
-      const result = partialMatchValue(
+      const result = matchValue(
         actual[i],
         expected[i],
         `${path}[${i}]`,
-        dialect
+        dialect,
+        mode
       );
       if (!result.pass) {
         return result;
@@ -654,403 +692,7 @@ function partialMatchValue(
     return {pass: true};
   }
 
-  // Handle objects (partial match)
-  if (typeof expected === 'object') {
-    if (
-      typeof actual !== 'object' ||
-      actual === null ||
-      Array.isArray(actual)
-    ) {
-      return matchFailStr(path, 'object', humanReadable(actual));
-    }
-    for (const [key, value] of Object.entries(expected)) {
-      const actualValue = (actual as Record<string, unknown>)[key];
-      const result = partialMatchValue(
-        actualValue,
-        value,
-        `${path}.${key}`,
-        dialect
-      );
-      if (!result.pass) {
-        return result;
-      }
-    }
-    return {pass: true};
-  }
-
-  return matchFailStr(
-    path,
-    'supported type',
-    `unsupported: ${typeof expected}`
-  );
-}
-
-/**
- * Compare a cell against an expected value with exact matching.
- * Uses schema type info for intelligent date/timestamp comparison.
- */
-function exactMatchCell(
-  cell: Malloy.Cell,
-  fieldInfo: Malloy.FieldInfo,
-  expected: unknown,
-  path: string,
-  dialect: Dialect
-): MatchResult {
-  // Handle null
-  if (cell.kind === 'null_cell') {
-    if (expected === null) {
-      return {pass: true};
-    }
-    return matchFail(path, expected, null);
-  }
-
-  if (expected === null) {
-    return matchFail(path, null, cellToValue(cell));
-  }
-
-  const typeKind = getTypeKind(fieldInfo);
-
-  // Handle date fields - same as partial match
-  if (cell.kind === 'date_cell' && typeKind === 'date_type') {
-    const actualDateStr = cell.date_value;
-    const actualDate = actualDateStr.split('T')[0];
-
-    if (typeof expected === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(expected)) {
-        if (actualDate === expected) {
-          return {pass: true};
-        }
-        return matchFailStr(path, expected, actualDate);
-      }
-      if (actualDateStr === expected) {
-        return {pass: true};
-      }
-      return matchFailStr(path, expected, actualDateStr);
-    }
-
-    if (expected instanceof Date) {
-      const actualDateObj = new Date(actualDateStr);
-      if (expected.getTime() === actualDateObj.getTime()) {
-        return {pass: true};
-      }
-      return matchFailStr(
-        path,
-        expected.toISOString(),
-        actualDateObj.toISOString()
-      );
-    }
-
-    return matchFail(path, expected, actualDate);
-  }
-
-  // Handle timestamp fields - same as partial match
-  if (
-    cell.kind === 'timestamp_cell' &&
-    (typeKind === 'timestamp_type' || typeKind === 'timestamptz_type')
-  ) {
-    const actualTsStr = cell.timestamp_value;
-
-    if (typeof expected === 'string') {
-      const actualDate = new Date(actualTsStr);
-      const expectedDate = new Date(expected);
-      if (!isNaN(expectedDate.getTime())) {
-        if (actualDate.getTime() === expectedDate.getTime()) {
-          return {pass: true};
-        }
-        return matchFailStr(
-          path,
-          expectedDate.toISOString(),
-          actualDate.toISOString()
-        );
-      }
-      if (actualTsStr === expected) {
-        return {pass: true};
-      }
-      return matchFailStr(path, expected, actualTsStr);
-    }
-
-    if (expected instanceof Date) {
-      const actualDate = new Date(actualTsStr);
-      if (expected.getTime() === actualDate.getTime()) {
-        return {pass: true};
-      }
-      return matchFailStr(
-        path,
-        expected.toISOString(),
-        actualDate.toISOString()
-      );
-    }
-
-    return matchFail(path, expected, actualTsStr);
-  }
-
-  // Handle boolean cells
-  if (cell.kind === 'boolean_cell') {
-    const actual = cell.boolean_value;
-    if (typeof expected === 'boolean') {
-      if (actual === expected) {
-        return {pass: true};
-      }
-      return matchFail(path, expected, actual);
-    }
-    return matchFail(path, expected, actual);
-  }
-
-  // Handle string cells
-  if (cell.kind === 'string_cell') {
-    const actual = cell.string_value;
-    if (actual === expected) {
-      return {pass: true};
-    }
-    return matchFail(path, expected, actual);
-  }
-
-  // Handle number cells
-  if (cell.kind === 'number_cell') {
-    const actual = cell.number_value;
-    if (actual === expected) {
-      return {pass: true};
-    }
-    return matchFail(path, expected, actual);
-  }
-
-  // Handle JSON cells
-  if (cell.kind === 'json_cell') {
-    const actual = JSON.parse(cell.json_value);
-    return exactMatchValue(actual, expected, path, dialect);
-  }
-
-  // Handle SQL native cells
-  if (cell.kind === 'sql_native_cell') {
-    const actual = JSON.parse(cell.sql_native_value);
-    return exactMatchValue(actual, expected, path, dialect);
-  }
-
-  // Handle array cells
-  if (cell.kind === 'array_cell') {
-    if (!Array.isArray(expected)) {
-      return matchFailStr(
-        path,
-        'array',
-        `expected non-array: ${humanReadable(expected)}`
-      );
-    }
-
-    const actualArray = cell.array_value;
-    if (actualArray.length !== expected.length) {
-      return matchFailStr(
-        path,
-        `${expected.length} elements`,
-        `${actualArray.length} elements`
-      );
-    }
-
-    let elementFieldInfo: Malloy.FieldInfo;
-    if (fieldInfo.kind === 'join') {
-      elementFieldInfo = fieldInfo;
-    } else if (fieldInfo.kind === 'view') {
-      return matchFailStr(path, 'array type', 'view fieldInfo');
-    } else if (fieldInfo.type.kind === 'array_type') {
-      elementFieldInfo = {
-        kind: 'dimension',
-        name: 'element',
-        type: fieldInfo.type.element_type,
-      };
-    } else {
-      return matchFailStr(
-        path,
-        'array type',
-        `unexpected type: ${fieldInfo.type.kind}`
-      );
-    }
-
-    for (let i = 0; i < expected.length; i++) {
-      const result = exactMatchCell(
-        actualArray[i],
-        elementFieldInfo,
-        expected[i],
-        `${path}[${i}]`,
-        dialect
-      );
-      if (!result.pass) {
-        return result;
-      }
-    }
-    return {pass: true};
-  }
-
-  // Handle record cells
-  if (cell.kind === 'record_cell') {
-    if (typeof expected !== 'object' || expected === null) {
-      return matchFailStr(
-        path,
-        'object',
-        `expected non-object: ${humanReadable(expected)}`
-      );
-    }
-
-    let fields: readonly {name: string}[];
-    let getChildFieldInfo: (i: number) => Malloy.FieldInfo;
-
-    if (fieldInfo.kind === 'join') {
-      fields = fieldInfo.schema.fields;
-      getChildFieldInfo = i => fieldInfo.schema.fields[i];
-    } else if (
-      fieldInfo.kind === 'dimension' &&
-      fieldInfo.type.kind === 'record_type'
-    ) {
-      const recordType = fieldInfo.type;
-      fields = recordType.fields;
-      getChildFieldInfo = i => ({
-        kind: 'dimension' as const,
-        name: recordType.fields[i].name,
-        type: recordType.fields[i].type,
-      });
-    } else {
-      return matchFailStr(
-        path,
-        'record type',
-        `unexpected fieldInfo: ${fieldInfo.kind}`
-      );
-    }
-
-    const fieldIndexMap = new Map<string, number>();
-    for (let i = 0; i < fields.length; i++) {
-      fieldIndexMap.set(fields[i].name, i);
-    }
-
-    const expectedObj = expected as Record<string, unknown>;
-    const expectedKeys = Object.keys(expectedObj).sort();
-    const actualKeys = fields.map(f => f.name).sort();
-
-    // For exact match, check that keys match exactly
-    for (const key of actualKeys) {
-      if (!expectedKeys.includes(key)) {
-        return matchFailStr(
-          path,
-          `no field '${key}'`,
-          `unexpected field '${key}'`
-        );
-      }
-    }
-    for (const key of expectedKeys) {
-      if (!actualKeys.includes(key)) {
-        return matchFailStr(path, `field '${key}'`, `missing field '${key}'`);
-      }
-    }
-
-    for (const [key, expectedValue] of Object.entries(expectedObj)) {
-      const fieldIndex = fieldIndexMap.get(key)!;
-      const childCell = cell.record_value[fieldIndex];
-      const childFieldInfo = getChildFieldInfo(fieldIndex);
-      const result = exactMatchCell(
-        childCell,
-        childFieldInfo,
-        expectedValue,
-        `${path}.${key}`,
-        dialect
-      );
-      if (!result.pass) {
-        return result;
-      }
-    }
-    return {pass: true};
-  }
-
-  return matchFailStr(
-    path,
-    humanReadable(expected),
-    `unknown cell kind: ${cell.kind}`
-  );
-}
-
-/**
- * Compare two plain values with exact matching.
- */
-function exactMatchValue(
-  actual: unknown,
-  expected: unknown,
-  path: string,
-  dialect: Dialect
-): MatchResult {
-  // Handle null
-  if (expected === null) {
-    if (actual === null) {
-      return {pass: true};
-    }
-    return matchFail(path, null, actual);
-  }
-
-  // Handle primitives
-  if (
-    typeof expected === 'string' ||
-    typeof expected === 'number' ||
-    typeof expected === 'boolean' ||
-    typeof expected === 'bigint'
-  ) {
-    if (actual === expected) {
-      return {pass: true};
-    }
-    return matchFail(path, expected, actual);
-  }
-
-  // Handle Date objects
-  if (expected instanceof Date) {
-    if (actual === null) {
-      return matchFailStr(path, expected.toISOString(), 'null');
-    }
-    let actualDate: Date;
-    if (actual instanceof Date) {
-      actualDate = actual;
-    } else if (typeof actual === 'string') {
-      actualDate = new Date(actual);
-      if (isNaN(actualDate.getTime())) {
-        return matchFailStr(
-          path,
-          expected.toISOString(),
-          `'${actual}' (not a valid date)`
-        );
-      }
-    } else {
-      return matchFailStr(path, expected.toISOString(), humanReadable(actual));
-    }
-    if (expected.getTime() === actualDate.getTime()) {
-      return {pass: true};
-    }
-    return matchFailStr(path, expected.toISOString(), actualDate.toISOString());
-  }
-
-  // Handle arrays
-  if (Array.isArray(expected)) {
-    if (!Array.isArray(actual)) {
-      return matchFailStr(
-        path,
-        `array with ${expected.length} elements`,
-        `${typeof actual}`
-      );
-    }
-    if (actual.length !== expected.length) {
-      return matchFailStr(
-        path,
-        `${expected.length} elements`,
-        `${actual.length} elements`
-      );
-    }
-    for (let i = 0; i < expected.length; i++) {
-      const result = exactMatchValue(
-        actual[i],
-        expected[i],
-        `${path}[${i}]`,
-        dialect
-      );
-      if (!result.pass) {
-        return result;
-      }
-    }
-    return {pass: true};
-  }
-
-  // Handle objects (exact match)
+  // Handle objects
   if (typeof expected === 'object') {
     if (
       typeof actual !== 'object' ||
@@ -1063,28 +705,32 @@ function exactMatchValue(
     const expectedKeys = Object.keys(expected).sort();
     const actualKeys = Object.keys(actual as Record<string, unknown>).sort();
 
-    for (const key of actualKeys) {
-      if (!expectedKeys.includes(key)) {
-        return matchFailStr(
-          path,
-          `no field '${key}'`,
-          `unexpected field '${key}'`
-        );
+    // For exact mode, check that keys match exactly
+    if (mode === 'exact') {
+      for (const key of actualKeys) {
+        if (!expectedKeys.includes(key)) {
+          return matchFailStr(
+            path,
+            `no field '${key}'`,
+            `unexpected field '${key}'`
+          );
+        }
       }
-    }
-    for (const key of expectedKeys) {
-      if (!actualKeys.includes(key)) {
-        return matchFailStr(path, `field '${key}'`, `missing field '${key}'`);
+      for (const key of expectedKeys) {
+        if (!actualKeys.includes(key)) {
+          return matchFailStr(path, `field '${key}'`, `missing field '${key}'`);
+        }
       }
     }
 
     for (const [key, value] of Object.entries(expected)) {
       const actualValue = (actual as Record<string, unknown>)[key];
-      const result = exactMatchValue(
+      const result = matchValue(
         actualValue,
         value,
         `${path}.${key}`,
-        dialect
+        dialect,
+        mode
       );
       if (!result.pass) {
         return result;
@@ -1113,16 +759,21 @@ function isOptions(arg: unknown): arg is MatcherOptions {
 }
 
 /**
- * Shared implementation for partial matching (toMatchResult and toMatchRows).
- * @param strictRowCount - If true, requires exact row count match (toMatchRows behavior)
+ * Shared implementation for all result matching.
+ * @param mode - 'partial' for toMatchResult/toMatchRows, 'exact' for toEqualResult
+ * @param strictRowCount - If true, requires exact row count match
  */
-async function partialMatchImpl(
+async function matchImpl(
   querySrc: string,
   tm: TestModel,
   expectedRows: ExpectedRow[],
   options: MatcherOptions,
+  mode: MatchMode,
   strictRowCount: boolean,
-  jestUtils: {EXPECTED_COLOR: (s: string) => string; RECEIVED_COLOR: (s: string) => string}
+  jestUtils: {
+    EXPECTED_COLOR: (s: string) => string;
+    RECEIVED_COLOR: (s: string) => string;
+  }
 ): Promise<JestMatcherResult> {
   querySrc = querySrc.trimEnd().replace(/^\n*/, '');
   const {fail, data, schema, dataObjects, queryTestTag, query} =
@@ -1173,6 +824,7 @@ async function partialMatchImpl(
 
   // Check empty match {} means "at least one row"
   if (
+    mode === 'partial' &&
     expectedRows.length === 1 &&
     Object.keys(expectedRows[0]).length === 0
   ) {
@@ -1183,12 +835,13 @@ async function partialMatchImpl(
     // Compare each expected row using schema-aware cell matching
     const rowsToCheck = Math.min(rows.length, expectedRows.length);
     for (let i = 0; i < rowsToCheck; i++) {
-      const matchResult = partialMatchCell(
+      const matchResult = matchCell(
         rows[i],
         rootFieldInfo,
         expectedRows[i],
         `Row ${i}`,
-        tm.dialect
+        tm.dialect,
+        mode
       );
       if (!matchResult.pass) {
         fails.push(`${matchResult.path}:`);
@@ -1220,7 +873,10 @@ async function partialMatchImpl(
 
   return {
     pass: true,
-    message: () => 'All rows matched expected results',
+    message: () =>
+      mode === 'exact'
+        ? 'All rows matched expected results exactly'
+        : 'All rows matched expected results',
   };
 }
 
@@ -1244,7 +900,15 @@ expect.extend({
       expectedRows = rowsOrOptions as ExpectedRow[];
     }
 
-    return partialMatchImpl(querySrc, tm, expectedRows, options, false, this.utils);
+    return matchImpl(
+      querySrc,
+      tm,
+      expectedRows,
+      options,
+      'partial',
+      false,
+      this.utils
+    );
   },
 
   async toMatchRows(
@@ -1253,7 +917,15 @@ expect.extend({
     expectedRows: ExpectedRow[],
     options: MatcherOptions = {}
   ): Promise<JestMatcherResult> {
-    return partialMatchImpl(querySrc, tm, expectedRows, options, true, this.utils);
+    return matchImpl(
+      querySrc,
+      tm,
+      expectedRows,
+      options,
+      'partial',
+      true,
+      this.utils
+    );
   },
 
   async toEqualResult(
@@ -1262,82 +934,15 @@ expect.extend({
     expectedRows: ExpectedRow[],
     options: MatcherOptions = {}
   ): Promise<JestMatcherResult> {
-    querySrc = querySrc.trimEnd().replace(/^\n*/, '');
-    const {fail, data, schema, dataObjects, queryTestTag, query} =
-      await runQueryInternal(tm, querySrc);
-    if (fail) return fail;
-    if (!data || !schema) {
-      return {
-        pass: false,
-        message: () => 'runQuery returned no data and no errors',
-      };
-    }
-
-    const fails: string[] = [];
-    const debug = options.debug || queryTestTag?.has('debug');
-
-    if (data.kind !== 'array_cell') {
-      return {
-        pass: false,
-        message: () => `Expected array_cell at root, got ${data.kind}`,
-      };
-    }
-
-    const rows = data.array_value;
-
-    // Exact row count match
-    if (rows.length !== expectedRows.length) {
-      fails.push(`Expected ${expectedRows.length} rows, got ${rows.length}`);
-    }
-
-    const rootFieldInfo: Malloy.FieldInfoWithJoin = {
-      kind: 'join',
-      name: 'root',
-      relationship: 'one',
-      schema,
-    };
-
-    // Compare each row exactly using schema-aware cell matching
-    const rowsToCheck = Math.min(rows.length, expectedRows.length);
-    for (let i = 0; i < rowsToCheck; i++) {
-      const matchResult = exactMatchCell(
-        rows[i],
-        rootFieldInfo,
-        expectedRows[i],
-        `Row ${i}`,
-        tm.dialect
-      );
-      if (!matchResult.pass) {
-        fails.push(`${matchResult.path}:`);
-        fails.push(
-          this.utils.EXPECTED_COLOR(`  Expected: ${matchResult.expected}`)
-        );
-        fails.push(
-          this.utils.RECEIVED_COLOR(`  Received: ${matchResult.actual}`)
-        );
-      }
-    }
-
-    if (debug && fails.length === 0) {
-      fails.push('Test forced failure (# test.debug)');
-      fails.push(`Result: ${humanReadable(dataObjects)}`);
-    }
-
-    if (fails.length > 0) {
-      if (debug) {
-        fails.unshift(`Result Data: ${humanReadable(dataObjects)}`);
-      }
-      const fromSQL = query
-        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
-        : 'SQL Missing';
-      const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n\n${fails.join('\n')}`;
-      return {pass: false, message: () => failMsg};
-    }
-
-    return {
-      pass: true,
-      message: () => 'All rows matched expected results exactly',
-    };
+    return matchImpl(
+      querySrc,
+      tm,
+      expectedRows,
+      options,
+      'exact',
+      true,
+      this.utils
+    );
   },
 
   /**

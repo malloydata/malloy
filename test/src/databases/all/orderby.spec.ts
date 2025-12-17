@@ -344,12 +344,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test.when(testTimes)(
       'null last in reduce timestamps with default descending order',
       async () => {
-        await expect(`run: ${times} -> { group_by: t }`).toMatchRows(orderByModel, [
-          {t: d2025},
-          {t: d2022},
-          {t: d2020},
-          {t: null},
-        ]);
+        await expect(`run: ${times} -> { group_by: t }`).toMatchRows(
+          orderByModel,
+          [{t: d2025}, {t: d2022}, {t: d2020}, {t: null}]
+        );
       }
     );
   });
