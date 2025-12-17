@@ -167,6 +167,19 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
     });
   });
 
+  describe('test.debug tag', () => {
+    test('# test.debug forces test to fail and shows data', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{n: 1}],
+      });
+      const query = 'run: data -> { select: * }';
+      // Without debug tag, test passes
+      await expect(query).toMatchResult(tm, {n: 1});
+      // With debug tag, test fails even though data matches
+      await expect('# test.debug\n' + query).not.toMatchResult(tm, {n: 1});
+    });
+  });
+
   describe.skip('error output format', () => {
     // These tests are skipped - they exist to show the error output format
     // Remove .skip to see the output
