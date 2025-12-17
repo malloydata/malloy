@@ -8,7 +8,8 @@
 import {Runtime} from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -17,13 +18,14 @@ afterAll(async () => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const testModel = wrapTestModel(runtime, '');
   it('basic composite usage', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
       source: x is compose(state_facts, state_facts extend { dimension: foo is 1 })
       run: x -> { group_by: foo }
-    `).malloyResultMatches(runtime, {foo: 1});
+    `).toMatchResult(testModel, {foo: 1});
   });
   it('composite usage multistage', async () => {
     await expect(`
@@ -31,7 +33,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
       source: x is compose(state_facts, state_facts extend { dimension: foo is 1 })
       run: x -> { group_by: foo } -> { select: foo }
-    `).malloyResultMatches(runtime, {foo: 1});
+    `).toMatchResult(testModel, {foo: 1});
   });
   it('composite view multistage', async () => {
     await expect(`
@@ -41,7 +43,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         view: multistage is { group_by: foo } -> { select: foo }
       }
       run: x -> multistage
-    `).malloyResultMatches(runtime, {foo: 1});
+    `).toMatchResult(testModel, {foo: 1});
   });
   it('SQL function contributes to field usage', async () => {
     await expect(`
@@ -51,7 +53,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         dimension: foo_copy is sql_number('\${foo}')
       }
       run: x -> { group_by: foo_copy }
-    `).malloyResultMatches(runtime, {foo_copy: 1});
+    `).toMatchResult(testModel, {foo_copy: 1});
   });
   describe('composited joins', () => {
     it('basic composited join', async () => {
@@ -70,7 +72,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
         source: c is compose(s1, s2)
         run: c -> { group_by: j.f2 }
-      `).malloyResultMatches(runtime, {f2: 2});
+      `).toMatchResult(testModel, {f2: 2});
     });
     it('selects correct join', async () => {
       await expect(`
@@ -90,7 +92,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
         source: c is compose(s1, s2)
         run: c -> { group_by: j.jf, f2 }
-      `).malloyResultMatches(runtime, {f2: 2, jf: 2});
+      `).toMatchResult(testModel, {f2: 2, jf: 2});
     });
     it('join on depends on selected join', async () => {
       await expect(`
@@ -114,7 +116,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
         source: c is compose(s1, s2)
         run: c -> { group_by: j.jf2, f2, j.state }
-      `).malloyResultMatches(runtime, {jf2: 2, f2: 2, state: 'IL'});
+      `).toMatchResult(testModel, {jf2: 2, f2: 2, state: 'IL'});
     });
   });
   it('composite source used in join', async () => {
@@ -126,7 +128,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         join_one: x on x.state = state
       }
       run: y -> { group_by: x.foo }
-    `).malloyResultMatches(runtime, {foo: 1});
+    `).toMatchResult(testModel, {foo: 1});
   });
   it('composite field from joined source used in join on', async () => {
     await expect(`
@@ -140,7 +142,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         join_one: ca is x on ca.state_copy = 'CA'
       }
       run: y -> { group_by: ca.state; where: state = 'IL' }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('composite field from joining source used in join on', async () => {
     await expect(`
@@ -159,7 +161,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         join_one: state_facts on state_one = state_facts.state
       }
       run: x -> { group_by: state_facts.state }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('query against composite resolves nested composite source even when no composite fields', async () => {
     await expect(`
@@ -175,7 +177,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         dimension: a is 1
       }
       run: x -> { group_by: a }
-    `).malloyResultMatches(runtime, {a: 1});
+    `).toMatchResult(testModel, {a: 1});
   });
   // TODO test always join composite field usage
   it('composite field used in view', async () => {
@@ -186,7 +188,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         view: v is { group_by: foo }
       }
       run: x -> v
-    `).malloyResultMatches(runtime, {foo: 1});
+    `).toMatchResult(testModel, {foo: 1});
   });
   it('composite field used in view refined with scalar', async () => {
     await expect(`
@@ -200,7 +202,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
       run: x -> v + foo
-    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+    `).toMatchResult(testModel, {foo: 1, state: 'CA'});
   });
   it('composite field used in view refined with literal view', async () => {
     await expect(`
@@ -214,7 +216,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
       run: x -> v + { group_by: foo }
-    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+    `).toMatchResult(testModel, {foo: 1, state: 'CA'});
   });
   it('composite field used in refined query', async () => {
     await expect(`
@@ -229,7 +231,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
       query: v is x -> v
       run: v + { group_by: foo }
-    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+    `).toMatchResult(testModel, {foo: 1, state: 'CA'});
   });
   it('composite of a composite', async () => {
     await expect(`
@@ -246,7 +248,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       // in order to get bar, we need to use the second composite input, which is itself a composite source
       // then in order to get foo, we need to resolve the inner composite source to its second input
       run: y -> { group_by: foo, bar }
-    `).malloyResultMatches(runtime, {foo: 1, bar: 2});
+    `).toMatchResult(testModel, {foo: 1, bar: 2});
   });
   it('definitions from composite extension carry through', async () => {
     await expect(`
@@ -259,7 +261,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         dimension: bar is 2
       }
       run: x -> { group_by: foo, bar }
-    `).malloyResultMatches(runtime, {foo: 1, bar: 2});
+    `).toMatchResult(testModel, {foo: 1, bar: 2});
   });
   it('filters from composite extension carry through', async () => {
     await expect(`
@@ -272,7 +274,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         where: state = 'CA'
       }
       run: x -> { group_by: foo, state }
-    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+    `).toMatchResult(testModel, {foo: 1, state: 'CA'});
   });
   it(`composite of a composite where greedy is bad- ${databaseName}`, async () => {
     await expect(`
@@ -289,7 +291,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       // to resolve it using the first composite, because you can't have both bar and baz
       // so the second input source is used instead
       run: x -> { group_by: foo, bar, baz }
-    `).malloyResultMatches(runtime, {foo: 1.3, bar: 2.3, baz: 3.3});
+    `).toMatchResult(testModel, {foo: 1.3, bar: 2.3, baz: 3.3});
   });
   it('composite with parameters', async () => {
     await expect(`
@@ -300,7 +302,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         state_facts extend { dimension: b is param + 1 }
       )
       run: x(param is 2) -> { group_by: b }
-    `).malloyResultMatches(runtime, {b: 3});
+    `).toMatchResult(testModel, {b: 3});
   });
   it('issue where measure defined on composite source has the wrong structPath', async () => {
     await expect(`
@@ -312,7 +314,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: total_airport_count
         where: state = 'CA'
       }
-    `).malloyResultMatches(runtime, {total_airport_count: 984});
+    `).toMatchResult(testModel, {total_airport_count: 984});
   });
   it('issue where query against composite source with no composite field usage does not resolve the source', async () => {
     await expect(`
@@ -323,7 +325,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         group_by: x is 1
       }
-    `).malloyResultMatches(runtime, {x: 1});
+    `).toMatchResult(testModel, {x: 1});
   });
   it('reference composite field in nest', async () => {
     await expect(`
@@ -334,7 +336,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: x
         }
       }
-    `).malloyResultMatches(runtime, {'foo.x': 1});
+    `).toMatchResult(testModel, {foo: [{x: 1}]});
   });
   it('composite with select *', async () => {
     await expect(`
@@ -344,7 +346,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         accept: foo
       }
       run: x -> { select: * }
-    `).malloyResultMatches(runtime, {foo: 1});
+    `).toMatchResult(testModel, {foo: 1});
   });
   it('composite with each', async () => {
     await expect(`
@@ -357,7 +359,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         dimension: arr is [1, 2, 3]
       }
       run: x -> { aggregate: foo; group_by: bar, arr.each }
-    `).malloyResultMatches(runtime, {foo: 0});
+    `).toMatchResult(testModel, {foo: 0});
   });
   it('complex nesting composite without join', async () => {
     await expect(`
@@ -378,7 +380,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       )
       run: x -> { aggregate: foo; group_by: bar }
-    `).malloyResultMatches(runtime, {foo: 0, bar: 1});
+    `).toMatchResult(testModel, {foo: 0, bar: 1});
   });
   it('complex nesting composite with join -- literal view', async () => {
     await expect(`
@@ -398,7 +400,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         join_one: state_facts on the_state = state_facts.state
       }
       run: x -> { group_by: state_facts.state }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('complex nesting composite with join -- double extend to define view', async () => {
     await expect(`
@@ -420,7 +422,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         view: y is { group_by: state_facts.state }
       }
       run: x -> y
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('complex nesting composite with join -- defined view', async () => {
     await expect(`
@@ -442,7 +444,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         view: y is { group_by: state_facts.state }
       }
       run: x -> y
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   describe('index queries against composite sources', () => {
     it('index query selects second input', async () => {
@@ -453,7 +455,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           state_facts,
           state_facts extend { dimension: bar is 1 }
         ) -> { index: bar }
-      `).malloyResultMatches(runtime, {}); // Just test that it runs
+      `).toMatchResult(testModel, {}); // Just test that it runs
     });
     it('index query selects first input', async () => {
       await expect(`
@@ -463,7 +465,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           state_facts extend { dimension: bar is 1 },
           state_facts
         ) -> { index: bar }
-      `).malloyResultMatches(runtime, {}); // Just test that it runs
+      `).toMatchResult(testModel, {}); // Just test that it runs
     });
     it('index query resolves when two stages', async () => {
       await expect(`
@@ -473,7 +475,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           state_facts extend { dimension: bar is 1 },
           state_facts
         ) -> { index: bar } -> { group_by: fieldName; where: fieldName is not null }
-      `).malloyResultMatches(runtime, {fieldName: 'bar'});
+      `).toMatchResult(testModel, {fieldName: 'bar'});
     });
   });
   it('composite with parameters in separate file', async () => {
@@ -494,11 +496,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    const wrappedTestModel = {
+      model: wrappedRuntime.loadModel(''),
+      dialect: runtime.dialect,
+    };
     await expect(`
       import "http://foo.malloy"
       ##! experimental { composite_sources parameters }
       run: x(param is 1) -> { group_by: b }
-    `).malloyResultMatches(wrappedRuntime, {b: 2});
+    `).toMatchResult(wrappedTestModel, {b: 2});
   });
   it('composite with parameters in separate file passing parameter to use in extended compose', async () => {
     const wrappedRuntime = new Runtime({
@@ -516,11 +522,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
       },
     });
+    const wrappedTestModel = {
+      model: wrappedRuntime.loadModel(''),
+      dialect: runtime.dialect,
+    };
     await expect(`
       import "http://foo.malloy"
       ##! experimental { composite_sources parameters }
       run: x(param is 2) -> { group_by: b }
-    `).malloyResultMatches(wrappedRuntime, {b: 3});
+    `).toMatchResult(wrappedTestModel, {b: 3});
   });
   it('nested composite where field usage depends on which composite selected', async () => {
     await expect(`
@@ -549,7 +559,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       )
       run: x -> { group_by: x }
-    `).malloyResultMatches(runtime, {x: 'b1'});
+    `).toMatchResult(testModel, {x: 'b1'});
   });
   describe('partition composites', () => {
     const id = (n: string) => (databaseName === 'snowflake' ? `"${n}"` : n);
@@ -567,7 +577,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: a_avg is a.avg()
           aggregate: c is count()
         }
-      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+      `).toMatchResult(testModel, {a_avg: 15, c: 2});
     });
     test('sql function contributes to partition composite selection', async () => {
       await expect(`
@@ -586,7 +596,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           limit: 1
           order_by: b_copy asc
         }
-      `).malloyResultMatches(runtime, {b_copy: 1});
+      `).toMatchResult(testModel, {b_copy: 1});
     });
     test('partition composite with fields different from partition name', async () => {
       await expect(`
@@ -602,7 +612,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: a_avg is a.avg()
           aggregate: c is count()
         }
-      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+      `).toMatchResult(testModel, {a_avg: 15, c: 2});
     });
     test('extended partition composite', async () => {
       await expect(`
@@ -622,7 +632,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: a_avg
           aggregate: c is count()
         }
-      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+      `).toMatchResult(testModel, {a_avg: 15, c: 2});
     });
     test('partition composite nested in composite', async () => {
       await expect(`
@@ -644,7 +654,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: a_avg is a.avg()
           aggregate: c is count()
         }
-      `).malloyResultMatches(runtime, {a_avg: 15, c: 2});
+      `).toMatchResult(testModel, {a_avg: 15, c: 2});
     });
   });
 });

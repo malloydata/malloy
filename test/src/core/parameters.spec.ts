@@ -6,9 +6,11 @@
  */
 
 import {runtimeFor} from '../runtimes';
-import '../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtime = runtimeFor('duckdb');
+const testModel = wrapTestModel(runtime, '');
 
 afterAll(async () => {
   await runtime.connection.close();
@@ -22,7 +24,7 @@ describe('parameters', () => {
         dimension: param_plus_one is param + 1
       }
       run: state_facts(param is 1) -> { group_by: param_plus_one }
-    `).malloyResultMatches(runtime, {param_plus_one: 2});
+    `).toMatchResult(testModel, {param_plus_one: 2});
   });
   it('number param used in sql function', async () => {
     await expect(`
@@ -31,7 +33,7 @@ describe('parameters', () => {
         dimension: param_plus_one is sql_number("\${param} + 1")
       }
       run: state_facts(param is 1) -> { group_by: param_plus_one }
-    `).malloyResultMatches(runtime, {param_plus_one: 2});
+    `).toMatchResult(testModel, {param_plus_one: 2});
   });
   it.skip('string param used in group_by', async () => {
     await expect(`
@@ -40,7 +42,7 @@ describe('parameters', () => {
         dimension: param_plus_one is param
       }
       run: state_facts(param is "foo") -> { group_by: param_val is param }
-    `).malloyResultMatches(runtime, {param_val: 'foo'});
+    `).toMatchResult(testModel, {param_val: 'foo'});
   });
   it('can filter on filter expression param', async () => {
     await expect(`
@@ -49,7 +51,7 @@ describe('parameters', () => {
         where: state ~ param
       }
       run: state_facts(param is f'CA') -> { select: state }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it.skip('reference field in source in argument', async () => {
     await expect(`
@@ -58,7 +60,7 @@ describe('parameters', () => {
         where: filter
       }
       run: state_facts(filter is state = 'CA') -> { group_by: state }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('can pass param into joined source correctly', async () => {
     await expect(`
@@ -83,7 +85,7 @@ describe('parameters', () => {
           s2 is state_facts.state
         aggregate: c is count()
       }
-    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
+    `).toMatchResult(testModel, {s1: 'CA', s2: 'CA', c: 1});
   });
   it('can pass param into extended source', async () => {
     await expect(`
@@ -93,7 +95,7 @@ describe('parameters', () => {
       }
       source: state_facts_ext(param::number) is state_facts(param)
       run: state_facts_ext(param is 1) -> p
-    `).malloyResultMatches(runtime, {p: 1});
+    `).toMatchResult(testModel, {p: 1});
   });
   // TODO excepting a field outright removes it from the source, without consideration
   //      to other fields that use that removed field in their definition; consider
@@ -117,7 +119,7 @@ describe('parameters', () => {
           limit: 1
         }
       `
-    ).malloyResultMatches(runtime, {state_copy: 'AK'});
+    ).toMatchResult(testModel, {state_copy: 'AK'});
   });
   it.skip('can shadow field that is excepted, using dimension that uses field that is excepted', async () => {
     await expect(
@@ -137,7 +139,7 @@ describe('parameters', () => {
           limit: 1
         }
       `
-    ).malloyResultMatches(runtime, {
+    ).toMatchResult(testModel, {
       hardcoded_state: 'NOT A STATE',
       state_copy: 'AK',
     });
@@ -156,7 +158,7 @@ describe('parameters', () => {
           group_by: hardcoded_state
         }
       `
-    ).malloyResultMatches(runtime, {hardcoded_state: 'NOT A STATE'});
+    ).toMatchResult(testModel, {hardcoded_state: 'NOT A STATE'});
   });
   it('default value propagates', async () => {
     await expect(
@@ -167,7 +169,7 @@ describe('parameters', () => {
         }
         run: ab_new -> { group_by: param_value }
       `
-    ).malloyResultMatches(runtime, {param_value: 10});
+    ).toMatchResult(testModel, {param_value: 10});
   });
   it('default value can be overridden', async () => {
     await expect(
@@ -178,7 +180,7 @@ describe('parameters', () => {
         }
         run: ab_new(param is 11) -> { group_by: param_value }
       `
-    ).malloyResultMatches(runtime, {param_value: 11});
+    ).toMatchResult(testModel, {param_value: 11});
   });
   it('default value passed through extension propagates', async () => {
     await expect(
@@ -190,7 +192,7 @@ describe('parameters', () => {
         source: ab_new_new(param::number is 11) is ab_new(param) extend {}
         run: ab_new_new -> { group_by: param_value }
       `
-    ).malloyResultMatches(runtime, {param_value: 11});
+    ).toMatchResult(testModel, {param_value: 11});
   });
   it('default value modified through extension propagates', async () => {
     await expect(
@@ -202,7 +204,7 @@ describe('parameters', () => {
         source: ab_new_new(param::number is 11) is ab_new(param is param + 1) extend {}
         run: ab_new_new -> { group_by: param_value }
       `
-    ).malloyResultMatches(runtime, {param_value: 12});
+    ).toMatchResult(testModel, {param_value: 12});
   });
   // Fix this with namespaces!
   it.skip('default value modified through extension twice propagates', async () => {
@@ -216,7 +218,7 @@ describe('parameters', () => {
         source: ab_plus_two(param::number is 0) is ab_plus_one(param is param + 1) extend {}
         run: ab_plus_two -> { group_by: param_value }
       `
-    ).malloyResultMatches(runtime, {param_value: 2});
+    ).toMatchResult(testModel, {param_value: 2});
   });
   it('use parameter in nested view', async () => {
     await expect(
@@ -235,11 +237,10 @@ describe('parameters', () => {
         }
         run: ab_new -> v
       `
-    ).malloyResultMatches(runtime, {
-      'param_value_1': 10,
-      'param_value_2': 10,
-      'n.param_value_1': 10,
-      'n.param_value_3': 10,
+    ).toMatchResult(testModel, {
+      param_value_1: 10,
+      param_value_2: 10,
+      n: [{param_value_1: 10, param_value_3: 10}],
     });
   });
   it.skip('can pass param into joined source from query', async () => {
@@ -265,7 +266,7 @@ describe('parameters', () => {
           s2 is state_facts.state
         aggregate: c is count()
       }
-    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
+    `).toMatchResult(testModel, {s1: 'CA', s2: 'CA', c: 1});
   });
   it.skip('can pass param into query definition', async () => {
     await expect(`
@@ -281,7 +282,7 @@ describe('parameters', () => {
       run: state_facts_query(state_filter is "CA") -> {
         select: state
       }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('can use param in join on', async () => {
     await expect(`
@@ -302,7 +303,7 @@ describe('parameters', () => {
           s2 is state_facts.state
         aggregate: c is count()
       }
-    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
+    `).toMatchResult(testModel, {s1: 'CA', s2: 'CA', c: 1});
   });
   it('can use param in join with', async () => {
     await expect(`
@@ -325,7 +326,7 @@ describe('parameters', () => {
           s2 is state_facts.state
         aggregate: c is count()
       }
-    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
+    `).toMatchResult(testModel, {s1: 'CA', s2: 'CA', c: 1});
   });
   it('source arguments in query propagate when turned into source', async () => {
     await expect(`
@@ -336,7 +337,7 @@ describe('parameters', () => {
       query: foo is ab_new(param is 1) -> { select: param_value }
       source: foo_ext is foo
       run: foo_ext -> { select: param_value }
-    `).malloyResultMatches(runtime, {param_value: 1});
+    `).toMatchResult(testModel, {param_value: 1});
   });
   it('date parameters keep granularity when passing in', async () => {
     await expect(`
@@ -345,7 +346,7 @@ describe('parameters', () => {
         dimension: date_value is day(param)
       }
       run: state_facts(param is @2024-04-11.month) -> { group_by: date_value }
-    `).malloyResultMatches(runtime, {date_value: 1});
+    `).toMatchResult(testModel, {date_value: 1});
   });
   it('can use parameter in null check', async () => {
     await expect(`
@@ -357,7 +358,7 @@ describe('parameters', () => {
         where: param is null and state = state_filter
       }
       run: state_facts -> { group_by: state }
-    `).malloyResultMatches(runtime, {state: 'CA'});
+    `).toMatchResult(testModel, {state: 'CA'});
   });
   it('default value not passed through extension propagates', async () => {
     await expect(
@@ -369,7 +370,7 @@ describe('parameters', () => {
         source: ab_new_new is ab_new extend {}
         run: ab_new_new -> { group_by: param_value }
       `
-    ).malloyResultMatches(runtime, {param_value: 10});
+    ).toMatchResult(testModel, {param_value: 10});
   });
   // TODO fix this when we redo namespaces
   it.skip('default value not passed through extension propagates, with composite source', async () => {
@@ -385,6 +386,6 @@ describe('parameters', () => {
         source: ab_new_new is ab_new extend {}
         run: ab_new_new -> { group_by: param_value, foo }
       `
-    ).malloyResultMatches(runtime, {param_value: 10});
+    ).toMatchResult(testModel, {param_value: 10});
   });
 });

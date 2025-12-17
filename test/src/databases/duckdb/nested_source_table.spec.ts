@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
@@ -128,12 +129,12 @@ const runtimes = new RuntimeList(databases);
 describe.each(runtimes.runtimeList)(
   'Nested Source Table - %s',
   (databaseName, runtime) => {
-    const gaModel = runtime.loadModel(modelText(databaseName));
+    const gaModel = wrapTestModel(runtime, modelText(databaseName));
+    const testModel = wrapTestModel(runtime, '');
     test(`repeated child of record - ${databaseName}`, async () => {
-      await expect('run: ga_sessions->by_page_title').malloyResultMatches(
-        gaModel,
-        {pageTitle: 'Shopping Cart'}
-      );
+      await expect('run: ga_sessions->by_page_title').toMatchResult(gaModel, {
+        pageTitle: 'Shopping Cart',
+      });
     });
 
     // Tests intermittently fail and lloyd said
@@ -156,11 +157,7 @@ describe.each(runtimes.runtimeList)(
           order_by: fieldName, weight desc
           limit: 10
         }
-      `).malloyResultMatches(gaModel, {
-        // fieldName: 'channelGrouping',
-        // fieldValue: 'Organic Search',
-        // weight: 10,
-      });
+      `).toMatchResult(gaModel, {});
     });
 
     test(`manual index - ${databaseName}`, async () => {
@@ -181,11 +178,7 @@ describe.each(runtimes.runtimeList)(
             limit: 100
           }
         }
-      `).malloyResultMatches(runtime, {
-        // 'top_fields.fieldName': 'channelGrouping',
-        // 'top_fields.fieldValue': 'Organic Search',
-        // 'top_fields.weight': 18,
-      });
+      `).toMatchResult(testModel, {});
     });
 
     test(`autobin - ${databaseName}`, async () => {
@@ -211,9 +204,7 @@ describe.each(runtimes.runtimeList)(
           aggregate: airport_count
           nest: by_elevation_bar_chart is by_elevation
         }
-      `).malloyResultMatches(runtime, {
-        // don't know what to expect ...
-      });
+      `).toMatchResult(testModel, {});
     });
   }
 );
