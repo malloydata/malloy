@@ -4,25 +4,26 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
 import {databasesFromEnvironmentOr} from '../../util';
 import {TestSelect} from '../../test-select';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
-  const d = runtime.dialect;
   const ts = new TestSelect(runtime.dialect);
+  const testModel = wrapTestModel(runtime, '');
 
   // Basic Type Tests
   test(`${db} inferred basic types`, async () => {
     const sql = ts.generate(
-      {t_int: 1, t_string: 'a', t_bool: d.resultBoolean(true), t_float: 1.5},
-      {t_int: 2, t_string: 'b', t_bool: d.resultBoolean(false), t_float: 2.5}
+      {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},
+      {t_int: 2, t_string: 'b', t_bool: false, t_float: 2.5}
     );
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
-      {t_int: 1, t_string: 'a', t_bool: d.resultBoolean(true), t_float: 1.5},
-      {t_int: 2, t_string: 'b', t_bool: d.resultBoolean(false), t_float: 2.5},
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
+      {t_int: 1, t_string: 'a', t_bool: true, t_float: 1.5},
+      {t_int: 2, t_string: 'b', t_bool: false, t_float: 2.5},
     ]);
   });
 
@@ -33,12 +34,12 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       t_string: ts.mk_string('hello'),
       t_bool: ts.mk_bool(true),
     });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {
         t_int: 1,
         t_float: 1.5,
         t_string: 'hello',
-        t_bool: d.resultBoolean(true),
+        t_bool: true,
       },
     ]);
   });
@@ -50,7 +51,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       t_bool: ts.mk_bool(null),
       t_float: ts.mk_float(null),
     });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {t_int: null, t_string: null, t_bool: null, t_float: null},
     ]);
   });
@@ -61,7 +62,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       {a: ts.mk_int(null), b: 2, c: 'world'},
       {a: 3, b: 4, c: ts.mk_string(null)}
     );
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {a: 1, b: null, c: 'hello'},
       {a: null, b: 2, c: 'world'},
       {a: 3, b: 4, c: null},
@@ -91,7 +92,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
   // Edge Cases
   test(`${db} single row`, async () => {
     const sql = ts.generate({a: 1, b: 'test'});
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {a: 1, b: 'test'},
     ]);
   });
@@ -102,7 +103,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       string_array: ['a', 'b', 'c'],
       number_array: [1, 2, 3],
     });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {string_array: ['a', 'b', 'c'], number_array: [1, 2, 3]},
     ]);
   });
@@ -114,7 +115,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       number_arr: ts.mk_array([1, 2, 3]),
       typed_arr: ts.mk_array([ts.mk_int(1), ts.mk_int(2), ts.mk_int(3)]),
     });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {
         string_arr: ['a', 'b', 'c'],
         number_arr: [1, 2, 3],
@@ -133,13 +134,9 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       const sql = ts.generate({
         person: {name: 'Alice', age: 30},
       });
-      await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
-        runtime,
-        {
-          'person/name': 'Alice',
-          'person/age': 30,
-        }
-      );
+      await expect(`run: ${db}.sql("""${sql}""")`).toMatchResult(testModel, {
+        person: {name: 'Alice', age: 30},
+      });
     });
 
     test.when(testRecords)(`${db} nested inferred records`, async () => {
@@ -152,7 +149,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
           },
         },
       });
-      await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
+      await expect(`run: ${db}.sql("""${sql}""")`).toMatchResult(testModel, {
         user: {name: 'Bob', address: {street: '123 Main', city: 'Boston'}},
       });
     });
@@ -168,8 +165,8 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
             active: ts.mk_bool(true),
           }),
         });
-        await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
-          person: {name: 'Alice', age: 30, active: d.resultBoolean(true)},
+        await expect(`run: ${db}.sql("""${sql}""")`).toMatchResult(testModel, {
+          person: {name: 'Alice', age: 30, active: true},
         });
       }
     );
@@ -185,7 +182,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
           }),
         }),
       });
-      await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
+      await expect(`run: ${db}.sql("""${sql}""")`).toMatchResult(testModel, {
         user: {
           name: 'Bob',
           address: {street: '123 Main', city: 'Boston', zip: 12345},
@@ -200,7 +197,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
           values: [1, 2, 3],
         },
       });
-      await expect(`run: ${db}.sql("""${sql}""")`).matchesRows(runtime, {
+      await expect(`run: ${db}.sql("""${sql}""")`).toMatchResult(testModel, {
         data: {name: 'Test', values: [1, 2, 3]},
       });
     });
@@ -213,17 +210,14 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
           {sku: 'DEF', qty: 3},
         ],
       });
-      await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
-        runtime,
-        [
-          {
-            items: [
-              {sku: 'ABC', qty: 2},
-              {sku: 'DEF', qty: 3},
-            ],
-          },
-        ]
-      );
+      await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
+        {
+          items: [
+            {sku: 'ABC', qty: 2},
+            {sku: 'DEF', qty: 3},
+          ],
+        },
+      ]);
     });
 
     // Array of Records Tests - Explicit
@@ -236,17 +230,14 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
             ts.mk_record({sku: ts.mk_string('DEF'), qty: ts.mk_int(3)}),
           ]),
         });
-        await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
-          runtime,
-          [
-            {
-              items: [
-                {sku: 'ABC', qty: 2},
-                {sku: 'DEF', qty: 3},
-              ],
-            },
-          ]
-        );
+        await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
+          {
+            items: [
+              {sku: 'ABC', qty: 2},
+              {sku: 'DEF', qty: 3},
+            ],
+          },
+        ]);
       }
     );
   });
@@ -257,7 +248,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       d1: ts.mk_date('2024-01-15'),
       d2: ts.mk_date('2024-12-31'),
     });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {d1: new Date('2024-01-15'), d2: new Date('2024-12-31')},
     ]);
   });
@@ -269,15 +260,12 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
         ts1: ts.mk_timestamp('2024-01-15 10:30:00'),
         ts2: ts.mk_timestamp('2024-12-31 23:59:59'),
       });
-      await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(
-        runtime,
-        [
-          {
-            ts1: new Date('2024-01-15T10:30:00Z'),
-            ts2: new Date('2024-12-31T23:59:59Z'),
-          },
-        ]
-      );
+      await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
+        {
+          ts1: new Date('2024-01-15T10:30:00Z'),
+          ts2: new Date('2024-12-31T23:59:59Z'),
+        },
+      ]);
     }
   );
 
@@ -286,7 +274,7 @@ describe.each(runtimes.runtimeList)('TestSelect for %s', (db, runtime) => {
       d: ts.mk_date(null),
       ts: ts.mk_timestamp(null),
     });
-    await expect(`run: ${db}.sql("""${sql}""")`).malloyResultMatches(runtime, [
+    await expect(`run: ${db}.sql("""${sql}""")`).toEqualResult(testModel, [
       {d: null, ts: null},
     ]);
   });

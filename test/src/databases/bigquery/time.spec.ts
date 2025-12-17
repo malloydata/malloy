@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
@@ -35,25 +35,15 @@ afterAll(async () => {
 
 describe('time specific tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
+  const testModel = runtime && wrapTestModel(runtime, '');
 
-  const utc_2020 = DateTime.fromObject(
-    {
-      year: 2020,
-      month: 2,
-      day: 20,
-      hour: 0,
-      minute: 0,
-      second: 0,
-    },
-    {
-      zone: 'UTC',
-    }
-  );
+  const utc_2020 = '2020-02-20T00:00:00.000Z';
+
   test('can cast unsupported DATETIME to timestamp', async () => {
     await expect(
       `run: bigquery.sql("SELECT DATETIME '2020-02-20 00:00:00' as t_datetime") -> {
           select: mex_220 is t_datetime::timestamp
       }`
-    ).malloyResultMatches(runtime!, {mex_220: utc_2020.toJSDate()});
+    ).toMatchResult(testModel!, {mex_220: utc_2020});
   });
 });

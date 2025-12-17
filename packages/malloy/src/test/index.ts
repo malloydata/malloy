@@ -1,24 +1,23 @@
 /*
- * Copyright 2024 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+// Test data creation
+export {TV} from './test-values';
+export type {TypedValue} from './test-values';
+export {mkTestModel, wrapTestModel, extendTestModel} from './test-models';
+export type {TestModelSources, TestModel} from './test-models';
+
+// Query execution
+export {runQuery} from './runQuery';
+export type {QueryResult} from './runQuery';
+
+// Jest matcher types (matchers registered via separate import)
+export type {ExpectedRow, MatcherOptions} from './resultMatchers';
+
+/*
+ * Legacy exports - kept for backwards compatibility
  */
 
 /**

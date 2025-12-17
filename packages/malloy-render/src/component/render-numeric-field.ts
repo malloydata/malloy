@@ -27,6 +27,7 @@ import {
   getText,
   NULL_SYMBOL,
   renderTimeString,
+  formatBigNumber,
   type RenderTimeStringOptions,
 } from '../util';
 import type {Field} from '../data_tree';
@@ -62,9 +63,14 @@ export function renderNumericField(
     return (
       getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString()
     );
-  } else if (tag.has('number'))
-    displayValue = format(tag.text('number') ?? '#', value);
-  else displayValue = (value as number).toLocaleString();
+  } else if (tag.has('number')) {
+    const numberFormat = tag.text('number');
+    if (numberFormat === 'big') {
+      displayValue = formatBigNumber(value);
+    } else {
+      displayValue = format(numberFormat ?? '#', value);
+    }
+  } else displayValue = (value as number).toLocaleString();
   return displayValue;
 }
 

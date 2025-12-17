@@ -23,7 +23,9 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '../../util/db-jest-matchers'; // For isSqlEq matcher used with sqlEq helper
 import {
   brokenIn,
   databasesFromEnvironmentOr,
@@ -38,6 +40,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
+  const testModel = wrapTestModel(runtime, '');
   const ts = new TestSelect(runtime.dialect);
   const timestamptz = runtime.dialect.hasTimestamptz;
   const timeSchema = {
@@ -110,7 +113,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         await expect(`
         run: ${dbName}.sql("SELECT 1")
         -> { select: yd is floor(days(@2001 to @2002)) }
-      `).malloyResultMatches(runtime, {yd: 365});
+      `).toMatchResult(testModel, {yd: 365});
       }
     );
 
@@ -194,7 +197,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           run: ${dbName}.sql("""${timeSQL}""") -> {
             select: result is t_timestamptz.day
           }
-        `).malloyResultMatches(runtime, {result: '2021-02-24 00:00:00Z'});
+        `).toMatchResult(testModel, {result: '2021-02-24T00:00:00.000Z'});
     });
 
     test('trunc week', async () => {
@@ -279,7 +282,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
             utc_hour is hour(utc_tstz)
             utc_day is day(utc_tstz)
         }`
-      ).malloyResultMatches(runtime, {utc_hour: 0, utc_day: 20});
+      ).toMatchResult(testModel, {utc_hour: 0, utc_day: 20});
     }
   );
 
@@ -516,7 +519,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         extend: {join_one: joined is timeData on t_date = joined.t_date}
         group_by: t_month is joined.t_timestamp.month
       }
-    `).malloyResultMatches(runtime, {t_month: new Date('2021-02-01')});
+    `).toMatchResult(testModel, {t_month: new Date('2021-02-01')});
   });
 
   describe('timezone set correctly', () => {
@@ -698,6 +701,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
+  const testModel = wrapTestModel(runtime, '');
   const ts = new TestSelect(runtime.dialect);
   const selectMidnight = `"""${ts.generate({
     utc_midnight_ts: ts.mk_timestamp('2020-02-20 00:00:00'),
@@ -727,7 +731,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           mex_midnight is hour(utc_midnight)
           mex_day is day(utc_midnight)
       }`
-    ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
+    ).toMatchResult(testModel, {mex_midnight: 18, mex_day: 19});
   });
 
   test.when(runtime.dialect.hasTimestamptz)(
@@ -744,7 +748,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
             mex_hour is hour(utc_tstz)
             mex_day is day(utc_tstz)
         }`
-      ).malloyResultMatches(runtime, {mex_hour: 18, mex_day: 19});
+      ).toMatchResult(testModel, {mex_hour: 18, mex_day: 19});
     }
   );
 
@@ -757,7 +761,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: mex_day is utc_midnight_ts.day
       }`
-    ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
+    ).toMatchResult(testModel, {mex_day: mex_19.toJSDate()});
   });
 
   test('truncate week', async () => {
@@ -771,7 +775,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_week is utc_midnight.week
       }`
-    ).malloyResultMatches(runtime, {mex_week: mex_sunday.toJSDate()});
+    ).toMatchResult(testModel, {mex_week: mex_sunday.toJSDate()});
   });
 
   test('cast timestamp to date', async () => {
@@ -780,7 +784,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: mex_date is utc_midnight_ts::date
       }`
-    ).malloyResultMatches(runtime, {mex_date: '2020-02-19'});
+    ).toMatchResult(testModel, {mex_date: '2020-02-19'});
   });
   test.when(runtime.dialect.hasTimestamptz)(
     'cast timestamptz to date',
@@ -791,7 +795,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
           select: mex_date is utc_tstz::date
         }`
-      ).malloyResultMatches(runtime, {mex_date: '2020-02-19'});
+      ).toMatchResult(testModel, {mex_date: '2020-02-19'});
     }
   );
   test('cast date to timestamp', async () => {
@@ -800,7 +804,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: mex_date is date_2020::timestamp
       }`
-    ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
+    ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
   });
   test('return date 2020-02-20', async () => {
     await expect(
@@ -808,7 +812,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: d2020 is date_2020
       }`
-    ).malloyResultMatches(runtime, {d2020: '2020-02-20'});
+    ).toMatchResult(testModel, {d2020: '2020-02-20'});
   });
   test.when(runtime.dialect.hasTimestamptz)(
     'cast date to timestamptz',
@@ -818,7 +822,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           timezone: '${zone}'
           select: mex_date is date_2020::timestamptz
         }`
-      ).malloyResultMatches(runtime, {mex_date: zone_2020.toJSDate()});
+      ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
     }
   );
 
@@ -884,7 +888,6 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   );
 
   test('intervals are evalutated in query timezone', async () => {
-    const truth = runtime.dialect.resultBoolean(true);
     await expect(
       `source: onerow is ${dbName}.sql("SELECT 1 as rownum") extend {
         dimension:
@@ -906,11 +909,11 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           hour_ok is by_hour = june1_correct, by_hour
           quarter_ok is by_quarter = august1_correct, by_quarter
       }`
-    ).malloyResultMatches(runtime, {
-      month_ok: truth,
-      day_ok: truth,
-      hour_ok: truth,
-      quarter_ok: truth,
+    ).toMatchResult(testModel, {
+      month_ok: true,
+      day_ok: true,
+      hour_ok: true,
+      quarter_ok: true,
     });
   });
 });

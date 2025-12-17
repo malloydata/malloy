@@ -1,10 +1,11 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.326",
+  "version": "0.0.327",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
     "./test": "./dist/test/index.js",
+    "./test/matchers": "./dist/test/matchers.js",
     "./connection": "./dist/connection/index.js",
     "./package.json": "./package.json"
   },
@@ -15,6 +16,9 @@
       ],
       "test": [
         "./dist/test/index.d.ts"
+      ],
+      "test/matchers": [
+        "./dist/test/matchers.d.ts"
       ],
       "connection": [
         "./dist/connection/index.d.ts"
@@ -41,9 +45,9 @@
     "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-filter": "0.0.326",
-    "@malloydata/malloy-interfaces": "0.0.326",
-    "@malloydata/malloy-tag": "0.0.326",
+    "@malloydata/malloy-filter": "0.0.327",
+    "@malloydata/malloy-interfaces": "0.0.327",
+    "@malloydata/malloy-tag": "0.0.327",
     "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",
     "jaro-winkler": "^0.2.8",
