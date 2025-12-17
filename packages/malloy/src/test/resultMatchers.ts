@@ -865,7 +865,9 @@ async function matchImpl(
 
   if (debug && fails.length === 0) {
     fails.push('Test forced failure (# test.debug)');
-    fails.push(jestUtils.RECEIVED_COLOR(`Result: ${humanReadable(dataObjects)}`));
+    fails.push(
+      jestUtils.RECEIVED_COLOR(`Result: ${humanReadable(dataObjects)}`)
+    );
   }
 
   if (fails.length > 0) {
