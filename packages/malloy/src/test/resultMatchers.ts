@@ -837,8 +837,8 @@ async function matchImpl(
         const issues = rowIssues.get(i);
         const isExtra = i >= expectedRows.length;
         if (issues || isExtra) {
-          // Red if there are issues or it's an extra row
-          diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}: ${rowData}`));
+          // Red if there are issues or it's an extra row (use ! for non-colored output)
+          diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}! ${rowData}`));
           if (issues) {
             for (const issue of issues) {
               diffLines.push(issue);
@@ -849,8 +849,8 @@ async function matchImpl(
           diffLines.push(jestUtils.EXPECTED_COLOR(`  ${i}: ${rowData}`));
         }
       } else {
-        // Missing row - show what was expected
-        diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}: (missing)`));
+        // Missing row - show what was expected (use ! for non-colored output)
+        diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}! (missing)`));
         if (i < expectedRows.length) {
           diffLines.push(
             jestUtils.EXPECTED_COLOR(

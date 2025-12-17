@@ -150,16 +150,18 @@ When tests fail, you see a `DATA DIFFERENCES` section showing actual vs expected
 DATA DIFFERENCES
   Expected 3 rows, got 2
   0: { id: 1, name: 'alice' }        <- green (matched)
-  1: { id: 2, name: 'bob' }          <- red (field mismatch)
+  1! { id: 2, name: 'bob' }          <- red (field mismatch)
     Expected age: 99
-  2: (missing)                        <- red
+  2! (missing)                        <- red
     Expected: { name: 'charlie' }
 ```
 
-- Matched rows are shown in green
-- Mismatched rows are shown in red with expected values indented below
-- Extra rows are shown in red
-- Missing rows show what was expected
+- Matched rows use `:` and are shown in green
+- Mismatched rows use `!` and are shown in red with expected values indented below
+- Extra rows use `!` and are shown in red
+- Missing rows use `!` and show what was expected
+
+The `!` marker makes it easy to identify problems even in non-colored output.
 
 ### Bad Malloy Code
 
