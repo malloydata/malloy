@@ -290,8 +290,15 @@ function processBigInts(data: unknown) {
   return JSON.parse(
     JSON.stringify(data, (_key, value) => {
       if (typeof value === 'bigint') {
-        // Preserve precision by converting to string
-        return value.toString();
+        // Only stringify values that exceed JS safe integer range
+        // Small bigints can be safely converted to numbers
+        if (
+          value > Number.MAX_SAFE_INTEGER ||
+          value < Number.MIN_SAFE_INTEGER
+        ) {
+          return value.toString();
+        }
+        return Number(value);
       }
       return value;
     })

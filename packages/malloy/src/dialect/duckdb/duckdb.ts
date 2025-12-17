@@ -46,7 +46,7 @@ import type {
   FieldReferenceType,
   IntegerTypeLimits,
 } from '../dialect';
-import {inDays} from '../dialect';
+import {inDays, MIN_INT32, MAX_INT32, MIN_INT128, MAX_INT128} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -98,8 +98,8 @@ export class DuckDBDialect extends PostgresBase {
 
   // DuckDB supports HUGEINT (128-bit signed integer)
   override integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: '-2^31', max: '2^31-1'},
-    bigint: {min: '-2^127', max: '2^127-1'},
+    integer: {min: MIN_INT32, max: MAX_INT32},
+    bigint: {min: MIN_INT128, max: MAX_INT128},
   };
 
   // hack until they support temporary macros.

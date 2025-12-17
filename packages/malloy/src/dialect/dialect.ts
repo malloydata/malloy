@@ -50,6 +50,27 @@ interface DialectField {
 }
 export type DialectFieldList = DialectField[];
 
+/*
+ * Standard integer type limits.
+ * Use these in dialect integerTypeLimits definitions.
+ */
+
+// 32-bit signed integer limits (for databases with 32-bit INTEGER type)
+export const MIN_INT32 = -2147483648; // -2^31
+export const MAX_INT32 = 2147483647; // 2^31 - 1
+
+// 64-bit signed integer limits
+export const MIN_INT64 = BigInt('-9223372036854775808'); // -2^63
+export const MAX_INT64 = BigInt('9223372036854775807'); // 2^63 - 1
+
+// 128-bit signed integer limits (for DuckDB HUGEINT)
+export const MIN_INT128 = BigInt('-170141183460469231731687303715884105728'); // -2^127
+export const MAX_INT128 = BigInt('170141183460469231731687303715884105727'); // 2^127 - 1
+
+// Decimal(38,0) limits (for Snowflake NUMBER(38,0))
+export const MIN_DECIMAL38 = BigInt('-99999999999999999999999999999999999999'); // -(10^38 - 1)
+export const MAX_DECIMAL38 = BigInt('99999999999999999999999999999999999999'); // 10^38 - 1
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -104,14 +125,9 @@ export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 /**
  * Min/max range for an integer type.
  * - null: type is not supported by this dialect
- * - {min, max}: the range of values as expressions that parseIntegerLimit() can parse
- *
- * Supported expression formats:
- * - Plain numbers: '12345', '-12345'
- * - Powers of 2: '2^31', '-2^63', '2^63-1', '-2^127+1'
- * - Repeated digits: '9(38)' (38 nines), '-9(38)'
+ * - {min, max}: the range of values (use the exported constants like MIN_INT64, MAX_INT64)
  */
-export type IntegerTypeRange = {min: string; max: string} | null;
+export type IntegerTypeRange = {min: number | bigint; max: number | bigint} | null;
 
 /**
  * Configuration for integer literal type selection.
@@ -207,8 +223,8 @@ export abstract class Dialect {
    * Default supports integer (JS safe) and bigint (64-bit signed).
    */
   integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: '-2^53-1', max: '2^53-1'},
-    bigint: {min: '-2^63', max: '2^63-1'},
+    integer: {min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER},
+    bigint: {min: MIN_INT64, max: MAX_INT64},
   };
 
   /**
@@ -272,42 +288,6 @@ export abstract class Dialect {
         timeframe: units,
       },
     };
-  }
-
-  /**
-   * Parse an integer limit expression into a BigInt.
-   *
-   * Supported formats:
-   * - Plain numbers: '12345', '-12345'
-   * - Powers of 2: '2^31', '-2^63', '2^63-1', '-2^127+1'
-   * - Repeated digits: '9(38)' (38 nines), '-9(38)'
-   */
-  static parseIntegerLimit(expr: string): bigint {
-    const trimmed = expr.trim();
-
-    // Check for repeated digits: 9(38) or -9(38)
-    const repeatMatch = trimmed.match(/^(-?)(\d)\((\d+)\)$/);
-    if (repeatMatch) {
-      const [, sign, digit, countStr] = repeatMatch;
-      // countStr is small (< 1000), safe for string repeat
-      const value = BigInt(digit.repeat(Number(countStr)));
-      return sign === '-' ? -value : value;
-    }
-
-    // Check for power of 2: 2^31, -2^63, 2^63-1, -2^127+1
-    const powerMatch = trimmed.match(/^(-?)2\^(\d+)([+-]\d+)?$/);
-    if (powerMatch) {
-      const [, sign, expStr, offsetStr] = powerMatch;
-      // BigInt ** BigInt exponentiation (using BigInt(2) instead of 2n for ES target compatibility)
-      let value = BigInt(2) ** BigInt(expStr);
-      if (offsetStr) {
-        value += BigInt(offsetStr);
-      }
-      return sign === '-' ? -value : value;
-    }
-
-    // Plain number
-    return BigInt(trimmed);
   }
 
   abstract getDialectFunctionOverrides(): {

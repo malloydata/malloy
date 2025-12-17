@@ -49,7 +49,7 @@ import type {
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect} from '../dialect';
+import {Dialect, MIN_INT64, MAX_INT64} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -131,7 +131,7 @@ export class StandardSQLDialect extends Dialect {
 
   // BigQuery only has INT64 - no 32-bit integer type
   override integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: '-2^63', max: '2^63-1'},
+    integer: {min: MIN_INT64, max: MAX_INT64},
     bigint: null,
   };
 

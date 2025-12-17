@@ -27,7 +27,7 @@ import {literalExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import type {NumberTypeDef} from '../../../model';
-import {Dialect, type IntegerTypeLimits} from '../../../dialect/dialect';
+import type {IntegerTypeLimits} from '../../../dialect/dialect';
 
 export class ExprNumber extends ExpressionDef {
   elementType = 'numeric literal';
@@ -48,7 +48,7 @@ export class ExprNumber extends ExpressionDef {
 
     const dialect = fs.dialectObj();
     const limits = dialect?.integerTypeLimits ?? {
-      integer: {min: '-2^53-1', max: '2^53-1'},
+      integer: {min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER},
       bigint: null,
     };
 
@@ -104,9 +104,8 @@ export class ExprNumber extends ExpressionDef {
     for (const numType of types) {
       const range = limits[numType];
       if (range !== null) {
-        const min = Dialect.parseIntegerLimit(range.min);
-        const max = Dialect.parseIntegerLimit(range.max);
-        if (value >= min && value <= max) {
+        // Comparison between bigint and number works in JS
+        if (value >= range.min && value <= range.max) {
           return numType;
         }
       }
@@ -118,7 +117,10 @@ export class ExprNumber extends ExpressionDef {
   /**
    * Get the largest supported range for error messages.
    */
-  private getMaxRange(limits: IntegerTypeLimits): {min: string; max: string} {
+  private getMaxRange(limits: IntegerTypeLimits): {
+    min: number | bigint;
+    max: number | bigint;
+  } {
     // Check in reverse order to find the largest supported type
     const types: (keyof IntegerTypeLimits)[] = ['bigint', 'integer'];
     for (const numType of types) {
@@ -128,7 +130,7 @@ export class ExprNumber extends ExpressionDef {
       }
     }
     // Should never happen, but fallback
-    return {min: '0', max: '0'};
+    return {min: 0, max: 0};
   }
 
   getStableLiteral(): Malloy.LiteralValue {

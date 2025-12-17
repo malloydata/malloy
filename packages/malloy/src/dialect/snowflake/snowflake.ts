@@ -52,7 +52,7 @@ import type {
   IntegerTypeLimits,
   QueryInfo,
 } from '../dialect';
-import {Dialect, qtz} from '../dialect';
+import {Dialect, qtz, MIN_DECIMAL38, MAX_DECIMAL38} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -130,7 +130,7 @@ export class SnowflakeDialect extends Dialect {
 
   // Snowflake uses NUMBER(38,0) for all integers - only one integer type
   override integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: '-9(38)', max: '9(38)'},
+    integer: {min: MIN_DECIMAL38, max: MAX_DECIMAL38},
     bigint: null,
   };
 
