@@ -167,6 +167,37 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
     });
   });
 
+  describe.skip('error output format', () => {
+    // These tests are skipped - they exist to show the error output format
+    // Remove .skip to see the output
+
+    test('too many results - got more rows than expected', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [
+          {id: 1, name: 'alice'},
+          {id: 2, name: 'bob'},
+          {id: 3, name: 'charlie'},
+        ],
+      });
+      // Expect only 1 row but got 3
+      await expect('run: data -> { select: * }').toMatchRows(tm, [
+        {name: 'alice'},
+      ]);
+    });
+
+    test('too few results - expected more rows than got', async () => {
+      const tm = mkTestModel(runtime, {
+        data: [{id: 1, name: 'alice'}],
+      });
+      // Expect 3 rows but only got 1
+      await expect('run: data -> { select: * }').toMatchRows(tm, [
+        {name: 'alice'},
+        {name: 'bob'},
+        {name: 'charlie'},
+      ]);
+    });
+  });
+
   describe('multiple sources', () => {
     test('can define multiple sources in one model', async () => {
       const tm = mkTestModel(runtime, {

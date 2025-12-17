@@ -779,7 +779,7 @@ async function matchImpl(
   const {fail, data, schema, dataObjects, queryTestTag, query} =
     await runQueryInternal(tm, querySrc);
   if (fail) return fail;
-  if (!data || !schema) {
+  if (!data || !schema || !dataObjects) {
     return {
       pass: false,
       message: () => 'runQuery returned no data and no errors',
@@ -799,21 +799,6 @@ async function matchImpl(
 
   const rows = data.array_value;
 
-  // Check row count
-  if (strictRowCount) {
-    // Exact row count required
-    if (rows.length !== expectedRows.length) {
-      fails.push(`Expected ${expectedRows.length} rows, got ${rows.length}`);
-    }
-  } else {
-    // At least expectedRows.length rows required
-    if (expectedRows.length > 0 && rows.length < expectedRows.length) {
-      fails.push(
-        `Expected at least ${expectedRows.length} rows, got ${rows.length}`
-      );
-    }
-  }
-
   // Create root fieldInfo for schema navigation
   const rootFieldInfo: Malloy.FieldInfoWithJoin = {
     kind: 'join',
@@ -821,6 +806,19 @@ async function matchImpl(
     relationship: 'one',
     schema,
   };
+
+  // Collect row-level issues for unified output
+  const rowCountMismatch =
+    strictRowCount && rows.length !== expectedRows.length
+      ? `Expected ${expectedRows.length} rows, got ${rows.length}`
+      : !strictRowCount &&
+          expectedRows.length > 0 &&
+          rows.length < expectedRows.length
+        ? `Expected at least ${expectedRows.length} rows, got ${rows.length}`
+        : null;
+
+  // Track per-row mismatches: row index -> list of field issues
+  const rowIssues: Map<number, string[]> = new Map();
 
   // Check empty match {} means "at least one row"
   if (
@@ -844,15 +842,58 @@ async function matchImpl(
         mode
       );
       if (!matchResult.pass) {
-        fails.push(`${matchResult.path}:`);
-        fails.push(
-          jestUtils.EXPECTED_COLOR(`  Expected: ${matchResult.expected}`)
+        // Extract field name from path like "Row 0.fieldname" or "Row 0.nested.field"
+        const pathMatch = matchResult.path?.match(/^Row \d+\.(.+)$/);
+        const fieldPath = pathMatch ? pathMatch[1] : matchResult.path;
+        const issue = jestUtils.EXPECTED_COLOR(
+          `    Expected ${fieldPath}: ${matchResult.expected}`
         );
-        fails.push(
-          jestUtils.RECEIVED_COLOR(`  Received: ${matchResult.actual}`)
-        );
+        if (!rowIssues.has(i)) {
+          rowIssues.set(i, []);
+        }
+        rowIssues.get(i)!.push(issue);
       }
     }
+  }
+
+  // Build DATA DIFFERENCES section if there are any issues
+  if (rowCountMismatch || rowIssues.size > 0) {
+    const diffLines: string[] = ['DATA DIFFERENCES'];
+    if (rowCountMismatch) {
+      diffLines.push(`  ${rowCountMismatch}`);
+    }
+    // Show each row with its issues
+    const maxRowToShow = Math.max(rows.length, expectedRows.length);
+    for (let i = 0; i < maxRowToShow; i++) {
+      if (i < rows.length) {
+        const rowData = humanReadable(dataObjects[i]);
+        const issues = rowIssues.get(i);
+        const isExtra = i >= expectedRows.length;
+        if (issues || isExtra) {
+          // Red if there are issues or it's an extra row
+          diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}: ${rowData}`));
+          if (issues) {
+            for (const issue of issues) {
+              diffLines.push(issue);
+            }
+          }
+        } else {
+          // Row matched - green
+          diffLines.push(jestUtils.EXPECTED_COLOR(`  ${i}: ${rowData}`));
+        }
+      } else {
+        // Missing row - show what was expected
+        diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}: (missing)`));
+        if (i < expectedRows.length) {
+          diffLines.push(
+            jestUtils.EXPECTED_COLOR(
+              `    Expected: ${humanReadable(expectedRows[i])}`
+            )
+          );
+        }
+      }
+    }
+    fails.push(diffLines.join('\n'));
   }
 
   if (debug && fails.length === 0) {
