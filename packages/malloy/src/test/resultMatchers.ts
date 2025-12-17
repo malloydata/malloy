@@ -32,23 +32,11 @@ declare global {
   namespace jest {
     interface Matchers<R> {
       /**
-       * Jest matcher for running a Malloy query with partial matching.
-       * Actual rows can have extra fields beyond what's expected.
+       * Partial matching - extra fields and rows allowed.
        *
        * @example
-       * await expect('run: users -> { select: * }')
-       *   .toMatchResult(tm, {name: 'alice'});  // passes with extra fields
-       *
-       * // Multiple rows - variadic
-       * await expect('run: users -> { select: * }')
-       *   .toMatchResult(tm, {name: 'alice'}, {name: 'bob'});
-       *
-       * // Check at least one row exists
-       * await expect('run: users -> { select: * }')
-       *   .toMatchResult(tm, {});
-       *
-       * @param tm - TestModel from mkTestModel()
-       * @param rows - Expected row values (variadic), last arg can be options
+       * await expect(query).toMatchResult(tm, {name: 'alice'});
+       * await expect(query).toMatchResult(tm, {name: 'alice'}, {name: 'bob'});
        */
       toMatchResult(
         tm: TestModel,
@@ -56,16 +44,10 @@ declare global {
       ): Promise<R>;
 
       /**
-       * Jest matcher for running a Malloy query with exact matching.
-       * Actual rows must have exactly the expected fields.
+       * Exact matching - exact fields and exact row count.
        *
        * @example
-       * await expect('run: users -> { select: name }')
-       *   .toEqualResult(tm, [{name: 'alice'}]);
-       *
-       * @param tm - TestModel from mkTestModel()
-       * @param rows - Array of expected rows
-       * @param options - Optional matcher options
+       * await expect(query).toEqualResult(tm, [{name: 'alice'}]);
        */
       toEqualResult(
         tm: TestModel,
@@ -74,17 +56,10 @@ declare global {
       ): Promise<R>;
 
       /**
-       * Jest matcher for running a Malloy query with partial field matching
-       * but exact row count. Like toMatchResult but enforces row count.
+       * Partial fields but exact row count.
        *
        * @example
-       * // Exactly 2 rows, partial field match
-       * await expect('run: users -> { select: * }')
-       *   .toMatchRows(tm, [{name: 'alice'}, {name: 'bob'}]);
-       *
-       * @param tm - TestModel from mkTestModel()
-       * @param rows - Array of expected rows (exact count required)
-       * @param options - Optional matcher options
+       * await expect(query).toMatchRows(tm, [{name: 'alice'}, {name: 'bob'}]);
        */
       toMatchRows(
         tm: TestModel,
@@ -93,18 +68,10 @@ declare global {
       ): Promise<R>;
 
       /**
-       * Jest matcher for checking nested values using dotted path syntax.
-       * Navigates into nested arrays by taking the first element at each level.
+       * Check nested values via dotted paths. Takes first element at each array level.
        *
        * @example
-       * const result = await runQuery(tm, 'run: ...');
        * expect(result.data[0]).toHavePath({'by_state.state': 'TX'});
-       * expect(result.data[0]).toHavePath({
-       *   'o.by_state.state': 'TX',
-       *   'o.by_state.airport_count': 1845,
-       * });
-       *
-       * @param paths - Object with dotted path keys and expected values
        */
       toHavePath(paths: Record<string, unknown>): R;
     }
