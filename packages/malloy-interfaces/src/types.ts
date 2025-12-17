@@ -121,6 +121,22 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'timestamptz_type': 'TimestamptzType',
     },
   },
+  'BigNumberCell': {
+    'type': 'struct',
+    'name': 'BigNumberCell',
+    'fields': {
+      'number_value': {
+        'type': 'string',
+        'optional': false,
+        'array': false,
+      },
+      'subtype': {
+        'type': 'NumberSubtype',
+        'optional': true,
+        'array': false,
+      },
+    },
+  },
   'BooleanCell': {
     'type': 'struct',
     'name': 'BooleanCell',
@@ -199,6 +215,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'array_cell': 'ArrayCell',
       'null_cell': 'NullCell',
       'sql_native_cell': 'SQLNativeCell',
+      'big_number_cell': 'BigNumberCell',
     },
   },
   'CompileModelRequest': {
@@ -976,6 +993,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'subtype': {
+        'type': 'NumberSubtype',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'NumberLiteral': {
@@ -995,6 +1017,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'values': {
       'integer': 1,
       'decimal': 2,
+      'bigint': 3,
     },
   },
   'NumberType': {
@@ -1867,6 +1890,11 @@ export type AtomicTypeWithTimestamptzType = {
   kind: 'timestamptz_type';
 } & TimestamptzType;
 
+export type BigNumberCell = {
+  number_value: string;
+  subtype?: NumberSubtype;
+};
+
 export type BooleanCell = {
   boolean_value: boolean;
 };
@@ -1898,7 +1926,8 @@ export type CellType =
   | 'record_cell'
   | 'array_cell'
   | 'null_cell'
-  | 'sql_native_cell';
+  | 'sql_native_cell'
+  | 'big_number_cell';
 
 export type Cell =
   | CellWithStringCell
@@ -1910,7 +1939,8 @@ export type Cell =
   | CellWithRecordCell
   | CellWithArrayCell
   | CellWithNullCell
-  | CellWithSQLNativeCell;
+  | CellWithSQLNativeCell
+  | CellWithBigNumberCell;
 
 export type CellWithStringCell = {kind: 'string_cell'} & StringCell;
 
@@ -1931,6 +1961,8 @@ export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
 export type CellWithNullCell = {kind: 'null_cell'} & NullCell;
 
 export type CellWithSQLNativeCell = {kind: 'sql_native_cell'} & SQLNativeCell;
+
+export type CellWithBigNumberCell = {kind: 'big_number_cell'} & BigNumberCell;
 
 export type CompileModelRequest = {
   model_url: string;
@@ -2301,13 +2333,14 @@ export type NullLiteral = {};
 
 export type NumberCell = {
   number_value: number;
+  subtype?: NumberSubtype;
 };
 
 export type NumberLiteral = {
   number_value: number;
 };
 
-export type NumberSubtype = 'integer' | 'decimal';
+export type NumberSubtype = 'integer' | 'decimal' | 'bigint';
 
 export type NumberType = {
   subtype?: NumberSubtype;

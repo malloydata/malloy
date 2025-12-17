@@ -813,7 +813,7 @@ export type StringFieldDef = StringTypeDef & AtomicFieldDef;
 
 export interface NumberTypeDef {
   type: 'number';
-  numberType?: 'integer' | 'float';
+  numberType?: 'integer' | 'float' | 'bigint';
 }
 export type NumberFieldDef = NumberTypeDef & AtomicFieldDef;
 

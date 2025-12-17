@@ -129,10 +129,17 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       }
       return {kind: 'boolean_cell', boolean_value: value};
     } else if (field.type.kind === 'number_type') {
+      const subtype = field.type.subtype;
+      if (subtype === 'bigint') {
+        // For bigint, accept string (for precision) or number
+        const stringValue =
+          typeof value === 'string' ? value : String(value ?? '');
+        return {kind: 'big_number_cell', number_value: stringValue, subtype};
+      }
       if (typeof value !== 'number') {
         throw new Error(`Invalid number ${value}`);
       }
-      return {kind: 'number_cell', number_value: value};
+      return {kind: 'number_cell', number_value: value, subtype};
     } else if (field.type.kind === 'string_type') {
       if (typeof value !== 'string') {
         throw new Error(`Invalid string ${value}`);

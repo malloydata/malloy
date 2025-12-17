@@ -46,7 +46,12 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import type {
+  DialectFieldList,
+  FieldReferenceType,
+  IntegerTypeLimits,
+  QueryInfo,
+} from '../dialect';
 import {Dialect, qtz} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -67,17 +72,17 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'nvarchar2': {type: 'string'},
   'char varying': {type: 'string'},
   'nchar varying': {type: 'string'},
-  // numbers
-  'number': {type: 'number', numberType: 'integer'},
-  'numeric': {type: 'number', numberType: 'integer'},
-  'decimal': {type: 'number', numberType: 'integer'},
-  'dec': {type: 'number', numberType: 'integer'},
-  'integer': {type: 'number', numberType: 'integer'},
-  'int': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
-  'smallint': {type: 'number', numberType: 'integer'},
-  'tinyint': {type: 'number', numberType: 'integer'},
-  'byteint': {type: 'number', numberType: 'integer'},
+  // numbers - Snowflake uses NUMBER(38,0) for all integers, which exceeds 64-bit
+  'number': {type: 'number', numberType: 'bigint'},
+  'numeric': {type: 'number', numberType: 'bigint'},
+  'decimal': {type: 'number', numberType: 'bigint'},
+  'dec': {type: 'number', numberType: 'bigint'},
+  'integer': {type: 'number', numberType: 'bigint'},
+  'int': {type: 'number', numberType: 'bigint'},
+  'bigint': {type: 'number', numberType: 'bigint'},
+  'smallint': {type: 'number', numberType: 'bigint'},
+  'tinyint': {type: 'number', numberType: 'bigint'},
+  'byteint': {type: 'number', numberType: 'bigint'},
   'float': {type: 'number', numberType: 'float'},
   'float4': {type: 'number', numberType: 'float'},
   'float8': {type: 'number', numberType: 'float'},
@@ -122,6 +127,12 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
+
+  // Snowflake uses NUMBER(38,0) for all integers - only one integer type
+  override integerTypeLimits: IntegerTypeLimits = {
+    integer: {min: '-9(38)', max: '9(38)'},
+    bigint: null,
+  };
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -566,8 +577,11 @@ ${indent(sql)}
     if (malloyType.type === 'string') {
       return 'VARCHAR';
     } else if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'INTEGER';
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
+        return 'NUMBER';
       } else {
         return 'DOUBLE';
       }

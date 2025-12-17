@@ -14,7 +14,7 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "clean": "tsc --build --clean && rimraf @flowtyped",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped",
     "build": "tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "verify-types": "thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift",

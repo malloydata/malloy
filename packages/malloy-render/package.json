@@ -20,7 +20,7 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "prepublishOnly": "npm run build",
     "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
     "storybook-windows": "del /s /q .\\node_modules\\.cache && storybook dev -p 6006",

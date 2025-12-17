@@ -59,9 +59,10 @@ function makeTableSourceDef(
 
 function convertNumberSubtype(
   subtype?: Malloy.NumberSubtype
-): 'float' | 'integer' | undefined {
+): 'float' | 'integer' | 'bigint' | undefined {
   if (subtype === undefined) return undefined;
   if (subtype === 'decimal') return 'float';
+  if (subtype === 'bigint') return 'bigint';
   return 'integer';
 }
 

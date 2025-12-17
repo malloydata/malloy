@@ -77,6 +77,26 @@ describe('db:BigQuery', () => {
 
   it.todo('gets table structdefs');
 
+  it('maps INT64 to bigint', async () => {
+    const schema = await bq.fetchSchemaForSQLStruct(
+      {
+        connection: 'bigquery',
+        selectStr: 'SELECT CAST(1 AS INT64) AS int_val',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+  });
+
   it('runs a Malloy query', async () => {
     const sql = await runtime
       .loadModel(

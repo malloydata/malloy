@@ -158,4 +158,37 @@ describe('postgres schema reading', () => {
     }
     await connection.close();
   });
+
+  it('maps integer types correctly', async () => {
+    const connection = new PooledPostgresConnection('postgres');
+    const schema = await connection.fetchSchemaForSQLStruct(
+      {
+        connection: 'postgres',
+        selectStr:
+          'SELECT 1::smallint AS small_int, 2::integer AS int_val, 3::bigint AS big_int',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'small_int',
+        type: 'number',
+        numberType: 'integer',
+      });
+      expect(schema.structDef.fields[1]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'integer',
+      });
+      expect(schema.structDef.fields[2]).toEqual({
+        name: 'big_int',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+    await connection.close();
+  });
 });

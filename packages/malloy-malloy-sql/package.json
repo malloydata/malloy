@@ -20,7 +20,7 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "npm run build-grammar && jest --config=../../jest.config.js",
     "build": "npm run build-grammar && tsc --build",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

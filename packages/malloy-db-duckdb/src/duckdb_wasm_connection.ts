@@ -58,7 +58,8 @@ export const unwrapArrow = (value: unknown): any => {
   } else if (value instanceof Date) {
     return value;
   } else if (typeof value === 'bigint') {
-    return Number(value);
+    // Preserve precision by converting to string
+    return value.toString();
   } else if (typeof value === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = value as Record<string | symbol, any>;

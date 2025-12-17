@@ -179,8 +179,8 @@ describe('DuckDBConnection', () => {
         'fields': [
           {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
           {'name': 'name', 'type': 'string'},
-          {'name': 'age', 'numberType': 'integer', 'type': 'number'},
-          {'name': 'total_sections', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'age', 'numberType': 'bigint', 'type': 'number'},
+          {'name': 'total_sections', 'numberType': 'bigint', 'type': 'number'},
         ],
       });
     });
@@ -212,6 +212,78 @@ describe('DuckDBConnection', () => {
         'name': 'test',
         'type': 'sql native',
         'rawType': 'UUID',
+      });
+    });
+
+    describe('integer type mappings', () => {
+      it('maps INTEGER to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'INTEGER'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps SMALLINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'SMALLINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps TINYINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'TINYINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps BIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'BIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps HUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'HUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UBIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UBIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UHUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UHUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
       });
     });
   });

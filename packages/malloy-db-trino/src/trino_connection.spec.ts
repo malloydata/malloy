@@ -138,5 +138,35 @@ describe('Trino connection', () => {
         ],
       });
     });
+
+    describe('integer type mappings', () => {
+      it('maps integer to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('integer')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps smallint to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('smallint')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps tinyint to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('tinyint')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps bigint to bigint', () => {
+        expect(connection.malloyTypeFromTrinoType('bigint')).toEqual({
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+    });
   });
 });

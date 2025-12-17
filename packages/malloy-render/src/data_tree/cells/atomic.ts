@@ -47,9 +47,18 @@ export class NumberCell extends CellBase {
     return this.cell.number_value;
   }
 
+  /**
+   * Returns the numeric value as a JS number.
+   * For NumberCell, this is the same as `.value`.
+   */
+  number(): number {
+    return this.value;
+  }
+
   compareTo(other: Cell) {
-    if (!other.isNumber()) return 0;
-    const difference = this.value - other.value;
+    if (!other.isNumber() && !other.isBigNumber()) return 0;
+    const otherValue = other.isNumber() ? other.value : other.number();
+    const difference = this.value - otherValue;
     if (difference > 0) {
       return 1;
     } else if (difference === 0) {
@@ -63,6 +72,67 @@ export class NumberCell extends CellBase {
     return {
       kind: 'number_literal',
       number_value: this.cell.number_value,
+    };
+  }
+}
+
+export class BigNumberCell extends CellBase {
+  constructor(
+    public readonly cell: Malloy.CellWithBigNumberCell,
+    public readonly field: NumberField,
+    public readonly parent: NestCell | undefined
+  ) {
+    super(cell, field, parent);
+    // Register as number for min/max tracking (may lose precision)
+    this.field.registerValue(this.number());
+  }
+
+  /**
+   * Returns the string representation of the big number value.
+   * Use this for display or when precision matters.
+   */
+  get value() {
+    return this.cell.number_value;
+  }
+
+  /**
+   * Returns the value as a JS number (potentially lossy for large values).
+   * Use this when a number is required (e.g., for charts, calculations).
+   */
+  number(): number {
+    return Number(this.cell.number_value);
+  }
+
+  /**
+   * Returns the value as a JS BigInt for precise integer arithmetic.
+   * Only valid when subtype is 'bigint'.
+   */
+  bigint(): bigint {
+    return BigInt(this.cell.number_value);
+  }
+
+  compareTo(other: Cell) {
+    if (!other.isNumber() && !other.isBigNumber()) return 0;
+    if (other.isBigNumber()) {
+      // Use BigInt comparison for precision when both are bigint subtype
+      const thisBigInt = this.bigint();
+      const otherBigInt = other.bigint();
+      if (thisBigInt > otherBigInt) return 1;
+      if (thisBigInt < otherBigInt) return -1;
+      return 0;
+    }
+    // Compare with number (may lose precision)
+    const difference = this.number() - other.value;
+    if (difference > 0) return 1;
+    if (difference === 0) return 0;
+    return -1;
+  }
+
+  get literalValue(): Malloy.LiteralValue | undefined {
+    // Use the numeric literal (may lose precision for very large values)
+    return {
+      kind: 'number_literal',
+      number_value: this.number(),
     };
   }
 }

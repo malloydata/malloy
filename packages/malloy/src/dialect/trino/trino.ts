@@ -82,7 +82,7 @@ declare interface TimeMeasure {
 const trinoToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'varchar': {type: 'string'},
   'integer': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
   'smallint': {type: 'number', numberType: 'integer'},
   'tinyint': {type: 'number', numberType: 'integer'},
   'double': {type: 'number', numberType: 'float'},
@@ -603,7 +603,13 @@ ${indent(sql)}
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
-        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+        if (malloyType.numberType === 'integer') {
+          return 'INTEGER';
+        } else if (malloyType.numberType === 'bigint') {
+          return 'BIGINT';
+        } else {
+          return 'DOUBLE';
+        }
       case 'string':
         return 'VARCHAR';
       case 'timestamptz':

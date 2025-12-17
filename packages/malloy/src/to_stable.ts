@@ -417,7 +417,9 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
               ? 'decimal'
               : field.numberType === 'integer'
                 ? 'integer'
-                : undefined,
+                : field.numberType === 'bigint'
+                  ? 'bigint'
+                  : undefined,
         };
       case 'boolean':
         return {kind: 'boolean_type'};

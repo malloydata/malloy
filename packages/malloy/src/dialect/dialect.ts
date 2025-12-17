@@ -101,6 +101,32 @@ export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
+/**
+ * Min/max range for an integer type.
+ * - null: type is not supported by this dialect
+ * - {min, max}: the range of values as expressions that parseIntegerLimit() can parse
+ *
+ * Supported expression formats:
+ * - Plain numbers: '12345', '-12345'
+ * - Powers of 2: '2^31', '-2^63', '2^63-1', '-2^127+1'
+ * - Repeated digits: '9(38)' (38 nines), '-9(38)'
+ */
+export type IntegerTypeRange = {min: string; max: string} | null;
+
+/**
+ * Configuration for integer literal type selection.
+ *
+ * When translating an integer literal, the translator walks down this list
+ * (integer → bigint) and selects the first type that can hold the value.
+ * If no type can hold the value (or all are null), an error is raised.
+ */
+export interface IntegerTypeLimits {
+  /** Range for 'integer' type (-2^53 to 2^53-1, safe for JS Number) */
+  integer: IntegerTypeRange;
+  /** Range for 'bigint' type (64-bit or larger integers, varies by dialect) */
+  bigint: IntegerTypeRange;
+}
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -177,6 +203,15 @@ export abstract class Dialect {
   likeEscape = true;
 
   /**
+   * Ranges for integer types in this dialect.
+   * Default supports integer (JS safe) and bigint (64-bit signed).
+   */
+  integerTypeLimits: IntegerTypeLimits = {
+    integer: {min: '-2^53-1', max: '2^53-1'},
+    bigint: {min: '-2^63', max: '2^63-1'},
+  };
+
+  /**
    * Create the appropriate time literal IR node based on dialect support.
    * Static method so it can be called with undefined dialect (e.g., ConstantFieldSpace).
    */
@@ -237,6 +272,42 @@ export abstract class Dialect {
         timeframe: units,
       },
     };
+  }
+
+  /**
+   * Parse an integer limit expression into a BigInt.
+   *
+   * Supported formats:
+   * - Plain numbers: '12345', '-12345'
+   * - Powers of 2: '2^31', '-2^63', '2^63-1', '-2^127+1'
+   * - Repeated digits: '9(38)' (38 nines), '-9(38)'
+   */
+  static parseIntegerLimit(expr: string): bigint {
+    const trimmed = expr.trim();
+
+    // Check for repeated digits: 9(38) or -9(38)
+    const repeatMatch = trimmed.match(/^(-?)(\d)\((\d+)\)$/);
+    if (repeatMatch) {
+      const [, sign, digit, countStr] = repeatMatch;
+      // countStr is small (< 1000), safe for string repeat
+      const value = BigInt(digit.repeat(Number(countStr)));
+      return sign === '-' ? -value : value;
+    }
+
+    // Check for power of 2: 2^31, -2^63, 2^63-1, -2^127+1
+    const powerMatch = trimmed.match(/^(-?)2\^(\d+)([+-]\d+)?$/);
+    if (powerMatch) {
+      const [, sign, expStr, offsetStr] = powerMatch;
+      // BigInt ** BigInt exponentiation (using BigInt(2) instead of 2n for ES target compatibility)
+      let value = BigInt(2) ** BigInt(expStr);
+      if (offsetStr) {
+        value += BigInt(offsetStr);
+      }
+      return sign === '-' ? -value : value;
+    }
+
+    // Plain number
+    return BigInt(trimmed);
   }
 
   abstract getDialectFunctionOverrides(): {

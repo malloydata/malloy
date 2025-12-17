@@ -143,4 +143,27 @@ describe('db:Snowflake', () => {
       {name: 'TS_TZ', type: 'timestamptz'},
     ]);
   });
+
+  it('maps integer types to bigint', async () => {
+    const x: malloy.SQLSourceDef = {
+      type: 'sql_select',
+      name: 'integer_types',
+      connection: conn.name,
+      dialect: conn.dialectName,
+      selectStr: `
+        SELECT
+          1::INTEGER AS int_val,
+          2::BIGINT AS bigint_val,
+          3::NUMBER(38,0) AS number_val
+      `,
+      fields: [],
+    };
+    const y = await conn.fetchSelectSchema(x);
+    // Snowflake maps all integer types to bigint since NUMBER can hold 38 digits
+    expect(y.fields).toEqual([
+      {name: 'INT_VAL', type: 'number', numberType: 'bigint'},
+      {name: 'BIGINT_VAL', type: 'number', numberType: 'bigint'},
+      {name: 'NUMBER_VAL', type: 'number', numberType: 'bigint'},
+    ]);
+  });
 });
