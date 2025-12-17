@@ -173,16 +173,15 @@ describe.each(runtimes.runtimeList)(
             aggregate: n is count()
             order_by: roll asc
           }
-          `).toMatchResult(
-          testModel,
+          `).toMatchRows(testModel, [
           {roll: 2, n: 1},
           {roll: 3, n: 2},
           {roll: 4, n: 3},
           {roll: 5, n: 4},
           {roll: 6, n: 3},
           {roll: 7, n: 2},
-          {roll: 8, n: 1}
-        );
+          {roll: 8, n: 1},
+        ]);
       });
       // can't use special chars in column names in bq
       test.when(conName !== 'bigquery')(
@@ -263,11 +262,10 @@ describe.each(runtimes.runtimeList)(
             group_by: nums
             aggregate: addem is n.sum()
             order_by: addem asc
-          }`).toMatchResult(
-          testModel,
+          }`).toMatchRows(testModel, [
           {nums: evensObj, addem: 11},
-          {nums: oddsObj, addem: 1100}
-        );
+          {nums: oddsObj, addem: 1100},
+        ]);
       });
     });
     describe('record', () => {

@@ -5,7 +5,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import {mkTestModel, TV, resultIs} from '@malloydata/malloy/test';
+import {mkTestModel, TV} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -61,9 +61,10 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
           },
         ],
       });
+      // Schema-aware matching - plain date strings work for date fields
       await expect('run: data -> { select: * }').toMatchResult(tm, {
-        d1: resultIs.date('2024-01-15'),
-        d2: resultIs.date('2024-12-31'),
+        d1: '2024-01-15',
+        d2: '2024-12-31',
       });
     });
 
@@ -143,13 +144,14 @@ describe.each(runtimes.runtimeList)('New matchers for %s', (db, runtime) => {
     });
   });
 
-  describe('resultIs matchers', () => {
-    test('resultIs.date compares dates correctly', async () => {
+  describe('schema-aware type matching', () => {
+    test('plain date strings work for date fields', async () => {
       const tm = mkTestModel(runtime, {
         data: [{d: TV.date('2024-01-15')}],
       });
+      // Schema knows 'd' is a date field, so '2024-01-15' matches '2024-01-15T00:00:00.000Z'
       await expect('run: data -> { select: * }').toMatchResult(tm, {
-        d: resultIs.date('2024-01-15'),
+        d: '2024-01-15',
       });
     });
 

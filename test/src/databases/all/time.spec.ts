@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, resultIs} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import '../../util/db-jest-matchers'; // For isSqlEq matcher used with sqlEq helper
 import {
   brokenIn,
@@ -784,7 +784,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: mex_date is utc_midnight_ts::date
       }`
-    ).toMatchResult(testModel, {mex_date: resultIs.date('2020-02-19')});
+    ).toMatchResult(testModel, {mex_date: '2020-02-19'});
   });
   test.when(runtime.dialect.hasTimestamptz)(
     'cast timestamptz to date',
@@ -795,7 +795,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
           select: mex_date is utc_tstz::date
         }`
-      ).toMatchResult(testModel, {mex_date: resultIs.date('2020-02-19')});
+      ).toMatchResult(testModel, {mex_date: '2020-02-19'});
     }
   );
   test('cast date to timestamp', async () => {
@@ -812,7 +812,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: d2020 is date_2020
       }`
-    ).toMatchResult(testModel, {d2020: resultIs.date('2020-02-20')});
+    ).toMatchResult(testModel, {d2020: '2020-02-20'});
   });
   test.when(runtime.dialect.hasTimestamptz)(
     'cast date to timestamptz',

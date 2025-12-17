@@ -10,7 +10,7 @@
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, resultIs} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const [describe, databases] = describeIfDatabaseAvailable(['presto', 'trino']);
 const runtimes = new RuntimeList(databases);
@@ -47,7 +47,7 @@ describe.each(runtimes.runtimeList)(
           select:
             *
             hll_moving is hll_estimate(hll_acc)
-        }`).toEqualResult(testModel, [
+        }`).toMatchRows(testModel, [
             {category: 'A', val: 'value1', seq: 1, hll_moving: 1},
             {category: 'A', val: 'value2', seq: 2, hll_moving: 2},
             {category: 'B', val: 'value1', seq: 1, hll_moving: 2},
@@ -74,7 +74,7 @@ describe.each(runtimes.runtimeList)(
           select:
            *
            final_count is hll_estimate(combined_hll)
-        }`).toEqualResult(testModel, [
+        }`).toMatchRows(testModel, [
             {category: 'A', final_count: 2},
             {category: 'B', final_count: 2},
           ]);
@@ -117,11 +117,9 @@ describe.each(runtimes.runtimeList)(
     });
 
     it(`runs the date_parse function - ${databaseName}`, async () => {
-      const expected = resultIs.date('2024-09-15');
-
       await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
       select: x is date_parse('2024-09-15', '%Y-%m-%d')::date
-      }`).toMatchResult(testModel, {x: expected});
+      }`).toMatchResult(testModel, {x: '2024-09-15'});
     });
 
     it(`runs the regexp_replace function - ${databaseName}`, async () => {

@@ -221,7 +221,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
           limit: 5
         }
-      `).toMatchResult(joinModel, {}, {}, {}, {}, {});
+      `).toMatchRows(joinModel, [{}, {}, {}, {}, {}]);
     }
   );
 
@@ -239,7 +239,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: flight_count is count()
         limit: 5
       }
-    `).toMatchResult(testModel, {}, {}, {}, {}, {});
+    `).toMatchRows(testModel, [{}, {}, {}, {}, {}]);
   });
 
   // I don't know what join issue 440 was, there was a change of repos and that

@@ -630,7 +630,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       const range = mkDateRange('2001-01-01', '2002-01-01');
       await expect(`
         run: range + { where: t ~ f'2001' }
-      `).toMatchResult(range, ...inRange);
+      `).toMatchRows(range, inRange);
     });
     test('2 days ago', async () => {
       nowIs('2001-01-15 12:00:00');
@@ -639,7 +639,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-13 00:00:00',
         '2001-01-14 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('2 days', async () => {
       nowIs('2001-01-15 12:00:00');
@@ -648,7 +648,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-14 00:00:00',
         '2001-01-16 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('2 days from now', async () => {
       nowIs('2001-01-15 12:00:00');
@@ -657,7 +657,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-17 00:00:00',
         '2001-01-18 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('2000 to 2001', async () => {
       const rangeQuery = mkRangeQuery(
@@ -665,7 +665,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2000-01-01 00:00:00',
         '2001-01-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next 2 days', async () => {
       nowIs('2001-01-01 12:00:00');
@@ -674,7 +674,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-02 00:00:00',
         '2001-01-04 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last 2 months', async () => {
       nowIs('2001-01-01 12:00:00');
@@ -683,7 +683,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2000-11-01 00:00:00',
         '2001-01-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('before y2k', async () => {
       const rangeQuery = mkRangeQuery(
@@ -709,7 +709,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-01 00:01:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('y2k for 2 hour', async () => {
       const rangeQuery = mkRangeQuery(
@@ -717,7 +717,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-01 02:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('y2k for 1 day', async () => {
       const rangeQuery = mkRangeQuery(
@@ -725,7 +725,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-02 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('y2k for 1 week', async () => {
       const rangeQuery = mkRangeQuery(
@@ -733,7 +733,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-01-08 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('y2k for 1 month', async () => {
       const rangeQuery = mkRangeQuery(
@@ -741,7 +741,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-02-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('y2k for 1 quarter', async () => {
       const rangeQuery = mkRangeQuery(
@@ -749,7 +749,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-04-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('y2k for 1 year', async () => {
       const rangeQuery = mkRangeQuery(
@@ -757,7 +757,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('null', async () => {
       const rangeQuery = mkRangeQuery(
@@ -802,7 +802,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('not month literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -810,7 +810,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-06-01 00:00:00',
         '2001-07-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...notInRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, notInRange);
     });
     test('day literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -818,7 +818,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-06-15 00:00:00',
         '2001-06-16 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('hour literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -826,7 +826,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-03 04:00:00',
         '2001-02-03 05:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('minute literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -834,7 +834,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-03 04:05:00',
         '2001-02-03 04:06:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('quarter literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -842,7 +842,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-04-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('week literal', async () => {
       const rangeQuery = mkRangeQuery(
@@ -850,7 +850,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-01 00:00:00',
         '2023-01-08 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('full second literal', async () => {
       const eqtime = mkEqTime('2023-01-01 01:02:03');
@@ -871,7 +871,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-03 00:00:00',
         '2001-02-04 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('yesterday', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -880,7 +880,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-02 00:00:00',
         '2001-02-03 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('tomorrow', async () => {
       nowIs('2001-02-03 12:00:00');
@@ -889,7 +889,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-02-04 00:00:00',
         '2001-02-05 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('this week', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -898,7 +898,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-01 00:00:00',
         '2023-01-08 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last month', async () => {
       nowIs('2001-02-01 12:00:00');
@@ -907,7 +907,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2001-02-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next quarter', async () => {
       nowIs('2001-01-02 12:00:00');
@@ -916,7 +916,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-04-01 00:00:00',
         '2001-07-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('this year', async () => {
       nowIs('2001-01-02 12:00:00');
@@ -925,7 +925,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2001-01-01 00:00:00',
         '2002-01-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     // 2023-01-01 is a sunday
     test('(last) sunday', async () => {
@@ -935,7 +935,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-01 00:00:00',
         '2023-01-02 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last monday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -944,7 +944,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-02 00:00:00',
         '2023-01-03 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last-tuesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -953,7 +953,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-27 00:00:00',
         '2022-12-28 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last-wednesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -962,7 +962,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-28 00:00:00',
         '2022-12-29 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last-thursday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -971,7 +971,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-29 00:00:00',
         '2022-12-30 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last-friday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -980,7 +980,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-30 00:00:00',
         '2022-12-31 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('last saturday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -989,7 +989,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2022-12-31 00:00:00',
         '2023-01-01 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next sunday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -998,7 +998,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-08 00:00:00',
         '2023-01-09 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next monday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1007,7 +1007,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-09 00:00:00',
         '2023-01-10 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next tuesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1016,7 +1016,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-10 00:00:00',
         '2023-01-11 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next wednesday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1025,7 +1025,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-04 00:00:00',
         '2023-01-05 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next thursday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1034,7 +1034,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-05 00:00:00',
         '2023-01-06 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next friday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1043,7 +1043,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-06 00:00:00',
         '2023-01-07 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('next saturday', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1052,7 +1052,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         '2023-01-07 00:00:00',
         '2023-01-08 00:00:00'
       );
-      await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+      await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
     });
     test('temporal filters are case insensitive', async () => {
       nowIs('2023-01-03 00:00:00');
@@ -1078,7 +1078,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           '2024-01-02 00:00:00',
           'America/Mexico_City'
         );
-        await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+        await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
       });
       test.when(tzTesting)(
         'timestamp literal today in query time zone',
@@ -1090,7 +1090,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             '2024-01-16 00:00:00',
             'America/Mexico_City'
           );
-          await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+          await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
         }
       );
       test.when(tzTesting)(
@@ -1103,7 +1103,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             '2024-01-04 00:00:00',
             'America/Mexico_City'
           );
-          await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+          await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
         }
       );
       test.when(tzTesting)('day literal in query time zone', async () => {
@@ -1132,7 +1132,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
             '2024-10-01 00:00:00', // Interpreted as Dublin time
             'Europe/Dublin'
           );
-          await expect('run: rangeQuery').toMatchResult(rangeQuery, ...inRange);
+          await expect('run: rangeQuery').toMatchRows(rangeQuery, inRange);
         }
       );
     });

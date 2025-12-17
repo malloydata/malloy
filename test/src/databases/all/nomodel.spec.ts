@@ -236,12 +236,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: c is airport_count.sum()
         group_by: a.state
       }
-    `).toMatchResult(
-      testModel,
+    `).toMatchRows(testModel, [
       {state: null, c: 18605},
       {state: 'CA', c: 984},
-      {state: 'NH', c: 112}
-    );
+      {state: 'NH', c: 112},
+    ]);
   });
 
   it(`join_one condition no primary key - ${databaseName}`, async () => {
@@ -270,12 +269,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: c is a.airport_count.sum()
         group_by: a.state
       }
-    `).toMatchResult(
-      testModel,
+    `).toMatchRows(testModel, [
       {state: 'TX', c: 1845},
       {state: 'LA', c: 500},
-      {state: null, c: 0}
-    );
+      {state: null, c: 0},
+    ]);
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {

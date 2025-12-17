@@ -23,7 +23,7 @@
 
 import {RuntimeList} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
-import {resultIs, wrapTestModel} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
@@ -37,7 +37,7 @@ describe('time specific tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
   const testModel = runtime && wrapTestModel(runtime, '');
 
-  const utc_2020 = resultIs.timestamp('2020-02-20T00:00:00.000Z');
+  const utc_2020 = '2020-02-20T00:00:00.000Z';
 
   test('can cast unsupported DATETIME to timestamp', async () => {
     await expect(

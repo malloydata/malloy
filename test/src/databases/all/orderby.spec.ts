@@ -25,7 +25,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, resultIs} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import {Dialect} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -210,13 +210,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${abc} -> { select: *; order_by: l asc }`
-        ).toMatchResult(
-          orderByModel,
+        ).toMatchRows(orderByModel, [
           {ln: 'a'},
           {ln: 'b'},
           {ln: 'c'},
-          {ln: 'null'}
-        );
+          {ln: 'null'},
+        ]);
       }
     );
     test.when(testNullOrdering)(
@@ -224,13 +223,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${abc} -> { select: *; order_by: l desc }`
-        ).toMatchResult(
-          orderByModel,
+        ).toMatchRows(orderByModel, [
           {ln: 'c'},
           {ln: 'b'},
           {ln: 'a'},
-          {ln: 'null'}
-        );
+          {ln: 'null'},
+        ]);
       }
     );
     test.when(testNullOrdering)(
@@ -238,13 +236,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(`
           #! test.verbose
-          run: ${abc} -> { group_by: l }`).toMatchResult(
-          orderByModel,
+          run: ${abc} -> { group_by: l }`).toMatchRows(orderByModel, [
           {l: 'a'},
           {l: 'b'},
           {l: 'c'},
-          {l: null}
-        );
+          {l: null},
+        ]);
       }
     );
     const nums = `${databaseName}.sql("""
@@ -258,7 +255,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${nums} -> { select: n; order_by: n asc }`
-        ).toMatchResult(orderByModel, {n: 1}, {n: 5}, {n: 9}, {n: null});
+        ).toMatchRows(orderByModel, [{n: 1}, {n: 5}, {n: 9}, {n: null}]);
       }
     );
     test.when(testNullOrdering)(
@@ -266,7 +263,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${nums} -> { select: n; order_by: n desc }`
-        ).toMatchResult(orderByModel, {n: 9}, {n: 5}, {n: 1}, {n: null});
+        ).toMatchRows(orderByModel, [{n: 9}, {n: 5}, {n: 1}, {n: null}]);
       }
     );
     test.when(testNullOrdering)(
@@ -277,13 +274,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           run: ${nums} -> {
             group_by: nstr is n ? pick 'null' when is null else concat('number', n::string)
             aggregate: nTotal is n.sum()
-          }`).toMatchResult(
-          orderByModel,
+          }`).toMatchRows(orderByModel, [
           {nstr: 'number9'},
           {nstr: 'number5'},
           {nstr: 'number1'},
-          {nstr: 'null'}
-        );
+          {nstr: 'null'},
+        ]);
       }
     );
     const y2020Node = Dialect.makeTimeLiteralNode(
@@ -294,9 +290,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'timestamp'
     );
     const y2020 = runtime.dialect.exprToSQL({}, y2020Node) || '';
-    const d2020 = resultIs.timestamp('2020-01-01T00:00:00.000Z');
-    const d2022 = resultIs.timestamp('2022-01-01T00:00:00.000Z');
-    const d2025 = resultIs.timestamp('2025-01-01T00:00:00.000Z');
+    const d2020 = '2020-01-01T00:00:00.000Z';
+    const d2022 = '2022-01-01T00:00:00.000Z';
+    const d2025 = '2025-01-01T00:00:00.000Z';
     const y2025Node = Dialect.makeTimeLiteralNode(
       runtime.dialect,
       '2025-01-01 00:00:00',
@@ -324,13 +320,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${times} -> { select: t; order_by: t asc }`
-        ).toMatchResult(
-          orderByModel,
+        ).toMatchRows(orderByModel, [
           {t: d2020},
           {t: d2022},
           {t: d2025},
-          {t: null}
-        );
+          {t: null},
+        ]);
       }
     );
     test.when(testTimes)(
@@ -338,25 +333,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${times} -> { select: t; order_by: t desc }`
-        ).toMatchResult(
-          orderByModel,
+        ).toMatchRows(orderByModel, [
           {t: d2025},
           {t: d2022},
           {t: d2020},
-          {t: null}
-        );
+          {t: null},
+        ]);
       }
     );
     test.when(testTimes)(
       'null last in reduce timestamps with default descending order',
       async () => {
-        await expect(`run: ${times} -> { group_by: t }`).toMatchResult(
-          orderByModel,
+        await expect(`run: ${times} -> { group_by: t }`).toMatchRows(orderByModel, [
           {t: d2025},
           {t: d2022},
           {t: d2020},
-          {t: null}
-        );
+          {t: null},
+        ]);
       }
     );
   });

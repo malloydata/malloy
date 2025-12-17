@@ -13,10 +13,6 @@ export type {TestModelSources, TestModel} from './test-models';
 export {runQuery} from './runQuery';
 export type {QueryResult} from './runQuery';
 
-// Result type matchers
-export {resultIs, isResultMatcher} from './resultIs';
-export type {ResultMatcher} from './resultIs';
-
 // Jest matcher types (matchers registered via separate import)
 export type {ExpectedRow, MatcherOptions} from './resultMatchers';
 
