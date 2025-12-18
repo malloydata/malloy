@@ -79,7 +79,10 @@ export function isStringFieldInfo(
 export function isTimestampFieldInfo(
   field: Malloy.DimensionInfo
 ): field is TimestampFieldInfo {
-  return field.type.kind === 'timestamp_type';
+  return (
+    field.type.kind === 'timestamp_type' ||
+    field.type.kind === 'timestamptz_type'
+  );
 }
 
 export function isBooleanFieldInfo(
