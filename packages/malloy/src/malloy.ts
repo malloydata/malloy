@@ -4080,8 +4080,7 @@ export class JSONWriter extends DataWriter {
       }
       const json = JSON.stringify(
         row.toObject(),
-        (_key, value) =>
-          typeof value === 'bigint' ? Number(value) : value,
+        (_key, value) => (typeof value === 'bigint' ? Number(value) : value),
         2
       );
       const jsonLines = json.split('\n');

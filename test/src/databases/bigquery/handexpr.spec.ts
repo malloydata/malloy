@@ -25,7 +25,7 @@
 
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, runQuery, mkTestModel} from '@malloydata/malloy/test';
+import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
 
 import {RuntimeList} from '../../runtimes';
 

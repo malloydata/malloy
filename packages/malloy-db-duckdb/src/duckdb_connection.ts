@@ -285,4 +285,3 @@ export class DuckDBConnection extends DuckDBCommon {
     }
   }
 }
-
