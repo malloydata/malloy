@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
+import {wrapTestModel, runQuery, mkTestModel} from '@malloydata/malloy/test';
 import '../../util/db-jest-matchers'; // For isSqlEq matcher
 import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
@@ -59,6 +59,29 @@ source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const expressionModel = runtime.loadModel(modelText(databaseName));
   const testModel = wrapTestModel(runtime, modelText(databaseName));
+
+  test.when(runtime.dialect.supportsBigIntPrecision)(
+    'number sizes',
+    async () => {
+      const MAX_INT64 = BigInt('9223372036854775807');
+      const tm = mkTestModel(runtime, {
+        oneBigNum: [{bign: MAX_INT64, n: 1}],
+      });
+      await expect('run: oneBigNum->{select: bign, n}').toMatchResult(tm, {
+        bign: MAX_INT64,
+        n: 1,
+      });
+    }
+  );
+
+  test('aggregate number size', async () => {
+    // on some databases sumI() expands to a larger integer type
+    // which cuased this to fail.
+    await expect(
+      'run: aircraft_models->{aggregate: total_seats}'
+    ).toMatchResult(testModel, {total_seats: 452415});
+  });
+
   // basic calculations for sum, filtered sum, without a join.
 
   const q = runtime.getQuoter();

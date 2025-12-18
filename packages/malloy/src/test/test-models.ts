@@ -25,7 +25,7 @@ export interface TestModel {
 }
 
 // Valid value types for inferrable types
-type PrimitiveValue = string | number | boolean | null;
+type PrimitiveValue = string | number | boolean | null | bigint;
 
 // Test data value types - can be primitives, arrays, records, or explicit TypedValues
 type TestValue =
@@ -91,6 +91,14 @@ function toTypedValue(value: TestValue): TypedValue {
     return {
       expr: value ? {node: 'true'} : {node: 'false'},
       malloyType: {type: 'boolean'},
+      needsCast: false,
+    };
+  }
+
+  if (typeof value === 'bigint') {
+    return {
+      expr: {node: 'numberLiteral', literal: value.toString()},
+      malloyType: {type: 'number', numberType: 'bigint'},
       needsCast: false,
     };
   }

@@ -127,7 +127,10 @@ export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
  * - null: type is not supported by this dialect
  * - {min, max}: the range of values (use the exported constants like MIN_INT64, MAX_INT64)
  */
-export type IntegerTypeRange = {min: number | bigint; max: number | bigint} | null;
+export type IntegerTypeRange = {
+  min: number | bigint;
+  max: number | bigint;
+} | null;
 
 /**
  * Configuration for integer literal type selection.
@@ -189,6 +192,10 @@ export abstract class Dialect {
 
   // support select * replace(...)
   supportsSelectReplace = true;
+
+  // Does the data path preserve bigint precision? False for dialects that
+  // serialize results through JSON (postgres, presto, trino)
+  supportsBigIntPrecision = true;
 
   // ability to join source with a filter on a joined source.
   supportsComplexFilteredSources = true;

@@ -29,8 +29,7 @@ function cellToValue(cell: Malloy.Cell, fieldInfo: Malloy.FieldInfo): unknown {
     case 'number_cell':
       return cell.number_value;
     case 'big_number_cell':
-      // Return as number for test comparisons (may lose precision for very large values)
-      return Number(cell.number_value);
+      return BigInt(cell.number_value);
     case 'boolean_cell':
       return cell.boolean_value;
     case 'date_cell':

@@ -1765,7 +1765,7 @@ export interface ModelAnnotation extends Annotation {
   id: string;
 }
 
-export type QueryScalar = string | boolean | number | Date | Buffer | null;
+export type QueryScalar = string | boolean | number | bigint | Date | Buffer | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;

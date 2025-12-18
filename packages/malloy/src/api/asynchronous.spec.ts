@@ -338,10 +338,6 @@ ORDER BY 1 asc NULLS LAST
         fetchers
       );
 
-      // Check that the schema has the correct bigint subtype
-      console.log('=== STABLE API TABLE SOURCE RESULT ===');
-      console.log(JSON.stringify(result.result?.schema, null, 2));
-
       expect(result.result).toBeDefined();
       expect(result.result?.schema.fields[0]).toMatchObject({
         kind: 'dimension',
@@ -409,10 +405,6 @@ ORDER BY 1 asc NULLS LAST
         fetchers
       );
 
-      // Check that the schema has the correct bigint subtype
-      console.log('=== STABLE API SQL SOURCE RESULT ===');
-      console.log(JSON.stringify(result.result?.schema, null, 2));
-
       expect(result.result).toBeDefined();
       expect(result.result?.schema.fields[0]).toMatchObject({
         kind: 'dimension',
@@ -475,8 +467,6 @@ ORDER BY 1 asc NULLS LAST
       const tableSchema = await wrappedConnection.fetchSchemaForTable(
         'test_table'
       );
-      console.log('=== WRAPPED TABLE SCHEMA ===');
-      console.log(JSON.stringify(tableSchema, null, 2));
 
       expect(tableSchema.fields[0]).toMatchObject({
         kind: 'dimension',
@@ -488,8 +478,6 @@ ORDER BY 1 asc NULLS LAST
       const sqlSchema = await wrappedConnection.fetchSchemaForSQLQuery(
         'SELECT 1::BIGINT as bigint_val'
       );
-      console.log('=== WRAPPED SQL SCHEMA ===');
-      console.log(JSON.stringify(sqlSchema, null, 2));
 
       expect(sqlSchema.fields[0]).toMatchObject({
         kind: 'dimension',
@@ -584,9 +572,6 @@ ORDER BY 1 asc NULLS LAST
         },
         fetchers
       );
-
-      console.log('=== FULL STABLE API WITH WRAPPED LEGACY CONNECTION ===');
-      console.log(JSON.stringify(result.result?.schema, null, 2));
 
       expect(result.result).toBeDefined();
       expect(result.result?.schema.fields[0]).toMatchObject({

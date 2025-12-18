@@ -360,7 +360,14 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     const result = await connection.runSQL(query, {
       rowLimit: 1000,
     });
-    return result.rows as unknown as SearchIndexResult[];
+    // Convert BigInt weights to numbers to satisfy the SearchIndexResult interface
+    return result.rows.map(row => ({
+      ...row,
+      weight:
+        typeof row['weight'] === 'bigint'
+          ? Number(row['weight'])
+          : row['weight'],
+    })) as unknown as SearchIndexResult[];
   }
 }
 

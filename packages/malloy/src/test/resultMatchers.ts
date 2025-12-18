@@ -117,6 +117,27 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
   return lovely;
 }
 
+function looseEqual(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (typeof a === 'number' && typeof b === 'bigint') {
+    try {
+      return BigInt(a) === b;
+    } catch {
+      return false;
+    }
+  }
+  if (typeof a === 'bigint' && typeof b === 'number') {
+    try {
+      return a === BigInt(b);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 async function runQueryInternal(
   tm: TestModel,
   src: string
@@ -236,6 +257,8 @@ function cellToValue(cell: Malloy.Cell): unknown {
       return cell.string_value;
     case 'number_cell':
       return cell.number_value;
+    case 'big_number_cell':
+      return BigInt(cell.number_value);
     case 'boolean_cell':
       return cell.boolean_value;
     case 'date_cell':
@@ -394,7 +417,20 @@ function matchCell(
     ) {
       actual = actual !== 0;
     }
-    if (actual === expected) {
+    if (looseEqual(actual, expected)) {
+      return {pass: true};
+    }
+    return matchFail(path, expected, actual);
+  }
+
+  // Handle big number cells
+  if (cell.kind === 'big_number_cell') {
+    const actual = BigInt(cell.number_value);
+    if (looseEqual(actual, expected)) {
+      return {pass: true};
+    }
+    // Also allow matching against string representation of the number
+    if (typeof expected === 'string' && expected === cell.number_value) {
       return {pass: true};
     }
     return matchFail(path, expected, actual);
@@ -596,7 +632,7 @@ function matchValue(
     typeof expected === 'boolean' ||
     typeof expected === 'bigint'
   ) {
-    if (actual === expected) {
+    if (looseEqual(actual, expected)) {
       return {pass: true};
     }
     return matchFail(path, expected, actual);
@@ -999,7 +1035,7 @@ expect.extend({
         current = current[0];
       }
 
-      if (current !== expected) {
+      if (!looseEqual(current, expected)) {
         fails.push(`Path '${path}':`);
         fails.push(
           this.utils.EXPECTED_COLOR(`  Expected: ${humanReadable(expected)}`)

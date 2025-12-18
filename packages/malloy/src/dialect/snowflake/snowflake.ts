@@ -73,10 +73,8 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'char varying': {type: 'string'},
   'nchar varying': {type: 'string'},
   // numbers - Snowflake uses NUMBER(38,0) for all integers, which exceeds 64-bit
-  'number': {type: 'number', numberType: 'bigint'},
-  'numeric': {type: 'number', numberType: 'bigint'},
-  'decimal': {type: 'number', numberType: 'bigint'},
-  'dec': {type: 'number', numberType: 'bigint'},
+  // NUMBER, NUMERIC, DECIMAL, DEC are handled dynamically in sqlTypeToMalloyType
+  // because they can be integers or floats depending on scale.
   'integer': {type: 'number', numberType: 'bigint'},
   'int': {type: 'number', numberType: 'bigint'},
   'bigint': {type: 'number', numberType: 'bigint'},
@@ -611,12 +609,30 @@ ${indent(sql)}
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
-    return (
-      snowflakeToMalloyTypes[baseSqlType.trim().toLowerCase()] || {
-        type: 'sql native',
-        rawType: sqlType,
+    const lowerType = baseSqlType.trim().toLowerCase();
+    const mapped = snowflakeToMalloyTypes[lowerType];
+    if (mapped) {
+      return mapped;
+    }
+
+    // Handle NUMBER/NUMERIC/DECIMAL with scale
+    // If scale > 0, it's a float (decimal). If scale == 0 or omitted, it's a bigint (integer).
+    if (['number', 'numeric', 'decimal', 'dec'].includes(lowerType)) {
+      const match = sqlType.match(/\(\s*\d+\s*,\s*(\d+)\s*\)/);
+      if (match) {
+        const scale = parseInt(match[1], 10);
+        if (scale > 0) {
+          return {type: 'number', numberType: 'float'};
+        }
       }
-    );
+      // Default to bigint if scale is 0 or not specified (Snowflake defaults to NUMBER(38,0))
+      return {type: 'number', numberType: 'bigint'};
+    }
+
+    return {
+      type: 'sql native',
+      rawType: sqlType,
+    };
   }
 
   castToString(expression: string): string {

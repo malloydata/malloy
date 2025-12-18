@@ -90,6 +90,8 @@ export class MySQLConnection
         database: this.config.database,
         multipleStatements: true,
         decimalNumbers: true,
+        supportBigNumbers: true,
+        bigNumberStrings: true,
         timezone: '+00:00',
       });
       await this.connection.query(

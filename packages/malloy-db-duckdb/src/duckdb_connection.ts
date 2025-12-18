@@ -224,7 +224,7 @@ export class DuckDBConnection extends DuckDBCommon {
           if (err) {
             reject(err);
           } else {
-            rows = processBigInts(rows);
+            // rows = processBigInts(rows);
             resolve({
               rows,
               totalRows: rows.length,
@@ -264,7 +264,7 @@ export class DuckDBConnection extends DuckDBCommon {
         break;
       }
       index++;
-      yield processBigInts(row);
+      yield row as QueryDataRow;
     }
   }
 
@@ -286,21 +286,3 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 }
 
-function processBigInts(data: unknown) {
-  return JSON.parse(
-    JSON.stringify(data, (_key, value) => {
-      if (typeof value === 'bigint') {
-        // Only stringify values that exceed JS safe integer range
-        // Small bigints can be safely converted to numbers
-        if (
-          value > Number.MAX_SAFE_INTEGER ||
-          value < Number.MIN_SAFE_INTEGER
-        ) {
-          return value.toString();
-        }
-        return Number(value);
-      }
-      return value;
-    })
-  );
-}

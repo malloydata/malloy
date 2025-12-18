@@ -2996,7 +2996,23 @@ export class ModelMaterializer extends FluentState<Model> {
     const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
-    return result._queryResult.result as unknown as SearchValueMapResult[];
+    // Convert BigInt values to numbers to satisfy the SearchValueMapResult interface
+    const rawResult = result._queryResult.result as unknown as {
+      fieldName: string;
+      cardinality: number | bigint;
+      values: {fieldValue: string; weight: number | bigint}[];
+    }[];
+    return rawResult.map(row => ({
+      ...row,
+      cardinality:
+        typeof row.cardinality === 'bigint'
+          ? Number(row.cardinality)
+          : row.cardinality,
+      values: row.values.map(v => ({
+        ...v,
+        weight: typeof v.weight === 'bigint' ? Number(v.weight) : v.weight,
+      })),
+    }));
   }
 
   /**
@@ -3683,12 +3699,12 @@ class DataNumber extends ScalarData<number> {
   protected _field: NumberField;
 
   constructor(
-    value: number,
+    value: number | string | bigint,
     field: NumberField,
     parent: DataArrayOrRecord | undefined,
     parentRecord: DataRecord | undefined
   ) {
-    super(value, field, parent, parentRecord);
+    super(Number(value), field, parent, parentRecord);
     this._field = field;
   }
 
@@ -4062,7 +4078,12 @@ export class JSONWriter extends DataWriter {
       if (row.index !== undefined && row.index > 0) {
         this.stream.write(',\n');
       }
-      const json = JSON.stringify(row.toObject(), null, 2);
+      const json = JSON.stringify(
+        row.toObject(),
+        (_key, value) =>
+          typeof value === 'bigint' ? Number(value) : value,
+        2
+      );
       const jsonLines = json.split('\n');
       for (let i = 0; i < jsonLines.length; i++) {
         const line = jsonLines[i];
