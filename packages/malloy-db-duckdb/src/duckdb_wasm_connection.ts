@@ -66,9 +66,9 @@ export const unwrapArrow = (value: unknown): any => {
     // DecimalBigNums appear as Uint32Arrays, but can be identified
     // because they have a Symbol.toPrimitive method
     if (obj[Symbol.toPrimitive]) {
-      // There seems to be a bug in [Symbol.toPrimitive]("number") so
-      // convert to string first and then to number.
-      return Number(obj[Symbol.toPrimitive]());
+      // Return as string to preserve precision for large integers (HUGEINT)
+      // The downstream mapData() handles string→number conversion based on schema
+      return obj[Symbol.toPrimitive]().toString();
     } else if (Array.isArray(value)) {
       return value.map(unwrapArrow);
     } else if (isIterable(value)) {
