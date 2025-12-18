@@ -121,8 +121,12 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
         return {kind: 'timestamp_cell', timestamp_value: time_value};
       }
     } else if (field.type.kind === 'boolean_type') {
-      if (typeof value === 'number') {
+      if (typeof value === 'number' || typeof value === 'bigint') {
         return {kind: 'boolean_cell', boolean_value: value !== 0};
+      }
+      if (typeof value === 'string') {
+        // MySQL with bigNumberStrings returns "0" or "1"
+        return {kind: 'boolean_cell', boolean_value: value !== '0' && value !== ''};
       }
       if (typeof value !== 'boolean') {
         throw new Error(`Invalid boolean ${value}`);

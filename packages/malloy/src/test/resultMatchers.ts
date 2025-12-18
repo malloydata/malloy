@@ -135,6 +135,13 @@ function looseEqual(a: unknown, b: unknown): boolean {
       return false;
     }
   }
+  // MySQL infers booleans as BIGINT in UNION contexts
+  if (typeof a === 'boolean' && typeof b === 'bigint') {
+    return a === (b !== BigInt(0));
+  }
+  if (typeof a === 'bigint' && typeof b === 'boolean') {
+    return (a !== BigInt(0)) === b;
+  }
   return false;
 }
 
