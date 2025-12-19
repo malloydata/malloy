@@ -25,7 +25,7 @@
 
 import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
-import type {AtomicField, Runtime} from '@malloydata/malloy';
+import type {Runtime} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import '@malloydata/malloy/test/matchers';
 import {wrapTestModel} from '@malloydata/malloy/test';
@@ -163,13 +163,9 @@ describe('Postgres tests', () => {
       'REAL',
       'DOUBLE PRECISION',
     ])('supports %s', async sqlType => {
-      const result = await runtime
-        .loadQuery(`run: postgres.sql("SELECT 10::${sqlType} as d")`)
-        .run();
-      const field = result.data.field.allFields[0];
-      expect(field.isAtomicField()).toBe(true);
-      expect((field as AtomicField).isNumber()).toBe(true);
-      expect(result.data.value[0]['d']).toEqual(10);
+      await expect(
+        `run: postgres.sql("SELECT 10::${sqlType} as d")`
+      ).toMatchResult(testModel, {d: 10});
     });
   });
 });
