@@ -128,6 +128,18 @@ async function toEmit(
   };
 }
 
+// Check if two values are numerically equal (handles number/bigint interop)
+function numericallyEqual(a: unknown, b: unknown): boolean {
+  const aIsNumeric = typeof a === 'number' || typeof a === 'bigint';
+  const bIsNumeric = typeof b === 'number' || typeof b === 'bigint';
+  if (aIsNumeric && bIsNumeric) {
+    // Use == for loose equality between number and bigint
+    // eslint-disable-next-line eqeqeq
+    return a == b;
+  }
+  return false;
+}
+
 // If expected is an object, all of the keys should also match,
 // but the expected is allowed to have other keys that are not matched
 function objectsMatch(a: unknown, mustHave: unknown): boolean {
@@ -139,6 +151,10 @@ function objectsMatch(a: unknown, mustHave: unknown): boolean {
     mustHave === undefined ||
     mustHave === null
   ) {
+    // Handle numeric equality between number and bigint
+    if (numericallyEqual(a, mustHave)) {
+      return true;
+    }
     return mustHave === a;
   } else if (Array.isArray(mustHave)) {
     if (Array.isArray(a)) {

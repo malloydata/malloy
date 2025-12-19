@@ -103,5 +103,79 @@ describe('Streaming tests', () => {
       await csvWriter.process(stream);
       expect(accummulator.accumulatedValue).toBe('code\n00A\n');
     });
+
+    it(`JSON with timestamp - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(
+          `source: flights is ${databaseName}.table('malloytest.flights')`
+        )
+        .loadQuery(
+          "run: flights -> { select: dep_time; where: carrier = 'WN' and origin = 'SJC'; order_by: dep_time; limit: 1 }"
+        )
+        .runStream({rowLimit: 1});
+      const accummulator = new StringAccumulator();
+      const jsonWriter = new JSONWriter(accummulator);
+      await jsonWriter.process(stream);
+      const result = JSON.parse(accummulator.accumulatedValue);
+      expect(result.length).toBe(1);
+      // Should be an ISO date string
+      expect(typeof result[0].dep_time).toBe('string');
+      expect(result[0].dep_time).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      );
+    });
+
+    it(`CSV with timestamp - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(
+          `source: flights is ${databaseName}.table('malloytest.flights')`
+        )
+        .loadQuery(
+          "run: flights -> { select: dep_time; where: carrier = 'WN' and origin = 'SJC'; order_by: dep_time; limit: 1 }"
+        )
+        .runStream({rowLimit: 1});
+      const accummulator = new StringAccumulator();
+      const csvWriter = new CSVWriter(accummulator);
+      await csvWriter.process(stream);
+      const lines = accummulator.accumulatedValue.trim().split('\n');
+      expect(lines.length).toBe(2);
+      expect(lines[0]).toBe('dep_time');
+      // Should be formatted as a date string
+      expect(lines[1]).toMatch(/\d{4}-\d{2}-\d{2}/);
+    });
+
+    it(`JSON with bigint - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(
+          `source: bigint_test is ${databaseName}.sql("SELECT CAST(19999 AS BIGINT) as big_id")`
+        )
+        .loadQuery('run: bigint_test -> { select: * }')
+        .runStream({rowLimit: 1});
+      const accummulator = new StringAccumulator();
+      const jsonWriter = new JSONWriter(accummulator);
+      await jsonWriter.process(stream);
+      const result = JSON.parse(accummulator.accumulatedValue);
+      expect(result.length).toBe(1);
+      // Bigint should be serialized as a string to preserve precision
+      expect(typeof result[0].big_id).toBe('string');
+      expect(result[0].big_id).toBe('19999');
+    });
+
+    it(`CSV with bigint - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(
+          `source: bigint_test is ${databaseName}.sql("SELECT CAST(19999 AS BIGINT) as big_id")`
+        )
+        .loadQuery('run: bigint_test -> { select: * }')
+        .runStream({rowLimit: 1});
+      const accummulator = new StringAccumulator();
+      const csvWriter = new CSVWriter(accummulator);
+      await csvWriter.process(stream);
+      const lines = accummulator.accumulatedValue.trim().split('\n');
+      expect(lines.length).toBe(2);
+      expect(lines[0]).toBe('big_id');
+      // Should be a number without quotes
+      expect(lines[1]).toBe('19999');
+    });
   });
 });

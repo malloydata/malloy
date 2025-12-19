@@ -21,9 +21,12 @@ import {
 } from '../to_stable';
 import type {Connection, InfoConnection} from './connection';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {DateTime} from 'luxon';
 import type {LogMessage} from '../lang';
-import {rowDataToNumber, rowDataToSerializedBigint} from './row_data_utils';
+import {
+  rowDataToNumber,
+  rowDataToSerializedBigint,
+  rowDataToDate,
+} from './row_data_utils';
 
 export function wrapLegacyInfoConnection(
   connection: LegacyInfoConnection
@@ -74,35 +77,6 @@ export function wrapLegacyConnection(connection: LegacyConnection): Connection {
   };
 }
 
-function valueToDate(value: unknown): Date {
-  // TODO properly map the data from BQ/Postgres types
-  if (value instanceof Date) {
-    return value;
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const valAsAny = value as any;
-  if (valAsAny.constructor.name === 'Date') {
-    // For some reason duckdb TSTZ values come back as objects which do not
-    // pass "instance of" but do seem date like.
-    return new Date(value as Date);
-  } else if (typeof value === 'number') {
-    return new Date(value);
-  } else if (typeof value !== 'string') {
-    return new Date((value as unknown as {value: string}).value);
-  } else {
-    // Postgres timestamps end up here, and ideally we would know the system
-    // timezone of the postgres instance to correctly create a Date() object
-    // which represents the same instant in time, but we don't have the data
-    // flow to implement that. This may be a problem at some future day,
-    // so here is a comment, for that day.
-    let parsed = DateTime.fromISO(value, {zone: 'UTC'});
-    if (!parsed.isValid) {
-      parsed = DateTime.fromSQL(value, {zone: 'UTC'});
-    }
-    return parsed.toJSDate();
-  }
-}
-
 export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
   function mapValue(
     value: QueryValue,
@@ -115,7 +89,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       field.type.kind === 'timestamp_type' ||
       field.type.kind === 'timestamptz_type'
     ) {
-      const time_value = valueToDate(value).toISOString();
+      const time_value = rowDataToDate(value).toISOString();
       if (field.type.kind === 'date_type') {
         return {kind: 'date_cell', date_value: time_value};
       } else {
@@ -274,7 +248,7 @@ export function wrapResult(result: Result): Malloy.Result {
 
   return {
     schema,
-    data: mapData(result.data.toObject(), schema),
+    data: mapData(result.data.rawData, schema),
     connection_name: result.connectionName,
     annotations: annotations.length > 0 ? annotations : undefined,
     model_annotations:
