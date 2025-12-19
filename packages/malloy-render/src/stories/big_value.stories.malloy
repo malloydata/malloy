@@ -1,7 +1,7 @@
 // Big Value Stories for Storybook
 // Tests the # big_value tag for rendering aggregate values as metric cards
 
-source: big_value_test is duckdb.table('../static/products.parquet') extend {
+source: big_value_test is duckdb.table("static/data/products.parquet") extend {
 
   // Basic Big Value - multiple aggregates as cards
   # big_value
@@ -62,17 +62,17 @@ source: big_value_test is duckdb.table('../static/products.parquet') extend {
       prior_sales is retail_price.sum() * 0.85  // Simulated prior period (15% less)
   }
 
-  // Big Value with comparison - percentage points
+  // Big Value with comparison - percentage points (simulated rates using ratio)
   # big_value
   view: with_comparison_ppt is {
     aggregate:
-      # label="Current Rate"
+      # label="Current Margin"
       # percent
-      current_rate is 0.452  // 45.2%
+      current_rate is (retail_price.sum() - cost.sum()) / retail_price.sum()  // profit margin
 
       # big_value { comparison_field='current_rate' comparison_label='vs Prior Year' comparison_format='ppt' }
       # percent
-      prior_rate is 0.40  // 40% - should show +5.2 ppt
+      prior_rate is ((retail_price.sum() - cost.sum()) / retail_price.sum()) * 0.90  // 90% of current (simulated lower prior year)
   }
 
   // Big Value with down_is_good (for cost metrics)
