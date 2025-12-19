@@ -2996,23 +2996,29 @@ export class ModelMaterializer extends FluentState<Model> {
     const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
-    // Convert BigInt values to numbers to satisfy the SearchValueMapResult interface
+    // Convert BigInt, string, or wrapper objects to numbers
+    // (Snowflake returns Integer wrapper objects with jsTreatIntegerAsBigInt)
     const rawResult = result._queryResult.result as unknown as {
       fieldName: string;
-      cardinality: number | bigint;
-      values: {fieldValue: string; weight: number | bigint}[];
+      cardinality: unknown;
+      values: {fieldValue: string; weight: unknown}[];
     }[];
-    return rawResult.map(row => ({
-      ...row,
-      cardinality:
-        typeof row.cardinality === 'bigint'
-          ? Number(row.cardinality)
-          : row.cardinality,
-      values: row.values.map(v => ({
-        ...v,
-        weight: typeof v.weight === 'bigint' ? Number(v.weight) : v.weight,
-      })),
-    }));
+    return rawResult.map(row => {
+      const cardVal = row.cardinality;
+      return {
+        ...row,
+        cardinality:
+          typeof cardVal !== 'number' ? Number(cardVal) : cardVal,
+        values: row.values.map(v => {
+          const weightVal = v.weight;
+          return {
+            ...v,
+            weight:
+              typeof weightVal !== 'number' ? Number(weightVal) : weightVal,
+          };
+        }),
+      };
+    });
   }
 
   /**

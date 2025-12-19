@@ -360,14 +360,16 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     const result = await connection.runSQL(query, {
       rowLimit: 1000,
     });
-    // Convert BigInt weights to numbers to satisfy the SearchIndexResult interface
-    return result.rows.map(row => ({
-      ...row,
-      weight:
-        typeof row['weight'] === 'bigint'
-          ? Number(row['weight'])
-          : row['weight'],
-    })) as unknown as SearchIndexResult[];
+    // Convert BigInt, string, or wrapper object weights to numbers
+    // (Snowflake returns Integer wrapper objects with jsTreatIntegerAsBigInt)
+    return result.rows.map(row => {
+      const weightVal = row['weight'];
+      return {
+        ...row,
+        weight:
+          typeof weightVal !== 'number' ? Number(weightVal) : weightVal,
+      };
+    }) as unknown as SearchIndexResult[];
   }
 }
 

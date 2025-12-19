@@ -155,6 +155,10 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       if (typeof value === 'string') {
         return {kind: 'number_cell', number_value: Number(value), subtype};
       }
+      // Handle wrapper objects like Snowflake's Integer class
+      if (typeof value === 'object') {
+        return {kind: 'number_cell', number_value: Number(value), subtype};
+      }
       if (typeof value !== 'number') {
         throw new Error(`Invalid number ${value}`);
       }
