@@ -497,9 +497,10 @@ export function BigValueComponent(props: BigValueComponentProps) {
     return [];
   });
 
-  // Check for dimensions (validation)
+  // Check for dimensions (validation) - only check non-nested fields
+  // Nested views (used for sparklines) can have dimensions, that's expected
   const hasDimension = createMemo(() => {
-    return fields().some(f => f.wasDimension());
+    return fields().some(f => !f.isNest() && f.wasDimension());
   });
 
   // Build comparison map: primaryFieldName -> { comparisonValue, ... }
