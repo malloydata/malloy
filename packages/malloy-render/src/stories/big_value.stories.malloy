@@ -4,6 +4,7 @@
 source: big_value_test is duckdb.table("static/data/products.parquet") extend {
 
   // Basic Big Value - multiple aggregates as cards
+  #(story)
   # big_value
   view: basic_metrics is {
     aggregate:
@@ -14,7 +15,8 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       avg_price is retail_price.avg()
   }
 
-  // Big Value with formatted fields
+  // Big Value with formatted fields and labels
+  #(story)
   # big_value
   view: formatted_metrics is {
     aggregate:
@@ -31,6 +33,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   }
 
   // Big Value with size=lg
+  #(story)
   # big_value { size=lg }
   view: large_metrics is {
     aggregate:
@@ -41,6 +44,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   }
 
   // Big Value with size=sm
+  #(story)
   # big_value { size=sm }
   view: small_metrics is {
     aggregate:
@@ -50,6 +54,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   }
 
   // Big Value with comparison - percentage change
+  #(story)
   # big_value
   view: with_comparison_pct is {
     aggregate:
@@ -59,23 +64,11 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
 
       # big_value { comparison_field='current_sales' comparison_label='vs Prior Period' }
       # currency
-      prior_sales is retail_price.sum() * 0.85  // Simulated prior period (15% less)
-  }
-
-  // Big Value with comparison - percentage points (simulated rates using ratio)
-  # big_value
-  view: with_comparison_ppt is {
-    aggregate:
-      # label="Current Margin"
-      # percent
-      current_rate is (retail_price.sum() - cost.sum()) / retail_price.sum()  // profit margin
-
-      # big_value { comparison_field='current_rate' comparison_label='vs Prior Year' comparison_format='ppt' }
-      # percent
-      prior_rate is ((retail_price.sum() - cost.sum()) / retail_price.sum()) * 0.90  // 90% of current (simulated lower prior year)
+      prior_sales is retail_price.sum() * 0.85
   }
 
   // Big Value with down_is_good (for cost metrics)
+  #(story)
   # big_value
   view: down_is_good_example is {
     aggregate:
@@ -85,15 +78,6 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
 
       # big_value { comparison_field='current_costs' comparison_label='vs Budget' down_is_good='true' }
       # currency
-      budgeted_costs is cost.sum() * 1.10  // 10% more budget - decrease should show green
+      budgeted_costs is cost.sum() * 1.10
   }
 }
-
-// Run the stories
-run: big_value_test -> basic_metrics
-run: big_value_test -> formatted_metrics
-run: big_value_test -> large_metrics
-run: big_value_test -> small_metrics
-run: big_value_test -> with_comparison_pct
-run: big_value_test -> with_comparison_ppt
-run: big_value_test -> down_is_good_example
