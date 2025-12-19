@@ -152,20 +152,4 @@ describe('Postgres tests', () => {
       ).toMatchResult(testModel, {mex_220: zone_2020.toJSDate()});
     });
   });
-
-  describe('numbers', () => {
-    it.each([
-      'SMALLINT',
-      'INTEGER',
-      'BIGINT',
-      'DECIMAL',
-      'NUMERIC',
-      'REAL',
-      'DOUBLE PRECISION',
-    ])('supports %s', async sqlType => {
-      await expect(
-        `run: postgres.sql("SELECT 10::${sqlType} as d")`
-      ).toMatchResult(testModel, {d: 10});
-    });
-  });
 });

@@ -327,17 +327,23 @@ export class SnowflakeConnection
     const variants: string[] = [];
     const notVariant = new Map<string, boolean>();
     for (const row of rows) {
-      // data types look like `VARCHAR(1234)`
-      const snowflakeDataType = (row['type'] as string)
-        .toLocaleLowerCase()
-        .split('(')[0];
+      // data types look like `VARCHAR(1234)` or `NUMBER(10,2)`
+      const fullType = (row['type'] as string).toLocaleLowerCase();
+      const baseType = fullType.split('(')[0];
       const name = row['name'] as string;
 
-      if (['variant', 'array', 'object'].includes(snowflakeDataType)) {
+      if (['variant', 'array', 'object'].includes(baseType)) {
         variants.push(name);
       } else {
         notVariant.set(name, true);
-        const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
+        // For NUMBER types, pass full string so dialect can inspect scale
+        // For other types, just use the base type
+        const typeForMapping = ['number', 'numeric', 'decimal', 'dec'].includes(
+          baseType
+        )
+          ? fullType
+          : baseType;
+        const malloyType = this.dialect.sqlTypeToMalloyType(typeForMapping);
         structDef.fields.push({...malloyType, name});
       }
     }

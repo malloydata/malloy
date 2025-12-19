@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBWASMConnection} from './duckdb_wasm_connection_node';
 import type {SQLSourceDef} from '@malloydata/malloy';
-
-const [describe] = describeIfDatabaseAvailable(['duckdb_wasm']);
+import * as malloy from '@malloydata/malloy';
 
 describe('DuckDBWasmConnection', () => {
   let connection: DuckDBWASMConnection;
@@ -51,7 +51,7 @@ describe('DuckDBWasmConnection', () => {
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jest.restoreAllMocks();
   });
 
   it('finds simple tables in SQL', async () => {
@@ -110,5 +110,49 @@ FROM read_parquet("inventory_items2.parquet")
   it('DecimalBigNum is broken', async () => {
     const result = await connection.runSQL('SELECT 1.234 AS n1');
     expect(result).toEqual({'rows': [{'n1': 1234}], 'totalRows': 1});
+  });
+});
+
+/**
+ * Tests for reading numeric values through Malloy queries (WASM path)
+ */
+describe('numeric value reading', () => {
+  const connection = new DuckDBWASMConnection('duckdb');
+  const runtime = new malloy.SingleConnectionRuntime({
+    urlReader: {readURL: async () => ''},
+    connection,
+  });
+  const testModel = wrapTestModel(runtime, '');
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    // Note: UHUGEINT excluded - Arrow returns byte array that can't convert to BigInt in WASM
+    it.each([
+      'TINYINT',
+      'SMALLINT',
+      'INTEGER',
+      'BIGINT',
+      'UTINYINT',
+      'USMALLINT',
+      'UINTEGER',
+      'UBIGINT',
+      'HUGEINT',
+    ])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: duckdb.sql("SELECT 10::${sqlType} as d")`
+      ).toMatchResult(testModel, {d: 10});
+    });
+  });
+
+  describe('float types', () => {
+    // Note: DECIMAL excluded - known broken in WASM (see DecimalBigNum test above)
+    it.each(['FLOAT', 'DOUBLE'])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
+      ).toMatchResult(testModel, {f: 10.5});
+    });
   });
 });

@@ -22,9 +22,9 @@
 
 import {PooledPostgresConnection} from './postgres_connection';
 import type {SQLSourceDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['postgres']);
+import * as malloy from '@malloydata/malloy';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -190,5 +190,43 @@ describe('postgres schema reading', () => {
       });
     }
     await connection.close();
+  });
+});
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const connection = new PooledPostgresConnection('postgres');
+  const runtime = new malloy.SingleConnectionRuntime({
+    urlReader: {readURL: async () => ''},
+    connection,
+  });
+  const testModel = wrapTestModel(runtime, '');
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each(['SMALLINT', 'INTEGER', 'BIGINT'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: postgres.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {d: 10});
+      }
+    );
+  });
+
+  describe('float types', () => {
+    it.each(['REAL', 'DOUBLE PRECISION', 'NUMERIC', 'DECIMAL'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: postgres.sql("SELECT 10.5::${sqlType} as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
   });
 });

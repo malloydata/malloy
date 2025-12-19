@@ -24,10 +24,10 @@
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
+import * as malloy from '@malloydata/malloy';
 import {mkArrayDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['duckdb']);
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -285,6 +285,36 @@ describe('DuckDBConnection', () => {
           numberType: 'bigint',
         });
       });
+
+      it('maps FLOAT to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'FLOAT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DOUBLE to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DOUBLE'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DECIMAL(10,2) to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DECIMAL(10,2)'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
     });
   });
 });
@@ -366,3 +396,49 @@ const dblType = {type: 'number', numberType: 'float'};
 
 const PROFESSOR_SCHEMA =
   'STRUCT(professor_id UUID, "name" VARCHAR, age BIGINT, total_sections BIGINT)[]';
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const connection = new DuckDBConnection('duckdb');
+  const runtime = new malloy.SingleConnectionRuntime({
+    urlReader: {readURL: async () => ''},
+    connection,
+  });
+  const testModel = wrapTestModel(runtime, '');
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each([
+      'TINYINT',
+      'SMALLINT',
+      'INTEGER',
+      'BIGINT',
+      'UTINYINT',
+      'USMALLINT',
+      'UINTEGER',
+      'UBIGINT',
+      'HUGEINT',
+      'UHUGEINT',
+    ])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: duckdb.sql("SELECT 10::${sqlType} as d")`
+      ).toMatchResult(testModel, {d: 10});
+    });
+  });
+
+  describe('float types', () => {
+    it.each(['FLOAT', 'DOUBLE', 'DECIMAL(10,2)'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
+  });
+});
