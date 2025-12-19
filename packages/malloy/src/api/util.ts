@@ -23,6 +23,7 @@ import type {Connection, InfoConnection} from './connection';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime} from 'luxon';
 import type {LogMessage} from '../lang';
+import {rowDataToNumber, rowDataToSerializedBigint} from './row_data_utils';
 
 export function wrapLegacyInfoConnection(
   connection: LegacyInfoConnection
@@ -138,31 +139,14 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
     } else if (field.type.kind === 'number_type') {
       const subtype = field.type.subtype;
       if (subtype === 'bigint') {
-        // For bigint, accept string (for precision) or number or bigint
-        let stringValue: string;
-        if (typeof value === 'bigint') {
-          stringValue = value.toString();
-        } else if (typeof value === 'string') {
-          stringValue = value;
-        } else {
-          stringValue = String(value ?? '');
-        }
+        const stringValue = rowDataToSerializedBigint(value);
         return {kind: 'big_number_cell', number_value: stringValue, subtype};
       }
-      if (typeof value === 'bigint') {
-        return {kind: 'number_cell', number_value: Number(value), subtype};
-      }
-      if (typeof value === 'string') {
-        return {kind: 'number_cell', number_value: Number(value), subtype};
-      }
-      // Handle wrapper objects like Snowflake's Integer class
-      if (typeof value === 'object') {
-        return {kind: 'number_cell', number_value: Number(value), subtype};
-      }
-      if (typeof value !== 'number') {
-        throw new Error(`Invalid number ${value}`);
-      }
-      return {kind: 'number_cell', number_value: value, subtype};
+      return {
+        kind: 'number_cell',
+        number_value: rowDataToNumber(value),
+        subtype,
+      };
     } else if (field.type.kind === 'string_type') {
       if (typeof value !== 'string') {
         throw new Error(`Invalid string ${value}`);

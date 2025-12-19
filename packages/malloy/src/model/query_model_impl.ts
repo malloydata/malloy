@@ -29,6 +29,7 @@ import type {Connection} from '../connection/types';
 import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
+import {rowDataToNumber} from '../api/row_data_utils';
 
 export function makeQueryModel(
   modelDef: ModelDef | undefined,
@@ -360,16 +361,10 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     const result = await connection.runSQL(query, {
       rowLimit: 1000,
     });
-    // Convert BigInt, string, or wrapper object weights to numbers
-    // (Snowflake returns Integer wrapper objects with jsTreatIntegerAsBigInt)
-    return result.rows.map(row => {
-      const weightVal = row['weight'];
-      return {
-        ...row,
-        weight:
-          typeof weightVal !== 'number' ? Number(weightVal) : weightVal,
-      };
-    }) as unknown as SearchIndexResult[];
+    return result.rows.map(row => ({
+      ...row,
+      weight: rowDataToNumber(row['weight']),
+    })) as unknown as SearchIndexResult[];
   }
 }
 

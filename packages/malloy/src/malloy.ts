@@ -107,6 +107,7 @@ import {
 import {sqlKey} from './model/sql_block';
 import {locationContainsPosition} from './lang/utils';
 import {ReferenceList} from './lang/reference-list';
+import {rowDataToNumber} from './api/row_data_utils';
 
 export interface Taggable {
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
@@ -2996,29 +2997,19 @@ export class ModelMaterializer extends FluentState<Model> {
     const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
-    // Convert BigInt, string, or wrapper objects to numbers
-    // (Snowflake returns Integer wrapper objects with jsTreatIntegerAsBigInt)
     const rawResult = result._queryResult.result as unknown as {
       fieldName: string;
       cardinality: unknown;
       values: {fieldValue: string; weight: unknown}[];
     }[];
-    return rawResult.map(row => {
-      const cardVal = row.cardinality;
-      return {
-        ...row,
-        cardinality:
-          typeof cardVal !== 'number' ? Number(cardVal) : cardVal,
-        values: row.values.map(v => {
-          const weightVal = v.weight;
-          return {
-            ...v,
-            weight:
-              typeof weightVal !== 'number' ? Number(weightVal) : weightVal,
-          };
-        }),
-      };
-    });
+    return rawResult.map(row => ({
+      ...row,
+      cardinality: rowDataToNumber(row.cardinality),
+      values: row.values.map(v => ({
+        ...v,
+        weight: rowDataToNumber(v.weight),
+      })),
+    }));
   }
 
   /**
@@ -3705,12 +3696,12 @@ class DataNumber extends ScalarData<number> {
   protected _field: NumberField;
 
   constructor(
-    value: number | string | bigint,
+    value: unknown,
     field: NumberField,
     parent: DataArrayOrRecord | undefined,
     parentRecord: DataRecord | undefined
   ) {
-    super(Number(value), field, parent, parentRecord);
+    super(rowDataToNumber(value), field, parent, parentRecord);
     this._field = field;
   }
 
