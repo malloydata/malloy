@@ -4,16 +4,18 @@ import type {
   SolidJSRenderPluginInstance,
 } from '@/api/plugin-types';
 import {type Field, FieldType, type NestField} from '@/data_tree';
-import type {Tag} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
 import {BigValueComponent} from './big-value-component';
 import {
   type BigValueSettings,
   type BigValueSize,
   defaultBigValueSettings,
+  bigValueSettingsSchema,
 } from './big-value-settings';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './big-value.css?raw';
+import type {JSONSchemaObject} from '@/api/json-schema-types';
 
 /**
  * Metadata returned by the Big Value plugin
@@ -26,10 +28,16 @@ interface BigValuePluginMetadata {
 
 /**
  * Big Value plugin instance type
+ * Extends SolidJSRenderPluginInstance with optional CoreViz methods for storybook compatibility
  */
 export interface BigValuePluginInstance
   extends SolidJSRenderPluginInstance<BigValuePluginMetadata> {
   field: NestField;
+  // Optional CoreViz methods for storybook compatibility
+  getSchema?: () => JSONSchemaObject;
+  getSettings?: () => Record<string, unknown>;
+  getDefaultSettings?: () => Record<string, unknown>;
+  settingsToTag?: (settings: Record<string, unknown>) => Tag;
 }
 
 /**
@@ -146,6 +154,19 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
           field,
           settings,
         }),
+
+        // CoreViz-compatible methods for storybook compatibility
+        getSchema: () => bigValueSettingsSchema,
+        getSettings: () => settings as Record<string, unknown>,
+        getDefaultSettings: () => defaultBigValueSettings as Record<string, unknown>,
+        settingsToTag: (s: Record<string, unknown>) => {
+          const tag = new Tag();
+          const size = (s as BigValueSettings).size;
+          if (size && size !== defaultBigValueSettings.size) {
+            tag.set(['big_value', 'size'], size);
+          }
+          return tag;
+        },
       };
 
       return pluginInstance;
