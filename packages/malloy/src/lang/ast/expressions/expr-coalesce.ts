@@ -59,8 +59,15 @@ export class ExprCoalesce extends ExpressionDef {
       );
     }
     const srcForType = maybeNull.type === 'error' ? whenNull : maybeNull;
+    // If both are numbers but subtypes differ, strip the subtype
+    const stripNumberType =
+      srcForType.type === 'number' &&
+      maybeNull.type === 'number' &&
+      whenNull.type === 'number' &&
+      maybeNull.numberType !== whenNull.numberType;
     return {
       ...srcForType,
+      ...(stripNumberType ? {numberType: undefined} : {}),
       expressionType: maxExpressionType(
         maybeNull.expressionType,
         whenNull.expressionType
