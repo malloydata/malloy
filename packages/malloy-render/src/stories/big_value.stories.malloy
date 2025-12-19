@@ -141,7 +141,8 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # currency
       avg_price is retail_price.sum() / count()
 
-      # big_value { comparison_field=avg_price comparison_label='MoM' down_is_good=true }
+      // No down_is_good set, so decrease shows as RED (default behavior)
+      # big_value { comparison_field=avg_price comparison_label='MoM' }
       # hidden
       avg_price_prior is (retail_price.sum() / count()) * 1.13
   }
