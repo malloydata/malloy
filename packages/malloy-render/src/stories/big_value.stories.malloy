@@ -61,17 +61,20 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       total_retail is retail_price.sum()
   }
 
-  // Big Value with comparison - percentage change
+  // Big Value with comparison - percentage change (up is good)
   #(story)
   # big_value
-  view: with_comparison_pct is {
+  view: with_comparison is {
     aggregate:
+      #(doc) Total revenue from all product sales
       # label="Current Sales"
       # currency
       current_sales is retail_price.sum()
 
-      # big_value { comparison_field='current_sales' comparison_label='vs Prior Period' }
-      # currency
+      // This field provides the comparison value for current_sales
+      // Shows ▲ 17.6% vs Prior Period (green because sales increased)
+      # big_value { comparison_field=current_sales comparison_label='vs Prior Period' }
+      # hidden
       prior_sales is retail_price.sum() * 0.85
   }
 
@@ -80,12 +83,141 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   # big_value
   view: down_is_good_example is {
     aggregate:
+      #(doc) Total costs including manufacturing and logistics
       # label="Current Costs"
       # currency
       current_costs is cost.sum()
 
-      # big_value { comparison_field='current_costs' comparison_label='vs Budget' down_is_good='true' }
-      # currency
+      // Shows ▼ -9.1% vs Budget (green because costs decreased - down is good!)
+      # big_value { comparison_field=current_costs comparison_label='vs Budget' down_is_good=true }
+      # hidden
       budgeted_costs is cost.sum() * 1.10
+  }
+
+  // Big Value with documentation tooltips
+  #(story)
+  # big_value
+  view: with_documentation is {
+    aggregate:
+      #(doc) Number of unique products in the catalog. Updated daily.
+      # label="Products"
+      product_count is count()
+
+      #(doc) Sum of retail prices across all products. Does not include discounts.
+      # label="Gross Revenue"
+      # currency
+      gross_revenue is retail_price.sum()
+
+      #(doc) Calculated as (Revenue - Cost) / Revenue. Industry average is 35%.
+      # label="Profit Margin"
+      # percent
+      profit_margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
+  }
+
+  // Big Value with multiple comparisons
+  #(story)
+  # big_value
+  view: multiple_comparisons is {
+    aggregate:
+      #(doc) Total sales this period
+      # label="Sales"
+      # currency
+      sales is retail_price.sum()
+
+      # big_value { comparison_field=sales comparison_label='MoM' }
+      # hidden
+      sales_prior is retail_price.sum() * 0.89
+
+      #(doc) Number of orders placed
+      # label="Orders"
+      order_count is count()
+
+      # big_value { comparison_field=order_count comparison_label='MoM' }
+      # hidden
+      orders_prior is count() * 0.973
+
+      #(doc) Average order value = Sales / Orders
+      # label="Avg Order Value"
+      # currency
+      aov is retail_price.sum() / count()
+
+      # big_value { comparison_field=aov comparison_label='MoM' down_is_good=true }
+      # hidden
+      aov_prior is (retail_price.sum() / count()) * 1.13
+  }
+}
+
+// For sparklines, we need time-series data
+source: sparkline_test is duckdb.table("static/data/flights.parquet") extend {
+
+  // Big Value with sparkline showing trend
+  #(story)
+  # big_value
+  view: with_sparkline is {
+    aggregate:
+      #(doc) Total number of flights
+      # label="Total Flights"
+      total_flights is count()
+
+    // Sparkline shows flights by carrier (as proxy for trend)
+    # big_value { sparkline_for=total_flights }
+    nest: trend is {
+      group_by: carrier
+      aggregate: flights is count()
+      limit: 10
+    }
+  }
+
+  // Big Value with area sparkline
+  #(story)
+  # big_value
+  view: with_area_sparkline is {
+    aggregate:
+      # label="Avg Delay"
+      avg_delay is dep_delay.avg()
+
+    # big_value { sparkline_for=avg_delay sparkline_type=area }
+    nest: delay_trend is {
+      group_by: carrier
+      aggregate: avg_delay is dep_delay.avg()
+      limit: 10
+    }
+  }
+
+  // Big Value with bar sparkline
+  #(story)
+  # big_value
+  view: with_bar_sparkline is {
+    aggregate:
+      # label="Flight Count"
+      flight_count is count()
+
+    # big_value { sparkline_for=flight_count sparkline_type=bar }
+    nest: count_trend is {
+      group_by: carrier
+      aggregate: flights is count()
+      limit: 8
+    }
+  }
+
+  // Full example: comparison + sparkline + doc
+  #(story)
+  # big_value
+  view: full_example is {
+    aggregate:
+      #(doc) Total flights across all carriers. Updated daily.
+      # label="Total Flights"
+      total_flights is count()
+
+      # big_value { comparison_field=total_flights comparison_label='vs Target' }
+      # hidden
+      target_flights is count() * 0.95
+
+    # big_value { sparkline_for=total_flights }
+    nest: trend is {
+      group_by: carrier
+      aggregate: flights is count()
+      limit: 10
+    }
   }
 }

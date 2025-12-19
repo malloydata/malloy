@@ -61,6 +61,13 @@
   font-size: 14px;
 }
 
+/* Value row (value + sparkline) */
+.malloy-big-value-value-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* Value */
 .malloy-big-value-value {
   font-size: 32px;
@@ -75,6 +82,11 @@
 
 .malloy-big-value-card--lg .malloy-big-value-value {
   font-size: 40px;
+}
+
+/* Sparkline */
+.malloy-big-value-sparkline {
+  flex-shrink: 0;
 }
 
 /* Comparison container */
