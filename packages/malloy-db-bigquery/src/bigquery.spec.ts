@@ -252,7 +252,7 @@ describe('db:BigQuery', () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      jest.restoreAllMocks();
     });
 
     it('caches table schema', async () => {

@@ -401,12 +401,17 @@ const PROFESSOR_SCHEMA =
  * Tests for reading numeric values through Malloy queries
  */
 describe('numeric value reading', () => {
-  const connection = new DuckDBConnection('duckdb');
-  const runtime = new malloy.SingleConnectionRuntime({
-    urlReader: {readURL: async () => ''},
-    connection,
+  let connection: DuckDBConnection;
+  let testModel: ReturnType<typeof wrapTestModel>;
+
+  beforeAll(() => {
+    connection = new DuckDBConnection('duckdb');
+    const runtime = new malloy.SingleConnectionRuntime({
+      urlReader: {readURL: async () => ''},
+      connection,
+    });
+    testModel = wrapTestModel(runtime, '');
   });
-  const testModel = wrapTestModel(runtime, '');
 
   afterAll(async () => {
     await connection.close();
