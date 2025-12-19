@@ -61,7 +61,7 @@ describe('db:Snowflake', () => {
 
   it('runs a SQL query', async () => {
     const res = await conn.runSQL('SELECT 1 as T');
-    expect(res.rows[0]['T']).toBe(1);
+    expect(malloy.API.rowDataToNumber(res.rows[0]['T'])).toBe(1);
   });
 
   it('runs a Malloy query', async () => {
@@ -78,7 +78,7 @@ describe('db:Snowflake', () => {
     expect(res.totalRows).toBe(55);
     let total = 0;
     for (const row of res.rows) {
-      total += Number(row['cnt'] ?? 0);
+      total += malloy.API.rowDataToNumber(row['cnt'] ?? 0);
     }
     expect(total).toBe(3540);
 
@@ -96,7 +96,7 @@ describe('db:Snowflake', () => {
       .getSQL();
     const res = await conn.runSQL(sql);
     expect(res.rows.length).toBe(1);
-    expect(res.rows[0]['cnt']).toBe(3599);
+    expect(malloy.API.rowDataToNumber(res.rows[0]['cnt'])).toBe(3599);
   });
 
   it('runs a Malloy function with overrides', async () => {
