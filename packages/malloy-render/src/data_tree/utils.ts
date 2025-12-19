@@ -109,6 +109,7 @@ const RENDER_TAG_LIST = [
   'scatter_chart',
   'shape_map',
   'segment_map',
+  'big_value',
 ];
 
 export function shouldRenderAs({

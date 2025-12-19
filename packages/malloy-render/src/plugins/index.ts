@@ -17,4 +17,16 @@ export {
   type BarChartPluginInstance,
 } from './bar-chart/bar-chart-plugin';
 
+export {
+  BigValuePluginFactory,
+  type BigValuePluginInstance,
+  type BigValueSettings,
+  type BigValueComparisonInfo,
+  type ComparisonFormat,
+  type BigValueSize,
+  defaultBigValueSettings,
+  bigValueSettingsSchema,
+  type IBigValueSettingsSchema,
+} from './big-value';
+
 export {ErrorPlugin} from './error/error-plugin';
