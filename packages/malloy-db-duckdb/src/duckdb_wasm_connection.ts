@@ -58,7 +58,14 @@ export const unwrapArrow = (value: unknown): any => {
   } else if (value instanceof Date) {
     return value;
   } else if (typeof value === 'bigint') {
-    // Preserve precision by converting to string
+    // Safe bigints can be represented as numbers without precision loss
+    if (
+      value >= BigInt(Number.MIN_SAFE_INTEGER) &&
+      value <= BigInt(Number.MAX_SAFE_INTEGER)
+    ) {
+      return Number(value);
+    }
+    // Large bigints stay as strings to preserve precision
     return value.toString();
   } else if (typeof value === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,9 +73,29 @@ export const unwrapArrow = (value: unknown): any => {
     // DecimalBigNums appear as Uint32Arrays, but can be identified
     // because they have a Symbol.toPrimitive method
     if (obj[Symbol.toPrimitive]) {
-      // Return as string to preserve precision for large integers (HUGEINT)
-      // The downstream mapData() handles string→number conversion based on schema
-      return obj[Symbol.toPrimitive]().toString();
+      const primitiveValue = obj[Symbol.toPrimitive]();
+      if (typeof primitiveValue === 'string') {
+        const num = Number(primitiveValue);
+        // Safe integers can be represented as numbers without precision loss
+        if (Number.isSafeInteger(num)) {
+          return num;
+        }
+        // Large numbers stay as strings to preserve precision (HUGEINT)
+        return primitiveValue;
+      }
+      if (typeof primitiveValue === 'number') {
+        return primitiveValue;
+      }
+      if (typeof primitiveValue === 'bigint') {
+        if (
+          primitiveValue >= BigInt(Number.MIN_SAFE_INTEGER) &&
+          primitiveValue <= BigInt(Number.MAX_SAFE_INTEGER)
+        ) {
+          return Number(primitiveValue);
+        }
+        return primitiveValue.toString();
+      }
+      return primitiveValue.toString();
     } else if (Array.isArray(value)) {
       return value.map(unwrapArrow);
     } else if (isIterable(value)) {

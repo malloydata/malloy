@@ -126,7 +126,10 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       }
       if (typeof value === 'string') {
         // MySQL with bigNumberStrings returns "0" or "1"
-        return {kind: 'boolean_cell', boolean_value: value !== '0' && value !== ''};
+        return {
+          kind: 'boolean_cell',
+          boolean_value: value !== '0' && value !== '',
+        };
       }
       if (typeof value !== 'boolean') {
         throw new Error(`Invalid boolean ${value}`);
