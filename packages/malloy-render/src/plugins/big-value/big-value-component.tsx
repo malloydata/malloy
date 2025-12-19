@@ -302,7 +302,7 @@ function Sparkline(props: {info: SparklineInfo; size: BigValueSize}) {
       </Show>
       <Show when={props.info.type === 'bar'}>
         <For each={normalized()}>
-          {(point, i) => {
+          {point => {
             const barWidth = (width() - 4) / (normalized().length * 1.5);
             const barHeight = height() - 4 - point.y + 2;
             return (
