@@ -154,6 +154,98 @@ view: cost_vs_price is {
 }
 ```
 
+### `# big_value`
+
+Renders aggregate values as prominent metric cards, similar to KPI tiles in dashboards. This is ideal for displaying key metrics at a glance.
+
+**Important:** Only works with aggregate fields (measures). Does not support `group_by` dimensions.
+
+**Properties:**
+
+- `.size`: Controls card size preset.
+  - Values: `sm`, `md` (default), `lg`
+  - Syntax: `# big_value { size=lg }`
+
+**Field-level Properties (for comparison values):**
+
+When you want to show a comparison (e.g., "vs Prior Year"), add these properties to the comparison field:
+
+- `.comparison_field`: The field name of the primary metric this value compares to.
+  - Syntax: `# big_value { comparison_field='win_rate_ytd' }`
+- `.comparison_label`: Optional label shown next to the delta indicator.
+  - Syntax: `# big_value { comparison_label='vs Prior Year' }`
+- `.comparison_format`: How to calculate and display the change.
+  - Values: `pct` (percentage change, default) or `ppt` (percentage point difference)
+  - Syntax: `# big_value { comparison_format='ppt' }`
+- `.down_is_good`: Set to `true` if a decrease should be shown as positive (green).
+  - Syntax: `# big_value { down_is_good='true' }`
+
+**Formatting:**
+
+Big Value cards respect field formatting tags:
+- `# currency` - Format as currency (e.g., $1,234.56)
+- `# percent` - Format as percentage
+- `# number` - Custom number format
+
+**Documentation Tooltips:**
+
+Add `#(doc)` annotations to fields to display an info tooltip:
+```
+#(doc) Total revenue from completed sales
+# currency
+measure: total_revenue is sales.sum()
+```
+
+**Examples:**
+
+```malloy
+// Basic usage - multiple KPIs as cards
+# big_value
+run: my_source -> {
+  aggregate:
+    opportunity_count
+    total_revenue
+    avg_deal_size
+}
+
+// With formatting
+# big_value
+run: my_source -> {
+  aggregate:
+    # currency
+    total_revenue
+    # percent
+    win_rate
+}
+
+// With comparison values (percentage change)
+# big_value
+run: my_source -> {
+  aggregate:
+    # label="Win Rate YTD"
+    # percent
+    win_rate_ytd
+
+    # big_value { comparison_field='win_rate_ytd' comparison_label='vs Prior Year' comparison_format='ppt' }
+    # percent
+    win_rate_prior_year
+}
+// Shows: Win Rate YTD: 45.2% with "▲ 5.0 ppt vs Prior Year" below
+
+// With down_is_good for cost metrics
+# big_value
+run: my_source -> {
+  aggregate:
+    # currency
+    current_costs
+
+    # big_value { comparison_field='current_costs' comparison_label='vs Budget' down_is_good='true' }
+    # currency
+    budgeted_costs
+}
+// A decrease in costs shows as green (positive)
+```
+
 ---
 
 ## Data Limiting and Performance
