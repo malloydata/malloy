@@ -1,0 +1,91 @@
+// Big Value Demo
+// Test the # big_value tag for rendering aggregate metrics as cards
+
+source: flights is duckdb.table('../test/data/duckdb/flights.parquet') extend {
+  
+  // Simple KPI Dashboard with Big Values
+  # big_value
+  view: flight_kpis is {
+    aggregate:
+      # label="Total Flights"
+      flight_count is count()
+      
+      # label="Unique Carriers"
+      carrier_count is count(distinct carrier)
+      
+      # label="Unique Origins"
+      origin_count is count(distinct origin)
+  }
+
+  // Big Value with currency formatting
+  # big_value
+  view: distance_metrics is {
+    aggregate:
+      # label="Total Distance"
+      # number="#,##0"
+      total_distance is distance.sum()
+      
+      # label="Avg Distance"
+      # number="#,##0.0"
+      avg_distance is distance.avg()
+      
+      # label="Max Distance"
+      # number="#,##0"
+      max_distance is max(distance)
+  }
+
+  // Big Value with comparison (simulated YoY)
+  # big_value
+  view: metrics_with_comparison is {
+    aggregate:
+      # label="Flight Count"
+      current_flights is count()
+      
+      # big_value { comparison_field='current_flights' comparison_label='vs Prior Year' }
+      prior_flights is count() * 0.92  // Simulated 8% growth
+  }
+
+  // Big Value - Large size
+  # big_value { size=lg }
+  view: large_kpis is {
+    aggregate:
+      # label="Total Flights"
+      flight_count is count()
+      
+      # label="Avg Flight Time"
+      # number="#,##0"
+      avg_flight_time is flight_time.avg()
+  }
+
+  // Big Value - Small size
+  # big_value { size=sm }
+  view: small_kpis is {
+    aggregate:
+      flight_count is count()
+      carrier_count is count(distinct carrier)
+      origin_count is count(distinct origin)
+      dest_count is count(distinct destination)
+  }
+
+  // Big Value with down_is_good for delay metrics
+  # big_value
+  view: delay_metrics is {
+    aggregate:
+      # label="Current Avg Delay"
+      # number="0.0"
+      current_delay is dep_delay.avg()
+      
+      # big_value { comparison_field='current_delay' comparison_label='vs Target' down_is_good='true' }
+      # number="0.0"
+      target_delay is dep_delay.avg() * 1.15  // Target is 15% higher (worse)
+  }
+}
+
+// Run these queries to see Big Value in action:
+run: flights -> flight_kpis
+run: flights -> distance_metrics
+run: flights -> metrics_with_comparison
+run: flights -> large_kpis
+run: flights -> small_kpis
+run: flights -> delay_metrics
+
