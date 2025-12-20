@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-query-builder",
-  "version": "0.0.327",
+  "version": "0.0.328",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,9 +22,9 @@
     "serve-docs": "npx http-server -o docs"
   },
   "dependencies": {
-    "@malloydata/malloy-filter": "0.0.327",
-    "@malloydata/malloy-interfaces": "0.0.327",
-    "@malloydata/malloy-tag": "0.0.327"
+    "@malloydata/malloy-filter": "0.0.328",
+    "@malloydata/malloy-interfaces": "0.0.328",
+    "@malloydata/malloy-tag": "0.0.328"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
