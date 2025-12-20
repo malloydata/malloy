@@ -30,6 +30,8 @@ export const timeExtractMap: Record<string, string> = {
  */
 export abstract class PostgresBase extends Dialect {
   hasTimestamptz = true;
+  // Postgres-family dialects use JSON serialization which loses bigint precision
+  supportsBigIntPrecision = false;
 
   sqlNowExpr(): string {
     return 'LOCALTIMESTAMP';

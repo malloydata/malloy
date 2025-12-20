@@ -43,8 +43,13 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, OrderByRequest, QueryInfo} from '../dialect';
-import {Dialect} from '../dialect';
+import type {
+  DialectFieldList,
+  IntegerTypeLimits,
+  OrderByRequest,
+  QueryInfo,
+} from '../dialect';
+import {Dialect, MIN_INT64, MAX_INT64} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -83,8 +88,8 @@ declare interface TimeMeasure {
 const bqToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
-  'INTEGER': {type: 'number', numberType: 'integer'},
-  'INT64': {type: 'number', numberType: 'integer'},
+  'INTEGER': {type: 'number', numberType: 'bigint'},
+  'INT64': {type: 'number', numberType: 'bigint'},
   'FLOAT': {type: 'number', numberType: 'float'},
   'FLOAT64': {type: 'number', numberType: 'float'},
   'NUMERIC': {type: 'number', numberType: 'float'},
@@ -123,6 +128,12 @@ export class StandardSQLDialect extends Dialect {
   nestedArrays = false; // Can't have an array of arrays for some reason
   supportsHyperLogLog = true;
   likeEscape = false; // Uses \ instead of ESCAPE 'X' in like clauses
+
+  // BigQuery only has INT64 - no 32-bit integer type
+  override integerTypeLimits: IntegerTypeLimits = {
+    integer: {min: MIN_INT64, max: MAX_INT64},
+    bigint: null,
+  };
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -504,7 +515,10 @@ ${indent(sql)}
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
         return 'INT64';
       } else {
         return 'FLOAT64';

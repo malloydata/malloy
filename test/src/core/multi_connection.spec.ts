@@ -110,7 +110,7 @@ source: postgres_aircraft is postgres.table('malloytest.aircraft') extend {
         `
       run: postgres.table('malloytest.airports')->{
         group_by:
-          version is version!()
+          version is version!string()
         aggregate:
           code_count is count(code)
           airport_count is count()

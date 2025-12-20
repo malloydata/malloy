@@ -46,8 +46,13 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
-import {Dialect, qtz} from '../dialect';
+import type {
+  DialectFieldList,
+  FieldReferenceType,
+  IntegerTypeLimits,
+  QueryInfo,
+} from '../dialect';
+import {Dialect, qtz, MIN_DECIMAL38, MAX_DECIMAL38} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -67,17 +72,15 @@ const snowflakeToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'nvarchar2': {type: 'string'},
   'char varying': {type: 'string'},
   'nchar varying': {type: 'string'},
-  // numbers
-  'number': {type: 'number', numberType: 'integer'},
-  'numeric': {type: 'number', numberType: 'integer'},
-  'decimal': {type: 'number', numberType: 'integer'},
-  'dec': {type: 'number', numberType: 'integer'},
-  'integer': {type: 'number', numberType: 'integer'},
-  'int': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
-  'smallint': {type: 'number', numberType: 'integer'},
-  'tinyint': {type: 'number', numberType: 'integer'},
-  'byteint': {type: 'number', numberType: 'integer'},
+  // numbers - Snowflake uses NUMBER(38,0) for all integers, which exceeds 64-bit
+  // NUMBER, NUMERIC, DECIMAL, DEC are handled dynamically in sqlTypeToMalloyType
+  // because they can be integers or floats depending on scale.
+  'integer': {type: 'number', numberType: 'bigint'},
+  'int': {type: 'number', numberType: 'bigint'},
+  'bigint': {type: 'number', numberType: 'bigint'},
+  'smallint': {type: 'number', numberType: 'bigint'},
+  'tinyint': {type: 'number', numberType: 'bigint'},
+  'byteint': {type: 'number', numberType: 'bigint'},
   'float': {type: 'number', numberType: 'float'},
   'float4': {type: 'number', numberType: 'float'},
   'float8': {type: 'number', numberType: 'float'},
@@ -122,6 +125,12 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
+
+  // Snowflake uses NUMBER(38,0) for all integers - only one integer type
+  override integerTypeLimits: IntegerTypeLimits = {
+    integer: {min: MIN_DECIMAL38, max: MAX_DECIMAL38},
+    bigint: null,
+  };
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -566,8 +575,11 @@ ${indent(sql)}
     if (malloyType.type === 'string') {
       return 'VARCHAR';
     } else if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'INTEGER';
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
+        return 'NUMBER';
       } else {
         return 'DOUBLE';
       }
@@ -597,12 +609,30 @@ ${indent(sql)}
   sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
-    return (
-      snowflakeToMalloyTypes[baseSqlType.trim().toLowerCase()] || {
-        type: 'sql native',
-        rawType: sqlType,
+    const lowerType = baseSqlType.trim().toLowerCase();
+    const mapped = snowflakeToMalloyTypes[lowerType];
+    if (mapped) {
+      return mapped;
+    }
+
+    // Handle NUMBER/NUMERIC/DECIMAL with scale
+    // If scale > 0, it's a float (decimal). If scale == 0 or omitted, it's a bigint (integer).
+    if (['number', 'numeric', 'decimal', 'dec'].includes(lowerType)) {
+      const match = sqlType.match(/\(\s*\d+\s*,\s*(\d+)\s*\)/);
+      if (match) {
+        const scale = parseInt(match[1], 10);
+        if (scale > 0) {
+          return {type: 'number', numberType: 'float'};
+        }
       }
-    );
+      // Default to bigint if scale is 0 or not specified (Snowflake defaults to NUMBER(38,0))
+      return {type: 'number', numberType: 'bigint'};
+    }
+
+    return {
+      type: 'sql native',
+      rawType: sqlType,
+    };
   }
 
   castToString(expression: string): string {

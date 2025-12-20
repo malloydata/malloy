@@ -9,3 +9,4 @@ export * as stateless from './stateless';
 export * as asynchronous from './asynchronous';
 export * from './connection';
 export * as util from './util';
+export * from './row_data_utils';

@@ -24,10 +24,10 @@
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
+import * as malloy from '@malloydata/malloy';
 import {mkArrayDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['duckdb']);
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -179,8 +179,8 @@ describe('DuckDBConnection', () => {
         'fields': [
           {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
           {'name': 'name', 'type': 'string'},
-          {'name': 'age', 'numberType': 'integer', 'type': 'number'},
-          {'name': 'total_sections', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'age', 'numberType': 'bigint', 'type': 'number'},
+          {'name': 'total_sections', 'numberType': 'bigint', 'type': 'number'},
         ],
       });
     });
@@ -212,6 +212,108 @@ describe('DuckDBConnection', () => {
         'name': 'test',
         'type': 'sql native',
         'rawType': 'UUID',
+      });
+    });
+
+    describe('integer type mappings', () => {
+      it('maps INTEGER to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'INTEGER'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps SMALLINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'SMALLINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps TINYINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'TINYINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps BIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'BIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps HUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'HUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UBIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UBIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UHUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UHUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps FLOAT to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'FLOAT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DOUBLE to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DOUBLE'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DECIMAL(10,2) to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DECIMAL(10,2)'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
       });
     });
   });
@@ -294,3 +396,54 @@ const dblType = {type: 'number', numberType: 'float'};
 
 const PROFESSOR_SCHEMA =
   'STRUCT(professor_id UUID, "name" VARCHAR, age BIGINT, total_sections BIGINT)[]';
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  let connection: DuckDBConnection;
+  let testModel: ReturnType<typeof wrapTestModel>;
+
+  beforeAll(() => {
+    connection = new DuckDBConnection('duckdb');
+    const runtime = new malloy.SingleConnectionRuntime({
+      urlReader: {readURL: async () => ''},
+      connection,
+    });
+    testModel = wrapTestModel(runtime, '');
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each([
+      'TINYINT',
+      'SMALLINT',
+      'INTEGER',
+      'BIGINT',
+      'UTINYINT',
+      'USMALLINT',
+      'UINTEGER',
+      'UBIGINT',
+      'HUGEINT',
+      'UHUGEINT',
+    ])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: duckdb.sql("SELECT 10::${sqlType} as d")`
+      ).toMatchResult(testModel, {d: 10});
+    });
+  });
+
+  describe('float types', () => {
+    it.each(['FLOAT', 'DOUBLE', 'DECIMAL(10,2)'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
+  });
+});

@@ -36,9 +36,16 @@ interface Choice {
 }
 
 function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return ev1 === undefined || ev1.type === 'null' || ev1.type === 'error'
-    ? ev2
-    : ev1;
+  if (ev1 === undefined || ev1.type === 'null' || ev1.type === 'error') {
+    return ev2;
+  }
+  // If both are numbers but subtypes differ, strip the subtype
+  if (ev1.type === 'number' && ev2.type === 'number') {
+    if (ev1.numberType !== ev2.numberType) {
+      return {...ev1, numberType: undefined};
+    }
+  }
+  return ev1;
 }
 
 export class Pick extends ExpressionDef {

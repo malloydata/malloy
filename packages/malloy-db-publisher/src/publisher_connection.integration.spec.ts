@@ -196,7 +196,7 @@ describe.skip('db:Publisher Integration Tests', () => {
     expect(res.totalRows).toBe(10);
     let total = 0;
     for (const row of res.rows) {
-      total += +(row['cnt'] ?? 0);
+      total += Number(row['cnt'] ?? 0);
     }
     expect(total).toBeGreaterThan(0);
   });

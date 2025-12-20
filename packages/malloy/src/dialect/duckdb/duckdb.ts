@@ -41,8 +41,12 @@ import {
 import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType} from '../dialect';
-import {inDays} from '../dialect';
+import type {
+  DialectFieldList,
+  FieldReferenceType,
+  IntegerTypeLimits,
+} from '../dialect';
+import {inDays, MIN_INT32, MAX_INT32, MIN_INT128, MAX_INT128} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -53,15 +57,16 @@ import {TinyParseError, TinyParser} from '../tiny_parser';
 const hackSplitComment = '-- hack: split on this';
 
 const duckDBToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
-  'BIGINT': {type: 'number', numberType: 'integer'},
+  'BIGINT': {type: 'number', numberType: 'bigint'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
   'SMALLINT': {type: 'number', numberType: 'integer'},
-  'UBIGINT': {type: 'number', numberType: 'integer'},
+  'UBIGINT': {type: 'number', numberType: 'bigint'},
   'UINTEGER': {type: 'number', numberType: 'integer'},
   'UTINYINT': {type: 'number', numberType: 'integer'},
   'USMALLINT': {type: 'number', numberType: 'integer'},
-  'HUGEINT': {type: 'number', numberType: 'integer'},
+  'HUGEINT': {type: 'number', numberType: 'bigint'},
+  'UHUGEINT': {type: 'number', numberType: 'bigint'},
   'DOUBLE': {type: 'number', numberType: 'float'},
   'FLOAT': {type: 'number', numberType: 'float'},
   'VARCHAR': {type: 'string'},
@@ -90,6 +95,12 @@ export class DuckDBDialect extends PostgresBase {
   supportsSafeCast = true;
   supportsNesting = true;
   supportsCountApprox = true;
+
+  // DuckDB supports HUGEINT (128-bit signed integer)
+  override integerTypeLimits: IntegerTypeLimits = {
+    integer: {min: MIN_INT32, max: MAX_INT32},
+    bigint: {min: MIN_INT128, max: MAX_INT128},
+  };
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -361,6 +372,8 @@ export class DuckDBDialect extends PostgresBase {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
+      } else if (malloyType.numberType === 'bigint') {
+        return 'hugeint';
       } else {
         return 'double precision';
       }

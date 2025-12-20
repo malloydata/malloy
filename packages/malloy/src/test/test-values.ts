@@ -81,6 +81,30 @@ export const TV = {
   },
 
   /**
+   * Create a bigint value.
+   * Use for explicit bigint type or typed nulls.
+   */
+  bigint(value: number | string | null): TypedValue {
+    const malloyType: AtomicTypeDef = {type: 'number', numberType: 'bigint'};
+
+    if (value === null) {
+      const castExpr: TypecastExpr = {
+        node: 'cast',
+        e: nullExpr,
+        dstType: {type: 'number', numberType: 'bigint'},
+        safe: false,
+      };
+      return {expr: castExpr, malloyType, needsCast: true};
+    }
+
+    return {
+      expr: {node: 'numberLiteral', literal: String(value)},
+      malloyType,
+      needsCast: false,
+    };
+  },
+
+  /**
    * Create a string value.
    * Use for typed nulls.
    */

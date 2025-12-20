@@ -164,6 +164,34 @@ export class TestSelect {
     };
   }
 
+  mk_bigint(value: number | string | null): TypedValue {
+    const malloyType: AtomicTypeDef = {type: 'number', numberType: 'bigint'};
+
+    if (value === null) {
+      const castExpr: TypecastExpr = {
+        node: 'cast',
+        e: nullExpr,
+        dstType: {type: 'number', numberType: 'bigint'},
+        safe: false,
+      };
+
+      return {
+        expr: castExpr,
+        malloyType,
+        needsCast: true,
+      };
+    }
+
+    return {
+      expr: {
+        node: 'numberLiteral',
+        literal: String(value),
+      },
+      malloyType,
+      needsCast: true, // bigint needs cast to ensure proper type
+    };
+  }
+
   mk_float(value: number | string | null): TypedValue {
     const malloyType: AtomicTypeDef = {type: 'number', numberType: 'float'};
 

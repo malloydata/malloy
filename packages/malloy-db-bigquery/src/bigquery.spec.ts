@@ -22,15 +22,14 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 import {BigQueryConnection} from './bigquery_connection';
 import type {TableMetadata} from '@google-cloud/bigquery';
 import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
 import * as util from 'util';
 import * as fs from 'fs';
 import {fileURLToPath} from 'url';
-
-const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
 describe('db:BigQuery', () => {
   let bq: BigQueryConnection;
@@ -76,6 +75,26 @@ describe('db:BigQuery', () => {
   });
 
   it.todo('gets table structdefs');
+
+  it('maps INT64 to bigint', async () => {
+    const schema = await bq.fetchSchemaForSQLStruct(
+      {
+        connection: 'bigquery',
+        selectStr: 'SELECT CAST(1 AS INT64) AS int_val',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+  });
 
   it('runs a Malloy query', async () => {
     const sql = await runtime
@@ -233,7 +252,7 @@ describe('db:BigQuery', () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      jest.restoreAllMocks();
     });
 
     it('caches table schema', async () => {
@@ -308,3 +327,44 @@ created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
 };
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  let connection: BigQueryConnection;
+  let runtime: malloy.SingleConnectionRuntime;
+  let testModel: ReturnType<typeof wrapTestModel>;
+
+  beforeAll(() => {
+    connection = new BigQueryConnection('bigquery');
+    runtime = new malloy.SingleConnectionRuntime({
+      urlReader: {readURL: async () => ''},
+      connection,
+    });
+    testModel = wrapTestModel(runtime, '');
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each(['INT64', 'INTEGER'])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: bigquery.sql("SELECT CAST(10 AS ${sqlType}) as d")`
+      ).toMatchResult(testModel, {d: 10});
+    });
+  });
+
+  describe('float types', () => {
+    it.each(['FLOAT64', 'NUMERIC', 'BIGNUMERIC'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: bigquery.sql("SELECT CAST(10.5 AS ${sqlType}) as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
+  });
+});

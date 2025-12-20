@@ -948,10 +948,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   );
 
   it(`run simple sql - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(`run: conn.sql('select 1 as ${q`one`}')`)
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
+    const testModel = wrapTestModel(runtime, '');
+    await expect(`run: conn.sql('select 1 as ${q`one`}')`).toEqualResult(
+      testModel,
+      [{one: 1}]
+    );
   });
 
   it(`simple sql is exactly as written - ${databaseName}`, async () => {

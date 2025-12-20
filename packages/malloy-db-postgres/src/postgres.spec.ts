@@ -22,9 +22,9 @@
 
 import {PooledPostgresConnection} from './postgres_connection';
 import type {SQLSourceDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['postgres']);
+import * as malloy from '@malloydata/malloy';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -157,5 +157,76 @@ describe('postgres schema reading', () => {
       });
     }
     await connection.close();
+  });
+
+  it('maps integer types correctly', async () => {
+    const connection = new PooledPostgresConnection('postgres');
+    const schema = await connection.fetchSchemaForSQLStruct(
+      {
+        connection: 'postgres',
+        selectStr:
+          'SELECT 1::smallint AS small_int, 2::integer AS int_val, 3::bigint AS big_int',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'small_int',
+        type: 'number',
+        numberType: 'integer',
+      });
+      expect(schema.structDef.fields[1]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'integer',
+      });
+      expect(schema.structDef.fields[2]).toEqual({
+        name: 'big_int',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+    await connection.close();
+  });
+});
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const connection = new PooledPostgresConnection('postgres');
+  const runtime = new malloy.SingleConnectionRuntime({
+    urlReader: {readURL: async () => ''},
+    connection,
+  });
+  const testModel = wrapTestModel(runtime, '');
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each(['SMALLINT', 'INTEGER', 'BIGINT'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: postgres.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {d: 10});
+      }
+    );
+  });
+
+  describe('float types', () => {
+    it.each(['REAL', 'DOUBLE PRECISION', 'NUMERIC', 'DECIMAL'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: postgres.sql("SELECT 10.5::${sqlType} as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
   });
 });

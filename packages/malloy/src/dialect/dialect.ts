@@ -50,6 +50,27 @@ interface DialectField {
 }
 export type DialectFieldList = DialectField[];
 
+/*
+ * Standard integer type limits.
+ * Use these in dialect integerTypeLimits definitions.
+ */
+
+// 32-bit signed integer limits (for databases with 32-bit INTEGER type)
+export const MIN_INT32 = -2147483648; // -2^31
+export const MAX_INT32 = 2147483647; // 2^31 - 1
+
+// 64-bit signed integer limits
+export const MIN_INT64 = BigInt('-9223372036854775808'); // -2^63
+export const MAX_INT64 = BigInt('9223372036854775807'); // 2^63 - 1
+
+// 128-bit signed integer limits (for DuckDB HUGEINT)
+export const MIN_INT128 = BigInt('-170141183460469231731687303715884105728'); // -2^127
+export const MAX_INT128 = BigInt('170141183460469231731687303715884105727'); // 2^127 - 1
+
+// Decimal(38,0) limits (for Snowflake NUMBER(38,0))
+export const MIN_DECIMAL38 = BigInt('-99999999999999999999999999999999999999'); // -(10^38 - 1)
+export const MAX_DECIMAL38 = BigInt('99999999999999999999999999999999999999'); // 10^38 - 1
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -101,6 +122,30 @@ export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
+/**
+ * Min/max range for an integer type.
+ * - null: type is not supported by this dialect
+ * - {min, max}: the range of values (use the exported constants like MIN_INT64, MAX_INT64)
+ */
+export type IntegerTypeRange = {
+  min: number | bigint;
+  max: number | bigint;
+} | null;
+
+/**
+ * Configuration for integer literal type selection.
+ *
+ * When translating an integer literal, the translator walks down this list
+ * (integer → bigint) and selects the first type that can hold the value.
+ * If no type can hold the value (or all are null), an error is raised.
+ */
+export interface IntegerTypeLimits {
+  /** Range for 'integer' type (-2^53 to 2^53-1, safe for JS Number) */
+  integer: IntegerTypeRange;
+  /** Range for 'bigint' type (64-bit or larger integers, varies by dialect) */
+  bigint: IntegerTypeRange;
+}
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -148,6 +193,10 @@ export abstract class Dialect {
   // support select * replace(...)
   supportsSelectReplace = true;
 
+  // Does the data path preserve bigint precision? False for dialects that
+  // serialize results through JSON (postgres, presto, trino)
+  supportsBigIntPrecision = true;
+
   // ability to join source with a filter on a joined source.
   supportsComplexFilteredSources = true;
 
@@ -175,6 +224,15 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+
+  /**
+   * Ranges for integer types in this dialect.
+   * Default supports integer (JS safe) and bigint (64-bit signed).
+   */
+  integerTypeLimits: IntegerTypeLimits = {
+    integer: {min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER},
+    bigint: {min: MIN_INT64, max: MAX_INT64},
+  };
 
   /**
    * Create the appropriate time literal IR node based on dialect support.
