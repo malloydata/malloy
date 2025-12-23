@@ -35,6 +35,7 @@ import {
   InMemoryModelCache,
   CacheManager,
 } from '@malloydata/malloy';
+import {createTestRuntime} from '@malloydata/malloy/test';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
@@ -264,9 +265,8 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime({
+  return createTestRuntime(connection, {
     urlReader: files,
-    connection,
     eventStream: new EventEmitter(),
     cacheManager: new TestCacheManager(new InMemoryModelCache()),
   });

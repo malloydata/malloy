@@ -44,7 +44,7 @@ import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
   DialectFieldList,
   FieldReferenceType,
-  IntegerTypeLimits,
+  IntegerTypeMapping,
 } from '../dialect';
 import {inDays, MIN_INT32, MAX_INT32, MIN_INT128, MAX_INT128} from '../dialect';
 import {PostgresBase} from '../pg_impl';
@@ -96,11 +96,11 @@ export class DuckDBDialect extends PostgresBase {
   supportsNesting = true;
   supportsCountApprox = true;
 
-  // DuckDB supports HUGEINT (128-bit signed integer)
-  override integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: MIN_INT32, max: MAX_INT32},
-    bigint: {min: MIN_INT128, max: MAX_INT128},
-  };
+  // DuckDB: 32-bit INTEGER is safe, larger integers need bigint
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: BigInt(MIN_INT32), max: BigInt(MAX_INT32), numberType: 'integer'},
+    {min: MIN_INT128, max: MAX_INT128, numberType: 'bigint'},
+  ];
 
   // hack until they support temporary macros.
   get udfPrefix(): string {

@@ -45,7 +45,7 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
   DialectFieldList,
-  IntegerTypeLimits,
+  IntegerTypeMapping,
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
@@ -129,11 +129,10 @@ export class StandardSQLDialect extends Dialect {
   supportsHyperLogLog = true;
   likeEscape = false; // Uses \ instead of ESCAPE 'X' in like clauses
 
-  // BigQuery only has INT64 - no 32-bit integer type
-  override integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: MIN_INT64, max: MAX_INT64},
-    bigint: null,
-  };
+  // BigQuery only has INT64 - all integers can exceed JS Number precision
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
+  ];
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;

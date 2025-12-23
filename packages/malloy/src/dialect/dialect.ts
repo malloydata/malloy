@@ -52,7 +52,7 @@ export type DialectFieldList = DialectField[];
 
 /*
  * Standard integer type limits.
- * Use these in dialect integerTypeLimits definitions.
+ * Use these in dialect integerTypeMappings definitions.
  */
 
 // 32-bit signed integer limits (for databases with 32-bit INTEGER type)
@@ -123,27 +123,16 @@ export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
 /**
- * Min/max range for an integer type.
- * - null: type is not supported by this dialect
- * - {min, max}: the range of values (use the exported constants like MIN_INT64, MAX_INT64)
- */
-export type IntegerTypeRange = {
-  min: number | bigint;
-  max: number | bigint;
-} | null;
-
-/**
- * Configuration for integer literal type selection.
+ * Maps a range of integer values to a Malloy number type.
  *
- * When translating an integer literal, the translator walks down this list
- * (integer → bigint) and selects the first type that can hold the value.
- * If no type can hold the value (or all are null), an error is raised.
+ * Dialects define an array of these mappings to describe how integer literals
+ * should be typed. The array is searched in order, and the first matching
+ * range determines the type.
  */
-export interface IntegerTypeLimits {
-  /** Range for 'integer' type (-2^53 to 2^53-1, safe for JS Number) */
-  integer: IntegerTypeRange;
-  /** Range for 'bigint' type (64-bit or larger integers, varies by dialect) */
-  bigint: IntegerTypeRange;
+export interface IntegerTypeMapping {
+  min: bigint;
+  max: bigint;
+  numberType: 'integer' | 'bigint';
 }
 
 export abstract class Dialect {
@@ -226,13 +215,38 @@ export abstract class Dialect {
   likeEscape = true;
 
   /**
-   * Ranges for integer types in this dialect.
-   * Default supports integer (JS safe) and bigint (64-bit signed).
+   * Mappings from integer value ranges to Malloy number types.
+   *
+   * The array is searched in order; the first matching range determines the type.
+   * Default: small integers (≤32-bit) → 'integer', larger → 'bigint'.
    */
-  integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER},
-    bigint: {min: MIN_INT64, max: MAX_INT64},
-  };
+  integerTypeMappings: IntegerTypeMapping[] = [
+    {min: BigInt(MIN_INT32), max: BigInt(MAX_INT32), numberType: 'integer'},
+    {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
+  ];
+
+  /**
+   * Determine the Malloy number type for a numeric literal.
+   */
+  literalNumberType(value: string): {
+    type: 'number';
+    numberType: 'integer' | 'float' | 'bigint';
+  } {
+    const isInteger = /^-?\d+$/.test(value);
+    if (!isInteger) {
+      return {type: 'number', numberType: 'float'};
+    }
+
+    const bigValue = BigInt(value);
+    for (const mapping of this.integerTypeMappings) {
+      if (bigValue >= mapping.min && bigValue <= mapping.max) {
+        return {type: 'number', numberType: mapping.numberType};
+      }
+    }
+
+    // Value exceeds all supported ranges - let SQL fail at runtime
+    return {type: 'number', numberType: 'bigint'};
+  }
 
   /**
    * Create the appropriate time literal IR node based on dialect support.
