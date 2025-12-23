@@ -3391,7 +3391,12 @@ export class Result extends PreparedResult {
   }
 
   public toJSON(): ResultJSON {
-    return {queryResult: this.inner, modelDef: this._modelDef};
+    // The result rows are converted to JSON separately because they
+    // may contain un-serializable data types.
+    return {
+      queryResult: {...this.inner, result: this.data.toJSON()},
+      modelDef: this._modelDef,
+    };
   }
 
   public static fromJSON({queryResult, modelDef}: ResultJSON): Result {
