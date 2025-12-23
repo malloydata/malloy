@@ -31,7 +31,6 @@ import type {
   ConnectionConfig,
   QueryDataRow,
   QueryOptionsReader,
-  QueryValue,
   RunSQLOptions,
 } from '@malloydata/malloy';
 import packageJson from '@malloydata/malloy/package.json';
@@ -247,30 +246,19 @@ export class DuckDBConnection extends DuckDBCommon {
       statements.shift();
     }
 
-    const result = await this.connection.run(statements[0]);
-    const columns = result.columnNames();
+    const result = await this.connection.stream(statements[0]);
 
     let index = 0;
-    while (true) {
-      const chunk = await result.fetchChunk();
-      if (chunk === null || chunk.rowCount === 0) break;
-
-      const chunkRows = chunk.getRows();
-      for (const row of chunkRows) {
+    for await (const chunk of result.yieldRowObjectJson()) {
+      for (const row of chunk) {
         if (
           (rowLimit !== undefined && index >= rowLimit) ||
           abortSignal?.aborted
         ) {
           return;
         }
-
-        const rowObj: QueryDataRow = {};
-        for (let i = 0; i < columns.length; i++) {
-          // Convert DuckDB values to JSON-serializable values
-          rowObj[columns[i]] = convertToJsonValue(row[i]);
-        }
         index++;
-        yield rowObj;
+        yield row as QueryDataRow;
       }
     }
   }
@@ -291,49 +279,4 @@ export class DuckDBConnection extends DuckDBCommon {
       }
     }
   }
-}
-
-/**
- * Convert DuckDB values to JSON-serializable values.
- * Handles BigInt conversion and nested structures.
- */
-function convertToJsonValue(value: unknown): QueryValue {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value === 'bigint') {
-    return Number(value);
-  }
-  if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
-    return value;
-  }
-  if (value instanceof Date) {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value.map(convertToJsonValue) as QueryValue;
-  }
-  if (typeof value === 'object') {
-    // Handle DuckDB value objects that have conversion methods
-    const obj = value as Record<string, unknown>;
-    if ('toDouble' in obj && typeof obj['toDouble'] === 'function') {
-      return (obj['toDouble'] as () => number)();
-    }
-    // For objects like Date, UUID, etc., try to get a string representation
-    if ('toString' in obj && typeof obj.toString === 'function') {
-      const str = obj.toString();
-      // Check if it's a meaningful string representation (not [object Object])
-      if (typeof str === 'string' && !str.startsWith('[object ')) {
-        return str;
-      }
-    }
-    // For plain objects, recursively convert
-    const result: QueryDataRow = {};
-    for (const [key, val] of Object.entries(obj)) {
-      result[key] = convertToJsonValue(val);
-    }
-    return result;
-  }
-  // Fallback: try to convert to string
-  return String(value);
 }
