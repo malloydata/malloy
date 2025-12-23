@@ -36,10 +36,9 @@ import '@malloydata/malloy/test/matchers';
  */
 
 describe('DuckDBConnection', () => {
-  let connection: DuckDBConnection;
+  const connection = new DuckDBConnection('duckdb');
 
   beforeAll(async () => {
-    connection = new DuckDBConnection('duckdb');
     await connection.runSQL('SELECT 1');
     expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
   });
@@ -316,6 +315,51 @@ describe('DuckDBConnection', () => {
       });
     });
   });
+
+  /**
+   * Tests for reading numeric values through Malloy queries
+   */
+  describe('numeric value reading', () => {
+    const runtime = createTestRuntime(connection);
+    const testModel = mkTestModel(runtime, {});
+
+    describe('integer types', () => {
+      it.each([
+        'TINYINT',
+        'SMALLINT',
+        'INTEGER',
+        'BIGINT',
+        'UTINYINT',
+        'USMALLINT',
+        'UINTEGER',
+        'UBIGINT',
+        'HUGEINT',
+        'UHUGEINT',
+      ])('reads %s correctly', async sqlType => {
+        await expect(
+          `run: duckdb.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {d: 10});
+      });
+
+      it('preserves precision for literal integers > 2^53', async () => {
+        const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+        await expect(`
+        run: duckdb.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+      });
+    });
+
+    describe('float types', () => {
+      it.each(['FLOAT', 'DOUBLE', 'DECIMAL(10,2)'])(
+        'reads %s correctly',
+        async sqlType => {
+          await expect(
+            `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
+          ).toMatchResult(testModel, {f: 10.5});
+        }
+      );
+    });
+  });
 });
 
 /**
@@ -395,53 +439,3 @@ const dblType = {type: 'number', numberType: 'float'};
 
 const PROFESSOR_SCHEMA =
   'STRUCT(professor_id UUID, "name" VARCHAR, age BIGINT, total_sections BIGINT)[]';
-
-/**
- * Tests for reading numeric values through Malloy queries
- */
-describe('numeric value reading', () => {
-  const connection = new DuckDBConnection('duckdb_numeric_tests');
-  const runtime = createTestRuntime(connection);
-  const testModel = mkTestModel(runtime, {});
-
-  afterAll(async () => {
-    await connection.close();
-  });
-
-  describe('integer types', () => {
-    it.each([
-      'TINYINT',
-      'SMALLINT',
-      'INTEGER',
-      'BIGINT',
-      'UTINYINT',
-      'USMALLINT',
-      'UINTEGER',
-      'UBIGINT',
-      'HUGEINT',
-      'UHUGEINT',
-    ])('reads %s correctly', async sqlType => {
-      await expect(
-        `run: duckdb.sql("SELECT 10::${sqlType} as d")`
-      ).toMatchResult(testModel, {d: 10});
-    });
-
-    it('preserves precision for literal integers > 2^53', async () => {
-      const largeInt = BigInt('9007199254740993'); // 2^53 + 1
-      await expect(`
-        run: duckdb.sql("select 1") -> { select: d is ${largeInt} }
-      `).toMatchResult(testModel, {d: largeInt});
-    });
-  });
-
-  describe('float types', () => {
-    it.each(['FLOAT', 'DOUBLE', 'DECIMAL(10,2)'])(
-      'reads %s correctly',
-      async sqlType => {
-        await expect(
-          `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
-        ).toMatchResult(testModel, {f: 10.5});
-      }
-    );
-  });
-});
