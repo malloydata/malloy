@@ -6,36 +6,63 @@
 import * as fs from 'fs';
 import * as util from 'util';
 import {fileURLToPath} from 'url';
-import type {Connection} from '..';
+import type {Connection, URLReader, EventStream, CacheManager} from '..';
 import {SingleConnectionRuntime} from '..';
 
 /**
- * Create a SingleConnectionRuntime for testing with a standard file URL reader.
+ * Options for createTestRuntime.
+ */
+export interface TestRuntimeOptions {
+  /** Custom URL reader. Defaults to reading from filesystem. */
+  urlReader?: URLReader;
+  /** Event stream for runtime events. */
+  eventStream?: EventStream;
+  /** Cache manager for model caching. */
+  cacheManager?: CacheManager;
+}
+
+/**
+ * Create a SingleConnectionRuntime for testing.
  *
- * This reduces boilerplate in connection test files by providing a simple
- * way to create a runtime that can read local files.
+ * By default, creates a runtime with a file URL reader that reads from the filesystem.
+ * Options can be provided to customize the URL reader, event stream, and cache manager.
  *
  * @example
+ * // Simple usage (connection package tests)
  * import { createTestRuntime } from '@malloydata/malloy/test';
  * import { BigQueryConnection } from '@malloydata/malloy-db-bigquery';
  *
  * const bq = new BigQueryConnection('test');
  * const runtime = createTestRuntime(bq);
  *
+ * @example
+ * // With options (internal test infrastructure)
+ * const runtime = createTestRuntime(connection, {
+ *   urlReader: customReader,
+ *   eventStream: new EventEmitter(),
+ *   cacheManager: new TestCacheManager(),
+ * });
+ *
  * @param connection - The database connection to use
- * @returns A SingleConnectionRuntime configured with a file URL reader
+ * @param options - Optional configuration for the runtime
+ * @returns A SingleConnectionRuntime configured for testing
  */
 export function createTestRuntime<T extends Connection>(
-  connection: T
+  connection: T,
+  options?: TestRuntimeOptions
 ): SingleConnectionRuntime<T> {
-  return new SingleConnectionRuntime({
-    urlReader: {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
+  const urlReader = options?.urlReader ?? {
+    readURL: async (url: URL) => {
+      const filePath = fileURLToPath(url);
+      return await util.promisify(fs.readFile)(filePath, 'utf8');
     },
+  };
+
+  return new SingleConnectionRuntime({
+    urlReader,
     connection,
+    eventStream: options?.eventStream,
+    cacheManager: options?.cacheManager,
   });
 }
 
