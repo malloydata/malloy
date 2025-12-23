@@ -7,11 +7,8 @@ function shouldQuoteIdentifier(name: string) {
 }
 
 export function maybeQuoteIdentifier(name: string): string {
-  const path = name.split('.');
-  for (let i = 0; i < path.length; i++) {
-    if (shouldQuoteIdentifier(path[i])) {
-      path[i] = `\`${path[i]}\``;
-    }
+  if (shouldQuoteIdentifier(name)) {
+    return `\`${name}\``;
   }
-  return path.join('.');
+  return name;
 }
