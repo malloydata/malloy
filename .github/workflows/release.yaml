@@ -8,6 +8,12 @@ jobs:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-databricks:
+    uses: './.github/workflows/db-databricks.yaml'
+    secrets:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
   db-duckdb:
     uses: './.github/workflows/db-duckdb.yaml'
   db-postgres:
@@ -26,6 +32,7 @@ jobs:
   npm-release:
     needs:
       - db-bigquery
+      - db-databricks
       - db-duckdb
       - db-publisher
       - db-postgres
