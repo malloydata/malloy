@@ -36,7 +36,8 @@ export class ExprNumber extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const dialect = fs.dialectObj();
-    const dataType = dialect?.literalNumberType(this.n) ?? this.defaultNumberType();
+    const dataType =
+      dialect?.literalNumberType(this.n) ?? this.defaultNumberType();
 
     return literalExprValue({
       dataType,

@@ -228,7 +228,10 @@ export abstract class Dialect {
   /**
    * Determine the Malloy number type for a numeric literal.
    */
-  literalNumberType(value: string): {type: 'number'; numberType: 'integer' | 'float' | 'bigint'} {
+  literalNumberType(value: string): {
+    type: 'number';
+    numberType: 'integer' | 'float' | 'bigint';
+  } {
     const isInteger = /^-?\d+$/.test(value);
     if (!isInteger) {
       return {type: 'number', numberType: 'float'};

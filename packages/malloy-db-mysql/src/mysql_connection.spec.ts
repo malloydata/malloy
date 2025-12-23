@@ -16,7 +16,6 @@ const describeMySQL = hasCredentials ? describe : describe.skip;
 
 describeMySQL('db:MySQL', () => {
   const connection = new MySQLConnection('mysql', config, {});
-  const runtime = createTestRuntime(connection);
 
   afterAll(async () => {
     await connection.close();
@@ -73,15 +72,17 @@ describeMySQL('numeric value reading', () => {
   describe('integer types', () => {
     // MySQL infers int for values <= 2^31-1, bigint for larger
     it('reads int correctly', async () => {
-      await expect(
-        `run: mysql.sql("SELECT 2147483647 as d")`
-      ).toMatchResult(testModel, {d: 2147483647});
+      await expect('run: mysql.sql("SELECT 2147483647 as d")').toMatchResult(
+        testModel,
+        {d: 2147483647}
+      );
     });
 
     it('reads bigint correctly', async () => {
-      await expect(
-        `run: mysql.sql("SELECT 2147483648 as d")`
-      ).toMatchResult(testModel, {d: 2147483648});
+      await expect('run: mysql.sql("SELECT 2147483648 as d")').toMatchResult(
+        testModel,
+        {d: 2147483648}
+      );
     });
 
     it('preserves precision for literal integers > 2^53', async () => {
