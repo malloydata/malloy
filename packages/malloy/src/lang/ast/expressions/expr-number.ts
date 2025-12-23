@@ -27,7 +27,6 @@ import {literalExprValue} from '../types/expr-value';
 import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import type {NumberTypeDef} from '../../../model';
-import type {IntegerTypeLimits} from '../../../dialect/dialect';
 
 export class ExprNumber extends ExpressionDef {
   elementType = 'numeric literal';
@@ -36,54 +35,8 @@ export class ExprNumber extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    // Check if this is an integer (no decimal point, no exponent notation)
-    const isInteger = /^-?\d+$/.test(this.n);
-
-    if (!isInteger) {
-      return literalExprValue({
-        dataType: {type: 'number', numberType: 'float'},
-        value: {node: 'numberLiteral', literal: this.n},
-      });
-    }
-
     const dialect = fs.dialectObj();
-    const limits = dialect?.integerTypeLimits ?? {
-      integer: {min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER},
-      bigint: null,
-    };
-
-    const literalValue = BigInt(this.n);
-    const numberType = this.selectIntegerType(literalValue, limits);
-
-    if (numberType === null) {
-      // Find the largest supported range for the error message
-      const maxRange = this.getMaxRange(limits);
-      this.logError(
-        'integer-literal-out-of-range',
-        `Integer literal ${this.n} exceeds ${dialect?.name ?? 'dialect'} integer range [${maxRange.min} to ${maxRange.max}]`
-      );
-      // Fall back to bigint so we can continue compilation
-      return literalExprValue({
-        dataType: {type: 'number', numberType: 'bigint'},
-        value: {node: 'numberLiteral', literal: this.n},
-      });
-    }
-
-    return literalExprValue({
-      dataType: {type: 'number', numberType},
-      value: {node: 'numberLiteral', literal: this.n},
-    });
-  }
-
-  /**
-   * For constants (no dialect context), always use bigint for integers
-   * to ensure large values render correctly.
-   */
-  constantExpression(): ExprValue {
-    const isInteger = /^-?\d+$/.test(this.n);
-    const dataType: NumberTypeDef = isInteger
-      ? {type: 'number', numberType: 'bigint'}
-      : {type: 'number', numberType: 'float'};
+    const dataType = dialect?.literalNumberType(this.n) ?? this.defaultNumberType();
 
     return literalExprValue({
       dataType,
@@ -92,45 +45,25 @@ export class ExprNumber extends ExpressionDef {
   }
 
   /**
-   * Select the appropriate integer type based on dialect limits.
-   * Returns null if no type can hold the value.
+   * Default number type when no dialect is available.
+   * Integers default to bigint for safety, floats to float.
    */
-  private selectIntegerType(
-    value: bigint,
-    limits: IntegerTypeLimits
-  ): 'integer' | 'bigint' | null {
-    const types: (keyof IntegerTypeLimits)[] = ['integer', 'bigint'];
-
-    for (const numType of types) {
-      const range = limits[numType];
-      if (range !== null) {
-        // Comparison between bigint and number works in JS
-        if (value >= range.min && value <= range.max) {
-          return numType;
-        }
-      }
-    }
-
-    return null;
+  private defaultNumberType(): NumberTypeDef {
+    const isInteger = /^-?\d+$/.test(this.n);
+    return isInteger
+      ? {type: 'number', numberType: 'bigint'}
+      : {type: 'number', numberType: 'float'};
   }
 
   /**
-   * Get the largest supported range for error messages.
+   * For constants (no dialect context), always use bigint for integers
+   * to ensure large values render correctly.
    */
-  private getMaxRange(limits: IntegerTypeLimits): {
-    min: number | bigint;
-    max: number | bigint;
-  } {
-    // Check in reverse order to find the largest supported type
-    const types: (keyof IntegerTypeLimits)[] = ['bigint', 'integer'];
-    for (const numType of types) {
-      const range = limits[numType];
-      if (range !== null) {
-        return range;
-      }
-    }
-    // Should never happen, but fallback
-    return {min: 0, max: 0};
+  constantExpression(): ExprValue {
+    return literalExprValue({
+      dataType: this.defaultNumberType(),
+      value: {node: 'numberLiteral', literal: this.n},
+    });
   }
 
   getStableLiteral(): Malloy.LiteralValue {

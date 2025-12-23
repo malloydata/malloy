@@ -22,33 +22,16 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
 import {BigQueryConnection} from './bigquery_connection';
 import type {TableMetadata} from '@google-cloud/bigquery';
 import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
-import * as util from 'util';
-import * as fs from 'fs';
-import {fileURLToPath} from 'url';
+
+const bq = new BigQueryConnection('test');
+const runtime = createTestRuntime(bq);
 
 describe('db:BigQuery', () => {
-  let bq: BigQueryConnection;
-  let runtime: malloy.Runtime;
-
-  beforeAll(() => {
-    bq = new BigQueryConnection('test');
-    const files = {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
-    };
-    runtime = new malloy.Runtime({
-      urlReader: files,
-      connection: bq,
-    });
-  });
-
   it('runs a SQL query', async () => {
     const res = await bq.runSQL('SELECT 1 as t');
     expect(res.rows[0]['t']).toBe(1);
@@ -332,28 +315,20 @@ FROM read_parquet("inventory_items2.parquet")
  * Tests for reading numeric values through Malloy queries
  */
 describe('numeric value reading', () => {
-  let connection: BigQueryConnection;
-  let runtime: malloy.SingleConnectionRuntime;
-  let testModel: ReturnType<typeof wrapTestModel>;
-
-  beforeAll(() => {
-    connection = new BigQueryConnection('bigquery');
-    runtime = new malloy.SingleConnectionRuntime({
-      urlReader: {readURL: async () => ''},
-      connection,
-    });
-    testModel = wrapTestModel(runtime, '');
-  });
-
-  afterAll(async () => {
-    await connection.close();
-  });
+  const testModel = mkTestModel(runtime, {});
 
   describe('integer types', () => {
+    const largeInt = BigInt('9007199254740993'); // 2^53 + 1
     it.each(['INT64', 'INTEGER'])('reads %s correctly', async sqlType => {
       await expect(
-        `run: bigquery.sql("SELECT CAST(10 AS ${sqlType}) as d")`
-      ).toMatchResult(testModel, {d: 10});
+        `run: bigquery.sql("SELECT CAST(${largeInt} AS ${sqlType}) as d")`
+      ).toMatchResult(testModel, {d: largeInt});
+    });
+
+    it('preserves precision for literal integers > 2^53', async () => {
+      await expect(`
+        run: bigquery.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
     });
   });
 
@@ -367,4 +342,8 @@ describe('numeric value reading', () => {
       }
     );
   });
+});
+
+afterAll(async () => {
+  await runtime.connection.close();
 });

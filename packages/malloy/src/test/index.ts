@@ -3,6 +3,42 @@
  * SPDX-License-Identifier: MIT
  */
 
+import * as fs from 'fs';
+import * as util from 'util';
+import {fileURLToPath} from 'url';
+import type {Connection} from '..';
+import {SingleConnectionRuntime} from '..';
+
+/**
+ * Create a SingleConnectionRuntime for testing with a standard file URL reader.
+ *
+ * This reduces boilerplate in connection test files by providing a simple
+ * way to create a runtime that can read local files.
+ *
+ * @example
+ * import { createTestRuntime } from '@malloydata/malloy/test';
+ * import { BigQueryConnection } from '@malloydata/malloy-db-bigquery';
+ *
+ * const bq = new BigQueryConnection('test');
+ * const runtime = createTestRuntime(bq);
+ *
+ * @param connection - The database connection to use
+ * @returns A SingleConnectionRuntime configured with a file URL reader
+ */
+export function createTestRuntime<T extends Connection>(
+  connection: T
+): SingleConnectionRuntime<T> {
+  return new SingleConnectionRuntime({
+    urlReader: {
+      readURL: async (url: URL) => {
+        const filePath = fileURLToPath(url);
+        return await util.promisify(fs.readFile)(filePath, 'utf8');
+      },
+    },
+    connection,
+  });
+}
+
 // Test data creation
 export {TV} from './test-values';
 export type {TypedValue} from './test-values';

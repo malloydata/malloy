@@ -49,7 +49,7 @@ import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
   DialectFieldList,
   FieldReferenceType,
-  IntegerTypeLimits,
+  IntegerTypeMapping,
   QueryInfo,
 } from '../dialect';
 import {Dialect, qtz, MIN_DECIMAL38, MAX_DECIMAL38} from '../dialect';
@@ -126,11 +126,10 @@ export class SnowflakeDialect extends Dialect {
   supportsPipelinesInViews = false;
   supportsComplexFilteredSources = false;
 
-  // Snowflake uses NUMBER(38,0) for all integers - only one integer type
-  override integerTypeLimits: IntegerTypeLimits = {
-    integer: {min: MIN_DECIMAL38, max: MAX_DECIMAL38},
-    bigint: null,
-  };
+  // Snowflake uses NUMBER(38,0) for all integers - can exceed JS Number precision
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: MIN_DECIMAL38, max: MAX_DECIMAL38, numberType: 'bigint'},
+  ];
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {

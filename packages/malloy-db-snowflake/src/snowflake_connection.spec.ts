@@ -22,37 +22,20 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
 import {SnowflakeConnection} from './snowflake_connection';
-import {fileURLToPath} from 'url';
-import * as util from 'util';
-import * as fs from 'fs';
 import {SnowflakeExecutor} from './snowflake_executor';
 
 describe('db:Snowflake', () => {
-  let conn: SnowflakeConnection;
-  let runtime: malloy.Runtime;
-
-  beforeAll(() => {
-    const connOptions =
-      SnowflakeExecutor.getConnectionOptionsFromEnv() ||
-      SnowflakeExecutor.getConnectionOptionsFromToml();
-    conn = new SnowflakeConnection('snowflake', {
-      connOptions: connOptions,
-      queryOptions: {rowLimit: 1000},
-    });
-    const files = {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
-    };
-    runtime = new malloy.Runtime({
-      urlReader: files,
-      connection: conn,
-    });
+  const connOptions =
+    SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+    SnowflakeExecutor.getConnectionOptionsFromToml();
+  const conn = new SnowflakeConnection('snowflake', {
+    connOptions: connOptions,
+    queryOptions: {rowLimit: 1000},
   });
+  const runtime = createTestRuntime(conn);
 
   afterAll(async () => {
     await conn.close();
@@ -174,15 +157,12 @@ describe('numeric value reading', () => {
   const connOptions =
     SnowflakeExecutor.getConnectionOptionsFromEnv() ||
     SnowflakeExecutor.getConnectionOptionsFromToml();
-  const connection = new SnowflakeConnection('snowflake', {
+  const connection = new SnowflakeConnection('snowflake_numeric_tests', {
     connOptions: connOptions,
     queryOptions: {rowLimit: 1000},
   });
-  const runtime = new malloy.SingleConnectionRuntime({
-    urlReader: {readURL: async () => ''},
-    connection,
-  });
-  const testModel = wrapTestModel(runtime, '');
+  const runtime = createTestRuntime(connection);
+  const testModel = mkTestModel(runtime, {});
 
   afterAll(async () => {
     await connection.close();
@@ -197,6 +177,13 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {D: 10});
       }
     );
+
+    it('preserves precision for literal integers > 2^53', async () => {
+      const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+      await expect(`
+        run: snowflake.sql("select 1 as n") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+    });
   });
 
   describe('float types', () => {

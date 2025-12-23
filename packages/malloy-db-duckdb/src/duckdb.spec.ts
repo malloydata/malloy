@@ -24,9 +24,8 @@
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
-import * as malloy from '@malloydata/malloy';
 import {mkArrayDef} from '@malloydata/malloy';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
 
 /*
@@ -401,17 +400,9 @@ const PROFESSOR_SCHEMA =
  * Tests for reading numeric values through Malloy queries
  */
 describe('numeric value reading', () => {
-  let connection: DuckDBConnection;
-  let testModel: ReturnType<typeof wrapTestModel>;
-
-  beforeAll(() => {
-    connection = new DuckDBConnection('duckdb');
-    const runtime = new malloy.SingleConnectionRuntime({
-      urlReader: {readURL: async () => ''},
-      connection,
-    });
-    testModel = wrapTestModel(runtime, '');
-  });
+  const connection = new DuckDBConnection('duckdb_numeric_tests');
+  const runtime = createTestRuntime(connection);
+  const testModel = mkTestModel(runtime, {});
 
   afterAll(async () => {
     await connection.close();
@@ -433,6 +424,13 @@ describe('numeric value reading', () => {
       await expect(
         `run: duckdb.sql("SELECT 10::${sqlType} as d")`
       ).toMatchResult(testModel, {d: 10});
+    });
+
+    it('preserves precision for literal integers > 2^53', async () => {
+      const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+      await expect(`
+        run: duckdb.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
     });
   });
 
