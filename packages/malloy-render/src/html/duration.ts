@@ -132,12 +132,12 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    if (!data.isNumeric()) {
+    if (!data.isNumber()) {
       throw new Error(
         `Cannot format field ${data.field.name} as a duration unit since its not a number`
       );
     }
-    return getText(data.field, data.numberValue(), {
+    return getText(data.field, data.value, {
       durationUnit: this.options.duration_unit,
     });
   }

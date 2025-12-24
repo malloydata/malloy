@@ -495,8 +495,8 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
       return null;
     } else if (data.isString() || data.isTime()) {
       return data.value;
-    } else if (data.isNumeric()) {
-      return data.numberValue();
+    } else if (data.isNumber()) {
+      return data.value;
     }
     throw new Error('Invalid data type for vega chart.');
   }

@@ -86,7 +86,8 @@ function formatStringWithCommas(value: string): string {
 }
 
 /**
- * Render a BigNumberCell value (stored as string for precision).
+ * Render a big number value (stored as string for precision).
+ * Used when NumberCell.stringValue is defined (bigint/bigdecimal subtypes).
  * Default formatting preserves full precision with comma separators.
  * Explicit format tags (currency, percent, etc.) may be lossy for values > 2^53.
  */

@@ -14,7 +14,6 @@ import {
 } from '../fields';
 import {ArrayCell, RecordCell, RepeatedRecordCell} from './nest';
 import {
-  BigNumberCell,
   BooleanCell,
   DateCell,
   JSONCell,
@@ -27,7 +26,6 @@ import {
 
 export {ArrayCell, RecordCell, RepeatedRecordCell, RootCell} from './nest';
 export {
-  BigNumberCell,
   BooleanCell,
   DateCell,
   JSONCell,
@@ -47,7 +45,6 @@ export type Cell =
   | RecordCell
   | NullCell
   | NumberCell
-  | BigNumberCell
   | DateCell
   | JSONCell
   | StringCell
@@ -87,20 +84,13 @@ export const Cell = {
       }
       case 'null_cell':
         return new NullCell(cell, field, parent);
-      case 'number_cell': {
+      case 'number_cell':
+      case 'big_number_cell': {
         if (field instanceof NumberField) {
           return new NumberCell(cell, field, parent);
         }
         throw new Error(
           'Expected number data to be associated with number field'
-        );
-      }
-      case 'big_number_cell': {
-        if (field instanceof NumberField) {
-          return new BigNumberCell(cell, field, parent);
-        }
-        throw new Error(
-          'Expected big_number data to be associated with number field'
         );
       }
       case 'date_cell': {

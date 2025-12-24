@@ -38,7 +38,7 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
   }
 
   override getText(data: Cell): string | null {
-    if (!data.isNumeric()) {
+    if (!data.isNumber()) {
       return null;
     }
 
@@ -55,7 +55,7 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
         break;
     }
 
-    const numText = data.numberValue().toLocaleString('en-US', {
+    const numText = data.value.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });

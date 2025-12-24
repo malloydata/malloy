@@ -51,8 +51,8 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
       return null;
     } else if (data.isTime()) {
       return data.value;
-    } else if (data.isNumeric()) {
-      return data.numberValue();
+    } else if (data.isNumber()) {
+      return data.value;
     } else if (data.isString()) {
       return data.value;
     } else {

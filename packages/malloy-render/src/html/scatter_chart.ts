@@ -55,8 +55,8 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
       return null;
     } else if (data.isTime() || data.isString()) {
       return data.value;
-    } else if (data.isNumeric()) {
-      return data.numberValue();
+    } else if (data.isNumber()) {
+      return data.value;
     } else {
       throw new Error('Invalid field type for scatter chart.');
     }

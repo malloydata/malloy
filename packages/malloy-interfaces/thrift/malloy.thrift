@@ -439,6 +439,7 @@ struct StringLiteral {
 
 struct NumberLiteral {
   1: required double number_value,
+  2: optional string string_value,
 }
 
 struct BooleanLiteral {

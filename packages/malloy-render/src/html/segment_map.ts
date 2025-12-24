@@ -35,8 +35,8 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Cell): string | number | null {
     if (data.isNull()) {
       return null;
-    } else if (data.isNumeric()) {
-      return data.numberValue();
+    } else if (data.isNumber()) {
+      return data.value;
     } else if (data.isString()) {
       return data.value;
     }
