@@ -74,6 +74,50 @@ export function renderNumericField(
   return displayValue;
 }
 
+/**
+ * Format a string number with locale-style comma separators.
+ * Preserves full precision (no conversion to JS number).
+ */
+function formatStringWithCommas(value: string): string {
+  const isNegative = value.startsWith('-');
+  const absValue = isNegative ? value.slice(1) : value;
+  const formatted = absValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return isNegative ? `-${formatted}` : formatted;
+}
+
+/**
+ * Render a BigNumberCell value (stored as string for precision).
+ * Default formatting preserves full precision with comma separators.
+ * Explicit format tags (currency, percent, etc.) may be lossy for values > 2^53.
+ */
+export function renderBigNumberField(
+  f: Field,
+  value: string | null | undefined
+): string {
+  if (value === null || value === undefined) {
+    return NULL_SYMBOL;
+  }
+  const tag = f.tag;
+
+  // For formatting that requires numeric conversion (lossy, but user explicitly tagged)
+  if (tag.has('currency') || tag.has('percent') || tag.has('duration')) {
+    return renderNumericField(f, Number(value));
+  }
+
+  // number="big" format with K/M/B/T/Q
+  if (tag.has('number') && tag.text('number') === 'big') {
+    return formatBigNumber(Number(value));
+  }
+
+  // Custom number format (lossy)
+  if (tag.has('number')) {
+    return format(tag.text('number') ?? '#', Number(value));
+  }
+
+  // Default: comma-formatted string (preserves precision)
+  return formatStringWithCommas(value);
+}
+
 export function renderDateTimeField(
   f: Field,
   value: Date | null | undefined,
