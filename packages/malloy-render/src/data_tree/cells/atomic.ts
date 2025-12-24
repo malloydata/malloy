@@ -33,106 +33,111 @@ export class NullCell extends CellBase {
   }
 }
 
+/** Type for either regular or big number cells from Thrift */
+type NumberCellInput = Malloy.CellWithNumberCell | Malloy.CellWithBigNumberCell;
+
+/**
+ * Unified cell for all numeric values.
+ * Handles both regular numbers and big numbers (bigint/bigdecimal).
+ */
 export class NumberCell extends CellBase {
+  private readonly _value: number;
+  private readonly _stringValue: string | undefined;
+
   constructor(
-    public readonly cell: Malloy.CellWithNumberCell,
+    public readonly cell: NumberCellInput,
     public readonly field: NumberField,
     public readonly parent: NestCell | undefined
   ) {
     super(cell, field, parent);
-    this.field.registerValue(this.value);
-  }
 
-  get value() {
-    return this.cell.number_value;
+    if (cell.kind === 'big_number_cell') {
+      // Big number: string in Thrift, convert to number (may be lossy)
+      this._stringValue = cell.number_value;
+      this._value = Number(cell.number_value);
+    } else {
+      // Regular number: already a number in Thrift
+      this._value = cell.number_value;
+      this._stringValue = undefined;
+    }
+
+    this.field.registerValue(this._value);
   }
 
   /**
    * Returns the numeric value as a JS number.
-   * For NumberCell, this is the same as `.value`.
+   * May be lossy for bigint/bigdecimal values > 2^53.
    */
-  number(): number {
-    return this.value;
-  }
-
-  compareTo(other: Cell) {
-    if (!other.isNumber() && !other.isBigNumber()) return 0;
-    const otherValue = other.isNumber() ? other.value : other.number();
-    const difference = this.value - otherValue;
-    if (difference > 0) {
-      return 1;
-    } else if (difference === 0) {
-      return 0;
-    }
-
-    return -1;
-  }
-
-  get literalValue(): Malloy.LiteralValue | undefined {
-    return {
-      kind: 'number_literal',
-      number_value: this.cell.number_value,
-    };
-  }
-}
-
-export class BigNumberCell extends CellBase {
-  constructor(
-    public readonly cell: Malloy.CellWithBigNumberCell,
-    public readonly field: NumberField,
-    public readonly parent: NestCell | undefined
-  ) {
-    super(cell, field, parent);
-    // Register as number for min/max tracking (may lose precision)
-    this.field.registerValue(this.number());
+  get value(): number {
+    return this._value;
   }
 
   /**
-   * Returns the string representation of the big number value.
-   * Use this for display or when precision matters.
+   * Returns the precise string representation for large values.
+   * Undefined for regular numbers that fit in JS number.
    */
-  get value() {
-    return this.cell.number_value;
+  get stringValue(): string | undefined {
+    return this._stringValue;
   }
 
   /**
-   * Returns the value as a JS number (potentially lossy for large values).
-   * Use this when a number is required (e.g., for charts, calculations).
+   * Returns the number subtype from the schema.
+   * 'integer' | 'decimal' | 'bigint' | future 'bigdecimal'
    */
-  number(): number {
-    return Number(this.cell.number_value);
+  get subtype(): Malloy.NumberSubtype | undefined {
+    return this.cell.subtype;
+  }
+
+  /**
+   * Returns true if this value needs string representation for precision.
+   */
+  needsStringPrecision(): boolean {
+    return this.subtype === 'bigint';
+  }
+
+  /**
+   * Returns the numeric value as a JS number.
+   * Alias for .value for API consistency.
+   */
+  numberValue(): number {
+    return this._value;
   }
 
   /**
    * Returns the value as a JS BigInt for precise integer arithmetic.
-   * Only valid when subtype is 'bigint'.
+   * Only valid when stringValue is defined and subtype is 'bigint'.
    */
   bigint(): bigint {
-    return BigInt(this.cell.number_value);
+    if (this._stringValue !== undefined) {
+      return BigInt(this._stringValue);
+    }
+    return BigInt(this._value);
   }
 
   compareTo(other: Cell) {
-    if (!other.isNumber() && !other.isBigNumber()) return 0;
-    if (other.isBigNumber()) {
-      // Use BigInt comparison for precision when both are bigint subtype
+    if (!other.isNumber()) return 0;
+
+    // Use BigInt comparison when both have string values for precision
+    if (this._stringValue !== undefined && other.stringValue !== undefined) {
       const thisBigInt = this.bigint();
       const otherBigInt = other.bigint();
       if (thisBigInt > otherBigInt) return 1;
       if (thisBigInt < otherBigInt) return -1;
       return 0;
     }
-    // Compare with number (may lose precision)
-    const difference = this.number() - other.value;
+
+    // Compare as numbers
+    const difference = this._value - other.value;
     if (difference > 0) return 1;
     if (difference === 0) return 0;
     return -1;
   }
 
   get literalValue(): Malloy.LiteralValue | undefined {
-    // Use the numeric literal (may lose precision for very large values)
     return {
       kind: 'number_literal',
-      number_value: this.number(),
+      number_value: this._value,
+      string_value: this._stringValue,
     };
   }
 }

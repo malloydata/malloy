@@ -12,7 +12,6 @@ import {
 } from '../drilling';
 import {
   ArrayCell,
-  BigNumberCell,
   BooleanCell,
   DateCell,
   JSONCell,
@@ -70,10 +69,6 @@ export abstract class CellBase {
     return this instanceof NumberCell;
   }
 
-  isBigNumber(): this is BigNumberCell {
-    return this instanceof BigNumberCell;
-  }
-
   isDate(): this is DateCell {
     return this instanceof DateCell;
   }
@@ -104,7 +99,6 @@ export abstract class CellBase {
       this instanceof RepeatedRecordCell ||
       this instanceof RecordCellType ||
       this instanceof NumberCell ||
-      this instanceof BigNumberCell ||
       this instanceof DateCell ||
       this instanceof JSONCell ||
       this instanceof StringCell ||

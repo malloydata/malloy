@@ -55,7 +55,9 @@ export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
     } else if (data.isTime()) {
       const timeframe = data.field.timeframe;
       return timeToString(data.value, timeframe, this.timezone);
-    } else if (data.isNumber() || data.isString()) {
+    } else if (data.isNumber()) {
+      return data.value;
+    } else if (data.isString()) {
       return data.value;
     } else {
       throw new Error('Invalid field type for bar chart.');

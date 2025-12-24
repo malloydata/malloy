@@ -27,6 +27,22 @@ source: hugeint_test is duckdb.sql("""
       large_hugeint,
       small_hugeint
   }
+
+  #(story) story="HUGEINT with Formatting"
+  # transpose
+  view: hugeint_formatted is {
+    select:
+      // Default: should show precise value with commas
+      unformatted is large_hugeint
+      // number="big" format: K/M/B/T/Q abbreviations
+      # number="big"
+      big_format is large_hugeint
+      // Small value for currency test (lossy for large values)
+      # currency
+      currency_format is small_hugeint
+      // Just over MAX_SAFE_INTEGER - should show precise
+      precise_test is just_over_max_safe
+  }
 }
 
 // Test a row of HUGEINT values in a table

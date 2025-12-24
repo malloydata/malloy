@@ -6,7 +6,10 @@
  */
 
 import type {JSXElement} from 'solid-js';
-import {renderNumericField} from '@/component/render-numeric-field';
+import {
+  renderNumericField,
+  renderBigNumberField,
+} from '@/component/render-numeric-field';
 import {renderLink} from '@/component/render-link';
 import MalloyTable from '@/component/table/table';
 import {renderList} from '@/component/render-list';
@@ -51,8 +54,12 @@ export function applyRenderer(props: RendererProps) {
     switch (renderAs) {
       case 'cell': {
         if (dataColumn.isNumber()) {
-          // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
-          renderValue = renderNumericField(field, dataColumn.value);
+          // Use string value for precision when available (bigint/bigdecimal)
+          if (dataColumn.stringValue !== undefined) {
+            renderValue = renderBigNumberField(field, dataColumn.stringValue);
+          } else {
+            renderValue = renderNumericField(field, dataColumn.value);
+          }
         } else if (dataColumn.isString()) {
           renderValue = dataColumn.value;
         } else if (field.isTime()) {

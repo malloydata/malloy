@@ -1009,6 +1009,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'string_value': {
+        'type': 'string',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'NumberSubtype': {
@@ -2338,6 +2343,7 @@ export type NumberCell = {
 
 export type NumberLiteral = {
   number_value: number;
+  string_value?: string;
 };
 
 export type NumberSubtype = 'integer' | 'decimal' | 'bigint';
