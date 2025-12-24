@@ -55,6 +55,14 @@ export class NumberCell extends CellBase {
     return this.value;
   }
 
+  /**
+   * Returns the numeric value as a JS number.
+   * Unified interface for both NumberCell and BigNumberCell.
+   */
+  numberValue(): number {
+    return this.value;
+  }
+
   compareTo(other: Cell) {
     if (!other.isNumber() && !other.isBigNumber()) return 0;
     const otherValue = other.isNumber() ? other.value : other.number();
@@ -109,6 +117,14 @@ export class BigNumberCell extends CellBase {
    */
   bigint(): bigint {
     return BigInt(this.cell.number_value);
+  }
+
+  /**
+   * Returns the numeric value as a JS number (lossy for large values).
+   * Unified interface for both NumberCell and BigNumberCell.
+   */
+  numberValue(): number {
+    return this.number();
   }
 
   compareTo(other: Cell) {

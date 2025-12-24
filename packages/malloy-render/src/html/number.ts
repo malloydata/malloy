@@ -39,23 +39,23 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
   }
 
   override getText(data: Cell): string | null {
-    if (!data.isNumber()) {
+    if (!data.isNumeric()) {
       return null;
     }
 
     if (this.options.value_format) {
       if (this.options.value_format === 'big') {
-        return formatBigNumber(data.value);
+        return formatBigNumber(data.numberValue());
       }
       try {
-        return format(this.options.value_format, data.value);
+        return format(this.options.value_format, data.numberValue());
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
         throw new Error(`Invalid value format: ${this.options.value_format}`);
       }
     }
 
-    return data.value.toLocaleString();
+    return data.numberValue().toLocaleString();
   }
 }
 

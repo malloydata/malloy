@@ -30,10 +30,10 @@ import type {Cell, Field} from '../data_tree';
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
   override getText(data: Cell): string | null {
-    if (!data.isNumber()) {
+    if (!data.isNumeric()) {
       return null;
     }
-    const num = data.value;
+    const num = data.numberValue();
 
     return num === null
       ? num

@@ -74,6 +74,10 @@ export abstract class CellBase {
     return this instanceof BigNumberCell;
   }
 
+  isNumeric(): this is NumberCell | BigNumberCell {
+    return this.isNumber() || this.isBigNumber();
+  }
+
   isDate(): this is DateCell {
     return this instanceof DateCell;
   }

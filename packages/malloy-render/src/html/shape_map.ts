@@ -42,8 +42,8 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   }
 
   getDataValue(data: Cell): Date | string | number | null | undefined {
-    if (data.isNumber()) {
-      return data.value;
+    if (data.isNumeric()) {
+      return data.numberValue();
     } else if (data.isString()) {
       const regionField = this.getRegionField(data.getParentRecord(1).field);
       if (data.field === regionField) {

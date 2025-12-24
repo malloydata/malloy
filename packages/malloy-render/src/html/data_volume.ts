@@ -51,13 +51,13 @@ export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    if (!data.isNumber()) {
+    if (!data.isNumeric()) {
       throw new Error(
         'Cannot format field as data volume since it is not a number'
       );
     }
 
-    let data_volume = data.value;
+    let data_volume = data.numberValue();
     let unit = 'Bytes';
     switch (this.options.data_volume_unit) {
       case DataVolumeUnit.Bytes:
