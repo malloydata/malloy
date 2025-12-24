@@ -1,5 +1,6 @@
 name: npmjs.com Pre-release
-permissions: {}
+permissions:
+  id-token: write
 
 on:
   workflow_dispatch:
@@ -15,9 +16,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          registry-url: https://registry.npmjs.org
       - name: npm install, build, and publish
         run: |
           echo BRANCH_NAME=$BRANCH_NAME
+          npm install -g npm@latest
           npm ci --loglevel error
           npm run build
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
@@ -32,5 +35,4 @@ jobs:
           done
         env:
           CI: true
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           BRANCH_NAME: ${{ github.ref_name || 'dev' }}
