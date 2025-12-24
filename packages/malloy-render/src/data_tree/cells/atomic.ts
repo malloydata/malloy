@@ -90,11 +90,9 @@ export class NumberCell extends CellBase {
 
   /**
    * Returns true if this value needs string representation for precision.
-   * True for bigint and bigdecimal subtypes.
    */
   needsStringPrecision(): boolean {
-    const st = this.subtype;
-    return st === 'bigint'; // Add 'bigdecimal' when supported
+    return this.subtype === 'bigint';
   }
 
   /**
