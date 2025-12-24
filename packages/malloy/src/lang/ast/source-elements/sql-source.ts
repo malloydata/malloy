@@ -25,13 +25,20 @@ import type {
   StructDef,
   InvokedStructRef,
   SourceDef,
+  GenericSQLExpr,
 } from '../../../model/malloy_types';
 import {compileSQLInterpolation, sqlKey} from '../../../model/sql_block';
 import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import type {SQLString} from '../sql-elements/sql-string';
-import type {ModelEntryReference, Document} from '../types/malloy-element';
+import {
+  type ModelEntryReference,
+  type Document,
+  UnresolvedNeeds,
+} from '../types/malloy-element';
+import type {ParameterSpace} from '../field-space/parameter-space';
+import {exprMap, exprWalk} from '../../../model/utils';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';
@@ -44,20 +51,22 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlSourceRequest(doc: Document): SQLSourceRequest {
+  sqlSourceRequest(
+    doc: Document,
+    parameterSpace: ParameterSpace | undefined
+  ): SQLSourceRequest {
     const partialModel = this.select.containsQueries
       ? doc.modelDef()
       : undefined;
-    return compileSQLInterpolation(
-      this.select.sqlPhrases(),
-      this.connectionName.refString,
+    const {template, schema} = this.select.sqlPhrases(
+      parameterSpace,
       partialModel
     );
   }
 
-  structRef(): InvokedStructRef {
+  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     return {
-      structRef: this.getSourceDef(),
+      structRef: this.getSourceDef(parameterSpace),
     };
   }
 
@@ -82,14 +91,21 @@ export class SQLSource extends Source {
     return true;
   }
 
-  needs(doc: Document): NeedCompileSQL | undefined {
+  needs(_doc: Document): NeedCompileSQL | undefined {
+    return undefined;
+  }
+
+  needs2(
+    doc: Document,
+    parameterSpace: ParameterSpace | undefined
+  ): NeedCompileSQL | boolean {
     if (!this.validateConnectionName()) {
-      return undefined;
+      return false;
     }
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
     if (this.requestBlock === undefined) {
-      this.requestBlock = this.sqlSourceRequest(doc);
+      this.requestBlock = this.sqlSourceRequest(doc, parameterSpace);
     }
     const sql = this.requestBlock;
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
@@ -98,7 +114,7 @@ export class SQLSource extends Source {
         'failed-to-fetch-sql-source-schema',
         "Cant't look up schema for sql block"
       );
-      return;
+      return false;
     }
     const key = sqlKey(sql.connection, sql.selectStr);
     sqlDefEntry.reference(key, this.location);
@@ -110,10 +126,14 @@ export class SQLSource extends Source {
     } else if (lookup.status === 'present') {
       doc.checkExperimentalDialect(this, lookup.value.dialect);
     }
+    return true;
   }
 
-  getSourceDef(): SourceDef {
-    if (!this.validateConnectionName()) {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
+    const needs = this.needs2(this.document()!, parameterSpace);
+    if (typeof needs !== 'boolean') {
+      throw new UnresolvedNeeds(needs);
+    } else if (!needs) {
       return ErrorFactory.structDef;
     }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
