@@ -3,10 +3,20 @@
   flex-wrap: wrap;
   gap: 16px;
   padding: 16px;
+  overflow: visible;
 
   * {
     box-sizing: border-box;
   }
+}
+
+/* When big-value is inside a dashboard item, ensure tooltips can overflow */
+.dashboard-item-value:has(.malloy-big-value) {
+  overflow: visible !important;
+}
+
+.dashboard-item:has(.malloy-big-value) {
+  overflow: visible;
 }
 
 .malloy-big-value-card {
@@ -25,6 +35,7 @@
   flex: 0 1 auto;
   width: fit-content;
   max-width: 400px;
+  overflow: visible;
 }
 
 /* Size variants */
@@ -46,6 +57,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  overflow: visible;
 }
 
 /* Label */
@@ -147,7 +159,7 @@
   flex-shrink: 0;
 }
 
-/* Tooltip popup */
+/* Tooltip popup - default position is above the icon */
 .malloy-big-value-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -170,17 +182,23 @@
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 1000;
+  z-index: 10000;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
+}
+
+/* Flipped position - below the icon when not enough space above */
+.malloy-big-value-tooltip--flipped {
+  bottom: auto;
+  top: calc(100% + 8px);
 }
 
 .malloy-big-value-tooltip-icon:hover .malloy-big-value-tooltip {
   opacity: 1;
 }
 
-/* Tooltip arrow */
+/* Tooltip arrow - points down by default (tooltip above) */
 .malloy-big-value-tooltip-arrow {
   position: absolute;
   top: 100%;
@@ -188,6 +206,14 @@
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-top-color: #1f2937;
+}
+
+/* Flipped arrow - points up when tooltip is below */
+.malloy-big-value-tooltip--flipped .malloy-big-value-tooltip-arrow {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #1f2937;
 }
 
 /* Error state */

@@ -1,4 +1,4 @@
-import {For, Show, createMemo} from 'solid-js';
+import {For, Show, createMemo, createSignal} from 'solid-js';
 import type {Field, RecordCell, NestCell, RepeatedRecordCell} from '@/data_tree';
 import {renderNumericField} from '@/component/render-numeric-field';
 import {NULL_SYMBOL} from '@/util';
@@ -226,13 +226,32 @@ function formatValue(field: Field, value: unknown): string {
 }
 
 /**
- * Tooltip icon component with hover functionality
+ * Tooltip icon component with smart positioning
+ * Shows tooltip above by default, flips below if not enough space
  */
 function TooltipIcon(props: {text: string}) {
+  let iconRef: HTMLSpanElement | undefined;
+  const [flipped, setFlipped] = createSignal(false);
+
+  const handleMouseEnter = () => {
+    if (iconRef) {
+      const rect = iconRef.getBoundingClientRect();
+      // If less than 100px from top of viewport, flip tooltip below
+      setFlipped(rect.top < 100);
+    }
+  };
+
   return (
-    <span class="malloy-big-value-tooltip-icon">
+    <span
+      class="malloy-big-value-tooltip-icon"
+      ref={iconRef}
+      onMouseEnter={handleMouseEnter}
+    >
       i
-      <div class="malloy-big-value-tooltip">
+      <div
+        class="malloy-big-value-tooltip"
+        classList={{'malloy-big-value-tooltip--flipped': flipped()}}
+      >
         {props.text}
         <div class="malloy-big-value-tooltip-arrow" />
       </div>
