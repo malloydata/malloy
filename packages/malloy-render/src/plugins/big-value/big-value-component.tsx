@@ -8,6 +8,8 @@ import type {
   ComparisonFormat,
   BigValueSize,
 } from './big-value-settings';
+import {SparklineEmbed} from '@/plugins/sparkline/sparkline-component';
+import type {SparklineType, SparklineSize} from '@/plugins/sparkline/sparkline-settings';
 
 /**
  * Props for the BigValueComponent
@@ -22,19 +24,15 @@ export interface BigValueComponentProps {
 }
 
 /**
- * Sparkline data point
- */
-interface SparklineDataPoint {
-  x: number;
-  y: number;
-}
-
-/**
- * Sparkline configuration for a field
+ * Sparkline data for embedding
  */
 interface SparklineInfo {
-  data: SparklineDataPoint[];
-  type: 'line' | 'area' | 'bar';
+  data: Array<{x: unknown; y: number}>;
+  xFieldName: string;
+  yFieldName: string;
+  type: SparklineType;
+  yPrefix?: string;
+  ySuffix?: string;
 }
 
 /**
@@ -260,95 +258,24 @@ function TooltipIcon(props: {text: string}) {
 }
 
 /**
- * SVG Sparkline component
- * Renders a simple line, area, or bar sparkline
+ * Get format prefix/suffix from a field's tags
  */
-function Sparkline(props: {info: SparklineInfo; size: BigValueSize}) {
-  const width = () => (props.size === 'lg' ? 120 : props.size === 'sm' ? 60 : 80);
-  const height = () => (props.size === 'lg' ? 32 : props.size === 'sm' ? 20 : 24);
-
-  const normalized = createMemo(() => {
-    const data = props.info.data;
-    if (data.length === 0) return [];
-
-    const yValues = data.map(d => d.y);
-    const minY = Math.min(...yValues);
-    const maxY = Math.max(...yValues);
-    const range = maxY - minY || 1;
-
-    const w = width();
-    const h = height();
-    const padding = 2;
-
-    return data.map((point, i) => ({
-      x: padding + (i / (data.length - 1 || 1)) * (w - 2 * padding),
-      y: h - padding - ((point.y - minY) / range) * (h - 2 * padding),
-    }));
-  });
-
-  const linePath = createMemo(() => {
-    const points = normalized();
-    if (points.length === 0) return '';
-    return (
-      'M ' + points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ')
-    );
-  });
-
-  const areaPath = createMemo(() => {
-    const points = normalized();
-    if (points.length === 0) return '';
-    const h = height();
-    const padding = 2;
-    const bottomY = h - padding;
-    const first = points[0];
-    const last = points[points.length - 1];
-    return (
-      `M ${first.x.toFixed(1)},${bottomY} ` +
-      points.map(p => `L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
-      ` L ${last.x.toFixed(1)},${bottomY} Z`
-    );
-  });
-
-  return (
-    <svg
-      class="malloy-big-value-sparkline"
-      width={width()}
-      height={height()}
-      viewBox={`0 0 ${width()} ${height()}`}
-    >
-      <Show when={props.info.type === 'area'}>
-        <path d={areaPath()} fill="rgba(66, 133, 244, 0.2)" />
-      </Show>
-      <Show when={props.info.type === 'bar'}>
-        <For each={normalized()}>
-          {point => {
-            const barWidth = (width() - 4) / (normalized().length * 1.5);
-            const barHeight = height() - 4 - point.y + 2;
-            return (
-              <rect
-                x={point.x - barWidth / 2}
-                y={point.y}
-                width={barWidth}
-                height={barHeight}
-                fill="#4285F4"
-                rx="1"
-              />
-            );
-          }}
-        </For>
-      </Show>
-      <Show when={props.info.type === 'line' || props.info.type === 'area'}>
-        <path
-          d={linePath()}
-          fill="none"
-          stroke="#4285F4"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </Show>
-    </svg>
-  );
+function getFieldFormat(field: Field): {yPrefix?: string; ySuffix?: string} {
+  const tag = field.tag;
+  if (tag.has('currency')) {
+    const currencyType = tag.text('currency');
+    return {
+      yPrefix:
+        currencyType === 'EUR'
+          ? '€'
+          : currencyType === 'GBP'
+            ? '£'
+            : '$',
+    };
+  } else if (tag.has('percent')) {
+    return {ySuffix: '%'};
+  }
+  return {};
 }
 
 /**
@@ -356,18 +283,18 @@ function Sparkline(props: {info: SparklineInfo; size: BigValueSize}) {
  */
 function extractSparklineData(
   nestedCell: RepeatedRecordCell
-): SparklineDataPoint[] {
+): SparklineInfo | null {
   const rows = nestedCell.rows;
-  if (!rows || rows.length === 0) return [];
+  if (!rows || rows.length === 0) return null;
 
   const fields = nestedCell.field.fields;
-  if (fields.length < 2) return [];
+  if (fields.length < 2) return null;
 
   // First field is x (usually date/time), second is y (value)
   const xField = fields[0];
   const yField = fields[1];
 
-  const points: SparklineDataPoint[] = [];
+  const data: Array<{x: unknown; y: number}> = [];
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -375,44 +302,52 @@ function extractSparklineData(
     const yCell = row.column(yField.name);
 
     if (xCell && yCell) {
-      let xVal: number;
       const xValue = xCell.value;
-
-      // Convert x value to number (handle dates, numbers, strings)
-      if (xValue instanceof Date) {
-        xVal = xValue.getTime();
-      } else if (typeof xValue === 'number') {
-        xVal = xValue;
-      } else if (typeof xValue === 'string') {
-        // Try parsing as date
-        const parsed = Date.parse(xValue);
-        xVal = isNaN(parsed) ? i : parsed;
-      } else {
-        xVal = i;
-      }
-
       const yValue = yCell.value;
+
       if (typeof yValue === 'number' && isFinite(yValue)) {
-        points.push({x: xVal, y: yValue});
+        data.push({x: xValue, y: yValue});
       }
     }
   }
 
-  // Sort by x value
-  points.sort((a, b) => a.x - b.x);
+  if (data.length === 0) return null;
 
-  return points;
+  // Get format from the y-field's tags (e.g., # currency)
+  const format = getFieldFormat(yField);
+
+  return {
+    data,
+    xFieldName: xField.name,
+    yFieldName: yField.name,
+    type: 'line', // Default, can be overridden by tag
+    ...format,
+  };
 }
 
 /**
  * Get sparkline type from tag
  */
-function getSparklineType(field: Field): 'line' | 'area' | 'bar' {
+function getSparklineType(field: Field): SparklineType {
   const tag = field.tag;
   const type = tag.text('big_value', 'sparkline_type');
   if (type === 'area') return 'area';
   if (type === 'bar') return 'bar';
   return 'line';
+}
+
+/**
+ * Map BigValueSize to SparklineSize
+ */
+function mapBigValueSizeToSparklineSize(size: BigValueSize): SparklineSize {
+  switch (size) {
+    case 'sm':
+      return 'sm';
+    case 'lg':
+      return 'lg';
+    default:
+      return 'md';
+  }
 }
 
 /**
@@ -446,6 +381,8 @@ function BigValueCard(props: {
       : 'malloy-big-value-delta--negative';
   });
 
+  const sparklineSize = createMemo(() => mapBigValueSizeToSparklineSize(props.size));
+
   return (
     <div
       class="malloy-big-value-card"
@@ -463,7 +400,15 @@ function BigValueCard(props: {
       <div class="malloy-big-value-value-row">
         <div class="malloy-big-value-value">{props.info.formattedValue}</div>
         <Show when={props.info.sparkline && props.info.sparkline.data.length > 1}>
-          <Sparkline info={props.info.sparkline!} size={props.size} />
+          <SparklineEmbed
+            data={props.info.sparkline!.data}
+            xFieldName={props.info.sparkline!.xFieldName}
+            yFieldName={props.info.sparkline!.yFieldName}
+            type={props.info.sparkline!.type}
+            size={sparklineSize()}
+            yPrefix={props.info.sparkline!.yPrefix}
+            ySuffix={props.info.sparkline!.ySuffix}
+          />
         </Show>
       </div>
       <Show when={delta()}>
@@ -573,12 +518,11 @@ export function BigValueComponent(props: BigValueComponentProps) {
 
       // Check if it's a repeated record (nested data)
       if ('rows' in cell && Array.isArray(cell.rows)) {
-        const data = extractSparklineData(cell as RepeatedRecordCell);
-        if (data.length > 0) {
-          map.set(sparklineFor, {
-            data,
-            type: getSparklineType(fieldDef),
-          });
+        const sparklineData = extractSparklineData(cell as RepeatedRecordCell);
+        if (sparklineData) {
+          // Override type from tag
+          sparklineData.type = getSparklineType(fieldDef);
+          map.set(sparklineFor, sparklineData);
         }
       }
     }
@@ -624,7 +568,16 @@ export function BigValueComponent(props: BigValueComponentProps) {
       const cell = row.column(fieldDef.name);
       const value = cell?.value;
       const comparison = compMap.get(fieldDef.name);
-      const sparkline = sparkMap.get(fieldDef.name) ?? null;
+      let sparkline = sparkMap.get(fieldDef.name) ?? null;
+
+      // If sparkline doesn't have format info from its y-field,
+      // fall back to the primary field's format
+      if (sparkline && !sparkline.yPrefix && !sparkline.ySuffix) {
+        const format = getFieldFormat(fieldDef);
+        if (format.yPrefix || format.ySuffix) {
+          sparkline = {...sparkline, ...format};
+        }
+      }
 
       result.push({
         field: fieldDef,

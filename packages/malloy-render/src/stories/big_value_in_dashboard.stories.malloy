@@ -96,6 +96,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         # big_value { sparkline_for=avg_price }
         nest: price_trend is {
           group_by: product_id is id / 100  // bucket every 100 products
+          # currency
           aggregate: price is retail_price.avg()
           order_by: product_id
           limit: 20
@@ -243,6 +244,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         # big_value { sparkline_for=total_revenue sparkline_type=area }
         nest: revenue_trend is {
           group_by: product_bucket is id / 50
+          # currency
           aggregate: revenue is retail_price.sum()
           order_by: product_bucket
           limit: 15
@@ -274,6 +276,100 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           # label="Profit Margin"
           # percent
           margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
+      }
+  }
+}
+
+// ============================================
+// ORDER-BASED TESTS: Big value with DATE-BASED sparklines
+// Using order_items data for proper time-series sparklines
+// ============================================
+source: orders is duckdb.table("static/data/order_items.parquet") extend {
+  dimension: order_month is created_at.month
+  dimension: order_week is created_at.week
+
+  // Define measures at source level with # currency - tags propagate when referenced
+  # currency
+  measure: total_revenue is sale_price.sum()
+  # currency
+  measure: avg_value is sale_price.avg()
+  measure: total_orders is count()
+
+  // TEST 11: Dashboard with date-based sparklines (monthly)
+  // Sparkline uses the same measure as the big value - # currency propagates automatically!
+  #(story)
+  # dashboard
+  view: dashboard_date_sparklines is {
+    group_by: status
+    nest:
+      # big_value
+      sales_with_trend is {
+        aggregate:
+          #(doc) Monthly revenue trend
+          # label="Total Revenue"
+          total_revenue  // References pre-defined measure with # currency
+
+        // Sparkline: monthly revenue trend - measure reference inherits # currency
+        # big_value { sparkline_for=total_revenue }
+        nest: monthly_trend is {
+          group_by: order_month
+          aggregate: total_revenue  // Same measure - inherits # currency automatically!
+          order_by: order_month
+          limit: 24
+        }
+      }
+  }
+
+  // TEST 12: Dashboard with area sparkline (weekly data)
+  #(story)
+  # dashboard
+  view: dashboard_area_date_sparklines is {
+    group_by: status
+    nest:
+      # big_value
+      orders_with_trend is {
+        aggregate:
+          # label="Order Count"
+          total_orders  // References pre-defined measure (no currency - it's a count)
+          # label="Avg Order Value"
+          avg_value  // References pre-defined measure with # currency
+
+        // Sparkline: weekly order count with area style
+        # big_value { sparkline_for=total_orders sparkline_type=area }
+        nest: weekly_trend is {
+          group_by: order_week
+          aggregate: total_orders  // References pre-defined measure
+          order_by: order_week
+          limit: 52
+        }
+      }
+  }
+
+  // TEST 13: Full featured - comparison + date sparkline + doc
+  #(story)
+  # dashboard
+  view: dashboard_full_date_features is {
+    group_by: status
+    nest:
+      # big_value
+      full_metrics is {
+        aggregate:
+          #(doc) Total sales with monthly trend. Hover over sparkline to see data points.
+          # label="Total Sales"
+          total_revenue  // References pre-defined measure with # currency
+
+          # big_value { comparison_field=total_revenue comparison_label='vs Target' }
+          # hidden
+          target is sale_price.sum() * 0.9
+
+        // Monthly sales sparkline - measure reference inherits # currency
+        # big_value { sparkline_for=total_revenue sparkline_type=area }
+        nest: sales_trend is {
+          group_by: order_month
+          aggregate: total_revenue  // Same measure - inherits # currency automatically!
+          order_by: order_month
+          limit: 24
+        }
       }
   }
 }

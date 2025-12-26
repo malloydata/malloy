@@ -147,60 +147,73 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       avg_price_prior is (retail_price.sum() / count()) * 1.13
   }
 
-  // Big Value with line sparkline (products - no time data)
+}
+
+// Big Value with sparklines using order data (dates on x-axis)
+source: big_value_orders is duckdb.table("static/data/order_items.parquet") extend {
+  dimension: order_month is created_at.month
+  dimension: order_week is created_at.week
+
+  // Define measures with # currency at source level - this tag propagates when referenced
+  # currency
+  measure: total_sales is sale_price.sum()
+  # currency
+  measure: avg_sale is sale_price.avg()
+  measure: order_count is count()
+
+  // Big Value with line sparkline (monthly trend)
+  // Note: sparkline references the pre-defined measure 'total_sales' which inherits # currency
   #(story)
   # big_value
   view: with_sparkline is {
     aggregate:
-      #(doc) Total products in catalog
-      # label="Total Products"
-      total_products is count()
+      #(doc) Total sales revenue from all orders
+      # label="Total Sales"
+      total_sales  // References pre-defined measure with # currency
 
-    // Sparkline: product count trend across ID buckets
-    # big_value { sparkline_for=total_products }
+    // Sparkline: monthly sales trend - uses the same measure, inherits # currency
+    # big_value { sparkline_for=total_sales }
     nest: trend is {
-      group_by: product_bucket is id / 100
-      aggregate: products is count()
-      order_by: product_bucket
-      limit: 15
+      group_by: order_month
+      aggregate: total_sales  // References pre-defined measure - inherits # currency!
+      order_by: order_month
+      limit: 24
     }
   }
 
-  // Big Value with area sparkline
+  // Big Value with area sparkline (weekly trend)
   #(story)
   # big_value
   view: with_area_sparkline is {
     aggregate:
-      # label="Avg Price"
-      # currency
-      avg_retail is retail_price.avg()
+      # label="Avg Order Value"
+      avg_sale  // References pre-defined measure with # currency
 
-    // Sparkline: price trend across ID buckets
-    # big_value { sparkline_for=avg_retail sparkline_type=area }
+    // Sparkline: weekly average order value trend
+    # big_value { sparkline_for=avg_sale sparkline_type=area }
     nest: price_trend is {
-      group_by: product_bucket is id / 100
-      aggregate: avg_price is retail_price.avg()
-      order_by: product_bucket
-      limit: 15
+      group_by: order_week
+      aggregate: avg_sale  // References pre-defined measure - inherits # currency!
+      order_by: order_week
+      limit: 52
     }
   }
 
-  // Big Value with bar sparkline
+  // Big Value with bar sparkline (monthly orders)
   #(story)
   # big_value
   view: with_bar_sparkline is {
     aggregate:
-      # label="Total Revenue"
-      # currency
-      total_revenue is retail_price.sum()
+      # label="Total Orders"
+      order_count  // References pre-defined measure (no currency - it's a count)
 
-    // Sparkline: revenue by ID bucket (bar chart style)
-    # big_value { sparkline_for=total_revenue sparkline_type=bar }
-    nest: revenue_trend is {
-      group_by: product_bucket is id / 200
-      aggregate: revenue is retail_price.sum()
-      order_by: product_bucket
-      limit: 10
+    // Sparkline: monthly order count (bar chart style)
+    # big_value { sparkline_for=order_count sparkline_type=bar }
+    nest: order_trend is {
+      group_by: order_month
+      aggregate: order_count  // References pre-defined measure
+      order_by: order_month
+      limit: 12
     }
   }
 
@@ -209,22 +222,21 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   # big_value
   view: full_example is {
     aggregate:
-      #(doc) Total revenue across all products. Updated daily.
+      #(doc) Total revenue from all orders. Updated daily.
       # label="Total Revenue"
-      # currency
-      total_revenue is retail_price.sum()
+      total_sales  // References pre-defined measure with # currency
 
-      # big_value { comparison_field=total_revenue comparison_label='vs Target' }
+      # big_value { comparison_field=total_sales comparison_label='vs Last Year' }
       # hidden
-      target_revenue is retail_price.sum() * 0.95
+      prior_revenue is sale_price.sum() * 0.85
 
-    // Sparkline: revenue trend across product IDs
-    # big_value { sparkline_for=total_revenue }
+    // Sparkline: monthly revenue trend - uses same measure, inherits # currency
+    # big_value { sparkline_for=total_sales }
     nest: trend is {
-      group_by: product_bucket is id / 100
-      aggregate: revenue is retail_price.sum()
-      order_by: product_bucket
-      limit: 15
+      group_by: order_month
+      aggregate: total_sales  // References pre-defined measure - inherits # currency!
+      order_by: order_month
+      limit: 24
     }
   }
 }
