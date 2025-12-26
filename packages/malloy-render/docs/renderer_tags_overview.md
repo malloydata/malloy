@@ -154,6 +154,190 @@ view: cost_vs_price is {
 }
 ```
 
+### `# big_value`
+
+Renders aggregate values as prominent metric cards, similar to KPI tiles in dashboards. This is ideal for displaying key metrics at a glance.
+
+**Important:** Only works with aggregate fields (measures). Does not support `group_by` dimensions.
+
+**Properties:**
+
+- `.size`: Controls card size preset.
+  - Values: `sm`, `md` (default), `lg`
+  - Syntax: `# big_value { size=lg }`
+
+---
+
+#### Feature 1: Comparison Delta Indicators
+
+Show change vs a baseline value with colored up/down arrows (▲ green / ▼ red).
+
+**Field-level Properties (for comparison fields):**
+
+Add these properties to the comparison field (not the primary metric):
+
+- `.comparison_field`: The field name of the primary metric this value compares to.
+  - Syntax: `# big_value { comparison_field=current_sales }`
+- `.comparison_label`: Optional label shown next to the delta indicator.
+  - Syntax: `# big_value { comparison_label='vs Prior Year' }`
+- `.comparison_format`: How to calculate and display the change.
+  - Values: `pct` (percentage change, default) or `ppt` (percentage point difference)
+  - Syntax: `# big_value { comparison_format=ppt }`
+- `.down_is_good`: Set to `true` if a decrease should be shown as positive (green). Useful for cost or delay metrics.
+  - Syntax: `# big_value { down_is_good=true }`
+
+**Example:**
+
+```malloy
+# big_value
+view: sales_comparison is {
+  aggregate:
+    # label="Current Sales"
+    # currency
+    current_sales is revenue.sum()
+
+    // Shows: ▲ 8.7% vs Prior Year (green)
+    # big_value { comparison_field=current_sales comparison_label='vs Prior Year' }
+    # hidden
+    prior_sales is revenue.sum() * 0.92
+}
+```
+
+---
+
+#### Feature 2: Documentation Tooltips
+
+Add info icons with hover descriptions using `#(doc)` annotations.
+
+**Example:**
+
+```malloy
+# big_value
+view: documented_metrics is {
+  aggregate:
+    #(doc) Total revenue from completed sales. Updated daily.
+    # label="Total Revenue"
+    # currency
+    total_revenue is sales.sum()
+
+    #(doc) Win rate = Won / (Won + Lost). Industry average is 25%.
+    # label="Win Rate"
+    # percent
+    win_rate is won.sum() / (won.sum() + lost.sum())
+}
+```
+
+---
+
+#### Feature 3: Sparkline Trends
+
+Show mini line, area, or bar charts alongside the metric value.
+
+**Nested Field Properties (for sparkline data):**
+
+- `.sparkline_for`: The field name of the primary metric this sparkline represents.
+  - Syntax: `# big_value { sparkline_for=total_sales }`
+- `.sparkline_type`: The chart type for the sparkline.
+  - Values: `line` (default), `area`, `bar`
+  - Syntax: `# big_value { sparkline_type=area }`
+
+**Example:**
+
+```malloy
+# big_value
+view: sales_with_trend is {
+  aggregate:
+    # label="Total Sales"
+    # currency
+    total_sales is revenue.sum()
+
+  // Line sparkline showing trend over time
+  # big_value { sparkline_for=total_sales }
+  nest: trend is {
+    group_by: order_date.month
+    aggregate: monthly_sales is revenue.sum()
+  }
+}
+
+// Area sparkline
+# big_value
+view: with_area_sparkline is {
+  aggregate:
+    # label="Avg Order Value"
+    # currency
+    avg_order is revenue.avg()
+
+  # big_value { sparkline_for=avg_order sparkline_type=area }
+  nest: aov_trend is {
+    group_by: order_date.week
+    aggregate: weekly_avg is revenue.avg()
+  }
+}
+
+// Bar sparkline
+# big_value
+view: with_bar_sparkline is {
+  aggregate:
+    # label="Order Count"
+    order_count is count()
+
+  # big_value { sparkline_for=order_count sparkline_type=bar }
+  nest: orders_by_region is {
+    group_by: region
+    aggregate: orders is count()
+    limit: 8
+  }
+}
+```
+
+---
+
+#### Formatting
+
+Big Value cards respect field formatting tags:
+- `# currency` - Format as currency (e.g., $1,234.56)
+- `# currency=euro` - Format as euros (€)
+- `# currency=pound` - Format as pounds (£)
+- `# percent` - Format as percentage
+- `# number="#,##0.0"` - Custom number format
+- `# number=big` - Abbreviate large numbers (1.2M, 3.5B)
+
+---
+
+#### Complete Example (All Features)
+
+```malloy
+# big_value
+view: executive_dashboard is {
+  aggregate:
+    #(doc) Total revenue this period. Target is $10M.
+    # label="Revenue"
+    # currency
+    revenue is sales.sum()
+
+    # big_value { comparison_field=revenue comparison_label='vs Target' }
+    # hidden
+    target_revenue is 10000000
+
+    #(doc) On-time delivery rate. SLA requires 95%.
+    # label="On-Time Rate"
+    # percent
+    ontime_rate is count() { where: delivered_on_time } / count()
+
+    # big_value { comparison_field=ontime_rate comparison_label='vs SLA' comparison_format=ppt }
+    # hidden
+    sla_target is 0.95
+
+  // Sparkline showing revenue trend
+  # big_value { sparkline_for=revenue }
+  nest: revenue_trend is {
+    group_by: order_date.month
+    aggregate: monthly_revenue is sales.sum()
+    limit: 12
+  }
+}
+```
+
 ---
 
 ## Data Limiting and Performance

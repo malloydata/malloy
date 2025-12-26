@@ -10,6 +10,8 @@ import type {RenderPluginFactory} from './plugin-types';
 import {MalloyViz} from './malloy-viz';
 import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
 import {BarChartPluginFactory} from '@/plugins/bar-chart/bar-chart-plugin';
+import {BigValuePluginFactory} from '@/plugins/big-value/big-value-plugin';
+import {SparklinePluginFactory} from '@/plugins/sparkline/sparkline-plugin';
 
 export class MalloyRenderer {
   private globalOptions: MalloyRendererOptions;
@@ -20,6 +22,8 @@ export class MalloyRenderer {
     this.pluginRegistry = [
       LineChartPluginFactory,
       BarChartPluginFactory,
+      BigValuePluginFactory,
+      SparklinePluginFactory,
       ...(options.plugins || []),
     ];
   }

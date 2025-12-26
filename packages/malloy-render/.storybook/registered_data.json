@@ -1,1 +1,1 @@
-["products.parquet", "logos.csv", "missing_data.csv"]
+["products.parquet", "logos.csv", "missing_data.csv", "order_items.parquet"]

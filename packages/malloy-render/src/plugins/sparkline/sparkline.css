@@ -1,0 +1,29 @@
+/*
+ * Sparkline Plugin Styles
+ */
+
+/* Sparkline container */
+.malloy-sparkline-container {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+/* Ensure SVG doesn't overflow */
+.malloy-sparkline-container svg {
+  display: block;
+}
+
+/* Vega tooltip styling override */
+.malloy-sparkline-container .vg-tooltip {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  padding: 6px 10px;
+  background: #1f2937;
+  color: #f9fafb;
+  border-radius: 6px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
