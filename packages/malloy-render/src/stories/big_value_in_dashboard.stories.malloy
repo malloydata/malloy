@@ -1,0 +1,279 @@
+// Big Value in Dashboard Stories for Storybook
+// Tests the # big_value tag when used inside a # dashboard view
+// This validates that the big_value plugin works correctly within nested dashboard contexts
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  // ============================================
+  // TEST 1: Basic big_value nest inside dashboard
+  // Expected: Dashboard shows category header with big_value cards for metrics
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_with_big_value_nest is {
+    group_by:
+      category
+    nest:
+      # big_value
+      metrics is {
+        aggregate:
+          product_count is count()
+          # currency
+          total_retail is retail_price.sum()
+          # currency
+          avg_price is retail_price.avg()
+      }
+  }
+
+  // ============================================
+  // TEST 2: big_value with comparison inside dashboard
+  // Expected: Big value cards should show delta indicators within dashboard
+  // Note: Using cost.avg() to create variation per category
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_with_big_value_comparison is {
+    group_by:
+      category
+    nest:
+      # big_value
+      sales_metrics is {
+        aggregate:
+          # label="Current Sales"
+          # currency
+          current_sales is retail_price.sum()
+
+          // Use cost.avg() to create varying comparison ratios per category
+          # big_value { comparison_field=current_sales comparison_label='vs Target' }
+          # hidden
+          target_sales is retail_price.sum() - (cost.avg() * count())
+      }
+  }
+
+  // ============================================
+  // TEST 3: big_value with doc tooltips inside dashboard
+  // Expected: Documentation tooltips should appear on hover within dashboard
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_with_big_value_docs is {
+    group_by:
+      category
+    nest:
+      # big_value
+      documented_metrics is {
+        aggregate:
+          #(doc) Total number of products in this category
+          # label="Products"
+          product_count is count()
+
+          #(doc) Average retail price across all products. Does not include discounts.
+          # label="Avg Price"
+          # currency
+          avg_price is retail_price.avg()
+      }
+  }
+
+  // ============================================
+  // TEST 4: big_value with sparklines inside dashboard
+  // Expected: Sparklines should render correctly within dashboard cards
+  // Note: Using id as x-axis to simulate time-series (products ordered by id)
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_with_big_value_sparkline is {
+    group_by:
+      category
+    nest:
+      # big_value
+      metrics_with_trends is {
+        aggregate:
+          # label="Avg Price"
+          # currency
+          avg_price is retail_price.avg()
+
+        // Sparkline: price trend across product IDs (simulating time order)
+        # big_value { sparkline_for=avg_price }
+        nest: price_trend is {
+          group_by: product_id is id / 100  // bucket every 100 products
+          aggregate: price is retail_price.avg()
+          order_by: product_id
+          limit: 20
+        }
+      }
+  }
+
+  // ============================================
+  // TEST 5: Multiple big_value nests in same dashboard
+  // Expected: Multiple big_value sections should render independently
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_multiple_big_values is {
+    group_by:
+      category
+    nest:
+      # big_value
+      revenue_kpis is {
+        aggregate:
+          # label="Revenue"
+          # currency
+          total_revenue is retail_price.sum()
+          # label="Avg Price"
+          # currency
+          avg_price is retail_price.avg()
+      }
+      # big_value
+      # break
+      cost_kpis is {
+        aggregate:
+          # label="Total Cost"
+          # currency
+          total_cost is cost.sum()
+          # label="Avg Cost"
+          # currency
+          avg_cost is cost.avg()
+      }
+  }
+
+  // ============================================
+  // TEST 6: big_value with different sizes inside dashboard
+  // Expected: Size modifiers (sm, md, lg) should work within dashboard
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_big_value_sizes is {
+    group_by:
+      category
+    nest:
+      # big_value { size=lg }
+      large_metrics is {
+        aggregate:
+          # label="Large KPI"
+          # currency
+          total_retail is retail_price.sum()
+      }
+      # break
+      # big_value { size=sm }
+      small_metrics is {
+        aggregate:
+          # label="Small KPI"
+          product_count is count()
+      }
+  }
+
+  // ============================================
+  // TEST 7: Mix of big_value and regular table nests
+  // Expected: Dashboard should render both big_value and table views correctly
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_mixed_nest_types is {
+    group_by:
+      category
+    nest:
+      # big_value
+      summary_kpis is {
+        aggregate:
+          # label="Products"
+          product_count is count()
+          # label="Revenue"
+          # currency
+          total_retail is retail_price.sum()
+      }
+      # break
+      top_brands is {
+        group_by: brand
+        aggregate:
+          # currency
+          avg_retail is retail_price.avg()
+        limit: 5
+      }
+  }
+
+  // ============================================
+  // TEST 8: big_value with down_is_good comparison inside dashboard
+  // Expected: Green color should show for decreasing cost metrics
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_big_value_down_is_good is {
+    group_by:
+      category
+    nest:
+      # big_value
+      cost_analysis is {
+        aggregate:
+          #(doc) Current costs including manufacturing and logistics
+          # label="Current Costs"
+          # currency
+          current_costs is cost.sum()
+
+          // Use retail_price.avg() to create varying comparison ratios per category
+          # big_value { comparison_field=current_costs comparison_label='vs Budget' down_is_good=true }
+          # hidden
+          budgeted_costs is cost.sum() + (retail_price.avg() * 10)
+      }
+  }
+
+  // ============================================
+  // TEST 9: big_value with all features combined inside dashboard
+  // Expected: Full feature set (comparison, sparkline, doc, formatting) should work
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_big_value_full_features is {
+    group_by:
+      category
+    nest:
+      # big_value
+      full_featured_metrics is {
+        aggregate:
+          #(doc) Total revenue from retail sales. Updated daily.
+          # label="Total Revenue"
+          # currency
+          total_revenue is retail_price.sum()
+
+          // Use cost.sum() to create varying comparison - simulates different "prior" values per category
+          # big_value { comparison_field=total_revenue comparison_label='vs Prior' }
+          # hidden
+          prior_revenue is retail_price.sum() - cost.sum() + (cost.avg() * 5)
+
+        // Sparkline: revenue trend across product IDs (simulating time order)
+        # big_value { sparkline_for=total_revenue sparkline_type=area }
+        nest: revenue_trend is {
+          group_by: product_bucket is id / 50
+          aggregate: revenue is retail_price.sum()
+          order_by: product_bucket
+          limit: 15
+        }
+      }
+  }
+
+  // ============================================
+  // TEST 10: Dashboard with measures AND big_value nest
+  // Expected: Regular measures render as dashboard items, big_value nest renders as cards
+  // ============================================
+  #(story)
+  # dashboard
+  view: dashboard_measures_and_big_value is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      category_total is retail_price.sum()
+    nest:
+      # big_value
+      detailed_kpis is {
+        aggregate:
+          # label="Products"
+          product_count is count()
+          # label="Avg Price"
+          # currency
+          avg_price is retail_price.avg()
+          # label="Profit Margin"
+          # percent
+          margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
+      }
+  }
+}

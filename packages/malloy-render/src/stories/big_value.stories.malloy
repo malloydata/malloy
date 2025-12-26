@@ -147,7 +147,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       avg_price_prior is (retail_price.sum() / count()) * 1.13
   }
 
-  // Big Value with line sparkline showing distribution by category
+  // Big Value with line sparkline (products - no time data)
   #(story)
   # big_value
   view: with_sparkline is {
@@ -156,12 +156,13 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # label="Total Products"
       total_products is count()
 
-    // Sparkline shows product count by category
+    // Sparkline: product count trend across ID buckets
     # big_value { sparkline_for=total_products }
-    nest: by_category is {
-      group_by: category
+    nest: trend is {
+      group_by: product_bucket is id / 100
       aggregate: products is count()
-      limit: 10
+      order_by: product_bucket
+      limit: 15
     }
   }
 
@@ -174,11 +175,13 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # currency
       avg_retail is retail_price.avg()
 
+    // Sparkline: price trend across ID buckets
     # big_value { sparkline_for=avg_retail sparkline_type=area }
-    nest: price_by_category is {
-      group_by: category
+    nest: price_trend is {
+      group_by: product_bucket is id / 100
       aggregate: avg_price is retail_price.avg()
-      limit: 10
+      order_by: product_bucket
+      limit: 15
     }
   }
 
@@ -191,11 +194,13 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # currency
       total_revenue is retail_price.sum()
 
+    // Sparkline: revenue by ID bucket (bar chart style)
     # big_value { sparkline_for=total_revenue sparkline_type=bar }
-    nest: revenue_by_category is {
-      group_by: category
+    nest: revenue_trend is {
+      group_by: product_bucket is id / 200
       aggregate: revenue is retail_price.sum()
-      limit: 8
+      order_by: product_bucket
+      limit: 10
     }
   }
 
@@ -213,11 +218,13 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # hidden
       target_revenue is retail_price.sum() * 0.95
 
+    // Sparkline: revenue trend across product IDs
     # big_value { sparkline_for=total_revenue }
     nest: trend is {
-      group_by: category
+      group_by: product_bucket is id / 100
       aggregate: revenue is retail_price.sum()
-      limit: 10
+      order_by: product_bucket
+      limit: 15
     }
   }
 }

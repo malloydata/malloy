@@ -21,22 +21,23 @@
     rgb(229, 231, 235) 0px 0px 0px 1px,
     rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
     rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
-  min-width: 120px;
-  flex: 1 1 150px;
-  overflow: hidden;
+  min-width: 140px;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 400px;
 }
 
 /* Size variants */
 .malloy-big-value-card--sm {
   padding: 12px 16px;
-  min-width: 80px;
-  flex: 1 1 100px;
+  min-width: 100px;
+  max-width: 300px;
 }
 
 .malloy-big-value-card--lg {
   padding: 24px 32px;
-  min-width: 150px;
-  flex: 1 1 200px;
+  min-width: 180px;
+  max-width: 500px;
 }
 
 /* Label container with tooltip */
@@ -54,10 +55,7 @@
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 
 .malloy-big-value-card--sm .malloy-big-value-label {
@@ -73,27 +71,23 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0;
 }
 
 /* Value */
 .malloy-big-value-value {
-  font-size: clamp(18px, 5vw, 32px);
+  font-size: 32px;
   font-weight: 600;
   color: var(--malloy-render--table-body-color, #111827);
   line-height: 1.2;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .malloy-big-value-card--sm .malloy-big-value-value {
-  font-size: clamp(16px, 4vw, 24px);
+  font-size: 24px;
 }
 
 .malloy-big-value-card--lg .malloy-big-value-value {
-  font-size: clamp(24px, 6vw, 40px);
+  font-size: 40px;
 }
 
 /* Sparkline */
