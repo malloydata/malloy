@@ -92,13 +92,13 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           # currency
           avg_price is retail_price.avg()
 
-        // Sparkline: price trend across product IDs (simulating time order)
+        // Sparkline: price trend by product bucket
         # big_value { sparkline_for=avg_price }
         nest: price_trend is {
-          group_by: product_id is id / 100  // bucket every 100 products
+          group_by: product_bucket is floor(id / 100)::number
           # currency
           aggregate: price is retail_price.avg()
-          order_by: product_id
+          order_by: product_bucket
           limit: 20
         }
       }
