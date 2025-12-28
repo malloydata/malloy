@@ -247,16 +247,22 @@ export class QueryQuery extends QueryField {
     return {as, field};
   }
 
+  // Modified addDependantPath to return the JoinInstance
   private addDependantPath(
     path: string[],
     uniqueKeyRequirement: UniqueKeyRequirement
-  ) {
+  ): JoinInstance {
     const node = this.parent.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement);
+
+    // This returns the JoinInstance
+    return this.rootResult.addStructToJoin(
+      joinableParent,
+      uniqueKeyRequirement
+    );
   }
 
   private dependenciesFromFieldUsage() {
@@ -270,7 +276,10 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(joinUsage.path, undefined);
+      const joinInstance = this.addDependantPath(joinUsage.path, undefined);
+      if (joinUsage.onReferencesNestedData) {
+        joinInstance.onReferencesNestedData = true;
+      }
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -892,11 +901,20 @@ export class QueryQuery extends QueryField {
         });
       }
 
-      if (
-        ji.children.length === 0 ||
-        conditions === undefined ||
-        !this.parent.dialect.supportsComplexFilteredSources
-      ) {
+      const needsComplexPattern =
+        ji.onReferencesNestedData || // NEW: our flag for ON conditions referencing nested data
+        (ji.children.length > 0 &&
+          conditions !== undefined &&
+          conditions.length > 0 &&
+          this.parent.dialect.supportsComplexFilteredSources);
+
+      if (!needsComplexPattern) {
+        // Simple case - direct JOIN
+        if (conditions !== undefined && conditions.length >= 1) {
+          filters = ` AND (${conditions.join(' AND ')})`;
+        }
+        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
+      } else {
         // LTNOTE: need a check here to see the children's where: conditions are local
         //  to the source and not to any of it's joined children.
         //  In Presto, we're going to get a SQL error if in this case
@@ -910,12 +928,6 @@ export class QueryQuery extends QueryField {
         //     'Cannot join a source with a complex filter on a joined source'
         //   );
         // }
-
-        if (conditions !== undefined && conditions.length >= 1) {
-          filters = ` AND (${conditions.join(' AND ')})`;
-        }
-        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
-      } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
         for (const childJoin of ji.children) {
@@ -925,14 +937,15 @@ export class QueryQuery extends QueryField {
             getDialectFieldList(childJoin.queryStruct.structDef)
           )} AS ${childJoin.alias}`;
         }
-        select += `\nFROM ${structSQL} AS ${
-          ji.alias
-        }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
+        select += `\nFROM ${structSQL} AS ${ji.alias}\n${joins}`;
+        if (conditions && conditions.length > 0) {
+          select += `\nWHERE ${conditions.join(' AND ')}\n`;
+        }
         s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
-        return s;
       }
+      return s;
     } else if (qsDef.type === 'array') {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');

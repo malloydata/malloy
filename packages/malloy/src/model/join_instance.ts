@@ -17,6 +17,7 @@ export class JoinInstance {
   leafiest = false;
   joinFilterConditions?: QueryFieldBoolean[];
   children: JoinInstance[] = [];
+  onReferencesNestedData?: boolean;
   constructor(
     public queryStruct: QueryStruct,
     public alias: string,

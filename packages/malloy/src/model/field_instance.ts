@@ -460,7 +460,8 @@ export class FieldInstanceResult implements FieldInstance {
   addStructToJoin(
     qs: QueryStruct,
     uniqueKeyRequirement: UniqueKeyRequirement
-  ): void {
+  ): JoinInstance {
+    // CHANGED: now returns JoinInstance
     const name = qs.getIdentifier();
 
     let join = this.root().joins.get(name);
@@ -469,7 +470,7 @@ export class FieldInstanceResult implements FieldInstance {
         join.uniqueKeyRequirement,
         uniqueKeyRequirement
       );
-      return;
+      return join; // CHANGED: return existing join
     }
 
     // if we have a parent, join it first.
@@ -489,6 +490,7 @@ export class FieldInstanceResult implements FieldInstance {
       join.uniqueKeyRequirement,
       uniqueKeyRequirement
     );
+    return join;
   }
 
   root(): FieldInstanceResultRoot {
