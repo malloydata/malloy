@@ -123,4 +123,15 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
     order_by: order_date
     limit: 60
   }
+
+  // Test with aggregate BEFORE group_by (matches PR issue query structure)
+  // This tests that field order doesn't matter
+  #(story)
+  # sparkline
+  view: aggregate_first is {
+    aggregate: revenue        // aggregate FIRST (like failing PR query)
+    group_by: order_month     // group_by SECOND
+    order_by: order_month
+    limit: 24                 // Same as basic_line for comparison
+  }
 }

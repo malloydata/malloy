@@ -290,9 +290,12 @@ function extractSparklineData(
   const fields = nestedCell.field.fields;
   if (fields.length < 2) return null;
 
-  // First field is x (usually date/time), second is y (value)
-  const xField = fields[0];
-  const yField = fields[1];
+  // Use field metadata to identify dimension (x) vs measure (y)
+  // This ensures correct axis assignment regardless of query clause order
+  const xField = fields.find(f => f.wasDimension());
+  const yField = fields.find(f => f.wasCalculation());
+
+  if (!xField || !yField) return null;
 
   const data: Array<{x: unknown; y: number}> = [];
 

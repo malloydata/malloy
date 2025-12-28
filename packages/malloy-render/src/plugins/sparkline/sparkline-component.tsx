@@ -374,8 +374,14 @@ export function SparklineComponent(props: SparklineComponentProps) {
       throw new Error('Sparkline requires at least 2 fields (x and y)');
     }
 
-    const xField = fields[0];
-    const yField = fields[1];
+    // Use field metadata to identify dimension (x) vs measure (y)
+    // This ensures correct axis assignment regardless of query clause order
+    const xField = fields.find(f => f.wasDimension());
+    const yField = fields.find(f => f.wasCalculation());
+
+    if (!xField || !yField) {
+      throw new Error('Sparkline requires a dimension field (x) and measure field (y)');
+    }
 
     const data = mapMalloyData(props.dataColumn.rows, xField.name, yField.name);
     const dimensions = getDimensions(props.settings.size);
