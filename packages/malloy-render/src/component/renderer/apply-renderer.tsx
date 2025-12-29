@@ -6,10 +6,7 @@
  */
 
 import type {JSXElement} from 'solid-js';
-import {
-  renderNumericField,
-  renderBigNumberField,
-} from '@/component/render-numeric-field';
+import {renderNumberCell} from '@/component/render-numeric-field';
 import {renderLink} from '@/component/render-link';
 import MalloyTable from '@/component/table/table';
 import {renderList} from '@/component/render-list';
@@ -54,12 +51,7 @@ export function applyRenderer(props: RendererProps) {
     switch (renderAs) {
       case 'cell': {
         if (dataColumn.isNumber()) {
-          // Use string value for precision when available (bigint/bigdecimal)
-          if (dataColumn.stringValue !== undefined) {
-            renderValue = renderBigNumberField(field, dataColumn.stringValue);
-          } else {
-            renderValue = renderNumericField(field, dataColumn.value);
-          }
+          renderValue = renderNumberCell(dataColumn);
         } else if (dataColumn.isString()) {
           renderValue = dataColumn.value;
         } else if (field.isTime()) {
