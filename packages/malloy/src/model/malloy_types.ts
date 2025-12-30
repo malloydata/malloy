@@ -813,7 +813,7 @@ export type StringFieldDef = StringTypeDef & AtomicFieldDef;
 
 export interface NumberTypeDef {
   type: 'number';
-  numberType?: 'integer' | 'float';
+  numberType?: 'integer' | 'float' | 'bigint';
 }
 export type NumberFieldDef = NumberTypeDef & AtomicFieldDef;
 
@@ -1765,7 +1765,14 @@ export interface ModelAnnotation extends Annotation {
   id: string;
 }
 
-export type QueryScalar = string | boolean | number | Date | Buffer | null;
+export type QueryScalar =
+  | string
+  | boolean
+  | number
+  | bigint
+  | Date
+  | Buffer
+  | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;

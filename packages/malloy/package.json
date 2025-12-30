@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.327",
+  "version": "0.0.331",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
@@ -38,16 +38,16 @@
   "scripts": {
     "test": "jest --config=../../jest.config.js",
     "build-parser": "node src/lang/grammar/build_parser.js",
-    "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-filter": "0.0.327",
-    "@malloydata/malloy-interfaces": "0.0.327",
-    "@malloydata/malloy-tag": "0.0.327",
+    "@malloydata/malloy-filter": "0.0.331",
+    "@malloydata/malloy-interfaces": "0.0.331",
+    "@malloydata/malloy-tag": "0.0.331",
     "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",
     "jaro-winkler": "^0.2.8",

@@ -25,9 +25,8 @@ import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import type {SQLSourceRequest, StructDef} from '@malloydata/malloy';
 import {mkArrayDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['duckdb']);
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -37,10 +36,9 @@ const [describe] = describeIfDatabaseAvailable(['duckdb']);
  */
 
 describe('DuckDBConnection', () => {
-  let connection: DuckDBConnection;
+  const connection = new DuckDBConnection('duckdb');
 
   beforeAll(async () => {
-    connection = new DuckDBConnection('duckdb');
     await connection.runSQL('SELECT 1');
     expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
   });
@@ -179,8 +177,8 @@ describe('DuckDBConnection', () => {
         'fields': [
           {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
           {'name': 'name', 'type': 'string'},
-          {'name': 'age', 'numberType': 'integer', 'type': 'number'},
-          {'name': 'total_sections', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'age', 'numberType': 'bigint', 'type': 'number'},
+          {'name': 'total_sections', 'numberType': 'bigint', 'type': 'number'},
         ],
       });
     });
@@ -213,6 +211,153 @@ describe('DuckDBConnection', () => {
         'type': 'sql native',
         'rawType': 'UUID',
       });
+    });
+
+    describe('integer type mappings', () => {
+      it('maps INTEGER to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'INTEGER'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps SMALLINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'SMALLINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps TINYINT to integer', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'TINYINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps BIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'BIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps HUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'HUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UBIGINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UBIGINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps UHUGEINT to bigint', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'UHUGEINT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'bigint',
+        });
+      });
+
+      it('maps FLOAT to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'FLOAT'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DOUBLE to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DOUBLE'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+
+      it('maps DECIMAL(10,2) to float', () => {
+        const structDef = makeStructDef();
+        connection.fillStructDefFromTypeMap(structDef, {test: 'DECIMAL(10,2)'});
+        expect(structDef.fields[0]).toEqual({
+          name: 'test',
+          type: 'number',
+          numberType: 'float',
+        });
+      });
+    });
+  });
+
+  /**
+   * Tests for reading numeric values through Malloy queries
+   */
+  describe('numeric value reading', () => {
+    const runtime = createTestRuntime(connection);
+    const testModel = mkTestModel(runtime, {});
+
+    describe('integer types', () => {
+      it.each([
+        'TINYINT',
+        'SMALLINT',
+        'INTEGER',
+        'BIGINT',
+        'UTINYINT',
+        'USMALLINT',
+        'UINTEGER',
+        'UBIGINT',
+        'HUGEINT',
+        'UHUGEINT',
+      ])('reads %s correctly', async sqlType => {
+        await expect(
+          `run: duckdb.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {d: 10});
+      });
+
+      it('preserves precision for literal integers > 2^53', async () => {
+        const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+        await expect(`
+        run: duckdb.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+      });
+    });
+
+    describe('float types', () => {
+      it.each(['FLOAT', 'DOUBLE', 'DECIMAL(10,2)'])(
+        'reads %s correctly',
+        async sqlType => {
+          await expect(
+            `run: duckdb.sql("SELECT 10.5::${sqlType} as f")`
+          ).toMatchResult(testModel, {f: 10.5});
+        }
+      );
     });
   });
 });

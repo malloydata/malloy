@@ -22,38 +22,20 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 import {SnowflakeConnection} from './snowflake_connection';
-import {fileURLToPath} from 'url';
-import * as util from 'util';
-import * as fs from 'fs';
 import {SnowflakeExecutor} from './snowflake_executor';
 
-const [describe] = describeIfDatabaseAvailable(['snowflake']);
-
 describe('db:Snowflake', () => {
-  let conn: SnowflakeConnection;
-  let runtime: malloy.Runtime;
-
-  beforeAll(() => {
-    const connOptions =
-      SnowflakeExecutor.getConnectionOptionsFromEnv() ||
-      SnowflakeExecutor.getConnectionOptionsFromToml();
-    conn = new SnowflakeConnection('snowflake', {
-      connOptions: connOptions,
-      queryOptions: {rowLimit: 1000},
-    });
-    const files = {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
-    };
-    runtime = new malloy.Runtime({
-      urlReader: files,
-      connection: conn,
-    });
+  const connOptions =
+    SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+    SnowflakeExecutor.getConnectionOptionsFromToml();
+  const conn = new SnowflakeConnection('snowflake', {
+    connOptions: connOptions,
+    queryOptions: {rowLimit: 1000},
   });
+  const runtime = createTestRuntime(conn);
 
   afterAll(async () => {
     await conn.close();
@@ -61,7 +43,7 @@ describe('db:Snowflake', () => {
 
   it('runs a SQL query', async () => {
     const res = await conn.runSQL('SELECT 1 as T');
-    expect(res.rows[0]['T']).toBe(1);
+    expect(malloy.API.rowDataToNumber(res.rows[0]['T'])).toBe(1);
   });
 
   it('runs a Malloy query', async () => {
@@ -78,7 +60,7 @@ describe('db:Snowflake', () => {
     expect(res.totalRows).toBe(55);
     let total = 0;
     for (const row of res.rows) {
-      total += +(row['cnt'] ?? 0);
+      total += malloy.API.rowDataToNumber(row['cnt'] ?? 0);
     }
     expect(total).toBe(3540);
 
@@ -96,7 +78,7 @@ describe('db:Snowflake', () => {
       .getSQL();
     const res = await conn.runSQL(sql);
     expect(res.rows.length).toBe(1);
-    expect(res.rows[0]['cnt']).toBe(3599);
+    expect(malloy.API.rowDataToNumber(res.rows[0]['cnt'])).toBe(3599);
   });
 
   it('runs a Malloy function with overrides', async () => {
@@ -142,5 +124,76 @@ describe('db:Snowflake', () => {
       {name: 'TS_LTZ', type: 'sql native', rawType: 'timestamp_ltz'},
       {name: 'TS_TZ', type: 'timestamptz'},
     ]);
+  });
+
+  it('maps integer types to bigint', async () => {
+    const x: malloy.SQLSourceDef = {
+      type: 'sql_select',
+      name: 'integer_types',
+      connection: conn.name,
+      dialect: conn.dialectName,
+      selectStr: `
+        SELECT
+          1::INTEGER AS int_val,
+          2::BIGINT AS bigint_val,
+          3::NUMBER(38,0) AS number_val
+      `,
+      fields: [],
+    };
+    const y = await conn.fetchSelectSchema(x);
+    // Snowflake maps all integer types to bigint since NUMBER can hold 38 digits
+    expect(y.fields).toEqual([
+      {name: 'INT_VAL', type: 'number', numberType: 'bigint'},
+      {name: 'BIGINT_VAL', type: 'number', numberType: 'bigint'},
+      {name: 'NUMBER_VAL', type: 'number', numberType: 'bigint'},
+    ]);
+  });
+});
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const connOptions =
+    SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+    SnowflakeExecutor.getConnectionOptionsFromToml();
+  const connection = new SnowflakeConnection('snowflake_numeric_tests', {
+    connOptions: connOptions,
+    queryOptions: {rowLimit: 1000},
+  });
+  const runtime = createTestRuntime(connection);
+  const testModel = mkTestModel(runtime, {});
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each(['INTEGER', 'BIGINT', 'NUMBER(38,0)'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: snowflake.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {D: 10});
+      }
+    );
+
+    it('preserves precision for literal integers > 2^53', async () => {
+      const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+      await expect(`
+        run: snowflake.sql("select 1 as n") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+    });
+  });
+
+  describe('float types', () => {
+    it.each(['FLOAT', 'DOUBLE', 'NUMBER(10,2)'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: snowflake.sql("SELECT 10.5::${sqlType} as f")`
+        ).toMatchResult(testModel, {F: 10.5});
+      }
+    );
   });
 });

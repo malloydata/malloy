@@ -66,6 +66,8 @@ import type {
   QuerySourceDef,
   TableSourceDef,
   SourceComponentInfo,
+  FieldDef,
+  AtomicTypeDef,
 } from './model';
 import {
   fieldIsIntrinsic,
@@ -75,6 +77,8 @@ import {
   isSourceDef,
   isJoined,
   isRecordOrRepeatedRecord,
+  isBasicArray,
+  isRepeatedRecord,
 } from './model';
 import type {
   EventStream,
@@ -91,7 +95,6 @@ import type {
   InfoConnection,
   LookupConnection,
 } from './connection/types';
-import {DateTime} from 'luxon';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Dialect} from './dialect';
 import {getDialect} from './dialect';
@@ -107,6 +110,11 @@ import {
 import {sqlKey} from './model/sql_block';
 import {locationContainsPosition} from './lang/utils';
 import {ReferenceList} from './lang/reference-list';
+import {
+  rowDataToNumber,
+  rowDataToSerializedBigint,
+  rowDataToDate,
+} from './api/row_data_utils';
 
 export interface Taggable {
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
@@ -2996,7 +3004,19 @@ export class ModelMaterializer extends FluentState<Model> {
     const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
-    return result._queryResult.result as unknown as SearchValueMapResult[];
+    const rawResult = result._queryResult.result as unknown as {
+      fieldName: string;
+      cardinality: unknown;
+      values: {fieldValue: string; weight: unknown}[];
+    }[];
+    return rawResult.map(row => ({
+      ...row,
+      cardinality: rowDataToNumber(row.cardinality),
+      values: row.values.map(v => ({
+        ...v,
+        weight: rowDataToNumber(v.weight),
+      })),
+    }));
   }
 
   /**
@@ -3371,7 +3391,12 @@ export class Result extends PreparedResult {
   }
 
   public toJSON(): ResultJSON {
-    return {queryResult: this.inner, modelDef: this._modelDef};
+    // The result rows are converted to JSON separately because they
+    // may contain un-serializable data types.
+    return {
+      queryResult: {...this.inner, result: this.data.toJSON()},
+      modelDef: this._modelDef,
+    };
   }
 
   public static fromJSON({queryResult, modelDef}: ResultJSON): Result {
@@ -3683,12 +3708,12 @@ class DataNumber extends ScalarData<number> {
   protected _field: NumberField;
 
   constructor(
-    value: number,
+    value: unknown,
     field: NumberField,
     parent: DataArrayOrRecord | undefined,
     parentRecord: DataRecord | undefined
   ) {
-    super(value, field, parent, parentRecord);
+    super(rowDataToNumber(value), field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3712,35 +3737,6 @@ class DataNumber extends ScalarData<number> {
   }
 }
 
-function valueToDate(value: Date): Date {
-  // TODO properly map the data from BQ/Postgres types
-  if (value instanceof Date) {
-    return value;
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const valAsAny = value as any;
-  if (valAsAny.constructor.name === 'Date') {
-    // For some reason duckdb TSTZ values come back as objects which do not
-    // pass "instance of" but do seem date like.
-    return new Date(value as Date);
-  } else if (typeof value === 'number') {
-    return new Date(value);
-  } else if (typeof value !== 'string') {
-    return new Date((value as unknown as {value: string}).value);
-  } else {
-    // Postgres timestamps end up here, and ideally we would know the system
-    // timezone of the postgres instance to correctly create a Date() object
-    // which represents the same instant in time, but we don't have the data
-    // flow to implement that. This may be a problem at some future day,
-    // so here is a comment, for that day.
-    let parsed = DateTime.fromISO(value, {zone: 'UTC'});
-    if (!parsed.isValid) {
-      parsed = DateTime.fromSQL(value, {zone: 'UTC'});
-    }
-    return parsed.toJSDate();
-  }
-}
-
 class DataTimestamp extends ScalarData<Date> {
   protected _field: TimestampField;
 
@@ -3755,7 +3751,7 @@ class DataTimestamp extends ScalarData<Date> {
   }
 
   public get value(): Date {
-    return valueToDate(this._value);
+    return rowDataToDate(this._value);
   }
 
   get field(): TimestampField {
@@ -3791,7 +3787,7 @@ class DataDate extends ScalarData<Date> {
   }
 
   public get value(): Date {
-    return valueToDate(this._value);
+    return rowDataToDate(this._value);
   }
 
   get field(): DateField {
@@ -3841,6 +3837,232 @@ class DataNull extends Data<null> {
   }
 }
 
+/**
+ * Normalizers for converting raw row data values to specific output formats.
+ */
+interface DataNormalizers {
+  number: (value: unknown) => number;
+  bigint: (value: unknown) => number | bigint | string;
+  date: (value: unknown) => Date | string;
+}
+
+/**
+ * Safe bigint conversion - handles floats that are incorrectly typed as bigint
+ * (e.g., avg() results which should be float but Malloy marks as bigint).
+ */
+function safeRowDataToBigint(value: unknown): bigint | number {
+  const strValue = rowDataToSerializedBigint(value);
+  if (
+    strValue.includes('.') ||
+    strValue.includes('e') ||
+    strValue.includes('E')
+  ) {
+    return rowDataToNumber(value);
+  }
+  try {
+    return BigInt(strValue);
+  } catch {
+    return rowDataToNumber(value);
+  }
+}
+
+/**
+ * Safe bigint serialization - returns number for floats that should stay as numbers.
+ */
+function safeRowDataToSerializedBigint(value: unknown): string | number {
+  const strValue = rowDataToSerializedBigint(value);
+  if (
+    strValue.includes('.') ||
+    strValue.includes('e') ||
+    strValue.includes('E')
+  ) {
+    return rowDataToNumber(value);
+  }
+  return strValue;
+}
+
+/**
+ * Normalizers for toObject() - returns JS native types (number | bigint, Date)
+ */
+const OBJECT_NORMALIZERS: DataNormalizers = {
+  number: rowDataToNumber,
+  bigint: safeRowDataToBigint,
+  date: rowDataToDate,
+};
+
+/**
+ * Normalizers for toJSON() - returns JSON-safe types (number | string, ISO strings)
+ */
+const JSON_NORMALIZERS: DataNormalizers = {
+  number: rowDataToNumber,
+  bigint: safeRowDataToSerializedBigint,
+  date: (value: unknown) => rowDataToDate(value).toISOString(),
+};
+
+/**
+ * Walk a QueryData array and normalize values according to the given normalizers.
+ */
+function walkQueryData(
+  data: QueryData,
+  structDef: StructDef,
+  normalizers: DataNormalizers
+): QueryData {
+  return data.map(row => walkQueryDataRow(row, structDef, normalizers));
+}
+
+/**
+ * Walk a QueryDataRow and normalize values according to the given normalizers.
+ */
+function walkQueryDataRow(
+  row: QueryDataRow,
+  structDef: StructDef,
+  normalizers: DataNormalizers
+): QueryDataRow {
+  const result: QueryDataRow = {};
+  for (const fieldDef of structDef.fields) {
+    const fieldName = fieldDef.as ?? fieldDef.name;
+    const value = row[fieldName];
+    result[fieldName] = walkValue(value, fieldDef, normalizers);
+  }
+  return result;
+}
+
+/**
+ * Normalize a single value based on its field definition.
+ */
+function walkValue(
+  value: QueryValue,
+  fieldDef: FieldDef,
+  normalizers: DataNormalizers
+): QueryValue {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // Handle scalar types
+  if (fieldDef.type === 'number') {
+    const numberDef = fieldDef as NumberFieldDef;
+    if (numberDef.numberType === 'bigint') {
+      return normalizers.bigint(value);
+    }
+    return normalizers.number(value);
+  }
+
+  if (
+    fieldDef.type === 'date' ||
+    fieldDef.type === 'timestamp' ||
+    fieldDef.type === 'timestamptz'
+  ) {
+    return normalizers.date(value);
+  }
+
+  if (
+    fieldDef.type === 'string' ||
+    fieldDef.type === 'boolean' ||
+    fieldDef.type === 'json' ||
+    fieldDef.type === 'sql native'
+  ) {
+    // Pass through as-is (or with minimal conversion for booleans from numbers)
+    if (fieldDef.type === 'boolean' && typeof value === 'number') {
+      return value !== 0;
+    }
+    return value;
+  }
+
+  // Handle arrays
+  if (fieldDef.type === 'array') {
+    if (!Array.isArray(value)) {
+      return value; // Unexpected, but don't crash
+    }
+
+    if (isRepeatedRecord(fieldDef)) {
+      // Array of records - recurse into each record
+      return value.map(item =>
+        walkQueryDataRow(
+          item as QueryDataRow,
+          fieldDef as StructDef,
+          normalizers
+        )
+      );
+    } else if (isBasicArray(fieldDef)) {
+      // Scalar array - normalize each element based on elementTypeDef
+      // Cast needed because QueryValue type doesn't cleanly express scalar arrays
+      const elementType = fieldDef.elementTypeDef as AtomicTypeDef;
+      return value.map(item =>
+        walkScalarValue(item, elementType, normalizers)
+      ) as QueryValue;
+    }
+  }
+
+  // Handle records (non-array)
+  if (fieldDef.type === 'record') {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return walkQueryDataRow(
+        value as QueryDataRow,
+        fieldDef as StructDef,
+        normalizers
+      );
+    }
+  }
+
+  // Fallback - pass through
+  return value;
+}
+
+/**
+ * Normalize a scalar value (not in a row context, e.g., elements of a scalar array).
+ */
+function walkScalarValue(
+  value: unknown,
+  typeDef: AtomicTypeDef,
+  normalizers: DataNormalizers
+): QueryValue {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeDef.type === 'number') {
+    const numberDef = typeDef as {type: 'number'; numberType?: string};
+    if (numberDef.numberType === 'bigint') {
+      return normalizers.bigint(value);
+    }
+    return normalizers.number(value);
+  }
+
+  if (
+    typeDef.type === 'date' ||
+    typeDef.type === 'timestamp' ||
+    typeDef.type === 'timestamptz'
+  ) {
+    return normalizers.date(value);
+  }
+
+  if (typeDef.type === 'boolean' && typeof value === 'number') {
+    return value !== 0;
+  }
+
+  // Handle nested arrays (array of arrays)
+  if (typeDef.type === 'array' && Array.isArray(value)) {
+    if (isBasicArray(typeDef)) {
+      const elementType = typeDef.elementTypeDef as AtomicTypeDef;
+      return value.map(item =>
+        walkScalarValue(item, elementType, normalizers)
+      ) as QueryValue;
+    } else if (isRepeatedRecord(typeDef)) {
+      return value.map(item =>
+        walkQueryDataRow(
+          item as QueryDataRow,
+          typeDef as StructDef,
+          normalizers
+        )
+      ) as QueryValue;
+    }
+  }
+
+  // Pass through other types
+  return value as QueryValue;
+}
+
 export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   private queryData: QueryData;
   protected _field: Explore;
@@ -3865,10 +4087,36 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   /**
-   * @return The raw object form of the data.
+   * @return The raw query data as returned by the database driver.
+   * Values may be in various formats depending on the driver (wrapper objects, strings, etc.).
+   * Use this for passing to mapData() which handles normalization itself.
+   */
+  public get rawData(): QueryData {
+    return this.queryData;
+  }
+
+  /**
+   * @return Normalized data with JS native types (number | bigint, Date).
+   * Use this for CSV output, tests, and general programmatic access.
    */
   public toObject(): QueryData {
-    return this.queryData;
+    return walkQueryData(
+      this.queryData,
+      this._field.structDef,
+      OBJECT_NORMALIZERS
+    );
+  }
+
+  /**
+   * @return Normalized data with JSON-safe types (numbers as number | string, dates as ISO strings).
+   * Use this for JSON serialization.
+   */
+  public toJSON(): QueryData {
+    return walkQueryData(
+      this.queryData,
+      this._field.structDef,
+      JSON_NORMALIZERS
+    );
   }
 
   path(...path: (number | string)[]): DataColumn {
@@ -3888,13 +4136,6 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
       this.rowCache.set(index, record);
     }
     return record;
-    return new DataRecord(
-      this.queryData[index],
-      index,
-      this.field,
-      this,
-      this.parentRecord
-    );
   }
 
   get rowCount(): number {
@@ -3957,8 +4198,28 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
     this.index = index;
   }
 
+  /**
+   * @return Normalized data with JS native types (number | bigint, Date).
+   * Use this for CSV output, tests, and general programmatic access.
+   */
   toObject(): QueryDataRow {
-    return this.queryDataRow;
+    return walkQueryDataRow(
+      this.queryDataRow,
+      this._field.structDef,
+      OBJECT_NORMALIZERS
+    );
+  }
+
+  /**
+   * @return Normalized data with JSON-safe types (numbers as number | string, dates as ISO strings).
+   * Use this for JSON serialization.
+   */
+  toJSON(): QueryDataRow {
+    return walkQueryDataRow(
+      this.queryDataRow,
+      this._field.structDef,
+      JSON_NORMALIZERS
+    );
   }
 
   path(...path: (number | string)[]): DataColumn {
@@ -4062,7 +4323,8 @@ export class JSONWriter extends DataWriter {
       if (row.index !== undefined && row.index > 0) {
         this.stream.write(',\n');
       }
-      const json = JSON.stringify(row.toObject(), null, 2);
+      // toJSON() returns JSON-safe values: bigints as strings, dates as ISO strings
+      const json = JSON.stringify(row.toJSON(), null, 2);
       const jsonLines = json.split('\n');
       for (let i = 0; i < jsonLines.length; i++) {
         const line = jsonLines[i];
@@ -4132,6 +4394,9 @@ export class CSVWriter extends DataWriter {
       return value.toISOString();
     } else if (typeof value === 'boolean' || typeof value === 'number') {
       return JSON.stringify(value);
+    } else if (typeof value === 'bigint') {
+      // Bigints from toObject() - write as unquoted number string
+      return value.toString();
     } else {
       return `${value}`;
     }

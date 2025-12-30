@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.327",
+  "version": "0.0.331",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/module/index.d.ts",
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "prepublishOnly": "npm run build",
     "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
     "storybook-windows": "del /s /q .\\node_modules\\.cache && storybook dev -p 6006",
@@ -29,9 +29,9 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.327",
-    "@malloydata/malloy-interfaces": "0.0.327",
-    "@malloydata/malloy-tag": "0.0.327",
+    "@malloydata/malloy": "0.0.331",
+    "@malloydata/malloy-interfaces": "0.0.331",
+    "@malloydata/malloy-tag": "0.0.331",
     "@tanstack/solid-virtual": "^3.10.4",
     "lodash": "^4.17.20",
     "luxon": "^3.5.0",
@@ -43,7 +43,7 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@malloydata/db-duckdb": "0.0.327",
+    "@malloydata/db-duckdb": "0.0.331",
     "@storybook/addon-essentials": "^8.5.8",
     "@storybook/addon-interactions": "^8.5.8",
     "@storybook/addon-links": "^8.5.8",

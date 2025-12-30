@@ -79,12 +79,12 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'smallint': {type: 'number', numberType: 'integer'},
   'mediumint': {type: 'number', numberType: 'integer'},
   'int': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
   'tinyint unsigned': {type: 'number', numberType: 'integer'},
   'smallint unsigned': {type: 'number', numberType: 'integer'},
   'mediumint unsigned': {type: 'number', numberType: 'integer'},
   'int unsigned': {type: 'number', numberType: 'integer'},
-  'bigint unsigned': {type: 'number', numberType: 'integer'},
+  'bigint unsigned': {type: 'number', numberType: 'bigint'},
   'double': {type: 'number', numberType: 'float'},
   'varchar': {type: 'string'},
   'varbinary': {type: 'string'},
@@ -102,7 +102,13 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
 function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
   switch (malloyType.type) {
     case 'number':
-      return malloyType.numberType === 'integer' ? 'INT' : 'DOUBLE';
+      if (malloyType.numberType === 'integer') {
+        return 'INT';
+      } else if (malloyType.numberType === 'bigint') {
+        return 'BIGINT';
+      } else {
+        return 'DOUBLE';
+      }
     case 'string':
       return 'CHAR(255)'; // JSON_TABLE needs a length
     case 'boolean':
@@ -149,7 +155,14 @@ export class MySQLDialect extends Dialect {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
-        return malloyType.numberType === 'integer' ? 'SIGNED' : 'DOUBLE';
+        if (
+          malloyType.numberType === 'integer' ||
+          malloyType.numberType === 'bigint'
+        ) {
+          return 'SIGNED';
+        } else {
+          return 'DOUBLE';
+        }
       case 'string':
         return 'CHAR';
       case 'boolean':

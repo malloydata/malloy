@@ -50,6 +50,27 @@ interface DialectField {
 }
 export type DialectFieldList = DialectField[];
 
+/*
+ * Standard integer type limits.
+ * Use these in dialect integerTypeMappings definitions.
+ */
+
+// 32-bit signed integer limits (for databases with 32-bit INTEGER type)
+export const MIN_INT32 = -2147483648; // -2^31
+export const MAX_INT32 = 2147483647; // 2^31 - 1
+
+// 64-bit signed integer limits
+export const MIN_INT64 = BigInt('-9223372036854775808'); // -2^63
+export const MAX_INT64 = BigInt('9223372036854775807'); // 2^63 - 1
+
+// 128-bit signed integer limits (for DuckDB HUGEINT)
+export const MIN_INT128 = BigInt('-170141183460469231731687303715884105728'); // -2^127
+export const MAX_INT128 = BigInt('170141183460469231731687303715884105727'); // 2^127 - 1
+
+// Decimal(38,0) limits (for Snowflake NUMBER(38,0))
+export const MIN_DECIMAL38 = BigInt('-99999999999999999999999999999999999999'); // -(10^38 - 1)
+export const MAX_DECIMAL38 = BigInt('99999999999999999999999999999999999999'); // 10^38 - 1
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -101,6 +122,19 @@ export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
+/**
+ * Maps a range of integer values to a Malloy number type.
+ *
+ * Dialects define an array of these mappings to describe how integer literals
+ * should be typed. The array is searched in order, and the first matching
+ * range determines the type.
+ */
+export interface IntegerTypeMapping {
+  min: bigint;
+  max: bigint;
+  numberType: 'integer' | 'bigint';
+}
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -148,6 +182,10 @@ export abstract class Dialect {
   // support select * replace(...)
   supportsSelectReplace = true;
 
+  // Does the data path preserve bigint precision? False for dialects that
+  // serialize results through JSON (postgres, presto, trino)
+  supportsBigIntPrecision = true;
+
   // ability to join source with a filter on a joined source.
   supportsComplexFilteredSources = true;
 
@@ -175,6 +213,40 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+
+  /**
+   * Mappings from integer value ranges to Malloy number types.
+   *
+   * The array is searched in order; the first matching range determines the type.
+   * Default: small integers (≤32-bit) → 'integer', larger → 'bigint'.
+   */
+  integerTypeMappings: IntegerTypeMapping[] = [
+    {min: BigInt(MIN_INT32), max: BigInt(MAX_INT32), numberType: 'integer'},
+    {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
+  ];
+
+  /**
+   * Determine the Malloy number type for a numeric literal.
+   */
+  literalNumberType(value: string): {
+    type: 'number';
+    numberType: 'integer' | 'float' | 'bigint';
+  } {
+    const isInteger = /^-?\d+$/.test(value);
+    if (!isInteger) {
+      return {type: 'number', numberType: 'float'};
+    }
+
+    const bigValue = BigInt(value);
+    for (const mapping of this.integerTypeMappings) {
+      if (bigValue >= mapping.min && bigValue <= mapping.max) {
+        return {type: 'number', numberType: mapping.numberType};
+      }
+    }
+
+    // Value exceeds all supported ranges - let SQL fail at runtime
+    return {type: 'number', numberType: 'bigint'};
+  }
 
   /**
    * Create the appropriate time literal IR node based on dialect support.

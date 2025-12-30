@@ -33,36 +33,111 @@ export class NullCell extends CellBase {
   }
 }
 
+/** Type for either regular or big number cells from Thrift */
+type NumberCellInput = Malloy.CellWithNumberCell | Malloy.CellWithBigNumberCell;
+
+/**
+ * Unified cell for all numeric values.
+ * Handles both regular numbers and big numbers (bigint/bigdecimal).
+ */
 export class NumberCell extends CellBase {
+  private readonly _value: number;
+  private readonly _stringValue: string | undefined;
+
   constructor(
-    public readonly cell: Malloy.CellWithNumberCell,
+    public readonly cell: NumberCellInput,
     public readonly field: NumberField,
     public readonly parent: NestCell | undefined
   ) {
     super(cell, field, parent);
-    this.field.registerValue(this.value);
+
+    if (cell.kind === 'big_number_cell') {
+      // Big number: string in Thrift, convert to number (may be lossy)
+      this._stringValue = cell.number_value;
+      this._value = Number(cell.number_value);
+    } else {
+      // Regular number: already a number in Thrift
+      this._value = cell.number_value;
+      this._stringValue = undefined;
+    }
+
+    this.field.registerValue(this._value);
   }
 
-  get value() {
-    return this.cell.number_value;
+  /**
+   * Returns the numeric value as a JS number.
+   * May be lossy for bigint/bigdecimal values > 2^53.
+   */
+  get value(): number {
+    return this._value;
+  }
+
+  /**
+   * Returns the precise string representation for large values.
+   * Undefined for regular numbers that fit in JS number.
+   */
+  get stringValue(): string | undefined {
+    return this._stringValue;
+  }
+
+  /**
+   * Returns the number subtype from the schema.
+   * 'integer' | 'decimal' | 'bigint' | future 'bigdecimal'
+   */
+  get subtype(): Malloy.NumberSubtype | undefined {
+    return this.cell.subtype;
+  }
+
+  /**
+   * Returns true if this value needs string representation for precision.
+   */
+  needsStringPrecision(): boolean {
+    return this.subtype === 'bigint';
+  }
+
+  /**
+   * Returns the numeric value as a JS number.
+   * Alias for .value for API consistency.
+   */
+  numberValue(): number {
+    return this._value;
+  }
+
+  /**
+   * Returns the value as a JS BigInt for precise integer arithmetic.
+   * Only valid when stringValue is defined and subtype is 'bigint'.
+   */
+  bigint(): bigint {
+    if (this._stringValue !== undefined) {
+      return BigInt(this._stringValue);
+    }
+    return BigInt(this._value);
   }
 
   compareTo(other: Cell) {
     if (!other.isNumber()) return 0;
-    const difference = this.value - other.value;
-    if (difference > 0) {
-      return 1;
-    } else if (difference === 0) {
+
+    // Use BigInt comparison when both have string values for precision
+    if (this._stringValue !== undefined && other.stringValue !== undefined) {
+      const thisBigInt = this.bigint();
+      const otherBigInt = other.bigint();
+      if (thisBigInt > otherBigInt) return 1;
+      if (thisBigInt < otherBigInt) return -1;
       return 0;
     }
 
+    // Compare as numbers
+    const difference = this._value - other.value;
+    if (difference > 0) return 1;
+    if (difference === 0) return 0;
     return -1;
   }
 
   get literalValue(): Malloy.LiteralValue | undefined {
     return {
       kind: 'number_literal',
-      number_value: this.cell.number_value,
+      number_value: this._value,
+      string_value: this._stringValue,
     };
   }
 }

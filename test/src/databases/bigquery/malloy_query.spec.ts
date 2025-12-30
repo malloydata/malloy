@@ -526,26 +526,22 @@ describe('airport_tests', () => {
   });
 
   it('nested_project', async () => {
-    const result = await runQuery(
-      model,
-      `
-    run: airports -> {
-      group_by: county
-      nest: stuff is {
-        group_by: elevation
+    await expect(`
+      run: airports -> {
+        group_by: county
+        nest: stuff is {
+          group_by: elevation
+          order_by: 1 desc
+          limit: 10
+        }
+        order_by: 1
+        limit: 1
+      } -> {
+        select: stuff.elevation
         order_by: 1 desc
-        limit: 10
+        limit: 1
       }
-      order_by: 1
-      limit: 1
-    } -> {
-      select: stuff.elevation
-      order_by: 1 desc
-      limit: 1
-    }
-    `
-    );
-    expect(result.data.value[0]['elevation']).toBe(1836);
+    `).toMatchResult(airportTestModel, {elevation: 1836});
   });
 
   it('nested_sums', async () => {

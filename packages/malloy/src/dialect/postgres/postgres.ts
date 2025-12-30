@@ -76,7 +76,7 @@ const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'text': {type: 'string'},
   'date': {type: 'date'},
   'integer': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
   'double precision': {type: 'number', numberType: 'float'},
   'timestamp without time zone': {type: 'timestamp'},
   'timestamp with time zone': {type: 'timestamptz'},
@@ -416,6 +416,8 @@ export class PostgresDialect extends PostgresBase {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
+      } else if (malloyType.numberType === 'bigint') {
+        return 'bigint';
       } else {
         return 'double precision';
       }

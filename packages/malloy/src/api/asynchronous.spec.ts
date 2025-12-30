@@ -281,5 +281,136 @@ ORDER BY 1 asc NULLS LAST
         },
       });
     });
+
+    test('bigint field type propagates through stable API schema (table source)', async () => {
+      const connection: InfoConnection = {
+        dialectName: 'duckdb',
+        fetchSchemaForTable: async (_name: string) => {
+          return {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'bigint_val',
+                type: {kind: 'number_type', subtype: 'bigint'},
+              },
+            ],
+          };
+        },
+        fetchSchemaForSQLQuery: async (_sql: string) => {
+          throw new Error('not implemented');
+        },
+      };
+      const urls: URLReader = {
+        readURL: async (_url: URL) => {
+          return "source: test_src is connection.table('test_table')";
+        },
+      };
+      const connections: LookupConnection<InfoConnection> = {
+        lookupConnection: async (_name: string) => {
+          return connection;
+        },
+      };
+      const fetchers = {
+        urls,
+        connections,
+      };
+      const result = await compileQuery(
+        {
+          model_url: 'file://test.malloy',
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {kind: 'source_reference', name: 'test_src'},
+              view: {
+                kind: 'segment',
+                operations: [
+                  {
+                    kind: 'group_by',
+                    field: {
+                      expression: {kind: 'field_reference', name: 'bigint_val'},
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        fetchers
+      );
+
+      expect(result.result).toBeDefined();
+      expect(result.result?.schema.fields[0]).toMatchObject({
+        kind: 'dimension',
+        name: 'bigint_val',
+        type: {kind: 'number_type', subtype: 'bigint'},
+      });
+    });
+
+    test('bigint field type propagates through stable API schema (SQL source)', async () => {
+      // This test simulates what Storybook does with duckdb.sql("SELECT ... BIGINT ...")
+      const connection: InfoConnection = {
+        dialectName: 'duckdb',
+        fetchSchemaForTable: async (_name: string) => {
+          throw new Error('not implemented');
+        },
+        fetchSchemaForSQLQuery: async (_sql: string) => {
+          // Return schema as if it came from a SQL query with BIGINT column
+          return {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'bigint_val',
+                type: {kind: 'number_type', subtype: 'bigint'},
+              },
+            ],
+          };
+        },
+      };
+      const urls: URLReader = {
+        readURL: async (_url: URL) => {
+          // Use duckdb.sql() source like Storybook does
+          return 'source: test_src is duckdb.sql("SELECT 9007199254740993::BIGINT as bigint_val")';
+        },
+      };
+      const connections: LookupConnection<InfoConnection> = {
+        lookupConnection: async (_name: string) => {
+          return connection;
+        },
+      };
+      const fetchers = {
+        urls,
+        connections,
+      };
+      const result = await compileQuery(
+        {
+          model_url: 'file://test.malloy',
+          query: {
+            definition: {
+              kind: 'arrow',
+              source: {kind: 'source_reference', name: 'test_src'},
+              view: {
+                kind: 'segment',
+                operations: [
+                  {
+                    kind: 'group_by',
+                    field: {
+                      expression: {kind: 'field_reference', name: 'bigint_val'},
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        fetchers
+      );
+
+      expect(result.result).toBeDefined();
+      expect(result.result?.schema.fields[0]).toMatchObject({
+        kind: 'dimension',
+        name: 'bigint_val',
+        type: {kind: 'number_type', subtype: 'bigint'},
+      });
+    });
   });
 });

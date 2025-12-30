@@ -33,7 +33,11 @@ import type {Cell, Field} from '../data_tree';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Cell): string | number | null {
-    if (data.isNull() || data.isNumber() || data.isString()) {
+    if (data.isNull()) {
+      return null;
+    } else if (data.isNumber()) {
+      return data.value;
+    } else if (data.isString()) {
       return data.value;
     }
     throw new Error('Invalid field type for segment map.');

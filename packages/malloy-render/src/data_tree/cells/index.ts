@@ -84,7 +84,9 @@ export const Cell = {
       }
       case 'null_cell':
         return new NullCell(cell, field, parent);
-      case 'number_cell': {
+      case 'number_cell':
+      // fallthrough
+      case 'big_number_cell': {
         if (field instanceof NumberField) {
           return new NumberCell(cell, field, parent);
         }

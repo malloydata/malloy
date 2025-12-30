@@ -64,6 +64,8 @@ export class SnowflakeExecutor {
   private static defaultConnectionOptions = {
     clientSessionKeepAlive: true, // default = false
     clientSessionKeepAliveHeartbeatFrequency: 900, // default = 3600
+    // Return integers as native JS BigInt to preserve precision
+    jsTreatIntegerAsBigInt: true,
   };
 
   private pool_: Pool<Connection>;
@@ -89,6 +91,8 @@ export class SnowflakeExecutor {
         warehouse,
         database,
         schema,
+        // Return integers as native JS BigInt to preserve precision
+        jsTreatIntegerAsBigInt: true,
       };
     }
     return undefined;

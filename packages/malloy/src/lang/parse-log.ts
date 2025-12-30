@@ -421,6 +421,7 @@ type MessageParameterTypes = {
   'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
   'invalid-partition-composite': string;
+  'integer-literal-out-of-range': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

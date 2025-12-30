@@ -30,7 +30,7 @@ import {
   formatBigNumber,
   type RenderTimeStringOptions,
 } from '../util';
-import type {Field} from '../data_tree';
+import type {Field, NumberCell} from '../data_tree';
 
 export function renderNumericField(
   f: Field,
@@ -72,6 +72,109 @@ export function renderNumericField(
     }
   } else displayValue = (value as number).toLocaleString();
   return displayValue;
+}
+
+/**
+ * Format a string number with locale-style comma separators.
+ * Preserves full precision (no conversion to JS number).
+ */
+function formatStringWithCommas(value: string): string {
+  const isNegative = value.startsWith('-');
+  const absValue = isNegative ? value.slice(1) : value;
+  const formatted = absValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return isNegative ? `-${formatted}` : formatted;
+}
+
+/**
+ * Get currency symbol from field tag.
+ */
+function getCurrencySymbol(f: Field): string {
+  const tag = f.tag;
+  switch (tag.text('currency')) {
+    case Currency.Euros:
+      return '€';
+    case Currency.Pounds:
+      return '£';
+    default:
+      return '$';
+  }
+}
+
+/**
+ * Format a bigint string as currency, preserving full precision.
+ * Bigints are always integers, so we append ".00" for cents display.
+ */
+function formatBigIntCurrency(f: Field, value: string): string {
+  const symbol = getCurrencySymbol(f);
+  const formatted = formatStringWithCommas(value);
+  return `${symbol}${formatted}.00`;
+}
+
+/**
+ * Render a big number value (stored as string for precision).
+ * Used when NumberCell.stringValue is defined (bigint/bigdecimal subtypes).
+ * Default formatting preserves full precision with comma separators.
+ *
+ * Note: percent, duration, and custom number formats are lossy for values > 2^53
+ * because they require numeric operations. Currency preserves precision.
+ */
+export function renderBigNumberField(
+  f: Field,
+  value: string | null | undefined
+): string {
+  if (value === null || value === undefined) {
+    return NULL_SYMBOL;
+  }
+  const tag = f.tag;
+
+  // Currency: preserve precision with string formatting
+  if (tag.has('currency')) {
+    return formatBigIntCurrency(f, value);
+  }
+
+  // Percent/duration require numeric operations - lossy for bigints (rare use case)
+  if (tag.has('percent') || tag.has('duration')) {
+    return renderNumericField(f, Number(value));
+  }
+
+  // number="big" format with K/M/B/T/Q (lossy, but values are abbreviated anyway)
+  if (tag.has('number') && tag.text('number') === 'big') {
+    return formatBigNumber(Number(value));
+  }
+
+  // Custom number format (lossy)
+  if (tag.has('number')) {
+    return format(tag.text('number') ?? '#', Number(value));
+  }
+
+  // Default: comma-formatted string (preserves precision)
+  return formatStringWithCommas(value);
+}
+
+/**
+ * Render a NumberCell for display, automatically handling bigint precision.
+ *
+ * USE THIS FUNCTION when rendering numeric values from cells in plugins/components.
+ *
+ * Why this exists:
+ * - NumberCell.value is always a JS number, which loses precision for integers > 2^53
+ * - NumberCell.stringValue preserves full precision for bigint fields
+ * - This function automatically picks the right representation
+ *
+ * Example:
+ *   import {renderNumberCell} from '@/component/render-numeric-field';
+ *   const displayValue = renderNumberCell(cell);
+ *
+ * @param cell - A NumberCell from the data tree
+ * @returns Formatted string for display, respecting field tags (currency, percent, etc.)
+ */
+export function renderNumberCell(cell: NumberCell): string {
+  // Use stringValue when available - this preserves precision for bigint fields.
+  // For regular numbers, stringValue is undefined and we use the numeric value.
+  if (cell.stringValue !== undefined) {
+    return renderBigNumberField(cell.field, cell.stringValue);
+  }
+  return renderNumericField(cell.field, cell.value);
 }
 
 export function renderDateTimeField(

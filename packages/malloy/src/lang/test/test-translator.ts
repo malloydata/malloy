@@ -154,6 +154,7 @@ export function humanify(value: unknown): string {
 }
 
 const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
+const bigintType: NumberTypeDef = {type: 'number', numberType: 'bigint'};
 const mockSchema: Record<string, SourceDef> = {
   'aTable': {
     type: 'table',
@@ -165,6 +166,7 @@ const mockSchema: Record<string, SourceDef> = {
       {type: 'string', name: 'astr'},
       {type: 'number', name: 'af', numberType: 'float'},
       {...intType, name: 'ai'},
+      {...bigintType, name: 'abig'},
       {type: 'date', name: 'ad'},
       {type: 'boolean', name: 'abool'},
       {type: 'timestamp', name: 'ats'},

@@ -30,12 +30,9 @@ import type {Cell, Field} from '../data_tree';
 function mapToJSON(cell: Cell): unknown {
   if (cell.isArray()) {
     return cell.values.map(c => mapToJSON(c));
-  } else if (
-    cell.isBoolean() ||
-    cell.isNumber() ||
-    cell.isString() ||
-    cell.isNull()
-  ) {
+  } else if (cell.isNumber()) {
+    return cell.value;
+  } else if (cell.isBoolean() || cell.isString() || cell.isNull()) {
     return cell.value;
   } else if (cell.isTime()) {
     return cell.value.toISOString();

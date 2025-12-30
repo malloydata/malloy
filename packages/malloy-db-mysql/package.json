@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-mysql",
-  "version": "0.0.327",
+  "version": "0.0.331",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,12 +17,12 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.327",
+    "@malloydata/malloy": "0.0.331",
     "@types/node": "^22.7.4",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "luxon": "^3.5.0",

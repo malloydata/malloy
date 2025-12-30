@@ -42,12 +42,12 @@ for (const file of fs.readdirSync('./generated-types')) {
   );
   const actualTypes = lines.slice(firstTypeLine, firstNonTypeLine).join('\n');
   const isAnEnum = actualTypes.match(
-    /export enum ([A-Za-z]+) {\n( {4}([A-Z_]+) = \d+,?\n)+}/
+    /export enum ([A-Za-z]+) {\n( {4}([A-Z_0-9]+) = \d+,?\n)+}/
   );
   if (isAnEnum) {
     const name = isAnEnum[1];
     const values: Record<string, number> = {};
-    const matches = actualTypes.matchAll(/ {4}([A-Z_]+) = (\d+)/g);
+    const matches = actualTypes.matchAll(/ {4}([A-Z_0-9]+) = (\d+)/g);
     for (const match of matches) {
       const [name, valueString] = [match[1].toLowerCase(), match[2]];
       values[name] = parseInt(valueString);

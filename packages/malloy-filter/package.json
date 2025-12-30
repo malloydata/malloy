@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-filter",
-  "version": "0.0.327",
+  "version": "0.0.331",
   "license": "MIT",
   "description": "Parsers for the Malloy filtering sub-languages",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
   "scripts": {
     "build": "npm run build-parsers && tsc --build && npm run generate-flow",
     "build-parsers": "mkdir -p src/lib && nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts && nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts && nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts",
-    "clean": "tsc --build --clean && rimraf src/lib/* dist @flowtyped",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf src/lib/* dist @flowtyped",
     "test": "jest",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
