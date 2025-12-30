@@ -26,6 +26,26 @@ source: datetime_pivot_test is duckdb.sql("""
     }
   }
 
+  #(story) story="Pivot Header: Timestamp .quarter"
+  view: pivot_ts_quarter is {
+    group_by: category
+    # pivot
+    nest: by_quarter is {
+      group_by: qtr is ts.quarter
+      aggregate: total is value.sum()
+    }
+  }
+
+  #(story) story="Pivot Header: Raw Date"
+  view: pivot_raw_date is {
+    group_by: category
+    # pivot
+    nest: by_date is {
+      group_by: dt is ts::date
+      aggregate: total is value.sum()
+    }
+  }
+
   #(story) story="Pivot Header: Raw Timestamp"
   view: pivot_raw_timestamp is {
     group_by: category
