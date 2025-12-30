@@ -3,157 +3,19 @@
  * SPDX-License-Identifier: MIT
  */
 
-// Stories to verify pivot functionality
-// See: https://github.com/malloydata/malloy-vscode-extension/issues/681
+// Stories to verify pivot header rendering
+// Tests proper formatting of dimension values in pivot column headers
 
-// Simulates reports data with timestamps across multiple months
-source: reports_generated is duckdb.sql("""
-  SELECT 'Alice' as name, CAST('2024-01-15' AS DATE) as created_at, 10 as report_count
-  UNION ALL SELECT 'Alice', CAST('2024-01-20' AS DATE), 15
-  UNION ALL SELECT 'Alice', CAST('2024-02-10' AS DATE), 8
-  UNION ALL SELECT 'Alice', CAST('2024-02-25' AS DATE), 12
-  UNION ALL SELECT 'Alice', CAST('2024-03-05' AS DATE), 20
-  UNION ALL SELECT 'Bob', CAST('2024-01-10' AS DATE), 5
-  UNION ALL SELECT 'Bob', CAST('2024-01-25' AS DATE), 7
-  UNION ALL SELECT 'Bob', CAST('2024-02-15' AS DATE), 9
-  UNION ALL SELECT 'Bob', CAST('2024-03-01' AS DATE), 11
-  UNION ALL SELECT 'Bob', CAST('2024-03-20' AS DATE), 14
-  UNION ALL SELECT 'Charlie', CAST('2024-01-05' AS DATE), 3
-  UNION ALL SELECT 'Charlie', CAST('2024-02-20' AS DATE), 6
-  UNION ALL SELECT 'Charlie', CAST('2024-03-15' AS DATE), 9
-  UNION ALL SELECT 'Diana', CAST('2024-02-01' AS DATE), 18
-  UNION ALL SELECT 'Diana', CAST('2024-02-28' AS DATE), 22
-  UNION ALL SELECT 'Diana', CAST('2024-03-10' AS DATE), 16
-""") extend {
-  measure: total_reports is report_count.sum()
-
-  // Issue #681 reproduction: pivot by month
-  // Expected: columns for each month (Jan, Feb, Mar)
-  // Bug: displays as nested sub-table under single "by_month" column
-  #(story) story="Pivot by Month (Issue 681)"
-  view: pivot_by_month is {
-    group_by: name
-    aggregate: total_reports
-    # pivot
-    nest: by_month is {
-      group_by: rep_month is created_at.month
-      aggregate: total_reports
-    }
-  }
-
-  // Same as above but with explicit dimensions
-  #(story) story="Pivot by Month - Explicit Dims"
-  view: pivot_by_month_explicit is {
-    group_by: name
-    aggregate: total_reports
-    # pivot { dimensions=[rep_month] }
-    nest: by_month is {
-      group_by: rep_month is created_at.month
-      aggregate: total_reports
-    }
-  }
-
-  // Pivot with multiple measures per month
-  #(story) story="Pivot by Month - Multiple Measures"
-  view: pivot_by_month_multi_measure is {
-    group_by: name
-    aggregate: total_reports
-    # pivot
-    nest: by_month is {
-      group_by: rep_month is created_at.month
-      aggregate:
-        total_reports
-        report_avg is report_count.avg()
-        report_max is report_count.max()
-    }
-  }
-
-  // Non-pivoted version for comparison
-  #(story) story="Nested by Month (No Pivot)"
-  view: nested_by_month is {
-    group_by: name
-    aggregate: total_reports
-    nest: by_month is {
-      group_by: rep_month is created_at.month
-      aggregate: total_reports
-    }
-  }
-}
-
-// Additional test with string-based month names to verify pivot ordering
-source: monthly_sales is duckdb.sql("""
-  SELECT 'Product A' as product, 'January' as month_name, 1 as month_num, 100 as sales
-  UNION ALL SELECT 'Product A', 'February', 2, 150
-  UNION ALL SELECT 'Product A', 'March', 3, 200
-  UNION ALL SELECT 'Product B', 'January', 1, 80
-  UNION ALL SELECT 'Product B', 'February', 2, 120
-  UNION ALL SELECT 'Product B', 'March', 3, 160
-  UNION ALL SELECT 'Product C', 'January', 1, 50
-  UNION ALL SELECT 'Product C', 'March', 3, 90
-""") extend {
-  #(story) story="Pivot by Month Name (String)"
-  view: pivot_by_month_name is {
-    group_by: product
-    aggregate: total_sales is sales.sum()
-    # pivot { dimensions=[month_name] }
-    nest: by_month is {
-      group_by: month_name
-      aggregate: monthly_sales is sales.sum()
-      order_by: month_name
-    }
-  }
-
-  // Sparse data: not all products have sales in all months
-  #(story) story="Pivot Sparse Monthly Data"
-  view: pivot_sparse_months is {
-    group_by: product
-    # pivot
-    nest: monthly is {
-      group_by: month_name
-      aggregate:
-        total_sales is sales.sum()
-        avg_sales is sales.avg()
-    }
-  }
-}
-
-// ============================================================
-// Pivot Header Type Tests - verify formatting of various types
-// ============================================================
-
-// Test all date/time truncation levels
+// Test date/timestamp pivot headers
 source: datetime_pivot_test is duckdb.sql("""
   SELECT 'Row A' as category, CAST('2024-01-15 10:30:45' AS TIMESTAMP) as ts, 100 as value
-  UNION ALL SELECT 'Row A', CAST('2024-01-15 11:45:30' AS TIMESTAMP), 150
-  UNION ALL SELECT 'Row A', CAST('2024-02-20 14:15:00' AS TIMESTAMP), 200
-  UNION ALL SELECT 'Row A', CAST('2024-03-10 09:00:00' AS TIMESTAMP), 175
+  UNION ALL SELECT 'Row A', CAST('2024-02-20 14:15:00' AS TIMESTAMP), 150
+  UNION ALL SELECT 'Row A', CAST('2024-03-10 09:00:00' AS TIMESTAMP), 200
   UNION ALL SELECT 'Row B', CAST('2024-01-15 10:30:45' AS TIMESTAMP), 80
   UNION ALL SELECT 'Row B', CAST('2024-02-20 14:15:00' AS TIMESTAMP), 120
-  UNION ALL SELECT 'Row B', CAST('2024-04-05 16:30:00' AS TIMESTAMP), 90
   UNION ALL SELECT 'Row C', CAST('2024-01-15 10:30:45' AS TIMESTAMP), 60
   UNION ALL SELECT 'Row C', CAST('2024-03-10 09:00:00' AS TIMESTAMP), 110
 """) extend {
-  // Date truncations
-  #(story) story="Pivot Header: Date .year"
-  view: pivot_date_year is {
-    group_by: category
-    # pivot
-    nest: by_year is {
-      group_by: yr is ts.year
-      aggregate: total is value.sum()
-    }
-  }
-
-  #(story) story="Pivot Header: Date .quarter"
-  view: pivot_date_quarter is {
-    group_by: category
-    # pivot
-    nest: by_quarter is {
-      group_by: qtr is ts.quarter
-      aggregate: total is value.sum()
-    }
-  }
-
   #(story) story="Pivot Header: Date .month"
   view: pivot_date_month is {
     group_by: category
@@ -164,69 +26,6 @@ source: datetime_pivot_test is duckdb.sql("""
     }
   }
 
-  #(story) story="Pivot Header: Date .week"
-  view: pivot_date_week is {
-    group_by: category
-    # pivot
-    nest: by_week is {
-      group_by: wk is ts.week
-      aggregate: total is value.sum()
-    }
-  }
-
-  #(story) story="Pivot Header: Date .day"
-  view: pivot_date_day is {
-    group_by: category
-    # pivot
-    nest: by_day is {
-      group_by: dy is ts.day
-      aggregate: total is value.sum()
-    }
-  }
-
-  // Timestamp truncations
-  #(story) story="Pivot Header: Timestamp .hour"
-  view: pivot_ts_hour is {
-    group_by: category
-    # pivot
-    nest: by_hour is {
-      group_by: hr is ts.hour
-      aggregate: total is value.sum()
-    }
-  }
-
-  #(story) story="Pivot Header: Timestamp .minute"
-  view: pivot_ts_minute is {
-    group_by: category
-    # pivot
-    nest: by_minute is {
-      group_by: minute_val is ts.minute
-      aggregate: total is value.sum()
-    }
-  }
-
-  #(story) story="Pivot Header: Timestamp .second"
-  view: pivot_ts_second is {
-    group_by: category
-    # pivot
-    nest: by_second is {
-      group_by: sec is ts.second
-      aggregate: total is value.sum()
-    }
-  }
-
-  // Raw date (no truncation)
-  #(story) story="Pivot Header: Raw Date"
-  view: pivot_raw_date is {
-    group_by: category
-    # pivot
-    nest: by_date is {
-      group_by: dt is ts::date
-      aggregate: total is value.sum()
-    }
-  }
-
-  // Raw timestamp (no truncation)
   #(story) story="Pivot Header: Raw Timestamp"
   view: pivot_raw_timestamp is {
     group_by: category
@@ -238,17 +37,15 @@ source: datetime_pivot_test is duckdb.sql("""
   }
 }
 
-// Test numeric pivot headers
+// Test numeric pivot headers (integer, formatted, currency, bigint)
 source: numeric_pivot_test is duckdb.sql("""
-  SELECT 'Item A' as item, 1 as region_id, 1.5 as rating, 100 as amount
-  UNION ALL SELECT 'Item A', 2, 2.5, 150
-  UNION ALL SELECT 'Item A', 3, 3.5, 200
-  UNION ALL SELECT 'Item B', 1, 1.5, 80
-  UNION ALL SELECT 'Item B', 2, 2.5, 120
-  UNION ALL SELECT 'Item B', 4, 4.5, 90
-  UNION ALL SELECT 'Item C', 1, 1.5, 60
-  UNION ALL SELECT 'Item C', 3, 3.5, 110
-  UNION ALL SELECT 'Item C', 5, 5.0, 130
+  SELECT 'Item A' as item, 1 as region_id, 100 as amount
+  UNION ALL SELECT 'Item A', 2, 150
+  UNION ALL SELECT 'Item A', 3, 200
+  UNION ALL SELECT 'Item B', 1, 80
+  UNION ALL SELECT 'Item B', 2, 120
+  UNION ALL SELECT 'Item C', 1, 60
+  UNION ALL SELECT 'Item C', 3, 110
 """) extend {
   #(story) story="Pivot Header: Integer"
   view: pivot_integer is {
@@ -256,33 +53,6 @@ source: numeric_pivot_test is duckdb.sql("""
     # pivot
     nest: by_region is {
       group_by: region_id
-      aggregate: total is amount.sum()
-    }
-  }
-
-  #(story) story="Pivot Header: Float/Decimal"
-  view: pivot_float is {
-    group_by: item
-    # pivot
-    nest: by_rating is {
-      group_by: rating
-      aggregate: total is amount.sum()
-    }
-  }
-
-  // Diagnostic: see raw rating values without pivot
-  #(story) story="Float Values (No Pivot)"
-  view: float_values_raw is {
-    group_by: item, rating
-    aggregate: total is amount.sum()
-  }
-
-  #(story) story="Pivot Header: Large Numbers"
-  view: pivot_large_numbers is {
-    group_by: item
-    # pivot
-    nest: by_large is {
-      group_by: large_num is region_id * 1000000
       aggregate: total is amount.sum()
     }
   }
@@ -310,7 +80,7 @@ source: numeric_pivot_test is duckdb.sql("""
   }
 }
 
-// Test bigint (> 2^53 = 9007199254740992)
+// Test bigint precision (> 2^53 = 9007199254740992)
 source: bigint_pivot_test is duckdb.sql("""
   SELECT 'X' as grp, 9007199254740993::BIGINT as big_id, 100 as amt
   UNION ALL SELECT 'X', 9007199254740994::BIGINT, 150
@@ -331,8 +101,8 @@ source: bigint_pivot_test is duckdb.sql("""
   }
 }
 
-// Test boolean pivot headers
-source: boolean_pivot_test is duckdb.sql("""
+// Test boolean and string pivot headers
+source: mixed_pivot_test is duckdb.sql("""
   SELECT 'User 1' as user_name, true as is_active, 'premium' as tier, 500 as spend
   UNION ALL SELECT 'User 1', false, 'basic', 50
   UNION ALL SELECT 'User 2', true, 'premium', 300
@@ -350,65 +120,13 @@ source: boolean_pivot_test is duckdb.sql("""
     }
   }
 
-  #(story) story="Pivot Header: Two Dimensions (Bool + String)"
-  view: pivot_two_dims is {
+  #(story) story="Pivot Header: String"
+  view: pivot_string is {
     group_by: user_name
     # pivot
-    nest: by_status_tier is {
-      group_by: is_active, tier
+    nest: by_tier is {
+      group_by: tier
       aggregate: total_spend is spend.sum()
-    }
-  }
-}
-
-// Test string variations
-source: string_pivot_test is duckdb.sql("""
-  SELECT 'Record 1' as record, 'Short' as label, 'A' as code, 100 as val
-  UNION ALL SELECT 'Record 1', 'Medium Length', 'B', 150
-  UNION ALL SELECT 'Record 1', 'This is a very long string label', 'C', 200
-  UNION ALL SELECT 'Record 2', 'Short', 'A', 80
-  UNION ALL SELECT 'Record 2', 'Medium Length', 'B', 120
-  UNION ALL SELECT 'Record 3', 'Short', 'A', 60
-  UNION ALL SELECT 'Record 3', 'This is a very long string label', 'C', 110
-""") extend {
-  #(story) story="Pivot Header: Short Strings"
-  view: pivot_short_string is {
-    group_by: record
-    # pivot
-    nest: by_code is {
-      group_by: code
-      aggregate: total is val.sum()
-    }
-  }
-
-  #(story) story="Pivot Header: Long Strings"
-  view: pivot_long_string is {
-    group_by: record
-    # pivot
-    nest: by_label is {
-      group_by: label
-      aggregate: total is val.sum()
-    }
-  }
-}
-
-// Test null handling in pivot headers
-source: null_pivot_test is duckdb.sql("""
-  SELECT 'A' as grp, 'Value 1' as nullable_dim, 100 as amt
-  UNION ALL SELECT 'A', 'Value 2', 150
-  UNION ALL SELECT 'A', NULL, 50
-  UNION ALL SELECT 'B', 'Value 1', 80
-  UNION ALL SELECT 'B', NULL, 200
-  UNION ALL SELECT 'C', 'Value 2', 120
-  UNION ALL SELECT 'C', NULL, 90
-""") extend {
-  #(story) story="Pivot Header: With Nulls"
-  view: pivot_with_nulls is {
-    group_by: grp
-    # pivot
-    nest: by_nullable is {
-      group_by: nullable_dim
-      aggregate: total is amt.sum()
     }
   }
 }
