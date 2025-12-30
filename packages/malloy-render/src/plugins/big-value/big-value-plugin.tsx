@@ -1,10 +1,10 @@
 import type {
   RenderPluginFactory,
   RenderProps,
-  SolidJSRenderPluginInstance,
+  CoreVizPluginInstance,
 } from '@/api/plugin-types';
 import {type Field, FieldType, type NestField} from '@/data_tree';
-import {Tag} from '@malloydata/malloy-tag';
+import type {Tag} from '@malloydata/malloy-tag';
 import type {JSXElement} from 'solid-js';
 import {BigValueComponent} from './big-value-component';
 import {
@@ -15,7 +15,7 @@ import {
 } from './big-value-settings';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './big-value.css?raw';
-import type {JSONSchemaObject} from '@/api/json-schema-types';
+import {bigValueSettingsToTag} from './settings-to-tag';
 
 /**
  * Metadata returned by the Big Value plugin
@@ -28,16 +28,11 @@ interface BigValuePluginMetadata {
 
 /**
  * Big Value plugin instance type
- * Extends SolidJSRenderPluginInstance with optional CoreViz methods for storybook compatibility
+ * Extends CoreVizPluginInstance for storybook compatibility
  */
 export interface BigValuePluginInstance
-  extends SolidJSRenderPluginInstance<BigValuePluginMetadata> {
+  extends CoreVizPluginInstance<BigValuePluginMetadata> {
   field: NestField;
-  // Optional CoreViz methods for storybook compatibility
-  getSchema?: () => JSONSchemaObject;
-  getSettings?: () => Record<string, unknown>;
-  getDefaultSettings?: () => Record<string, unknown>;
-  settingsToTag?: (settings: Record<string, unknown>) => Tag;
 }
 
 /**
@@ -54,8 +49,18 @@ function getBigValueSettings(field: Field): BigValueSettings {
       ? sizeText
       : defaultBigValueSettings.size;
 
+  // Get neutralThreshold from tag or use default
+  const neutralThresholdText = bigValueTag?.text('neutral_threshold');
+  const neutralThreshold =
+    neutralThresholdText !== undefined
+      ? parseFloat(neutralThresholdText)
+      : defaultBigValueSettings.neutralThreshold;
+
   return {
     size,
+    neutralThreshold: isNaN(neutralThreshold)
+      ? defaultBigValueSettings.neutralThreshold
+      : neutralThreshold,
   };
 }
 
@@ -157,15 +162,10 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
 
         // CoreViz-compatible methods for storybook compatibility
         getSchema: () => bigValueSettingsSchema,
-        getSettings: () => settings as Record<string, unknown>,
-        getDefaultSettings: () => defaultBigValueSettings as Record<string, unknown>,
+        getSettings: () => settings,
+        getDefaultSettings: () => defaultBigValueSettings,
         settingsToTag: (s: Record<string, unknown>) => {
-          const tag = new Tag();
-          const size = (s as BigValueSettings).size;
-          if (size && size !== defaultBigValueSettings.size) {
-            tag.set(['big_value', 'size'], size);
-          }
-          return tag;
+          return bigValueSettingsToTag(s as unknown as BigValueSettings);
         },
       };
 

@@ -29,18 +29,4 @@ export {
   type IBigValueSettingsSchema,
 } from './big-value';
 
-export {
-  SparklinePluginFactory,
-  type SparklinePluginInstance,
-  SparklineComponent,
-  SparklineEmbed,
-  type SparklineComponentProps,
-  type SparklineEmbedProps,
-  type SparklineSettings,
-  type SparklineType,
-  type SparklineSize,
-  defaultSparklineSettings,
-  sparklineSettingsSchema,
-} from './sparkline';
-
 export {ErrorPlugin} from './error/error-plugin';

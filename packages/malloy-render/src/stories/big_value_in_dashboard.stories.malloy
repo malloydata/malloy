@@ -90,10 +90,12 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         aggregate:
           # label="Avg Price"
           # currency
+          # big_value { sparkline=price_trend }
           avg_price is retail_price.avg()
 
         // Sparkline: price trend by product bucket
-        # big_value { sparkline_for=avg_price }
+        # line_chart { size=spark }
+        # hidden
         nest: price_trend is {
           group_by: product_bucket is floor(id / 100)::number
           # currency
@@ -233,6 +235,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           #(doc) Total revenue from retail sales. Updated daily.
           # label="Total Revenue"
           # currency
+          # big_value { sparkline=revenue_trend }
           total_revenue is retail_price.sum()
 
           // Use cost.sum() to create varying comparison - simulates different "prior" values per category
@@ -241,7 +244,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           prior_revenue is retail_price.sum() - cost.sum() + (cost.avg() * 5)
 
         // Sparkline: revenue trend across product IDs (simulating time order)
-        # big_value { sparkline_for=total_revenue sparkline_type=area }
+        # line_chart { size=spark }
+        # hidden
         nest: revenue_trend is {
           group_by: product_bucket is id / 50
           # currency
@@ -296,7 +300,7 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
   measure: total_orders is count()
 
   // TEST 11: Dashboard with date-based sparklines (monthly)
-  // Sparkline uses the same measure as the big value - # currency propagates automatically!
+  // Sparkline uses the same measure as the big value
   #(story)
   # dashboard
   view: dashboard_date_sparklines is {
@@ -307,13 +311,15 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
         aggregate:
           #(doc) Monthly revenue trend
           # label="Total Revenue"
+          # big_value { sparkline=monthly_trend }
           total_revenue  // References pre-defined measure with # currency
 
-        // Sparkline: monthly revenue trend - measure reference inherits # currency
-        # big_value { sparkline_for=total_revenue }
+        // Sparkline: monthly revenue trend
+        # line_chart { size=spark }
+        # hidden
         nest: monthly_trend is {
           group_by: order_month
-          aggregate: total_revenue  // Same measure - inherits # currency automatically!
+          aggregate: total_revenue
           order_by: order_month
           limit: 24
         }
@@ -330,12 +336,14 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
       orders_with_trend is {
         aggregate:
           # label="Order Count"
+          # big_value { sparkline=weekly_trend }
           total_orders  // References pre-defined measure (no currency - it's a count)
           # label="Avg Order Value"
           avg_value  // References pre-defined measure with # currency
 
-        // Sparkline: weekly order count with area style
-        # big_value { sparkline_for=total_orders sparkline_type=area }
+        // Sparkline: weekly order count
+        # line_chart { size=spark }
+        # hidden
         nest: weekly_trend is {
           group_by: order_week
           aggregate: total_orders  // References pre-defined measure
@@ -356,6 +364,7 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
         aggregate:
           #(doc) Total sales with monthly trend. Hover over sparkline to see data points.
           # label="Total Sales"
+          # big_value { sparkline=sales_trend }
           total_revenue  // References pre-defined measure with # currency
 
           # big_value { comparison_field=total_revenue comparison_label='vs Target' }
@@ -363,7 +372,8 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
           target is sale_price.sum() * 0.9
 
         // Monthly sales sparkline - measure reference inherits # currency
-        # big_value { sparkline_for=total_revenue sparkline_type=area }
+        # line_chart { size=spark }
+        # hidden
         nest: sales_trend is {
           group_by: order_month
           aggregate: total_revenue  // Same measure - inherits # currency automatically!

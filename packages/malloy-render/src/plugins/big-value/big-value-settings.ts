@@ -15,9 +15,11 @@ export type ComparisonFormat = 'pct' | 'ppt';
 /**
  * Settings for the Big Value plugin
  */
-export interface BigValueSettings {
+export interface BigValueSettings extends Record<string, unknown> {
   /** Size preset for the cards */
   size: BigValueSize;
+  /** Threshold below which delta values are considered neutral (default: 0.05) */
+  neutralThreshold: number;
 }
 
 /**
@@ -40,6 +42,7 @@ export interface BigValueComparisonInfo {
  */
 export const defaultBigValueSettings: BigValueSettings = {
   size: 'md',
+  neutralThreshold: 0.05,
 };
 
 /**
@@ -53,6 +56,12 @@ export const bigValueSettingsSchema: JSONSchemaObject = {
       enum: ['sm', 'md', 'lg'],
       default: 'md',
       description: 'Size preset for the big value cards',
+    },
+    neutralThreshold: {
+      type: 'number',
+      default: 0.05,
+      description:
+        'Threshold below which delta values are considered neutral (e.g., 0.05 for 0.05% or 0.05 ppt)',
     },
   },
 };

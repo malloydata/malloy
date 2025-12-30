@@ -162,38 +162,44 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
   measure: order_count is count()
 
   // Big Value with line sparkline (monthly trend)
-  // Note: sparkline references the pre-defined measure 'total_sales' which inherits # currency
+  // The metric references the sparkline nest by name: sparkline=trend
+  // The nest uses standard chart tag: # line_chart { size=spark }
   #(story)
   # big_value
   view: with_sparkline is {
     aggregate:
       #(doc) Total sales revenue from all orders
       # label="Total Sales"
+      # big_value { sparkline=trend }
       total_sales  // References pre-defined measure with # currency
 
-    // Sparkline: monthly sales trend - uses the same measure, inherits # currency
-    # big_value { sparkline_for=total_sales }
+    // Sparkline: monthly sales trend
+    // Uses line_chart with size=spark for consistent rendering with standalone sparks
+    # line_chart { size=spark }
+    # hidden
     nest: trend is {
       group_by: order_month
-      aggregate: total_sales  // References pre-defined measure - inherits # currency!
+      aggregate: total_sales
       order_by: order_month
       limit: 24
     }
   }
 
-  // Big Value with area sparkline (weekly trend)
+  // Big Value with line sparkline (weekly trend)
   #(story)
   # big_value
   view: with_area_sparkline is {
     aggregate:
       # label="Avg Order Value"
+      # big_value { sparkline=price_trend }
       avg_sale  // References pre-defined measure with # currency
 
     // Sparkline: weekly average order value trend
-    # big_value { sparkline_for=avg_sale sparkline_type=area }
+    # line_chart { size=spark }
+    # hidden
     nest: price_trend is {
       group_by: order_week
-      aggregate: avg_sale  // References pre-defined measure - inherits # currency!
+      aggregate: avg_sale
       order_by: order_week
       limit: 52
     }
@@ -205,13 +211,15 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
   view: with_bar_sparkline is {
     aggregate:
       # label="Total Orders"
+      # big_value { sparkline=order_trend }
       order_count  // References pre-defined measure (no currency - it's a count)
 
     // Sparkline: monthly order count (bar chart style)
-    # big_value { sparkline_for=order_count sparkline_type=bar }
+    # bar_chart { size=spark }
+    # hidden
     nest: order_trend is {
       group_by: order_month
-      aggregate: order_count  // References pre-defined measure
+      aggregate: order_count
       order_by: order_month
       limit: 12
     }
@@ -224,17 +232,19 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
     aggregate:
       #(doc) Total revenue from all orders. Updated daily.
       # label="Total Revenue"
+      # big_value { sparkline=trend }
       total_sales  // References pre-defined measure with # currency
 
       # big_value { comparison_field=total_sales comparison_label='vs Last Year' }
       # hidden
       prior_revenue is sale_price.sum() * 0.85
 
-    // Sparkline: monthly revenue trend - uses same measure, inherits # currency
-    # big_value { sparkline_for=total_sales }
+    // Sparkline: monthly revenue trend
+    # line_chart { size=spark }
+    # hidden
     nest: trend is {
       group_by: order_month
-      aggregate: total_sales  // References pre-defined measure - inherits # currency!
+      aggregate: total_sales
       order_by: order_month
       limit: 24
     }

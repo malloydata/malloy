@@ -34,7 +34,7 @@
   min-width: 140px;
   flex: 0 1 auto;
   width: fit-content;
-  max-width: 400px;
+  max-width: 500px;
   overflow: visible;
 }
 
@@ -48,7 +48,7 @@
 .malloy-big-value-card--lg {
   padding: 24px 32px;
   min-width: 180px;
-  max-width: 500px;
+  max-width: 600px;
 }
 
 /* Label container with tooltip */
@@ -78,11 +78,11 @@
   font-size: 14px;
 }
 
-/* Value row (value + sparkline) */
+/* Value row (value + sparkline side by side) */
 .malloy-big-value-value-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 /* Value */
@@ -105,6 +105,14 @@
 /* Sparkline */
 .malloy-big-value-sparkline {
   flex-shrink: 0;
+}
+
+.malloy-big-value-sparkline .malloy-sparkline-container {
+  display: block;
+}
+
+.malloy-big-value-sparkline svg {
+  display: block;
 }
 
 /* Comparison container */
