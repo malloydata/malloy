@@ -4,8 +4,9 @@
  */
 
 import {For} from 'solid-js';
-import type {Field} from '../../data_tree';
+import type {Cell, Field} from '../../data_tree';
 import type {PivotConfig, PivotedField} from './pivot-utils';
+import {renderNumberCell, renderDateTimeField} from '../render-numeric-field';
 
 /**
  * Info about a sibling field (non-pivot field at same depth as pivot).
@@ -14,6 +15,45 @@ export type SiblingFieldInfo = {
   field: Field;
   startColumn: number;
   endColumn: number;
+};
+
+/**
+ * Renders a cell value for display in pivot dimension headers.
+ * Uses proper formatting based on cell type and field tags.
+ */
+const renderPivotDimensionValue = (cell: Cell): string => {
+  if (cell.isNull()) {
+    return '';
+  }
+
+  // Number cells: use renderNumberCell which handles bigint and formatting tags
+  if (cell.isNumber()) {
+    return renderNumberCell(cell);
+  }
+
+  // Date cells: use renderDateTimeField with date options
+  if (cell.isDate()) {
+    return renderDateTimeField(cell.field, cell.value, {
+      isDate: true,
+      timeframe: cell.timeframe,
+    });
+  }
+
+  // Timestamp cells: use renderDateTimeField with timestamp options
+  if (cell.isTimestamp()) {
+    return renderDateTimeField(cell.field, cell.value, {
+      isDate: false,
+      timeframe: cell.timeframe,
+    });
+  }
+
+  // Boolean: display as true/false
+  if (cell.isBoolean()) {
+    return String(cell.value);
+  }
+
+  // String and other types: use value directly
+  return String(cell.value);
 };
 
 /**
@@ -30,7 +70,7 @@ const PivotDimensionHeaderRow = (props: {
     const parts: string[] = [];
     for (const dimValue of pf.values) {
       if (dimValue && !dimValue.isNull()) {
-        parts.push(String(dimValue.value));
+        parts.push(renderPivotDimensionValue(dimValue));
       }
     }
     return parts.join(', ') || '';
