@@ -326,10 +326,10 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
       }
   }
 
-  // TEST 12: Dashboard with area sparkline (weekly data)
+  // TEST 12: Dashboard with weekly sparkline
   #(story)
   # dashboard
-  view: dashboard_area_date_sparklines is {
+  view: dashboard_weekly_sparklines is {
     group_by: status
     nest:
       # big_value

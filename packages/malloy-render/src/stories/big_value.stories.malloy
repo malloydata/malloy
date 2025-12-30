@@ -188,7 +188,7 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
   // Big Value with line sparkline (weekly trend)
   #(story)
   # big_value
-  view: with_area_sparkline is {
+  view: with_weekly_sparkline is {
     aggregate:
       # label="Avg Order Value"
       # big_value { sparkline=price_trend }
