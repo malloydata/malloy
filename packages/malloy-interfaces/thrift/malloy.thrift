@@ -505,14 +505,9 @@ struct BooleanCell {
 struct NumberCell {
   1: required double number_value,
   2: optional NumberSubtype subtype,
-}
-
-// String representation for numbers that exceed JavaScript's Number.MAX_SAFE_INTEGER
-// or require precision beyond float64. Currently used for bigints (64-bit+ integers),
-// but designed to also support high-precision decimals in the future.
-struct BigNumberCell {
-  1: required string number_value,
-  2: optional NumberSubtype subtype,
+  // String representation for numbers that exceed JavaScript's Number.MAX_SAFE_INTEGER
+  // or require precision beyond float64. Used for bigints and future large decimals.
+  3: optional string string_value,
 }
 
 struct NullCell {}
@@ -553,7 +548,6 @@ union Cell {
   8: required ArrayCell array_cell,
   9: required NullCell null_cell,
   10: required SQLNativeCell sql_native_cell,
-  11: required BigNumberCell big_number_cell,
 }
 
 union Data {

@@ -33,35 +33,18 @@ export class NullCell extends CellBase {
   }
 }
 
-/** Type for either regular or big number cells from Thrift */
-type NumberCellInput = Malloy.CellWithNumberCell | Malloy.CellWithBigNumberCell;
-
 /**
  * Unified cell for all numeric values.
  * Handles both regular numbers and big numbers (bigint/bigdecimal).
  */
 export class NumberCell extends CellBase {
-  private readonly _value: number;
-  private readonly _stringValue: string | undefined;
-
   constructor(
-    public readonly cell: NumberCellInput,
+    public readonly cell: Malloy.CellWithNumberCell,
     public readonly field: NumberField,
     public readonly parent: NestCell | undefined
   ) {
     super(cell, field, parent);
-
-    if (cell.kind === 'big_number_cell') {
-      // Big number: string in Thrift, convert to number (may be lossy)
-      this._stringValue = cell.number_value;
-      this._value = Number(cell.number_value);
-    } else {
-      // Regular number: already a number in Thrift
-      this._value = cell.number_value;
-      this._stringValue = undefined;
-    }
-
-    this.field.registerValue(this._value);
+    this.field.registerValue(this.value);
   }
 
   /**
@@ -69,7 +52,7 @@ export class NumberCell extends CellBase {
    * May be lossy for bigint/bigdecimal values > 2^53.
    */
   get value(): number {
-    return this._value;
+    return this.cell.number_value;
   }
 
   /**
@@ -77,7 +60,7 @@ export class NumberCell extends CellBase {
    * Undefined for regular numbers that fit in JS number.
    */
   get stringValue(): string | undefined {
-    return this._stringValue;
+    return this.cell.string_value;
   }
 
   /**
@@ -100,7 +83,7 @@ export class NumberCell extends CellBase {
    * Alias for .value for API consistency.
    */
   numberValue(): number {
-    return this._value;
+    return this.value;
   }
 
   /**
@@ -108,17 +91,17 @@ export class NumberCell extends CellBase {
    * Only valid when stringValue is defined and subtype is 'bigint'.
    */
   bigint(): bigint {
-    if (this._stringValue !== undefined) {
-      return BigInt(this._stringValue);
+    if (this.stringValue !== undefined) {
+      return BigInt(this.stringValue);
     }
-    return BigInt(this._value);
+    return BigInt(this.value);
   }
 
   compareTo(other: Cell) {
     if (!other.isNumber()) return 0;
 
     // Use BigInt comparison when both have string values for precision
-    if (this._stringValue !== undefined && other.stringValue !== undefined) {
+    if (this.stringValue !== undefined && other.stringValue !== undefined) {
       const thisBigInt = this.bigint();
       const otherBigInt = other.bigint();
       if (thisBigInt > otherBigInt) return 1;
@@ -127,7 +110,7 @@ export class NumberCell extends CellBase {
     }
 
     // Compare as numbers
-    const difference = this._value - other.value;
+    const difference = this.value - other.value;
     if (difference > 0) return 1;
     if (difference === 0) return 0;
     return -1;
@@ -136,8 +119,8 @@ export class NumberCell extends CellBase {
   get literalValue(): Malloy.LiteralValue | undefined {
     return {
       kind: 'number_literal',
-      number_value: this._value,
-      string_value: this._stringValue,
+      number_value: this.value,
+      string_value: this.stringValue,
     };
   }
 }
