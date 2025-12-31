@@ -23,10 +23,8 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
-import {
-  DuckDBInstance,
-  DuckDBConnection as DuckDBNodeConnection,
-} from '@duckdb/node-api';
+import {DuckDBInstance} from '@duckdb/node-api';
+import type {DuckDBConnection as DuckDBNodeConnection} from '@duckdb/node-api';
 import type {
   ConnectionConfig,
   QueryDataRow,
