@@ -98,6 +98,7 @@ export function generateLineChartVegaSpecV2(
   const {getTopNSeries, field: explore} = plugin;
   const tag = convertLegacyToVizTag(explore.tag);
   const chartTag = tag.tag('viz');
+
   if (!chartTag)
     throw new Error(
       'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
@@ -730,7 +731,11 @@ export function generateLineChartVegaSpecV2(
     },
     padding: {
       ...chartSettings.padding,
-      bottom: chartSettings.xAxis.hidden ? 0 : chartSettings.xAxis.height,
+      // For sparklines, preserve the bottom padding from chartSettings (for stroke room)
+      // For regular charts, use x-axis height
+      bottom: chartSettings.xAxis.hidden
+        ? chartSettings.padding.bottom
+        : chartSettings.xAxis.height,
     },
     data: [valuesData, nonNullXValues, xValuesAggregated],
     scales: [
@@ -759,7 +764,7 @@ export function generateLineChartVegaSpecV2(
       },
       {
         name: 'yscale',
-        nice: true,
+        nice: chartSettings.isSpark ? false : true, // Disable nice for sparklines to maximize variation
         range: 'height',
         zero: settings.zeroBaseline,
         domain: chartSettings.yScale.domain ?? {data: 'values', field: 'y'},

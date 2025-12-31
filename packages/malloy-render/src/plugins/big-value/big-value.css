@@ -105,14 +105,23 @@
 /* Sparkline */
 .malloy-big-value-sparkline {
   flex-shrink: 0;
+  overflow: visible;
+  padding: 4px 0;  /* Add vertical padding to prevent line cropping */
 }
 
 .malloy-big-value-sparkline .malloy-sparkline-container {
   display: block;
+  overflow: visible;
 }
 
 .malloy-big-value-sparkline svg {
   display: block;
+  overflow: visible;
+}
+
+/* Ensure chart container doesn't crop sparkline */
+.malloy-big-value-sparkline .malloy-chart__container {
+  overflow: visible;
 }
 
 /* Comparison container */

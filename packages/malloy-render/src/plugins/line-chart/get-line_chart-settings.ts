@@ -348,7 +348,7 @@ export function getLineChartSettings(
     }
   }
 
-  return {
+  const result = {
     xChannel,
     yChannel,
     seriesChannel,
@@ -357,4 +357,6 @@ export function getLineChartSettings(
     disableEmbedded,
     mode,
   };
+
+  return result;
 }
