@@ -66,7 +66,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   # big_value
   view: with_comparison is {
     aggregate:
-      #(doc) Total revenue from all product sales
+      # description="Total revenue from all product sales"
       # label="Current Sales"
       # currency
       current_sales is retail_price.sum()
@@ -83,7 +83,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   # big_value
   view: down_is_good_example is {
     aggregate:
-      #(doc) Total costs including manufacturing and logistics
+      # description="Total costs including manufacturing and logistics"
       # label="Current Costs"
       # currency
       current_costs is cost.sum()
@@ -99,16 +99,16 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   # big_value
   view: with_documentation is {
     aggregate:
-      #(doc) Number of unique products in the catalog. Updated daily.
+      # description="Number of unique products in the catalog. Updated daily."
       # label="Products"
       product_count is count()
 
-      #(doc) Sum of retail prices across all products. Does not include discounts.
+      # description="Sum of retail prices across all products. Does not include discounts."
       # label="Gross Revenue"
       # currency
       gross_revenue is retail_price.sum()
 
-      #(doc) Calculated as (Revenue - Cost) / Revenue. Industry average is 35%.
+      # description="Calculated as (Revenue - Cost) / Revenue. Industry average is 35%."
       # label="Profit Margin"
       # percent
       profit_margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
@@ -119,7 +119,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
   # big_value
   view: multiple_comparisons is {
     aggregate:
-      #(doc) Total sales this period
+      # description="Total sales this period"
       # label="Sales"
       # currency
       sales is retail_price.sum()
@@ -128,7 +128,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # hidden
       sales_prior is retail_price.sum() * 0.89
 
-      #(doc) Number of products
+      # description="Number of products"
       # label="Products"
       product_count is count()
 
@@ -136,7 +136,7 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       # hidden
       products_prior is count() * 0.973
 
-      #(doc) Average price = Sales / Products
+      # description="Average price = Sales / Products"
       # label="Avg Price"
       # currency
       avg_price is retail_price.sum() / count()
@@ -168,7 +168,7 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
   # big_value
   view: with_sparkline is {
     aggregate:
-      #(doc) Total sales revenue from all orders
+      # description="Total sales revenue from all orders"
       # label="Total Sales"
       # big_value { sparkline=trend }
       total_sales  // References pre-defined measure with # currency
@@ -230,7 +230,7 @@ source: big_value_orders is duckdb.table("static/data/order_items.parquet") exte
   # big_value
   view: full_example is {
     aggregate:
-      #(doc) Total revenue from all orders. Updated daily.
+      # description="Total revenue from all orders. Updated daily."
       # label="Total Revenue"
       # big_value { sparkline=trend }
       total_sales  // References pre-defined measure with # currency

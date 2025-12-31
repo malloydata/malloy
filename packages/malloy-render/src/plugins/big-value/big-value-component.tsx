@@ -73,27 +73,11 @@ function getFieldLabel(field: Field): string {
 }
 
 /**
- * Extract doc annotation from field metadata
- * Looks for #(doc) annotations
+ * Get the description text for a field
+ * Uses # description="text" render tag
  */
-function getDocAnnotation(field: Field): string | null {
-  // Check field.field.annotations array (raw Malloy format)
-  const fieldInfo = field.field;
-  if (fieldInfo?.annotations && Array.isArray(fieldInfo.annotations)) {
-    for (const ann of fieldInfo.annotations) {
-      if (
-        ann &&
-        typeof ann.value === 'string' &&
-        ann.value.startsWith('#(doc)')
-      ) {
-        return ann.value
-          .replace(/^#\(doc\)\s*/, '')
-          .replace(/\n$/, '')
-          .trim();
-      }
-    }
-  }
-  return null;
+function getDescription(field: Field): string | null {
+  return field.tag.text('description') || null;
 }
 
 /**
@@ -493,7 +477,7 @@ export function BigValueComponent(props: BigValueComponentProps) {
         formattedValue: formatValue(cell ?? null),
         comparison: comparison?.info ?? null,
         comparisonValue: comparison?.value ?? null,
-        docText: getDocAnnotation(fieldDef),
+        docText: getDescription(fieldDef),
         sparklineNest,
       });
     }

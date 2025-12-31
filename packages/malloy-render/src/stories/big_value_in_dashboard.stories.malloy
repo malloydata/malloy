@@ -63,11 +63,11 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       # big_value
       documented_metrics is {
         aggregate:
-          #(doc) Total number of products in this category
+          # description="Total number of products in this category"
           # label="Products"
           product_count is count()
 
-          #(doc) Average retail price across all products. Does not include discounts.
+          # description="Average retail price across all products. Does not include discounts."
           # label="Avg Price"
           # currency
           avg_price is retail_price.avg()
@@ -208,7 +208,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       # big_value
       cost_analysis is {
         aggregate:
-          #(doc) Current costs including manufacturing and logistics
+          # description="Current costs including manufacturing and logistics"
           # label="Current Costs"
           # currency
           current_costs is cost.sum()
@@ -233,7 +233,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       # big_value
       full_featured_metrics is {
         aggregate:
-          #(doc) Total revenue from retail sales. Updated daily.
+          # description="Total revenue from retail sales. Updated daily."
           # label="Total Revenue"
           # currency
           # big_value { sparkline=revenue_trend }
@@ -311,7 +311,7 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
       # big_value
       sales_with_trend is {
         aggregate:
-          #(doc) Monthly revenue trend
+          # description="Monthly revenue trend"
           # label="Total Revenue"
           # big_value { sparkline=monthly_trend }
           total_revenue  // References pre-defined measure with # currency
@@ -366,7 +366,7 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
       # big_value
       full_metrics is {
         aggregate:
-          #(doc) Total sales with monthly trend. Hover over sparkline to see data points.
+          # description="Total sales with monthly trend. Hover over sparkline to see data points."
           # label="Total Sales"
           # big_value { sparkline=sales_trend }
           total_revenue  // References pre-defined measure with # currency
