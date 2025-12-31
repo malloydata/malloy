@@ -1,0 +1,252 @@
+// Big Value Stories for Storybook
+// Tests the # big_value tag for rendering aggregate values as metric cards
+
+source: big_value_test is duckdb.table("static/data/products.parquet") extend {
+
+  // Basic Big Value - multiple aggregates as cards
+  #(story)
+  # big_value
+  view: basic_metrics is {
+    aggregate:
+      product_count is count()
+      # currency
+      total_retail is retail_price.sum()
+      # currency
+      avg_price is retail_price.avg()
+  }
+
+  // Big Value with all formatting options
+  #(story)
+  # big_value
+  view: formatted_metrics is {
+    aggregate:
+      # label="Plain Number"
+      product_count is count()
+
+      # label="Currency (USD)"
+      # currency
+      total_usd is retail_price.sum()
+
+      # label="Custom Format"
+      # number="#,##0.0"
+      avg_price is retail_price.avg()
+
+      # label="Big Number"
+      # number=big
+      big_total is retail_price.sum() * 1000
+
+      # label="Profit Margin"
+      # percent
+      margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
+  }
+
+  // Big Value with size=lg
+  #(story)
+  # big_value { size=lg }
+  view: large_metrics is {
+    aggregate:
+      # currency
+      total_retail is retail_price.sum()
+      # currency
+      avg_price is retail_price.avg()
+  }
+
+  // Big Value with size=sm
+  #(story)
+  # big_value { size=sm }
+  view: small_metrics is {
+    aggregate:
+      product_count is count()
+      # currency
+      total_retail is retail_price.sum()
+  }
+
+  // Big Value with comparison - percentage change (up is good)
+  #(story)
+  # big_value
+  view: with_comparison is {
+    aggregate:
+      # description="Total revenue from all product sales"
+      # label="Current Sales"
+      # currency
+      current_sales is retail_price.sum()
+
+      // This field provides the comparison value for current_sales
+      // Shows ▲ 17.6% vs Prior Period (green because sales increased)
+      # big_value { comparison_field=current_sales comparison_label='vs Prior Period' }
+      # hidden
+      prior_sales is retail_price.sum() * 0.85
+  }
+
+  // Big Value with down_is_good (for cost metrics)
+  #(story)
+  # big_value
+  view: down_is_good_example is {
+    aggregate:
+      # description="Total costs including manufacturing and logistics"
+      # label="Current Costs"
+      # currency
+      current_costs is cost.sum()
+
+      // Shows ▼ -9.1% vs Budget (green because costs decreased - down is good!)
+      # big_value { comparison_field=current_costs comparison_label='vs Budget' down_is_good=true }
+      # hidden
+      budgeted_costs is cost.sum() * 1.10
+  }
+
+  // Big Value with documentation tooltips
+  #(story)
+  # big_value
+  view: with_documentation is {
+    aggregate:
+      # description="Number of unique products in the catalog. Updated daily."
+      # label="Products"
+      product_count is count()
+
+      # description="Sum of retail prices across all products. Does not include discounts."
+      # label="Gross Revenue"
+      # currency
+      gross_revenue is retail_price.sum()
+
+      # description="Calculated as (Revenue - Cost) / Revenue. Industry average is 35%."
+      # label="Profit Margin"
+      # percent
+      profit_margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
+  }
+
+  // Big Value with multiple comparisons
+  #(story)
+  # big_value
+  view: multiple_comparisons is {
+    aggregate:
+      # description="Total sales this period"
+      # label="Sales"
+      # currency
+      sales is retail_price.sum()
+
+      # big_value { comparison_field=sales comparison_label='MoM' }
+      # hidden
+      sales_prior is retail_price.sum() * 0.89
+
+      # description="Number of products"
+      # label="Products"
+      product_count is count()
+
+      # big_value { comparison_field=product_count comparison_label='MoM' }
+      # hidden
+      products_prior is count() * 0.973
+
+      # description="Average price = Sales / Products"
+      # label="Avg Price"
+      # currency
+      avg_price is retail_price.sum() / count()
+
+      // No down_is_good set, so decrease shows as RED (default behavior)
+      # big_value { comparison_field=avg_price comparison_label='MoM' }
+      # hidden
+      avg_price_prior is (retail_price.sum() / count()) * 1.13
+  }
+
+}
+
+// Big Value with sparklines using order data (dates on x-axis)
+source: big_value_orders is duckdb.table("static/data/order_items.parquet") extend {
+  dimension: order_month is created_at.month
+  dimension: order_week is created_at.week
+
+  // Define measures with # currency at source level - this tag propagates when referenced
+  # currency
+  measure: total_sales is sale_price.sum()
+  # currency
+  measure: avg_sale is sale_price.avg()
+  measure: order_count is count()
+
+  // Big Value with line sparkline (monthly trend)
+  // The metric references the sparkline nest by name: sparkline=trend
+  // The nest uses standard chart tag: # line_chart { size=spark }
+  #(story)
+  # big_value
+  view: with_sparkline is {
+    aggregate:
+      # description="Total sales revenue from all orders"
+      # label="Total Sales"
+      # big_value { sparkline=trend }
+      total_sales  // References pre-defined measure with # currency
+
+    // Sparkline: monthly sales trend
+    // Uses line_chart with size=spark for consistent rendering with standalone sparks
+    # line_chart { size=spark }
+    # hidden
+    nest: trend is {
+      group_by: order_month
+      aggregate: total_sales
+      order_by: order_month
+      limit: 24
+    }
+  }
+
+  // Big Value with line sparkline (weekly trend)
+  #(story)
+  # big_value
+  view: with_weekly_sparkline is {
+    aggregate:
+      # label="Avg Order Value"
+      # big_value { sparkline=price_trend }
+      avg_sale  // References pre-defined measure with # currency
+
+    // Sparkline: weekly average order value trend
+    # line_chart { size=spark }
+    # hidden
+    nest: price_trend is {
+      group_by: order_week
+      aggregate: avg_sale
+      order_by: order_week
+      limit: 52
+    }
+  }
+
+  // Big Value with bar sparkline (monthly orders)
+  #(story)
+  # big_value
+  view: with_bar_sparkline is {
+    aggregate:
+      # label="Total Orders"
+      # big_value { sparkline=order_trend }
+      order_count  // References pre-defined measure (no currency - it's a count)
+
+    // Sparkline: monthly order count (bar chart style)
+    # bar_chart { size=spark }
+    # hidden
+    nest: order_trend is {
+      group_by: order_month
+      aggregate: order_count
+      order_by: order_month
+      limit: 12
+    }
+  }
+
+  // Full example: comparison + sparkline + doc
+  #(story)
+  # big_value
+  view: full_example is {
+    aggregate:
+      # description="Total revenue from all orders. Updated daily."
+      # label="Total Revenue"
+      # big_value { sparkline=trend }
+      total_sales  // References pre-defined measure with # currency
+
+      # big_value { comparison_field=total_sales comparison_label='vs Last Year' }
+      # hidden
+      prior_revenue is sale_price.sum() * 0.85
+
+    // Sparkline: monthly revenue trend
+    # line_chart { size=spark }
+    # hidden
+    nest: trend is {
+      group_by: order_month
+      aggregate: total_sales
+      order_by: order_month
+      limit: 24
+    }
+  }
+}

@@ -99,6 +99,10 @@ export function getLineChartSettings(
 
   const vizTag = normalizedTag.tag('viz')!;
 
+  // Check if this is a spark-sized chart
+  const isSpark =
+    vizTag.text('size') === 'spark' || normalizedTag.text('size') === 'spark';
+
   // Parse model defaults from viz.line_chart.defaults.* tags
   const modelDefaults = parseModelDefaults(modelTag);
 
@@ -111,15 +115,16 @@ export function getLineChartSettings(
     mergedDefaults = deepMerge(mergedDefaults, modelDefaults);
   }
 
-  // default zero_baselinse
-  let zeroBaseline = mergedDefaults.zeroBaseline;
+  // default zero_baseline
+  // Sparklines default to false (auto-scale to data range) since they have no visible y-axis
+  let zeroBaseline = isSpark ? false : mergedDefaults.zeroBaseline;
   if (vizTag.has('zero_baseline')) {
     const value = vizTag.text('zero_baseline');
     // If explicitly set to false, set to false
     if (value === 'false') {
       zeroBaseline = false;
     }
-    // If explicilty set to true or no value, set to true
+    // If explicitly set to true or no value, set to true
     else if (
       value === 'true' ||
       value === null ||
@@ -343,7 +348,7 @@ export function getLineChartSettings(
     }
   }
 
-  return {
+  const result = {
     xChannel,
     yChannel,
     seriesChannel,
@@ -352,4 +357,6 @@ export function getLineChartSettings(
     disableEmbedded,
     mode,
   };
+
+  return result;
 }

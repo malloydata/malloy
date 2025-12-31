@@ -1,0 +1,255 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+.malloy-big-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  overflow: visible;
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* When big-value is inside a dashboard item, ensure tooltips can overflow */
+.dashboard-item-value:has(.malloy-big-value) {
+  overflow: visible !important;
+}
+
+.dashboard-item:has(.malloy-big-value) {
+  overflow: visible;
+}
+
+.malloy-big-value-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  background: var(--malloy-render--background, white);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow:
+    rgb(255, 255, 255) 0px 0px 0px 0px,
+    rgb(229, 231, 235) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
+    rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+  min-width: 140px;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 500px;
+  overflow: visible;
+}
+
+/* Size variants */
+.malloy-big-value-card--sm {
+  padding: 12px 16px;
+  min-width: 100px;
+  max-width: 300px;
+}
+
+.malloy-big-value-card--lg {
+  padding: 24px 32px;
+  min-width: 180px;
+  max-width: 600px;
+}
+
+/* Label container with tooltip */
+.malloy-big-value-label-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  overflow: visible;
+}
+
+/* Label */
+.malloy-big-value-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+
+.malloy-big-value-card--sm .malloy-big-value-label {
+  font-size: 11px;
+}
+
+.malloy-big-value-card--lg .malloy-big-value-label {
+  font-size: 14px;
+}
+
+/* Value row (value + sparkline side by side) */
+.malloy-big-value-value-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Value */
+.malloy-big-value-value {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--malloy-render--table-body-color, #111827);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.malloy-big-value-card--sm .malloy-big-value-value {
+  font-size: 24px;
+}
+
+.malloy-big-value-card--lg .malloy-big-value-value {
+  font-size: 40px;
+}
+
+/* Sparkline */
+.malloy-big-value-sparkline {
+  flex-shrink: 0;
+  overflow: visible;
+  padding: 4px 0;  /* Add vertical padding to prevent line cropping */
+}
+
+.malloy-big-value-sparkline .malloy-sparkline-container {
+  display: block;
+  overflow: visible;
+}
+
+.malloy-big-value-sparkline svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Ensure chart container doesn't crop sparkline */
+.malloy-big-value-sparkline .malloy-chart__container {
+  overflow: visible;
+}
+
+/* Comparison container */
+.malloy-big-value-comparison {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Delta indicator */
+.malloy-big-value-delta {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.malloy-big-value-delta--positive {
+  color: #059669;
+}
+
+.malloy-big-value-delta--negative {
+  color: #dc2626;
+}
+
+.malloy-big-value-delta--neutral {
+  color: #6b7280;
+}
+
+/* Comparison label */
+.malloy-big-value-comparison-label {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+/* Tooltip icon */
+.malloy-big-value-tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #9ca3af;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+  font-family: Georgia, serif;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Tooltip popup - default position is above the icon */
+.malloy-big-value-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  font-style: normal;
+  font-family: system-ui, -apple-system, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.4;
+  white-space: normal;
+  max-width: 250px;
+  min-width: 150px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* Flipped position - below the icon when not enough space above */
+.malloy-big-value-tooltip--flipped {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+.malloy-big-value-tooltip-icon:hover .malloy-big-value-tooltip {
+  opacity: 1;
+}
+
+/* Tooltip arrow - points down by default (tooltip above) */
+.malloy-big-value-tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+}
+
+/* Flipped arrow - points up when tooltip is below */
+.malloy-big-value-tooltip--flipped .malloy-big-value-tooltip-arrow {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #1f2937;
+}
+
+/* Error state */
+.malloy-big-value-error {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.malloy-big-value-error-icon {
+  margin-right: 8px;
+}
