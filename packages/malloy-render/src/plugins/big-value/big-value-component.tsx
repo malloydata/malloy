@@ -264,6 +264,8 @@ function TooltipIcon(props: {text: string}) {
 
 /**
  * Component to render sparkline using applyRenderer (leverages existing chart plugins)
+ * Note: For dashboard sparklines, add y.independent=true in the Malloy tag to ensure
+ * each row's sparkline scales to its own data range.
  */
 function SparklineChart(props: {info: SparklineNestInfo}) {
   const rendering = applyRenderer({

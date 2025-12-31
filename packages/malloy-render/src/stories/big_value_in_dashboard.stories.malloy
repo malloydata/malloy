@@ -94,7 +94,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           avg_price is retail_price.avg()
 
         // Sparkline: price trend by product bucket
-        # line_chart { size=spark }
+        // y.independent=true ensures each dashboard row's sparkline scales to its own data
+        # line_chart { size=spark y.independent=true }
         # hidden
         nest: price_trend is {
           group_by: product_bucket is floor(id / 100)::number
@@ -244,7 +245,8 @@ source: products is duckdb.table("static/data/products.parquet") extend {
           prior_revenue is retail_price.sum() - cost.sum() + (cost.avg() * 5)
 
         // Sparkline: revenue trend across product IDs (simulating time order)
-        # line_chart { size=spark }
+        // y.independent=true ensures each dashboard row's sparkline scales to its own data
+        # line_chart { size=spark y.independent=true }
         # hidden
         nest: revenue_trend is {
           group_by: product_bucket is id / 50
@@ -315,7 +317,8 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
           total_revenue  // References pre-defined measure with # currency
 
         // Sparkline: monthly revenue trend
-        # line_chart { size=spark }
+        // y.independent=true ensures each dashboard row's sparkline scales to its own data
+        # line_chart { size=spark y.independent=true }
         # hidden
         nest: monthly_trend is {
           group_by: order_month
@@ -342,7 +345,8 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
           avg_value  // References pre-defined measure with # currency
 
         // Sparkline: weekly order count
-        # line_chart { size=spark }
+        // y.independent=true ensures each dashboard row's sparkline scales to its own data
+        # line_chart { size=spark y.independent=true }
         # hidden
         nest: weekly_trend is {
           group_by: order_week
@@ -372,7 +376,8 @@ source: orders is duckdb.table("static/data/order_items.parquet") extend {
           target is sale_price.sum() * 0.9
 
         // Monthly sales sparkline - measure reference inherits # currency
-        # line_chart { size=spark }
+        // y.independent=true ensures each dashboard row's sparkline scales to its own data
+        # line_chart { size=spark y.independent=true }
         # hidden
         nest: sales_trend is {
           group_by: order_month
