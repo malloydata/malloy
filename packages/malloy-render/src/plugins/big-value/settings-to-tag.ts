@@ -1,3 +1,8 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
 import {Tag} from '@malloydata/malloy-tag';
 import type {BigValueSettings} from './big-value-settings';
 import {defaultBigValueSettings} from './big-value-settings';
@@ -15,7 +20,10 @@ export function bigValueSettingsToTag(settings: BigValueSettings): Tag {
     settings.neutralThreshold !== undefined &&
     settings.neutralThreshold !== defaultBigValueSettings.neutralThreshold
   ) {
-    tag.set(['big_value', 'neutral_threshold'], String(settings.neutralThreshold));
+    tag.set(
+      ['big_value', 'neutral_threshold'],
+      String(settings.neutralThreshold)
+    );
   }
 
   return tag;

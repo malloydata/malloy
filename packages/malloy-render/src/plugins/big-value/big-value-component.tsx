@@ -1,3 +1,8 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
 import {For, Show, createMemo, createSignal} from 'solid-js';
 import type {Cell, Field, RecordCell, NestCell, NestField} from '@/data_tree';
 import {renderNumberCell} from '@/component/render-numeric-field';
