@@ -140,6 +140,15 @@ npm run clean                  # Clean build artifacts from all packages
 npm run watch                  # Watch for TypeScript changes across the repo
 ```
 
+NOTES TOOL RUNNING NUM BUILD: build output is long and | head or | tail and a re-run is a bas choice,
+instead do something like
+
+```
+npm run build 2>&1 >/tmp/build0.log && echo Build OK || (tail -50 /tmp/build0.log; exit 1)
+```
+
+
+
 ### Parser Generation
 
 The Malloy grammar uses ANTLR4. When modifying grammar files in `packages/malloy/src/lang/grammar/`, run:
@@ -150,6 +159,8 @@ npm run build-parser  # In the malloy package directory
 ### Testing
 
 **IMPORTANT**: Malloy has a large test suite which cannot run on a development machine. A CI run is needed to fully verify a change.
+
+NOTES ON TOOLS RUNNING TESTS:
 
 **DO NOT RUN** `npm run test` without restrictions - it requires active database connections for every database and will take a very long time and won't ever succeed.
 
@@ -212,6 +223,10 @@ For new files, this is the current correct copyright text (here in C/Java/Javasc
  * SPDX-License-Identifier: MIT
  */
 ```
+
+## Commit and PR Guidelines
+
+Do not include AI attribution (e.g., "Generated with Claude Code", "Co-Authored-By: Claude") in commits or pull requests.
 
 ## Subsystem Context
 
