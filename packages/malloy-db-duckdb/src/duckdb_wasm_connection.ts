@@ -33,6 +33,7 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
+import {Type} from 'apache-arrow';
 import type {StructRow, Table, Schema, Field, DataType} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
 
@@ -46,10 +47,6 @@ const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
 // These convert Arrow values to vanilla JS using schema type information.
 // ----------------------------------------------------------------------------
 
-function isIterable(x: unknown): x is Iterable<unknown> {
-  return typeof x === 'object' && x !== null && Symbol.iterator in x;
-}
-
 /**
  * Convert an Arrow value to vanilla JS using the Arrow DataType.
  * Uses schema type info to correctly handle decimals and nested types.
@@ -59,45 +56,46 @@ function unwrapValue(value: unknown, fieldType: DataType): unknown {
     return null;
   }
 
-  // Check for decimal type (has scale property)
-  if ('scale' in fieldType) {
-    return unwrapDecimal(value, fieldType);
-  }
-
-  // Check for date/timestamp types (Arrow returns as epoch ms)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const typeAny = fieldType as any;
-  if (typeAny.typeId === 8 || typeAny.typeId === 10) {
-    // Type.Date = 8, Type.Timestamp = 10
-    if (typeof value === 'number') {
-      return new Date(value);
-    }
-    if (value instanceof Date) {
-      return value;
-    }
-  }
+  const children = (fieldType as any).children as Field[] | null;
 
-  // Check for nested types (have children property)
-  if ('children' in fieldType) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const children = (fieldType as any).children as Field[] | null;
-    if (children && children.length > 0) {
-      // List types: single child is element type
-      if (
-        children.length === 1 &&
-        (Array.isArray(value) || isIterable(value))
-      ) {
+  switch (fieldType.typeId) {
+    case Type.Decimal:
+      return unwrapDecimal(value, fieldType);
+
+    case Type.Date:
+    case Type.Timestamp:
+      if (typeof value === 'number') {
+        return new Date(value);
+      }
+      if (value instanceof Date) {
+        return value;
+      }
+      return unwrapPrimitive(value);
+
+    case Type.List:
+    case Type.FixedSizeList:
+      if (children && children.length > 0) {
         return unwrapArray(value, children[0].type);
       }
-      // Struct types: children are named fields
-      if (typeof value === 'object') {
+      return unwrapPrimitive(value);
+
+    case Type.Struct:
+      if (children && children.length > 0) {
         return unwrapStruct(value, children);
       }
-    }
-  }
+      return unwrapPrimitive(value);
 
-  // Primitive values: extract from Arrow wrappers
-  return unwrapPrimitive(value);
+    case Type.Map:
+      // Maps have a single child which is a struct with key/value fields
+      if (children && children.length > 0) {
+        return unwrapArray(value, children[0].type);
+      }
+      return unwrapPrimitive(value);
+
+    default:
+      return unwrapPrimitive(value);
+  }
 }
 
 function unwrapDecimal(value: unknown, fieldType: DataType): number | string {
