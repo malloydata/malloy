@@ -165,6 +165,8 @@ Renders aggregate values as prominent metric cards, similar to KPI tiles in dash
 - `.size`: Controls card size preset.
   - Values: `sm`, `md` (default), `lg`
   - Syntax: `# big_value { size=lg }`
+- `.neutral_threshold`: Percentage threshold below which changes are shown as neutral (dash) instead of up/down arrows. Default is `0.05` (5%).
+  - Syntax: `# big_value { neutral_threshold=0.1 }`
 
 ---
 
@@ -207,7 +209,7 @@ view: sales_comparison is {
 
 #### Feature 2: Documentation Tooltips
 
-Add info icons with hover descriptions using `#(doc)` annotations.
+Add info icons with hover descriptions using `# description` tags.
 
 **Example:**
 
@@ -215,12 +217,12 @@ Add info icons with hover descriptions using `#(doc)` annotations.
 # big_value
 view: documented_metrics is {
   aggregate:
-    #(doc) Total revenue from completed sales. Updated daily.
+    # description="Total revenue from completed sales. Updated daily."
     # label="Total Revenue"
     # currency
     total_revenue is sales.sum()
 
-    #(doc) Win rate = Won / (Won + Lost). Industry average is 25%.
+    # description="Win rate = Won / (Won + Lost). Industry average is 25%."
     # label="Win Rate"
     # percent
     win_rate is won.sum() / (won.sum() + lost.sum())
@@ -231,15 +233,18 @@ view: documented_metrics is {
 
 #### Feature 3: Sparkline Trends
 
-Show mini line, area, or bar charts alongside the metric value.
+Show mini line or bar charts alongside the metric value.
 
-**Nested Field Properties (for sparkline data):**
+**How it works:**
 
-- `.sparkline_for`: The field name of the primary metric this sparkline represents.
-  - Syntax: `# big_value { sparkline_for=total_sales }`
-- `.sparkline_type`: The chart type for the sparkline.
-  - Values: `line` (default), `area`, `bar`
-  - Syntax: `# big_value { sparkline_type=area }`
+1. Add `sparkline=nest_name` to the metric field to reference a sparkline nest
+2. Define the sparkline data as a nested view with `# line_chart { size=spark }` or `# bar_chart { size=spark }`
+3. Mark the nest as `# hidden` to prevent it from rendering separately
+
+**Metric Field Properties:**
+
+- `.sparkline`: The name of the nested view containing sparkline data.
+  - Syntax: `# big_value { sparkline=trend }`
 
 **Example:**
 
@@ -249,28 +254,17 @@ view: sales_with_trend is {
   aggregate:
     # label="Total Sales"
     # currency
+    # big_value { sparkline=trend }
     total_sales is revenue.sum()
 
   // Line sparkline showing trend over time
-  # big_value { sparkline_for=total_sales }
+  # line_chart { size=spark }
+  # hidden
   nest: trend is {
     group_by: order_date.month
     aggregate: monthly_sales is revenue.sum()
-  }
-}
-
-// Area sparkline
-# big_value
-view: with_area_sparkline is {
-  aggregate:
-    # label="Avg Order Value"
-    # currency
-    avg_order is revenue.avg()
-
-  # big_value { sparkline_for=avg_order sparkline_type=area }
-  nest: aov_trend is {
-    group_by: order_date.week
-    aggregate: weekly_avg is revenue.avg()
+    order_by: order_date.month
+    limit: 12
   }
 }
 
@@ -279,10 +273,12 @@ view: with_area_sparkline is {
 view: with_bar_sparkline is {
   aggregate:
     # label="Order Count"
+    # big_value { sparkline=order_trend }
     order_count is count()
 
-  # big_value { sparkline_for=order_count sparkline_type=bar }
-  nest: orders_by_region is {
+  # bar_chart { size=spark }
+  # hidden
+  nest: order_trend is {
     group_by: region
     aggregate: orders is count()
     limit: 8
@@ -310,16 +306,17 @@ Big Value cards respect field formatting tags:
 # big_value
 view: executive_dashboard is {
   aggregate:
-    #(doc) Total revenue this period. Target is $10M.
+    # description="Total revenue this period. Target is $10M."
     # label="Revenue"
     # currency
+    # big_value { sparkline=revenue_trend }
     revenue is sales.sum()
 
     # big_value { comparison_field=revenue comparison_label='vs Target' }
     # hidden
     target_revenue is 10000000
 
-    #(doc) On-time delivery rate. SLA requires 95%.
+    # description="On-time delivery rate. SLA requires 95%."
     # label="On-Time Rate"
     # percent
     ontime_rate is count() { where: delivered_on_time } / count()
@@ -329,10 +326,12 @@ view: executive_dashboard is {
     sla_target is 0.95
 
   // Sparkline showing revenue trend
-  # big_value { sparkline_for=revenue }
+  # line_chart { size=spark }
+  # hidden
   nest: revenue_trend is {
     group_by: order_date.month
     aggregate: monthly_revenue is sales.sum()
+    order_by: order_date.month
     limit: 12
   }
 }
@@ -693,6 +692,16 @@ Overrides the default display name (label/title) for a field or dashboard item.
 
 ```
 measure: total_revenue is sales.sum() # label="Total Sales ($)"
+```
+
+### `# description`
+
+Adds a description to a field, shown as an info icon tooltip in `# big_value` cards.
+
+**Example:**
+
+```
+measure: total_revenue is sales.sum() # description="Total revenue from completed sales. Updated daily."
 ```
 
 ### `# break`
