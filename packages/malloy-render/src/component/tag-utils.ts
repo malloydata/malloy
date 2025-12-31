@@ -48,7 +48,7 @@ export function convertLegacyToVizTag(tag: Tag): Tag {
   if (legacyChartTag) {
     const legacyTagObject = tag.tag(legacyChartTag);
     // tag.set() returns a NEW tag (it's immutable), so we must use the returned value
-    let normalizedTag = tag.set(['viz'], legacyTagToVizType(legacyChartTag));
+    const normalizedTag = tag.set(['viz'], legacyTagToVizType(legacyChartTag));
     // Copy properties from the legacy tag object to the new viz property
     if (normalizedTag.properties?.['viz'] && legacyTagObject?.properties) {
       normalizedTag.properties['viz'].properties = legacyTagObject.properties;
