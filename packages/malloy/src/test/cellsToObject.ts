@@ -27,9 +27,11 @@ function cellToValue(cell: Malloy.Cell, fieldInfo: Malloy.FieldInfo): unknown {
     case 'string_cell':
       return cell.string_value;
     case 'number_cell':
+      // Return BigInt for bigint values (when string_value is present for precision)
+      if (cell.string_value !== undefined) {
+        return BigInt(cell.string_value);
+      }
       return cell.number_value;
-    case 'big_number_cell':
-      return BigInt(cell.number_value);
     case 'boolean_cell':
       return cell.boolean_value;
     case 'date_cell':

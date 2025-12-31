@@ -112,14 +112,13 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       return {kind: 'boolean_cell', boolean_value: value};
     } else if (field.type.kind === 'number_type') {
       const subtype = field.type.subtype;
-      if (subtype === 'bigint') {
-        const stringValue = rowDataToSerializedBigint(value);
-        return {kind: 'big_number_cell', number_value: stringValue, subtype};
-      }
+      const stringValue =
+        subtype === 'bigint' ? rowDataToSerializedBigint(value) : undefined;
       return {
         kind: 'number_cell',
         number_value: rowDataToNumber(value),
         subtype,
+        string_value: stringValue,
       };
     } else if (field.type.kind === 'string_type') {
       if (typeof value !== 'string') {

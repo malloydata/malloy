@@ -263,9 +263,11 @@ function cellToValue(cell: Malloy.Cell): unknown {
     case 'string_cell':
       return cell.string_value;
     case 'number_cell':
+      // Return BigInt for bigint values (when string_value is present)
+      if (cell.string_value !== undefined) {
+        return BigInt(cell.string_value);
+      }
       return cell.number_value;
-    case 'big_number_cell':
-      return BigInt(cell.number_value);
     case 'boolean_cell':
       return cell.boolean_value;
     case 'date_cell':
@@ -415,6 +417,18 @@ function matchCell(
 
   // Handle number cells
   if (cell.kind === 'number_cell') {
+    // For bigint values, use string_value for precision
+    if (cell.string_value !== undefined) {
+      const actual = BigInt(cell.string_value);
+      if (looseEqual(actual, expected)) {
+        return {pass: true};
+      }
+      // Also allow matching against string representation of the number
+      if (typeof expected === 'string' && expected === cell.string_value) {
+        return {pass: true};
+      }
+      return matchFail(path, expected, actual);
+    }
     let actual: unknown = cell.number_value;
     // Handle simulated booleans (MySQL returns 1/0 for booleans)
     if (
@@ -425,19 +439,6 @@ function matchCell(
       actual = actual !== 0;
     }
     if (looseEqual(actual, expected)) {
-      return {pass: true};
-    }
-    return matchFail(path, expected, actual);
-  }
-
-  // Handle big number cells
-  if (cell.kind === 'big_number_cell') {
-    const actual = BigInt(cell.number_value);
-    if (looseEqual(actual, expected)) {
-      return {pass: true};
-    }
-    // Also allow matching against string representation of the number
-    if (typeof expected === 'string' && expected === cell.number_value) {
       return {pass: true};
     }
     return matchFail(path, expected, actual);
