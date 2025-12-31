@@ -89,7 +89,8 @@ function getComparisonInfo(field: Field): BigValueComparisonInfo | null {
 
   if (!comparisonField) return null;
 
-  const comparisonLabel = tag.text('big_value', 'comparison_label') ?? undefined;
+  const comparisonLabel =
+    tag.text('big_value', 'comparison_label') ?? undefined;
   const comparisonFormat = (tag.text('big_value', 'comparison_format') ??
     'pct') as ComparisonFormat;
   const downIsGood = tag.text('big_value', 'down_is_good') === 'true';
@@ -122,8 +123,8 @@ function calculateDelta(
 ): DeltaResult {
   // Handle invalid inputs
   if (
-    primaryValue == null ||
-    comparisonValue == null ||
+    primaryValue === null ||
+    comparisonValue === null ||
     typeof primaryValue !== 'number' ||
     typeof comparisonValue !== 'number' ||
     !isFinite(primaryValue) ||
@@ -370,7 +371,10 @@ export function BigValueComponent(props: BigValueComponentProps) {
 
   // Build comparison map: primaryFieldName -> { comparisonValue, ... }
   const comparisonMap = createMemo(() => {
-    const map = new Map<string, {value: number; info: BigValueComparisonInfo}>();
+    const map = new Map<
+      string,
+      {value: number; info: BigValueComparisonInfo}
+    >();
     const row = firstRow();
     if (!row) return map;
 
