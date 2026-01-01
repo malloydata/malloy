@@ -40,6 +40,101 @@ source: big_value_test is duckdb.table("static/data/products.parquet") extend {
       margin is (retail_price.sum() - cost.sum()) / retail_price.sum()
   }
 
+  // Currency Scaling Examples - SHORTHAND SYNTAX
+  #(story)
+  # big_value
+  view: currency_scaling is {
+    aggregate:
+      # label="Default Currency"
+      # currency=usd
+      default_format is retail_price.sum() * 1000
+
+      # label="In Thousands (K)"
+      # currency=usd0k
+      in_thousands is retail_price.sum() * 1000
+
+      # label="In Millions (M)"
+      # currency=usd1m
+      in_millions is retail_price.sum() * 1000
+
+      # label="Euro in Millions"
+      # currency=eur1m
+      euro_millions is retail_price.sum() * 1000
+
+      # label="Pounds in Thousands"
+      # currency=gbp0k
+      pound_thousands is retail_price.sum() * 1000
+  }
+
+  // Currency Scaling - VERBOSE SYNTAX (for advanced options)
+  #(story)
+  # big_value
+  view: currency_verbose is {
+    aggregate:
+      # label="Financial Format (MM)"
+      # currency { scale=m decimals=2 suffix=finance }
+      finance_format is retail_price.sum() * 1000
+
+      # label="Word Suffix"
+      # currency { scale=m decimals=1 suffix=word }
+      word_format is retail_price.sum() * 1000
+
+      # label="No Suffix"
+      # currency { scale=k suffix=none }
+      no_suffix is retail_price.sum() * 1000
+
+      # label="Auto-Scale"
+      # currency { scale=auto }
+      auto_scale is retail_price.sum() * 1000
+  }
+
+  // Number Scaling Examples - SHORTHAND SYNTAX
+  #(story)
+  # big_value
+  view: number_scaling is {
+    aggregate:
+      # label="Default Number"
+      product_count is count()
+
+      # label="In Thousands"
+      # number=1k
+      count_thousands is count() * 1000
+
+      # label="In Millions"
+      # number=1m
+      count_millions is count() * 1000000
+
+      # label="Auto-Scale"
+      # number=auto
+      count_auto is count() * 1000000
+
+      # label="ID (no commas)"
+      # number=id
+      sku_example is count() * 123456
+  }
+
+  // Number Scaling - VERBOSE SYNTAX (for advanced options)
+  #(story)
+  # big_value
+  view: number_verbose is {
+    aggregate:
+      # label="Word Suffix"
+      # number { scale=m decimals=1 suffix=word }
+      word_format is count() * 1000000
+
+      # label="Scientific Notation"
+      # number { scale=m decimals=2 suffix=scientific }
+      scientific_format is count() * 1000000
+
+      # label="Uppercase Letter"
+      # number { scale=m decimals=1 suffix=letter }
+      letter_format is count() * 1000000
+
+      # label="Legacy Big Number"
+      # number=big
+      legacy_big is count() * 1000000
+  }
+
   // Big Value with size=lg
   #(story)
   # big_value { size=lg }

@@ -22,17 +22,34 @@
  */
 
 import {Currency, DurationUnit} from '../html/data_styles';
+import type {SuffixFormat} from '../html/data_styles';
 import {format} from 'ssf';
 import {
   getText,
   NULL_SYMBOL,
   renderTimeString,
   formatBigNumber,
+  formatScaledNumber,
+  parseNumberShorthand,
+  parseCurrencyShorthand,
+  normalizeScale,
   type RenderTimeStringOptions,
+  type ScaleKey,
+  type SuffixFormatKey,
 } from '../util';
 import type {Field, NumberCell} from '../data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
 
+/**
+ * Renders a numeric field with formatting based on tags.
+ *
+ * Supports:
+ * - Currency shorthand: # currency=usd2m, # currency=eur0k
+ * - Currency verbose: # currency { scale=m decimals=2 suffix=finance }
+ * - Number shorthand: # number=1k, # number=0m, # number=auto
+ * - Number verbose: # number { scale=m decimals=2 suffix=word }
+ * - Legacy: # number=big, # currency=euro, # currency { scale=thousands }
+ */
 export function renderNumericField(
   f: Field,
   value: number | null | undefined,
@@ -41,39 +58,165 @@ export function renderNumericField(
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
-  let displayValue: string | number = value;
   const tag = tagOverride ?? f.tag;
-  if (tag.has('currency')) {
-    let unitText = '$';
 
-    switch (tag.text('currency')) {
-      case Currency.Euros:
-        unitText = '€';
-        break;
-      case Currency.Pounds:
-        unitText = '£';
-        break;
-      case Currency.Dollars:
-        // Do nothing.
-        break;
-    }
-    displayValue = format(`${unitText}#,##0.00`, value);
-  } else if (tag.has('percent')) displayValue = format('#,##0.00%', value);
-  else if (tag.has('duration')) {
+  // Handle currency formatting
+  if (tag.has('currency')) {
+    return renderCurrencyField(tag, value);
+  }
+
+  // Handle percent formatting
+  if (tag.has('percent')) {
+    return format('#,##0.00%', value);
+  }
+
+  // Handle duration formatting
+  if (tag.has('duration')) {
     const duration_unit = tag.text('duration');
     const targetUnit = duration_unit ?? DurationUnit.Seconds;
-    return (
-      getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString()
-    );
-  } else if (tag.has('number')) {
-    const numberFormat = tag.text('number');
-    if (numberFormat === 'big') {
-      displayValue = formatBigNumber(value);
-    } else {
-      displayValue = format(numberFormat ?? '#', value);
+    return getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString();
+  }
+
+  // Handle number formatting
+  if (tag.has('number')) {
+    return renderNumberField(tag, value);
+  }
+
+  // Default: locale string
+  return value.toLocaleString();
+}
+
+/**
+ * Renders a currency field with support for shorthand and verbose syntax.
+ */
+function renderCurrencyField(tag: Tag, value: number): string {
+  const currencyValue = tag.text('currency');
+
+  // Try parsing as shorthand format (e.g., "usd2m", "eur0k")
+  const shorthand = currencyValue ? parseCurrencyShorthand(currencyValue) : null;
+
+  let symbol = '$';
+  let scale: ScaleKey | 'auto' | undefined;
+  let decimals: number | undefined;
+  let suffixFormat: SuffixFormatKey = 'lower'; // Default for shorthand
+
+  if (shorthand) {
+    // Shorthand format parsed successfully
+    symbol = shorthand.symbol;
+    scale = shorthand.scale;
+    decimals = shorthand.decimals;
+  } else {
+    // Try legacy/verbose format
+    // Currency type: usd, euro, pound
+    switch (currencyValue) {
+      case 'euro':
+        symbol = '€';
+        break;
+      case 'pound':
+        symbol = '£';
+        break;
+      case 'usd':
+      default:
+        symbol = '$';
+        break;
     }
-  } else displayValue = (value as number).toLocaleString();
-  return displayValue;
+
+    // Get scale from verbose syntax
+    const scaleTag = tag.text('currency', 'scale');
+    scale = normalizeScale(scaleTag);
+
+    // Get decimals from verbose syntax
+    decimals = tag.numeric('currency', 'decimals') ?? undefined;
+
+    // Get suffix format from verbose syntax
+    const suffixTag = tag.text('currency', 'suffix') as SuffixFormat | undefined;
+    if (suffixTag) {
+      suffixFormat = suffixTag as SuffixFormatKey;
+    } else if (scale) {
+      // Default to 'letter' for verbose syntax with scale
+      suffixFormat = 'letter';
+    }
+  }
+
+  // Apply scaling and formatting
+  if (scale) {
+    // Use formatScaledNumber for scaled values
+    const scaledStr = formatScaledNumber(value, {
+      scale,
+      decimals: decimals ?? 1,
+      suffix: suffixFormat,
+    });
+    return `${symbol}${scaledStr}`;
+  } else {
+    // No scaling - use standard currency format
+    const effectiveDecimals = decimals ?? 2;
+    const formatStr =
+      effectiveDecimals > 0
+        ? `${symbol}#,##0.${'0'.repeat(effectiveDecimals)}`
+        : `${symbol}#,##0`;
+    return format(formatStr, value);
+  }
+}
+
+/**
+ * Renders a number field with support for shorthand and verbose syntax.
+ */
+function renderNumberField(tag: Tag, value: number): string {
+  const numberValue = tag.text('number');
+
+  // Try parsing as shorthand format (e.g., "1k", "0m", "auto", "big", "id")
+  const shorthand = numberValue ? parseNumberShorthand(numberValue) : null;
+
+  if (shorthand) {
+    // Shorthand format parsed successfully
+    if (shorthand.isId) {
+      // ID format - no commas, just the raw number
+      return String(value);
+    } else if (shorthand.scale) {
+      // Has scale - use formatScaledNumber
+      return formatScaledNumber(value, {
+        scale: shorthand.scale,
+        decimals: shorthand.decimals ?? 1,
+        suffix: 'lower', // Default for shorthand
+      });
+    } else if (shorthand.decimals !== undefined) {
+      // Just decimals, no scale - use toFixed
+      return Number(value.toFixed(shorthand.decimals)).toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: shorthand.decimals,
+      });
+    }
+  }
+
+  // Check for verbose syntax with scale
+  const scaleTag = tag.text('number', 'scale');
+  const scale = normalizeScale(scaleTag);
+
+  if (scale) {
+    // Verbose syntax with scale
+    const decimals = tag.numeric('number', 'decimals') ?? 1;
+    const suffixTag = tag.text('number', 'suffix') as SuffixFormat | undefined;
+    const suffixFormat: SuffixFormatKey = (suffixTag as SuffixFormatKey) ?? 'letter';
+
+    return formatScaledNumber(value, {
+      scale,
+      decimals,
+      suffix: suffixFormat,
+    });
+  }
+
+  // Legacy: # number=big
+  if (numberValue === 'big') {
+    return formatBigNumber(value);
+  }
+
+  // SSF format string (e.g., "#,##0.00")
+  if (numberValue) {
+    return format(numberValue, value);
+  }
+
+  // Default
+  return format('#', value);
 }
 
 /**
