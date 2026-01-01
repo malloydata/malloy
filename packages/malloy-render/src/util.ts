@@ -423,7 +423,8 @@ export function formatScaledNumber(
   value: number,
   options: FormatScaledNumberOptions = {}
 ): string {
-  const {scale = 'auto', decimals = 1, suffix = 'lower'} = options;
+  const {scale = 'auto', decimals: rawDecimals = 2, suffix = 'lower'} = options;
+  const decimals = Math.min(Math.max(0, rawDecimals), 10); // Clamp to 0-10
   const absValue = Math.abs(value);
   const sign = value < 0 ? '-' : '';
 
@@ -464,7 +465,8 @@ export function formatScaledNumber(
   // Special handling for scientific notation - use true scientific format
   if (suffix === 'scientific') {
     // Calculate true scientific notation (coefficient between 1 and 10)
-    const exponent = Math.floor(Math.log10(absValue));
+    // Add small epsilon to handle floating point precision near powers of 10
+    const exponent = Math.floor(Math.log10(absValue) + 1e-10);
     const coefficient = absValue / Math.pow(10, exponent);
     const formattedCoeff = coefficient.toLocaleString('en-US', {
       minimumFractionDigits: 0,
@@ -524,22 +526,26 @@ export interface ParsedCurrencyFormat extends ParsedNumberFormat {
 
 /**
  * Parses a number shorthand format string.
- * Pattern: {decimals}{scale} or "auto" or "big" or "id"
+ * Pattern: {decimals}{scale} or "auto" or "id"
  *
  * @example
  * parseNumberShorthand("1k") // { decimals: 1, scale: 'k' }
  * parseNumberShorthand("0m") // { decimals: 0, scale: 'm' }
  * parseNumberShorthand("2")  // { decimals: 2 }
  * parseNumberShorthand("auto") // { scale: 'auto' }
- * parseNumberShorthand("big") // { scale: 'auto' } (legacy)
  * parseNumberShorthand("id") // { isId: true }
+ *
+ * Note: "big" is NOT handled here - it's a legacy format handled separately
+ * in renderNumberField to preserve backward compatibility with formatBigNumber.
  */
-export function parseNumberShorthand(format: string): ParsedNumberFormat | null {
+export function parseNumberShorthand(
+  format: string
+): ParsedNumberFormat | null {
   const normalized = format.toLowerCase().trim();
 
-  // Handle special cases
-  if (normalized === 'auto' || normalized === 'big') {
-    return {scale: 'auto', decimals: 1};
+  // Handle auto scale
+  if (normalized === 'auto') {
+    return {scale: 'auto', decimals: 2};
   }
 
   // Handle 'id' format - for identifiers like SKUs, no commas
@@ -595,7 +601,7 @@ export function parseCurrencyShorthand(
 
   // Check for .auto suffix
   if (rest === '.auto') {
-    return {currency: currencyCode, symbol, scale: 'auto', decimals: 1};
+    return {currency: currencyCode, symbol, scale: 'auto', decimals: 2};
   }
 
   // Pattern: {decimals}{scale} e.g., "2m", "0k"
@@ -629,7 +635,7 @@ export function parseCurrencyShorthand(
 
 /**
  * Normalizes a scale value to a ScaleKey.
- * Handles both new single-letter scales (k, m, b, t, q) and legacy names (thousands, millions, billions).
+ * Supports single-letter scales: k, m, b, t, q, auto.
  */
 export function normalizeScale(
   scale: string | undefined
@@ -648,12 +654,5 @@ export function normalizeScale(
     return 'auto';
   }
 
-  // Legacy scale names
-  const legacyMap: Record<string, ScaleKey> = {
-    thousands: 'k',
-    millions: 'm',
-    billions: 'b',
-  };
-
-  return legacyMap[normalized];
+  return undefined;
 }

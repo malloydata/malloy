@@ -6,7 +6,15 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {tagFromAnnotations, renderTagFromAnnotations} from './util';
+import {
+  tagFromAnnotations,
+  renderTagFromAnnotations,
+  formatBigNumber,
+  formatScaledNumber,
+  parseNumberShorthand,
+  parseCurrencyShorthand,
+  normalizeScale,
+} from './util';
 
 describe('renderTagFromAnnotations namespace support', () => {
   test('should parse default namespace only', () => {
@@ -131,9 +139,6 @@ describe('tagFromAnnotations original behavior', () => {
 });
 
 describe('formatBigNumber', () => {
-  // Import the function
-  const {formatBigNumber} = require('./util');
-
   test('should format thousands with K suffix', () => {
     expect(formatBigNumber(1000)).toBe('1K');
     expect(formatBigNumber(1500)).toBe('1.5K');
@@ -213,13 +218,11 @@ describe('formatBigNumber', () => {
 });
 
 describe('formatScaledNumber', () => {
-  const {formatScaledNumber} = require('./util');
-
   describe('auto-scaling', () => {
     test('should auto-scale to appropriate suffix', () => {
-      expect(formatScaledNumber(1234567, {scale: 'auto'})).toBe('1.2m');
-      expect(formatScaledNumber(1234567890, {scale: 'auto'})).toBe('1.2b');
-      expect(formatScaledNumber(1234, {scale: 'auto'})).toBe('1.2k');
+      expect(formatScaledNumber(1234567, {scale: 'auto'})).toBe('1.23m');
+      expect(formatScaledNumber(1234567890, {scale: 'auto'})).toBe('1.23b');
+      expect(formatScaledNumber(1234, {scale: 'auto'})).toBe('1.23k');
     });
 
     test('should not scale small numbers', () => {
@@ -265,47 +268,47 @@ describe('formatScaledNumber', () => {
 
   describe('suffix formats', () => {
     test('should use letter suffix (uppercase)', () => {
-      expect(
-        formatScaledNumber(1234567, {scale: 'm', suffix: 'letter'})
-      ).toBe('1.2M');
+      expect(formatScaledNumber(1234567, {scale: 'm', suffix: 'letter'})).toBe(
+        '1.23M'
+      );
     });
 
     test('should use lower suffix (lowercase)', () => {
       expect(formatScaledNumber(1234567, {scale: 'm', suffix: 'lower'})).toBe(
-        '1.2m'
+        '1.23m'
       );
     });
 
     test('should use word suffix', () => {
       expect(formatScaledNumber(1234567, {scale: 'm', suffix: 'word'})).toBe(
-        '1.2 Million'
+        '1.23 Million'
       );
     });
 
     test('should use short suffix', () => {
-      expect(formatScaledNumber(1234567890, {scale: 'b', suffix: 'short'})).toBe(
-        '1.2 Bil'
-      );
+      expect(
+        formatScaledNumber(1234567890, {scale: 'b', suffix: 'short'})
+      ).toBe('1.23 Bil');
     });
 
     test('should use finance suffix', () => {
-      expect(
-        formatScaledNumber(1234567, {scale: 'm', suffix: 'finance'})
-      ).toBe('1.2MM');
+      expect(formatScaledNumber(1234567, {scale: 'm', suffix: 'finance'})).toBe(
+        '1.23MM'
+      );
       expect(formatScaledNumber(1234, {scale: 'k', suffix: 'finance'})).toBe(
-        '1.2M'
+        '1.23M'
       );
     });
 
     test('should use scientific suffix (true scientific notation)', () => {
       expect(
         formatScaledNumber(1234567, {scale: 'm', suffix: 'scientific'})
-      ).toBe('1.2×10⁶');
+      ).toBe('1.23×10⁶');
     });
 
     test('should use no suffix', () => {
       expect(formatScaledNumber(1234567, {scale: 'm', suffix: 'none'})).toBe(
-        '1.2'
+        '1.23'
       );
     });
   });
@@ -327,14 +330,12 @@ describe('formatScaledNumber', () => {
       expect(formatScaledNumber(-1234567, {scale: 'm', decimals: 1})).toBe(
         '-1.2m'
       );
-      expect(formatScaledNumber(-1234567890, {scale: 'b'})).toBe('-1.2b');
+      expect(formatScaledNumber(-1234567890, {scale: 'b'})).toBe('-1.23b');
     });
   });
 });
 
 describe('parseNumberShorthand', () => {
-  const {parseNumberShorthand} = require('./util');
-
   test('should parse decimal + scale format', () => {
     expect(parseNumberShorthand('1k')).toEqual({decimals: 1, scale: 'k'});
     expect(parseNumberShorthand('0m')).toEqual({decimals: 0, scale: 'm'});
@@ -355,10 +356,13 @@ describe('parseNumberShorthand', () => {
     expect(parseNumberShorthand('2')).toEqual({decimals: 2});
   });
 
-  test('should parse auto and big keywords', () => {
-    expect(parseNumberShorthand('auto')).toEqual({scale: 'auto', decimals: 1});
-    expect(parseNumberShorthand('big')).toEqual({scale: 'auto', decimals: 1});
-    expect(parseNumberShorthand('AUTO')).toEqual({scale: 'auto', decimals: 1});
+  test('should parse auto keyword', () => {
+    expect(parseNumberShorthand('auto')).toEqual({scale: 'auto', decimals: 2});
+    expect(parseNumberShorthand('AUTO')).toEqual({scale: 'auto', decimals: 2});
+  });
+
+  test('should return null for big (handled separately as legacy)', () => {
+    expect(parseNumberShorthand('big')).toBeNull();
   });
 
   test('should parse id format for identifiers', () => {
@@ -376,8 +380,6 @@ describe('parseNumberShorthand', () => {
 });
 
 describe('parseCurrencyShorthand', () => {
-  const {parseCurrencyShorthand} = require('./util');
-
   test('should parse currency code only', () => {
     expect(parseCurrencyShorthand('usd')).toEqual({
       currency: 'usd',
@@ -421,7 +423,7 @@ describe('parseCurrencyShorthand', () => {
       currency: 'usd',
       symbol: '$',
       scale: 'auto',
-      decimals: 1,
+      decimals: 2,
     });
   });
 
@@ -452,8 +454,6 @@ describe('parseCurrencyShorthand', () => {
 });
 
 describe('normalizeScale', () => {
-  const {normalizeScale} = require('./util');
-
   test('should normalize single letter scales', () => {
     expect(normalizeScale('k')).toBe('k');
     expect(normalizeScale('m')).toBe('m');
@@ -467,14 +467,12 @@ describe('normalizeScale', () => {
     expect(normalizeScale('M')).toBe('m');
   });
 
-  test('should convert legacy scale names', () => {
-    expect(normalizeScale('thousands')).toBe('k');
-    expect(normalizeScale('millions')).toBe('m');
-    expect(normalizeScale('billions')).toBe('b');
-  });
-
   test('should return undefined for invalid scales', () => {
     expect(normalizeScale('invalid')).toBeUndefined();
     expect(normalizeScale(undefined)).toBeUndefined();
+    // Legacy scale names are not supported
+    expect(normalizeScale('thousands')).toBeUndefined();
+    expect(normalizeScale('millions')).toBeUndefined();
+    expect(normalizeScale('billions')).toBeUndefined();
   });
 });

@@ -48,7 +48,7 @@ import type {Tag} from '@malloydata/malloy-tag';
  * - Currency verbose: # currency { scale=m decimals=2 suffix=finance }
  * - Number shorthand: # number=1k, # number=0m, # number=auto
  * - Number verbose: # number { scale=m decimals=2 suffix=word }
- * - Legacy: # number=big, # currency=euro, # currency { scale=thousands }
+ * - Legacy: # number=big, # currency=euro
  */
 export function renderNumericField(
   f: Field,
@@ -72,9 +72,11 @@ export function renderNumericField(
 
   // Handle duration formatting
   if (tag.has('duration')) {
-    const duration_unit = tag.text('duration');
-    const targetUnit = duration_unit ?? DurationUnit.Seconds;
-    return getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString();
+    const durationUnit = tag.text('duration');
+    const targetUnit = durationUnit ?? DurationUnit.Seconds;
+    return (
+      getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString()
+    );
   }
 
   // Handle number formatting
@@ -93,7 +95,9 @@ function renderCurrencyField(tag: Tag, value: number): string {
   const currencyValue = tag.text('currency');
 
   // Try parsing as shorthand format (e.g., "usd2m", "eur0k")
-  const shorthand = currencyValue ? parseCurrencyShorthand(currencyValue) : null;
+  const shorthand = currencyValue
+    ? parseCurrencyShorthand(currencyValue)
+    : null;
 
   let symbol = '$';
   let scale: ScaleKey | 'auto' | undefined;
@@ -129,7 +133,9 @@ function renderCurrencyField(tag: Tag, value: number): string {
     decimals = tag.numeric('currency', 'decimals') ?? undefined;
 
     // Get suffix format from verbose syntax
-    const suffixTag = tag.text('currency', 'suffix') as SuffixFormat | undefined;
+    const suffixTag = tag.text('currency', 'suffix') as
+      | SuffixFormat
+      | undefined;
     if (suffixTag) {
       suffixFormat = suffixTag as SuffixFormatKey;
     } else if (scale) {
@@ -143,7 +149,7 @@ function renderCurrencyField(tag: Tag, value: number): string {
     // Use formatScaledNumber for scaled values
     const scaledStr = formatScaledNumber(value, {
       scale,
-      decimals: decimals ?? 1,
+      decimals: decimals ?? 2,
       suffix: suffixFormat,
     });
     return `${symbol}${scaledStr}`;
@@ -176,7 +182,7 @@ function renderNumberField(tag: Tag, value: number): string {
       // Has scale - use formatScaledNumber
       return formatScaledNumber(value, {
         scale: shorthand.scale,
-        decimals: shorthand.decimals ?? 1,
+        decimals: shorthand.decimals ?? 2,
         suffix: 'lower', // Default for shorthand
       });
     } else if (shorthand.decimals !== undefined) {
@@ -194,9 +200,10 @@ function renderNumberField(tag: Tag, value: number): string {
 
   if (scale) {
     // Verbose syntax with scale
-    const decimals = tag.numeric('number', 'decimals') ?? 1;
+    const decimals = tag.numeric('number', 'decimals') ?? 2;
     const suffixTag = tag.text('number', 'suffix') as SuffixFormat | undefined;
-    const suffixFormat: SuffixFormatKey = (suffixTag as SuffixFormatKey) ?? 'letter';
+    const suffixFormat: SuffixFormatKey =
+      (suffixTag as SuffixFormatKey) ?? 'letter';
 
     return formatScaledNumber(value, {
       scale,

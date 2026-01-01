@@ -95,12 +95,6 @@ export enum Currency {
 // Scale options: k=thousands, m=millions, b=billions, t=trillions, q=quadrillions, auto=dynamic
 export type Scale = 'k' | 'm' | 'b' | 't' | 'q' | 'auto';
 
-// Legacy scale names (deprecated, but still supported)
-export type LegacyScale = 'thousands' | 'millions' | 'billions';
-
-// Combined scale type for backward compatibility
-export type CurrencyScale = Scale | LegacyScale;
-
 // Suffix format options for controlling how scale suffixes are displayed
 export type SuffixFormat =
   | 'letter' // K, M, B, T, Q (uppercase)
@@ -113,7 +107,7 @@ export type SuffixFormat =
 
 export interface CurrencyRenderOptions extends TextRenderOptions {
   currency?: Currency;
-  scale?: CurrencyScale;
+  scale?: Scale;
   decimals?: number;
   suffix?: SuffixFormat;
 }
