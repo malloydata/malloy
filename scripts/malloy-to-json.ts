@@ -69,8 +69,11 @@ async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
     }
     throw new Error(`No connection ${name}`);
   };
-  const readURL = async function (url: URL): Promise<string> {
-    const filePath = url.pathname;
+  const readURL = async function (reqUrl: URL): Promise<string> {
+    if (reqUrl.href === fileURL) {
+      return fileSrc;
+    }
+    const filePath = reqUrl.pathname;
     const src = await readFile(filePath, {encoding: 'utf-8'});
     return src;
   };
@@ -86,9 +89,17 @@ async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
   }
 }
 
-function ask(rlObj: readline.Interface, prompt: string): Promise<string> {
+function ask(
+  rlObj: readline.Interface,
+  prompt: string
+): Promise<string | null> {
   return new Promise(resolve => {
-    rlObj.question(prompt, resolve);
+    try {
+      rlObj.question(prompt, resolve);
+      rlObj.once('close', () => resolve(null));
+    } catch {
+      resolve(null);
+    }
   });
 }
 
@@ -104,7 +115,7 @@ async function main() {
     for (const fileArg of process.argv.slice(2)) {
       const filePath = fullPath(fileArg);
       const src = readFileSync(filePath, 'utf-8');
-      const url = `file:/${filePath}`;
+      const url = `file://${filePath}`;
       await printTranlsatedMalloy(src, url);
     }
   } else {
@@ -112,13 +123,16 @@ async function main() {
       input: process.stdin,
       output: process.stdout,
     });
-    let translating = true;
-    while (translating) {
+    let closed = false;
+    rl.on('close', () => {
+      closed = true;
+    });
+    while (!closed) {
       const src = await ask(rl, 'malloy> ');
       if (src) {
         await printTranlsatedMalloy(src, 'malloy://cli/stdin');
       } else {
-        translating = false;
+        break;
       }
     }
     rl.close();
