@@ -151,7 +151,10 @@ export function shouldRenderAs({
     return 'none';
   }
 
-  const isNest = field instanceof ArrayField || field instanceof RecordField;
+  // RepeatedRecordField and RecordField render as tables
+  // Plain ArrayField (e.g., string[], number[]) renders as cell with comma-separated values
+  const isNest =
+    field instanceof RepeatedRecordField || field instanceof RecordField;
 
   const result = !isNest ? 'cell' : 'table';
   return result;
