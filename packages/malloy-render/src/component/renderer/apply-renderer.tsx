@@ -6,17 +6,16 @@
  */
 
 import type {JSXElement} from 'solid-js';
-import {renderNumberCell} from '@/component/render-numeric-field';
 import {renderLink} from '@/component/render-link';
 import MalloyTable from '@/component/table/table';
 import {renderList} from '@/component/render-list';
 import {renderImage} from '@/component/render-image';
 import {Dashboard} from '@/component/dashboard/dashboard';
-import {renderTime} from '@/component/render-time';
 import {LegacyChart} from '@/component/legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '@/util';
 import type {RendererProps} from '@/component/types';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
+import {renderCellValue} from '@/component/cell-utils';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
@@ -52,34 +51,14 @@ export function applyRenderer(props: RendererProps) {
       case 'cell': {
         if (dataColumn.isArray()) {
           // Plain array (e.g., string[], number[]) - render as comma-separated values
-          // with proper formatting for each element type
-          const renderedElements = dataColumn.values.map(elementCell => {
-            if (elementCell.isNull()) {
-              return NULL_SYMBOL;
-            } else if (elementCell.isNumber()) {
-              return renderNumberCell(elementCell);
-            } else if (elementCell.isTime()) {
-              return renderTime({
-                dataColumn: elementCell,
-                tag: elementCell.field.tag,
-                customProps,
-              });
-            } else if (elementCell.isString()) {
-              return elementCell.value;
-            } else {
-              return String(elementCell.value);
-            }
-          });
+          // Use the array field's tag for formatting (currency, percent, etc.)
+          const arrayTag = field.tag;
+          const renderedElements = dataColumn.values.map(elementCell =>
+            renderCellValue(elementCell, {tag: arrayTag})
+          );
           renderValue = renderedElements.join(', ');
-        } else if (dataColumn.isNumber()) {
-          renderValue = renderNumberCell(dataColumn);
-        } else if (dataColumn.isString()) {
-          renderValue = dataColumn.value;
-        } else if (field.isTime()) {
-          renderValue = renderTime(props);
         } else {
-          // try to force to string
-          renderValue = String(dataColumn.value);
+          renderValue = renderCellValue(dataColumn);
         }
         break;
       }

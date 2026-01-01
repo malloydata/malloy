@@ -31,16 +31,18 @@ import {
   type RenderTimeStringOptions,
 } from '../util';
 import type {Field, NumberCell} from '../data_tree';
+import type {Tag} from '@malloydata/malloy-tag';
 
 export function renderNumericField(
   f: Field,
-  value: number | null | undefined
+  value: number | null | undefined,
+  tagOverride?: Tag
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
   let displayValue: string | number = value;
-  const tag = f.tag;
+  const tag = tagOverride ?? f.tag;
   if (tag.has('currency')) {
     let unitText = '$';
 
@@ -86,10 +88,9 @@ function formatStringWithCommas(value: string): string {
 }
 
 /**
- * Get currency symbol from field tag.
+ * Get currency symbol from tag.
  */
-function getCurrencySymbol(f: Field): string {
-  const tag = f.tag;
+function getCurrencySymbol(tag: Tag): string {
   switch (tag.text('currency')) {
     case Currency.Euros:
       return '€';
@@ -104,8 +105,8 @@ function getCurrencySymbol(f: Field): string {
  * Format a bigint string as currency, preserving full precision.
  * Bigints are always integers, so we append ".00" for cents display.
  */
-function formatBigIntCurrency(f: Field, value: string): string {
-  const symbol = getCurrencySymbol(f);
+function formatBigIntCurrency(tag: Tag, value: string): string {
+  const symbol = getCurrencySymbol(tag);
   const formatted = formatStringWithCommas(value);
   return `${symbol}${formatted}.00`;
 }
@@ -120,21 +121,22 @@ function formatBigIntCurrency(f: Field, value: string): string {
  */
 export function renderBigNumberField(
   f: Field,
-  value: string | null | undefined
+  value: string | null | undefined,
+  tagOverride?: Tag
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
-  const tag = f.tag;
+  const tag = tagOverride ?? f.tag;
 
   // Currency: preserve precision with string formatting
   if (tag.has('currency')) {
-    return formatBigIntCurrency(f, value);
+    return formatBigIntCurrency(tag, value);
   }
 
   // Percent/duration require numeric operations - lossy for bigints (rare use case)
   if (tag.has('percent') || tag.has('duration')) {
-    return renderNumericField(f, Number(value));
+    return renderNumericField(f, Number(value), tag);
   }
 
   // number="big" format with K/M/B/T/Q (lossy, but values are abbreviated anyway)
@@ -166,27 +168,29 @@ export function renderBigNumberField(
  *   const displayValue = renderNumberCell(cell);
  *
  * @param cell - A NumberCell from the data tree
+ * @param tagOverride - Optional tag to use for formatting (e.g., for array elements, use the array field's tag)
  * @returns Formatted string for display, respecting field tags (currency, percent, etc.)
  */
-export function renderNumberCell(cell: NumberCell): string {
+export function renderNumberCell(cell: NumberCell, tagOverride?: Tag): string {
   // Use stringValue when available - this preserves precision for bigint fields.
   // For regular numbers, stringValue is undefined and we use the numeric value.
   if (cell.stringValue !== undefined) {
-    return renderBigNumberField(cell.field, cell.stringValue);
+    return renderBigNumberField(cell.field, cell.stringValue, tagOverride);
   }
-  return renderNumericField(cell.field, cell.value);
+  return renderNumericField(cell.field, cell.value, tagOverride);
 }
 
 export function renderDateTimeField(
   f: Field,
   value: Date | null | undefined,
-  options: RenderTimeStringOptions = {}
+  options: RenderTimeStringOptions = {},
+  tagOverride?: Tag
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
 
-  const tag = f.tag;
+  const tag = tagOverride ?? f.tag;
 
   // Check if the field has a number= tag for custom date formatting
   if (tag.has('number')) {
