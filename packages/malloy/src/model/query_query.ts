@@ -1048,13 +1048,45 @@ export class QueryQuery extends QueryField {
     return s;
   }
 
+  /**
+   * Collect all array joins from the join tree in depth-first order.
+   * This ordering ensures parent arrays are ordered before child arrays.
+   */
+  collectArrayJoins(ji: JoinInstance): JoinInstance[] {
+    const result: JoinInstance[] = [];
+    if (ji.queryStruct.structDef.type === 'array') {
+      result.push(ji);
+    }
+    for (const child of ji.children) {
+      result.push(...this.collectArrayJoins(child));
+    }
+    return result;
+  }
+
   genereateSQLOrderBy(
     queryDef: QuerySegment,
     resultStruct: FieldInstanceResult
   ): string {
     let s = '';
+
+    // Collect array joins for dialects that need explicit ordering.
+    // Only for project queries - reduce queries aggregate rows so individual
+    // row order doesn't matter, and we can't ORDER BY columns not in GROUP BY.
+    let arrayJoins: JoinInstance[] = [];
+    if (
+      this.parent.dialect.requiresExplicitUnnestOrdering &&
+      this.firstSegment.type === 'project'
+    ) {
+      const [[, rootJoin]] = this.rootResult.joins;
+      arrayJoins = this.collectArrayJoins(rootJoin);
+    }
+
     if (this.firstSegment.type === 'project' && !queryDef.orderBy) {
-      return ''; // No default ordering for project.
+      // For project without explicit ordering, we still need array ordinality
+      // ordering if the dialect requires it
+      if (arrayJoins.length === 0) {
+        return ''; // No default ordering for project.
+      }
     }
     // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
     //  Some database don't have this optimization.
@@ -1115,6 +1147,12 @@ export class QueryQuery extends QueryField {
         }
       }
     }
+
+    // Add array ordinality ordering for dialects that require it
+    for (const aj of arrayJoins) {
+      o.push(`${aj.alias}_outer.__row_id ASC`);
+    }
+
     if (o.length > 0) {
       s = this.parent.dialect.sqlOrderBy(o, 'query') + '\n';
     }

@@ -217,7 +217,7 @@ export class DuckDBConnection extends DuckDBCommon {
     }
 
     const result = await this.connection.run(sql);
-    // Use getRowObjectsJson() to get JSON-serializable objects
+    // getRowObjectsJson() converts nested types (LIST, STRUCT) to JS arrays/objects
     const rows = (await result.getRowObjectsJson()) as QueryDataRow[];
 
     return {

@@ -197,6 +197,10 @@ export abstract class Dialect {
   // can LEFT JOIN UNNEST
   supportsLeftJoinUnnest = true;
 
+  // UNNEST in LATERAL JOINs doesn't guarantee array element order.
+  // When true, compiler adds ORDER BY on array ordinality columns (__row_id)
+  requiresExplicitUnnestOrdering = false;
+
   supportsCountApprox = false;
 
   supportsHyperLogLog = false;

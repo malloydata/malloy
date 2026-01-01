@@ -96,6 +96,9 @@ export class DuckDBDialect extends PostgresBase {
   supportsNesting = true;
   supportsCountApprox = true;
 
+  // DuckDB UNNEST in LATERAL JOINs doesn't preserve array element order
+  requiresExplicitUnnestOrdering = true;
+
   // DuckDB: 32-bit INTEGER is safe, larger integers need bigint
   override integerTypeMappings: IntegerTypeMapping[] = [
     {min: BigInt(MIN_INT32), max: BigInt(MAX_INT32), numberType: 'integer'},
@@ -189,7 +192,7 @@ export class DuckDBDialect extends PostgresBase {
     source: string,
     alias: string,
     _fieldList: DialectFieldList,
-    needDistinctKey: boolean,
+    _needDistinctKey: boolean,
     _isArray: boolean,
     isInNestedPipeline: boolean
   ): string {
@@ -202,12 +205,8 @@ export class DuckDBDialect extends PostgresBase {
         ${arrayLen},
         1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
     }
-    //Simulate left joins by guarenteeing there is at least one row.
-    if (!needDistinctKey) {
-      return `LEFT JOIN LATERAL (SELECT UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(${alias},ignoreme) ON ${alias}_outer.ignoreme=1`;
-    } else {
-      return `LEFT JOIN LATERAL (SELECT UNNEST(GENERATE_SERIES(1, length(${source}),1)) as __row_id, UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(__row_id, ${alias},ignoreme) ON  ${alias}_outer.ignoreme=1`;
-    }
+    // Use WITH ORDINALITY to preserve array element order via __row_id
+    return `LEFT JOIN LATERAL UNNEST(${source}) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id) ON true`;
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
