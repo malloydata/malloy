@@ -364,3 +364,32 @@ source: sparse_pivot is duckdb.sql(
     }
   }
 }
+
+// Test rendering of plain string arrays (not struct arrays)
+source: array_test is duckdb.sql("""
+  SELECT
+    'Movie 1' as title,
+    ['Action', 'Comedy'] as genres,
+    ['Tom Hanks', 'Robin Wright'] as cast_names
+  UNION ALL
+  SELECT
+    'Movie 2' as title,
+    ['Drama'] as genres,
+    ['Brad Pitt'] as cast_names
+  UNION ALL
+  SELECT
+    'Movie 3' as title,
+    ['Action', 'Sci-Fi', 'Thriller'] as genres,
+    ['Keanu Reeves', 'Carrie-Anne Moss', 'Laurence Fishburne'] as cast_names
+""") extend {
+  #(story) story="String Array Columns"
+  view: string_array_column is {
+    select: title, genres, cast_names
+  }
+
+  #(story) story="String Array Group By"
+  view: string_array_group_by is {
+    group_by: genres
+    aggregate: movie_count is count()
+  }
+}

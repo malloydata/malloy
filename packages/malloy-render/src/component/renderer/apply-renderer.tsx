@@ -97,12 +97,19 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       case 'table': {
-        if (dataColumn.isRecordOrRepeatedRecord())
+        if (dataColumn.isRecordOrRepeatedRecord()) {
           renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
-        else
+        } else if (dataColumn.isArray()) {
+          // Plain array (e.g., string[]) - render as cell with comma-separated values
+          const values = dataColumn.values.map(cell => cell.value);
+          renderValue = values.join(', ');
+          // Return 'cell' so it gets proper cell wrapper styling
+          return {renderAs: 'cell', renderValue};
+        } else {
           throw new Error(
             `Malloy render: wrong data type passed to the table renderer for field ${field.name}`
           );
+        }
         break;
       }
       default: {
