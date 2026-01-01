@@ -365,22 +365,29 @@ source: sparse_pivot is duckdb.sql(
   }
 }
 
-// Test rendering of plain string arrays (not struct arrays)
+// Test rendering of plain arrays (not struct arrays)
+// Tests string[], number[], date[], and arrays with null elements
 source: array_test is duckdb.sql("""
   SELECT
     'Movie 1' as title,
     ['Action', 'Comedy'] as genres,
-    ['Tom Hanks', 'Robin Wright'] as cast_names
+    ['Tom Hanks', 'Robin Wright'] as cast_names,
+    [85, 92, 78] as ratings,
+    [DATE '2020-01-15', DATE '2020-06-20'] as release_dates
   UNION ALL
   SELECT
     'Movie 2' as title,
     ['Drama'] as genres,
-    ['Brad Pitt'] as cast_names
+    ['Brad Pitt'] as cast_names,
+    [95] as ratings,
+    [DATE '2019-05-10'] as release_dates
   UNION ALL
   SELECT
     'Movie 3' as title,
     ['Action', 'Sci-Fi', 'Thriller'] as genres,
-    ['Keanu Reeves', 'Carrie-Anne Moss', 'Laurence Fishburne'] as cast_names
+    ['Keanu Reeves', 'Carrie-Anne Moss', 'Laurence Fishburne'] as cast_names,
+    [88, 91, 85, 90] as ratings,
+    [DATE '1999-03-31', DATE '2003-05-15', DATE '2021-12-22'] as release_dates
 """) extend {
   #(story) story="String Array Columns"
   view: string_array_column is {
@@ -391,5 +398,58 @@ source: array_test is duckdb.sql("""
   view: string_array_group_by is {
     group_by: genres
     aggregate: movie_count is count()
+  }
+
+  #(story) story="Number Array Columns"
+  view: number_array_column is {
+    select: title, ratings
+  }
+
+  #(story) story="Date Array Columns"
+  view: date_array_column is {
+    select: title, release_dates
+  }
+
+  #(story) story="Mixed Array Types"
+  view: mixed_array_types is {
+    select: title, genres, ratings, release_dates
+  }
+}
+
+// Test arrays with null elements
+source: array_null_test is duckdb.sql("""
+  SELECT
+    'Test 1' as name,
+    ['a', NULL, 'b'] as string_with_null,
+    [1, NULL, 3] as number_with_null,
+    [DATE '2020-01-01', NULL, DATE '2020-03-01'] as date_with_null
+  UNION ALL
+  SELECT
+    'Test 2' as name,
+    [NULL, 'only'] as string_with_null,
+    [NULL, 42, NULL] as number_with_null,
+    [NULL] as date_with_null
+""") extend {
+  #(story) story="Arrays With Null Elements"
+  view: arrays_with_nulls is {
+    select: name, string_with_null, number_with_null, date_with_null
+  }
+}
+
+// Test timestamp arrays
+source: array_timestamp_test is duckdb.sql("""
+  SELECT
+    'Event 1' as event_name,
+    [TIMESTAMP '2024-01-15 10:30:00', TIMESTAMP '2024-01-15 14:45:30'] as timestamps,
+    [TIMESTAMP '2024-06-01 09:00:00', NULL, TIMESTAMP '2024-06-03 17:30:00'] as timestamps_with_null
+  UNION ALL
+  SELECT
+    'Event 2' as event_name,
+    [TIMESTAMP '2023-12-31 23:59:59'] as timestamps,
+    [TIMESTAMP '2023-11-01 08:00:00', TIMESTAMP '2023-11-02 08:00:00'] as timestamps_with_null
+""") extend {
+  #(story) story="Timestamp Array Columns"
+  view: timestamp_array_column is {
+    select: event_name, timestamps, timestamps_with_null
   }
 }

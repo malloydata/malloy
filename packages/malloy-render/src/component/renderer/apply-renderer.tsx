@@ -50,7 +50,28 @@ export function applyRenderer(props: RendererProps) {
   } else {
     switch (renderAs) {
       case 'cell': {
-        if (dataColumn.isNumber()) {
+        if (dataColumn.isArray()) {
+          // Plain array (e.g., string[], number[]) - render as comma-separated values
+          // with proper formatting for each element type
+          const renderedElements = dataColumn.values.map(elementCell => {
+            if (elementCell.isNull()) {
+              return NULL_SYMBOL;
+            } else if (elementCell.isNumber()) {
+              return renderNumberCell(elementCell);
+            } else if (elementCell.isTime()) {
+              return renderTime({
+                dataColumn: elementCell,
+                tag: elementCell.field.tag,
+                customProps,
+              });
+            } else if (elementCell.isString()) {
+              return elementCell.value;
+            } else {
+              return String(elementCell.value);
+            }
+          });
+          renderValue = renderedElements.join(', ');
+        } else if (dataColumn.isNumber()) {
           renderValue = renderNumberCell(dataColumn);
         } else if (dataColumn.isString()) {
           renderValue = dataColumn.value;
@@ -99,12 +120,6 @@ export function applyRenderer(props: RendererProps) {
       case 'table': {
         if (dataColumn.isRecordOrRepeatedRecord()) {
           renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
-        } else if (dataColumn.isArray()) {
-          // Plain array (e.g., string[]) - render as cell with comma-separated values
-          const values = dataColumn.values.map(cell => cell.value);
-          renderValue = values.join(', ');
-          // Return 'cell' so it gets proper cell wrapper styling
-          return {renderAs: 'cell', renderValue};
         } else {
           throw new Error(
             `Malloy render: wrong data type passed to the table renderer for field ${field.name}`
