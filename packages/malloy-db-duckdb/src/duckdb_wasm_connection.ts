@@ -329,6 +329,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       if (this.databasePath) {
         await this._database.open({
           path: this.databasePath,
+          accessMode: duckdb.DuckDBAccessMode.AUTOMATIC,
         });
       }
       URL.revokeObjectURL(workerUrl);
