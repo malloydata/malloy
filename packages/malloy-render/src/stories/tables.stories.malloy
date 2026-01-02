@@ -414,6 +414,14 @@ source: array_test is duckdb.sql("""
   view: mixed_array_types is {
     select: title, genres, ratings, release_dates
   }
+
+  #(story) story="Currency Array"
+  view: currency_array is {
+    select:
+      title
+      # currency
+      prices is [19.99, 24.99, 29.99]
+  }
 }
 
 // Test arrays with null elements
