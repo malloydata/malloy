@@ -449,6 +449,29 @@ describe('query operation annotations', () => {
       }
     `).toLog(errorMessage('Model annotations not allowed at this scope'));
   });
+  test('outputStruct has annotation', () => {
+    const m = new TestTranslator(`
+      run: a -> {
+        select:
+          # note
+          note_a is astr
+      }
+    `);
+    expect(m).toTranslate();
+    const query = m.getQuery(0);
+    expect(query).toBeDefined();
+    if (query) {
+      const segment = query.pipeline[0];
+      if ('outputStruct' in segment) {
+        const outputField = getFieldDef(segment.outputStruct, 'note_a');
+        expect(outputField.annotation).matchesAnnotation({
+          notes: ['# note\n'],
+        });
+      } else {
+        throw new Error('Expected segment to have outputStruct');
+      }
+    }
+  });
   test('project new definition annotation', () => {
     const m = new TestTranslator(`
       query: findme is a -> {

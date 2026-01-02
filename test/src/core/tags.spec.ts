@@ -161,6 +161,27 @@ describe('tags in results', () => {
     expect(tp.log).toEqual([]);
     expect(tp.tag).tagsAre({sourceNote: {}, queryNote: {}});
   });
+  test('field ref has tag through pipeline', async () => {
+    const loaded = runtime.loadQuery(`
+      run: duckdb.sql("select 1 as num") -> {
+        select:
+          # stage1Note
+          num
+      } -> {
+        select:
+          # stage2Note
+          num
+      }
+    `);
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const num = shape.getFieldByName('num');
+    expect(num).toBeDefined();
+    const tp = num.tagParse();
+    expect(tp.log).toEqual([]);
+    // Stage 2 should have both its own annotation and the inherited one from stage 1
+    expect(tp.tag).tagsAre({stage1Note: {}, stage2Note: {}});
+  });
   test('atomic field model scope tag', async () => {
     const loaded = runtime.loadQuery(
       `
