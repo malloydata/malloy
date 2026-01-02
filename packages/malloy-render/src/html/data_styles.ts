@@ -92,8 +92,24 @@ export enum Currency {
   Pounds = 'pound',
 }
 
+// Scale options: k=thousands, m=millions, b=billions, t=trillions, q=quadrillions, auto=dynamic
+export type Scale = 'k' | 'm' | 'b' | 't' | 'q' | 'auto';
+
+// Suffix format options for controlling how scale suffixes are displayed
+export type SuffixFormat =
+  | 'letter' // K, M, B, T, Q (uppercase)
+  | 'lower' // k, m, b, t, q (lowercase) - default for shorthand
+  | 'word' // Thousand, Million, Billion, Trillion, Quadrillion
+  | 'short' // K, Mil, Bil, Tril, Quad
+  | 'finance' // M, MM, B, T, Q (financial convention)
+  | 'scientific' // ×10³, ×10⁶, ×10⁹, ×10¹², ×10¹⁵
+  | 'none'; // no suffix
+
 export interface CurrencyRenderOptions extends TextRenderOptions {
   currency?: Currency;
+  scale?: Scale;
+  decimals?: number;
+  suffix?: SuffixFormat;
 }
 
 export interface TimeRenderOptions extends TextRenderOptions {
@@ -101,7 +117,10 @@ export interface TimeRenderOptions extends TextRenderOptions {
 }
 
 export interface NumberRenderOptions extends TextRenderOptions {
-  value_format?: string;
+  value_format?: string; // SSF format string (e.g., "#,##0.00") or 'big'/'auto' for auto-scaling
+  scale?: Scale; // k, m, b, t, q, auto
+  decimals?: number; // 0-4 decimal places
+  suffix?: SuffixFormat; // letter, lower, word, short, finance, scientific, none
 }
 
 export enum DataVolumeUnit {

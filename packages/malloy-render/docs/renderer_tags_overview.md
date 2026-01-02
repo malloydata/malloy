@@ -572,17 +572,67 @@ These tags are typically applied directly to individual fields within a query.
 
 ### `# currency`
 
-Formats a numeric field as currency (e.g., `$1,234.56`).
+Formats a numeric field as currency. Supports both **shorthand** and **verbose** syntax for scaling and formatting options.
 
-**Properties:**
+#### Shorthand Syntax (Recommended)
 
-- `. [unit]`: Specifies currency unit (`usd` (default), `euro`, `pound`). Can be specified like `# currency.euro` or `# currency=euro`.
+Pattern: `# currency={code}{decimals}{scale}`
+
+- `{code}`: Currency code (`usd`, `eur`, `gbp`)
+- `{decimals}`: Number of decimal places (0-4)
+- `{scale}`: Scale letter (`k`, `m`, `b`, `t`, `q`) - case insensitive
+
+| Tag | Output | Description |
+|-----|--------|-------------|
+| `# currency=usd` | $412 | USD, default decimals |
+| `# currency=usd0` | $412 | 0 decimals |
+| `# currency=usd2` | $412.12 | 2 decimals |
+| `# currency=usd0k` | $412k | thousands, 0 decimals |
+| `# currency=usd1m` | $412.1m | millions, 1 decimal |
+| `# currency=usd0b` | $1b | billions, 0 decimals |
+| `# currency=eur2m` | €412.12m | Euro, millions, 2 decimals |
+| `# currency=gbp1b` | £1.4b | Pound, billions, 1 decimal |
+
+#### Verbose Syntax (Advanced Options)
+
+For suffix format control, use verbose syntax:
+
+```malloy
+# currency { scale=m decimals=2 suffix=finance }  // $412.12MM
+# currency { scale=k suffix=none }                // $412 (no suffix)
+# currency { scale=auto }                         // auto-scale like number=big
+```
+
+**Scale Options:** `k` (thousands), `m` (millions), `b` (billions), `t` (trillions), `q` (quadrillions), `auto`
+
+**Suffix Format Options:**
+
+| Format | k | m | b | t | q |
+|--------|---|---|---|---|---|
+| `letter` | K | M | B | T | Q |
+| `lower` (shorthand default) | k | m | b | t | q |
+| `word` | Thousand | Million | Billion | Trillion | Quadrillion |
+| `short` | K | Mil | Bil | Tril | Quad |
+| `finance` | M | MM | B | T | Q |
+| `scientific` | ×10³ | ×10⁶ | ×10⁹ | ×10¹² | ×10¹⁵ |
+| `none` | (empty) | (empty) | (empty) | (empty) | (empty) |
 
 **Example:**
 
-```
-measure: total_revenue is sales.sum() # currency
-measure: euro_sales is sales.sum() # currency=euro
+```malloy
+source: financials extend {
+  # currency=usd
+  measure: total_revenue is sales.sum()
+
+  # currency=usd0m
+  measure: revenue_millions is sales.sum()
+
+  # currency=eur2k
+  measure: euro_thousands is eu_sales.sum()
+
+  # currency { scale=m suffix=finance decimals=2 }
+  measure: revenue_finance is sales.sum()  // $42.54MM
+}
 ```
 
 ### `# percent`
@@ -597,17 +647,68 @@ measure: margin_pct is (revenue - cost) / revenue # percent
 
 ### `# number`
 
-Formats a numeric field using an `ssf` format string (e.g., Excel/Sheets formats).
+Formats a numeric field. Supports **shorthand** syntax for scaling, **verbose** syntax for advanced options, and **ssf format strings** for custom formatting.
 
-**Properties:**
+#### Shorthand Syntax (Recommended)
 
-- `. [format]`: The format string.
-  - Syntax: `# number="#,##0.00"`
+Pattern: `# number={decimals}{scale}` or `# number=auto`
+
+- `{decimals}`: Number of decimal places (0-4)
+- `{scale}`: Scale letter (`k`, `m`, `b`, `t`, `q`) - case insensitive
+
+| Tag | Output | Description |
+|-----|--------|-------------|
+| `# number=0` | 11 | 0 decimals |
+| `# number=1` | 11.2 | 1 decimal |
+| `# number=2` | 11.23 | 2 decimals |
+| `# number=0k` | 64k | thousands, 0 decimals |
+| `# number=1k` | 64.2k | thousands, 1 decimal |
+| `# number=0m` | 43m | millions, 0 decimals |
+| `# number=1m` | 42.5m | millions, 1 decimal |
+| `# number=0b` | 1b | billions, 0 decimals |
+| `# number=1t` | 1.4t | trillions, 1 decimal |
+| `# number=auto` | 1.2m | auto-scale (same as `number=big`) |
+| `# number=id` | 123456789 | identifier format (no commas) |
+
+#### Verbose Syntax (Advanced Options)
+
+For suffix format control, use verbose syntax:
+
+```malloy
+# number { scale=m decimals=2 suffix=word }      // 42.54 Million
+# number { scale=auto suffix=letter }            // 1.2M (uppercase)
+# number { scale=k suffix=none }                 // 64 (no suffix)
+```
+
+**Scale Options:** `k` (thousands), `m` (millions), `b` (billions), `t` (trillions), `q` (quadrillions), `auto`
+
+**Suffix Format Options:** Same as currency (see above)
+
+#### SSF Format String
+
+For custom formatting, use an ssf format string:
+
+```malloy
+# number="#,##0.00"    // 1,234.56
+# number="0.0%"        // percent format
+```
 
 **Example:**
 
-```
-measure: rounded_sales is sales.sum() # number="#,##0"
+```malloy
+source: metrics extend {
+  # number=1m
+  measure: users_millions is users.count()
+
+  # number=auto
+  measure: auto_scaled is amount.sum()
+
+  # number { scale=m suffix=word }
+  measure: word_format is amount.sum()  // 1.2 Million
+
+  # number=id
+  measure: order_id is id.max()  // 123456789 (no commas)
+}
 ```
 
 ### `# duration`
