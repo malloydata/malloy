@@ -674,7 +674,7 @@ export function checkFilterExpression(
   }
   const fsrc = fexpr.filterSrc;
   let err: string | undefined;
-  if (ft === 'date' || ft === 'timestamp' || ft === 'timestamptz') {
+  if (isTemporalType(ft)) {
     err = TemporalFilterExpression.parse(fsrc).log[0]?.message;
   } else if (ft === 'string') {
     err = StringFilterExpression.parse(fsrc).log[0]?.message;
