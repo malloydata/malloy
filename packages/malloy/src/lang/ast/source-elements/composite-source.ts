@@ -133,7 +133,7 @@ function composeSources(
             fieldUsage: [
               {path: [fieldName], at: compositeCodeSource.codeLocation},
             ],
-            code: compositeCodeSource.code,
+            code: undefined,
             location: compositeCodeSource.codeLocation,
             // A composite field's grouping may differ from slice to slice
             requiresGroupBy: undefined,
