@@ -28,6 +28,7 @@ import type {
   BasicExpressionType,
   FilterMatchExpr,
   NumberTypeDef,
+  FilterExprType,
 } from '../../../model/malloy_types';
 import {
   isDateUnit,
@@ -658,7 +659,7 @@ function unsupportError(
 
 export function checkFilterExpression(
   logTo: MalloyElement,
-  ft: string,
+  ft: FilterExprType,
   fexpr: Expr
 ) {
   while (fexpr.node === '()') {
@@ -673,7 +674,7 @@ export function checkFilterExpression(
   }
   const fsrc = fexpr.filterSrc;
   let err: string | undefined;
-  if (ft === 'date' || ft === 'timestamp') {
+  if (ft === 'date' || ft === 'timestamp' || ft === 'timestamptz') {
     err = TemporalFilterExpression.parse(fsrc).log[0]?.message;
   } else if (ft === 'string') {
     err = StringFilterExpression.parse(fsrc).log[0]?.message;
