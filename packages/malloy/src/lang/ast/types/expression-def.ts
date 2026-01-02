@@ -238,7 +238,7 @@ export class ExprDuration extends ExpressionDef {
 }
 
 function willMorphTo(ev: ExprValue, t: MorphicType): Expr | undefined {
-  if (ev.type === t) {
+  if (ev.type === t || (t === 'timestamp' && ev.type === 'timestamptz')) {
     return ev.value;
   }
   return ev.morphic && ev.morphic[t];

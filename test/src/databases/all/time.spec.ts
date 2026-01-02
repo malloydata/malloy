@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel} from '@malloydata/malloy/test';
+import {mkTestModel, TV, wrapTestModel} from '@malloydata/malloy/test';
 import '../../util/db-jest-matchers'; // For isSqlEq matcher used with sqlEq helper
 import {
   brokenIn,
@@ -825,6 +825,17 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
     }
   );
+
+  test.when(runtime.dialect.hasTimestamptz)('compare timestamptz', async () => {
+    const tzModel = mkTestModel(runtime, {
+      tzdata: [
+        {updated: TV.timestamptz('2020-01-01 00:00:00[America/Mexico_City]')},
+      ],
+    });
+    await expect(
+      'run: tzdata -> { select: cmp is updated ? now.day}'
+    ).toMatchResult(tzModel, {cmp: false});
+  });
 
   // Test for timezone rendering issue with nested queries
   test.when(runtime.supportsNesting)(
