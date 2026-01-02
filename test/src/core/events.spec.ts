@@ -121,3 +121,7 @@ describe('emits events', () => {
     });
   });
 });
+
+afterAll(async () => {
+  await runtime.connection.close();
+});

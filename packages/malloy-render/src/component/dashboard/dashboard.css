@@ -59,6 +59,7 @@
   .dashboard-item-value {
     overflow: auto;
     text-align: left;
+    color: var(--malloy-render--table-body-color);
   }
 
   .dashboard-item-title {
@@ -70,6 +71,7 @@
 
   .dashboard-item-value-measure {
     font-size: 20px;
+    min-height: 1.1em; // Prevent scrollbar when one line
   }
 
   .dashboard-dimension-wrapper {

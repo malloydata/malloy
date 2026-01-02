@@ -24,7 +24,8 @@
 /* eslint-disable no-console */
 
 import {describeIfDatabaseAvailable} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
 
 import {RuntimeList} from '../../runtimes';
 
@@ -69,55 +70,55 @@ describe.each(runtimes.runtimeList)(
     `;
 
     // BigQuery tests only on the Hand Coded models.
-    const handModel = runtime.loadModel(makeModel(databaseName));
+    const testModel = wrapTestModel(runtime, makeModel(databaseName));
 
     it(`hand query hand model - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: total_seats is aircraft_models.seats.sum() {
           where: aircraft_models.manufacturer = 'BOEING'
         }
       }
-    `).malloyResultMatches(handModel, {total_seats: 6244});
+    `).toMatchResult(testModel, {total_seats: 6244});
     });
 
     it(`hand turtle - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: aircraft_count
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 3599});
+    `).toMatchResult(testModel, {aircraft_count: 3599});
     });
 
     it(`hand turtle malloy - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> hand_turtle
-    `).malloyResultMatches(handModel, {aircraft_count: 3599});
+    `).toMatchResult(testModel, {aircraft_count: 3599});
     });
 
     it(`default sort order - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         group_by: state
         aggregate: aircraft_count
         limit: 10
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 367});
+    `).toMatchResult(testModel, {aircraft_count: 367});
     });
 
     it(`default sort order by dir - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         group_by: state
         aggregate: aircraft_count
         order_by: 2
         limit: 10
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 1});
+    `).toMatchResult(testModel, {aircraft_count: 1});
     });
 
     it(`hand turtle2 - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         group_by: state
         aggregate: aircraft_count
@@ -126,31 +127,31 @@ describe.each(runtimes.runtimeList)(
           aggregate: aircraft_count
         }
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 367});
+    `).toMatchResult(testModel, {aircraft_count: 367});
     });
 
     it(`hand total - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         group_by: state
         aggregate: aircraft_count
         aggregate: total_aircraft is all(aircraft_count)
       }
-    `).malloyResultMatches(handModel, {total_aircraft: 3599});
+    `).toMatchResult(testModel, {total_aircraft: 3599});
     });
 
     it(`hand turtle3 - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         group_by: state
         aggregate: aircraft_count
         nest: hand_turtle
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 367});
+    `).toMatchResult(testModel, {aircraft_count: 367});
     });
 
     it(`hand turtle total - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         group_by: state
         aggregate: aircraft_count
@@ -160,21 +161,23 @@ describe.each(runtimes.runtimeList)(
           aggregate: total_aircraft is all(aircraft_count)
         }
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 367});
+    `).toMatchResult(testModel, {aircraft_count: 367});
     });
 
     it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: aircraft_count
       } -> {
         group_by: aircraft_count
       }
-    `).malloyResultMatches(handModel, {aircraft_count: 3599});
+    `).toMatchResult(testModel, {aircraft_count: 3599});
     });
 
     it(`hand: turtle is pipeline - ${databaseName}`, async () => {
-      expect(`
+      const result = await runQuery(
+        testModel.model,
+        `
       run: aircraft -> {
         aggregate: aircraft_count
         nest: pipe is {
@@ -186,13 +189,14 @@ describe.each(runtimes.runtimeList)(
           aggregate: total_aircraft is aircraft_count.sum()
         }
       }
-    `).malloyResultMatches(handModel, {'pipe.total_aircraft': 61});
-      // expect(result.data.path(0, 'pipe', 0, 'total_aircraft').value).toBe(61);
+    `
+      );
+      expect(result.data[0]).toHavePath({'pipe.total_aircraft': 61});
     });
 
     // Hand model basic calculations for sum, filtered sum, without a join.
     it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft->{
         aggregate:
           aircraft_models.total_seats,
@@ -202,7 +206,7 @@ describe.each(runtimes.runtimeList)(
           boeing_seats2 is aircraft_models.sum(aircraft_models.seats) { where: aircraft_models.manufacturer ? 'BOEING'},
           boeing_seats3 is aircraft_models.boeing_seats { where: aircraft_models.manufacturer ? ~'B%'}
       }
-    `).malloyResultMatches(handModel, {
+    `).toMatchResult(testModel, {
         total_seats: 18294,
         total_seats2: 31209,
         total_seats3: 18294,
@@ -213,82 +217,86 @@ describe.each(runtimes.runtimeList)(
     });
 
     it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: total_seats3 is aircraft_models.sum(aircraft_models.seats)
       }
-    `).malloyResultMatches(handModel, {total_seats3: 18294});
+    `).toMatchResult(testModel, {total_seats3: 18294});
     });
 
     // WORKs: (hand coded model):
     // Model based version of sums.
     it(`hand: expression fixups. - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate:
           aircraft_models.total_seats,
           aircraft_models.boeing_seats
       }
-    `).malloyResultMatches(handModel, {total_seats: 18294, boeing_seats: 6244});
+    `).toMatchResult(testModel, {total_seats: 18294, boeing_seats: 6244});
     });
 
     it(`model: filtered measures - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: boeing_seats is aircraft_models.total_seats {
           where: aircraft_models.manufacturer ? 'BOEING'
         }
       }
-    `).malloyResultMatches(handModel, {boeing_seats: 6244});
+    `).toMatchResult(testModel, {boeing_seats: 6244});
     });
 
     // does the filter force a join?
     it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: boeing_aircraft is count() {
           where:aircraft_models.manufacturer ? 'BOEING'
         }
       }
-    `).malloyResultMatches(handModel, {boeing_aircraft: 69});
+    `).toMatchResult(testModel, {boeing_aircraft: 69});
     });
 
     // Works: Generate query using named alias.
     it(`hand: filtered measures - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: aircraft -> {
         aggregate: boeing_seats is aircraft_models.seats.sum() {
           where: aircraft_models.manufacturer = 'BOEING'
         }
       }
-    `).malloyResultMatches(handModel, {boeing_seats: 6244});
+    `).toMatchResult(testModel, {boeing_seats: 6244});
     });
 
     // Join tests
 
-    const handJoinModel = handModel.extendModel(`
-    source: model_aircraft is aircraft_models extend {
-      join_many: aircraft on aircraft_model_code = aircraft.aircraft_model_code
-    }
-  `);
+    const joinTestModel = wrapTestModel(
+      runtime,
+      makeModel(databaseName) +
+        `
+      source: model_aircraft is aircraft_models extend {
+        join_many: aircraft on aircraft_model_code = aircraft.aircraft_model_code
+      }
+    `
+    );
 
     it(`hand join ON - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: model_aircraft -> {
         group_by: aircraft.state
         aggregate: aircraft.aircraft_count
         aggregate: model_count
       }
-    `).malloyResultMatches(handJoinModel, {model_count: 59104});
+    `).toMatchResult(joinTestModel, {model_count: 59104});
     });
 
     it(`hand join symmetric agg - ${databaseName}`, async () => {
-      expect(`
+      await expect(`
       run: model_aircraft -> {
         aggregate: total_seats
         aggregate: aircraft.aircraft_count
       }
-    `).malloyResultMatches(handJoinModel, {
+    `).toMatchResult(joinTestModel, {
         total_seats: 452415,
         aircraft_count: 62644,
       });

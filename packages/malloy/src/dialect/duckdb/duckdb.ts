@@ -24,12 +24,12 @@
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
   OrderBy,
+  TimestampUnit,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -41,8 +41,12 @@ import {
 import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, FieldReferenceType} from '../dialect';
-import {inDays} from '../dialect';
+import type {
+  DialectFieldList,
+  FieldReferenceType,
+  IntegerTypeMapping,
+} from '../dialect';
+import {inDays, MIN_INT32, MAX_INT32, MIN_INT128, MAX_INT128} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -53,15 +57,16 @@ import {TinyParseError, TinyParser} from '../tiny_parser';
 const hackSplitComment = '-- hack: split on this';
 
 const duckDBToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
-  'BIGINT': {type: 'number', numberType: 'integer'},
+  'BIGINT': {type: 'number', numberType: 'bigint'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
   'SMALLINT': {type: 'number', numberType: 'integer'},
-  'UBIGINT': {type: 'number', numberType: 'integer'},
+  'UBIGINT': {type: 'number', numberType: 'bigint'},
   'UINTEGER': {type: 'number', numberType: 'integer'},
   'UTINYINT': {type: 'number', numberType: 'integer'},
   'USMALLINT': {type: 'number', numberType: 'integer'},
-  'HUGEINT': {type: 'number', numberType: 'integer'},
+  'HUGEINT': {type: 'number', numberType: 'bigint'},
+  'UHUGEINT': {type: 'number', numberType: 'bigint'},
   'DOUBLE': {type: 'number', numberType: 'float'},
   'FLOAT': {type: 'number', numberType: 'float'},
   'VARCHAR': {type: 'string'},
@@ -90,6 +95,15 @@ export class DuckDBDialect extends PostgresBase {
   supportsSafeCast = true;
   supportsNesting = true;
   supportsCountApprox = true;
+
+  // DuckDB UNNEST in LATERAL JOINs doesn't preserve array element order
+  requiresExplicitUnnestOrdering = true;
+
+  // DuckDB: 32-bit INTEGER is safe, larger integers need bigint
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: BigInt(MIN_INT32), max: BigInt(MAX_INT32), numberType: 'integer'},
+    {min: MIN_INT128, max: MAX_INT128, numberType: 'bigint'},
+  ];
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -123,17 +137,12 @@ export class DuckDBDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
-    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail},[])`;
+    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet}),[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -183,7 +192,7 @@ export class DuckDBDialect extends PostgresBase {
     source: string,
     alias: string,
     _fieldList: DialectFieldList,
-    needDistinctKey: boolean,
+    _needDistinctKey: boolean,
     _isArray: boolean,
     isInNestedPipeline: boolean
   ): string {
@@ -196,12 +205,8 @@ export class DuckDBDialect extends PostgresBase {
         ${arrayLen},
         1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
     }
-    //Simulate left joins by guarenteeing there is at least one row.
-    if (!needDistinctKey) {
-      return `LEFT JOIN LATERAL (SELECT UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(${alias},ignoreme) ON ${alias}_outer.ignoreme=1`;
-    } else {
-      return `LEFT JOIN LATERAL (SELECT UNNEST(GENERATE_SERIES(1, length(${source}),1)) as __row_id, UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(__row_id, ${alias},ignoreme) ON  ${alias}_outer.ignoreme=1`;
-    }
+    // Use WITH ORDINALITY to preserve array element order via __row_id
+    return `LEFT JOIN LATERAL UNNEST(${source}) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id) ON true`;
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -366,11 +371,16 @@ export class DuckDBDialect extends PostgresBase {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
+      } else if (malloyType.numberType === 'bigint') {
+        return 'hugeint';
       } else {
         return 'double precision';
       }
     } else if (malloyType.type === 'string') {
       return 'varchar';
+    }
+    if (malloyType.type === 'timestamptz') {
+      return 'timestamp with time zone';
     }
     return malloyType.type;
   }
@@ -388,7 +398,11 @@ export class DuckDBDialect extends PostgresBase {
     }
   }
 
-  sqlTypeToMalloyType(sqlType: string): BasicAtomicTypeDef {
+  sqlTypeToMalloyType(rawSqlType: string): BasicAtomicTypeDef {
+    const sqlType = rawSqlType.toUpperCase();
+    if (sqlType === 'TIMESTAMP WITH TIME ZONE') {
+      return {type: 'timestamptz'};
+    }
     // Remove decimal precision
     const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params
@@ -418,18 +432,25 @@ export class DuckDBDialect extends PostgresBase {
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `${n}*3`;
-    } else if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `${n}*7`;
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // DuckDB doesn't support INTERVAL '1' WEEK, convert to days
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `(${magnitude})*7`;
     }
-    const interval = `INTERVAL (${n}) ${timeframe}`;
-    return `${df.kids.base.sql} ${df.op} ${interval}`;
+
+    const interval = `INTERVAL (${offsetMag}) ${offsetUnit}`;
+    return `(${expr} ${op} ${interval})`;
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
@@ -504,10 +525,12 @@ class DuckDBTypeParser extends TinyParser {
       this.next();
       baseType = {type: 'number', numberType: 'float'};
     } else if (id === 'TIMESTAMP') {
-      if (this.peek().text === 'WITH') {
+      if (this.peek().text.toUpperCase() === 'WITH') {
         this.nextText('WITH', 'TIME', 'ZONE');
+        baseType = {type: 'timestamptz'};
+      } else {
+        baseType = {type: 'timestamp'};
       }
-      baseType = {type: 'timestamp'};
     } else if (duckDBToMalloyTypes[id]) {
       baseType = duckDBToMalloyTypes[id];
     } else if (id === 'STRUCT') {

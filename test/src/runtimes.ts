@@ -35,6 +35,7 @@ import {
   InMemoryModelCache,
   CacheManager,
 } from '@malloydata/malloy';
+import {createTestRuntime} from '@malloydata/malloy/test';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
@@ -132,6 +133,17 @@ export class DuckDBTestConnection extends DuckDBConnection {
   }
 }
 
+export class DuckDBROTestConnection extends DuckDBTestConnection {
+  constructor(name: string, databasePath?: string, workingDirectory?: string) {
+    super({
+      name,
+      databasePath,
+      workingDirectory,
+      readOnly: true,
+    });
+  }
+}
+
 export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
 
@@ -190,6 +202,12 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new PostgresTestConnection(dbName);
         break;
       case 'duckdb':
+        connection = new DuckDBROTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
+        break;
+      case 'duckdb_rw':
         connection = new DuckDBTestConnection(
           dbName,
           'test/data/duckdb/duckdb_test.db'
@@ -247,9 +265,8 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime({
+  return createTestRuntime(connection, {
     urlReader: files,
-    connection,
     eventStream: new EventEmitter(),
     cacheManager: new TestCacheManager(new InMemoryModelCache()),
   });
@@ -298,8 +315,8 @@ export class RuntimeList {
     for (const [_key, runtime] of this.runtimeMap) {
       await runtime.connection.close();
     }
-    // Unfortunate hack to avoid slow to die background threads tripping
-    // up jest
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // TODO delete this line if it turns out not to be needed.
+    // At one time duckdb_wasm needed this
+    // await new Promise(resolve => setTimeout(resolve, 2000));
   }
 }

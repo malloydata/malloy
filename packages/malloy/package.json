@@ -1,10 +1,11 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.302",
+  "version": "0.0.332",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
     "./test": "./dist/test/index.js",
+    "./test/matchers": "./dist/test/matchers.js",
     "./connection": "./dist/connection/index.js",
     "./package.json": "./package.json"
   },
@@ -15,6 +16,9 @@
       ],
       "test": [
         "./dist/test/index.d.ts"
+      ],
+      "test/matchers": [
+        "./dist/test/matchers.d.ts"
       ],
       "connection": [
         "./dist/connection/index.d.ts"
@@ -34,28 +38,28 @@
   "scripts": {
     "test": "jest --config=../../jest.config.js",
     "build-parser": "node src/lang/grammar/build_parser.js",
-    "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-filter": "0.0.302",
-    "@malloydata/malloy-interfaces": "0.0.302",
-    "@malloydata/malloy-tag": "0.0.302",
+    "@malloydata/malloy-filter": "0.0.332",
+    "@malloydata/malloy-interfaces": "0.0.332",
+    "@malloydata/malloy-tag": "0.0.332",
     "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",
     "jaro-winkler": "^0.2.8",
     "jest-diff": "^29.6.2",
     "lodash": "^4.17.20",
-    "luxon": "^2.4.0",
+    "luxon": "^3.5.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@types/jaro-winkler": "^0.2.3",
     "@types/lodash": "^4.14.165",
-    "@types/luxon": "^2.4.0",
+    "@types/luxon": "^3.5.0",
     "antlr4ts-cli": "^0.5.0-alpha.4"
   }
 }

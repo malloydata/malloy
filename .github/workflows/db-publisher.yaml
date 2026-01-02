@@ -10,7 +10,7 @@ jobs:
 
     services:
       publisher:
-        image: ms2data/publisher
+        image: ms2data/malloy-publisher
         ports:
           - 8000:8000
 

@@ -28,7 +28,6 @@ import type {
 } from '@malloydata/malloy';
 import {DuckDBDialect, registerDialect} from '@malloydata/malloy';
 import {testRuntimeFor} from '../runtimes';
-import '../util/db-jest-matchers';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
 const envDatabases = (
@@ -74,10 +73,7 @@ describe('experimental dialects', () => {
     }
   }
 
-  const connection = new DuckdbXConnection(
-    duckdbX,
-    'test/data/duckdb/duckdb_test.db'
-  );
+  const connection = new DuckdbXConnection(duckdbX, ':memory:');
 
   class DuckdbXDialect extends DuckDBDialect {
     experimental = true;

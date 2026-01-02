@@ -26,18 +26,20 @@ import type {
   Sampling,
   AtomicTypeDef,
   MeasureTimeExpr,
-  TimeTruncExpr,
   TimeExtractExpr,
-  TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
-  TimeLiteralNode,
+  TimeLiteralExpr,
   RecordLiteralNode,
   ArrayLiteralNode,
   BasicAtomicTypeDef,
   OrderBy,
+  TimestampUnit,
+  ATimestampTypeDef,
+  TimeExpr,
+  TemporalFieldType,
 } from '../model/malloy_types';
-import {isRawCast, isBasicAtomic} from '../model/malloy_types';
+import {isRawCast, isBasicAtomic, TD, isDateUnit} from '../model/malloy_types';
 import type {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {
@@ -47,6 +49,27 @@ interface DialectField {
   sqlOutputName: string;
 }
 export type DialectFieldList = DialectField[];
+
+/*
+ * Standard integer type limits.
+ * Use these in dialect integerTypeMappings definitions.
+ */
+
+// 32-bit signed integer limits (for databases with 32-bit INTEGER type)
+export const MIN_INT32 = -2147483648; // -2^31
+export const MAX_INT32 = 2147483647; // 2^31 - 1
+
+// 64-bit signed integer limits
+export const MIN_INT64 = BigInt('-9223372036854775808'); // -2^63
+export const MAX_INT64 = BigInt('9223372036854775807'); // 2^63 - 1
+
+// 128-bit signed integer limits (for DuckDB HUGEINT)
+export const MIN_INT128 = BigInt('-170141183460469231731687303715884105728'); // -2^127
+export const MAX_INT128 = BigInt('170141183460469231731687303715884105727'); // 2^127 - 1
+
+// Decimal(38,0) limits (for Snowflake NUMBER(38,0))
+export const MIN_DECIMAL38 = BigInt('-99999999999999999999999999999999999999'); // -(10^38 - 1)
+export const MAX_DECIMAL38 = BigInt('99999999999999999999999999999999999999'); // 10^38 - 1
 
 /**
  * Data which dialect methods need in order to correctly generate SQL.
@@ -99,6 +122,19 @@ export type OrderByClauseType = 'output_name' | 'ordinal' | 'expression';
 export type OrderByRequest = 'query' | 'turtle' | 'analytical';
 export type BooleanTypeSupport = 'supported' | 'simulated' | 'none';
 
+/**
+ * Maps a range of integer values to a Malloy number type.
+ *
+ * Dialects define an array of these mappings to describe how integer literals
+ * should be typed. The array is searched in order, and the first matching
+ * range determines the type.
+ */
+export interface IntegerTypeMapping {
+  min: bigint;
+  max: bigint;
+  numberType: 'integer' | 'bigint';
+}
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -131,6 +167,9 @@ export abstract class Dialect {
   // Some dialects don't supporrt arrays (mysql)
   supportsArraysInData = true;
 
+  // Does the dialect support timestamptz (TIMESTAMP WITH TIME ZONE)?
+  hasTimestamptz = false;
+
   // can read some version of ga_sample
   readsNestedData = true;
 
@@ -143,6 +182,10 @@ export abstract class Dialect {
   // support select * replace(...)
   supportsSelectReplace = true;
 
+  // Does the data path preserve bigint precision? False for dialects that
+  // serialize results through JSON (postgres, presto, trino)
+  supportsBigIntPrecision = true;
+
   // ability to join source with a filter on a joined source.
   supportsComplexFilteredSources = true;
 
@@ -153,6 +196,10 @@ export abstract class Dialect {
 
   // can LEFT JOIN UNNEST
   supportsLeftJoinUnnest = true;
+
+  // UNNEST in LATERAL JOINs doesn't guarantee array element order.
+  // When true, compiler adds ORDER BY on array ordinality columns (__row_id)
+  requiresExplicitUnnestOrdering = false;
 
   supportsCountApprox = false;
 
@@ -170,6 +217,103 @@ export abstract class Dialect {
 
   // Like characters are escaped with ESCAPE clause
   likeEscape = true;
+
+  /**
+   * Mappings from integer value ranges to Malloy number types.
+   *
+   * The array is searched in order; the first matching range determines the type.
+   * Default: small integers (≤32-bit) → 'integer', larger → 'bigint'.
+   */
+  integerTypeMappings: IntegerTypeMapping[] = [
+    {min: BigInt(MIN_INT32), max: BigInt(MAX_INT32), numberType: 'integer'},
+    {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
+  ];
+
+  /**
+   * Determine the Malloy number type for a numeric literal.
+   */
+  literalNumberType(value: string): {
+    type: 'number';
+    numberType: 'integer' | 'float' | 'bigint';
+  } {
+    const isInteger = /^-?\d+$/.test(value);
+    if (!isInteger) {
+      return {type: 'number', numberType: 'float'};
+    }
+
+    const bigValue = BigInt(value);
+    for (const mapping of this.integerTypeMappings) {
+      if (bigValue >= mapping.min && bigValue <= mapping.max) {
+        return {type: 'number', numberType: mapping.numberType};
+      }
+    }
+
+    // Value exceeds all supported ranges - let SQL fail at runtime
+    return {type: 'number', numberType: 'bigint'};
+  }
+
+  /**
+   * Create the appropriate time literal IR node based on dialect support.
+   * Static method so it can be called with undefined dialect (e.g., ConstantFieldSpace).
+   */
+  static makeTimeLiteralNode(
+    dialect: Dialect | undefined,
+    literal: string,
+    timezone: string | undefined,
+    units: TimestampUnit | undefined,
+    typ: TemporalFieldType
+  ): TimeLiteralExpr {
+    // ConstantFieldSpace.dialectObj() returns undefined, so constants default to false
+    const hasTimestamptz = dialect?.hasTimestamptz ?? false;
+
+    if (typ === 'date') {
+      return {
+        node: 'dateLiteral',
+        literal,
+        typeDef: {
+          type: 'date',
+          timeframe:
+            units !== undefined && isDateUnit(units) ? units : undefined,
+        },
+      };
+    }
+
+    // typ === 'timestamp'
+    if (timezone && hasTimestamptz) {
+      // Dialect supports timestamptz - create timestamptzLiteral
+      return {
+        node: 'timestamptzLiteral',
+        literal,
+        typeDef: {
+          type: 'timestamptz',
+          timeframe: units,
+        },
+        timezone,
+      };
+    }
+
+    // Plain timestamp (either no timezone, or dialect doesn't support timestamptz)
+    if (timezone) {
+      return {
+        node: 'timestampLiteral',
+        literal,
+        typeDef: {
+          type: 'timestamp',
+          timeframe: units,
+        },
+        timezone,
+      };
+    }
+
+    return {
+      node: 'timestampLiteral',
+      literal,
+      typeDef: {
+        type: 'timestamp',
+        timeframe: units,
+      },
+    };
+  }
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
@@ -192,8 +336,7 @@ export abstract class Dialect {
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string;
 
   abstract sqlAnyValueTurtle(
@@ -277,14 +420,326 @@ export abstract class Dialect {
   }
 
   abstract sqlNowExpr(): string;
-  abstract sqlTruncExpr(qi: QueryInfo, toTrunc: TimeTruncExpr): string;
   abstract sqlTimeExtractExpr(qi: QueryInfo, xFrom: TimeExtractExpr): string;
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
-  abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
+  /**
+   * Generate SQL for type casting expressions.
+   *
+   * Most casts are simple: `CAST(expr AS type)` or `TRY_CAST(expr AS type)` for safe casts.
+   *
+   * However, when a query timezone is set, casts between temporal types (date, timestamp, timestamptz)
+   * require special handling to ensure correct timezone semantics:
+   *
+   * **Timezone-Aware Cast Semantics:**
+   *
+   * 1. **TIMESTAMP → DATE**:
+   *    - TIMESTAMP represents UTC wall clock
+   *    - Convert to query timezone, then extract date
+   *    - Example: TIMESTAMP '2020-02-20 00:00:00' with tz 'America/Mexico_City' → '2020-02-19'
+   *
+   * 2. **TIMESTAMPTZ → DATE**:
+   *    - TIMESTAMPTZ represents absolute instant
+   *    - Convert to query timezone, then extract date
+   *    - Example: TIMESTAMPTZ '2020-02-20 00:00:00 UTC' with tz 'America/Mexico_City' → '2020-02-19'
+   *
+   * 3. **DATE → TIMESTAMP**:
+   *    - DATE represents civil date
+   *    - Interpret as midnight in query timezone, return UTC wall clock
+   *    - Example: DATE '2020-02-20' with tz 'America/Mexico_City' → TIMESTAMP '2020-02-20 06:00:00' (UTC)
+   *
+   * 4. **DATE → TIMESTAMPTZ**:
+   *    - DATE represents civil date
+   *    - Interpret as midnight in query timezone, create instant
+   *    - Example: DATE '2020-02-20' with tz 'America/Mexico_City' → instant at 2020-02-20 06:00:00 UTC
+   *
+   * 5. **TIMESTAMPTZ → TIMESTAMP**:
+   *    - TIMESTAMPTZ represents absolute instant
+   *    - Extract wall clock in query timezone, return as TIMESTAMP
+   *    - Example: TIMESTAMPTZ '2020-02-20 00:00:00 UTC' with tz 'America/Mexico_City' → TIMESTAMP '2020-02-19 18:00:00'
+   *
+   * 6. **TIMESTAMP → TIMESTAMPTZ**:
+   *    - TIMESTAMP represents UTC wall clock
+   *    - Interpret as being in query timezone
+   *    - Example: TIMESTAMP '2020-02-20 00:00:00' with tz 'America/Mexico_City' → instant at 2020-02-20 06:00:00 UTC
+   *
+   * **Implementation Notes:**
+   *
+   * - Dialects without timestamptz support (MySQL, BigQuery, StandardSQL) only need cases 1-3
+   * - Without query timezone, most casts are simple `CAST(expr AS type)`
+   *
+   * @param qi - Query info containing timezone and other context
+   * @param cast - The typecast expression to generate SQL for
+   * @returns SQL string for the cast operation
+   */
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
 
-  abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
+  /**
+   * Converts a Malloy timestamp to "civil time" for calendar operations in a timezone.
+   *
+   * Each dialect selects its own SQL type to represent civil time (e.g., plain TIMESTAMP,
+   * TIMESTAMP WITH TIME ZONE, or DATETIME). The civil space is where timezone-aware
+   * truncation and interval arithmetic happen. Operations like sqlTruncate and sqlOffsetTime
+   * are aware of the civil space and work correctly within it.
+   *
+   * @param expr The SQL expression for the Malloy timestamp (plain or timestamptz)
+   * @param timezone The target timezone for civil operations
+   * @param typeDef The Malloy type of the input expression
+   * @returns Object with SQL expression and the SQL type it evaluates to (the civil type)
+   */
+  abstract sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef};
+
+  /**
+   * Converts from civil time back to a Malloy timestamp type.
+   *
+   * This is the inverse of sqlConvertToCivilTime. Takes a value in the dialect's
+   * civil space and converts it back to either a plain timestamp (UTC) or a
+   * timestamptz, depending on the destination type.
+   *
+   * @param expr The SQL expression in civil time
+   * @param timezone The timezone of the civil time
+   * @param destTypeDef The destination Malloy timestamp type (plain or timestamptz)
+   * @returns SQL expression representing the Malloy timestamp
+   */
+  abstract sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    destTypeDef: ATimestampTypeDef
+  ): string;
+
+  /**
+   * Truncates a time expression to the specified unit.
+   *
+   * @param expr The SQL expression to truncate
+   * @param unit The unit to truncate to (year, month, day, hour, etc.)
+   * @param typeDef The Malloy type of the expression (date, timestamp, etc.)
+   * @param inCivilTime If true, the expression is already in civil (local) time and should not
+   *                    be converted. If false, may need timezone conversion for timestamps.
+   * @param timezone Optional timezone for the operation. Only provided when timezone-aware
+   *                 truncation is needed but inCivilTime is false.
+   * @returns SQL expression representing the truncated time
+   */
+  abstract sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
+  ): string;
+
+  /**
+   * Adds or subtracts a time interval from a time expression.
+   *
+   * @param expr The SQL expression to offset
+   * @param op The operation: '+' for addition, '-' for subtraction
+   * @param magnitude The SQL expression for the interval magnitude (e.g., '6', '(delta_val)')
+   * @param unit The interval unit (year, month, day, hour, etc.)
+   * @param typeDef The Malloy type of the expression (date, timestamp, etc.)
+   * @param inCivilTime If true, the expression is already in civil (local) time and should not
+   *                    be converted. If false, may need timezone conversion for timestamps.
+   * @param timezone Optional timezone for the operation. Only provided when timezone-aware
+   *                 offset is needed but inCivilTime is false.
+   * @returns SQL expression representing the offset time
+   */
+  abstract sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
+  ): string;
+
+  /**
+   * Determines whether a truncation and/or offset operation needs to be performed in
+   * civil (local) time, and if so, which timezone to use.
+   *
+   * Calendar-based operations (day, week, month, quarter, year) typically need civil time
+   * computation because these units can cross DST boundaries, changing the UTC offset.
+   *
+   * Default implementation:
+   * - Returns true for timestamps with truncation or calendar-unit offsets
+   * - Uses the query timezone from QueryInfo, or 'UTC' if none specified
+   * - Returns false for dates or sub-day offsets (hour, minute, second)
+   *
+   * Dialects can override this if they have different rules about which operations
+   * require civil time computation.
+   *
+   * @param typeDef The Malloy type of the base expression
+   * @param truncateTo The truncation unit, if any
+   * @param offsetUnit The offset unit, if any
+   * @param qi Query information including timezone settings
+   * @returns Object with `needed` boolean and optional `tz` string
+   */
+  needsCivilTimeComputation(
+    typeDef: AtomicTypeDef,
+    truncateTo: TimestampUnit | undefined,
+    offsetUnit: TimestampUnit | undefined,
+    qi: QueryInfo
+  ): {needed: boolean; tz: string | undefined} {
+    // Calendar units that can cross DST boundaries
+    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
+
+    const isCalendarTruncate =
+      truncateTo !== undefined && calendarUnits.includes(truncateTo);
+
+    const isCalendarOffset =
+      offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
+
+    const tz = qtz(qi);
+
+    // Timestamps with calendar truncation/offset need civil time computation
+    // BUT only if there's actually a timezone to convert to/from
+    const needed =
+      TD.isAnyTimestamp(typeDef) &&
+      (isCalendarTruncate || isCalendarOffset) &&
+      tz !== undefined;
+
+    return {needed, tz};
+  }
+
+  /**
+   * Unified function for truncation and/or offset operations. This turns out to
+   * be a very common operation and one which can be optimized by doing it together.
+   *
+   * Much of the complexity has to do with getting timezone values set up so that
+   * they will truncate/offset in the query timezone instead of UTC.
+   *
+   * The intention is that this implementation will work for all dialects, and all
+   * the dialect peculiarities are handled with the new primitives introduced to
+   * support this function:
+   * - needsCivilTimeComputation: Determines if operation needs civil time
+   * - sqlConvertToCivilTime/sqlConvertFromCivilTime: Timezone conversion
+   * - sqlTruncate: Truncation operation
+   * - sqlOffsetTime: Interval arithmetic
+   *
+   * OFFSET TIMESTAMP BEHAVIOR:
+   * - Plain timestamps (offset=false): Always return plain TIMESTAMP in UTC
+   * - Offset timestamps (offset=true):
+   *   - Simple path: Operate in native embedded timezone, return TIMESTAMPTZ
+   *   - Civil path: Convert to query timezone (preserving instant), operate there,
+   *     return TIMESTAMPTZ in query timezone via sqlConvertFromCivilTime
+   * - BigQuery/MySQL: No offset timestamp support, this logic never runs
+   *
+   * @param baseExpr The time expression to operate on (already compiled, with .sql populated)
+   * @param qi Query information including timezone
+   * @param truncateTo Optional truncation unit (year, month, day, etc.)
+   * @param offset Optional offset to apply (after truncation if both present)
+   */
+  sqlTruncAndOffset(
+    baseExpr: TimeExpr,
+    qi: QueryInfo,
+    truncateTo?: TimestampUnit,
+    offset?: {
+      op: '+' | '-';
+      magnitude: string;
+      unit: TimestampUnit;
+    }
+  ): string {
+    // Determine if we need to work in civil (local) time
+    if (TD.isAnyTimestamp(baseExpr.typeDef)) {
+      const {needed: needsCivil, tz} = this.needsCivilTimeComputation(
+        baseExpr.typeDef,
+        truncateTo,
+        offset?.unit,
+        qi
+      );
+
+      if (needsCivil && tz) {
+        // Civil time path: convert to local time, operate, convert back to UTC
+        const civilResult = this.sqlConvertToCivilTime(
+          baseExpr.sql!,
+          tz,
+          baseExpr.typeDef
+        );
+        let expr = civilResult.sql;
+        const civilTypeDef = civilResult.typeDef;
+
+        if (truncateTo) {
+          expr = this.sqlTruncate(expr, truncateTo, civilTypeDef, true, tz);
+        }
+
+        if (offset) {
+          expr = this.sqlOffsetTime(
+            expr,
+            offset.op,
+            offset.magnitude,
+            offset.unit,
+            civilTypeDef,
+            true,
+            tz
+          );
+        }
+
+        return this.sqlConvertFromCivilTime(expr, tz, baseExpr.typeDef);
+      }
+    }
+
+    // Simple path: no civil time conversion needed
+    let sql = baseExpr.sql!;
+
+    if (truncateTo) {
+      sql = this.sqlTruncate(sql, truncateTo, baseExpr.typeDef, false, qtz(qi));
+    }
+
+    if (offset) {
+      sql = this.sqlOffsetTime(
+        sql,
+        offset.op,
+        offset.magnitude,
+        offset.unit,
+        baseExpr.typeDef,
+        false,
+        qtz(qi)
+      );
+    }
+
+    return sql;
+  }
+
+  /**
+   * Generate SQL for a DATE literal.
+   * @param literal - The date string in format 'YYYY-MM-DD'
+   * @returns SQL that produces a DATE value
+   */
+  abstract sqlDateLiteral(qi: QueryInfo, literal: string): string;
+
+  /**
+   * Generate SQL for a plain TIMESTAMP literal (without timezone offset).
+   * @param literal - The timestamp string in format 'YYYY-MM-DD HH:MM:SS'
+   * @param timezone - Optional timezone name (e.g., 'America/Los_Angeles')
+   *   - If undefined: Create plain timestamp literal from the literal string
+   *   - If defined: The literal string represents a civil time in the given timezone.
+   *     Convert it to a plain timestamp (typically by interpreting as timestamptz
+   *     in that timezone, then casting to plain timestamp). This happens when:
+   *     1. A constant with timezone is used (constants don't have dialect context)
+   *     2. A literal with timezone is used in a dialect that doesn't support offset timestamps
+   * @returns SQL that produces a plain TIMESTAMP value
+   */
+  abstract sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string;
+
+  /**
+   * Generate SQL for an offset TIMESTAMP literal (TIMESTAMP WITH TIME ZONE).
+   * Only called for dialects where hasOffsetTimestamp = true.
+   * @param literal - The timestamp string in format 'YYYY-MM-DD HH:MM:SS'
+   * @param timezone - The timezone name (e.g., 'America/Los_Angeles')
+   * @returns SQL that produces a TIMESTAMP WITH TIME ZONE value representing
+   *   the civil time in the specified timezone
+   */
+  abstract sqlTimestamptzLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string
+  ): string;
   abstract sqlLiteralString(literal: string): string;
   abstract sqlLiteralRegexp(literal: string): string;
   abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
@@ -306,10 +761,27 @@ export abstract class Dialect {
         return this.sqlNowExpr();
       case 'timeDiff':
         return this.sqlMeasureTimeExpr(df);
-      case 'delta':
-        return this.sqlAlterTimeExpr(df);
+      case 'delta': {
+        // Optimize: if delta's base is a trunc, combine them
+        const base = df.kids.base;
+        if (base.node === 'trunc') {
+          // Combined trunc + offset - pass the base of the truncation
+          return this.sqlTruncAndOffset(base.e, qi, base.units, {
+            op: df.op,
+            magnitude: df.kids.delta.sql!,
+            unit: df.units,
+          });
+        }
+        // Just offset, no truncation - pass the delta's base
+        return this.sqlTruncAndOffset(base, qi, undefined, {
+          op: df.op,
+          magnitude: df.kids.delta.sql!,
+          unit: df.units,
+        });
+      }
       case 'trunc':
-        return this.sqlTruncExpr(qi, df);
+        // Just truncation, no offset
+        return this.sqlTruncAndOffset(df.e, qi, df.units);
       case 'extract':
         return this.sqlTimeExtractExpr(qi, df);
       case 'cast':
@@ -328,8 +800,12 @@ export abstract class Dialect {
         }
         return;
       }
-      case 'timeLiteral':
-        return this.sqlLiteralTime(qi, df);
+      case 'dateLiteral':
+        return this.sqlDateLiteral(qi, df.literal);
+      case 'timestampLiteral':
+        return this.sqlTimestampLiteral(qi, df.literal, df.timezone);
+      case 'timestamptzLiteral':
+        return this.sqlTimestamptzLiteral(qi, df.literal, df.timezone);
       case 'stringLiteral':
         return this.sqlLiteralString(df.literal);
       case 'numberLiteral':

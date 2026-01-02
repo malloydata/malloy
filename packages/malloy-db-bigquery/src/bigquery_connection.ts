@@ -666,6 +666,15 @@ export class BigQueryConnection
         try {
           return await job.getQueryResults({
             timeoutMs: 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
+            wrapIntegers: {
+              integerTypeCastFunction: (val: string | number) => {
+                const num = Number(val);
+                if (Number.isSafeInteger(num)) {
+                  return num;
+                }
+                return String(val);
+              },
+            },
             ...getQueryResultsOptions,
           });
         } catch (fetchError) {

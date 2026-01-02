@@ -82,7 +82,9 @@ export type Expr =
   | TimeExtractExpr
   | TimeDeltaExpr
   | TimeTruncExpr
-  | TimeLiteralNode
+  | DateLiteralNode
+  | TimestampLiteralNode
+  | TimestamptzLiteralNode
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
@@ -235,7 +237,7 @@ export interface NowNode extends ExprLeaf {
   typeDef: {type: 'timestamp'};
 }
 
-interface HasTimeValue {
+export interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
 export type TimeExpr = Expr & HasTimeValue;
@@ -326,9 +328,17 @@ export type FilterExprType =
   | 'number'
   | 'boolean'
   | 'date'
-  | 'timestamp';
+  | 'timestamp'
+  | 'timestamptz';
 export function isFilterExprType(s: string): s is FilterExprType {
-  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
+  return [
+    'string',
+    'number',
+    'boolean',
+    'date',
+    'timestamp',
+    'timestamptz',
+  ].includes(s);
 }
 
 export interface FilterMatchExpr extends ExprWithKids {
@@ -343,11 +353,37 @@ export interface FilterLiteralExpr extends ExprLeaf {
   filterSrc: string;
 }
 
-export interface TimeLiteralNode extends ExprLeaf {
-  node: 'timeLiteral';
+export interface DateLiteralNode extends ExprLeaf {
+  node: 'dateLiteral';
   literal: string;
-  typeDef: TemporalTypeDef;
-  timezone?: string;
+  typeDef: DateTypeDef;
+}
+
+export interface TimestampLiteralNode extends ExprLeaf {
+  node: 'timestampLiteral';
+  literal: string;
+  typeDef: TimestampTypeDef;
+  timezone?: string; // Used for SQL generation (CONVERT_TZ, etc.)
+}
+
+export interface TimestamptzLiteralNode extends ExprLeaf {
+  node: 'timestamptzLiteral';
+  literal: string;
+  typeDef: TimestamptzTypeDef;
+  timezone: string; // Always required for timestamptz
+}
+
+export type TimeLiteralExpr =
+  | DateLiteralNode
+  | TimestampLiteralNode
+  | TimestamptzLiteralNode;
+
+export function isTimeLiteral(e: Expr): e is TimeLiteralExpr {
+  return (
+    e.node === 'dateLiteral' ||
+    e.node === 'timestampLiteral' ||
+    e.node === 'timestamptzLiteral'
+  );
 }
 
 export interface StringLiteralNode extends ExprLeaf {
@@ -449,6 +485,7 @@ export type ParameterType =
   | 'boolean'
   | 'date'
   | 'timestamp'
+  | 'timestamptz'
   | 'filter expression'
   | 'error';
 
@@ -459,6 +496,7 @@ export function isParameterType(t: string): t is ParameterType {
     'boolean',
     'date',
     'timestamp',
+    'timestamptz',
     'filter expression',
     'error',
   ].includes(t);
@@ -499,35 +537,48 @@ export interface DocumentLocation {
   range: DocumentRange;
 }
 
+/**
+ * Used by the IDE to get information about what a reference refers to. Was once the
+ * entire definition, which created very large model files where the definition
+ * of an object would be repeated N+1 times, where N is the number of references.
+ *
+ * The IDE currently only uses these three fields, so as a stop-gap measure we
+ * create a LightweightDefinition with just these three fields.
+ *
+ * I believe there are future plans for the IDE to need more information about
+ * the references, and in that case, this should include something like an
+ * index or pointer to the full definition elsewhere in the model.
+ */
+export interface LightweightDefinition {
+  type: string;
+  annotation?: Annotation;
+  location?: DocumentLocation;
+}
+
 interface DocumentReferenceBase {
   text: string;
   location: DocumentLocation;
-  definition: HasLocation;
+  definition: LightweightDefinition;
 }
 
 export interface DocumentExploreReference extends DocumentReferenceBase {
   type: 'exploreReference';
-  definition: StructDef;
 }
 
 export interface DocumentJoinReference extends DocumentReferenceBase {
   type: 'joinReference';
-  definition: FieldDef;
 }
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
   type: 'sqlBlockReference';
-  definition: SQLSourceDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {
   type: 'queryReference';
-  definition: Query;
 }
 
 export interface DocumentFieldReference extends DocumentReferenceBase {
   type: 'fieldReference';
-  definition: FieldDef;
 }
 
 export type DocumentReference =
@@ -679,9 +730,9 @@ export function hasExpression<T extends FieldDef>(
   return 'e' in f && f.e !== undefined;
 }
 
-export type TemporalFieldType = 'date' | 'timestamp';
+export type TemporalFieldType = 'date' | 'timestamp' | 'timestamptz';
 export function isTemporalType(s: string): s is TemporalFieldType {
-  return s === 'date' || s === 'timestamp';
+  return s === 'date' || s === 'timestamp' || s === 'timestamptz';
 }
 export type CastType =
   | 'string'
@@ -701,6 +752,7 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'number',
     'date',
     'timestamp',
+    'timestamptz',
     'boolean',
     'json',
     'sql native',
@@ -710,15 +762,27 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
   ].includes(s);
 }
 export function canOrderBy(s: string) {
-  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'boolean',
+    'date',
+    'timestamp',
+    'timestamptz',
+  ].includes(s);
 }
 
 export function isCastType(s: string): s is CastType {
-  return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'timestamp',
+    'timestamptz',
+    'boolean',
+    'json',
+  ].includes(s);
 }
 
 /**
@@ -749,7 +813,7 @@ export type StringFieldDef = StringTypeDef & AtomicFieldDef;
 
 export interface NumberTypeDef {
   type: 'number';
-  numberType?: 'integer' | 'float';
+  numberType?: 'integer' | 'float' | 'bigint';
 }
 export type NumberFieldDef = NumberTypeDef & AtomicFieldDef;
 
@@ -783,6 +847,12 @@ export interface BasicArrayDef
   join: 'many';
 }
 
+/**
+ * Create a clean FieldDef from a TypeDef descendent
+ * @param atd Usually a TypeDesc
+ * @param name
+ * @returns Field with `name` and no type meta data
+ */
 export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
   if (isBasicArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name);
@@ -795,7 +865,30 @@ export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
     const {type, fields} = atd;
     return {type, fields, join: 'one', name};
   }
-  return {...atd, name};
+  const ret = {name, type: atd.type};
+  switch (atd.type) {
+    case 'sql native':
+      return {...ret, rawType: atd.rawType};
+    case 'number': {
+      const numberType = atd.numberType;
+      return numberType ? {...ret, numberType} : ret;
+    }
+    case 'date': {
+      const timeframe = atd.timeframe;
+      return timeframe ? {name, type: 'date', timeframe} : ret;
+    }
+    case 'timestamp': {
+      const ret: TimestampFieldDef = {name, type: 'timestamp'};
+      if (atd.timeframe) ret.timeframe = atd.timeframe;
+      return ret;
+    }
+    case 'timestamptz': {
+      const ret: TimestamptzFieldDef = {name, type: 'timestamptz'};
+      if (atd.timeframe) ret.timeframe = atd.timeframe;
+      return ret;
+    }
+  }
+  return ret;
 }
 
 export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {
@@ -832,6 +925,7 @@ export interface RecordDef
     FieldBase {
   type: 'record';
   join: 'one';
+  queryTimezone?: string;
 }
 
 // While repeated records are mostly treated like arrays of records,
@@ -863,6 +957,7 @@ export interface RepeatedRecordDef
     FieldBase {
   type: 'array';
   join: 'many';
+  queryTimezone?: string;
 }
 export type ArrayTypeDef = BasicArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = BasicArrayDef | RepeatedRecordDef;
@@ -879,6 +974,17 @@ export function isRepeatedRecord(
   fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
 ): fd is RepeatedRecordTypeDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+}
+
+export function isRecordOrRepeatedRecord(
+  fd: FieldDef | StructDef
+): fd is RecordDef | RepeatedRecordDef {
+  return (
+    fd.type === 'record' ||
+    (fd.type === 'array' &&
+      'elementTypeDef' in fd &&
+      fd.elementTypeDef.type === 'record_element')
+  );
 }
 
 export function isBasicArray(
@@ -984,6 +1090,16 @@ export interface TimestampTypeDef {
   timeframe?: TimestampUnit;
 }
 export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
+
+export interface TimestamptzTypeDef {
+  type: 'timestamptz';
+  timeframe?: TimestampUnit;
+}
+export type TimestamptzFieldDef = TimestamptzTypeDef & AtomicFieldDef;
+
+// Union type for both timestamp types
+export type ATimestampTypeDef = TimestampTypeDef | TimestamptzTypeDef;
+export type ATimestampFieldDef = TimestampFieldDef | TimestamptzFieldDef;
 
 /** parameter to order a query */
 export interface OrderBy {
@@ -1130,7 +1246,26 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
 export type IndexFieldDef = RefToField;
 export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
-export interface IndexSegment extends Filtered {
+/**
+ * The compiler needs to know a number of things computed for a query.
+ * We've modified the fieldUsage code from composite sources to collect
+ * the information needed by the compiler and a query is processed
+ * as a final step to append this information.
+ *
+ *   0) An ordered list list of active joins
+ *   1) Each field that is referenced, even indirectly
+ *   2) Each join path ending in a count
+ *   3) Each join path ending in an assymmetric aggregate
+ *   4) Each join path ending in an analytic funtion
+ */
+
+export interface SegmentUsageSummary {
+  activeJoins?: FieldUsage[];
+  expandedFieldUsage?: FieldUsage[];
+  expandedUngroupings?: AggregateUngrouping[];
+}
+
+export interface IndexSegment extends Filtered, SegmentUsageSummary {
   type: 'index';
   indexFields: IndexFieldDef[];
   limit?: number;
@@ -1148,9 +1283,18 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface FieldUsage {
   path: string[];
   at?: DocumentLocation;
+  uniqueKeyRequirement?: UniqueKeyRequirement;
+  analyticFunctionUse?: boolean;
 }
 
-export interface QuerySegment extends Filtered, Ordered {
+export function bareFieldUsage(fu: FieldUsage): boolean {
+  return (
+    fu.uniqueKeyRequirement === undefined &&
+    fu.analyticFunctionUse === undefined
+  );
+}
+
+export interface QuerySegment extends Filtered, Ordered, SegmentUsageSummary {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
@@ -1173,6 +1317,8 @@ export interface TurtleDef extends NamedObject, Pipeline {
   fieldUsage?: FieldUsage[];
   requiredGroupBys?: string[][];
 }
+
+export interface TurtleDefPlusFilters extends TurtleDef, Filtered {}
 
 interface StructDefBase extends HasLocation, NamedObject {
   type: string;
@@ -1339,6 +1485,9 @@ export interface AggregateUngrouping {
   ungroupedFields: string[][] | '*';
   fieldUsage: FieldUsage[];
   requiresGroupBy?: RequiredGroupBy[];
+  exclude: boolean;
+  path: string[];
+  refFields?: string[];
 }
 
 export type TypeInfo = {
@@ -1505,7 +1654,10 @@ export interface ConnectionDef extends NamedObject {
   type: 'connection';
 }
 
-export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
+export type TemporalTypeDef =
+  | DateTypeDef
+  | TimestampTypeDef
+  | TimestamptzTypeDef;
 export type BasicAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
@@ -1613,7 +1765,14 @@ export interface ModelAnnotation extends Annotation {
   id: string;
 }
 
-export type QueryScalar = string | boolean | number | Date | Buffer | null;
+export type QueryScalar =
+  | string
+  | boolean
+  | number
+  | bigint
+  | Date
+  | Buffer
+  | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;
@@ -1744,6 +1903,7 @@ export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
   materializedTablePrefix?: string;
   defaultRowLimit?: number;
+  isPartialQuery?: boolean; // Query is being used as a sql_block
 }
 
 type UTD =
@@ -1770,7 +1930,12 @@ export const TD = {
   isSQL: (td: UTD): td is NativeUnsupportedTypeDef => td?.type === 'sql native',
   isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
   isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
-  isTemporal(td: UTD): td is TimestampTypeDef {
+  isTimestamptz: (td: UTD): td is TimestamptzTypeDef =>
+    td?.type === 'timestamptz',
+  isAnyTimestamp(td: UTD): td is ATimestampTypeDef {
+    return td?.type === 'timestamp' || td?.type === 'timestamptz';
+  },
+  isTemporal(td: UTD): td is TemporalTypeDef {
     const typ = td?.type ?? '';
     return isTemporalType(typ);
   },
@@ -1815,5 +1980,29 @@ export const TD = {
     return x.type === y.type;
   },
 };
+
+/**
+ * Aggregate functions carry this meta data. Used to determine if
+ * a function requires the existence of a unique key. This used
+ * be a pair of types: UniqueKeyUse and UniqueKeyPossibleUse.
+ *
+ * The three states are:
+ *
+ * 1. undefined - not recorded, symmetric  MIN/MAX/COUNT_DISTINCT
+ * 2. {isCount: true} - this is a COUNT aggregate
+ * 3. {isCount: false} - this is an asymmetric aggregate, SUM or AVG
+ */
+export type UniqueKeyRequirement = undefined | {isCount: boolean};
+
+export function mergeUniqueKeyRequirement(
+  existing: UniqueKeyRequirement,
+  newInfo: UniqueKeyRequirement
+): UniqueKeyRequirement {
+  if (!existing) return newInfo;
+  if (!newInfo) return existing;
+  return {
+    isCount: existing.isCount || newInfo.isCount,
+  };
+}
 
 // clang-format on

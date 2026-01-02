@@ -21,16 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {AccessModifierLabel} from '../../../model';
+import type {AccessModifierLabel, Annotation} from '../../../model';
 import type {DynamicSpace} from '../field-space/dynamic-space';
 import {RenameSpaceField} from '../field-space/rename-space-field';
+import {DefinitionList} from '../types/definition-list';
 import type {FieldName} from '../types/field-space';
-import {ListOf, MalloyElement} from '../types/malloy-element';
+import {MalloyElement} from '../types/malloy-element';
+import {extendNoteMethod, type Noteable} from '../types/noteable';
 import type {MakeEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
-export class RenameField extends MalloyElement implements MakeEntry {
+export class RenameField extends MalloyElement implements Noteable, MakeEntry {
   elementType = 'renameField';
+  note?: Annotation;
+  extendNote = extendNoteMethod;
+  readonly isNoteableObj = true;
+
   constructor(
     readonly newName: string,
     readonly oldName: FieldName
@@ -38,6 +44,7 @@ export class RenameField extends MalloyElement implements MakeEntry {
     super();
     this.has({oldName: oldName});
   }
+
   makeEntry(fs: DynamicSpace) {
     if (this.oldName.refString === this.newName) {
       this.logError(
@@ -46,13 +53,38 @@ export class RenameField extends MalloyElement implements MakeEntry {
       );
       return;
     }
+
+    // Check if the new name would shadow an existing field
+    if (fs.entry(this.newName)) {
+      this.logError(
+        'invalid-rename-with-same-name',
+        `Can't rename to '${this.newName}', field already exists`
+      );
+      return;
+    }
+
     const oldValue = this.oldName.getField(fs);
+    /*
+
+    ok need to get the annotation from the old field into the inherits and the annotaiton
+    of the curuent field and then
+
+
+
+
+
+    */
     if (oldValue.found) {
       if (oldValue.found instanceof SpaceField) {
         fs.renameEntry(
           this.oldName.refString,
           this.newName,
-          new RenameSpaceField(oldValue.found, this.newName, this.location)
+          new RenameSpaceField(
+            oldValue.found,
+            this.newName,
+            this.location,
+            this.note
+          )
         );
       } else {
         this.logError('failed-rename', `'${this.oldName}' cannot be renamed`);
@@ -70,7 +102,7 @@ export class RenameField extends MalloyElement implements MakeEntry {
   }
 }
 
-export class Renames extends ListOf<RenameField> {
+export class Renames extends DefinitionList<RenameField> {
   elementType = 'renameFields';
 
   constructor(

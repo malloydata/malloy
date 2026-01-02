@@ -6,7 +6,6 @@
  */
 
 import type {
-  Connection,
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
@@ -20,8 +19,14 @@ import type {
   TestableConnection,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
-import type {ConnectionAttributes, RawAxiosRequestConfig} from './client';
-import {Configuration, ConnectionsApi} from './client';
+import type {
+  Connection,
+  ConnectionAttributes,
+  PostSqlsourceRequest,
+  RawAxiosRequestConfig,
+} from './client';
+import {Configuration, ConnectionsApi, ConnectionsTestApi} from './client';
+import {AxiosError} from 'axios';
 
 interface PublisherConnectionOptions {
   connectionUri: string;
@@ -39,7 +44,9 @@ export class PublisherConnection
   public readonly name: string;
   public readonly projectName: string;
   private connectionsApi: ConnectionsApi;
+  private connectionsTestApi: ConnectionsTestApi;
   private connectionAttributes: ConnectionAttributes;
+  private connectionData: Connection;
   private accessToken: string | undefined;
 
   static async create(name: string, options: PublisherConnectionOptions) {
@@ -64,18 +71,30 @@ export class PublisherConnection
     const apiUrl = `${url.origin}/${apiTag}/${versionTag}`;
     const configuration = new Configuration({
       basePath: apiUrl,
+      baseOptions: {
+        timeout: 600000,
+      },
     });
     const connectionsApi = new ConnectionsApi(configuration);
+    const connectionsTestApi = new ConnectionsTestApi(configuration);
     const response = await connectionsApi.getConnection(projectName, name, {
       headers: PublisherConnection.getAuthHeaders(options.accessToken),
     });
-    const connectionAttributes = response.data
-      .attributes as ConnectionAttributes;
+    if (!response || !response.data) {
+      throw new Error(
+        `Failed to get connection: ${name} from project: ${projectName}`
+      );
+    }
+    const connectionData = response.data as Connection;
+    const connectionAttributes =
+      connectionData.attributes as ConnectionAttributes;
     const connection = new PublisherConnection(
       name,
       projectName,
       connectionsApi,
+      connectionsTestApi,
       connectionAttributes,
+      connectionData,
       options.accessToken
     );
     await connection.test();
@@ -94,14 +113,18 @@ export class PublisherConnection
     name: string,
     projectName: string,
     connectionsApi: ConnectionsApi,
+    connectionsTestApi: ConnectionsTestApi,
     connectionAttributes: ConnectionAttributes,
+    connectionData: Connection,
     accessToken: string | undefined
   ) {
     super();
     this.name = name;
     this.projectName = projectName;
     this.connectionsApi = connectionsApi;
+    this.connectionsTestApi = connectionsTestApi;
     this.connectionAttributes = connectionAttributes;
+    this.connectionData = connectionData;
     this.accessToken = accessToken;
   }
 
@@ -122,33 +145,54 @@ export class PublisherConnection
   }
 
   public async fetchTableSchema(
-    tableKey: string,
+    _tableKey: string,
     tablePath: string
   ): Promise<TableSourceDef> {
-    const response = await this.connectionsApi.getTablesource(
-      this.projectName,
-      this.name,
-      tableKey,
-      tablePath,
-      {
-        headers: PublisherConnection.getAuthHeaders(this.accessToken),
-      }
-    );
-    return JSON.parse(response.data.source as string) as TableSourceDef;
+    let result = {} as TableSourceDef;
+    try {
+      const response = await this.connectionsApi.getTable(
+        this.projectName,
+        this.name,
+        tablePath.split('.')[0],
+        tablePath,
+        {
+          headers: PublisherConnection.getAuthHeaders(this.accessToken),
+        }
+      );
+      result = JSON.parse(response.data.source as string) as TableSourceDef;
+    } catch (error: AxiosError | unknown) {
+      this.extractAndThrowError(
+        error,
+        `Failed to fetch table schema for ${tablePath}`
+      );
+    }
+    return result;
   }
 
   public async fetchSelectSchema(
     sqlRef: SQLSourceRequest
   ): Promise<SQLSourceDef> {
-    const response = await this.connectionsApi.getSqlsource(
-      this.projectName,
-      this.name,
-      sqlRef.selectStr,
-      {
-        headers: PublisherConnection.getAuthHeaders(this.accessToken),
-      }
-    );
-    return JSON.parse(response.data.source as string) as SQLSourceDef;
+    let result = {} as SQLSourceDef;
+    try {
+      const request: PostSqlsourceRequest = {
+        sqlStatement: sqlRef.selectStr,
+      };
+      const response = await this.connectionsApi.postSqlsource(
+        this.projectName,
+        this.name,
+        request,
+        {
+          headers: PublisherConnection.getAuthHeaders(this.accessToken),
+        }
+      );
+      result = JSON.parse(response.data.source as string) as SQLSourceDef;
+    } catch (error: AxiosError | unknown) {
+      this.extractAndThrowError(
+        error,
+        'Failed to fetch select schema for SQL query'
+      );
+    }
+    return result;
   }
 
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
@@ -160,64 +204,112 @@ export class PublisherConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    // TODO: Add support for abortSignal.
-    options.abortSignal = undefined;
-    const response = await this.connectionsApi.getQuerydata(
-      this.projectName,
-      this.name,
-      sql,
-      JSON.stringify(options),
-      {
-        headers: PublisherConnection.getAuthHeaders(this.accessToken),
-      }
-    );
-    return JSON.parse(response.data.data as string) as MalloyQueryData;
+    let result = {} as MalloyQueryData;
+    try {
+      // TODO: Add support for abortSignal.
+      options.abortSignal = undefined;
+      const request: PostSqlsourceRequest = {
+        sqlStatement: sql,
+      };
+      const response = await this.connectionsApi.postQuerydata(
+        this.projectName,
+        this.name,
+        request,
+        JSON.stringify(options),
+        {
+          headers: PublisherConnection.getAuthHeaders(this.accessToken),
+        }
+      );
+      result = JSON.parse(response.data.data as string) as MalloyQueryData;
+    } catch (error: AxiosError | unknown) {
+      this.extractAndThrowError(error, 'Failed to execute SQL query');
+    }
+    return result;
   }
 
   public async *runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
-    // TODO: Add support for abortSignal.
-    options.abortSignal = undefined;
-    // TODO: Add real streaming support to publisher API.
-    const response = await this.connectionsApi.getQuerydata(
-      this.projectName,
-      this.name,
-      sqlCommand,
-      JSON.stringify(options),
-      {
-        headers: PublisherConnection.getAuthHeaders(this.accessToken),
+    try {
+      // TODO: Add support for abortSignal.
+      options.abortSignal = undefined;
+      // TODO: Add real streaming support to publisher API.
+      const request: PostSqlsourceRequest = {
+        sqlStatement: sqlCommand,
+      };
+      const response = await this.connectionsApi.postQuerydata(
+        this.projectName,
+        this.name,
+        request,
+        JSON.stringify(options),
+        {
+          headers: PublisherConnection.getAuthHeaders(this.accessToken),
+        }
+      );
+      const queryData = JSON.parse(
+        response.data.data as string
+      ) as MalloyQueryData;
+      for (const row of queryData.rows) {
+        yield row;
       }
-    );
-    const queryData = JSON.parse(
-      response.data.data as string
-    ) as MalloyQueryData;
-    for (const row of queryData.rows) {
-      yield row;
+    } catch (error: AxiosError | unknown) {
+      this.extractAndThrowError(error, 'Failed to execute streaming SQL query');
+      return;
     }
   }
 
   public async test(): Promise<void> {
-    await this.connectionsApi.getTest(this.projectName, this.name, {
-      headers: PublisherConnection.getAuthHeaders(this.accessToken),
-    });
+    try {
+      await this.connectionsTestApi.testConnectionConfiguration(
+        this.connectionData,
+        {
+          headers: PublisherConnection.getAuthHeaders(this.accessToken),
+        }
+      );
+    } catch (error: AxiosError | unknown) {
+      this.extractAndThrowError(
+        error,
+        'Failed to test connection configuration'
+      );
+    }
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const response = await this.connectionsApi.getTemporarytable(
-      this.projectName,
-      this.name,
-      sqlCommand,
-      {
-        headers: PublisherConnection.getAuthHeaders(this.accessToken),
-      }
-    );
-    return response.data.table as string;
+    let result = '';
+    try {
+      const request: PostSqlsourceRequest = {
+        sqlStatement: sqlCommand,
+      };
+      const response = await this.connectionsApi.postTemporarytable(
+        this.projectName,
+        this.name,
+        request,
+        {
+          headers: PublisherConnection.getAuthHeaders(this.accessToken),
+        }
+      );
+      result = response.data.table as string;
+    } catch (error: AxiosError | unknown) {
+      this.extractAndThrowError(error, 'Failed to manifest temporary table');
+    }
+    return result;
   }
 
   public async close(): Promise<void> {
     // Can't close the remote connection.
     return;
+  }
+
+  private extractAndThrowError(
+    error: AxiosError | unknown,
+    defaultMessage: string
+  ): void {
+    if (error instanceof AxiosError) {
+      const errorMessage =
+        error?.response?.data?.message || error?.message || defaultMessage;
+      throw new Error(errorMessage);
+    }
+    throw error;
   }
 }

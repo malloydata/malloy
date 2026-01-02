@@ -118,6 +118,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'timestamp_type': 'TimestampType',
       'array_type': 'ArrayType',
       'record_type': 'RecordType',
+      'timestamptz_type': 'TimestamptzType',
     },
   },
   'BooleanCell': {
@@ -684,6 +685,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'number_type': 'NumberType',
       'date_type': 'DateType',
       'timestamp_type': 'TimestampType',
+      'timestamptz_type': 'TimestamptzType',
     },
   },
   'FilteredField': {
@@ -974,6 +976,16 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'subtype': {
+        'type': 'NumberSubtype',
+        'optional': true,
+        'array': false,
+      },
+      'string_value': {
+        'type': 'string',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'NumberLiteral': {
@@ -985,6 +997,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
         'optional': false,
         'array': false,
       },
+      'string_value': {
+        'type': 'string',
+        'optional': true,
+        'array': false,
+      },
     },
   },
   'NumberSubtype': {
@@ -993,6 +1010,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
     'values': {
       'integer': 1,
       'decimal': 2,
+      'bigint': 3,
     },
   },
   'NumberType': {
@@ -1065,6 +1083,7 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       'array_type': 'ArrayType',
       'record_type': 'RecordType',
       'filter_expression_type': 'FilterExpressionType',
+      'timestamptz_type': 'TimestamptzType',
     },
   },
   'ParameterValue': {
@@ -1629,6 +1648,17 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
       },
     },
   },
+  'TimestamptzType': {
+    'type': 'struct',
+    'name': 'TimestamptzType',
+    'fields': {
+      'timeframe': {
+        'type': 'TimestampTimeframe',
+        'optional': true,
+        'array': false,
+      },
+    },
+  },
   'TimingInfo': {
     'type': 'struct',
     'name': 'TimingInfo',
@@ -1812,7 +1842,8 @@ export type AtomicTypeType =
   | 'date_type'
   | 'timestamp_type'
   | 'array_type'
-  | 'record_type';
+  | 'record_type'
+  | 'timestamptz_type';
 
 export type AtomicType =
   | AtomicTypeWithStringType
@@ -1823,7 +1854,8 @@ export type AtomicType =
   | AtomicTypeWithDateType
   | AtomicTypeWithTimestampType
   | AtomicTypeWithArrayType
-  | AtomicTypeWithRecordType;
+  | AtomicTypeWithRecordType
+  | AtomicTypeWithTimestamptzType;
 
 export type AtomicTypeWithStringType = {kind: 'string_type'} & StringType;
 
@@ -1846,6 +1878,10 @@ export type AtomicTypeWithTimestampType = {
 export type AtomicTypeWithArrayType = {kind: 'array_type'} & ArrayType;
 
 export type AtomicTypeWithRecordType = {kind: 'record_type'} & RecordType;
+
+export type AtomicTypeWithTimestamptzType = {
+  kind: 'timestamptz_type';
+} & TimestamptzType;
 
 export type BooleanCell = {
   boolean_value: boolean;
@@ -2120,14 +2156,16 @@ export type FilterableTypeType =
   | 'boolean_type'
   | 'number_type'
   | 'date_type'
-  | 'timestamp_type';
+  | 'timestamp_type'
+  | 'timestamptz_type';
 
 export type FilterableType =
   | FilterableTypeWithStringType
   | FilterableTypeWithBooleanType
   | FilterableTypeWithNumberType
   | FilterableTypeWithDateType
-  | FilterableTypeWithTimestampType;
+  | FilterableTypeWithTimestampType
+  | FilterableTypeWithTimestamptzType;
 
 export type FilterableTypeWithStringType = {kind: 'string_type'} & StringType;
 
@@ -2142,6 +2180,10 @@ export type FilterableTypeWithDateType = {kind: 'date_type'} & DateType;
 export type FilterableTypeWithTimestampType = {
   kind: 'timestamp_type';
 } & TimestampType;
+
+export type FilterableTypeWithTimestamptzType = {
+  kind: 'timestamptz_type';
+} & TimestamptzType;
 
 export type FilteredField = {
   field_reference: Reference;
@@ -2275,13 +2317,16 @@ export type NullLiteral = {};
 
 export type NumberCell = {
   number_value: number;
+  subtype?: NumberSubtype;
+  string_value?: string;
 };
 
 export type NumberLiteral = {
   number_value: number;
+  string_value?: string;
 };
 
-export type NumberSubtype = 'integer' | 'decimal';
+export type NumberSubtype = 'integer' | 'decimal' | 'bigint';
 
 export type NumberType = {
   subtype?: NumberSubtype;
@@ -2310,7 +2355,8 @@ export type ParameterTypeType =
   | 'timestamp_type'
   | 'array_type'
   | 'record_type'
-  | 'filter_expression_type';
+  | 'filter_expression_type'
+  | 'timestamptz_type';
 
 export type ParameterType =
   | ParameterTypeWithStringType
@@ -2322,7 +2368,8 @@ export type ParameterType =
   | ParameterTypeWithTimestampType
   | ParameterTypeWithArrayType
   | ParameterTypeWithRecordType
-  | ParameterTypeWithFilterExpressionType;
+  | ParameterTypeWithFilterExpressionType
+  | ParameterTypeWithTimestamptzType;
 
 export type ParameterTypeWithStringType = {kind: 'string_type'} & StringType;
 
@@ -2349,6 +2396,10 @@ export type ParameterTypeWithRecordType = {kind: 'record_type'} & RecordType;
 export type ParameterTypeWithFilterExpressionType = {
   kind: 'filter_expression_type';
 } & FilterExpressionType;
+
+export type ParameterTypeWithTimestamptzType = {
+  kind: 'timestamptz_type';
+} & TimestamptzType;
 
 export type ParameterValue = {
   name: string;
@@ -2544,6 +2595,10 @@ export type TimestampTimeframe =
   | 'second';
 
 export type TimestampType = {
+  timeframe?: TimestampTimeframe;
+};
+
+export type TimestamptzType = {
   timeframe?: TimestampTimeframe;
 };
 

@@ -296,7 +296,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       document,
       options,
       c.defaultStylesForChildren,
-      field.root().queryTimezone,
+      field.getEffectiveQueryTimezone(),
       field.tag
     );
   });

@@ -1,5 +1,4 @@
-/*
- * Copyright 2023 Google LLC
+/* Copyright 2023 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -21,11 +20,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PostgresConnection} from './postgres_connection';
+import {PooledPostgresConnection} from './postgres_connection';
 import type {SQLSourceDef} from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
-
-const [describe] = describeIfDatabaseAvailable(['postgres']);
+import * as malloy from '@malloydata/malloy';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 
 /*
  * !IMPORTANT
@@ -34,13 +33,31 @@ const [describe] = describeIfDatabaseAvailable(['postgres']);
  * and keys uniquely for each test you will see cross test interactions.
  */
 
-describe('PostgresConnection', () => {
-  let connection: PostgresConnection;
+describe('postgres schema caching', () => {
+  let connection: PooledPostgresConnection;
   let getTableSchema: jest.SpyInstance;
   let getSQLBlockSchema: jest.SpyInstance;
 
+  const SQL_BLOCK_1: SQLSourceDef = {
+    type: 'sql_select',
+    name: 'block1',
+    dialect: 'postgres',
+    connection: 'mock_postgres',
+    fields: [],
+    selectStr: "SELECT 'block1' AS sql_block1",
+  };
+
+  const SQL_BLOCK_2: SQLSourceDef = {
+    type: 'sql_select',
+    name: 'block2',
+    dialect: 'postgres',
+    connection: 'mock_postgres',
+    fields: [],
+    selectStr: "SELECT 'block2' AS sql_block2",
+  };
+
   beforeAll(async () => {
-    connection = new PostgresConnection('duckdb');
+    connection = new PooledPostgresConnection('mock_postgres');
     await connection.runSQL('SELECT 1');
   });
 
@@ -51,30 +68,34 @@ describe('PostgresConnection', () => {
   beforeEach(async () => {
     getTableSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'fetchTableSchema')
+      .spyOn(PooledPostgresConnection.prototype as any, 'fetchTableSchema')
       .mockResolvedValue({
         type: 'table',
         dialect: 'postgres',
         name: 'name',
         tablePath: 'test',
-        connection: 'postgres',
+        connection: 'mock_postgres',
       });
 
     getSQLBlockSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'fetchSelectSchema')
+      .spyOn(PooledPostgresConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
-        type: 'sql select',
+        type: 'sql_select',
         dialect: 'postgres',
         name: 'name',
         selectStr: SQL_BLOCK_1.selectStr,
-        connection: 'postgres',
+        connection: 'mock_postgres',
         fields: [],
       });
   });
 
   afterEach(() => {
     jest.resetAllMocks();
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
   });
 
   it('caches table schema', async () => {
@@ -111,44 +132,101 @@ describe('PostgresConnection', () => {
   });
 });
 
-const SQL_BLOCK_1: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block1',
-  dialect: 'postgres',
-  connection: 'postgres',
-  fields: [],
-  selectStr: `
-SELECT
-created_at,
-sale_price,
-inventory_item_id
-FROM 'order_items.parquet'
-SELECT
-id,
-product_department,
-product_category,
-created_at AS inventory_items_created_at
-FROM "inventory_items.parquet"
-`,
-};
+describe('postgres schema reading', () => {
+  it('distinguishes time stamp with and without offset', async () => {
+    const connection = new PooledPostgresConnection('postgres');
+    const schema = await connection.fetchSchemaForSQLStruct(
+      {
+        connection: 'postgres',
+        selectStr:
+          'SELECT current_timestamp AS offset_ts, localtimestamp as ts',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'offset_ts',
+        type: 'timestamptz',
+      });
+      expect(schema.structDef.fields[1]).toEqual({
+        name: 'ts',
+        type: 'timestamp',
+      });
+    }
+    await connection.close();
+  });
 
-const SQL_BLOCK_2: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block2',
-  dialect: 'postgres',
-  connection: 'postgres',
-  fields: [],
-  selectStr: `
-SELECT
-created_at,
-sale_price,
-inventory_item_id
-FROM read_parquet('order_items2.parquet', arg='value')
-SELECT
-id,
-product_department,
-product_category,
-created_at AS inventory_items_created_at
-FROM read_parquet("inventory_items2.parquet")
-`,
-};
+  it('maps integer types correctly', async () => {
+    const connection = new PooledPostgresConnection('postgres');
+    const schema = await connection.fetchSchemaForSQLStruct(
+      {
+        connection: 'postgres',
+        selectStr:
+          'SELECT 1::smallint AS small_int, 2::integer AS int_val, 3::bigint AS big_int',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'small_int',
+        type: 'number',
+        numberType: 'integer',
+      });
+      expect(schema.structDef.fields[1]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'integer',
+      });
+      expect(schema.structDef.fields[2]).toEqual({
+        name: 'big_int',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+    await connection.close();
+  });
+});
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const connection = new PooledPostgresConnection('postgres');
+  const runtime = new malloy.SingleConnectionRuntime({
+    urlReader: {readURL: async () => ''},
+    connection,
+  });
+  const testModel = wrapTestModel(runtime, '');
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  describe('integer types', () => {
+    it.each(['SMALLINT', 'INTEGER', 'BIGINT'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: postgres.sql("SELECT 10::${sqlType} as d")`
+        ).toMatchResult(testModel, {d: 10});
+      }
+    );
+  });
+
+  describe('float types', () => {
+    it.each(['REAL', 'DOUBLE PRECISION', 'NUMERIC', 'DECIMAL'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: postgres.sql("SELECT 10.5::${sqlType} as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
+  });
+});

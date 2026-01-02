@@ -24,7 +24,8 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -34,6 +35,7 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const testModel = wrapTestModel(runtime, '');
   test.when(runtime.dialect.supportsTempTables)(
     `basic index  - ${databaseName}`,
     async () => {
@@ -93,7 +95,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         dimension: one is 'one'
       } -> {index:one, state }
         -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
-    `).malloyResultMatches(runtime, {fieldName: 'one', weight: 51});
+    `).toMatchResult(testModel, {fieldName: 'one', weight: 51});
   });
 
   // bigquery doesn't support row count based sampling.
@@ -107,7 +109,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           dimension: one is 'one'
         } -> {index:one, state; sample: 10 }
             -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
-      `).malloyResultMatches(runtime, {fieldName: 'one', weight: 10});
+      `).toMatchResult(testModel, {fieldName: 'one', weight: 10});
   });
 
   it.when(databaseName !== 'trino' && databaseName !== 'presto')(
@@ -118,7 +120,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         dimension: one is 'one'
       } -> {index:one, tail_num; sample: 50% }
         -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
-    `).malloyResultMatches(runtime, {fieldName: 'one'});
+    `).toMatchResult(testModel, {fieldName: 'one'});
       // Hard to get consistent results here so just check that we get a value back.
     }
   );

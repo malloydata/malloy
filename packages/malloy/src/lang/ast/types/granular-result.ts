@@ -22,6 +22,7 @@
  */
 
 import type {TimestampUnit} from '../../../model/malloy_types';
+import {TD} from '../../../model/malloy_types';
 
 import type {ExprValue} from './expr-value';
 import type {TimeResult} from './time-result';
@@ -31,7 +32,7 @@ export type GranularResult = TimeResult & {
 };
 
 export function isGranularResult(v: ExprValue): v is GranularResult {
-  if (v.type === 'date' || v.type === 'timestamp') {
+  if (TD.isTemporal(v)) {
     return (v as GranularResult).timeframe !== undefined;
   }
   return false;

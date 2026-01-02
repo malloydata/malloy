@@ -24,7 +24,8 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {brokenIn, databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import type * as malloy from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -68,6 +69,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
 expressionModels.forEach((x, databaseName) => {
   const expressionModel = x.expressionModel;
   const runtime = x.runtime;
+  const testModel = wrapTestModel(runtime, modelText(databaseName));
   const dbTrue = runtime.dialect.resultBoolean(true);
   const dbFalse = runtime.dialect.resultBoolean(false);
   const funcTestGeneral = async (
@@ -146,8 +148,8 @@ expressionModels.forEach((x, databaseName) => {
           databaseName === 'postgres'
             ? 'const'
             : databaseName === 'mysql'
-            ? 'cons1'
-            : 'construe',
+              ? 'cons1'
+              : 'construe',
         ],
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
@@ -241,10 +243,10 @@ expressionModels.forEach((x, databaseName) => {
           databaseName === 'postgres'
             ? '\\0 - a - b - c'
             : databaseName === 'trino' ||
-              databaseName === 'presto' ||
-              databaseName === 'mysql'
-            ? '0 - 1 - 2 - 3'
-            : 'axbxc - a - b - c',
+                databaseName === 'presto' ||
+                databaseName === 'mysql'
+              ? '0 - 1 - 2 - 3'
+              : 'axbxc - a - b - c',
         ],
         [
           "replace('aaaa', '', 'c')",
@@ -485,21 +487,20 @@ expressionModels.forEach((x, databaseName) => {
     });
 
     it(`works using unary minus in calculate block - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: state_facts -> {
-            group_by: first_letter is substr(state, 1, 1)
-            aggregate: states_with_first_letter_ish is round(count() / 2) * 2
-            calculate:
-              r is rank()
-              neg_r is -r
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'neg_r').value).toBe(-1);
-      expect(result.data.path(1, 'neg_r').value).toBe(-1);
-      expect(result.data.path(2, 'neg_r').value).toBe(-3);
-      expect(result.data.path(3, 'neg_r').value).toBe(-3);
+      await expect(`
+        run: state_facts -> {
+          group_by: first_letter is substr(state, 1, 1)
+          aggregate: states_with_first_letter_ish is round(count() / 2) * 2
+          calculate:
+            r is rank()
+            neg_r is -r
+      }`).toMatchResult(
+        testModel,
+        {neg_r: -1},
+        {neg_r: -1},
+        {neg_r: -3},
+        {neg_r: -3}
+      );
     });
 
     it(`properly isolated nested calculations - ${databaseName}`, async () => {
@@ -523,7 +524,7 @@ expressionModels.forEach((x, databaseName) => {
             group_by: by_fac_type.id2
             order_by: id2 desc
           }
-      `).malloyResultMatches(expressionModel, {
+      `).toMatchResult(testModel, {
         id2: 2,
       });
     });
@@ -1172,18 +1173,20 @@ expressionModels.forEach((x, databaseName) => {
   describe('count_approx', () => {
     const supported = runtime.dialect.supportsCountApprox;
     test.when(supported)('works generally', async () => {
+      const tm = wrapTestModel(runtime, '');
       await expect(`
           // be accurate within 30%
           run: ${databaseName}.table('malloytest.state_facts') -> {
             aggregate: passes is abs(count_approx(state)-count(state))/count(state) < 0.3
             aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
           }
-          `).malloyResultMatches(runtime, {
-        'passes': runtime.dialect.resultBoolean(true),
-        'also_passes': runtime.dialect.resultBoolean(true),
+          `).toMatchResult(tm, {
+        'passes': true,
+        'also_passes': true,
       });
     });
     test.when(supported)('works with fanout', async () => {
+      const tm = wrapTestModel(runtime, '');
       await expect(`
         source: state_facts is ${databaseName}.table('malloytest.state_facts')
         source: state_facts_fanout is ${databaseName}.table('malloytest.state_facts') extend {
@@ -1192,7 +1195,7 @@ expressionModels.forEach((x, databaseName) => {
         run: state_facts_fanout -> {
           aggregate: x is state_facts.state.count_approx() > 0
         }
-      `).malloyResultMatches(runtime, {x: runtime.dialect.resultBoolean(true)});
+      `).toMatchResult(tm, {x: true});
     });
   });
   describe('last_value', () => {
@@ -1273,7 +1276,7 @@ expressionModels.forEach((x, databaseName) => {
         order_by: b desc
         calculate: s is sum_moving(b, 2)
         limit: 5
-      }`).malloyResultMatches(expressionModel, [
+      }`).toMatchRows(testModel, [
         {b: 28810563, s: 28810563},
         {b: 23694136, s: 23694136 + 28810563},
         {b: 21467359, s: 21467359 + 23694136 + 28810563},
@@ -1289,7 +1292,7 @@ expressionModels.forEach((x, databaseName) => {
         order_by: b desc
         calculate: s is sum_moving(b, 0, 2)
         limit: 7
-      }`).malloyResultMatches(expressionModel, [
+      }`).toMatchRows(testModel, [
         {b: 28810563, s: 28810563 + 23694136 + 21467359},
         {b: 23694136, s: 23694136 + 21467359 + 16661910},
         {b: 21467359, s: 21467359 + 16661910 + 15178876},
@@ -1342,32 +1345,35 @@ expressionModels.forEach((x, databaseName) => {
   describe('hll_functions', () => {
     const supported = runtime.dialect.supportsHyperLogLog;
     it.when(supported)(`hyperloglog basic - ${databaseName}`, async () => {
+      const tm = wrapTestModel(runtime, '');
       await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
         aggregate:
           m1 is floor(hll_estimate(hll_accumulate(state))/10)
-      }`).malloyResultMatches(runtime, {m1: 5});
+      }`).toMatchResult(tm, {m1: 5});
     });
 
     it.when(supported)(`hyperloglog combine - ${databaseName}`, async () => {
+      const tm = wrapTestModel(runtime, '');
       await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: state
           aggregate: names_hll is hll_accumulate(popular_name)
       } -> {
           aggregate: name_count is hll_estimate(hll_combine(names_hll))
       }
-      `).malloyResultMatches(runtime, {name_count: 6});
+      `).toMatchResult(tm, {name_count: 6});
     });
 
     it.when(supported)(
       `hyperloglog import/export - ${databaseName}`,
       async () => {
+        const tm = wrapTestModel(runtime, '');
         await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: state
           aggregate: names_hll is hll_export(hll_accumulate(popular_name))
       } -> {
           aggregate: name_count is hll_estimate(hll_combine(hll_import(names_hll)))
       }
-      `).malloyResultMatches(runtime, {name_count: 6});
+      `).toMatchResult(tm, {name_count: 6});
       }
     );
   });
@@ -1403,20 +1409,21 @@ expressionModels.forEach((x, databaseName) => {
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const expressionModel = runtime.loadModel(modelText(databaseName));
+  const testModel = wrapTestModel(runtime, modelText(databaseName));
 
   describe('string_agg', () => {
     it(`works no order by - ${databaseName}`, async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is string_agg(name)
-      }`).malloyResultMatches(expressionModel, {f: 'RUTHERFORD PAT R JR'});
+      }`).toMatchResult(testModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
     it(`works with dotted shortcut - ${databaseName}`, async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is name.string_agg()
-      }`).malloyResultMatches(expressionModel, {f: 'RUTHERFORD PAT R JR'});
+      }`).toMatchResult(testModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
     it(`works with order by field - ${databaseName}`, async () => {
@@ -1426,19 +1433,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: f is string_agg(name, ',') {
           order_by: name
         }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
       });
     });
 
     it(`works with order by direction - ${databaseName}`, async () => {
-      expect(`##! experimental { aggregate_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
           order_by: asc
         }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
       });
     });
@@ -1450,7 +1457,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: f is string_agg(name, ',') {
           order_by: city, name
         }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
       });
     });
@@ -1466,7 +1473,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: f is string_agg(name, ',') {
           order_by: length(name)
         }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'YANKEE FLYING CLUB INC,WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC',
       });
     });
@@ -1476,7 +1483,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: aircraft -> {
         where: name ~ r'.*ADVENTURE.*'
         aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC',
       });
     });
@@ -1490,7 +1497,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         limit: 3
       } -> {
         aggregate: f is string_agg(name, ',') { order_by: name asc }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
       });
     });
@@ -1504,7 +1511,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         limit: 3
       } -> {
         aggregate: f is string_agg(name, ',') { order_by: name desc }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
       });
     });
@@ -1526,7 +1533,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: s is string_agg(state) {
           order_by: popular_name, state
         }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         s: 'IA,LA,MN,AL,AR,IN,ME,MT,NC,AZ,CA,CO,CT,FL,GA,HI,IL,KS,KY,MA,MO,NJ,NM,NV,NY,OH,OK,PA,RI,TN,TX,WV,WY,DC,MS,SC,ID,NE,UT,VA,AK,DE,MD,MI,ND,NH,OR,SD,VT,WA,WI',
         c: 51,
       });
@@ -1542,7 +1549,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: c is state_facts2.count()
         aggregate: s is string_agg('o')
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         s: 'o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o',
         c: 51,
       });
@@ -1558,7 +1565,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: c is state_facts2.count()
         aggregate: s is string_agg('o', '')
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         s: 'ooooooooooooooooooooooooooooooooooooooooooooooooooo',
         c: 51,
       });
@@ -1578,7 +1585,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         }`;
       if (databaseName === 'bigquery') {
-        await expect(query).malloyResultMatches(expressionModel, {
+        await expect(query).toMatchResult(testModel, {
           f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC',
         });
       } else {
@@ -1591,6 +1598,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('string_agg_distinct', () => {
     it(`actually distincts - ${databaseName}`, async () => {
+      const tm = wrapTestModel(runtime, '');
       await expect(`##! experimental { aggregate_order_by }
         source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
           primary_key: tail_num
@@ -1605,7 +1613,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           where: aircraft.name = 'RAYTHEON AIRCRAFT COMPANY' | 'FOWLER IRA R DBA'
           aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: asc }
           aggregate: f_all is aircraft.name.string_agg() { order_by: aircraft.name }
-      }`).malloyResultMatches(runtime, {
+      }`).toMatchResult(tm, {
         f_dist: 'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY',
         f_all:
           'FOWLER IRA R DBA,FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY,RAYTHEON AIRCRAFT COMPANY',
@@ -1616,7 +1624,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is string_agg_distinct(name)
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'RUTHERFORD PAT R JR',
       });
     });
@@ -1625,7 +1633,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is name.string_agg_distinct()
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'RUTHERFORD PAT R JR',
       });
     });
@@ -1637,7 +1645,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: f is string_agg_distinct(name, ',') {
           order_by: asc
         }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
       });
     });
@@ -1651,7 +1659,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         limit: 3
       } -> {
         aggregate: f is string_agg_distinct(name, ',') { order_by: asc }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
       });
     });
@@ -1665,7 +1673,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         limit: 3
       } -> {
         aggregate: f is string_agg_distinct(name, ',') { order_by: desc }
-      }`).malloyResultMatches(expressionModel, {
+      }`).toMatchResult(testModel, {
         f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
       });
     });
@@ -1684,7 +1692,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         }`;
       if (databaseName === 'bigquery') {
-        await expect(query).malloyResultMatches(expressionModel, {
+        await expect(query).toMatchResult(testModel, {
           f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC',
         });
       } else {
@@ -1713,7 +1721,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         order_by: yr, qtr
         where: dep_time < @2002
-      }`).malloyResultMatches(expressionModel, [
+      }`).toMatchResult(
+        testModel,
         {yr: 2000, qtr: 1, qtr_flights: 12148, last_yr_qtr_flights: null},
         {yr: 2000, qtr: 2, qtr_flights: 11599, last_yr_qtr_flights: null},
         {yr: 2000, qtr: 3, qtr_flights: 12075, last_yr_qtr_flights: null},
@@ -1721,8 +1730,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         {yr: 2001, qtr: 1, qtr_flights: 11612, last_yr_qtr_flights: 12148},
         {yr: 2001, qtr: 2, qtr_flights: 13186, last_yr_qtr_flights: 11599},
         {yr: 2001, qtr: 3, qtr_flights: 12663, last_yr_qtr_flights: 12075},
-        {yr: 2001, qtr: 4, qtr_flights: 11714, last_yr_qtr_flights: 11320},
-      ]);
+        {yr: 2001, qtr: 4, qtr_flights: 11714, last_yr_qtr_flights: 11320}
+      );
     });
 
     it(`works with aggregate - ${databaseName}`, async () => {
@@ -1737,13 +1746,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         order_by: l
         limit: 5
-      }`).malloyResultMatches(expressionModel, [
+      }`).toMatchResult(
+        testModel,
         {l: 'A', c: 4, prev: null},
         {l: 'C', c: 3, prev: null},
         {l: 'D', c: 2, prev: null},
         {l: 'F', c: 1, prev: null},
-        {l: 'G', c: 1, prev: 'F'},
-      ]);
+        {l: 'G', c: 1, prev: 'F'}
+      );
     });
 
     it(`works with multiple order_bys - ${databaseName}`, async () => {
@@ -1763,12 +1773,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
               aircraft_models.seats.sum() desc
           }
         order_by: name
-      }`).malloyResultMatches(expressionModel, [
+      }`).toMatchResult(
+        testModel,
         {name: 'AMERICAN AIRLINES INC', r: 3},
         {name: 'CESSNA AIRCRAFT COMPANY', r: 4},
         {name: 'FEDERAL EXPRESS CORP', r: 2},
-        {name: 'UNITED AIR LINES INC', r: 1},
-      ]);
+        {name: 'UNITED AIR LINES INC', r: 1}
+      );
     });
 
     // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
@@ -1785,7 +1796,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: births desc
           limit: 3
         }
-      `).malloyResultMatches(expressionModel, [
+      `).toMatchResult(
+        testModel,
         {
           state: 'CA',
           births: 28810563,
@@ -1803,8 +1815,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           births: 21467359,
           popular_name: 'Isabella',
           prev_births_by_name: 23694136,
-        },
-      ]);
+        }
+      );
     });
     // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
     it('can be used in a select in a composite source', async () => {
@@ -1821,7 +1833,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: births desc
           limit: 3
         }
-      `).malloyResultMatches(expressionModel, [
+      `).toMatchResult(
+        testModel,
         {
           state: 'CA',
           births: 28810563,
@@ -1839,8 +1852,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           births: 21467359,
           popular_name: 'Isabella',
           prev_births_by_name: 23694136,
-        },
-      ]);
+        }
+      );
     });
   });
 });

@@ -1555,5 +1555,223 @@ describe('sql native fields in schema', () => {
         )
       );
     });
+
+    describe('malloy cast types', () => {
+      test('cast to string', () => {
+        expect(expr`ai::string`).toTranslate();
+      });
+      test('cast to number', () => {
+        expect(expr`astr::number`).toTranslate();
+      });
+      test('cast to boolean', () => {
+        expect(expr`ai::boolean`).toTranslate();
+      });
+      test('cast to date', () => {
+        expect(expr`ats::date`).toTranslate();
+      });
+      test('cast to timestamp', () => {
+        expect(expr`ad::timestamp`).toTranslate();
+      });
+      test('cast to timestamptz', () => {
+        expect(expr`ats::timestamptz`).toTranslate();
+      });
+    });
+  });
+});
+
+describe('number subtype propagation', () => {
+  // Test fields: ai (integer), af (float), abig (bigint)
+  // Helper to get numberType from ExprValue
+  function getNumberType(
+    result: ReturnType<BetaExpression['generated']>
+  ): string | undefined {
+    if (result.type === 'number') {
+      return result.numberType;
+    }
+    return undefined;
+  }
+
+  describe('arithmetic operations', () => {
+    test('integer + integer preserves integer subtype', () => {
+      const e = new BetaExpression('ai + ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('integer');
+    });
+
+    test('integer - integer preserves integer subtype', () => {
+      const e = new BetaExpression('ai - ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('integer');
+    });
+
+    test('integer * integer preserves integer subtype', () => {
+      const e = new BetaExpression('ai * ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('integer');
+    });
+
+    test('bigint + integer returns bigint subtype', () => {
+      const e = new BetaExpression('abig + ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+
+    test('integer + bigint returns bigint subtype', () => {
+      const e = new BetaExpression('ai + abig');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+
+    test('bigint + bigint returns bigint subtype', () => {
+      const e = new BetaExpression('abig + abig');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+
+    test('bigint * integer returns bigint subtype', () => {
+      const e = new BetaExpression('abig * ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+
+    test('float + integer returns float subtype', () => {
+      const e = new BetaExpression('af + ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('float');
+    });
+
+    test('float + bigint returns float subtype', () => {
+      const e = new BetaExpression('af + abig');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('float');
+    });
+
+    test('integer / integer returns float subtype', () => {
+      const e = new BetaExpression('ai / ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('float');
+    });
+
+    test('bigint / integer returns float subtype', () => {
+      const e = new BetaExpression('abig / ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('float');
+    });
+
+    test('integer % integer returns float subtype', () => {
+      const e = new BetaExpression('ai % ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('float');
+    });
+  });
+
+  describe('unary operations', () => {
+    test('unary minus preserves integer subtype', () => {
+      const e = new BetaExpression('-ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('integer');
+    });
+
+    test('unary minus preserves bigint subtype', () => {
+      const e = new BetaExpression('-abig');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+  });
+
+  describe('pick/case statements', () => {
+    test('pick with same integer subtypes preserves integer', () => {
+      const e = new BetaExpression('pick ai when true else ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('integer');
+    });
+
+    test('pick with same bigint subtypes preserves bigint', () => {
+      const e = new BetaExpression('pick abig when true else abig');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+
+    test('pick with mixed integer/bigint subtypes strips subtype', () => {
+      const e = new BetaExpression('pick abig when true else ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBeUndefined();
+    });
+
+    test('pick with mixed float/integer subtypes strips subtype', () => {
+      const e = new BetaExpression('pick af when true else ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBeUndefined();
+    });
+  });
+
+  describe('coalesce operations', () => {
+    test('coalesce with same integer subtypes preserves integer', () => {
+      const e = new BetaExpression('ai ?? ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('integer');
+    });
+
+    test('coalesce with same bigint subtypes preserves bigint', () => {
+      const e = new BetaExpression('abig ?? abig');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBe('bigint');
+    });
+
+    test('coalesce with mixed integer/bigint subtypes strips subtype', () => {
+      const e = new BetaExpression('abig ?? ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBeUndefined();
+    });
+
+    test('coalesce with mixed float/integer subtypes strips subtype', () => {
+      const e = new BetaExpression('af ?? ai');
+      e.compile();
+      const result = e.generated();
+      expect(result.type).toBe('number');
+      expect(getNumberType(result)).toBeUndefined();
+    });
   });
 });

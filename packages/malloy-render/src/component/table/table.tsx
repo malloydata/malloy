@@ -11,8 +11,13 @@ import {
   onCleanup,
 } from 'solid-js';
 import {getRangeSize} from '../util';
-import {getTableLayout} from './table-layout';
-import {createTableStore, TableContext, useTableContext} from './table-context';
+import {getTableLayout, adjustLayoutForPivots} from './table-layout';
+import {
+  createTableStore,
+  TableContext,
+  useTableContext,
+  type TableContext as TableContextType,
+} from './table-context';
 import {applyRenderer} from '@/component/renderer/apply-renderer';
 import {createStore, produce} from 'solid-js/store';
 import type {Virtualizer} from '@tanstack/solid-virtual';
@@ -27,6 +32,15 @@ import type {
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './table.css?raw';
 import {useResultContext} from '../result-context';
+import TransposeTable, {shouldTranspose} from './transpose-table';
+import {
+  buildPivotConfig,
+  shouldPivot,
+  getUserDefinedDimensions,
+  type PivotConfig,
+} from './pivot-utils';
+import {PivotFieldCells} from './pivot-cells';
+import {PivotHeaders} from './pivot-header';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -73,8 +87,8 @@ const Cell = (props: {
         displayValue: props.isHeader
           ? props.rawValue
           : typeof props.value !== 'function'
-          ? props.value
-          : null,
+            ? props.value
+            : null,
         value: typeof props.rawValue !== 'function' ? props.rawValue : null,
         fieldPath: props.field.path,
         isHeader: !!props.isHeader,
@@ -168,6 +182,26 @@ const TableField = (props: {
   row: RecordCell;
   rowPath: number[];
 }) => {
+  const tableCtx = useTableContext()!;
+
+  // Check if this field is a pivot field
+  const pivotConfig = () => tableCtx.pivotConfigs.get(props.field.key);
+
+  // If this is a pivot field, render pivot cells instead
+  if (pivotConfig()) {
+    const fieldLayout = tableCtx.layout.fieldLayout(props.field);
+    const columnRange = fieldLayout.relativeColumnRange;
+
+    return (
+      <PivotFieldCells
+        row={props.row}
+        pivotConfig={pivotConfig()!}
+        rowPath={props.rowPath}
+        startColumn={columnRange[0]}
+      />
+    );
+  }
+
   let renderValue: JSXElement = '';
   let renderAs = '';
   ({renderValue, renderAs} = applyRenderer({
@@ -180,10 +214,9 @@ const TableField = (props: {
       },
     },
   }));
-  const tableLayout = useTableContext()!.layout;
+  const tableLayout = tableCtx.layout;
   const fieldLayout = tableLayout.fieldLayout(props.field);
   const columnRange = fieldLayout.relativeColumnRange;
-  const tableCtx = useTableContext();
   const isHighlightedRow = () => {
     return (
       JSON.stringify(props.rowPath) ===
@@ -296,6 +329,37 @@ const MalloyTableRoot = (_props: {
 
   const root = props.data.root().field;
 
+  // Check if a field is a child of a pivot field
+  const isChildOfPivotField = (field: Field): boolean => {
+    let current = field.parent;
+    while (current) {
+      if (tableCtx.pivotConfigs.has(current.key)) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  };
+
+  // Check if a field is a sibling of a pivot field (same parent, same depth)
+  const isSiblingOfPivotField = (field: Field, depth: number): boolean => {
+    const parent = field.parent;
+    if (!parent) return false;
+    // Check if any pivot field has the same parent and depth
+    for (const [pivotKey] of tableCtx.pivotConfigs.entries()) {
+      const pivotLayout = tableCtx.layout.fieldHeaderRangeMap[pivotKey];
+      const pivotField = root.fieldAt(pivotKey);
+      if (
+        pivotLayout &&
+        pivotLayout.depth === depth &&
+        pivotField.parent === parent
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
       .sort((a, b) => {
@@ -311,7 +375,11 @@ const MalloyTableRoot = (_props: {
         const parentFieldRenderer = parent?.renderAs();
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
-        return isPartOfTable;
+        // Exclude children of pivot fields - they get special pivot headers
+        const isChildOfPivot = isChildOfPivotField(field);
+        // Exclude siblings of pivot fields - they render in pivot header rows
+        const isSiblingOfPivot = isSiblingOfPivotField(field, value.depth);
+        return isPartOfTable && !isChildOfPivot && !isSiblingOfPivot;
       })
       .map(([key, value]) => ({
         fieldKey: key,
@@ -323,6 +391,75 @@ const MalloyTableRoot = (_props: {
 
   const maxPinnedHeaderDepth = createMemo(() => {
     return Math.max(...pinnedFields().map(f => f.depth));
+  });
+
+  // Get pivot fields with their layout info and sibling fields for rendering pivot headers
+  const pivotFieldsWithLayout = createMemo(() => {
+    const result: Array<{
+      field: Field;
+      config: PivotConfig;
+      startColumn: number;
+      totalColumns: number;
+      siblingFields: Array<{
+        field: Field;
+        startColumn: number;
+        endColumn: number;
+      }>;
+    }> = [];
+
+    for (const [key, config] of tableCtx.pivotConfigs.entries()) {
+      const fieldLayout = tableCtx.layout.fieldHeaderRangeMap[key];
+      if (fieldLayout) {
+        const pivotField = root.fieldAt(key);
+        const parent = pivotField.parent;
+        const pivotDepth = fieldLayout.depth;
+
+        // Find sibling fields (same parent, same depth, not a pivot)
+        const siblingFields: Array<{
+          field: Field;
+          startColumn: number;
+          endColumn: number;
+        }> = [];
+
+        if (parent) {
+          for (const [sibKey, sibLayout] of Object.entries(
+            tableCtx.layout.fieldHeaderRangeMap
+          )) {
+            if (sibKey === key) continue; // Skip the pivot field itself
+            if (sibLayout.depth !== pivotDepth) continue;
+            const sibField = root.fieldAt(sibKey);
+            if (sibField.parent !== parent) continue;
+            if (tableCtx.pivotConfigs.has(sibKey)) continue; // Skip other pivots
+
+            siblingFields.push({
+              field: sibField,
+              startColumn: sibLayout.abs[0],
+              endColumn: sibLayout.abs[1],
+            });
+          }
+        }
+
+        // Sort siblings by column position
+        siblingFields.sort((a, b) => a.startColumn - b.startColumn);
+
+        // Calculate total columns for this level
+        const totalColumns =
+          Math.max(
+            ...Object.entries(tableCtx.layout.fieldHeaderRangeMap)
+              .filter(([, v]) => v.depth === pivotDepth)
+              .map(([, v]) => v.abs[1])
+          ) + 1;
+
+        result.push({
+          field: config.field,
+          config,
+          startColumn: fieldLayout.abs[0],
+          totalColumns,
+          siblingFields,
+        });
+      }
+    }
+    return result;
   });
 
   const fieldsToSize = createMemo(() => {
@@ -348,9 +485,8 @@ const MalloyTableRoot = (_props: {
         .forEach(([depth, size]) => {
           style[`--malloy-render--table-header-height-${depth}`] = `${size}px`;
           cumulativeDepth += size;
-          style[
-            `--malloy-render--table-header-cumulative-height-${depth}`
-          ] = `${cumulativeDepth}px`;
+          style[`--malloy-render--table-header-cumulative-height-${depth}`] =
+            `${cumulativeDepth}px`;
         });
 
       style['--total-header-size'] = tableCtx.layout.totalHeaderSize;
@@ -625,6 +761,17 @@ const MalloyTableRoot = (_props: {
               </div>
             )}
           </For>
+          {/* Pivot headers - rendered after regular headers */}
+          <For each={pivotFieldsWithLayout()}>
+            {pivotInfo => (
+              <PivotHeaders
+                pivotConfig={pivotInfo.config}
+                pivotStartColumn={pivotInfo.startColumn}
+                totalColumns={pivotInfo.totalColumns}
+                siblingFields={pivotInfo.siblingFields}
+              />
+            )}
+          </For>
         </div>
       </Show>
       {/* virtualized table */}
@@ -715,6 +862,31 @@ const MalloyTableRoot = (_props: {
   );
 };
 
+/**
+ * Builds pivot configurations for all pivot fields in the data.
+ */
+function buildPivotConfigs(
+  data: RecordOrRepeatedRecordCell
+): Map<string, PivotConfig> {
+  const configs = new Map<string, PivotConfig>();
+
+  for (const field of data.field.fields) {
+    if (shouldPivot(field) && field.isNest()) {
+      try {
+        const userDimensions = getUserDefinedDimensions(field);
+        const config = buildPivotConfig(field, data, userDimensions);
+        configs.set(field.key, config);
+      } catch (e) {
+        // Log error but don't fail rendering
+        // eslint-disable-next-line no-console
+        console.warn(`Failed to build pivot config for ${field.name}:`, e);
+      }
+    }
+  }
+
+  return configs;
+}
+
 const MalloyTable: Component<{
   data: RecordOrRepeatedRecordCell;
   rowLimit?: number;
@@ -723,8 +895,23 @@ const MalloyTable: Component<{
   shouldFillWidth?: boolean;
   currentRow?: number[];
 }> = props => {
+  // Check for transpose mode
+  if (shouldTranspose(props.data.field)) {
+    return <TransposeTable data={props.data} rowLimit={props.rowLimit} />;
+  }
+
   const hasTableCtx = !!useTableContext();
-  const tableCtx = createMemo<TableContext>(() => {
+
+  // Build pivot configs for pivot fields
+  const pivotConfigs = createMemo(() => {
+    if (hasTableCtx) {
+      // Inherit from parent context - don't rebuild
+      return useTableContext()!.pivotConfigs;
+    }
+    return buildPivotConfigs(props.data);
+  });
+
+  const tableCtx = createMemo<TableContextType>(() => {
     if (hasTableCtx) {
       const parentCtx = useTableContext()!;
       return {
@@ -736,14 +923,20 @@ const MalloyTable: Component<{
     }
 
     const [store, setStore] = createTableStore();
+    // Get base layout and adjust for pivot column expansion
+    const baseLayout = getTableLayout(props.data.field);
+    const configs = pivotConfigs();
+    const layout = adjustLayoutForPivots(baseLayout, configs);
+
     return {
       root: true,
-      layout: getTableLayout(props.data.field),
+      layout,
       store,
       setStore,
       headerSizeStore: createStore({}),
       currentRow: [],
       currentExplore: props.data.field.path,
+      pivotConfigs: configs,
     };
   });
 

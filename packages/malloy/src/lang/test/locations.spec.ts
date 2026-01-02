@@ -158,12 +158,11 @@ describe('source locations', () => {
 
   test('location of fields inherited from a query', () => {
     const source = markSource`
-      source: na is ${"_db_.table('aTable')"} -> {
+      source: na is _db_.table('aTable') -> {
         group_by:
-          abool
+          ${'abool'}
           ${'y is 1'}
-      }
-    `;
+      }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');

@@ -23,8 +23,8 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
-import type {Connection, DuckDbError, TableData} from 'duckdb';
-import {Database} from 'duckdb';
+import {DuckDBInstance} from '@duckdb/node-api';
+import type {DuckDBConnection as DuckDBNodeConnection} from '@duckdb/node-api';
 import type {
   ConnectionConfig,
   QueryDataRow,
@@ -42,8 +42,8 @@ export interface DuckDBConnectionOptions extends ConnectionConfig {
 }
 
 interface ActiveDB {
-  database: Database;
-  connections: Connection[];
+  instance: DuckDBInstance;
+  connections: DuckDBNodeConnection[];
 }
 
 export class DuckDBConnection extends DuckDBCommon {
@@ -54,7 +54,7 @@ export class DuckDBConnection extends DuckDBCommon {
   private readOnly = false;
 
   connecting: Promise<void>;
-  protected connection: Connection | null = null;
+  protected connection: DuckDBNodeConnection | null = null;
   protected setupError: Error | undefined;
   protected isSetup: Promise<void> | undefined;
 
@@ -120,15 +120,14 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    return new Promise(resolve => {
+    try {
       if (this.databasePath in DuckDBConnection.activeDBs) {
         const activeDB = DuckDBConnection.activeDBs[this.databasePath];
-        this.connection = activeDB.database.connect();
+        this.connection = await activeDB.instance.connect();
         activeDB.connections.push(this.connection);
-        resolve();
       } else {
         const config: Record<string, string> = {
-          'custom_user_agent': `Malloy/${packageJson.version}`,
+          custom_user_agent: `Malloy/${packageJson.version}`,
         };
         if (this.isMotherDuck) {
           if (
@@ -137,33 +136,28 @@ export class DuckDBConnection extends DuckDBCommon {
             !process.env['MOTHERDUCK_TOKEN']
           ) {
             this.setupError = new Error('Please set your MotherDuck Token');
-            // Resolve instead of error because errors cannot be caught.
-            return resolve();
+            return;
           }
           if (this.motherDuckToken) {
             config['motherduck_token'] = this.motherDuckToken;
           }
         }
         if (this.readOnly) {
-          config['access_mode'] = 'read_only';
+          config['access_mode'] = 'READ_ONLY';
         }
-        const database = new Database(this.databasePath, config, err => {
-          if (err) {
-            this.setupError = err;
-          } else {
-            this.connection = database.connect();
-            const activeDB: ActiveDB = {
-              database,
-              connections: [],
-            };
-            DuckDBConnection.activeDBs[this.databasePath] = activeDB;
 
-            activeDB.connections.push(this.connection);
-          }
-          resolve();
-        });
+        const instance = await DuckDBInstance.create(this.databasePath, config);
+        this.connection = await instance.connect();
+
+        const activeDB: ActiveDB = {
+          instance,
+          connections: [this.connection],
+        };
+        DuckDBConnection.activeDBs[this.databasePath] = activeDB;
       }
-    });
+    } catch (err) {
+      this.setupError = err instanceof Error ? err : new Error(String(err));
+    }
   }
 
   async loadExtension(ext: string) {
@@ -217,24 +211,19 @@ export class DuckDBConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{rows: TableData; totalRows: number}> {
-    return new Promise((resolve, reject) => {
-      if (this.connection) {
-        this.connection.all(sql, (err: DuckDbError | null, rows: TableData) => {
-          if (err) {
-            reject(err);
-          } else {
-            rows = processBigInts(rows);
-            resolve({
-              rows,
-              totalRows: rows.length,
-            });
-          }
-        });
-      } else {
-        reject(new Error('Connection not open'));
-      }
-    });
+  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+    if (!this.connection) {
+      throw new Error('Connection not open');
+    }
+
+    const result = await this.connection.run(sql);
+    // getRowObjectsJson() converts nested types (LIST, STRUCT) to JS arrays/objects
+    const rows = (await result.getRowObjectsJson()) as QueryDataRow[];
+
+    return {
+      rows,
+      totalRows: rows.length,
+    };
   }
 
   public async *runSQLStream(
@@ -255,16 +244,20 @@ export class DuckDBConnection extends DuckDBCommon {
       statements.shift();
     }
 
+    const result = await this.connection.stream(statements[0]);
+
     let index = 0;
-    for await (const row of this.connection.stream(statements[0])) {
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        break;
+    for await (const chunk of result.yieldRowObjectJson()) {
+      for (const row of chunk) {
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          return;
+        }
+        index++;
+        yield row as QueryDataRow;
       }
-      index++;
-      yield processBigInts(row);
     }
   }
 
@@ -279,20 +272,9 @@ export class DuckDBConnection extends DuckDBCommon {
         connection => connection !== this.connection
       );
       if (activeDB.connections.length === 0) {
-        activeDB.database.close();
+        activeDB.instance.closeSync();
         delete DuckDBConnection.activeDBs[this.databasePath];
       }
     }
   }
-}
-
-function processBigInts(data: unknown) {
-  return JSON.parse(
-    JSON.stringify(data, (_key, value) => {
-      if (typeof value === 'bigint') {
-        return Number(value);
-      }
-      return value;
-    })
-  );
 }

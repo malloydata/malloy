@@ -154,6 +154,189 @@ view: cost_vs_price is {
 }
 ```
 
+### `# big_value`
+
+Renders aggregate values as prominent metric cards, similar to KPI tiles in dashboards. This is ideal for displaying key metrics at a glance.
+
+**Important:** Only works with aggregate fields (measures). Does not support `group_by` dimensions.
+
+**Properties:**
+
+- `.size`: Controls card size preset.
+  - Values: `sm`, `md` (default), `lg`
+  - Syntax: `# big_value { size=lg }`
+- `.neutral_threshold`: Percentage threshold below which changes are shown as neutral (dash) instead of up/down arrows. Default is `0.05` (5%).
+  - Syntax: `# big_value { neutral_threshold=0.1 }`
+
+---
+
+#### Feature 1: Comparison Delta Indicators
+
+Show change vs a baseline value with colored up/down arrows (▲ green / ▼ red).
+
+**Field-level Properties (for comparison fields):**
+
+Add these properties to the comparison field (not the primary metric):
+
+- `.comparison_field`: The field name of the primary metric this value compares to.
+  - Syntax: `# big_value { comparison_field=current_sales }`
+- `.comparison_label`: Optional label shown next to the delta indicator.
+  - Syntax: `# big_value { comparison_label='vs Prior Year' }`
+- `.comparison_format`: How to calculate and display the change.
+  - Values: `pct` (percentage change, default) or `ppt` (percentage point difference)
+  - Syntax: `# big_value { comparison_format=ppt }`
+- `.down_is_good`: Set to `true` if a decrease should be shown as positive (green). Useful for cost or delay metrics.
+  - Syntax: `# big_value { down_is_good=true }`
+
+**Example:**
+
+```malloy
+# big_value
+view: sales_comparison is {
+  aggregate:
+    # label="Current Sales"
+    # currency
+    current_sales is revenue.sum()
+
+    // Shows: ▲ 8.7% vs Prior Year (green)
+    # big_value { comparison_field=current_sales comparison_label='vs Prior Year' }
+    # hidden
+    prior_sales is revenue.sum() * 0.92
+}
+```
+
+---
+
+#### Feature 2: Documentation Tooltips
+
+Add info icons with hover descriptions using `# description` tags.
+
+**Example:**
+
+```malloy
+# big_value
+view: documented_metrics is {
+  aggregate:
+    # description="Total revenue from completed sales. Updated daily."
+    # label="Total Revenue"
+    # currency
+    total_revenue is sales.sum()
+
+    # description="Win rate = Won / (Won + Lost). Industry average is 25%."
+    # label="Win Rate"
+    # percent
+    win_rate is won.sum() / (won.sum() + lost.sum())
+}
+```
+
+---
+
+#### Feature 3: Sparkline Trends
+
+Show mini line or bar charts alongside the metric value.
+
+**How it works:**
+
+1. Add `sparkline=nest_name` to the metric field to reference a sparkline nest
+2. Define the sparkline data as a nested view with `# line_chart { size=spark }` or `# bar_chart { size=spark }`
+3. Mark the nest as `# hidden` to prevent it from rendering separately
+
+**Metric Field Properties:**
+
+- `.sparkline`: The name of the nested view containing sparkline data.
+  - Syntax: `# big_value { sparkline=trend }`
+
+**Example:**
+
+```malloy
+# big_value
+view: sales_with_trend is {
+  aggregate:
+    # label="Total Sales"
+    # currency
+    # big_value { sparkline=trend }
+    total_sales is revenue.sum()
+
+  // Line sparkline showing trend over time
+  # line_chart { size=spark }
+  # hidden
+  nest: trend is {
+    group_by: order_date.month
+    aggregate: monthly_sales is revenue.sum()
+    order_by: order_date.month
+    limit: 12
+  }
+}
+
+// Bar sparkline
+# big_value
+view: with_bar_sparkline is {
+  aggregate:
+    # label="Order Count"
+    # big_value { sparkline=order_trend }
+    order_count is count()
+
+  # bar_chart { size=spark }
+  # hidden
+  nest: order_trend is {
+    group_by: region
+    aggregate: orders is count()
+    limit: 8
+  }
+}
+```
+
+---
+
+#### Formatting
+
+Big Value cards respect field formatting tags:
+- `# currency` - Format as currency (e.g., $1,234.56)
+- `# currency=euro` - Format as euros (€)
+- `# currency=pound` - Format as pounds (£)
+- `# percent` - Format as percentage
+- `# number="#,##0.0"` - Custom number format
+- `# number=big` - Abbreviate large numbers (1.2M, 3.5B)
+
+---
+
+#### Complete Example (All Features)
+
+```malloy
+# big_value
+view: executive_dashboard is {
+  aggregate:
+    # description="Total revenue this period. Target is $10M."
+    # label="Revenue"
+    # currency
+    # big_value { sparkline=revenue_trend }
+    revenue is sales.sum()
+
+    # big_value { comparison_field=revenue comparison_label='vs Target' }
+    # hidden
+    target_revenue is 10000000
+
+    # description="On-time delivery rate. SLA requires 95%."
+    # label="On-Time Rate"
+    # percent
+    ontime_rate is count() { where: delivered_on_time } / count()
+
+    # big_value { comparison_field=ontime_rate comparison_label='vs SLA' comparison_format=ppt }
+    # hidden
+    sla_target is 0.95
+
+  // Sparkline showing revenue trend
+  # line_chart { size=spark }
+  # hidden
+  nest: revenue_trend is {
+    group_by: order_date.month
+    aggregate: monthly_revenue is sales.sum()
+    order_by: order_date.month
+    limit: 12
+  }
+}
+```
+
 ---
 
 ## Data Limiting and Performance
@@ -258,10 +441,18 @@ Explicitly renders data as a table. This is often the default for nested results
 
 **Properties:**
 
-- `.pivot`: Pivots the table, turning unique values from dimension columns into new columns.
-  - Syntax: `# pivot` (uses all dimensions automatically) or `# pivot { dimensions=["dim1", "dim2"] }` (uses specified dimensions).
 - `.flatten`: Flattens a _single-row_ nested record's fields into the parent table as columns. The nested query should not have `group_by`.
   - Syntax: `# flatten` (applied to the `nest:` definition)
+- `.pivot`: Transforms a nested query into horizontal columns where dimension values become column headers
+  -  Dimensions (fields in `group_by`) become column headers
+  -  Measures (fields in `aggregate`) become cell values
+  - Column headers display as "DimensionValue: measure_name"
+  -  Maximum 30 pivot columns.
+  - Syntax: `# pivot` (applied to a `nest:` or a query)
+    - `.dimensions`: Specifies which fields to use as pivot dimensions. If not specified, all `group_by` fields are used.
+    - Syntax: `# pivot { dimensions=[field1, field2] }`
+- `.transpose`: Rotates a table so rows become columns and columns become rows. Original column names become row headers, original row values become column headers. Maximum 20 transpose columns.
+  - Syntax: `# transpose` (applied to the view)
 - `.size=fill`: Makes the table attempt to fill the width of its container.
   - Syntax: `# table.size=fill`
 - `# column` (applied to a specific field within the view): Controls individual column appearance.
@@ -274,26 +465,63 @@ Explicitly renders data as a table. This is often the default for nested results
 
 **Examples:**
 
-```
+```malloy
+// Column width and flatten
 view: detailed_table is {
   group_by:
     category
-    # column { width=lg } // Make brand column wider
+    # column { width=lg }
     brand
+  aggregate: total_sales
+
+  # flatten
+  nest: metrics is {
+    aggregate: avg_price, total_cost
+  }
+}
+
+// Pivot - dimensions auto-detected from group_by
+view: sales_by_category is {
+  group_by: category
+  aggregate: total_sales is sales.sum()
+
+  # pivot
+  nest: by_department is {
+    group_by: department
+    aggregate:
+      avg_price is price.avg()
+      total_units is units.sum()
+  }
+}
+// Creates columns: Men: avg_price | Men: total_units | Women: avg_price | Women: total_units
+
+// Pivot with explicit dimensions
+view: regional_sales is {
+  group_by: year
+  # pivot { dimensions=[region] }
+  nest: by_region is {
+    group_by: region
+    aggregate:
+      total_sales is sales.sum()
+      avg_margin is margin.avg()
+  }
+}
+
+// Transpose - swap rows and columns
+# transpose
+view: metrics_summary is {
+  group_by: category
   aggregate:
-    total_sales
-
-// Flatten metrics from a nested query
-nest: metrics is { # flatten
-aggregate: avg_price, total_cost
+    avg_price is price.avg()
+    total_sales is sales.sum()
+    product_count is count()
 }
-
-// Pivot sales by year
-nest: sales_by_year is { # pivot
-group_by: sale_year.year
-aggregate: yearly_sales is sum(sales)
-}
-}
+// Instead of categories as rows, displays as:
+// |               | Jeans  | Outerwear |
+// |---------------|--------|-----------|
+// | avg_price     | 97.41  | 145.37    |
+// | total_sales   | 104,776| 92,269    |
+// | product_count | 1,024  | 856       |
 ```
 
 ### `# list`
@@ -336,19 +564,6 @@ view: brand_counts is {
 // Output might look like: Clothing: Brand A (15), Brand B (12), Brand C (10)
 ```
 
-### `# transpose`
-
-Transposes a table result, swapping rows and columns. Useful for viewing single-row results with many measures.
-
-**Example:**
-
-```
-# transpose
-view: metrics is {
-  aggregate: total_sales, avg_cost, num_users
-}
-```
-
 ---
 
 ## Field-Level Formatting & Rendering Tags
@@ -357,17 +572,67 @@ These tags are typically applied directly to individual fields within a query.
 
 ### `# currency`
 
-Formats a numeric field as currency (e.g., `$1,234.56`).
+Formats a numeric field as currency. Supports both **shorthand** and **verbose** syntax for scaling and formatting options.
 
-**Properties:**
+#### Shorthand Syntax (Recommended)
 
-- `. [unit]`: Specifies currency unit (`usd` (default), `euro`, `pound`). Can be specified like `# currency.euro` or `# currency=euro`.
+Pattern: `# currency={code}{decimals}{scale}`
+
+- `{code}`: Currency code (`usd`, `eur`, `gbp`)
+- `{decimals}`: Number of decimal places (0-4)
+- `{scale}`: Scale letter (`k`, `m`, `b`, `t`, `q`) - case insensitive
+
+| Tag | Output | Description |
+|-----|--------|-------------|
+| `# currency=usd` | $412 | USD, default decimals |
+| `# currency=usd0` | $412 | 0 decimals |
+| `# currency=usd2` | $412.12 | 2 decimals |
+| `# currency=usd0k` | $412k | thousands, 0 decimals |
+| `# currency=usd1m` | $412.1m | millions, 1 decimal |
+| `# currency=usd0b` | $1b | billions, 0 decimals |
+| `# currency=eur2m` | €412.12m | Euro, millions, 2 decimals |
+| `# currency=gbp1b` | £1.4b | Pound, billions, 1 decimal |
+
+#### Verbose Syntax (Advanced Options)
+
+For suffix format control, use verbose syntax:
+
+```malloy
+# currency { scale=m decimals=2 suffix=finance }  // $412.12MM
+# currency { scale=k suffix=none }                // $412 (no suffix)
+# currency { scale=auto }                         // auto-scale like number=big
+```
+
+**Scale Options:** `k` (thousands), `m` (millions), `b` (billions), `t` (trillions), `q` (quadrillions), `auto`
+
+**Suffix Format Options:**
+
+| Format | k | m | b | t | q |
+|--------|---|---|---|---|---|
+| `letter` | K | M | B | T | Q |
+| `lower` (shorthand default) | k | m | b | t | q |
+| `word` | Thousand | Million | Billion | Trillion | Quadrillion |
+| `short` | K | Mil | Bil | Tril | Quad |
+| `finance` | M | MM | B | T | Q |
+| `scientific` | ×10³ | ×10⁶ | ×10⁹ | ×10¹² | ×10¹⁵ |
+| `none` | (empty) | (empty) | (empty) | (empty) | (empty) |
 
 **Example:**
 
-```
-measure: total_revenue is sales.sum() # currency
-measure: euro_sales is sales.sum() # currency=euro
+```malloy
+source: financials extend {
+  # currency=usd
+  measure: total_revenue is sales.sum()
+
+  # currency=usd0m
+  measure: revenue_millions is sales.sum()
+
+  # currency=eur2k
+  measure: euro_thousands is eu_sales.sum()
+
+  # currency { scale=m suffix=finance decimals=2 }
+  measure: revenue_finance is sales.sum()  // $42.54MM
+}
 ```
 
 ### `# percent`
@@ -382,17 +647,68 @@ measure: margin_pct is (revenue - cost) / revenue # percent
 
 ### `# number`
 
-Formats a numeric field using an `ssf` format string (e.g., Excel/Sheets formats).
+Formats a numeric field. Supports **shorthand** syntax for scaling, **verbose** syntax for advanced options, and **ssf format strings** for custom formatting.
 
-**Properties:**
+#### Shorthand Syntax (Recommended)
 
-- `. [format]`: The format string.
-  - Syntax: `# number="#,##0.00"`
+Pattern: `# number={decimals}{scale}` or `# number=auto`
+
+- `{decimals}`: Number of decimal places (0-4)
+- `{scale}`: Scale letter (`k`, `m`, `b`, `t`, `q`) - case insensitive
+
+| Tag | Output | Description |
+|-----|--------|-------------|
+| `# number=0` | 11 | 0 decimals |
+| `# number=1` | 11.2 | 1 decimal |
+| `# number=2` | 11.23 | 2 decimals |
+| `# number=0k` | 64k | thousands, 0 decimals |
+| `# number=1k` | 64.2k | thousands, 1 decimal |
+| `# number=0m` | 43m | millions, 0 decimals |
+| `# number=1m` | 42.5m | millions, 1 decimal |
+| `# number=0b` | 1b | billions, 0 decimals |
+| `# number=1t` | 1.4t | trillions, 1 decimal |
+| `# number=auto` | 1.2m | auto-scale (same as `number=big`) |
+| `# number=id` | 123456789 | identifier format (no commas) |
+
+#### Verbose Syntax (Advanced Options)
+
+For suffix format control, use verbose syntax:
+
+```malloy
+# number { scale=m decimals=2 suffix=word }      // 42.54 Million
+# number { scale=auto suffix=letter }            // 1.2M (uppercase)
+# number { scale=k suffix=none }                 // 64 (no suffix)
+```
+
+**Scale Options:** `k` (thousands), `m` (millions), `b` (billions), `t` (trillions), `q` (quadrillions), `auto`
+
+**Suffix Format Options:** Same as currency (see above)
+
+#### SSF Format String
+
+For custom formatting, use an ssf format string:
+
+```malloy
+# number="#,##0.00"    // 1,234.56
+# number="0.0%"        // percent format
+```
 
 **Example:**
 
-```
-measure: rounded_sales is sales.sum() # number="#,##0"
+```malloy
+source: metrics extend {
+  # number=1m
+  measure: users_millions is users.count()
+
+  # number=auto
+  measure: auto_scaled is amount.sum()
+
+  # number { scale=m suffix=word }
+  measure: word_format is amount.sum()  // 1.2 Million
+
+  # number=id
+  measure: order_id is id.max()  // 123456789 (no commas)
+}
 ```
 
 ### `# duration`
@@ -466,7 +782,8 @@ Hides a field from being rendered in tables or dashboards, though it remains in 
 **Example:**
 
 ```
-dimension: internal_id is id # hidden
+# hidden
+dimension: internal_id is id
 ```
 
 ### `# label`
@@ -476,7 +793,18 @@ Overrides the default display name (label/title) for a field or dashboard item.
 **Example:**
 
 ```
-measure: total_revenue is sales.sum() # label="Total Sales ($)"
+# label="Total Sales ($)"
+measure: total_revenue is sales.sum()
+```
+
+### `# description`
+
+Adds a description to a field, shown as an info icon tooltip in `# big_value` cards.
+
+**Example:**
+
+```
+measure: total_revenue is sales.sum() # description="Total revenue from completed sales. Updated daily."
 ```
 
 ### `# break`

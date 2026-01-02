@@ -49,7 +49,11 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getDataValue(data: Cell): Date | string | number | null {
     if (data.isNull()) {
       return null;
-    } else if (data.isTime() || data.isNumber() || data.isString()) {
+    } else if (data.isTime()) {
+      return data.value;
+    } else if (data.isNumber()) {
+      return data.value;
+    } else if (data.isString()) {
       return data.value;
     } else {
       throw new Error('Invalid field type for line chart.');

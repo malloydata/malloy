@@ -64,11 +64,97 @@ import type {
 import type {EventStream} from '../../runtime_types';
 import {sqlKey} from '../../model/sql_block';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
-export function pretty(thing: any): string {
-  return inspect(thing, {breakLength: 72, depth: Infinity});
+export function pretty(thing: unknown): string {
+  return inspect(thing, {breakLength: 100, depth: Infinity});
 }
+
+/**
+ * For human inspection of IR objects, there is a lot of noise which makes
+ * it diifficult to read. This function makes a deep copy of the object
+ * stripping out location meta data and and fields with undefined values.
+ * Then it pretty-prints the result.
+ * @param value Some IR object
+ * @returns prettified printable version
+ */
+export function humanify(value: unknown): string {
+  const seen = new WeakMap<object, unknown>();
+
+  function isObject(u: unknown): u is object {
+    return typeof u === 'object' && u !== null;
+  }
+
+  function walk(u: unknown): unknown {
+    // primitives & null
+    if (u === null || typeof u !== 'object') return u;
+
+    // Date
+    if (u instanceof Date) return new Date(u.getTime());
+
+    // RegExp
+    if (u instanceof RegExp) return new RegExp(u.source, u.flags);
+
+    // Already visited (handle cycles)
+    if (seen.has(u as object)) return seen.get(u as object);
+
+    // Array
+    if (Array.isArray(u)) {
+      const out: unknown[] = [];
+      seen.set(u as object, out);
+      for (let i = 0; i < u.length; i++) {
+        out[i] = walk(u[i]);
+      }
+      return out;
+    }
+
+    // Map
+    if (u instanceof Map) {
+      const out = new Map<unknown, unknown>();
+      seen.set(u as object, out);
+      for (const [k, v] of u.entries()) {
+        out.set(k, walk(v));
+      }
+      return out;
+    }
+
+    // Set
+    if (u instanceof Set) {
+      const out = new Set<unknown>();
+      seen.set(u as object, out);
+      for (const v of u.values()) {
+        out.add(walk(v));
+      }
+      return out;
+    }
+
+    // Plain object or class instance: copy enumerable own properties,
+    // skipping keys "at" and "location"
+    if (isObject(u)) {
+      const out: Record<string, unknown> = {};
+      seen.set(u as object, out);
+      const src = u as Record<string, unknown>;
+      for (const key of Object.keys(src)) {
+        // skip location metadata
+        if (key === 'at' || key === 'location') continue;
+        const val = src[key];
+        // drop properties that exist but have undefined value
+        if (val === undefined) continue;
+        const w = walk(val);
+        // if the walked value is undefined, skip adding the property
+        if (w === undefined) continue;
+        out[key] = w;
+      }
+      return out;
+    }
+
+    // Fallback
+    return u;
+  }
+
+  return pretty(walk(value));
+}
+
 const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
+const bigintType: NumberTypeDef = {type: 'number', numberType: 'bigint'};
 const mockSchema: Record<string, SourceDef> = {
   'aTable': {
     type: 'table',
@@ -80,6 +166,7 @@ const mockSchema: Record<string, SourceDef> = {
       {type: 'string', name: 'astr'},
       {type: 'number', name: 'af', numberType: 'float'},
       {...intType, name: 'ai'},
+      {...bigintType, name: 'abig'},
       {type: 'date', name: 'ad'},
       {type: 'boolean', name: 'abool'},
       {type: 'timestamp', name: 'ats'},
@@ -659,7 +746,7 @@ export function getSelectOneStruct(sqlBlock: SQLSourceRequest): {
       type: 'sql_select',
       name: key,
       dialect: 'standardsql',
-      connection: 'bigquery',
+      connection: '_db_',
       selectStr: sqlBlock.selectStr,
       fields: [{type: 'number', name: 'one'}],
     },

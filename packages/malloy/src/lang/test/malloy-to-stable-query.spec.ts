@@ -224,6 +224,33 @@ describe('Malloy to Stable Query', () => {
         logs: [],
       });
     });
+    test('filter parameter is passed properly', () => {
+      idempotent('run: a(p is f`foo`) -> by_carrier', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+              parameters: [
+                {
+                  name: 'p',
+                  value: {
+                    kind: 'filter_expression_literal',
+                    filter_expression_value: 'foo',
+                  },
+                },
+              ],
+            },
+            view: {
+              kind: 'view_reference',
+              name: 'by_carrier',
+            },
+          },
+        },
+        logs: [],
+      });
+    });
   });
   describe('drill', () => {
     test('drill clauses with all the literal types, as well as a filter string comparison', () => {
@@ -709,6 +736,156 @@ describe('Malloy to Stable Query', () => {
               },
             },
           },
+        },
+        logs: [],
+      });
+    });
+  });
+  describe('quoted identifiers', () => {
+    test('source name with dots is quoted as single identifier', () => {
+      idempotent('run: `foo.bar` -> { group_by: carrier }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'foo.bar',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+    test('source name with hyphens and dots is quoted as single identifier', () => {
+      idempotent('run: `foo-bar.baz` -> { group_by: carrier }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'foo-bar.baz',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+    test('source name with colons is quoted as single identifier', () => {
+      idempotent('run: `foo:bar:baz` -> { group_by: carrier }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'foo:bar:baz',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+
+    test('field path with quoted segment containing dot', () => {
+      idempotent('run: a -> { group_by: `foo.bar`.baz }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'a',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'baz',
+                      path: ['foo.bar'],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        logs: [],
+      });
+    });
+  });
+  describe('Render annotations', () => {
+    test('single render annotation', () => {
+      idempotent('# bar_chart\nrun: flights -> { group_by: carrier }', {
+        query: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  'field': {
+                    'annotations': undefined,
+                    'expression': {
+                      'kind': 'field_reference',
+                      'name': 'carrier',
+                      'path': undefined,
+                    },
+                  },
+                  'kind': 'group_by',
+                  'name': undefined,
+                },
+              ],
+            },
+          },
+          annotations: [{value: '# bar_chart\n'}],
         },
         logs: [],
       });

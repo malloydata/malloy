@@ -86,7 +86,12 @@ export class RefinedSpace extends DynamicSpace {
             if (value instanceof SpaceField) {
               edited.setEntry(
                 renamed.as,
-                new RenameSpaceField(value, renamed.as, renamed.location)
+                new RenameSpaceField(
+                  value,
+                  renamed.as,
+                  renamed.location,
+                  undefined
+                )
               );
             } else {
               renamed.logTo.logError(
@@ -180,8 +185,8 @@ function editJoinsFromIncludeState(
   const isJoin = path.length > 0;
   if (isJoin) {
     if (joinedState.fieldsToInclude) {
-      fields = from.fields.filter(
-        f => joinedState.fieldsToInclude?.has(f.as ?? f.name)
+      fields = from.fields.filter(f =>
+        joinedState.fieldsToInclude?.has(f.as ?? f.name)
       );
     } else {
       fields = from.fields;

@@ -1,24 +1,86 @@
 /*
- * Copyright 2024 Google LLC
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import * as fs from 'fs';
+import * as util from 'util';
+import {fileURLToPath} from 'url';
+import type {Connection, URLReader, EventStream, CacheManager} from '..';
+import {SingleConnectionRuntime} from '..';
+
+/**
+ * Options for createTestRuntime.
+ */
+export interface TestRuntimeOptions {
+  /** Custom URL reader. Defaults to reading from filesystem. */
+  urlReader?: URLReader;
+  /** Event stream for runtime events. */
+  eventStream?: EventStream;
+  /** Cache manager for model caching. */
+  cacheManager?: CacheManager;
+}
+
+/**
+ * Create a SingleConnectionRuntime for testing.
  *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
+ * By default, creates a runtime with a file URL reader that reads from the filesystem.
+ * Options can be provided to customize the URL reader, event stream, and cache manager.
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
+ * @example
+ * // Simple usage (connection package tests)
+ * import { createTestRuntime } from '@malloydata/malloy/test';
+ * import { BigQueryConnection } from '@malloydata/malloy-db-bigquery';
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * const bq = new BigQueryConnection('test');
+ * const runtime = createTestRuntime(bq);
+ *
+ * @example
+ * // With options (internal test infrastructure)
+ * const runtime = createTestRuntime(connection, {
+ *   urlReader: customReader,
+ *   eventStream: new EventEmitter(),
+ *   cacheManager: new TestCacheManager(),
+ * });
+ *
+ * @param connection - The database connection to use
+ * @param options - Optional configuration for the runtime
+ * @returns A SingleConnectionRuntime configured for testing
+ */
+export function createTestRuntime<T extends Connection>(
+  connection: T,
+  options?: TestRuntimeOptions
+): SingleConnectionRuntime<T> {
+  const urlReader = options?.urlReader ?? {
+    readURL: async (url: URL) => {
+      const filePath = fileURLToPath(url);
+      return await util.promisify(fs.readFile)(filePath, 'utf8');
+    },
+  };
+
+  return new SingleConnectionRuntime({
+    urlReader,
+    connection,
+    eventStream: options?.eventStream,
+    cacheManager: options?.cacheManager,
+  });
+}
+
+// Test data creation
+export {TV} from './test-values';
+export type {TypedValue} from './test-values';
+export {mkTestModel, wrapTestModel, extendTestModel} from './test-models';
+export type {TestModelSources, TestModel} from './test-models';
+
+// Query execution
+export {runQuery} from './runQuery';
+export type {QueryResult} from './runQuery';
+
+// Jest matcher types (matchers registered via separate import)
+export type {ExpectedRow, MatcherOptions} from './resultMatchers';
+
+/*
+ * Legacy exports - kept for backwards compatibility
  */
 
 /**
@@ -32,8 +94,8 @@ export function databasesFromEnvironmentOr(
   return process.env['MALLOY_DATABASES']
     ? process.env['MALLOY_DATABASES'].split(',')
     : process.env['MALLOY_DATABASE']
-    ? [process.env['MALLOY_DATABASE']]
-    : defaultDatabases;
+      ? [process.env['MALLOY_DATABASE']]
+      : defaultDatabases;
 }
 
 /**

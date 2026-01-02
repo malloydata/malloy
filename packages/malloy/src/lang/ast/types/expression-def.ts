@@ -27,6 +27,7 @@ import type {
   TimestampUnit,
   BasicExpressionType,
   FilterMatchExpr,
+  NumberTypeDef,
 } from '../../../model/malloy_types';
 import {
   isDateUnit,
@@ -179,7 +180,7 @@ export abstract class ExpressionDef extends MalloyElement {
 
 export class ExprDuration extends ExpressionDef {
   elementType = 'duration';
-  legalChildTypes = [TDU.timestampT, TDU.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly n: ExpressionDef,
     readonly timeframe: TimestampUnit
@@ -432,6 +433,51 @@ function compare(
   });
 }
 
+/**
+ * Computes the result numberType for arithmetic operations.
+ * - Division/modulo always return float
+ * - Float wins over integer/bigint
+ * - Bigint wins over integer
+ * - Both integer = integer
+ * - Unknown = no subtype
+ */
+function mergeNumberTypes(
+  lhs: ExprValue,
+  rhs: ExprValue,
+  op: ArithmeticMalloyOperator
+): NumberTypeDef {
+  // Division and modulo always return float
+  if (op === '/' || op === '%') {
+    return {type: 'number', numberType: 'float'};
+  }
+
+  // Only applies if both are numbers
+  if (lhs.type !== 'number' || rhs.type !== 'number') {
+    return {type: 'number'};
+  }
+
+  const leftSubtype = lhs.numberType;
+  const rightSubtype = rhs.numberType;
+
+  // If either is float, result is float
+  if (leftSubtype === 'float' || rightSubtype === 'float') {
+    return {type: 'number', numberType: 'float'};
+  }
+
+  // If either is bigint, result is bigint
+  if (leftSubtype === 'bigint' || rightSubtype === 'bigint') {
+    return {type: 'number', numberType: 'bigint'};
+  }
+
+  // Both are integer, result is integer
+  if (leftSubtype === 'integer' && rightSubtype === 'integer') {
+    return {type: 'number', numberType: 'integer'};
+  }
+
+  // Unknown - no subtype
+  return {type: 'number'};
+}
+
 function numeric(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -459,7 +505,7 @@ function numeric(
     );
   } else {
     return computedExprValue({
-      dataType: {type: 'number'},
+      dataType: mergeNumberTypes(lhs, rhs, op),
       value: {node: op, kids: {left: lhs.value, right: rhs.value}},
       from: [lhs, rhs],
     });
@@ -558,7 +604,7 @@ export function applyBinary(
         kids: {left: num.value, right: denom.value},
       };
       return computedExprValue({
-        dataType: {type: 'number'},
+        dataType: mergeNumberTypes(num, denom, op),
         value: divmod,
         from: [num, denom],
       });

@@ -23,7 +23,9 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import '../../util/db-jest-matchers'; // For isSqlEq matcher used with sqlEq helper
 import {
   brokenIn,
   databasesFromEnvironmentOr,
@@ -31,14 +33,26 @@ import {
   runQuery,
 } from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
+import {API} from '@malloydata/malloy';
+import {TestSelect} from '../../test-select';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
-  const q = runtime.getQuoter();
-
-  const timeSQL = `SELECT DATE '2021-02-24' as ${q`t_date`}, TIMESTAMP '2021-02-24 03:05:06' as ${q`t_timestamp`} `;
+  const testModel = wrapTestModel(runtime, '');
+  const ts = new TestSelect(runtime.dialect);
+  const timestamptz = runtime.dialect.hasTimestamptz;
+  const timeSchema = {
+    t_date: ts.mk_date('2021-02-24'),
+    t_timestamp: ts.mk_timestamp('2021-02-24 03:05:06'),
+  };
+  if (timestamptz) {
+    timeSchema['t_timestamptz'] = ts.mk_timestamptz(
+      '2021-02-24 03:05:06 [UTC]'
+    );
+  }
+  const timeSQL = ts.generate(timeSchema);
   const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 
   describe('interval measurement', () => {
@@ -99,7 +113,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         await expect(`
         run: ${dbName}.sql("SELECT 1")
         -> { select: yd is floor(days(@2001 to @2002)) }
-      `).malloyResultMatches(runtime, {yd: 365});
+      `).toMatchResult(testModel, {yd: 365});
       }
     );
 
@@ -178,6 +192,14 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       expect(await eq).isSqlEq();
     });
 
+    test.when(timestamptz)('trunc timestamptz day', async () => {
+      await expect(`
+          run: ${dbName}.sql("""${timeSQL}""") -> {
+            select: result is t_timestamptz.day
+          }
+        `).toMatchResult(testModel, {result: '2021-02-24T00:00:00.000Z'});
+    });
+
     test('trunc week', async () => {
       const eq = sqlEq('t_timestamp.week', '@2021-02-21 00:00:00');
       expect(await eq).isSqlEq();
@@ -246,6 +268,24 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       expect(await eq).isSqlEq();
     });
   });
+
+  test.when(runtime.dialect.hasTimestamptz)(
+    'extract from timestamptz without query timezone',
+    async () => {
+      // TIMESTAMPTZ representing midnight UTC
+      // Without query timezone, extract should happen in UTC (or stored tz for Trino)
+      // Expected: hour = 0, day = 20
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
+          select:
+            utc_hour is hour(utc_tstz)
+            utc_day is day(utc_tstz)
+        }`
+      ).toMatchResult(testModel, {utc_hour: 0, utc_day: 20});
+    }
+  );
+
   describe('date truncation', () => {
     test('date trunc day', async () => {
       const eq = sqlEq('t_date.day', '@2021-02-24');
@@ -472,16 +512,14 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     });
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('dependant join dialect fragments', async () => {
+  test('dependant join dialect fragments', async () => {
     await expect(`
       source: timeData is ${dbName}.sql("""${timeSQL}""")
       run: timeData -> {
         extend: {join_one: joined is timeData on t_date = joined.t_date}
         group_by: t_month is joined.t_timestamp.month
       }
-    `).malloyResultMatches(runtime, {t_month: new Date('2021-02-01')});
+    `).toMatchResult(testModel, {t_month: new Date('2021-02-01')});
   });
 
   describe('timezone set correctly', () => {
@@ -630,9 +668,7 @@ const utc_2020 = LuxonDateTime.fromObject(
 );
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )(`${dbName} - default timezone is UTC`, async () => {
+  test(`${dbName} - default timezone is UTC`, async () => {
     // this makes sure that the tests which use the test timezome are actually
     // testing something ... file this under "abundance of caution". It
     // really tests nothing, but I feel calmer with this here.
@@ -649,9 +685,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     expect(have.valueOf()).toEqual(utc_2020.valueOf());
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('literal with zone name', async () => {
+  test('literal with zone name', async () => {
     const query = runtime.loadQuery(
       `
         run: ${dbName}.sql("SELECT 1 as one") -> {
@@ -667,10 +701,13 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
-  const q = runtime.getQuoter();
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('literal timestamps', async () => {
+  const testModel = wrapTestModel(runtime, '');
+  const ts = new TestSelect(runtime.dialect);
+  const selectMidnight = `"""${ts.generate({
+    utc_midnight_ts: ts.mk_timestamp('2020-02-20 00:00:00'),
+    date_2020: ts.mk_date('2020-02-20'),
+  })}"""`;
+  test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
         run: ${dbName}.sql("SELECT 1 as one") -> {
@@ -694,47 +731,190 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           mex_midnight is hour(utc_midnight)
           mex_day is day(utc_midnight)
       }`
-    ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
+    ).toMatchResult(testModel, {mex_midnight: 18, mex_day: 19});
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('truncate day', async () => {
+  test.when(runtime.dialect.hasTimestamptz)(
+    'extract from timestamptz with query timezone',
+    async () => {
+      // TIMESTAMPTZ representing midnight UTC
+      // With query timezone America/Mexico_City (-06:00), midnight UTC = 6pm Feb 19
+      // Expected: hour = 18, day = 19
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
+          select:
+            mex_hour is hour(utc_tstz)
+            mex_day is day(utc_tstz)
+        }`
+      ).toMatchResult(testModel, {mex_hour: 18, mex_day: 19});
+    }
+  );
+
+  test('truncate day', async () => {
     // At midnight in london it the 19th in Mexico, so that truncates to
     // midnight on the 19th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
     await expect(
-      `run: ${dbName}.sql("SELECT 1 as x") -> {
+      `run: ${dbName}.sql(${selectMidnight}) -> {
         timezone: '${zone}'
-        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-        select: mex_day is utc_midnight.day
+        select: mex_day is utc_midnight_ts.day
       }`
-    ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
+    ).toMatchResult(testModel, {mex_day: mex_19.toJSDate()});
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('cast timestamp to date', async () => {
-    // At midnight in london it is the 19th in Mexico, so when we cast that
-    // to a date, it should be the 19th.
+  test('truncate week', async () => {
+    // the 19th in mexico is a wednesday, so trunc to the 15th
+    const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
+    // Find the sunday before then
+    const mex_sunday = mex_19.minus({days: mex_19.weekday % 7});
     await expect(
       `run: ${dbName}.sql("SELECT 1 as x") -> {
         timezone: '${zone}'
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-        select: mex_day is day(utc_midnight::date)
+        select: mex_week is utc_midnight.week
       }`
-    ).malloyResultMatches(runtime, {mex_day: 19});
+    ).toMatchResult(testModel, {mex_week: mex_sunday.toJSDate()});
   });
 
-  test.when(
-    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
-  )('cast date to timestamp', async () => {
+  test('cast timestamp to date', async () => {
     await expect(
-      `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
+      `run: ${dbName}.sql(${selectMidnight}) -> {
         timezone: '${zone}'
-        select: mex_ts is mex_20::timestamp
+        select: mex_date is utc_midnight_ts::date
       }`
-    ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
+    ).toMatchResult(testModel, {mex_date: '2020-02-19'});
+  });
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast timestamptz to date',
+    async () => {
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_tstz is @2020-02-20 00:00:00[UTC]::timestamptz }
+          select: mex_date is utc_tstz::date
+        }`
+      ).toMatchResult(testModel, {mex_date: '2020-02-19'});
+    }
+  );
+  test('cast date to timestamp', async () => {
+    await expect(
+      `run: ${dbName}.sql(${selectMidnight}) -> {
+        timezone: '${zone}'
+        select: mex_date is date_2020::timestamp
+      }`
+    ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
+  });
+  test('return date 2020-02-20', async () => {
+    await expect(
+      `run: ${dbName}.sql(${selectMidnight}) -> {
+        timezone: '${zone}'
+        select: d2020 is date_2020
+      }`
+    ).toMatchResult(testModel, {d2020: '2020-02-20'});
+  });
+  test.when(runtime.dialect.hasTimestamptz)(
+    'cast date to timestamptz',
+    async () => {
+      await expect(
+        `run: ${dbName}.sql(${selectMidnight}) -> {
+          timezone: '${zone}'
+          select: mex_date is date_2020::timestamptz
+        }`
+      ).toMatchResult(testModel, {mex_date: zone_2020.toJSDate()});
+    }
+  );
+
+  // Test for timezone rendering issue with nested queries
+  test.when(runtime.supportsNesting)(
+    'nested queries preserve timezone in rendering',
+    async () => {
+      const result = await runQuery(
+        runtime,
+        `run: ${dbName}.table('malloytest.flights') extend {
+        view: arrivals is {
+          group_by: arr_time.hour
+          order_by: arr_time desc
+          limit: 1
+        }
+      } -> {
+        nest: arrive_utc is arrivals
+        nest: arrive_yekaterinburg is arrivals + { timezone: 'Asia/Yekaterinburg' }
+      }`
+      );
+
+      // First, check that the raw result has the correct timezone metadata
+      const rawFields = result.resultExplore.structDef.fields;
+      const rawArriveUtc = rawFields.find(f => f.name === 'arrive_utc');
+      const rawArriveYek = rawFields.find(
+        f => f.name === 'arrive_yekaterinburg'
+      );
+
+      expect(rawArriveUtc).toBeDefined();
+      expect(rawArriveYek).toBeDefined();
+
+      // Check timezone properties on raw array/record fields
+      expect(rawArriveUtc!['queryTimezone']).toBeUndefined(); // Should be undefined for UTC
+      expect(rawArriveYek!['queryTimezone']).toBe('Asia/Yekaterinburg');
+
+      // Now check that the wrapped result also preserves timezone metadata
+      const wrappedResult = API.util.wrapResult(result);
+      const wrappedFields = wrappedResult.schema.fields;
+      const wrappedArriveUtc = wrappedFields.find(f => f.name === 'arrive_utc');
+      const wrappedArriveYek = wrappedFields.find(
+        f => f.name === 'arrive_yekaterinburg'
+      );
+
+      expect(wrappedArriveUtc).toBeDefined();
+      expect(wrappedArriveYek).toBeDefined();
+
+      // Check timezone properties in the wrapped result
+      // For nested views, the timezone should be in the annotations
+      const arriveUtcAnnotations = wrappedArriveUtc?.annotations;
+      const arriveYekAnnotations = wrappedArriveYek?.annotations;
+
+      // Check if timezone info is present in annotations
+      const utcTimezoneAnnotation = arriveUtcAnnotations?.find(ann =>
+        ann.value.includes('query_timezone')
+      );
+      const yekTimezoneAnnotation = arriveYekAnnotations?.find(ann =>
+        ann.value.includes('query_timezone')
+      );
+
+      expect(utcTimezoneAnnotation).toBeUndefined(); // UTC should have no timezone annotation
+      expect(yekTimezoneAnnotation?.value).toContain('Asia/Yekaterinburg');
+    }
+  );
+
+  test('intervals are evalutated in query timezone', async () => {
+    await expect(
+      `source: onerow is ${dbName}.sql("SELECT 1 as rownum") extend {
+        dimension:
+          // Dublin is UTC+1 in June and UTC in November
+          november is @2024-11-01 00:00:00[Europe/Dublin]
+          june1_correct is @2024-06-01 00:00:00[Europe/Dublin],
+          august1_correct is @2024-08-01 00:00:00[Europe/Dublin],
+          by_month is november - 5 months,
+          by_day is november - 153 days,
+          by_hour is november - 3673 hours, // 153 days * 24 hours + 1 hour fall back
+          by_quarter is november - 1 quarter, // 3 months back crosses DST boundary
+      }
+      run: onerow -> {
+        timezone: 'Europe/Dublin'
+        select:
+          june1_correct,
+          month_ok is by_month = june1_correct, by_month
+          day_ok is by_day = june1_correct, by_day
+          hour_ok is by_hour = june1_correct, by_hour
+          quarter_ok is by_quarter = august1_correct, by_quarter
+      }`
+    ).toMatchResult(testModel, {
+      month_ok: true,
+      day_ok: true,
+      hour_ok: true,
+      quarter_ok: true,
+    });
   });
 });
 

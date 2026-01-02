@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-snowflake",
-  "version": "0.0.302",
+  "version": "0.0.332",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,14 +17,14 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.302",
+    "@malloydata/malloy": "0.0.332",
     "generic-pool": "^3.9.0",
-    "snowflake-sdk": "2.0.2",
+    "snowflake-sdk": "2.3.1",
     "toml": "^3.0.0"
   }
 }

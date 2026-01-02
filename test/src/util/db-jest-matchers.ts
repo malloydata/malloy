@@ -1,37 +1,10 @@
-/* eslint-disable no-console */
 /*
- * Copyright 2023 Google LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files
- * (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import type {Result, Runtime} from '@malloydata/malloy';
-import {SingleConnectionRuntime} from '@malloydata/malloy';
 import EventEmitter from 'events';
-import {inspect} from 'util';
-import type {
-  ExpectedResult,
-  ExpectedResultRow,
-  TestRunner,
-} from './db-matcher-support';
-import {runQuery} from './db-matcher-support';
 
 interface ExpectedEvent {
   id: string;
@@ -44,70 +17,6 @@ declare global {
   namespace jest {
     interface Matchers<R> {
       isSqlEq(): R;
-      /**
-       * Jest matcher for running a Malloy query, checks that each row
-       * contains the values matching the template. If you only want to
-       * check the first row, use the first form. If you want to check
-       * multiple rows, use the second.
-       *
-       *     await expect('query').malloyResultMatches(runtime, {colName: colValue});
-       *     await expect('query').malloyResultMatches(runtime, [{colName: colValue}]);
-       *
-       *   * If you use an array, the number of rows in the result must match the rows in the match
-       *   * The empty match {} accepts ANY data, but will errror if there is not a row
-       *   * A match key of nestName.colName expects nestName to be a query which returns multiple rows, it will match
-       *     fields from the first row of the rows of nestName
-       *   * A match key of nestName/colName expects nestName to be a record/struct type
-       *
-       * In addition, the query is checked for the following tags
-       *
-       *   * test.verbose -- If the test fails, also pretty-print the result data
-       *   * test.debug -- Force test failure, and the result data will be printed
-       *
-       * @param querySrc Malloy source, last query in source will be run
-       * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
-       * @param expected Key value pairs or array of key value pairs
-       */
-      malloyResultMatches(
-        runtime: TestRunner,
-        matchVals: ExpectedResult
-      ): Promise<R>;
-      /**
-       * Jest matcher for running a Malloy query, checks that each row
-       * contains the values matching the template. The argument list
-       * at the end will be matched for each row of the query.
-       *
-       * To see if the first row of a query contains a field called num with a value of 7
-       * ( a "runtime"  can be a Runtime, or a Model from load/extend of a Model)
-       *
-       *     await expect('run: ...').matchesRows(runtime, {num: 7});
-       *
-       * To see if the first two rows of a query contains a field called num with a values 7 and 8
-       *
-       *     await expect('run: ...').matchesRows(runtime {num: 7}, {num:8});
-       *
-       * Every symbol in the expect match must be in the row, however there can be columns in the row
-       * which are not in the match.
-       *
-       * mtoy todo maybe this should be "debug_query()" instead of a tag ... ?
-       * In addition, the query is checked for the tags, preceed your run statement with ...
-       *
-       *   * test.debug -- Force test failure, and the result data will be printed
-       *
-       * @param matchVals ... list of row objects containing key-value pairs
-       */
-      matchesRows(
-        runtime: TestRunner,
-        ...matchVals: ExpectedResultRow[]
-      ): Promise<R>;
-      /**
-       * Similar to matchesRows, argument is an array of rows, not a list of rows
-       * Output on a mismatch is a jest-diff
-       */
-      matchesResult(
-        runtime: TestRunner,
-        matchVals: ExpectedResultRow[]
-      ): Promise<R>;
       toEmitDuringCompile(
         runtime: Runtime,
         ...events: ExpectedEvent[]
@@ -140,225 +49,6 @@ expect.extend({
     return {
       pass: true,
       message: () => 'SQL expression matched',
-    };
-  },
-
-  async malloyResultMatches(
-    querySrc: string,
-    runtime: TestRunner,
-    shouldEqual: ExpectedResult
-  ) {
-    // TODO -- THIS IS NOT OK BUT I AM NOT FIXING IT NOW
-    if (querySrc.indexOf('nest:') >= 0) {
-      if (
-        runtime instanceof SingleConnectionRuntime &&
-        !runtime.supportsNesting
-      ) {
-        return {
-          pass: true,
-          message: () =>
-            'Test was skipped since connection does not support nesting.',
-        };
-      }
-    }
-
-    const {fail, result, queryTestTag, query} = await runQuery({
-      runner: runtime,
-      src: querySrc,
-    });
-    if (fail) return fail;
-    if (!result) {
-      return {
-        pass: false,
-        message: () => 'runQuery returned no results and no errors',
-      };
-    }
-
-    const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
-    const fails: string[] = [];
-    const gotRows = result.data.toObject().length;
-
-    if (Array.isArray(shouldEqual)) {
-      if (gotRows !== allRows.length) {
-        fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
-      }
-    }
-    let matchRow = 0;
-    for (const expected of allRows) {
-      for (const [name, value] of Object.entries(expected)) {
-        const pExpect = JSON.stringify(value);
-        const row = allRows.length > 1 ? `[${matchRow}]` : '';
-        const expected = `Expected ${row}{${name}: ${pExpect}}`;
-        try {
-          // the internet taught me this, use lookahead/behind to preserve delimiters
-          // but we are splitting on / and .
-          const nestParse = name.split(/(?=[./])|(?<=[./])/g);
-
-          const resultPath = [matchRow, nestParse[0]];
-          for (
-            let pathCursor = 1;
-            pathCursor < nestParse.length;
-            pathCursor += 2
-          ) {
-            if (nestParse[pathCursor] === '.') {
-              resultPath.push(0);
-            }
-            resultPath.push(nestParse[pathCursor + 1]);
-          }
-          const got = result.data.path(...resultPath).value;
-          const pGot = JSON.stringify(got);
-          const mustBe = value instanceof Date ? value.getTime() : value;
-          const actuallyGot = got instanceof Date ? got.getTime() : got;
-          if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
-            fails.push(`${expected} Got: Non Numeric '${pGot}'`);
-          } else if (!objectsMatch(actuallyGot, mustBe)) {
-            fails.push(`${expected} Got: ${pGot}`);
-          }
-        } catch (e) {
-          fails.push(`${expected} Error: ${e.message}`);
-        }
-      }
-      matchRow += 1;
-    }
-    const failedTest = fails.length > 0;
-    const debugFail = queryTestTag?.has('debug');
-    if (debugFail || (failedTest && queryTestTag?.has('verbose'))) {
-      fails.unshift(`Result Data: ${humanReadable(result.data.toObject())}\n`);
-    }
-
-    if (fails.length > 0) {
-      if (debugFail && !failedTest) {
-        fails.push('\nTest forced failure (# test.debug)');
-      }
-      const fromSQL = query
-        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
-        : 'SQL Missing';
-      const failMsg = `${fromSQL}\n${fails.join('\n')}`;
-      return {pass: false, message: () => failMsg};
-    }
-
-    return {
-      pass: true,
-      message: () => 'All rows matched expected results',
-    };
-  },
-
-  async matchesRows(
-    querySrc: string,
-    runtime: TestRunner,
-    ...expected: ExpectedResultRow[]
-  ) {
-    querySrc = querySrc.trimEnd().replace(/^\n*/, '');
-    const {fail, result, queryTestTag, query} = await runQuery({
-      runner: runtime,
-      src: querySrc,
-    });
-    if (fail) return fail;
-    if (!result) {
-      return {
-        pass: false,
-        message: () => 'runQuery returned no results and no errors',
-      };
-    }
-
-    const fails: string[] = [];
-    const got = result.data.toObject();
-    const expectStr = this.utils.EXPECTED_COLOR(humanReadable(expected));
-
-    if (!Array.isArray(got)) {
-      fails.push(`!!! Expected: ${expectStr}`);
-      fails.push(
-        `??? NonArray: ${this.utils.RECEIVED_COLOR(humanReadable(got))}`
-      );
-    } else {
-      // compare each row in the result to each row in the expectation
-      // This is more useful than a straight diff
-      const diffs: string[] = [];
-      let unMatched = false;
-      for (let expectNum = 0; expectNum < expected.length; expectNum += 1) {
-        const eStr = humanReadable(expected[expectNum]);
-        if (objectsMatch(got[expectNum], expected[expectNum])) {
-          diffs.push(`              ${eStr}`);
-        } else {
-          diffs.push(this.utils.EXPECTED_COLOR(`<<< Expected: ${eStr}`));
-          diffs.push(
-            this.utils.RECEIVED_COLOR(
-              `>>> Received: ${humanReadable(got[expectNum])}`
-            )
-          );
-          unMatched = true;
-        }
-      }
-      if (unMatched) {
-        fails.push('ROWS:', ...diffs);
-      }
-    }
-
-    if (queryTestTag?.has('debug') && fails.length === 0) {
-      fails.push(
-        `\n${this.utils.RECEIVED_COLOR('Test forced failure (# test.debug)')}`
-      );
-      fails.push(`Received: ${this.utils.EXPECTED_COLOR(humanReadable(got))}`);
-    }
-
-    if (fails.length > 0) {
-      const fromSQL = query
-        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
-        : 'SQL Missing';
-      const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n${fails.join('\n')}`;
-      return {pass: false, message: () => failMsg};
-    }
-
-    return {pass: true, message: () => `Matched: ${expectStr}`};
-  },
-
-  async matchesResult(
-    querySrc: string,
-    runtime: TestRunner,
-    expected: ExpectedResultRow[]
-  ) {
-    querySrc = querySrc.trimEnd();
-    const {fail, result, queryTestTag, query} = await runQuery({
-      runner: runtime,
-      src: querySrc,
-    });
-    if (fail) return fail;
-    if (!result) {
-      return {
-        pass: false,
-        message: () => 'runQuery returned no results and no errors',
-      };
-    }
-
-    const fails: string[] = [];
-    const got = result.data.toObject();
-    const expectStr = humanReadable(expected);
-
-    if (!objectsMatch(got, expected)) {
-      fails.push(
-        'RESULT:',
-        this.utils.diff(expectStr, humanReadable(got)) || ''
-      );
-    }
-
-    if (queryTestTag?.has('debug') && fails.length === 0) {
-      fails.push(
-        `\n${this.utils.RECEIVED_COLOR('Test forced failure (# test.debug)')}`
-      );
-      fails.push(`Received: ${this.utils.EXPECTED_COLOR(humanReadable(got))}`);
-    }
-
-    if (fails.length > 0) {
-      const fromSQL = query
-        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
-        : 'SQL Missing';
-      const failMsg = `QUERY:\n${querySrc}\n${fromSQL}\n${fails.join('\n')}`;
-      return {pass: false, message: () => failMsg};
-    }
-
-    return {
-      pass: true,
-      message: () => `Matched: ${this.utils.EXPECTED_COLOR(expectStr)}`,
     };
   },
 
@@ -434,12 +124,20 @@ async function toEmit(
 
   return {
     pass: true,
-    message: () => 'All rows matched expected results',
+    message: () => 'All events matched',
   };
 }
 
-function humanReadable(thing: unknown): string {
-  return inspect(thing, {breakLength: 72, depth: Infinity});
+// Check if two values are numerically equal (handles number/bigint interop)
+function numericallyEqual(a: unknown, b: unknown): boolean {
+  const aIsNumeric = typeof a === 'number' || typeof a === 'bigint';
+  const bIsNumeric = typeof b === 'number' || typeof b === 'bigint';
+  if (aIsNumeric && bIsNumeric) {
+    // Use == for loose equality between number and bigint
+    // eslint-disable-next-line eqeqeq
+    return a == b;
+  }
+  return false;
 }
 
 // If expected is an object, all of the keys should also match,
@@ -453,6 +151,10 @@ function objectsMatch(a: unknown, mustHave: unknown): boolean {
     mustHave === undefined ||
     mustHave === null
   ) {
+    // Handle numeric equality between number and bigint
+    if (numericallyEqual(a, mustHave)) {
+      return true;
+    }
     return mustHave === a;
   } else if (Array.isArray(mustHave)) {
     if (Array.isArray(a)) {

@@ -399,8 +399,8 @@ describe('api', () => {
                 },
                 {
                   default_value: {
-                    kind: 'timestamp_literal',
-                    timestamp_value: '2020-01-01',
+                    kind: 'date_literal',
+                    date_value: '2020-01-01',
                   },
                   name: 'date_1',
                   type: {
@@ -1092,6 +1092,292 @@ LIMIT 101
         };
         expect(result).toMatchObject(expected);
       });
+    });
+    test('coalesce across joined sources', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: `
+          run: flights -> {
+            select:
+              result1 is flight_id ?? airports.city ?? carriers.name
+          }
+        `,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.airports',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'code',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'city',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.carriers',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'code',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'name',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'id2',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'origin',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: airports is duckdb.table('malloytest.airports') extend {
+                  primary_key: code
+                  dimension: key is code
+                  dimension: other_data is city
+                }
+                source: carriers is duckdb.table('malloytest.carriers') extend {
+                  primary_key: code
+                }
+                source: flights is duckdb.table('malloytest.flights') extend {
+                  dimension: flight_id is id2
+                  join_one: airports on airports.key = origin
+                  join_one: carriers on carriers.code = carrier
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'duckdb', dialect: 'duckdb'}],
+        },
+      });
+
+      expect(result.compiler_needs).toBeUndefined();
+      // Assert no errors and that we got a result with SQL
+      expect(result.logs).toBeUndefined();
+      expect(result.result).toBeDefined();
+      expect(result.result?.sql).toBeDefined();
+      expect(result.result?.connection_name).toBe('duckdb');
+      expect(result.result?.sql).toContain('LEFT JOIN malloytest.airports');
+      expect(result.result?.sql).toContain('LEFT JOIN malloytest.carriers');
+      expect(result.result?.sql).toContain(
+        'COALESCE((COALESCE((base."id2"),airports_0."city")),carriers_0."name")'
+      );
+    });
+    test('coalesce with literal null across joined sources', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: `
+          run: flights -> {
+            select:
+              result1 is null ?? airports.city
+          }
+        `,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.airports',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'code',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'city',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'id2',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                  {
+                    kind: 'dimension',
+                    name: 'origin',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: airports is duckdb.table('malloytest.airports') extend {
+                  primary_key: code
+                  dimension: key is code
+                  dimension: other_data is city
+                }
+                source: flights is duckdb.table('malloytest.flights') extend {
+                  dimension: flight_id is id2
+                  join_one: airports on airports.key = origin
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'duckdb', dialect: 'duckdb'}],
+        },
+      });
+
+      expect(result.compiler_needs).toBeUndefined();
+      expect(result.logs).toBeUndefined();
+      expect(result.result).toBeDefined();
+      expect(result.result?.sql).toBeDefined();
+      expect(result.result?.connection_name).toBe('duckdb');
+      expect(result.result?.sql).toContain('LEFT JOIN malloytest.airports');
+      expect(result.result?.sql).toContain('airports_0."city"');
+    });
+    test('coalesce with parameter and constant', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: `
+          run: flights(my_param is "some_value") -> {
+            select:
+              result1 is param_field ?? "default_value"
+          }
+        `,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'id2',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.parameters
+                source: flights(my_param::string is "default_value") is duckdb.table('malloytest.flights') extend {
+                  dimension: param_field is my_param
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'duckdb', dialect: 'duckdb'}],
+        },
+      });
+
+      expect(result.compiler_needs).toBeUndefined();
+      expect(result.logs).toBeUndefined();
+      expect(result.result).toBeDefined();
+      expect(result.result?.sql).toBeDefined();
+      expect(result.result?.connection_name).toBe('duckdb');
+      expect(result.result?.sql).toContain(
+        "COALESCE(('some_value'),'default_value')"
+      );
+    });
+    test('coalesce with parameter and field', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query_malloy: `
+          run: flights -> {
+            select:
+              result1 is param_field ?? carrier
+          }
+        `,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'duckdb',
+              name: 'malloytest.flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                ##! experimental.parameters
+                source: flights(my_param::string is "default_value") is duckdb.table('malloytest.flights') extend {
+                  dimension: param_field is my_param
+                }
+              `,
+            },
+          ],
+          connections: [{name: 'duckdb', dialect: 'duckdb'}],
+        },
+      });
+
+      expect(result.compiler_needs).toBeUndefined();
+      expect(result.logs).toBeUndefined();
+      expect(result.result).toBeDefined();
+      expect(result.result?.sql).toBeDefined();
+      expect(result.result?.connection_name).toBe('duckdb');
+      expect(result.result?.sql).toContain(
+        'COALESCE((\'default_value\'),base."carrier")'
+      );
     });
   });
   test('compile and get source annotations', () => {

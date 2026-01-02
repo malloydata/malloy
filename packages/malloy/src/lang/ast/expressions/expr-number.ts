@@ -34,17 +34,35 @@ export class ExprNumber extends ExpressionDef {
     super();
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    return this.constantExpression();
-  }
+  getExpression(fs: FieldSpace): ExprValue {
+    const dialect = fs.dialectObj();
+    const dataType =
+      dialect?.literalNumberType(this.n) ?? this.defaultNumberType();
 
-  constantExpression(): ExprValue {
-    const n = Number(this.n);
-    const dataType: NumberTypeDef = Number.isNaN(n)
-      ? {type: 'number'}
-      : {type: 'number', numberType: Number.isInteger(n) ? 'integer' : 'float'};
     return literalExprValue({
       dataType,
+      value: {node: 'numberLiteral', literal: this.n},
+    });
+  }
+
+  /**
+   * Default number type when no dialect is available.
+   * Integers default to bigint for safety, floats to float.
+   */
+  private defaultNumberType(): NumberTypeDef {
+    const isInteger = /^-?\d+$/.test(this.n);
+    return isInteger
+      ? {type: 'number', numberType: 'bigint'}
+      : {type: 'number', numberType: 'float'};
+  }
+
+  /**
+   * For constants (no dialect context), always use bigint for integers
+   * to ensure large values render correctly.
+   */
+  constantExpression(): ExprValue {
+    return literalExprValue({
+      dataType: this.defaultNumberType(),
       value: {node: 'numberLiteral', literal: this.n},
     });
   }

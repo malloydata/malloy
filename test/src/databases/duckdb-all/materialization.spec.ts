@@ -6,7 +6,6 @@
  */
 
 import {RuntimeList} from '../../runtimes';
-import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const runtimes = ['duckdb', 'duckdb_wasm'];

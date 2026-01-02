@@ -22,7 +22,7 @@
  */
 
 import type {SQLSourceRequest} from '../lang/translate-response';
-import {QueryModel} from './malloy_query';
+import {makeQueryModel, type QueryModel} from './query_model';
 import type {SQLPhraseSegment, ModelDef} from './malloy_types';
 import {isSegmentSQL} from './malloy_types';
 import {generateHash} from './utils';
@@ -47,16 +47,18 @@ export function compileSQLInterpolation(
             'Internal error: Partial model missing when compiling SQL block'
           );
         }
-        queryModel = new QueryModel(partialModel);
+        queryModel = makeQueryModel(partialModel);
       }
       const compiledSql = queryModel.compileQuery(
         segment,
         {
           defaultRowLimit: undefined,
+          isPartialQuery: true,
         },
         false
       ).sql;
       selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
+      // console.log(selectStr);
       parenAlready = false;
     }
   }

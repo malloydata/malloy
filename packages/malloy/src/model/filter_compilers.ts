@@ -14,7 +14,6 @@ import type {
   Moment,
   TemporalFilter,
   TemporalLiteral,
-  TemporalUnit,
 } from '@malloydata/malloy-filter';
 import {
   isNumberFilter,
@@ -23,8 +22,9 @@ import {
   isBooleanFilter,
 } from '@malloydata/malloy-filter';
 import type {Dialect} from '../dialect';
+import {type QueryInfo} from '../dialect';
 import type {
-  TimeLiteralNode,
+  TimeLiteralExpr,
   TimeDeltaExpr,
   Expr,
   TimeTruncExpr,
@@ -32,6 +32,7 @@ import type {
   NumberLiteralNode,
   TimestampUnit,
   TimeExtractExpr,
+  TimestampLiteralNode,
 } from './malloy_types';
 import {mkTemporal} from './malloy_types';
 import {DateTime as LuxonDateTime} from 'luxon';
@@ -48,11 +49,9 @@ function invertCompare(no: NumberRangeOperator): NumberRangeOperator {
 }
 
 function unlike(disLiked: string[], x: string) {
-  const orNull = ` OR ${x} IS NULL`;
-  if (disLiked.length === 1) {
-    return `${disLiked[0]}${orNull}`;
-  }
-  return `(${disLiked.join(' AND ')})${orNull}`;
+  const unlikeSQL =
+    disLiked.length === 1 ? disLiked[0] : `(${disLiked.join(' AND ')})`;
+  return `(${unlikeSQL} OR ${x} IS NULL)`;
 }
 
 /*
@@ -64,7 +63,13 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
-  compile(t: string, c: FilterExpression | null, x: string, d: Dialect) {
+  compile(
+    t: string,
+    c: FilterExpression | null,
+    x: string,
+    d: Dialect,
+    qi: QueryInfo = {}
+  ) {
     if (c === null) {
       return 'true';
     }
@@ -75,7 +80,7 @@ export const FilterCompilers = {
     } else if (t === 'boolean' && isBooleanFilter(c)) {
       return FilterCompilers.booleanCompile(c, x, d);
     } else if ((t === 'date' || t === 'timestamp') && isTemporalFilter(c)) {
-      return FilterCompilers.temporalCompile(c, x, d, t);
+      return FilterCompilers.temporalCompile(c, x, d, t, qi);
     }
     throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
   },
@@ -87,19 +92,21 @@ export const FilterCompilers = {
           (nc.operator === '=' && nc.not) || (nc.operator === '!=' && !nc.not);
         const optList = nc.values.join(', ');
         if (nc.values.length === 1) {
-          if (notEqual) return `${x} != ${optList} OR ${x} IS NULL`;
+          if (notEqual) return `(${x} != ${optList} OR ${x} IS NULL)`;
           return `${x} = ${optList}`;
         }
-        if (notEqual) return `${x} NOT IN (${optList}) OR ${x} IS NULL`;
+        if (notEqual) return `(${x} NOT IN (${optList}) OR ${x} IS NULL)`;
         return `${x} IN (${optList})`;
       }
       case '>':
       case '<':
       case '>=':
-      case '<=':
+      case '<=': {
+        const op = nc.not ? invertCompare(nc.operator) : nc.operator;
         return nc.values
-          .map(v => `${x} ${nc.operator} ${v}`)
+          .map(v => `${x} ${op} ${v}`)
           .join(nc.not ? ' AND ' : ' OR ');
+      }
       case 'range': {
         let startOp = nc.startOperator;
         let endOp = nc.endOperator;
@@ -125,17 +132,53 @@ export const FilterCompilers = {
           .join(` ${nc.operator.toUpperCase()} `);
     }
   },
-  booleanCompile(bc: BooleanFilter, x: string, _d: Dialect): string {
-    switch (bc.operator) {
-      case 'false':
-        return `${x} = false`;
-      case 'false_or_null':
-        return `${x} IS NULL OR ${x} = false`;
-      case 'null':
-        return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
-      case 'true':
-        return x;
+  booleanCompile(bc: BooleanFilter, x: string, d: Dialect): string {
+    const px = `(${x})`;
+    /*
+     * We have the following truth table for boolean filters.
+     * The default malloy operations treat null as false. The '='
+     * variants exist for cases where that is not desired.
+     *
+     * filter expression | x=true | x=false | x=null
+     * true              |   T    |   F     |   F
+     * not true          |   F    |   T     |   T
+     * =true             |   T    |   F     |   NULL
+     * not =true         |   F    |   T     |   NULL
+     * false             |   F    |   T     |   T
+     * not false         |   T    |   F     |   F
+     * =false            |   F    |   T     |   NULL
+     * not =false        |   T    |   F     |   NULL
+     */
+
+    if (bc.operator === '=true') {
+      return bc.not ? `NOT ${px}` : x;
+    } else if (bc.operator === '=false') {
+      return bc.not ? x : `NOT ${px}`;
+    } else if (bc.operator === 'null') {
+      return bc.not ? `${px} IS NOT NULL` : `${px} IS NULL`;
     }
+
+    // For some databases checking NULL combined with a boolean check
+    // is faster than a COALESCE, for now, just detect if the expression
+    // is just a column reference, and if so, don't use COALECSE.
+    const quoteChar = d.sqlMaybeQuoteIdentifier('select')[0];
+    const isColumn = x.match(`^[()${quoteChar}\\w.]+$`);
+
+    if (isColumn) {
+      if (bc.operator === 'true') {
+        return bc.not
+          ? `${px} IS NULL OR ${px} = false`
+          : `${px} IS NOT NULL AND ${px}`;
+      }
+      return bc.not
+        ? `${px} IS NOT NULL AND ${px}` // not false: exclude null
+        : `${px} IS NULL OR ${px} = false`; // false: include null
+    }
+    if (bc.operator === 'true') {
+      return bc.not ? `NOT COALESCE(${x}, false)` : `COALESCE(${x}, false)`;
+    }
+    // else bc.operator === 'false'
+    return bc.not ? `COALESCE(${x}, false)` : `NOT COALESCE(${x}, false)`;
   },
   stringCompile(sc: StringFilter, x: string, d: Dialect): string {
     switch (sc.operator) {
@@ -208,7 +251,7 @@ export const FilterCompilers = {
         const clauses = sc.members.map(c =>
           FilterCompilers.stringCompile(c, x, d)
         );
-        return clauses.join(' AND ');
+        return clauses.join(' OR ');
       }
       case ',': {
         /*
@@ -295,9 +338,10 @@ export const FilterCompilers = {
     tc: TemporalFilter,
     x: string,
     d: Dialect,
-    t: 'date' | 'timestamp'
+    t: 'date' | 'timestamp',
+    qi: QueryInfo = {}
   ): string {
-    const c = new TemporalFilterCompiler(x, d, t);
+    const c = new TemporalFilterCompiler(x, d, t, qi);
     return c.compile(tc);
   },
 };
@@ -337,13 +381,16 @@ const fTimestamp = `${fMinute}:ss`;
  */
 export class TemporalFilterCompiler {
   readonly d: Dialect;
+  readonly qi: QueryInfo;
 
   constructor(
     readonly expr: string,
     dialect: Dialect,
-    readonly timetype: 'timestamp' | 'date' = 'timestamp'
+    readonly timetype: 'timestamp' | 'date' = 'timestamp',
+    queryInfo: QueryInfo = {}
   ) {
     this.d = dialect;
+    this.qi = queryInfo;
   }
 
   time(timeSQL: string): string {
@@ -382,26 +429,45 @@ export class TemporalFilterCompiler {
         const m = this.moment(tc.in);
         if (m.begin.sql === m.end) {
           return tc.not
-            ? `${x} != ${this.time(m.end)} OR ${x} IS NULL`
+            ? `(${x} != ${this.time(m.end)} OR ${x} IS NULL)`
             : `${x} = ${this.time(m.end)}`;
         }
         return this.isIn(tc.not, m.begin.sql, m.end);
       }
       case 'for': {
         const start = this.moment(tc.begin);
-        const end = this.delta(start.begin, '+', tc.n, tc.units);
-        return this.isIn(tc.not, start.begin.sql, end.sql);
+        // start.begin could be any moment (literal, "last monday", etc.)
+        // so we can't optimize through its already-generated SQL
+        const endSql = this.d.sqlTruncAndOffset(
+          mkTemporal(start.begin, 'timestamp'),
+          this.qi,
+          undefined,
+          {
+            op: '+',
+            magnitude: tc.n,
+            unit: tc.units,
+          }
+        );
+        return this.isIn(tc.not, start.begin.sql, endSql);
       }
       case 'in_last': {
         // last N units means "N - 1 UNITS AGO FOR N UNITS"
         const back = Number(tc.n) - 1;
-        const thisUnit = this.nowDot(tc.units);
+        const now = this.nowExpr();
         const start =
           back > 0
-            ? this.delta(thisUnit, '-', back.toString(), tc.units)
-            : thisUnit;
-        const end = this.delta(thisUnit, '+', '1', tc.units);
-        return this.isIn(tc.not, start.sql, end.sql);
+            ? this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+                op: '-',
+                magnitude: back.toString(),
+                unit: tc.units,
+              })
+            : this.d.sqlTruncAndOffset(now, this.qi, tc.units);
+        const end = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '+',
+          magnitude: '1',
+          unit: tc.units,
+        });
+        return this.isIn(tc.not, start, end);
       }
       case 'to': {
         const firstMoment = this.moment(tc.fromMoment);
@@ -409,20 +475,28 @@ export class TemporalFilterCompiler {
         return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.begin.sql);
       }
       case 'last': {
-        const thisUnit = this.nowDot(tc.units);
-        const start = this.delta(thisUnit, '-', tc.n, tc.units);
-        return this.isIn(tc.not, start.sql, thisUnit.sql);
+        const now = this.nowExpr();
+        const start = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '-',
+          magnitude: tc.n,
+          unit: tc.units,
+        });
+        const end = this.d.sqlTruncAndOffset(now, this.qi, tc.units);
+        return this.isIn(tc.not, start, end);
       }
       case 'next': {
-        const thisUnit = this.nowDot(tc.units);
-        const start = this.delta(thisUnit, '+', '1', tc.units);
-        const end = this.delta(
-          thisUnit,
-          '+',
-          (Number(tc.n) + 1).toString(),
-          tc.units
-        );
-        return this.isIn(tc.not, start.sql, end.sql);
+        const now = this.nowExpr();
+        const start = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '+',
+          magnitude: '1',
+          unit: tc.units,
+        });
+        const end = this.d.sqlTruncAndOffset(now, this.qi, tc.units, {
+          op: '+',
+          magnitude: (Number(tc.n) + 1).toString(),
+          unit: tc.units,
+        });
+        return this.isIn(tc.not, start, end);
       }
       case 'null':
         return tc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
@@ -509,13 +583,19 @@ export class TemporalFilterCompiler {
     }
   }
 
-  private literalNode(literal: string): Translated<TimeLiteralNode> {
-    const literalNode: TimeLiteralNode = {
-      node: 'timeLiteral',
-      typeDef: {type: 'timestamp'},
+  private literalNode(literal: string): Translated<TimeLiteralExpr> {
+    // Filter expressions only contain civil time literals (no timezone in the string).
+    // Always create a plain timestampLiteral node, with timezone field for conversion.
+    const node: TimestampLiteralNode = {
+      node: 'timestampLiteral',
       literal,
+      typeDef: {type: 'timestamp'},
     };
-    return {...literalNode, sql: this.d.sqlLiteralTime({}, literalNode)};
+    if (this.qi.queryTimezone) {
+      node.timezone = this.qi.queryTimezone;
+    }
+    const sql = this.d.sqlTimestampLiteral(this.qi, literal, node.timezone);
+    return {...node, sql};
   }
 
   private nowExpr(): Translated<NowNode> {
@@ -530,59 +610,63 @@ export class TemporalFilterCompiler {
     return {node: 'numberLiteral', literal, sql: literal};
   }
 
-  private delta(
-    from: Expr,
-    op: '+' | '-',
-    n: string,
-    units: TemporalUnit
-  ): Translated<TimeDeltaExpr> {
-    const ret: TimeDeltaExpr = {
-      node: 'delta',
-      op,
-      units,
-      kids: {
-        base: mkTemporal(from, 'timestamp'),
-        delta: this.n(n),
-      },
-    };
-    return {...ret, sql: this.d.sqlAlterTimeExpr(ret)};
-  }
-
   private dayofWeek(e: Expr): Translated<TimeExtractExpr> {
     const t: TimeExtractExpr = {
       node: 'extract',
       e: mkTemporal(e, 'timestamp'),
       units: 'day_of_week',
     };
-    return {...t, sql: this.d.sqlTimeExtractExpr({}, t)};
-  }
-
-  private nowDot(units: TimestampUnit): Translated<TimeTruncExpr> {
-    const nowTruncExpr: TimeTruncExpr = {
-      node: 'trunc',
-      e: this.nowExpr(),
-      units,
-    };
-    return {...nowTruncExpr, sql: this.d.sqlTruncExpr({}, nowTruncExpr)};
+    return {...t, sql: this.d.sqlTimeExtractExpr(this.qi, t)};
   }
 
   private thisUnit(units: TimestampUnit): MomentIs {
-    const thisUnit = this.nowDot(units);
-    const nextUnit = this.delta(thisUnit, '+', '1', units);
-    return {begin: thisUnit, end: nextUnit.sql};
+    const now = this.nowExpr();
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, units);
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '+',
+      magnitude: '1',
+      unit: units,
+    });
+    const beginNode: TimeTruncExpr = {node: 'trunc', e: now, units};
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 
   private lastUnit(units: TimestampUnit): MomentIs {
-    const thisUnit = this.nowDot(units);
-    const lastUnit = this.delta(thisUnit, '-', '1', units);
-    return {begin: lastUnit, end: thisUnit.sql};
+    const now = this.nowExpr();
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '-',
+      magnitude: '1',
+      unit: units,
+    });
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, units);
+    const beginNode: TimeDeltaExpr = {
+      node: 'delta',
+      op: '-',
+      units,
+      kids: {base: now, delta: this.n('1')},
+    };
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 
   private nextUnit(units: TimestampUnit): MomentIs {
-    const thisUnit = this.nowDot(units);
-    const nextUnit = this.delta(thisUnit, '+', '1', units);
-    const next2Unit = this.delta(thisUnit, '+', '2', units);
-    return {begin: nextUnit, end: next2Unit.sql};
+    const now = this.nowExpr();
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '+',
+      magnitude: '1',
+      unit: units,
+    });
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, units, {
+      op: '+',
+      magnitude: '2',
+      unit: units,
+    });
+    const beginNode: TimeDeltaExpr = {
+      node: 'delta',
+      op: '+',
+      units,
+      kids: {base: now, delta: this.n('1')},
+    };
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 
   mod7(n: string): string {
@@ -599,24 +683,36 @@ export class TemporalFilterCompiler {
         return this.expandLiteral(m);
       case 'ago':
       case 'from_now': {
-        const nowTruncExpr = this.nowDot(m.units);
-        const nowTrunc = mkTemporal(nowTruncExpr, 'timestamp');
-        const beginExpr = this.delta(
-          nowTrunc,
-          m.moment === 'ago' ? '-' : '+',
-          m.n,
-          m.units
-        );
-        // Now the end is one unit after that .. either n-1 units ago or n+1 units from now
-        if (m.moment === 'ago' && m.n === '1') {
-          return {begin: beginExpr, end: nowTruncExpr.sql};
-        }
-        const oneDifferent = Number(m.n) + (m.moment === 'ago' ? -1 : 1);
-        const endExpr = {
-          ...beginExpr,
-          kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},
+        const now = this.nowExpr();
+        const op = m.moment === 'ago' ? '-' : '+';
+        const beginSql = this.d.sqlTruncAndOffset(now, this.qi, m.units, {
+          op,
+          magnitude: m.n,
+          unit: m.units,
+        });
+        const beginNode: TimeDeltaExpr = {
+          node: 'delta',
+          op,
+          units: m.units,
+          kids: {base: now, delta: this.n(m.n)},
         };
-        return {begin: beginExpr, end: this.d.sqlAlterTimeExpr(endExpr)};
+
+        // Now the end is one unit after that .. either n-1 units ago or n+1 units from now
+        let endSql: string;
+        if (m.moment === 'ago' && m.n === '1') {
+          endSql = this.d.sqlTruncAndOffset(now, this.qi, m.units);
+        } else {
+          const oneDifferent = Number(m.n) + (m.moment === 'ago' ? -1 : 1);
+          endSql = this.d.sqlTruncAndOffset(now, this.qi, m.units, {
+            op,
+            magnitude: oneDifferent.toString(),
+            unit: m.units,
+          });
+        }
+        return {
+          begin: {...beginNode, sql: beginSql},
+          end: endSql,
+        };
       }
       case 'today':
         return this.thisUnit('day');
@@ -630,66 +726,20 @@ export class TemporalFilterCompiler {
         return this.lastUnit(m.units);
       case 'next':
         return this.nextUnit(m.units);
+      case 'sunday':
+        return this.weekdayMoment(1, m.which);
       case 'monday':
+        return this.weekdayMoment(2, m.which);
       case 'tuesday':
+        return this.weekdayMoment(3, m.which);
       case 'wednesday':
+        return this.weekdayMoment(4, m.which);
       case 'thursday':
+        return this.weekdayMoment(5, m.which);
       case 'friday':
+        return this.weekdayMoment(6, m.which);
       case 'saturday':
-      case 'sunday': {
-        const destDay = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-        ].indexOf(m.moment);
-        const dow = this.dayofWeek(this.nowExpr()).sql;
-        if (m.which === 'next') {
-          const nForwards = `${this.mod7(`${destDay}-(${dow}-1)+6`)}+1`;
-          const begin = this.delta(
-            this.thisUnit('day').begin,
-            '+',
-            nForwards,
-            'day'
-          );
-          const end = this.delta(
-            this.thisUnit('day').begin,
-            '+',
-            `${nForwards}+1`,
-            'day'
-          );
-          // console.log(
-          //   `SELECT ${
-          //     this.nowExpr().sql
-          //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nForwards} as nForwards,\n  ${
-          //     begin.sql
-          //   } as begin,\n   ${end.sql} as end`
-          // );
-          return {begin, end: end.sql};
-        }
-        // dacks back = mod((daw0 - dst) + 6, 7) + 1;
-        // dacks back = mod(((daw - 1) - dst) + 6, 7) + 1;
-        // dacks back = mod(((daw) - dst) + 7, 7) + 1;
-        const nBack = `${this.mod7(`(${dow}-1)-${destDay}+6`)}+1`;
-        const begin = this.delta(this.thisUnit('day').begin, '-', nBack, 'day');
-        const end = this.delta(
-          this.thisUnit('day').begin,
-          '-',
-          `(${nBack})-1`,
-          'day'
-        );
-        // console.log(
-        //   `SELECT ${
-        //     this.nowExpr().sql
-        //   } as now,\n  ${destDay} as destDay,\n  ${dow} as dow,\n  ${nBack} as nBack,\n  ${
-        //     begin.sql
-        //   } as begin,\n   ${end.sql} as end`
-        // );
-        return {begin, end: end.sql};
-      }
+        return this.weekdayMoment(7, m.which);
     }
   }
 
@@ -705,5 +755,62 @@ export class TemporalFilterCompiler {
     begin = this.time(begin);
     end = this.time(end);
     return `${this.expr} ${begOp} ${begin} ${joinOp} ${this.expr} ${endOp} ${end}`;
+  }
+
+  private weekdayMoment(
+    destDay: number,
+    which: 'last' | 'next' | undefined
+  ): MomentIs {
+    const direction = which || 'last';
+    const dow = this.dayofWeek(this.nowExpr());
+    const now = this.nowExpr();
+
+    // destDay comes in as 1-7 (Malloy format), convert to 0-6
+    const destDayZeroBased = destDay - 1;
+    // dow is 1-7, convert to 0-6 for the arithmetic
+    const dowZeroBased = `(${dow.sql}-1)`;
+
+    let beginOffset: string;
+    let endOffset: string;
+
+    // "dayname" and "last dayname" both refer to the most recent,
+    // already complete day of that name. So if today is Sunday,
+    // "next sunday" is "today", and "last sunday" is 7 days ago.
+    if (direction === 'next') {
+      // Days forward: ((destDay - currentDay + 6) % 7) + 1
+      beginOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+1`;
+      endOffset = `${this.mod7(`${destDayZeroBased}-${dowZeroBased}+6`)}+2`;
+    } else {
+      // Days back: ((currentDay - destDay + 6) % 7) + 1
+      beginOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}+1`;
+      // End offset is one day less (closer to today)
+      endOffset = `${this.mod7(`${dowZeroBased}-${destDayZeroBased}+6`)}`;
+    }
+
+    const op = direction === 'next' ? '+' : '-';
+    const beginSql = this.d.sqlTruncAndOffset(now, this.qi, 'day', {
+      op,
+      magnitude: beginOffset,
+      unit: 'day',
+    });
+    const endSql = this.d.sqlTruncAndOffset(now, this.qi, 'day', {
+      op,
+      magnitude: endOffset,
+      unit: 'day',
+    });
+
+    // Build an Expr node for begin (truncate now to day, then add offset)
+    const truncatedNow: TimeTruncExpr = {node: 'trunc', e: now, units: 'day'};
+    const beginNode: TimeDeltaExpr = {
+      node: 'delta',
+      op,
+      units: 'day',
+      kids: {
+        base: mkTemporal(truncatedNow, 'timestamp'),
+        delta: this.n(beginOffset),
+      },
+    };
+
+    return {begin: {...beginNode, sql: beginSql}, end: endSql};
   }
 }

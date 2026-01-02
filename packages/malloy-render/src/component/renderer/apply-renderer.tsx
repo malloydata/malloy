@@ -6,17 +6,16 @@
  */
 
 import type {JSXElement} from 'solid-js';
-import {renderNumericField} from '@/component/render-numeric-field';
 import {renderLink} from '@/component/render-link';
 import MalloyTable from '@/component/table/table';
 import {renderList} from '@/component/render-list';
 import {renderImage} from '@/component/render-image';
 import {Dashboard} from '@/component/dashboard/dashboard';
-import {renderTime} from '@/component/render-time';
 import {LegacyChart} from '@/component/legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '@/util';
 import type {RendererProps} from '@/component/types';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
+import {renderCellValue} from '@/component/cell-utils';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
@@ -50,16 +49,16 @@ export function applyRenderer(props: RendererProps) {
   } else {
     switch (renderAs) {
       case 'cell': {
-        if (dataColumn.isNumber()) {
-          // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
-          renderValue = renderNumericField(field, dataColumn.value);
-        } else if (dataColumn.isString()) {
-          renderValue = dataColumn.value;
-        } else if (field.isTime()) {
-          renderValue = renderTime(props);
+        if (dataColumn.isArray()) {
+          // Plain array (e.g., string[], number[]) - render as comma-separated values
+          // Use the array field's tag for formatting (currency, percent, etc.)
+          const arrayTag = field.tag;
+          const renderedElements = dataColumn.values.map(elementCell =>
+            renderCellValue(elementCell, {tag: arrayTag})
+          );
+          renderValue = renderedElements.join(', ');
         } else {
-          // try to force to string
-          renderValue = String(dataColumn.value);
+          renderValue = renderCellValue(dataColumn);
         }
         break;
       }
@@ -98,12 +97,13 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       case 'table': {
-        if (dataColumn.isRecordOrRepeatedRecord())
+        if (dataColumn.isRecordOrRepeatedRecord()) {
           renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
-        else
+        } else {
           throw new Error(
             `Malloy render: wrong data type passed to the table renderer for field ${field.name}`
           );
+        }
         break;
       }
       default: {

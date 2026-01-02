@@ -29,13 +29,12 @@ import {
   isJoinedSource,
   isBasicAtomic,
   isRepeatedRecord,
+  isRecordOrRepeatedRecord,
   isSourceDef,
   isTurtle,
-} from './model';
-import {
   getResultStructDefForQuery,
   getResultStructDefForView,
-} from './model/malloy_query';
+} from './model';
 import {annotationToTaglines} from './annotation';
 import {Tag} from '@malloydata/malloy-tag';
 
@@ -150,10 +149,17 @@ function convertParameterDefaultValue(
         kind: 'filter_expression_literal',
         filter_expression_value: value.filterSrc,
       };
-    case 'timeLiteral':
+    case 'dateLiteral':
+      return {
+        kind: 'date_literal',
+        date_value: value.literal,
+      };
+    case 'timestampLiteral':
+    case 'timestamptzLiteral':
       return {
         kind: 'timestamp_literal',
         timestamp_value: value.literal,
+        timezone: value.timezone,
       };
     case 'true':
       return {kind: 'boolean_literal', boolean_value: true};
@@ -212,9 +218,19 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       const resultMetadataAnnotation = field.resultMetadata
         ? getResultMetadataAnnotation(field, field.resultMetadata)
         : undefined;
+
+      // Check if this field has queryTimezone information (for RecordDef/RepeatedRecordDef)
+      let timezoneAnnotation: Malloy.Annotation | undefined;
+      if (isRecordOrRepeatedRecord(field) && field.queryTimezone) {
+        const timezoneTag = Tag.withPrefix('#(malloy) ');
+        timezoneTag.set(['query_timezone'], field.queryTimezone);
+        timezoneAnnotation = {value: timezoneTag.toString()};
+      }
+
       const fieldAnnotations = [
         ...(annotations ?? []),
         ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+        ...(timezoneAnnotation ? [timezoneAnnotation] : []),
       ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: aggregate ? 'measure' : 'dimension',
@@ -376,6 +392,11 @@ export function getResultStructMetadataAnnotation(
     }
     hasAny = true;
   }
+  // Include queryTimezone if present on the field
+  if (field.queryTimezone) {
+    tag.set(['query_timezone'], field.queryTimezone);
+    hasAny = true;
+  }
   return hasAny
     ? {
         value: tag.toString(),
@@ -395,8 +416,10 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
             field.numberType === 'float'
               ? 'decimal'
               : field.numberType === 'integer'
-              ? 'integer'
-              : undefined,
+                ? 'integer'
+                : field.numberType === 'bigint'
+                  ? 'bigint'
+                  : undefined,
         };
       case 'boolean':
         return {kind: 'boolean_type'};
@@ -418,6 +441,11 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
       case 'timestamp':
         return {
           kind: 'timestamp_type',
+          timeframe: convertTimestampTimeframe(field.timeframe),
+        };
+      case 'timestamptz':
+        return {
+          kind: 'timestamptz_type',
           timeframe: convertTimestampTimeframe(field.timeframe),
         };
       case 'json':

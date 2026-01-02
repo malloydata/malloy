@@ -14,7 +14,8 @@ export type ParsedFilter =
   | {kind: 'number'; parsed: Filter.NumberFilter | null}
   | {kind: 'boolean'; parsed: Filter.BooleanFilter | null}
   | {kind: 'date'; parsed: Filter.TemporalFilter | null}
-  | {kind: 'timestamp'; parsed: Filter.TemporalFilter | null};
+  | {kind: 'timestamp'; parsed: Filter.TemporalFilter | null}
+  | {kind: 'timestamptz'; parsed: Filter.TemporalFilter | null};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -30,14 +31,14 @@ type NonOptionalASTNode<T> = T extends undefined ? never : ASTNode<T>;
 type LiteralOrNode<T> = T extends string
   ? T
   : T extends number
-  ? T
-  : T extends string[]
-  ? T
-  : T extends boolean
-  ? T
-  : undefined extends T
-  ? NonOptionalASTNode<T> | undefined
-  : ASTNode<T>;
+    ? T
+    : T extends string[]
+      ? T
+      : T extends boolean
+        ? T
+        : undefined extends T
+          ? NonOptionalASTNode<T> | undefined
+          : ASTNode<T>;
 
 abstract class ASTNode<T> {
   /**
@@ -3022,7 +3023,7 @@ export class ASTSegmentViewDefinition
     name: string,
     path: string[],
     timeframe: Malloy.TimestampTimeframe,
-    type: 'date_type' | 'timestamp_type'
+    type: 'date_type' | 'timestamp_type' | 'timestamptz_type'
   ): ASTGroupByViewOperation {
     const schema = this.getInputSchema();
     const fieldInfo = ASTNode.schemaGet(schema, name, path);
@@ -3087,6 +3088,26 @@ export class ASTSegmentViewDefinition
       arg3 === undefined ? (arg2 as Malloy.TimestampTimeframe) : arg3;
     const path = arg3 === undefined ? [] : (arg2 as string[]);
     return this.addTimeGroupBy(name, path, timeframe, 'timestamp_type');
+  }
+
+  public addTimestamptzGroupBy(
+    name: string,
+    path: string[],
+    timeframe: Malloy.TimestampTimeframe
+  ): ASTGroupByViewOperation;
+  public addTimestamptzGroupBy(
+    name: string,
+    timeframe: Malloy.TimestampTimeframe
+  ): ASTGroupByViewOperation;
+  public addTimestamptzGroupBy(
+    name: string,
+    arg2: string[] | Malloy.TimestampTimeframe,
+    arg3?: Malloy.TimestampTimeframe
+  ): ASTGroupByViewOperation {
+    const timeframe =
+      arg3 === undefined ? (arg2 as Malloy.TimestampTimeframe) : arg3;
+    const path = arg3 === undefined ? [] : (arg2 as string[]);
+    return this.addTimeGroupBy(name, path, timeframe, 'timestamptz_type');
   }
 
   /**
@@ -4172,7 +4193,10 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
         ...def.type,
         timeframe: timestampTimeframeToDateTimeframe(this.truncation),
       };
-    } else if (def.type.kind === 'timestamp_type') {
+    } else if (
+      def.type.kind === 'timestamp_type' ||
+      def.type.kind === 'timestamptz_type'
+    ) {
       return {...def.type, timeframe: this.truncation};
     }
     throw new Error('This type of field cannot have a time truncation');
@@ -5205,6 +5229,7 @@ function serializeFilter(filter: ParsedFilter) {
     case 'boolean':
       return Filter.BooleanFilterExpression.unparse(filter.parsed);
     case 'timestamp':
+    case 'timestamptz':
     case 'date':
       return Filter.TemporalFilterExpression.unparse(filter.parsed);
   }
@@ -5236,6 +5261,7 @@ function parseFilter(
       return {kind, parsed: result.parsed};
     }
     case 'timestamp':
+    case 'timestamptz':
     case 'date': {
       const result = Filter.TemporalFilterExpression.parse(filterString);
       handleError(result.log);
@@ -5311,6 +5337,8 @@ function getFilterType(
     case 'date_type':
       return 'date';
     case 'timestamp_type':
+      return 'timestamp';
+    case 'timestamptz_type':
       return 'timestamp';
     default:
       return 'other';

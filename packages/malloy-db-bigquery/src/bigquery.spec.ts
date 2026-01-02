@@ -21,35 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as malloy from '@malloydata/malloy';
-import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+import type * as malloy from '@malloydata/malloy';
+import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import '@malloydata/malloy/test/matchers';
 import {BigQueryConnection} from './bigquery_connection';
 import type {TableMetadata} from '@google-cloud/bigquery';
 import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
-import * as util from 'util';
-import * as fs from 'fs';
-import {fileURLToPath} from 'url';
 
-const [describe] = describeIfDatabaseAvailable(['bigquery']);
+const bq = new BigQueryConnection('test');
+const runtime = createTestRuntime(bq);
 
 describe('db:BigQuery', () => {
-  let bq: BigQueryConnection;
-  let runtime: malloy.Runtime;
-
-  beforeAll(() => {
-    bq = new BigQueryConnection('test');
-    const files = {
-      readURL: async (url: URL) => {
-        const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
-      },
-    };
-    runtime = new malloy.Runtime({
-      urlReader: files,
-      connection: bq,
-    });
-  });
-
   it('runs a SQL query', async () => {
     const res = await bq.runSQL('SELECT 1 as t');
     expect(res.rows[0]['t']).toBe(1);
@@ -76,6 +58,26 @@ describe('db:BigQuery', () => {
   });
 
   it.todo('gets table structdefs');
+
+  it('maps INT64 to bigint', async () => {
+    const schema = await bq.fetchSchemaForSQLStruct(
+      {
+        connection: 'bigquery',
+        selectStr: 'SELECT CAST(1 AS INT64) AS int_val',
+      },
+      {}
+    );
+    if (schema.error) {
+      throw new Error(`Error fetching schema: ${schema.error}`);
+    }
+    if (schema.structDef) {
+      expect(schema.structDef.fields[0]).toEqual({
+        name: 'int_val',
+        type: 'number',
+        numberType: 'bigint',
+      });
+    }
+  });
 
   it('runs a Malloy query', async () => {
     const sql = await runtime
@@ -233,7 +235,7 @@ describe('db:BigQuery', () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      jest.restoreAllMocks();
     });
 
     it('caches table schema', async () => {
@@ -308,3 +310,40 @@ created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
 };
+
+/**
+ * Tests for reading numeric values through Malloy queries
+ */
+describe('numeric value reading', () => {
+  const testModel = mkTestModel(runtime, {});
+
+  describe('integer types', () => {
+    const largeInt = BigInt('9007199254740993'); // 2^53 + 1
+    it.each(['INT64', 'INTEGER'])('reads %s correctly', async sqlType => {
+      await expect(
+        `run: bigquery.sql("SELECT CAST(${largeInt} AS ${sqlType}) as d")`
+      ).toMatchResult(testModel, {d: largeInt});
+    });
+
+    it('preserves precision for literal integers > 2^53', async () => {
+      await expect(`
+        run: bigquery.sql("select 1") -> { select: d is ${largeInt} }
+      `).toMatchResult(testModel, {d: largeInt});
+    });
+  });
+
+  describe('float types', () => {
+    it.each(['FLOAT64', 'NUMERIC', 'BIGNUMERIC'])(
+      'reads %s correctly',
+      async sqlType => {
+        await expect(
+          `run: bigquery.sql("SELECT CAST(10.5 AS ${sqlType}) as f")`
+        ).toMatchResult(testModel, {f: 10.5});
+      }
+    );
+  });
+});
+
+afterAll(async () => {
+  await runtime.connection.close();
+});

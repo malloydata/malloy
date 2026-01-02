@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Malloy Publisher - Semantic Model Serving API
- * The Malloy Publisher - Semantic Model Serving API serves Malloy packages.  A Malloy package is a directory of Malloy models (.malloy files), Malloy notebooks (.malloynb files), and embedded datbases (.parque files) with a malloy-publisher.json manifest at the package\'s root directory. For example, see the Malloy samples packages (https://github.com/malloydata/malloy-samples) repo.
+ * The Malloy Publisher - Semantic Model Serving API provides comprehensive access to Malloy packages and their associated resources. A Malloy package is a directory containing Malloy models (.malloy files), Malloy notebooks (.malloynb files), and embedded databases (.parquet files) with a malloy-publisher.json manifest at the package\'s root directory.  ## Key Features  - **Project Management**: Create and manage projects with their associated packages and connections - **Package Lifecycle**: Full CRUD operations for Malloy packages and their versions - **Model & Notebook Access**: Retrieve and execute Malloy models and notebooks - **Connection Management**: Secure database connection configuration and testing - **Query Execution**: Execute queries against models and retrieve results - **Watch Mode**: Real-time file watching for development workflows  ## Resource Hierarchy  The API follows a hierarchical resource structure: ``` Projects ├── Connections └── Packages     ├── Models     ├── Notebooks     └── Databases ```  For examples, see the Malloy samples packages (https://github.com/malloydata/malloy-samples) repository. 
  *
  * The version of the OpenAPI document: v0
  * 
@@ -144,7 +144,11 @@ export const toPathString = function (url: URL) {
  */
 export const createRequestFunction = function (axiosArgs: RequestArgs, globalAxios: AxiosInstance, BASE_PATH: string, configuration?: Configuration) {
     return <T = unknown, R = AxiosResponse<T>>(axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
-        const axiosRequestArgs = {...axiosArgs.options, url: (axios.defaults.baseURL ? '' : configuration?.basePath ?? basePath) + axiosArgs.url};
+        const axiosRequestArgs = {
+        ...configuration?.baseOptions,
+        ...axiosArgs.options,
+        url: (axios.defaults.baseURL ? '' : configuration?.basePath ?? basePath) + axiosArgs.url
+        };
         return axios.request<T, R>(axiosRequestArgs);
     };
 }

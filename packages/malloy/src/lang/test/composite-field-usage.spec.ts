@@ -7,6 +7,8 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
+import type {FieldUsage, PipeSegment, Query} from '../../model';
+import {bareFieldUsage, isIndexSegment, isQuerySegment} from '../../model';
 
 describe('composite sources', () => {
   describe('composite field usage', () => {
@@ -59,7 +61,288 @@ describe('composite sources', () => {
 
     test('join use in method-style aggregate', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.ai.sum()`).hasFieldUsage([['ai']]);
+      expect(mexpr`x.ai.sum()`).hasFieldUsage([['x', 'ai']]);
+    });
+  });
+
+  describe('expanded field usage', () => {
+    function segmentExpandedFieldUsage(segment: PipeSegment) {
+      return isQuerySegment(segment) || isIndexSegment(segment)
+        ? segment.expandedFieldUsage?.filter(u => bareFieldUsage(u))
+        : undefined;
+    }
+    test('direct field reference', () => {
+      const m = model`
+        run: a -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('where reference', () => {
+      const m = model`
+        run: a -> { group_by: ai; where: af = 2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+
+    test('reference in calculate', () => {
+      const m = model`
+        run: a extend {
+          measure: c is count()
+        } -> { group_by: ai; calculate: lag_c is lag(c) }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['c']},
+      ]);
+    });
+
+    test('exclude field is not counted', () => {
+      const m = model`
+        run: a -> {
+          group_by: ai_2 is ai
+          nest: x is {
+            aggregate: c is exclude(count(), ai_2)
+          }
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('view is not included', () => {
+      const m = model`
+        run: a extend {
+          view: x is {
+            group_by: ai
+          }
+        } -> x
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('join in view is included', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a on true
+          view: x is {
+            group_by: b.ai
+          }
+        } -> x
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['b', 'ai']},
+      ]);
+    });
+
+    test('expression involving multiple fields', () => {
+      const m = model`
+        run: a -> { group_by: ai_plus_af is ai + af }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
+    });
+
+    test('dimension reference', () => {
+      const m = model`
+        run: a extend {
+          dimension: ai_2 is ai
+        } -> { group_by: ai_2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('join on reference', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a on b.ai = ai
+        } -> { group_by: b.astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      const [correct, orNot] = checkForFieldUsage(
+        query,
+        {path: ['b', 'astr']},
+        {path: ['b', 'ai']},
+        {path: ['ai']}
+      );
+      expect(correct, orNot).toBeTruthy();
+    });
+
+    test('two-step resolution of dimension', () => {
+      const m = model`
+        run: a extend {
+          dimension: ai_2 is ai
+          dimension: ai_3 is ai_2
+        } -> { group_by: ai_3 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai_3']},
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('source where is included', () => {
+      const m = model`
+        run: a extend {
+          where: ai = 2
+        } -> { group_by: astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['astr']},
+      ]);
+    });
+
+    test('join where is included', () => {
+      const m = model`
+        run: a extend {
+          join_one: b is a extend { where: ai = 1 } on true
+        } -> { group_by: b.astr }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      const [correct, orNot] = checkForFieldUsage(
+        query,
+        {path: ['b', 'astr']},
+        {path: ['b', 'ai']}
+      );
+      expect(correct, orNot).toBeTruthy();
+    });
+
+    test('expansion respects selected composite', () => {
+      const m = model`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend {
+            dimension: ai_1 is 1
+            where: astr = 'foo'
+          },
+          a extend {
+            dimension: ai_2 is 2
+            where: ai = 2
+          }
+        ) -> { group_by: ai_2 }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['ai_2']},
+      ]);
+    });
+
+    test('second-stage extend dimension works', () => {
+      const m = model`
+        run: a -> { group_by: ai } -> {
+          extend: {
+            dimension: ai_2 is ai
+          }
+          group_by: ai_2
+        }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai_2']},
+        {path: ['ai']},
+      ]);
+    });
+
+    test('param is not included', () => {
+      const m = model`
+        ##! experimental.parameters
+        source: a_2(param is 1) is a extend {
+          dimension: param_value is param
+        }
+        run: a_2(param is 2) -> { group_by: param_value }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['param_value']},
+      ]);
+    });
+
+    test('query arrow usage', () => {
+      const m = model`
+        query: q is a -> { group_by: ai }
+        run: q -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('query arrow usage with composite ', () => {
+      const m = model`
+        ##! experimental.composite_sources
+        query: q is compose(
+          a extend {
+            dimension: ai_1 is 1
+            where: astr = 'foo'
+          },
+          a extend {
+            dimension: ai_2 is 2
+            where: ai = 2
+          }
+        ) -> { group_by: ai is ai_2 }
+        run: q -> { group_by: ai }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[1])).toMatchObject([
+        {path: ['ai']},
+      ]);
+    });
+
+    test('query refine usage', () => {
+      const m = model`
+        query: q is a -> { group_by: ai }
+        run: q + { group_by: af }
+      `;
+      expect(m).toTranslate();
+      const query = m.translator.modelDef.queryList[0];
+      expect(segmentExpandedFieldUsage(query.pipeline[0])).toMatchObject([
+        {path: ['ai']},
+        {path: ['af']},
+      ]);
     });
   });
 
@@ -291,7 +574,7 @@ describe('composite sources', () => {
         }
       `).toLog(
         errorMessage(
-          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `one`, `three`, and `two`)'
+          'This operation uses field `three`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `two` and `three` (fields required in source: `two`, `one`, and `three`)'
         )
       );
     });
@@ -606,5 +889,433 @@ describe('composite sources', () => {
         )
       );
     });
+  });
+});
+
+function pathToKey(path: string[]): string {
+  return path.map(el => `${el.length}-${el}`).join(':');
+}
+
+/**
+ * Instead of a custom matcher, new test pattern I thought I would try out.
+ * A field usage might be spread out among multiple records, so this looks
+ * through all matching records.
+ * @param query Look in the first segment of this query for usages
+ * @param refs One or more expected field usages
+ * @returns [bool,msg] if false, will explain what was wrong
+ */
+function checkForFieldUsage(
+  query: Query | undefined,
+  ...refs: FieldUsage[]
+): [boolean, string] {
+  if (!query) {
+    return [false, 'Query not found'];
+  }
+  const ps = query.pipeline[0];
+  if (!isQuerySegment(ps)) {
+    return [false, 'Pipeline did not contain a query segment'];
+  }
+  const usages = ps.expandedFieldUsage || [];
+  const errors: string[] = [];
+  for (const ref of refs) {
+    const pathStr = ref.path.length > 0 ? ref.path.join('.') : '[]';
+    let found = false;
+    const refKey = pathToKey(ref.path);
+    let needAnalytic = ref.analyticFunctionUse || false;
+    let needCount = ref.uniqueKeyRequirement?.isCount || false;
+    let needAsymmetric = ref.uniqueKeyRequirement?.isCount === false;
+    for (const fu of usages) {
+      if (pathToKey(fu.path) !== refKey) continue;
+      found = true;
+      if (needAnalytic && fu.analyticFunctionUse) needAnalytic = false;
+      if (needAsymmetric && fu.uniqueKeyRequirement?.isCount === false)
+        needAsymmetric = false;
+      if (needCount && fu?.uniqueKeyRequirement?.isCount) needCount = false;
+    }
+    if (!found) {
+      errors.push(`Did not find usage reference to path ${pathStr}`);
+    } else {
+      const missing: string[] = [];
+      if (needAnalytic) missing.push('analytic');
+      if (needCount) missing.push('count');
+      if (needAsymmetric) missing.push('asymmetric');
+      if (missing.length > 0) {
+        errors.push(
+          `Missing properties for path ${pathStr}: ${missing.join(',')}`
+        );
+      }
+    }
+  }
+  if (errors.length > 0) {
+    return [false, errors.join('\n')];
+  }
+  return [true, 'Found all usage references'];
+}
+
+describe('field usage with compiler extensions', () => {
+  test('filters on source are reflected in usage', () => {
+    const mTest = model`
+      run: a extend { where: ai = 1} -> { select: astr }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {path: ['ai']});
+    expect(found, message).toBeTruthy();
+  });
+  test('filters on segment are reflected in usage', () => {
+    const mTest = model`
+      run: a -> { where: ai = 1; select: astr }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {path: ['ai']});
+    expect(found, message).toBeTruthy();
+  });
+  test('on expressions in joins reflected in field usage', () => {
+    const mTest = model`
+      source: bintoa is a extend { join_one: b on ai = b.ai }
+      query: uses_b is bintoa -> { select: b.astr }
+      query: ignore_b is bintoa -> { select: astr }
+    `;
+    expect(mTest).toTranslate();
+    let mq = mTest.translator.getQuery('uses_b');
+    let [found, message] = checkForFieldUsage(mq, {path: ['ai']});
+    expect(found, message).toBeTruthy();
+    mq = mTest.translator.getQuery('ignore_b');
+    [found, message] = checkForFieldUsage(mq, {path: ['b', 'ai']});
+    expect(found, message).toBeFalsy();
+  });
+  test('filters on joins reflected in field usage', () => {
+    const mTest = model`
+      source: bone is b extend { where: ai = 1 }
+      source: bintoa is a extend { join_one: b is bone on b.astr = astr }
+      query: uses_b is bintoa -> { select: b.af }
+      query: ignore_b is bintoa -> { select: af }
+    `;
+    expect(mTest).toTranslate();
+    let mq = mTest.translator.getQuery('uses_b');
+    let [found, message] = checkForFieldUsage(mq, {path: ['b', 'ai']});
+    expect(found, message).toBeTruthy();
+    mq = mTest.translator.getQuery('ignore_b');
+    [found, message] = checkForFieldUsage(mq, {path: ['ai']});
+    expect(found, message).toBeFalsy();
+  });
+  test('count with no path reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: acnt is count() }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('source count reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: acnt is source.count() }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('count with path reflected in field usage', () => {
+    const mTest = model`
+      run: ab -> { group_by: astr; aggregate: bcnt is b.count() }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: ['b'],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric internal with no path reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: avf_f is avg(af) }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: false},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric internal with dotted value reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: astr; aggregate: i_info is ai.avg() };
+    `;
+    expect(mTest).toTranslate();
+    const [found, message] = checkForFieldUsage(
+      mTest.translator.getQuery(0),
+      {path: [], uniqueKeyRequirement: {isCount: false}},
+      {path: ['ai']}
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric internal with join path to value reflected in field usage', () => {
+    const mTest = model`
+      run: ab -> { group_by: astr; aggregate: i_info is b.ai.avg() };
+    `;
+    expect(mTest).toTranslate();
+    const [found, message] = checkForFieldUsage(
+      mTest.translator.getQuery(0),
+      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
+      {path: ['b', 'ai']}
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('asymmetric custom function reflected in field usage', () => {
+    // non-distinct string_add is asymmetric
+    const mTest = model`
+      run: a -> { group_by: ai; aggregate: custom_a is string_agg(astr, ',') }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: false},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('pathed dialect asymmetric on value generates value usage and unique usage', () => {
+    const mTest = model`
+      run: ab -> { group_by: astr; aggregate: i_info is b.ai.stddev() };
+    `;
+    expect(mTest).toTranslate();
+    const [found, message] = checkForFieldUsage(
+      mTest.translator.getQuery(0),
+      {path: ['b'], uniqueKeyRequirement: {isCount: false}},
+      {path: ['b', 'ai']}
+    );
+    expect(found, message).toBeTruthy();
+  });
+  test('analytic function call reflected in field usage', () => {
+    const mTest = model`
+      run: a -> { group_by: ai; calculate: lag_i is lag(ai) }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      analyticFunctionUse: true,
+    });
+    expect(found, message).toBeTruthy();
+  });
+  it('transitive joins activated, in order', () => {
+    const joinModel = model`
+        source: root is a extend { dimension: id is 1 }
+        source: branch is a extend { dimension: id is 1, root_id is 1}
+        source: leaf is a extend { dimension: id is 1, branch_id is 1, color is astr}
+        source: things is a extend {
+          join_many: root on root.id = ai
+          join_many: branch on branch.root_id = root.id
+          join_many: leaf on leaf.branch_id = branch.id
+        }
+        run: things -> { group_by: leaf.color }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const segment = mq!.pipeline[0];
+    if (isQuerySegment(segment)) {
+      expect(segment.activeJoins).toEqual([
+        {path: ['root']},
+        {path: ['branch']},
+        {path: ['leaf']},
+      ]);
+    }
+  });
+  it('generateds activation for nested join', () => {
+    const joinModel = model`
+        source: person0 is a extend {
+          dimension: brother_id is 1, parent_id is 1, id is 1, name is astr
+        }
+        source: person1 is person0 extend {
+          join_many: brothers is person0 on brothers.id = brother_id
+        }
+        source: person is person1 extend {
+          join_many: parents is person1 on parents.id = parent_id
+          dimension: uncle_name is parents.brothers.name
+        }
+        run: person -> { group_by: uncle_name }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const segment = mq!.pipeline[0];
+    if (isQuerySegment(segment)) {
+      expect(segment.activeJoins).toEqual([
+        {path: ['parents']},
+        {path: ['parents', 'brothers']},
+      ]);
+    }
+  });
+  it('with joins generate both references', () => {
+    const joinModel = model`
+      source: hasKey is a extend { primary_key: ai }
+      source: withJoin is a extend { join_one: b is hasKey with ai }
+      run: withJoin -> { select: b.astr }
+    `;
+    expect(joinModel).toTranslate();
+    const mq = joinModel.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(
+      mq,
+      {path: ['ai']},
+      {path: ['b', 'ai']}
+    );
+    expect(found, message).toBeTruthy();
+  });
+  it('nested query unique key requirements propagate to parent', () => {
+    const nestedModel = model`
+      run: a -> {
+        group_by: ai
+        nest: by_ASTR is {
+          group_by: astr_upper is upper(astr)
+          nest: by_astr is {
+            group_by: astr
+            aggregate: str_count is astr.count()
+          }
+        }
+      }
+    `;
+    expect(nestedModel).toTranslate();
+    const mq = nestedModel.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    const [found, message] = checkForFieldUsage(mq, {
+      path: ['astr'],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  it('unique key requirement preserved when path referenced before usage', () => {
+    const m = model`
+    source: data is a extend {
+      dimension: items is [
+        {name is 'A', value is 1},
+        {name is 'B', value is 2}
+      ]
+      measure: item_count is items.count()
+    }
+
+    run: data -> {
+      group_by: items.name
+      aggregate: item_count
+    }
+  `;
+
+    expect(m).toTranslate();
+    const query = m.translator.getQuery(0);
+    const [found, message] = checkForFieldUsage(query, {
+      path: ['items'],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+  });
+  it('index with array wildcard generates correct field usage', () => {
+    const m = model`
+    source: ga_data is a extend {
+      dimension: hits is [
+        {page is {pageTitle is 'Home'}, dataSource is 'web'},
+        {page is {pageTitle is 'About'}, dataSource is 'app'}
+      ]
+      dimension: totals is {revenue is 100}
+    }
+
+    run: ga_data -> {
+      index: hits.*, totals.*
+    }
+  `;
+
+    expect(m).toTranslate();
+    const query = m.translator.getQuery(0);
+    expect(query).toBeDefined();
+
+    const segment = query!.pipeline[0];
+    if (isIndexSegment(segment)) {
+      const hasHitsInActiveJoins = segment.activeJoins?.some(
+        usage => usage.path.length === 1 && usage.path[0] === 'hits'
+      );
+      expect(hasHitsInActiveJoins).toBeTruthy();
+    }
+  });
+
+  test('nested turtle with multi-stage pipeline expands all stage dependencies', () => {
+    const mTest = model`
+    run: a -> {
+      group_by: ai
+      nest: by_elevation is {
+        aggregate: bin_size is (max(af) - min(af)) / 30
+        nest: data is {
+          group_by: af
+          aggregate: row_count is count()
+        }
+      } -> {
+        group_by: elevation is floor(data.af / bin_size) * bin_size + bin_size / 2
+        aggregate: total_count is data.row_count.sum()
+      }
+    }
+  `;
+
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+
+    const firstSegment = mq!.pipeline[0];
+    if (isQuerySegment(firstSegment)) {
+      const byElevationField = firstSegment.queryFields.find(
+        f =>
+          f.type === 'turtle' &&
+          (f.as === 'by_elevation' || f.name === 'by_elevation')
+      );
+
+      expect(byElevationField).toBeDefined();
+
+      if (
+        byElevationField?.type === 'turtle' &&
+        byElevationField.pipeline.length > 1
+      ) {
+        const secondStage = byElevationField.pipeline[1];
+
+        if (secondStage.type !== 'raw') {
+          expect(secondStage.expandedFieldUsage).toBeDefined();
+
+          const hasDataInActiveJoins = secondStage.activeJoins?.some(
+            usage => usage.path.length === 1 && usage.path[0] === 'data'
+          );
+
+          expect(hasDataInActiveJoins).toBeTruthy();
+        }
+      }
+    }
+  });
+
+  test('coalesce across joined sources', () => {
+    const query = model`
+      source: c is a
+      source: abc is a extend {
+        join_one: c with astr
+        join_one: b with astr
+      }
+      run: abc -> {
+        select:
+          result1 is null ?? af ?? b.af ?? c.af
+      }
+    `;
+    expect(query).toTranslate();
+    const mq = query.translator.getQuery(0);
+    expect(mq).toBeDefined();
+    let [found, message] = checkForFieldUsage(mq, {path: ['af']});
+    expect(found, message).toBeTruthy();
+    [found, message] = checkForFieldUsage(mq, {path: ['b', 'af']});
+    expect(found, message).toBeTruthy();
+    [found, message] = checkForFieldUsage(mq, {path: ['c', 'af']});
+    expect(found, message).toBeTruthy();
   });
 });

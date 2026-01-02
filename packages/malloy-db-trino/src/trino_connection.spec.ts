@@ -113,6 +113,12 @@ describe('Trino connection', () => {
       });
     });
 
+    it('parses timestamp with time zone', () => {
+      expect(
+        connection.malloyTypeFromTrinoType('timestamp(3) with time zone)')
+      ).toEqual({type: 'timestamptz'});
+    });
+
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
         'type': 'array',
@@ -130,6 +136,36 @@ describe('Trino connection', () => {
             ],
           },
         ],
+      });
+    });
+
+    describe('integer type mappings', () => {
+      it('maps integer to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('integer')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps smallint to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('smallint')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps tinyint to integer', () => {
+        expect(connection.malloyTypeFromTrinoType('tinyint')).toEqual({
+          type: 'number',
+          numberType: 'integer',
+        });
+      });
+
+      it('maps bigint to bigint', () => {
+        expect(connection.malloyTypeFromTrinoType('bigint')).toEqual({
+          type: 'number',
+          numberType: 'bigint',
+        });
       });
     });
   });

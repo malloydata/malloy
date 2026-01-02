@@ -115,16 +115,20 @@ export type {
   RepeatedRecordTypeDef,
   RecordDef,
   RepeatedRecordDef,
-  // Used in array/record tests
+  // Used in testing, not really public API
   RecordLiteralNode,
   StringLiteralNode,
   ArrayLiteralNode,
   SourceComponentInfo,
+  DateLiteralNode,
+  TimestampLiteralNode,
+  TimestamptzLiteralNode,
+  TimeLiteralExpr,
+  TypecastExpr,
 } from './model';
 export {
   isSourceDef,
   // Used in Composer Demo
-  Segment,
   isBasicAtomic,
   isJoined,
   isJoinedSource,
@@ -144,6 +148,8 @@ export {
   composeSQLExpr,
   isTimestampUnit,
   isDateUnit,
+  // Used in testing, not really public API
+  constantExprToSQL,
 } from './model';
 export {
   malloyToQuery,

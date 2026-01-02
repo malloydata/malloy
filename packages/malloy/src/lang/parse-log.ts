@@ -421,6 +421,7 @@ type MessageParameterTypes = {
   'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
   'invalid-partition-composite': string;
+  'integer-literal-out-of-range': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -534,8 +535,8 @@ export function makeLogMessage<T extends MessageCode>(
       ? format(parameters)
       : format
     : typeof parameters === 'string'
-    ? parameters
-    : undefined;
+      ? parameters
+      : undefined;
   if (info === undefined) {
     throw new Error(`No message formatter for error code \`${code}\`.`);
   }

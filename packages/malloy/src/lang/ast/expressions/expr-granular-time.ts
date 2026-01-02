@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Expr, TimestampUnit} from '../../../model/malloy_types';
+import type {
+  Expr,
+  TemporalTypeDef,
+  TimestampUnit,
+} from '../../../model/malloy_types';
 import {isDateUnit, mkTemporal, TD} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -74,17 +78,35 @@ export class ExprGranularTime extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const timeframe = this.units;
     const exprVal = this.expr.getExpression(fs);
+    let timeType: TemporalTypeDef;
+    let tsVal: GranularResult;
     if (TD.isTemporal(exprVal)) {
-      const tsVal: GranularResult = {
-        ...exprVal,
-        timeframe: timeframe,
-      };
+      if (exprVal.type === 'date') {
+        if (!isDateUnit(timeframe)) {
+          return this.loggedErrorExpr(
+            'unsupported-type-for-time-truncation',
+            `Cannot truncate date to timestamp unit '${timeframe}'`
+          );
+        }
+        tsVal = {...exprVal, timeframe: timeframe};
+        timeType = {type: 'date', timeframe};
+      } else {
+        // timestamp or timestamptz
+        tsVal = {...exprVal, timeframe: timeframe};
+        if (exprVal.type === 'timestamptz') {
+          timeType = {type: 'timestamptz', timeframe};
+        } else {
+          timeType = {type: 'timestamp', timeframe};
+        }
+      }
       if (this.truncate) {
         tsVal.value = {
           node: 'trunc',
-          e: mkTemporal(exprVal.value, exprVal.type),
+          e: mkTemporal(exprVal.value, timeType),
           units: timeframe,
         };
+      } else {
+        tsVal.value = exprVal.value;
       }
       return tsVal;
     }
@@ -130,11 +152,11 @@ export class ExprGranularTime extends ExpressionDef {
   toRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
     const one: Expr = {node: 'numberLiteral', literal: '1'};
-    if (begin.type === 'timestamp') {
-      const beginTS = ExprTime.fromValue('timestamp', begin);
+    if (TD.isAnyTimestamp(begin)) {
+      const beginTS = ExprTime.fromValue(begin.type, begin);
       const endTS = new ExprTime(
-        'timestamp',
-        timeOffset('timestamp', begin.value, '+', one, this.units),
+        begin.type,
+        timeOffset(begin.type, begin.value, '+', one, this.units),
         [begin]
       );
       return new Range(beginTS, endTS);

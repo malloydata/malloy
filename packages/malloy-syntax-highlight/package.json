@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/syntax-highlight",
-  "version": "0.0.302",
+  "version": "0.0.332",
   "description": "A package to simplify the process of developing, testing, and syncnig Malloy syntax highlighting grammars",
   "files": [
     "grammars/**/*.tmGrammar.json",
@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "tsc --build --clean && rm -rf dist",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf dist",
     "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.monarch.ts && prettier grammars/malloy/malloy.monarch.ts --write",
     "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
     "test-monarch-grammars": "rimraf ./dist && tsc && karma start",

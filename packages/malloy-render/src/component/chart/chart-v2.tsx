@@ -70,6 +70,7 @@ export function ChartV2Inner(props: ChartV2Props) {
     const _view = view();
     if (_view) {
       _view.data('values', props.values);
+      _view.resize();
       _view.runAsync();
       props.onView?.(_view);
     }

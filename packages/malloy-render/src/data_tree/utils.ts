@@ -79,7 +79,10 @@ export function isStringFieldInfo(
 export function isTimestampFieldInfo(
   field: Malloy.DimensionInfo
 ): field is TimestampFieldInfo {
-  return field.type.kind === 'timestamp_type';
+  return (
+    field.type.kind === 'timestamp_type' ||
+    field.type.kind === 'timestamptz_type'
+  );
 }
 
 export function isBooleanFieldInfo(
@@ -106,6 +109,7 @@ const RENDER_TAG_LIST = [
   'scatter_chart',
   'shape_map',
   'segment_map',
+  'big_value',
 ];
 
 export function shouldRenderAs({
@@ -147,7 +151,10 @@ export function shouldRenderAs({
     return 'none';
   }
 
-  const isNest = field instanceof ArrayField || field instanceof RecordField;
+  // RepeatedRecordField and RecordField render as tables
+  // Plain ArrayField (e.g., string[], number[]) renders as cell with comma-separated values
+  const isNest =
+    field instanceof RepeatedRecordField || field instanceof RecordField;
 
   const result = !isNest ? 'cell' : 'table';
   return result;

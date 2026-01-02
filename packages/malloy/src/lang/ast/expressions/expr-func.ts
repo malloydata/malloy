@@ -39,6 +39,9 @@ import type {
   RecordFunctionParameterTypeDef,
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
+  FieldUsage,
+  FunctionOrderBy as ModelFunctionOrderBy,
+  AggregateUngrouping,
 } from '../../../model/malloy_types';
 import {
   expressionIsAggregate,
@@ -69,7 +72,7 @@ import {FieldName} from '../types/field-space';
 import type {SQLExprElement} from '../../../model/utils';
 import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
-import {mergeFieldUsage} from '../../../model/composite_source_utils';
+import {mergeFieldUsage} from '../../composite-source-utils';
 import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
@@ -188,7 +191,7 @@ export class ExprFunc extends ExpressionDef {
               at: this.source.location,
             },
             evalSpace: footType.evalSpace,
-            fieldUsage: footType.fieldUsage,
+            fieldUsage: [{path: this.source.path, at: this.source.location}],
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -248,8 +251,8 @@ export class ExprFunc extends ExpressionDef {
         error.maxEvalSpace === 'literal'
           ? 'literal'
           : error.maxEvalSpace === 'constant'
-          ? 'literal or constant'
-          : 'literal, constant or output';
+            ? 'literal or constant'
+            : 'literal, constant or output';
       const arg = this.args[adjustedIndex];
       arg.logError(
         'invalid-function-argument-evaluation-space',
@@ -301,13 +304,13 @@ export class ExprFunc extends ExpressionDef {
       structPath,
     };
     let funcCall: Expr = frag;
+    const isAnalytic = expressionIsAnalytic(overload.returnType.expressionType);
+    const isAsymmetric = !overload.isSymmetric;
+    const orderByUsage: FieldUsage[] = [];
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
     if (props?.orderBys && props.orderBys.length > 0) {
-      const isAnalytic = expressionIsAnalytic(
-        overload.returnType.expressionType
-      );
       if (!isAnalytic) {
         if (!this.inExperiment('aggregate_order_by', true)) {
           props.orderBys[0].logError(
@@ -318,12 +321,17 @@ export class ExprFunc extends ExpressionDef {
       }
       if (overload.supportsOrderBy || isAnalytic) {
         const allowExpression = overload.supportsOrderBy !== 'only_default';
-        const allObs = props.orderBys.flatMap(orderBy =>
-          isAnalytic
-            ? orderBy.getAnalyticOrderBy(fs)
-            : orderBy.getAggregateOrderBy(fs, allowExpression)
-        );
-        frag.kids.orderBy = allObs;
+        const allOrderBy: ModelFunctionOrderBy[] = [];
+        for (const ordering of props.orderBys) {
+          const {orderBy, fieldUsage} = isAnalytic
+            ? ordering.getAnalyticOrderBy(fs)
+            : ordering.getAggregateOrderBy(fs, allowExpression);
+          if (fieldUsage) {
+            orderByUsage.push(...fieldUsage);
+          }
+          allOrderBy.push(...orderBy);
+        }
+        frag.kids.orderBy = allOrderBy;
       } else {
         props.orderBys[0].logError(
           'function-does-not-support-order-by',
@@ -366,6 +374,7 @@ export class ExprFunc extends ExpressionDef {
       }
       frag.partitionBy = partitionByFields;
     }
+    const sqlFunctionFieldUsage: FieldUsage[] = [];
     if (
       [
         'sql_number',
@@ -408,7 +417,8 @@ export class ExprFunc extends ExpressionDef {
                 `Invalid interpolation: ${result.error.message}`
               );
             }
-            if (result.found.typeDesc().type === 'filter expression') {
+            const typeDesc = result.found.typeDesc();
+            if (typeDesc.type === 'filter expression') {
               return this.loggedErrorExpr(
                 'filter-expression-error',
                 'Filter expressions cannot be used in sql_ functions'
@@ -417,6 +427,10 @@ export class ExprFunc extends ExpressionDef {
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: part.path});
             } else {
+              sqlFunctionFieldUsage.push({
+                path: part.path,
+                at: this.args[0].location,
+              });
               expr.push({
                 node: 'field',
                 // TODO when we have namespaces, this will need to be replaced with the resolved path
@@ -440,8 +454,26 @@ export class ExprFunc extends ExpressionDef {
       maxEvalSpace === 'constant'
         ? 'constant'
         : expressionIsScalar(expressionType)
-        ? maxEvalSpace
-        : 'output';
+          ? maxEvalSpace
+          : 'output';
+    const aggregateFunctionUsage: FieldUsage[] = [];
+    if (isAsymmetric || isAnalytic) {
+      const funcUsage: FieldUsage = {path: structPath || [], at: this.location};
+      if (isAsymmetric) funcUsage.uniqueKeyRequirement = {isCount: false};
+      if (isAnalytic) funcUsage.analyticFunctionUse = true;
+      aggregateFunctionUsage.push(funcUsage);
+    }
+    const fieldUsage = mergeFieldUsage(
+      ...argExprs.map(ae => ae.fieldUsage),
+      orderByUsage,
+      sqlFunctionFieldUsage,
+      aggregateFunctionUsage
+    );
+    const ungroupings = argExprs.reduce(
+      (ug: AggregateUngrouping[], a) => a.ungroupings ?? ug,
+      []
+    );
+
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
@@ -450,7 +482,8 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      fieldUsage: mergeFieldUsage(...argExprs.map(e => e.fieldUsage)),
+      fieldUsage,
+      ungroupings,
     };
   }
 }

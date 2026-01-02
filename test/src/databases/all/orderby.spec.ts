@@ -24,7 +24,9 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
+import {Dialect} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -33,10 +35,13 @@ afterAll(async () => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const orderByModel = runtime.loadModel(`
+  const orderByModel = wrapTestModel(
+    runtime,
+    `
     source: models is ${databaseName}.table('malloytest.aircraft_models') extend {
       measure: model_count is count()
-    }`);
+    }`
+  );
 
   it(`boolean type - ${databaseName}`, async () => {
     await expect(`
@@ -44,8 +49,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: big is seats >=20
         aggregate: model_count is count()
       }
-    `).malloyResultMatches(orderByModel, {
-      big: runtime.dialect.resultBoolean(false),
+    `).toMatchResult(orderByModel, {
+      big: false,
       model_count: 58451,
     });
   });
@@ -61,8 +66,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: big
         aggregate: model_count is model_count.sum()
       }
-    `).malloyResultMatches(orderByModel, {
-      big: runtime.dialect.resultBoolean(false),
+    `).toMatchResult(orderByModel, {
+      big: false,
       model_count: 58500,
     });
   });
@@ -74,7 +79,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         group_by: j_names
       }
-    `).malloyResultMatches(orderByModel, {j_names: 1358});
+    `).toMatchResult(orderByModel, {j_names: 1358});
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -84,7 +89,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }->{
         group_by: fetch
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   test.when(runtime.supportsNesting)(
@@ -101,7 +106,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           withxz is lower(withx.select)
           fetch is withx.fetch
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
     }
   );
 
@@ -116,7 +121,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         select: withxis lower(withx.select)
         select: fetch is with.fetch
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
@@ -124,7 +129,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: models->{
         aggregate: model_count is count(){ where: manufacturer ? ~'A%' }
       }
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   // I'm not sure I have the syntax right here...
@@ -139,7 +144,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: 2
         select: manufacturer, model_count
       }
-    `).malloyResultMatches(orderByModel, {model_count: 102});
+    `).toMatchResult(orderByModel, {model_count: 102});
   });
 
   test.when(runtime.supportsNesting)(
@@ -160,7 +165,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: 2
           select: manufacturer, model_count
         }
-      `).malloyResultMatches(orderByModel, {model_count: 102});
+      `).toMatchResult(orderByModel, {model_count: 102});
     }
   );
 
@@ -182,7 +187,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: a.aircraft_count
         }
       } -> foo
-    `).malloyResultMatches(orderByModel, {});
+    `).toMatchResult(orderByModel, {});
   });
 
   // There's a problem with null ordering in MySQL which we are ignoring for now
@@ -205,7 +210,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${abc} -> { select: *; order_by: l asc }`
-        ).malloyResultMatches(runtime, [
+        ).toMatchRows(orderByModel, [
           {ln: 'a'},
           {ln: 'b'},
           {ln: 'c'},
@@ -218,7 +223,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${abc} -> { select: *; order_by: l desc }`
-        ).malloyResultMatches(runtime, [
+        ).toMatchRows(orderByModel, [
           {ln: 'c'},
           {ln: 'b'},
           {ln: 'a'},
@@ -230,8 +235,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       'null last in reduce string with default ascending order',
       async () => {
         await expect(`
-        #! test.verbose
-        run: ${abc} -> { group_by: l }`).malloyResultMatches(runtime, [
+          #! test.verbose
+          run: ${abc} -> { group_by: l }`).toMatchRows(orderByModel, [
           {l: 'a'},
           {l: 'b'},
           {l: 'c'},
@@ -250,7 +255,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${nums} -> { select: n; order_by: n asc }`
-        ).malloyResultMatches(runtime, [{n: 1}, {n: 5}, {n: 9}, {n: null}]);
+        ).toMatchRows(orderByModel, [{n: 1}, {n: 5}, {n: 9}, {n: null}]);
       }
     );
     test.when(testNullOrdering)(
@@ -258,18 +263,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${nums} -> { select: n; order_by: n desc }`
-        ).malloyResultMatches(runtime, [{n: 9}, {n: 5}, {n: 1}, {n: null}]);
+        ).toMatchRows(orderByModel, [{n: 9}, {n: 5}, {n: 1}, {n: null}]);
       }
     );
     test.when(testNullOrdering)(
       'null last in reduce measure with default descending order',
       async () => {
         await expect(`
-        # test.verbose
-        run: ${nums} -> {
-          group_by: nstr is n ? pick 'null' when is null else concat('number', n::string)
-          aggregate: nTotal is n.sum()
-        }`).malloyResultMatches(runtime, [
+          # test.verbose
+          run: ${nums} -> {
+            group_by: nstr is n ? pick 'null' when is null else concat('number', n::string)
+            aggregate: nTotal is n.sum()
+          }`).toMatchRows(orderByModel, [
           {nstr: 'number9'},
           {nstr: 'number5'},
           {nstr: 'number1'},
@@ -277,33 +282,33 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ]);
       }
     );
-    const y2020 = runtime.dialect.sqlLiteralTime(
-      {},
-      {
-        node: 'timeLiteral',
-        literal: '2020-01-01 00:00:00',
-        typeDef: {type: 'timestamp'},
-      }
+    const y2020Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2020-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
     );
-    const d2020 = new Date('2020-01-01 00:00:00Z');
-    const d2022 = new Date('2022-01-01 00:00:00Z');
-    const d2025 = new Date('2025-01-01 00:00:00Z');
-    const y2025 = runtime.dialect.sqlLiteralTime(
-      {},
-      {
-        node: 'timeLiteral',
-        literal: '2025-01-01 00:00:00',
-        typeDef: {type: 'timestamp'},
-      }
+    const y2020 = runtime.dialect.exprToSQL({}, y2020Node) || '';
+    const d2020 = '2020-01-01T00:00:00.000Z';
+    const d2022 = '2022-01-01T00:00:00.000Z';
+    const d2025 = '2025-01-01T00:00:00.000Z';
+    const y2025Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2025-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
     );
-    const y2022 = runtime.dialect.sqlLiteralTime(
-      {},
-      {
-        node: 'timeLiteral',
-        literal: '2022-01-01 00:00:00',
-        typeDef: {type: 'timestamp'},
-      }
+    const y2025 = runtime.dialect.exprToSQL({}, y2025Node) || '';
+    const y2022Node = Dialect.makeTimeLiteralNode(
+      runtime.dialect,
+      '2022-01-01 00:00:00',
+      undefined,
+      undefined,
+      'timestamp'
     );
+    const y2022 = runtime.dialect.exprToSQL({}, y2022Node) || '';
     const times = `${databaseName}.sql("""
       SELECT ${y2020} as ${q`t`}
       UNION ALL SELECT ${y2025}
@@ -315,7 +320,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${times} -> { select: t; order_by: t asc }`
-        ).malloyResultMatches(runtime, [
+        ).toMatchRows(orderByModel, [
           {t: d2020},
           {t: d2022},
           {t: d2025},
@@ -328,7 +333,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       async () => {
         await expect(
           `run: ${times} -> { select: t; order_by: t desc }`
-        ).malloyResultMatches(runtime, [
+        ).toMatchRows(orderByModel, [
           {t: d2025},
           {t: d2022},
           {t: d2020},
@@ -339,8 +344,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test.when(testTimes)(
       'null last in reduce timestamps with default descending order',
       async () => {
-        await expect(`run: ${times} -> { group_by: t }`).malloyResultMatches(
-          runtime,
+        await expect(`run: ${times} -> { group_by: t }`).toMatchRows(
+          orderByModel,
           [{t: d2025}, {t: d2022}, {t: d2020}, {t: null}]
         );
       }

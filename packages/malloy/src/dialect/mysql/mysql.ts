@@ -31,14 +31,12 @@
 import type {
   Sampling,
   MeasureTimeExpr,
-  TimeLiteralNode,
   RegexMatchExpr,
-  TimeDeltaExpr,
-  TimeTruncExpr,
   TimeExtractExpr,
   TypecastExpr,
   BasicAtomicTypeDef,
   AtomicTypeDef,
+  TimestampTypeDef,
   ArrayLiteralNode,
   RecordLiteralNode,
 } from '../../model/malloy_types';
@@ -81,12 +79,12 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'smallint': {type: 'number', numberType: 'integer'},
   'mediumint': {type: 'number', numberType: 'integer'},
   'int': {type: 'number', numberType: 'integer'},
-  'bigint': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'bigint'},
   'tinyint unsigned': {type: 'number', numberType: 'integer'},
   'smallint unsigned': {type: 'number', numberType: 'integer'},
   'mediumint unsigned': {type: 'number', numberType: 'integer'},
   'int unsigned': {type: 'number', numberType: 'integer'},
-  'bigint unsigned': {type: 'number', numberType: 'integer'},
+  'bigint unsigned': {type: 'number', numberType: 'bigint'},
   'double': {type: 'number', numberType: 'float'},
   'varchar': {type: 'string'},
   'varbinary': {type: 'string'},
@@ -100,6 +98,30 @@ const mysqlToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   // TODO: Check if we need special handling for boolean.
   'tinyint(1)': {type: 'boolean'},
 };
+
+function malloyTypeToJSONTableType(malloyType: AtomicTypeDef): string {
+  switch (malloyType.type) {
+    case 'number':
+      if (malloyType.numberType === 'integer') {
+        return 'INT';
+      } else if (malloyType.numberType === 'bigint') {
+        return 'BIGINT';
+      } else {
+        return 'DOUBLE';
+      }
+    case 'string':
+      return 'CHAR(255)'; // JSON_TABLE needs a length
+    case 'boolean':
+      return 'INT'; // or TINYINT(1) if you prefer
+    case 'record':
+    case 'array':
+      return 'JSON';
+    case 'timestamp':
+      return 'DATETIME';
+    default:
+      return malloyType.type.toUpperCase();
+  }
+}
 
 export class MySQLDialect extends Dialect {
   name = 'mysql';
@@ -133,14 +155,23 @@ export class MySQLDialect extends Dialect {
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
       case 'number':
-        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+        if (
+          malloyType.numberType === 'integer' ||
+          malloyType.numberType === 'bigint'
+        ) {
+          return 'SIGNED';
+        } else {
+          return 'DOUBLE';
+        }
       case 'string':
-        return 'TEXT';
+        return 'CHAR';
+      case 'boolean':
+        return 'SIGNED';
       case 'record':
       case 'array':
         return 'JSON';
-      case 'date':
       case 'timestamp':
+        return 'DATETIME';
       default:
         return malloyType.type;
     }
@@ -179,10 +210,9 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    const separator = limit ? ',xrmmex' : ',';
+    const separator = ',';
     let gc = `GROUP_CONCAT(
       IF(group_set=${groupSet},
         JSON_OBJECT(${this.mapFields(fieldList)})
@@ -191,10 +221,6 @@ export class MySQLDialect extends Dialect {
       ${orderBy}
       SEPARATOR '${separator}'
     )`;
-    if (limit) {
-      gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
-      gc = `REPLACE(${gc},'${separator}',',')`;
-    }
     gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
@@ -231,10 +257,11 @@ export class MySQLDialect extends Dialect {
       return 'JSON';
     } else return t;
   }
+
   unnestColumns(fieldList: DialectFieldList) {
     const fields: string[] = [];
     for (const f of fieldList) {
-      let fType = this.malloyTypeToSQLType(f.typeDef);
+      let fType = malloyTypeToJSONTableType(f.typeDef);
       if (
         f.typeDef.type === 'sql native' &&
         f.typeDef.rawType &&
@@ -299,10 +326,10 @@ export class MySQLDialect extends Dialect {
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const sqlDistinctKey = `CONCAT(${key}, '')`;
-    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(65, 0)) * 4294967296`;
-    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(65, 0))`;
+    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(55, 10)) * 4294967296`;
+    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(55, 10))`;
     const hashkey = `(${upperPart} + ${lowerPart})`;
-    const v = `COALESCE(${value},0)`;
+    const v = `CAST(COALESCE(${value},0) as DECIMAL(55, 10))`;
     const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
     if (funcName === 'SUM') {
       return sqlSum;
@@ -374,31 +401,43 @@ export class MySQLDialect extends Dialect {
     return 'LOCALTIMESTAMP';
   }
 
-  // truncToUnit(sql, unit: string): string {
-  //   return `EXTRACT(${unit} FROM ${sql})`;
-  // }
-  sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
-    // LTNOTE: how come this can be undefined?
-    let truncThis = trunc.e.sql || 'why could this be undefined';
-    if (trunc.units === 'week') {
-      truncThis = `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`;
-    }
-    if (TD.isTimestamp(trunc.e.typeDef)) {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = `(CONVERT_TZ(${truncThis}, 'UTC','${tz}'))`;
-        const civilTrunc = `${this.truncToUnit(civilSource, trunc.units)}`;
-        const truncTsTz = `CONVERT_TZ(${civilTrunc}, '${tz}', 'UTC')`;
-        return `(${truncTsTz})`; // TODO: should it cast?
-      }
-    }
-    const result = `${this.truncToUnit(truncThis, trunc.units)}`;
-    return result;
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // MySQL has no timestamptz type, so typeDef.timestamptz will never be true
+    return {
+      sql: `CONVERT_TZ(${expr}, 'UTC', '${timezone}')`,
+      typeDef: {type: 'timestamp'},
+    };
   }
 
-  truncToUnit(expr: string, units: string) {
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: TimestampTypeDef
+  ): string {
+    return `CONVERT_TZ(${expr}, '${timezone}', 'UTC')`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // For week truncation, adjust to Sunday first
+    // DAYOFWEEK returns 1=Sunday, 2=Monday, etc., so subtract (DAYOFWEEK-1) days
+    const adjustedExpr =
+      unit === 'week'
+        ? `DATE_SUB(${expr}, INTERVAL DAYOFWEEK(${expr}) - 1 DAY)`
+        : expr;
+
+    // Generate truncation using DATE_FORMAT
     let format = "'%Y-%m-%d %H:%i:%s'";
-    switch (units) {
+    switch (unit) {
       case 'minute':
         format = "'%Y-%m-%d %H:%i:00'";
         break;
@@ -413,14 +452,38 @@ export class MySQLDialect extends Dialect {
         format = "'%Y-%m-01 00:00:00'";
         break;
       case 'quarter':
-        format = `CASE WHEN MONTH(${expr}) > 9 THEN '%Y-10-01 00:00:00' WHEN MONTH(${expr}) > 6 THEN '%Y-07-01 00:00:00' WHEN MONTH(${expr}) > 3 THEN '%Y-04-01 00:00:00' ELSE '%Y-01-01 00:00:00' end`;
+        format = `CASE WHEN MONTH(${adjustedExpr}) > 9 THEN '%Y-10-01 00:00:00' WHEN MONTH(${adjustedExpr}) > 6 THEN '%Y-07-01 00:00:00' WHEN MONTH(${adjustedExpr}) > 3 THEN '%Y-04-01 00:00:00' ELSE '%Y-01-01 00:00:00' end`;
         break;
       case 'year':
         format = "'%Y-01-01 00:00:00'";
         break;
     }
 
-    return `TIMESTAMP(DATE_FORMAT(${expr}, ${format}))`;
+    return `TIMESTAMP(DATE_FORMAT(${adjustedExpr}, ${format}))`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: string,
+    _typeDef: AtomicTypeDef,
+    _inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    // Convert quarter/week to supported units
+    let offsetUnit = unit;
+    let offsetMag = magnitude;
+    if (unit === 'quarter') {
+      offsetUnit = 'month';
+      offsetMag = `${magnitude}*3`;
+    } else if (unit === 'week') {
+      offsetUnit = 'day';
+      offsetMag = `${magnitude}*7`;
+    }
+
+    const interval = `INTERVAL ${offsetMag} ${offsetUnit}`;
+    return `(${expr} ${op} ${interval})`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
@@ -433,20 +496,6 @@ export class MySQLDialect extends Dialect {
       }
     }
     return `${msUnits}(${extractFrom})`;
-  }
-
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    let timeframe = df.units;
-    let n = df.kids.delta.sql;
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = `${n}*3`;
-    } else if (timeframe === 'week') {
-      timeframe = 'day';
-      n = `${n}*7`;
-    }
-    const interval = `INTERVAL ${n} ${timeframe} `;
-    return `(${df.kids.base.sql})${df.op}${interval}`;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
@@ -474,15 +523,28 @@ export class MySQLDialect extends Dialect {
     return `REGEXP_LIKE(${df.kids.expr.sql}, ${df.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {
-    if (TD.isDate(lt.typeDef)) {
-      return `DATE '${lt.literal}'`;
-    }
-    const tz = lt.timezone || qtz(qi);
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE '${literal}'`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    const tz = timezone || qtz(qi);
     if (tz) {
-      return ` CONVERT_TZ('${lt.literal}', '${tz}', 'UTC')`;
+      return `CONVERT_TZ('${literal}', '${tz}', 'UTC')`;
     }
-    return `TIMESTAMP '${lt.literal}'`;
+    return `TIMESTAMP '${literal}'`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    _literal: string,
+    _timezone: string
+  ): string {
+    throw new Error('MySQL does not support timestamptz');
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {

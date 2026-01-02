@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-sql",
-  "version": "0.0.302",
+  "version": "0.0.332",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,11 +20,11 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "npm run build-grammar && jest --config=../../jest.config.js",
     "build": "npm run build-grammar && tsc --build",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.302"
+    "@malloydata/malloy": "0.0.332"
   },
   "devDependencies": {
     "peggy": "^3.0.2"

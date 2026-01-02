@@ -25,16 +25,15 @@ import {indent} from '../../model/utils';
 import type {
   Sampling,
   AtomicTypeDef,
-  TimeTruncExpr,
   TimeExtractExpr,
-  TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
-  TimeLiteralNode,
   MeasureTimeExpr,
   BasicAtomicTypeDef,
   RecordLiteralNode,
   ArrayLiteralNode,
+  TimestampUnit,
+  TimestampTypeDef,
 } from '../../model/malloy_types';
 import {
   isSamplingEnable,
@@ -44,8 +43,13 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, OrderByRequest, QueryInfo} from '../dialect';
-import {Dialect} from '../dialect';
+import type {
+  DialectFieldList,
+  IntegerTypeMapping,
+  OrderByRequest,
+  QueryInfo,
+} from '../dialect';
+import {Dialect, MIN_INT64, MAX_INT64} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -59,10 +63,6 @@ function timestampMeasureable(units: string): boolean {
     'hour',
     'day',
   ].includes(units);
-}
-
-function dateMeasureable(units: string): boolean {
-  return ['day', 'week', 'month', 'quarter', 'year'].includes(units);
 }
 
 const extractMap: Record<string, string> = {
@@ -88,8 +88,8 @@ declare interface TimeMeasure {
 const bqToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
-  'INTEGER': {type: 'number', numberType: 'integer'},
-  'INT64': {type: 'number', numberType: 'integer'},
+  'INTEGER': {type: 'number', numberType: 'bigint'},
+  'INT64': {type: 'number', numberType: 'bigint'},
   'FLOAT': {type: 'number', numberType: 'float'},
   'FLOAT64': {type: 'number', numberType: 'float'},
   'NUMERIC': {type: 'number', numberType: 'float'},
@@ -129,8 +129,38 @@ export class StandardSQLDialect extends Dialect {
   supportsHyperLogLog = true;
   likeEscape = false; // Uses \ instead of ESCAPE 'X' in like clauses
 
+  // BigQuery only has INT64 - all integers can exceed JS Number precision
+  override integerTypeMappings: IntegerTypeMapping[] = [
+    {min: MIN_INT64, max: MAX_INT64, numberType: 'bigint'},
+  ];
+
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
+  }
+
+  needsCivilTimeComputation(
+    typeDef: AtomicTypeDef,
+    truncateTo: TimestampUnit | undefined,
+    offsetUnit: TimestampUnit | undefined,
+    qi: QueryInfo
+  ): {needed: boolean; tz: string | undefined} {
+    // In addition to using "civil" space for units where a query time zone is
+    // set, BigQuery also uses civil space for unit operations not supported
+    // by the TIMESTAMP functions.
+    const calendarUnits = ['day', 'week', 'month', 'quarter', 'year'];
+
+    const isCalendarTruncate =
+      truncateTo !== undefined && calendarUnits.includes(truncateTo);
+
+    const isCalendarOffset =
+      offsetUnit !== undefined && calendarUnits.includes(offsetUnit);
+
+    const needed =
+      TD.isAnyTimestamp(typeDef) && (isCalendarTruncate || isCalendarOffset);
+
+    const tz = needed ? qtz(qi) || 'UTC' : undefined;
+
+    return {needed, tz};
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -152,17 +182,12 @@ export class StandardSQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined,
-    limit: number | undefined
+    orderBy: string | undefined
   ): string {
-    let tail = '';
-    if (limit !== undefined) {
-      tail += ` LIMIT ${limit}`;
-    }
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy} ${tail})`;
+    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -290,46 +315,80 @@ ${indent(sql)}
     return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
-    const tz = qtz(qi);
-    const tzAdd = tz ? `, "${tz}"` : '';
-    if (TD.isDate(trunc.e.typeDef)) {
-      if (dateMeasureable(trunc.units)) {
-        return `DATE_TRUNC(${trunc.e.sql},${trunc.units})`;
-      }
-      return `TIMESTAMP(${trunc.e.sql}${tzAdd})`;
-    }
-    return `TIMESTAMP_TRUNC(${trunc.e.sql},${trunc.units}${tzAdd})`;
-  }
-
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const extractTo = extractMap[te.units] || te.units;
-    const tz = TD.isTimestamp(te.e.typeDef) && qtz(qi);
+    const tz = TD.isAnyTimestamp(te.e.typeDef) && qtz(qi);
     const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
-  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
-    const from = df.kids.base;
-    let dataType: string = from?.typeDef.type;
-    let sql = from.sql;
-    if (df.units !== 'day' && timestampMeasureable(df.units)) {
-      // The units must be done in timestamp, no matter the input type
-      if (dataType !== 'timestamp') {
-        sql = `TIMESTAMP(${sql})`;
-        dataType = 'timestamp';
-      }
-    } else if (dataType === 'timestamp') {
-      sql = `DATETIME(${sql})`;
-      dataType = 'datetime';
+  sqlConvertToCivilTime(
+    expr: string,
+    timezone: string,
+    _typeDef: AtomicTypeDef
+  ): {sql: string; typeDef: AtomicTypeDef} {
+    // BigQuery has no timestamptz type, so typeDef.timestamptz will never be true
+    return {
+      sql: `DATETIME(${expr}, '${timezone}')`,
+      typeDef: {type: 'timestamp'},
+    };
+  }
+
+  sqlConvertFromCivilTime(
+    expr: string,
+    timezone: string,
+    _destTypeDef: TimestampTypeDef
+  ): string {
+    return `TIMESTAMP(${expr}, '${timezone}')`;
+  }
+
+  sqlTruncate(
+    expr: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    timezone?: string
+  ): string {
+    if (inCivilTime) {
+      // Operating on DATETIME (civil time)
+      return `DATETIME_TRUNC(${expr}, ${unit})`;
     }
-    const funcTail = df.op === '+' ? '_ADD' : '_SUB';
-    const funcName = `${dataType.toUpperCase()}${funcTail}`;
-    const newTime = `${funcName}(${sql}, INTERVAL ${df.kids.delta.sql} ${df.units})`;
-    if (dataType === from.typeDef.type) {
-      return newTime;
+
+    // Operating on DATE or TIMESTAMP
+    if (TD.isDate(typeDef)) {
+      return `DATE_TRUNC(${expr}, ${unit})`;
     }
-    return `${from.typeDef.type.toUpperCase()}(${newTime})`;
+
+    // TIMESTAMP truncation with optional timezone
+    const tzParam = timezone ? `, '${timezone}'` : '';
+    return `TIMESTAMP_TRUNC(${expr}, ${unit}${tzParam})`;
+  }
+
+  sqlOffsetTime(
+    expr: string,
+    op: '+' | '-',
+    magnitude: string,
+    unit: TimestampUnit,
+    typeDef: AtomicTypeDef,
+    inCivilTime: boolean,
+    _timezone?: string
+  ): string {
+    if (inCivilTime) {
+      // Operating on DATETIME (civil time)
+      const funcName = op === '+' ? 'DATETIME_ADD' : 'DATETIME_SUB';
+      return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
+    }
+
+    // Operating on DATE or TIMESTAMP
+    const baseType = typeDef.type;
+    if (baseType === 'date') {
+      const funcName = op === '+' ? 'DATE_ADD' : 'DATE_SUB';
+      return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
+    }
+
+    // TIMESTAMP with sub-day units only (calendar units go through civil time)
+    const funcName = op === '+' ? 'TIMESTAMP_ADD' : 'TIMESTAMP_SUB';
+    return `${funcName}(${expr}, INTERVAL ${magnitude} ${unit})`;
   }
 
   ignoreInProject(fieldName: string): boolean {
@@ -357,19 +416,29 @@ ${indent(sql)}
     return `REGEXP_CONTAINS(${match.kids.expr.sql},${match.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
-    if (TD.isDate(lit.typeDef)) {
-      return `DATE('${lit.literal}')`;
-    } else if (TD.isTimestamp(lit.typeDef)) {
-      let timestampArgs = `'${lit.literal}'`;
-      const tz = lit.timezone || qtz(qi);
-      if (tz && tz !== 'UTC') {
-        timestampArgs += `,'${tz}'`;
-      }
-      return `TIMESTAMP(${timestampArgs})`;
-    } else {
-      throw new Error(`Unsupported Literal time format ${lit.typeDef}`);
+  sqlDateLiteral(_qi: QueryInfo, literal: string): string {
+    return `DATE('${literal}')`;
+  }
+
+  sqlTimestampLiteral(
+    qi: QueryInfo,
+    literal: string,
+    timezone: string | undefined
+  ): string {
+    let timestampArgs = `'${literal}'`;
+    const tz = timezone || qtz(qi);
+    if (tz && tz !== 'UTC') {
+      timestampArgs += `,'${tz}'`;
     }
+    return `TIMESTAMP(${timestampArgs})`;
+  }
+
+  sqlTimestamptzLiteral(
+    _qi: QueryInfo,
+    _literal: string,
+    _timezone: string
+  ): string {
+    throw new Error('BigQuery does not support timestamptz');
   }
 
   sqlMeasureTimeExpr(measure: MeasureTimeExpr): string {
@@ -445,7 +514,10 @@ ${indent(sql)}
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
+      if (
+        malloyType.numberType === 'integer' ||
+        malloyType.numberType === 'bigint'
+      ) {
         return 'INT64';
       } else {
         return 'FLOAT64';

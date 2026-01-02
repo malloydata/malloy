@@ -22,62 +22,325 @@
  */
 
 import {Currency, DurationUnit} from '../html/data_styles';
+import type {SuffixFormat} from '../html/data_styles';
 import {format} from 'ssf';
 import {
   getText,
   NULL_SYMBOL,
   renderTimeString,
+  formatBigNumber,
+  formatScaledNumber,
+  parseNumberShorthand,
+  parseCurrencyShorthand,
+  normalizeScale,
   type RenderTimeStringOptions,
+  type ScaleKey,
+  type SuffixFormatKey,
 } from '../util';
-import type {Field} from '../data_tree';
+import type {Field, NumberCell} from '../data_tree';
+import type {Tag} from '@malloydata/malloy-tag';
 
+/**
+ * Renders a numeric field with formatting based on tags.
+ *
+ * Supports:
+ * - Currency shorthand: # currency=usd2m, # currency=eur0k
+ * - Currency verbose: # currency { scale=m decimals=2 suffix=finance }
+ * - Number shorthand: # number=1k, # number=0m, # number=auto
+ * - Number verbose: # number { scale=m decimals=2 suffix=word }
+ * - Legacy: # number=big, # currency=euro
+ */
 export function renderNumericField(
   f: Field,
-  value: number | null | undefined
+  value: number | null | undefined,
+  tagOverride?: Tag
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
-  let displayValue: string | number = value;
-  const tag = f.tag;
-  if (tag.has('currency')) {
-    let unitText = '$';
+  const tag = tagOverride ?? f.tag;
 
-    switch (tag.text('currency')) {
-      case Currency.Euros:
-        unitText = '€';
-        break;
-      case Currency.Pounds:
-        unitText = '£';
-        break;
-      case Currency.Dollars:
-        // Do nothing.
-        break;
-    }
-    displayValue = format(`${unitText}#,##0.00`, value);
-  } else if (tag.has('percent')) displayValue = format('#,##0.00%', value);
-  else if (tag.has('duration')) {
-    const duration_unit = tag.text('duration');
-    const targetUnit = duration_unit ?? DurationUnit.Seconds;
+  // Handle currency formatting
+  if (tag.has('currency')) {
+    return renderCurrencyField(tag, value);
+  }
+
+  // Handle percent formatting
+  if (tag.has('percent')) {
+    return format('#,##0.00%', value);
+  }
+
+  // Handle duration formatting
+  if (tag.has('duration')) {
+    const durationUnit = tag.text('duration');
+    const targetUnit = durationUnit ?? DurationUnit.Seconds;
     return (
       getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString()
     );
-  } else if (tag.has('number'))
-    displayValue = format(tag.text('number') ?? '#', value);
-  else displayValue = (value as number).toLocaleString();
-  return displayValue;
+  }
+
+  // Handle number formatting
+  if (tag.has('number')) {
+    return renderNumberField(tag, value);
+  }
+
+  // Default: locale string
+  return value.toLocaleString();
+}
+
+/**
+ * Renders a currency field with support for shorthand and verbose syntax.
+ */
+function renderCurrencyField(tag: Tag, value: number): string {
+  const currencyValue = tag.text('currency');
+
+  // Try parsing as shorthand format (e.g., "usd2m", "eur0k")
+  const shorthand = currencyValue
+    ? parseCurrencyShorthand(currencyValue)
+    : null;
+
+  let symbol = '$';
+  let scale: ScaleKey | 'auto' | undefined;
+  let decimals: number | undefined;
+  let suffixFormat: SuffixFormatKey = 'lower'; // Default for shorthand
+
+  if (shorthand) {
+    // Shorthand format parsed successfully
+    symbol = shorthand.symbol;
+    scale = shorthand.scale;
+    decimals = shorthand.decimals;
+  } else {
+    // Try legacy/verbose format
+    // Currency type: usd, euro, pound
+    switch (currencyValue) {
+      case 'euro':
+        symbol = '€';
+        break;
+      case 'pound':
+        symbol = '£';
+        break;
+      case 'usd':
+      default:
+        symbol = '$';
+        break;
+    }
+
+    // Get scale from verbose syntax
+    const scaleTag = tag.text('currency', 'scale');
+    scale = normalizeScale(scaleTag);
+
+    // Get decimals from verbose syntax
+    decimals = tag.numeric('currency', 'decimals') ?? undefined;
+
+    // Get suffix format from verbose syntax
+    const suffixTag = tag.text('currency', 'suffix') as
+      | SuffixFormat
+      | undefined;
+    if (suffixTag) {
+      suffixFormat = suffixTag as SuffixFormatKey;
+    } else if (scale) {
+      // Default to 'letter' for verbose syntax with scale
+      suffixFormat = 'letter';
+    }
+  }
+
+  // Apply scaling and formatting
+  if (scale) {
+    // Use formatScaledNumber for scaled values
+    const scaledStr = formatScaledNumber(value, {
+      scale,
+      decimals: decimals ?? 2,
+      suffix: suffixFormat,
+    });
+    return `${symbol}${scaledStr}`;
+  } else {
+    // No scaling - use standard currency format
+    const effectiveDecimals = decimals ?? 2;
+    const formatStr =
+      effectiveDecimals > 0
+        ? `${symbol}#,##0.${'0'.repeat(effectiveDecimals)}`
+        : `${symbol}#,##0`;
+    return format(formatStr, value);
+  }
+}
+
+/**
+ * Renders a number field with support for shorthand and verbose syntax.
+ */
+function renderNumberField(tag: Tag, value: number): string {
+  const numberValue = tag.text('number');
+
+  // Try parsing as shorthand format (e.g., "1k", "0m", "auto", "big", "id")
+  const shorthand = numberValue ? parseNumberShorthand(numberValue) : null;
+
+  if (shorthand) {
+    // Shorthand format parsed successfully
+    if (shorthand.isId) {
+      // ID format - no commas, just the raw number
+      return String(value);
+    } else if (shorthand.scale) {
+      // Has scale - use formatScaledNumber
+      return formatScaledNumber(value, {
+        scale: shorthand.scale,
+        decimals: shorthand.decimals ?? 2,
+        suffix: 'lower', // Default for shorthand
+      });
+    } else if (shorthand.decimals !== undefined) {
+      // Just decimals, no scale - use toFixed
+      return Number(value.toFixed(shorthand.decimals)).toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: shorthand.decimals,
+      });
+    }
+  }
+
+  // Check for verbose syntax with scale
+  const scaleTag = tag.text('number', 'scale');
+  const scale = normalizeScale(scaleTag);
+
+  if (scale) {
+    // Verbose syntax with scale
+    const decimals = tag.numeric('number', 'decimals') ?? 2;
+    const suffixTag = tag.text('number', 'suffix') as SuffixFormat | undefined;
+    const suffixFormat: SuffixFormatKey =
+      (suffixTag as SuffixFormatKey) ?? 'letter';
+
+    return formatScaledNumber(value, {
+      scale,
+      decimals,
+      suffix: suffixFormat,
+    });
+  }
+
+  // Legacy: # number=big
+  if (numberValue === 'big') {
+    return formatBigNumber(value);
+  }
+
+  // SSF format string (e.g., "#,##0.00")
+  if (numberValue) {
+    return format(numberValue, value);
+  }
+
+  // Default
+  return format('#', value);
+}
+
+/**
+ * Format a string number with locale-style comma separators.
+ * Preserves full precision (no conversion to JS number).
+ */
+function formatStringWithCommas(value: string): string {
+  const isNegative = value.startsWith('-');
+  const absValue = isNegative ? value.slice(1) : value;
+  const formatted = absValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return isNegative ? `-${formatted}` : formatted;
+}
+
+/**
+ * Get currency symbol from tag.
+ */
+function getCurrencySymbol(tag: Tag): string {
+  switch (tag.text('currency')) {
+    case Currency.Euros:
+      return '€';
+    case Currency.Pounds:
+      return '£';
+    default:
+      return '$';
+  }
+}
+
+/**
+ * Format a bigint string as currency, preserving full precision.
+ * Bigints are always integers, so we append ".00" for cents display.
+ */
+function formatBigIntCurrency(tag: Tag, value: string): string {
+  const symbol = getCurrencySymbol(tag);
+  const formatted = formatStringWithCommas(value);
+  return `${symbol}${formatted}.00`;
+}
+
+/**
+ * Render a big number value (stored as string for precision).
+ * Used when NumberCell.stringValue is defined (bigint/bigdecimal subtypes).
+ * Default formatting preserves full precision with comma separators.
+ *
+ * Note: percent, duration, and custom number formats are lossy for values > 2^53
+ * because they require numeric operations. Currency preserves precision.
+ */
+export function renderBigNumberField(
+  f: Field,
+  value: string | null | undefined,
+  tagOverride?: Tag
+): string {
+  if (value === null || value === undefined) {
+    return NULL_SYMBOL;
+  }
+  const tag = tagOverride ?? f.tag;
+
+  // Currency: preserve precision with string formatting
+  if (tag.has('currency')) {
+    return formatBigIntCurrency(tag, value);
+  }
+
+  // Percent/duration require numeric operations - lossy for bigints (rare use case)
+  if (tag.has('percent') || tag.has('duration')) {
+    return renderNumericField(f, Number(value), tag);
+  }
+
+  // number="big" format with K/M/B/T/Q (lossy, but values are abbreviated anyway)
+  if (tag.has('number') && tag.text('number') === 'big') {
+    return formatBigNumber(Number(value));
+  }
+
+  // Custom number format (lossy)
+  if (tag.has('number')) {
+    return format(tag.text('number') ?? '#', Number(value));
+  }
+
+  // Default: comma-formatted string (preserves precision)
+  return formatStringWithCommas(value);
+}
+
+/**
+ * Render a NumberCell for display, automatically handling bigint precision.
+ *
+ * USE THIS FUNCTION when rendering numeric values from cells in plugins/components.
+ *
+ * Why this exists:
+ * - NumberCell.value is always a JS number, which loses precision for integers > 2^53
+ * - NumberCell.stringValue preserves full precision for bigint fields
+ * - This function automatically picks the right representation
+ *
+ * Example:
+ *   import {renderNumberCell} from '@/component/render-numeric-field';
+ *   const displayValue = renderNumberCell(cell);
+ *
+ * @param cell - A NumberCell from the data tree
+ * @param tagOverride - Optional tag to use for formatting (e.g., for array elements, use the array field's tag)
+ * @returns Formatted string for display, respecting field tags (currency, percent, etc.)
+ */
+export function renderNumberCell(cell: NumberCell, tagOverride?: Tag): string {
+  // Use stringValue when available - this preserves precision for bigint fields.
+  // For regular numbers, stringValue is undefined and we use the numeric value.
+  if (cell.stringValue !== undefined) {
+    return renderBigNumberField(cell.field, cell.stringValue, tagOverride);
+  }
+  return renderNumericField(cell.field, cell.value, tagOverride);
 }
 
 export function renderDateTimeField(
   f: Field,
   value: Date | null | undefined,
-  options: RenderTimeStringOptions = {}
+  options: RenderTimeStringOptions = {},
+  tagOverride?: Tag
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
 
-  const tag = f.tag;
+  const tag = tagOverride ?? f.tag;
 
   // Check if the field has a number= tag for custom date formatting
   if (tag.has('number')) {
@@ -96,6 +359,17 @@ export function renderDateTimeField(
     }
   }
 
+  // Get the effective query timezone for timestamp fields (not date fields)
+  // Date fields represent calendar dates and shouldn't be timezone-adjusted
+  const effectiveTimezone = !options.isDate
+    ? options.timezone ?? f.getEffectiveQueryTimezone()
+    : undefined;
+
+  const optionsWithTimezone = {
+    ...options,
+    timezone: effectiveTimezone,
+  };
+
   // Fall back to default time string rendering
-  return renderTimeString(value, options);
+  return renderTimeString(value, optionsWithTimezone);
 }

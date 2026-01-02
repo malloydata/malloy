@@ -7,7 +7,8 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import '../../util/db-jest-matchers';
+import '@malloydata/malloy/test/matchers';
+import {wrapTestModel} from '@malloydata/malloy/test';
 import type {
   RecordLiteralNode,
   ArrayLiteralNode,
@@ -34,6 +35,7 @@ function literalNum(num: Number): Expr {
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
   (conName, runtime) => {
+    const testModel = wrapTestModel(runtime, '');
     const supportsNestedArrays = runtime.dialect.nestedArrays;
     const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
 
@@ -96,7 +98,7 @@ describe.each(runtimes.runtimeList)(
     describe('simple arrays', () => {
       test('array literal dialect function', async () => {
         await expect(`
-          run: ${evens}`).malloyResultMatches(runtime, {
+          run: ${evens}`).toMatchResult(testModel, {
           evens: evensObj,
         });
       });
@@ -104,15 +106,15 @@ describe.each(runtimes.runtimeList)(
         await expect(`
           # test.verbose
           run: ${evens}->{select: nn is evens}
-          `).malloyResultMatches(runtime, {nn: evensObj});
+          `).toMatchResult(testModel, {nn: evensObj});
       });
       test.when(canReadCompoundSchema)(
         'schema read allows array-un-nest on each',
         async () => {
           await expect(`
           run: ${evens}->{ select: n is evens.each }
-        `).malloyResultMatches(
-            runtime,
+        `).toEqualResult(
+            testModel,
             evensObj.map(n => ({n}))
           );
         }
@@ -134,14 +136,14 @@ describe.each(runtimes.runtimeList)(
         expect(fn).not.toEqual(missing);
         await expect(
           `run: ${evens}->{ select: nby2 is ${fn}!number(evens); } `
-        ).malloyResultMatches(runtime, {nby2: evensObj.length});
+        ).toMatchResult(testModel, {nby2: evensObj.length});
       });
       test('array.each in source', async () => {
         await expect(`
           run: ${empty}
           extend { dimension: d4 is [1,2,3,4] }
           -> { select: die_roll is d4.each }
-        `).malloyResultMatches(runtime, [
+        `).toEqualResult(testModel, [
           {die_roll: 1},
           {die_roll: 2},
           {die_roll: 3},
@@ -154,7 +156,7 @@ describe.each(runtimes.runtimeList)(
             extend: { dimension: d4 is [1,2,3,4] }
             select: die_roll is d4.each
           }
-        `).malloyResultMatches(runtime, [
+        `).toEqualResult(testModel, [
           {die_roll: 1},
           {die_roll: 2},
           {die_roll: 3},
@@ -171,16 +173,15 @@ describe.each(runtimes.runtimeList)(
             aggregate: n is count()
             order_by: roll asc
           }
-          `).matchesRows(
-          runtime,
+          `).toMatchRows(testModel, [
           {roll: 2, n: 1},
           {roll: 3, n: 2},
           {roll: 4, n: 3},
           {roll: 5, n: 4},
           {roll: 6, n: 3},
           {roll: 7, n: 2},
-          {roll: 8, n: 1}
-        );
+          {roll: 8, n: 1},
+        ]);
       });
       // can't use special chars in column names in bq
       test.when(conName !== 'bigquery')(
@@ -194,7 +195,7 @@ describe.each(runtimes.runtimeList)(
             run: ${empty}
             ->{ select: ${qname} is [1]}
             -> { select: num is ${qname}.each }`;
-            await expect(malloySrc).malloyResultMatches(runtime, {});
+            await expect(malloySrc).toMatchResult(testModel, {});
             const result = await runtime.loadQuery(malloySrc).run();
             const ok =
               result.data.path(0, 'num').value === 1
@@ -241,12 +242,12 @@ describe.each(runtimes.runtimeList)(
       test.when(supportsNestedArrays)('bare array of array', async () => {
         await expect(`
           run: ${empty} -> { select: aoa is [[1,2]] }
-        `).malloyResultMatches(runtime, {aoa: [[1, 2]]});
+        `).toMatchResult(testModel, {aoa: [[1, 2]]});
       });
       test.when(supportsNestedArrays)('each.each array of array', async () => {
         await expect(`
           run: ${empty} extend { dimension: aoa is [[1,2]] } -> { select: aoa.each.each }
-        `).malloyResultMatches(runtime, [{each: 1}, {each: 2}]);
+        `).toEqualResult(testModel, [{each: 1}, {each: 2}]);
       });
       test('group by array', async () => {
         const oddsObj = [1, 3, 5, 7];
@@ -261,28 +262,24 @@ describe.each(runtimes.runtimeList)(
             group_by: nums
             aggregate: addem is n.sum()
             order_by: addem asc
-          }`).matchesRows(
-          runtime,
+          }`).toMatchRows(testModel, [
           {nums: evensObj, addem: 11},
-          {nums: oddsObj, addem: 1100}
-        );
+          {nums: oddsObj, addem: 1100},
+        ]);
       });
     });
     describe('record', () => {
-      function rec_eq(as?: string): Record<string, Number> {
+      function rec_eq(as?: string): Record<string, unknown> {
         const name = as ?? 'sizes';
         return {
-          [`${name}/s`]: 0,
-          [`${name}/m`]: 1,
-          [`${name}/l`]: 2,
-          [`${name}/xl`]: 3,
+          [name]: {s: 0, m: 1, l: 2, xl: 3},
         };
       }
       test('record literal object', async () => {
         await expect(`
           run: ${conName}.sql("select 0 as o")
           -> { select: ${malloySizes}}
-        `).malloyResultMatches(runtime, rec_eq());
+        `).toMatchResult(testModel, rec_eq());
       });
       // can't use special chars in column names in bq
       test.when(conName !== 'bigquery')(
@@ -329,13 +326,13 @@ describe.each(runtimes.runtimeList)(
         async () => {
           await expect(`run: ${conName}.sql("""
               SELECT ${sizesSQL} AS ${quote('sizes')}
-          """)`).malloyResultMatches(runtime, rec_eq());
+          """)`).toMatchResult(testModel, rec_eq());
         }
       );
       test('simple record.property access', async () => {
         await expect(`
-          run: ${sizes} -> { select: small is sizes.s }`).malloyResultMatches(
-          runtime,
+          run: ${sizes} -> { select: small is sizes.s }`).toMatchResult(
+          testModel,
           {small: 0}
         );
       });
@@ -345,7 +342,7 @@ describe.each(runtimes.runtimeList)(
             dimension: copy_sizes is sizes
           }
           run: sx -> {select: xl is copy_sizes.xl}
-        `).matchesRows(runtime, {xl: 3});
+        `).toMatchResult(testModel, {xl: 3});
       });
       test('nested data looks like a record', async () => {
         await expect(`
@@ -358,7 +355,7 @@ describe.each(runtimes.runtimeList)(
                 x is sum(o) + 1,
                 xl is sum(o) + 2
             }
-          } -> { select: small is sizes.s }`).malloyResultMatches(runtime, {
+          } -> { select: small is sizes.s }`).toMatchResult(testModel, {
           small: 0,
         });
       });
@@ -366,12 +363,12 @@ describe.each(runtimes.runtimeList)(
         await expect(
           `
           run: ${sizes} -> { select: sizes }`
-        ).malloyResultMatches(runtime, rec_eq());
+        ).toMatchResult(testModel, rec_eq());
       });
       test('record literal can be selected', async () => {
         await expect(`
           run: ${sizes} -> { select: record is sizes }
-        `).malloyResultMatches(runtime, rec_eq('record'));
+        `).toMatchResult(testModel, rec_eq('record'));
       });
       test('select record literal from a source', async () => {
         await expect(`
@@ -379,14 +376,14 @@ describe.each(runtimes.runtimeList)(
             extend: { dimension: ${malloySizes} }
             select: sizes
           }
-        `).malloyResultMatches(runtime, rec_eq());
+        `).toMatchResult(testModel, rec_eq());
       });
       test('computed record.property from a source', async () => {
         await expect(`
           run: ${empty}
             extend { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
             -> { select: small is record.s }
-        `).malloyResultMatches(runtime, {small: 0});
+        `).toMatchResult(testModel, {small: 0});
       });
       test('record.property from an extend block', async () => {
         await expect(`
@@ -394,38 +391,38 @@ describe.each(runtimes.runtimeList)(
             extend: { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
             select: small is record.s
           }
-        `).malloyResultMatches(runtime, {small: 0});
+        `).toMatchResult(testModel, {small: 0});
       });
       test('simple each on array property inside record', async () => {
         await expect(`
           run: ${empty} -> { select: nums is { odds is [1,3], evens is [2,4]} }
           -> { select: odd is nums.odds.value }
-        `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
+        `).toEqualResult(testModel, [{odd: 1}, {odd: 3}]);
       });
       test('each on array property inside record from source', async () => {
         await expect(`
           run: ${empty} extend { dimension: nums is { odds is [1,3], evens is [2,4]} }
           -> { select: odd is nums.odds.each }
-        `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
+        `).toEqualResult(testModel, [{odd: 1}, {odd: 3}]);
       });
       const abc = "rec is {a is 'a', bc is {b is 'b', c is 'c'}}";
       test('record with a record property', async () => {
         await expect(`
           run: ${empty} -> { select: ${abc} }
           -> { select: rec.a, rec.bc.b, rec.bc.c }
-        `).malloyResultMatches(runtime, {a: 'a', b: 'b', c: 'c'});
+        `).toMatchResult(testModel, {a: 'a', b: 'b', c: 'c'});
       });
       test('record in source with a record property', async () => {
         await expect(`
           run: ${empty} extend { dimension: ${abc} }
           -> { select: rec.a, rec.bc.b, rec.bc.c }
-        `).malloyResultMatches(runtime, {a: 'a', b: 'b', c: 'c'});
+        `).toMatchResult(testModel, {a: 'a', b: 'b', c: 'c'});
       });
       test('record dref in source with a record property', async () => {
         await expect(`
           run: ${empty} extend { dimension: ${abc} }
           -> { select: b is pick rec.bc.b when true else 'b' }
-        `).malloyResultMatches(runtime, {b: 'b'});
+        `).toMatchResult(testModel, {b: 'b'});
       });
       test.todo('array or record where first entries are null');
       // https://github.com/malloydata/malloy/issues/2206
@@ -439,7 +436,21 @@ describe.each(runtimes.runtimeList)(
           } -> {
             group_by: x is owner.first_name
           }
-        `).malloyResultMatches(runtime, {x: 'Mark'});
+        `).toMatchResult(testModel, {x: 'Mark'});
+      });
+      test('record in join references join fields', async () => {
+        const id = quote('id');
+        const x = quote('x');
+        const y = quote('y');
+        await expect(`
+          source: joined_data is ${conName}.sql("""
+            SELECT 1 as ${id}, 10 as ${x}, 20 as ${y}
+          """) extend { dimension: rec is {xysum is x + y} }
+          source: base is ${conName}.sql("""SELECT 1 as ${id} """) extend {
+            join_one: jd is joined_data on jd.id = id
+          }
+          run: base -> { select: result is jd.rec.xysum }
+        `).toMatchResult(testModel, {result: 30});
       });
     });
     describe('repeated record', () => {
@@ -479,18 +490,18 @@ describe.each(runtimes.runtimeList)(
               UNION ALL SELECT 20 , 21
             """) -> { nest: ab is { select: a, b } }
                  -> { select: ab.a, ab.b ; order_by: a}
-        `).malloyResultMatches(runtime, ab_eq);
+        `).toEqualResult(testModel, ab_eq);
       });
       test('select repeated record from literal dialect functions', async () => {
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """)
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+        `).toMatchResult(testModel, {ab: ab_eq});
       });
       test('repeat record from malloy literal', async () => {
         await expect(`
           run: ${empty}
           -> { select: ab is ${abMalloy} }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+        `).toMatchResult(testModel, {ab: ab_eq});
       });
       test('repeated record can be selected and renamed', async () => {
         const src = `
@@ -498,41 +509,41 @@ describe.each(runtimes.runtimeList)(
             ${selectAB('sqlAB')}
           """) -> { select: ab is sqlAB }
       `;
-        await expect(src).malloyResultMatches(runtime, {ab: ab_eq});
+        await expect(src).toMatchResult(testModel, {ab: ab_eq});
       });
       test('select repeated record passed down pipeline', async () => {
         await expect(`
           run: ${empty}
           -> { select: pipeAb is ${abMalloy} }
           -> { select: ab is pipeAb }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+        `).toMatchResult(testModel, {ab: ab_eq});
       });
       test('deref repeat record passed down pipeline', async () => {
         await expect(`
           run: ${empty}
           -> { select: pipeAb is ${abMalloy} }
           -> { select: pipeAb.a, pipeAb.b }
-        `).malloyResultMatches(runtime, ab_eq);
+        `).toEqualResult(testModel, ab_eq);
       });
       test('select array of records from source', async () => {
         await expect(`
           run: ${empty}
           extend { dimension: abSrc is ${abMalloy} }
           -> { select: ab is abSrc }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+        `).toMatchResult(testModel, {ab: ab_eq});
       });
       test('deref array of records from source', async () => {
         await expect(`
           run: ${empty}
           extend { dimension: ab is ${abMalloy} }
           -> { select: ab.a, ab.b }
-        `).malloyResultMatches(runtime, ab_eq);
+        `).toEqualResult(testModel, ab_eq);
       });
       test('repeated record in source wth record property', async () => {
         await expect(`
           run: ${empty} extend { dimension: rec is [ {bc is  {b is 'b'}} ] }
           -> { select: rec.bc.b }
-        `).malloyResultMatches(runtime, {b: 'b'});
+        `).toMatchResult(testModel, {b: 'b'});
       });
       test('piped repeated record containing an array', async () => {
         await expect(`
@@ -545,7 +556,7 @@ describe.each(runtimes.runtimeList)(
             select: val is rrec.val, name is rrec.names.each
             order_by: val desc, name asc
           }
-        `).malloyResultMatches(runtime, [
+        `).toEqualResult(testModel, [
           {val: 2, name: 'due'},
           {val: 2, name: 'two'},
           {val: 1, name: 'one'},
@@ -563,7 +574,7 @@ describe.each(runtimes.runtimeList)(
             select: val is rrec.val, name is rrec.names.each
             order_by: val desc, name asc
           }
-        `).malloyResultMatches(runtime, [
+        `).toEqualResult(testModel, [
           {val: 2, name: 'due'},
           {val: 2, name: 'two'},
           {val: 1, name: 'one'},
@@ -573,7 +584,7 @@ describe.each(runtimes.runtimeList)(
       test('group_by repeated record', async () => {
         await expect(`
           run: ${conName}.sql(""" ${selectAB('ab')} """) -> { group_by: ab }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+        `).toMatchResult(testModel, {ab: ab_eq});
       });
       // test for https://github.com/malloydata/malloy/issues/2065
       test('nest a group_by repeated record', async () => {
@@ -581,7 +592,7 @@ describe.each(runtimes.runtimeList)(
           run: ${conName}.sql(""" ${selectAB('ab')} """)
           -> { nest: gab is {group_by: ab } }
           -> { select: gab.ab }
-        `).matchesRows(runtime, {ab: ab_eq});
+        `).toMatchResult(testModel, {ab: ab_eq});
       });
     });
   }
