@@ -34,7 +34,7 @@ import type {
   TimeExtractExpr,
   TimestampLiteralNode,
 } from './malloy_types';
-import {mkTemporal} from './malloy_types';
+import {isTemporalType, mkTemporal} from './malloy_types';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 function escapeForLike(v: string) {
@@ -79,7 +79,7 @@ export const FilterCompilers = {
       return FilterCompilers.numberCompile(c, x, d);
     } else if (t === 'boolean' && isBooleanFilter(c)) {
       return FilterCompilers.booleanCompile(c, x, d);
-    } else if ((t === 'date' || t === 'timestamp') && isTemporalFilter(c)) {
+    } else if (isTemporalType(t) && isTemporalFilter(c)) {
       return FilterCompilers.temporalCompile(c, x, d, t, qi);
     }
     throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
@@ -338,7 +338,7 @@ export const FilterCompilers = {
     tc: TemporalFilter,
     x: string,
     d: Dialect,
-    t: 'date' | 'timestamp',
+    t: 'date' | 'timestamp' | 'timestamptz',
     qi: QueryInfo = {}
   ): string {
     const c = new TemporalFilterCompiler(x, d, t, qi);
@@ -386,7 +386,7 @@ export class TemporalFilterCompiler {
   constructor(
     readonly expr: string,
     dialect: Dialect,
-    readonly timetype: 'timestamp' | 'date' = 'timestamp',
+    readonly timetype: 'timestamp' | 'timestamptz' | 'date' = 'timestamp',
     queryInfo: QueryInfo = {}
   ) {
     this.d = dialect;
