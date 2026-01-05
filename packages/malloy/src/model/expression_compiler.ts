@@ -354,6 +354,7 @@ function generateAppliedFilter(
       break;
     case 'date':
     case 'timestamp':
+    case 'timestamptz':
       fParse = TemporalFilterExpression.parse(filterSrc);
       break;
     default:
