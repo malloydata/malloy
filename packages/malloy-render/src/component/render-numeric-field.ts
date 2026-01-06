@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Currency, DurationUnit} from '../html/data_styles';
+import {DurationUnit} from '../html/data_styles';
 import type {SuffixFormat} from '../html/data_styles';
 import {format} from 'ssf';
 import {
@@ -89,9 +89,20 @@ export function renderNumericField(
 }
 
 /**
- * Renders a currency field with support for shorthand and verbose syntax.
+ * Parsed currency format options from a tag.
  */
-function renderCurrencyField(tag: Tag, value: number): string {
+interface CurrencyFormatOptions {
+  symbol: string;
+  scale?: ScaleKey | 'auto';
+  decimals?: number;
+  suffixFormat: SuffixFormatKey;
+}
+
+/**
+ * Parses currency format options from a tag.
+ * Supports both shorthand (e.g., "usd2m") and verbose syntax (e.g., { scale=k decimals=0 }).
+ */
+function parseCurrencyFormatOptions(tag: Tag): CurrencyFormatOptions {
   const currencyValue = tag.text('currency');
 
   // Try parsing as shorthand format (e.g., "usd2m", "eur0k")
@@ -143,6 +154,16 @@ function renderCurrencyField(tag: Tag, value: number): string {
       suffixFormat = 'letter';
     }
   }
+
+  return {symbol, scale, decimals, suffixFormat};
+}
+
+/**
+ * Renders a currency field with support for shorthand and verbose syntax.
+ */
+function renderCurrencyField(tag: Tag, value: number): string {
+  const {symbol, scale, decimals, suffixFormat} =
+    parseCurrencyFormatOptions(tag);
 
   // Apply scaling and formatting
   if (scale) {
@@ -238,27 +259,34 @@ function formatStringWithCommas(value: string): string {
 }
 
 /**
- * Get currency symbol from tag.
- */
-function getCurrencySymbol(tag: Tag): string {
-  switch (tag.text('currency')) {
-    case Currency.Euros:
-      return '€';
-    case Currency.Pounds:
-      return '£';
-    default:
-      return '$';
-  }
-}
-
-/**
- * Format a bigint string as currency, preserving full precision.
- * Bigints are always integers, so we append ".00" for cents display.
+ * Format a bigint string as currency with support for scale/decimals/suffix.
+ *
+ * Note: When scale is specified, this converts to JS number which is lossy
+ * for values > 2^53. This is acceptable since scaled values are abbreviated
+ * and don't need full precision.
  */
 function formatBigIntCurrency(tag: Tag, value: string): string {
-  const symbol = getCurrencySymbol(tag);
-  const formatted = formatStringWithCommas(value);
-  return `${symbol}${formatted}.00`;
+  const {symbol, scale, decimals, suffixFormat} =
+    parseCurrencyFormatOptions(tag);
+
+  // If scale is specified, convert to number and use formatScaledNumber
+  // This is lossy for very large bigints but acceptable for abbreviated display
+  if (scale) {
+    const numericValue = Number(value);
+    const scaledStr = formatScaledNumber(numericValue, {
+      scale,
+      decimals: decimals ?? 2,
+      suffix: suffixFormat,
+    });
+    return `${symbol}${scaledStr}`;
+  }
+
+  // No scaling - format with specified decimals
+  const effectiveDecimals = decimals ?? 2;
+  if (effectiveDecimals === 0) {
+    return `${symbol}${formatStringWithCommas(value)}`;
+  }
+  return `${symbol}${formatStringWithCommas(value)}.${'0'.repeat(effectiveDecimals)}`;
 }
 
 /**
@@ -266,8 +294,8 @@ function formatBigIntCurrency(tag: Tag, value: string): string {
  * Used when NumberCell.stringValue is defined (bigint/bigdecimal subtypes).
  * Default formatting preserves full precision with comma separators.
  *
- * Note: percent, duration, and custom number formats are lossy for values > 2^53
- * because they require numeric operations. Currency preserves precision.
+ * Note: percent, duration, scale, and custom number formats are lossy for values > 2^53
+ * because they require numeric operations. This is acceptable for abbreviated display.
  */
 export function renderBigNumberField(
   f: Field,
@@ -279,7 +307,7 @@ export function renderBigNumberField(
   }
   const tag = tagOverride ?? f.tag;
 
-  // Currency: preserve precision with string formatting
+  // Currency with full scale/decimals/suffix support
   if (tag.has('currency')) {
     return formatBigIntCurrency(tag, value);
   }
@@ -289,14 +317,72 @@ export function renderBigNumberField(
     return renderNumericField(f, Number(value), tag);
   }
 
-  // number="big" format with K/M/B/T/Q (lossy, but values are abbreviated anyway)
-  if (tag.has('number') && tag.text('number') === 'big') {
+  // Number formatting with scale/decimals support
+  if (tag.has('number')) {
+    return formatBigIntNumber(tag, value);
+  }
+
+  // Default: comma-formatted string (preserves precision)
+  return formatStringWithCommas(value);
+}
+
+/**
+ * Format a bigint string as number with support for scale/decimals/suffix.
+ *
+ * Note: When scale is specified, this converts to JS number which is lossy
+ * for values > 2^53. This is acceptable since scaled values are abbreviated.
+ */
+function formatBigIntNumber(tag: Tag, value: string): string {
+  const numberValue = tag.text('number');
+
+  // Try parsing as shorthand format (e.g., "1k", "0m", "auto", "id")
+  const shorthand = numberValue ? parseNumberShorthand(numberValue) : null;
+
+  if (shorthand) {
+    if (shorthand.isId) {
+      // ID format - no commas, just the raw number
+      return value;
+    } else if (shorthand.scale) {
+      // Has scale - use formatScaledNumber (lossy but abbreviated)
+      return formatScaledNumber(Number(value), {
+        scale: shorthand.scale,
+        decimals: shorthand.decimals ?? 2,
+        suffix: 'lower',
+      });
+    } else if (shorthand.decimals !== undefined) {
+      // Just decimals, no scale
+      if (shorthand.decimals === 0) {
+        return formatStringWithCommas(value);
+      }
+      return `${formatStringWithCommas(value)}.${'0'.repeat(shorthand.decimals)}`;
+    }
+  }
+
+  // Check for verbose syntax with scale
+  const scaleTag = tag.text('number', 'scale');
+  const scale = normalizeScale(scaleTag);
+
+  if (scale) {
+    const decimals = tag.numeric('number', 'decimals') ?? 2;
+    const suffixTag = tag.text('number', 'suffix') as SuffixFormat | undefined;
+    const suffixFormat: SuffixFormatKey =
+      (suffixTag as SuffixFormatKey) ?? 'letter';
+
+    return formatScaledNumber(Number(value), {
+      scale,
+      decimals,
+      suffix: suffixFormat,
+    });
+  }
+
+  // Legacy: # number=big
+  if (numberValue === 'big') {
     return formatBigNumber(Number(value));
   }
 
-  // Custom number format (lossy)
-  if (tag.has('number')) {
-    return format(tag.text('number') ?? '#', Number(value));
+  // SSF format string (e.g., "#,##0.00") - lossy
+  if (numberValue) {
+    return format(numberValue, Number(value));
   }
 
   // Default: comma-formatted string (preserves precision)
