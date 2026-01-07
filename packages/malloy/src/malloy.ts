@@ -1407,6 +1407,14 @@ export class PreparedResult implements Taggable {
   public get _sourceFilters(): FilterCondition[] {
     return this.inner.sourceFilters || [];
   }
+
+  /**
+   * @return Whether this result has a schema. DDL statements (INSTALL, LOAD,
+   * CREATE SECRET, etc.) do not return a schema.
+   */
+  public get hasSchema(): boolean {
+    return this.inner.structs.length > 0;
+  }
 }
 
 /**
@@ -3391,6 +3399,14 @@ export class Result extends PreparedResult {
   }
 
   public toJSON(): ResultJSON {
+    // DDL statements (INSTALL, LOAD, CREATE SECRET, etc.) don't have a schema,
+    // so we can't call this.data.toJSON() which requires resultExplore.
+    if (!this.hasSchema) {
+      return {
+        queryResult: this.inner,
+        modelDef: this._modelDef,
+      };
+    }
     // The result rows are converted to JSON separately because they
     // may contain un-serializable data types.
     return {
