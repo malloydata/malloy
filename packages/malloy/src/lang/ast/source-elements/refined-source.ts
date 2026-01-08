@@ -168,7 +168,8 @@ export class RefinedSource extends Source {
     fs.addNotes(thisIncludeState.notes);
     const retStruct = fs.structDef();
 
-    const filterList = retStruct.filterList || [];
+    // Clone the filterList to avoid mutating the original source's filters
+    const filterList = retStruct.filterList ? [...retStruct.filterList] : [];
     let moreFilters = false;
     for (const filter of filters) {
       for (const el of filter.list) {
