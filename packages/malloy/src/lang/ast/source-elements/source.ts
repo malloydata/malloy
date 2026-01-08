@@ -28,7 +28,7 @@ import type {
 } from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import type {HasParameter} from '../parameters/has-parameter';
-import type {ParameterSpace} from '../field-space/parameter-space';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A "Source" is a thing which you can run queries against. The main
@@ -59,7 +59,8 @@ export abstract class Source extends MalloyElement {
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): SourceDef {
-    const before = this.getSourceDef(parameterSpace);
+    const paramSpace = parameterSpace ?? new ParameterSpace(pList ?? []);
+    const before = this.getSourceDef(paramSpace);
     return {
       ...before,
       parameters: this.packParameters(pList),

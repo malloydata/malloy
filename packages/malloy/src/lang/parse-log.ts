@@ -420,6 +420,7 @@ type MessageParameterTypes = {
   'grouped-by-not-found': string;
   'non-scalar-grouped-by': string;
   'missing-required-group-by': string;
+  'parameter-default-required-for-sql-source': string;
   'invalid-partition-composite': string;
   'integer-literal-out-of-range': string;
 };
