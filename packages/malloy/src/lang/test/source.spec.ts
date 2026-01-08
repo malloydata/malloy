@@ -1066,4 +1066,71 @@ describe('source:', () => {
       }
     }
   });
+  describe('filterList mutation', () => {
+    test('extending source with join filter does not mutate original filterList', () => {
+      const m = new TestTranslator(`
+        source: bb is b extend {
+          primary_key: astr
+        }
+        source: aircraft is a extend {
+          join_one: bb with astr
+          where: ai > 0
+        }
+        source: aircraft_filtered is aircraft extend {
+          where: bb.astr = 'test'
+        }
+      `);
+      expect(m).toTranslate();
+
+      const aircraft = m.getSourceDef('aircraft');
+      expect(aircraft).toBeDefined();
+      if (aircraft && isSourceDef(aircraft)) {
+        const filterCountOriginal = aircraft.filterList?.length ?? 0;
+        expect(filterCountOriginal).toBe(1);
+      }
+
+      const aircraftFiltered = m.getSourceDef('aircraft_filtered');
+      expect(aircraftFiltered).toBeDefined();
+      if (aircraftFiltered && isSourceDef(aircraftFiltered)) {
+        const filterCountExtended = aircraftFiltered.filterList?.length ?? 0;
+        expect(filterCountExtended).toBe(2);
+      }
+    });
+
+    test('multiple extensions do not affect each other filterLists', () => {
+      const m = new TestTranslator(`
+        source: bb is b extend {
+          primary_key: astr
+        }
+        source: base is a extend {
+          join_one: bb with astr
+        }
+        source: ext1 is base extend {
+          where: bb.astr = 'one'
+        }
+        source: ext2 is base extend {
+          where: bb.astr = 'two'
+        }
+      `);
+      expect(m).toTranslate();
+
+      const base = m.getSourceDef('base');
+      const ext1 = m.getSourceDef('ext1');
+      const ext2 = m.getSourceDef('ext2');
+
+      expect(base).toBeDefined();
+      expect(ext1).toBeDefined();
+      expect(ext2).toBeDefined();
+
+      if (base && isSourceDef(base)) {
+        expect(base.filterList?.length ?? 0).toBe(0);
+      }
+      if (ext1 && isSourceDef(ext1)) {
+        expect(ext1.filterList?.length ?? 0).toBe(1);
+      }
+      if (ext2 && isSourceDef(ext2)) {
+        expect(ext2.filterList?.length ?? 0).toBe(1);
+      }
+    });
+  });
 });
