@@ -217,5 +217,33 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(data.length).toBe(1);
       expect(data[0]).toHaveProperty('one.length', 2);
     });
+
+    // Test for bug: multi-field order_by with limit should generate single ROW_NUMBER()
+    // Previously generated duplicate __row_number__ columns causing BigQuery errors
+    test.when(runtime.supportsNesting)(
+      'limit nest with multi-field order_by',
+      async () => {
+        const {data} = await runQuery(
+          testModel,
+          `
+          run: ${databaseName}.table('malloytest.state_facts') -> {
+            group_by: popular_name
+            aggregate: c is count()
+            limit: 3
+            nest: by_state is {
+              group_by: state
+              aggregate:
+                state_count is count()
+                total_births is births.sum()
+              order_by: state_count desc, total_births desc
+              limit: 2
+            }
+          }
+          `
+        );
+        expect(data.length).toBe(3);
+        expect(data[0]).toHaveProperty('by_state.length', 2);
+      }
+    );
   });
 });

@@ -1448,6 +1448,8 @@ export class QueryQuery extends QueryField {
           const orderByDef =
             (result.firstSegment as QuerySegment).orderBy ||
             result.calculateDefaultOrderBy();
+
+          // Build up the ORDER BY clause from all ordering fields
           for (const ordering of orderByDef) {
             if (typeof ordering.field === 'string') {
               orderingField = {
@@ -1464,40 +1466,42 @@ export class QueryQuery extends QueryField {
                 ) +
                 ` ${ordering.dir || 'ASC'}`
             );
+          }
 
-            // partition for a row number is the parent if it exists.
-            let p = '';
-            if (result.parent && partitionSQL[result.parent.groupSet]) {
-              p = partitionSQL[result.parent.groupSet] + ', group_set';
-            } else {
-              p = 'PARTITION BY group_set';
-            }
+          // partition for a row number is the parent if it exists.
+          let p = '';
+          if (result.parent && partitionSQL[result.parent.groupSet]) {
+            p = partitionSQL[result.parent.groupSet] + ', group_set';
+          } else {
+            p = 'PARTITION BY group_set';
+          }
 
-            // if this has nested data and a having, we want to partion by the 'having' so we don't count
-            // deleted rows.
-            if (result.hasHaving) {
-              p = p + `, __delete__${result.groupSet}`;
-            }
-            limitExpressions.push(
-              `CASE WHEN GROUP_SET=${result.groupSet} THEN
-                 ROW_NUMBER() OVER (${p} ORDER BY ${obSQL.join(
-                   ','
-                 )}) END  as __row_number__${result.groupSet}`
-            );
+          // if this has nested data and a having, we want to partition by the 'having' so we don't count
+          // deleted rows.
+          if (result.hasHaving) {
+            p = p + `, __delete__${result.groupSet}`;
+          }
 
-            // if the group set is a leaf, we can write a simple where clause.
-            const filterClause = `(GROUP_SET = ${
-              result.groupSet
-            } AND __row_number__${result.groupSet} > ${
-              limitValues[result.groupSet]
-            })`;
-            if (result.childGroups.length === 1) {
-              limitSimpleFilters.push(filterClause);
-            } else {
-              // its a complex
-              limitComplexClauses[result.groupSet] =
-                `CASE WHEN ${filterClause} THEN 1 ELSE 0 END`;
-            }
+          // Generate a single ROW_NUMBER() with all ORDER BY fields
+          limitExpressions.push(
+            `CASE WHEN GROUP_SET=${result.groupSet} THEN
+               ROW_NUMBER() OVER (${p} ORDER BY ${obSQL.join(
+                 ','
+               )}) END  as __row_number__${result.groupSet}`
+          );
+
+          // if the group set is a leaf, we can write a simple where clause.
+          const filterClause = `(GROUP_SET = ${
+            result.groupSet
+          } AND __row_number__${result.groupSet} > ${
+            limitValues[result.groupSet]
+          })`;
+          if (result.childGroups.length === 1) {
+            limitSimpleFilters.push(filterClause);
+          } else {
+            // its a complex
+            limitComplexClauses[result.groupSet] =
+              `CASE WHEN ${filterClause} THEN 1 ELSE 0 END`;
           }
         }
       }
