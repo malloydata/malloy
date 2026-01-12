@@ -36,7 +36,7 @@ import type {Timeframe} from './time-frame';
 
 export class ForRange extends ExpressionDef {
   elementType = 'forRange';
-  legalChildTypes = [TDU.timestampT, TDU.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly from: ExpressionDef,
     readonly duration: ExpressionDef,

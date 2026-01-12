@@ -49,7 +49,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 
 export class ExprGranularTime extends ExpressionDef {
   elementType = 'granularTime';
-  legalChildTypes = [TDU.timestampT, TDU.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.timestamptzT, TDU.dateT];
   constructor(
     readonly expr: ExpressionDef,
     readonly units: TimestampUnit,

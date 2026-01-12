@@ -261,6 +261,11 @@ describe('expressions', () => {
     test('can apply range to date', () => {
       expect(expr`ad ? @2001 for 1 day`).toTranslate();
     });
+    test('can apply for range to timestamptz', () => {
+      expect(
+        model`run: astar -> { select: tbool is atstz ? ats for 1 day }`
+      ).toTranslate();
+    });
     const noOffset = ['second', 'minute', 'hour'];
 
     test.each(noOffset.map(x => [x]))('disallow date delta %s', unit => {
