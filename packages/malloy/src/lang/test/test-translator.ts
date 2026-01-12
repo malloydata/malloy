@@ -155,46 +155,57 @@ export function humanify(value: unknown): string {
 
 const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
 const bigintType: NumberTypeDef = {type: 'number', numberType: 'bigint'};
-const mockSchema: Record<string, SourceDef> = {
-  'aTable': {
-    type: 'table',
-    name: 'aTable',
-    dialect: 'standardsql',
-    tablePath: 'aTable',
-    connection: 'test',
-    fields: [
-      {type: 'string', name: 'astr'},
-      {type: 'number', name: 'af', numberType: 'float'},
-      {...intType, name: 'ai'},
-      {...bigintType, name: 'abig'},
-      {type: 'date', name: 'ad'},
-      {type: 'boolean', name: 'abool'},
-      {type: 'timestamp', name: 'ats'},
-      {type: 'sql native', name: 'aun'},
-      {type: 'sql native', name: 'aweird', rawType: 'weird'},
-      {
-        type: 'array',
-        name: 'astruct',
-        elementTypeDef: {type: 'record_element'},
-        join: 'many',
-        fields: [
-          {
-            name: 'column',
-            type: 'number',
-            numberType: 'integer',
-          },
-        ],
-      },
-      {
-        type: 'record',
-        name: 'aninline',
-        fields: [{...intType, name: 'column'}],
-        join: 'one',
-        matrixOperation: 'left',
-      },
-      mkArrayDef(intType, 'ais'),
-    ],
-  },
+const aTable: SourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'standardsql',
+  tablePath: 'aTable',
+  connection: 'test',
+  fields: [
+    {type: 'string', name: 'astr'},
+    {type: 'number', name: 'af', numberType: 'float'},
+    {...intType, name: 'ai'},
+    {...bigintType, name: 'abig'},
+    {type: 'date', name: 'ad'},
+    {type: 'boolean', name: 'abool'},
+    {type: 'timestamp', name: 'ats'},
+    {type: 'sql native', name: 'aun'},
+    {type: 'sql native', name: 'aweird', rawType: 'weird'},
+    {
+      type: 'array',
+      name: 'astruct',
+      elementTypeDef: {type: 'record_element'},
+      join: 'many',
+      fields: [
+        {
+          name: 'column',
+          type: 'number',
+          numberType: 'integer',
+        },
+      ],
+    },
+    {
+      type: 'record',
+      name: 'aninline',
+      fields: [{...intType, name: 'column'}],
+      join: 'one',
+      matrixOperation: 'left',
+    },
+    mkArrayDef(intType, 'ais'),
+  ],
+};
+const astar: TableSourceDef = {
+  ...aTable,
+  name: 'astar',
+  tablePath: 'astar',
+  dialect: 'duckdb',
+  fields: [...aTable.fields, {type: 'timestamptz', name: 'atstz'}],
+};
+
+export const mockSchema: Record<string, SourceDef> = {
+  'aTable': aTable,
+  // bigquery doesn't support timestamptz, duckdb does
+  'astar': astar,
   'malloytest.carriers': {
     type: 'table',
     name: 'malloytest.carriers',
@@ -375,6 +386,7 @@ export class TestTranslator extends MalloyTranslator {
       _db_: {type: 'connection', name: '_db_'},
       a: {...aTableDef, primaryKey: 'astr', as: 'a'},
       b: {...aTableDef, primaryKey: 'astr', as: 'b'},
+      astar: {...astar},
       ab: {
         ...aTableDef,
         primaryKey: 'astr',
