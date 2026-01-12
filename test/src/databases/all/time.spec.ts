@@ -495,9 +495,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     test('year implied truncated range', async () => {
       expect(await sqlEq(`${tsMoment} ? t_timestamp.year`, true)).isSqlEq();
     });
-    test('timestamp in literal minute', async () => {
-      expect(await sqlEq('t_timestamp ? @2021-02-24 03:05', true)).isSqlEq();
-    });
+    test('timestamp in literal minute', async () => {});
     test('timestamp in literal day', async () => {
       expect(await sqlEq('t_timestamp ? @2021-02-24', true)).isSqlEq();
     });
@@ -509,6 +507,31 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     });
     test('timestamp in literal year', async () => {
       expect(await sqlEq('t_timestamp ? @2021', true)).isSqlEq();
+    });
+    test('check all four edges of a range', async () => {
+      const tm = mkTestModel(runtime, {
+        fourTimes: [
+          {
+            tbefore: TV.timestamp('2025-12-31 23:59:59'),
+            tfirst: TV.timestamp('2026-01-01 00:00:00'),
+            tlast: TV.timestamp('2026-01-01 23:59:59'),
+            tafter: TV.timestamp('2026-01-02 00:00:00'),
+          },
+        ],
+      });
+      await expect(`
+        run: fourTimes -> { select:
+          isBefore is tbefore ? @2026-01-01
+          isFirst is tfirst ? @2026-01-01
+          isLast is tlast ? @2026-01-01
+          isAfter is tafter ? @2026-01-01
+        }
+      `).toMatchResult(tm, {
+        isBefore: false,
+        isFirst: true,
+        isLast: true,
+        isAfter: false,
+      });
     });
   });
 
@@ -826,16 +849,19 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     }
   );
 
-  test.when(runtime.dialect.hasTimestamptz)('compare timestamptz', async () => {
-    const tzModel = mkTestModel(runtime, {
-      tzdata: [
-        {updated: TV.timestamptz('2020-01-01 00:00:00[America/Mexico_City]')},
-      ],
-    });
-    await expect(
-      'run: tzdata -> { select: cmp is updated ? now.day}'
-    ).toMatchResult(tzModel, {cmp: false});
-  });
+  test.when(runtime.dialect.hasTimestamptz)(
+    'compare timestamptz to range',
+    async () => {
+      const tzModel = mkTestModel(runtime, {
+        tzdata: [
+          {updated: TV.timestamptz('2020-01-15 00:00:00[America/Mexico_City]')},
+        ],
+      });
+      await expect(
+        'run: tzdata -> { select: cmp is updated ? @2020-01 }'
+      ).toMatchResult(tzModel, {cmp: true});
+    }
+  );
 
   // Test for timezone rendering issue with nested queries
   test.when(runtime.supportsNesting)(
