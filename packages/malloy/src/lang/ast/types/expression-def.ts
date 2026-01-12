@@ -276,7 +276,7 @@ function timeCompare(
       const lval = willMorphTo(lhs, 'timestamp');
       const rval = willMorphTo(rhs, 'timestamp');
       if (lval && rval) {
-        return {node, kids: {left: lval, right: lval}};
+        return {node, kids: {left: lval, right: rval}};
       }
     } else {
       return {node, kids: {left: lhs.value, right: rhs.value}};

@@ -21,6 +21,16 @@ describe('misc tests for regressions that have no better home', () => {
     `).toMatchResult(testModel, {});
   });
 
+  test('issue 2632 - timestamptz compared to timestamp range', async () => {
+    // Bug: timeCompare used lval for both left and right when types differ
+    // This caused `tstz_col ? ts_range` to generate `col >= col AND col < col`
+    await expect(`
+      run: duckdb.sql("SELECT TIMESTAMPTZ '2020-01-15 12:00:00 UTC' as updated") -> {
+        select: in_range is updated ? @2020-01-01 00:00:00.month
+      }
+    `).toMatchResult(testModel, {in_range: true});
+  });
+
   test('result data structure contains time zones for nested queries', async () => {
     const query = runtime.loadQuery(`
       run: duckdb.table('malloytest.flights') -> {
