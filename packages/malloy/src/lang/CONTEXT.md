@@ -94,3 +94,7 @@ src/lang/
 - IR is deliberately database-agnostic
 - The translator handles all language-level semantics (scoping, type checking, name resolution)
 - Error messages and warnings are generated during translation
+
+## Testing
+
+For details on the translator test infrastructure, including `TestTranslator`, `BetaExpression`, template literal helpers, and Jest matchers, see [test/CONTEXT.md](test/CONTEXT.md).
