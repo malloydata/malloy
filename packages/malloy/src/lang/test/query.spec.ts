@@ -821,12 +821,12 @@ describe('query:', () => {
     });
     describe('dialect functions', () => {
       test('can use function enabled in this dialect (standardsql)', () => {
-        expect(`run: a -> {
+        expect(`run: bq_a -> {
           group_by: d is date_from_unix_date(1000)
         }`).toTranslate();
       });
       test('cannot use function enabled in a different dialect (duckdb)', () => {
-        expect(`run: a -> {
+        expect(`run: bq_a -> {
           group_by: ts is to_timestamp(1000)
         }`).toLog(errorMessage(/Unknown function/));
       });

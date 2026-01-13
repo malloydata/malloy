@@ -35,6 +35,7 @@ import {
   errorMessage,
   warningMessage,
   warning,
+  TEST_DIALECT,
 } from './test-translator';
 import './parse-expects';
 
@@ -262,9 +263,7 @@ describe('expressions', () => {
       expect(expr`ad ? @2001 for 1 day`).toTranslate();
     });
     test('can apply for range to timestamptz', () => {
-      expect(
-        model`run: astar -> { select: tbool is atstz ? ats for 1 day }`
-      ).toTranslate();
+      expect(expr`atstz ? ats for 1 day `).toTranslate();
     });
     const noOffset = ['second', 'minute', 'hour'];
 
@@ -493,10 +492,24 @@ describe('expressions', () => {
       );
     });
 
-    test('string_agg_distinct order by cannot specify expression', () => {
+    test('string_agg_distinct order by can specify expression', () => {
       expect(markSource`
         ##! experimental { aggregate_order_by }
         run: a -> {
+          group_by: ai
+          aggregate: x is string_agg_distinct(astr) { order_by: ai }
+        }
+      `).toTranslate();
+    });
+
+    // This test requires `supportsOrderBy: 'only_default'` in the dialect blueprint
+    // When we moved TEST_DIALECT to use duckdb so we could test timestamptz,
+    // this test started failing. As some future point we need to somehow both
+    // test "can" and "cannot"
+    test('string_agg_distinct order by cannot specify expression', () => {
+      expect(markSource`
+        ##! experimental { aggregate_order_by }
+        run: bq_a -> {
           group_by: ai
           aggregate: x is string_agg_distinct(astr) { order_by: ai }
         }
@@ -1556,7 +1569,7 @@ describe('sql native fields in schema', () => {
     test('sql cast illegal type name', () => {
       expect(expr`astr::"stuff 'n' things"`).toLog(
         errorMessage(
-          "Cast type `stuff 'n' things` is invalid for standardsql dialect"
+          `Cast type \`stuff 'n' things\` is invalid for ${TEST_DIALECT} dialect`
         )
       );
     });

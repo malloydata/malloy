@@ -91,7 +91,7 @@ describe('literals', () => {
     ],
     [
       '@1960-06-30 10:30:00[America/Los_Angeles]',
-      'timestamp',
+      'timestamptz',
       undefined,
       {
         literal: '1960-06-30 10:30:00',

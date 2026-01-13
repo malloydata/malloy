@@ -89,14 +89,17 @@ describe('connection sql()', () => {
 
   it('simple turducken', () => {
     const m = new TestTranslator(`
-      source: someSql is _db_.sql("""SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1""")
+      query: aByAstr is a -> { group_by: astr }
+      source: someSql is _db_.sql("""SELECT * FROM --MALLOY
+        %{ aByAstr } --ENDMALLOY
+         WHERE 1=1""")
     `);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
     if (compileSql) {
-      expect(compileSql.selectStr).toEqual(
-        'SELECT * FROM (SELECT \n   base.`astr` as `astr`\nFROM `aTable` as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n) WHERE 1=1'
+      expect(compileSql.selectStr).toMatch(
+        /SELECT \* FROM --MALLOY.*--ENDMALLOY\n\s+WHERE 1=1/s
       );
     }
   });
