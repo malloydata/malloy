@@ -238,34 +238,8 @@ For deeper context on specific subsystems, see:
 
 ## Maintaining the CONTEXT Tree
 
-The idea is, for any given file of interest, you could walk up the directory path from the directory containg the file, reading all the CONTEXT.md files, and get
-both a good overview of the context you need for that file, as well as then the pointers to other CONTEXT.md files which might be interesting,
-without having to load all CONTEXT.md files at all times.
+This repository uses the [CONTEXT.md convention](https://github.com/the-michael-toy/llm-context-md) for LLM-friendly documentation.
 
-### Verification Task
-
-Periodically (recommended: twice per year), the CONTEXT tree should be verified for accuracy and completeness. This is an expensive operation but ensures the context remains valuable for AI assistance.
-
-**To verify the CONTEXT tree, perform these checks:**
-
-1. **Reference Integrity**: Starting from this root CONTEXT.md, verify that:
-   - All referenced child CONTEXT.md files exist
-   - Each child CONTEXT.md references its own children (if any)
-   - The complete tree is reachable from the root
-   - No CONTEXT.md files exist that aren't referenced in the tree
-
-2. **Code Reference Validation**: For each CONTEXT.md file, verify that:
-   - File paths mentioned (e.g., `src/lang/grammar/MalloyLexer.g4`) still exist
-   - Source files mentioned (e.g., `query_query.ts`, `expression_compiler.ts`) still exist at their specified locations
-   - Key symbols/classes/functions mentioned (e.g., `QueryQuery`, `MalloyElement`, `FieldSpace`) still exist in the referenced files
-   - Directory structures described are still accurate
-
-3. **Content Accuracy**: Check that:
-   - Architecture descriptions match current implementation
-   - Technology choices are still current (e.g., ANTLR4, Solid.js, Vega)
-   - Process descriptions reflect actual code flow
-   - Package names and structures are up to date
+The idea is that for any file of interest, an LLM can walk up the directory tree reading CONTEXT.md files to gather layered context - from specific to general - without loading all context files at once.
 
 **Verification command:** "Read the CONTEXT tree and verify it is up to date"
-
-This command should trigger a comprehensive check of all items above, reporting any discrepancies, missing files, or outdated information.
