@@ -155,76 +155,89 @@ export function humanify(value: unknown): string {
 
 const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
 const bigintType: NumberTypeDef = {type: 'number', numberType: 'bigint'};
-const aTable: SourceDef = {
+// Base fields shared by both duckdb and BigQuery table definitions
+const baseFields: FieldDef[] = [
+  {type: 'string', name: 'astr'},
+  {type: 'number', name: 'af', numberType: 'float'},
+  {...intType, name: 'ai'},
+  {...bigintType, name: 'abig'},
+  {type: 'date', name: 'ad'},
+  {type: 'boolean', name: 'abool'},
+  {type: 'timestamp', name: 'ats'},
+  {type: 'sql native', name: 'aun'},
+  {type: 'sql native', name: 'aweird', rawType: 'weird'},
+  {
+    type: 'array',
+    name: 'astruct',
+    elementTypeDef: {type: 'record_element'},
+    join: 'many',
+    fields: [
+      {
+        name: 'column',
+        type: 'number',
+        numberType: 'integer',
+      },
+    ],
+  },
+  {
+    type: 'record',
+    name: 'aninline',
+    fields: [{...intType, name: 'column'}],
+    join: 'one',
+    matrixOperation: 'left',
+  },
+  mkArrayDef(intType, 'ais'),
+];
+
+export const TEST_DIALECT = 'duckdb';
+export const aTableDef: TableSourceDef = {
+  type: 'table',
+  name: 'aTable',
+  dialect: TEST_DIALECT,
+  tablePath: 'aTable',
+  connection: '_db_',
+  fields: [
+    ...baseFields,
+    {type: 'timestamptz', name: 'atstz'}, // duckdb supports timestamptz
+  ],
+};
+
+// BigQuery-compatible table definition (no timestamptz support)
+export const bqTableDef: SourceDef = {
   type: 'table',
   name: 'aTable',
   dialect: 'standardsql',
   tablePath: 'aTable',
-  connection: 'test',
-  fields: [
-    {type: 'string', name: 'astr'},
-    {type: 'number', name: 'af', numberType: 'float'},
-    {...intType, name: 'ai'},
-    {...bigintType, name: 'abig'},
-    {type: 'date', name: 'ad'},
-    {type: 'boolean', name: 'abool'},
-    {type: 'timestamp', name: 'ats'},
-    {type: 'sql native', name: 'aun'},
-    {type: 'sql native', name: 'aweird', rawType: 'weird'},
-    {
-      type: 'array',
-      name: 'astruct',
-      elementTypeDef: {type: 'record_element'},
-      join: 'many',
-      fields: [
-        {
-          name: 'column',
-          type: 'number',
-          numberType: 'integer',
-        },
-      ],
-    },
-    {
-      type: 'record',
-      name: 'aninline',
-      fields: [{...intType, name: 'column'}],
-      join: 'one',
-      matrixOperation: 'left',
-    },
-    mkArrayDef(intType, 'ais'),
-  ],
-};
-const astar: TableSourceDef = {
-  ...aTable,
-  name: 'astar',
-  tablePath: 'astar',
-  dialect: 'duckdb',
-  fields: [...aTable.fields, {type: 'timestamptz', name: 'atstz'}],
+  connection: '_bq_',
+  fields: baseFields,
 };
 
-export const mockSchema: Record<string, SourceDef> = {
-  'aTable': aTable,
-  // bigquery doesn't support timestamptz, duckdb does
-  'astar': astar,
-  'malloytest.carriers': {
+/**
+ * A TestTranlator never actually talks to connection, instead uses
+ * some mocked schema definitions.
+ */
+
+export const mockSchema: TableSourceDef[] = [
+  aTableDef,
+  bqTableDef,
+  {
     type: 'table',
-    name: 'malloytest.carriers',
-    dialect: 'standardsql',
+    name: 'carriers',
+    dialect: TEST_DIALECT,
     tablePath: 'malloytest.carriers',
-    connection: 'bigquery',
+    connection: '_db_',
     fields: [
       {name: 'code', type: 'string'},
       {name: 'name', type: 'string'},
       {name: 'nickname', type: 'string'},
     ],
-    as: 'carriers',
   },
-  'malloytest.flights': {
+  {
     type: 'table',
-    name: 'malloytest.flights',
-    dialect: 'standardsql',
+    name: 'flights',
+    dialect: TEST_DIALECT,
     tablePath: 'malloytest.flights',
-    connection: 'bigquery',
+    connection: '_db_',
     fields: [
       {name: 'carrier', type: 'string'},
       {name: 'origin', type: 'string'},
@@ -243,14 +256,13 @@ export const mockSchema: Record<string, SourceDef> = {
       {name: 'diverted', type: 'string'},
       {name: 'id2', type: 'number', numberType: 'integer'},
     ],
-    as: 'flights',
   },
-  'malloytest.airports': {
+  {
     type: 'table',
-    name: 'malloytest.airports',
-    dialect: 'standardsql',
+    name: 'airports',
+    dialect: TEST_DIALECT,
     tablePath: 'malloytest.airports',
-    connection: 'bigquery',
+    connection: '_db_',
     fields: [
       {name: 'id', type: 'number', numberType: 'integer'},
       {name: 'code', type: 'string'},
@@ -280,18 +292,12 @@ export const mockSchema: Record<string, SourceDef> = {
       {name: 'cntl_twr', type: 'string'},
       {name: 'major', type: 'string'},
     ],
-    as: 'airports',
   },
-};
-export const aTableDef = mockSchema['aTable'];
+];
 
 const bJoinedIntoA: TableSourceDef & JoinBase = {
-  type: 'table',
-  name: 'aTable',
-  dialect: 'standardsql',
-  tablePath: 'aTable',
-  connection: 'test',
-  as: 'b',
+  ...aTableDef,
+  name: 'b',
   join: 'one',
   matrixOperation: 'left',
   onExpression: {
@@ -301,7 +307,6 @@ const bJoinedIntoA: TableSourceDef & JoinBase = {
       right: {node: 'field', path: ['b', 'astr']},
     },
   },
-  fields: aTableDef.fields,
 };
 
 /**
@@ -362,19 +367,31 @@ export class TestTranslator extends MalloyTranslator {
   allDialectsEnabled = true;
   testRoot?: TestRoot;
   /*
+   * There are two connections:
+   *   _db_  - duckdb dialect, with the following tables ...
+   *      aTable, malloytest.carriers, malloytest.flights, malloytest.airports
+   *   _bq_  - bigquery/standardsql dialect, with one table
+   *      aTable
+   *
+   * The "aTable" table is a mocked table with one column of each type.
+   * The _bq_ version does not have the timestamptz column, and when
+   * DATETIME support is added, the _db_ version will not have that.
+   *
    * All test source files can assume that an import of this
-
    *
-   * Also the following tables will be available on _db_
-   *   aTable, malloytest.carriers, malloytest.flights, malloytest.airports
+   *   source:
+   *     bq_a is _bq_.table('aTable') extend { primary_key: astr }
+   *     carriers is _db_.table('malloytest.carriers')
+   *     flights is _db_.table('malloytest.flights')
+   *     airports is _db_.table('malloytest.airports')
+   *     a is _db_.table('aTable') extend { primary_key: astr }
+   *     b is a
+   *     ab is a extend {
+   *       join_one: b with astr
+   *       measure: acount is count()
+   *       view: aturtle is { group_by: astr; aggregate: acount }
+   *     }
    *
-   *   source: a is _db_.table('aTable') extend { primary_key: astr }
-   *   source: b is a
-   *   source: ab is a extend {
-   *     join_one: b with astr
-   *     measure: acount is count()
-   *     query: aturtle is { group_by: astr; aggregate: acount }
-   *   }
    */
 
   internalModel: ModelDef = {
@@ -384,9 +401,10 @@ export class TestTranslator extends MalloyTranslator {
     dependencies: {},
     contents: {
       _db_: {type: 'connection', name: '_db_'},
-      a: {...aTableDef, primaryKey: 'astr', as: 'a'},
-      b: {...aTableDef, primaryKey: 'astr', as: 'b'},
-      astar: {...astar},
+      _bq_: {type: 'connection', name: '_bq_'},
+      a: {...aTableDef, primaryKey: 'astr', name: 'a'},
+      b: {...aTableDef, primaryKey: 'astr', name: 'b'},
+      bq_a: {...bqTableDef, primaryKey: 'astr', name: 'bq_a'},
       ab: {
         ...aTableDef,
         primaryKey: 'astr',
@@ -419,7 +437,7 @@ export class TestTranslator extends MalloyTranslator {
                     {type: 'string', name: 'acount'},
                   ],
                   connection: 'test',
-                  dialect: 'standardsql',
+                  dialect: TEST_DIALECT,
                 },
                 isRepeated: true,
               },
@@ -443,9 +461,11 @@ export class TestTranslator extends MalloyTranslator {
     if (internalModel !== undefined) {
       this.internalModel = internalModel;
     }
-    for (const tableName in mockSchema) {
-      this.schemaZone.define(tableName, mockSchema[tableName]);
-      this.schemaZone.define(`_db_:${tableName}`, mockSchema[tableName]);
+    for (const actualSchema of mockSchema) {
+      this.schemaZone.define(
+        `${actualSchema.connection}:${actualSchema.tablePath}`,
+        actualSchema
+      );
     }
   }
 
@@ -757,7 +777,7 @@ export function getSelectOneStruct(sqlBlock: SQLSourceRequest): {
     [key]: {
       type: 'sql_select',
       name: key,
-      dialect: 'standardsql',
+      dialect: TEST_DIALECT,
       connection: '_db_',
       selectStr: sqlBlock.selectStr,
       fields: [{type: 'number', name: 'one'}],
