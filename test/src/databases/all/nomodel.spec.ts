@@ -947,6 +947,43 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
+  test.when(runtime.supportsNesting)(
+    `ungrouped declared ungrouped with field  - ${databaseName}`,
+    async () => {
+      await expect(`
+        source: s is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension:
+            first_letter is substr(state,1,1)
+          measure:
+            total_births is births.sum()
+            all_births is all(total_births)
+            all_births_first_letter is all(total_births,first_letter)
+        }
+
+        # test.debug
+        run: s -> {
+          group_by:
+            first_letter
+            popular_name
+
+          aggregate:
+            // total_births
+            // all_births
+            all_births_first_letter
+            all_births_first_letter2 is all(total_births,first_letter)
+
+        }
+      `).malloyResultMatches(runtime, {
+        // first_letter: 'C',
+        // popular_name: 'Isabella',
+        // total_births: 35596513,
+        // all_births: 295727065,
+        all_births_first_letter: 35596513,
+        all_births_first_letter2: 35596513,
+      });
+    }
+  );
+
   it(`run simple sql - ${databaseName}`, async () => {
     const testModel = wrapTestModel(runtime, '');
     await expect(`run: conn.sql('select 1 as ${q`one`}')`).toEqualResult(
