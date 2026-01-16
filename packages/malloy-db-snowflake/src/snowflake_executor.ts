@@ -36,6 +36,9 @@ import type {Readable} from 'stream';
 import type {QueryData, QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
 import {toAsyncGenerator} from '@malloydata/malloy';
 
+// Disable snowflake-sdk logging by default (issue #2565)
+snowflake.configure({logLevel: 'OFF'});
+
 export interface ConnectionConfigFile {
   // a toml file with snowflake connection settings
   // if not provided, we will try to read ~/.snowflake/config

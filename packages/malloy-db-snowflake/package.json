@@ -24,7 +24,7 @@
   "dependencies": {
     "@malloydata/malloy": "0.0.335",
     "generic-pool": "^3.9.0",
-    "snowflake-sdk": "2.3.1",
+    "snowflake-sdk": "2.3.3",
     "toml": "^3.0.0"
   }
 }
