@@ -25,7 +25,7 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
-          ./test/presto/presto_start.sh
+          ./test/presto/presto_start.sh --slim
           npm run ci-presto
           ./test/presto/presto_stop.sh
         env:
