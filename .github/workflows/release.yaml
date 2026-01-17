@@ -32,6 +32,8 @@ jobs:
       - db-snowflake
       - main
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,9 +60,8 @@ jobs:
           done
           # Make sure we're current
           git pull origin $BRANCH_NAME
-          # Tag current version
-          git tag v$VERSION
-          git push origin v$VERSION
+          # Create GitHub Release with auto-generated notes from PRs
+          gh release create v$VERSION --generate-notes --title "v$VERSION"
           # Bump version
           npx lerna version patch --exact --yes --no-push --no-git-tag-version
           # Fix up package-lock.json
@@ -75,3 +76,4 @@ jobs:
           CI: true
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           BRANCH_NAME: main
+          GH_TOKEN: ${{ github.token }}
