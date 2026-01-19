@@ -53,6 +53,17 @@ describe('source:', () => {
   test('source from query', () => {
     expect('source: testA is a->{group_by: astr}').toTranslate();
   });
+  test('An unknown dialect followed by a "->" shows the correct error', () => {
+    const translator = new TestTranslator(`
+      ##! experimental
+
+      source: test is foo.table('bar') -> {}
+    `);
+    translator.update({
+      errors: {tables: {'foo:bar': 'Bad table!'}},
+    });
+    expect(translator).toLog(errorMessage(/Bad table!/));
+  });
   test('refine source', () => {
     expect('source: aa is a extend { dimension: a is astr }').toTranslate();
   });
