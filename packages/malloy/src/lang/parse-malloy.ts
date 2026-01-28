@@ -567,6 +567,7 @@ class TranslateStep implements TranslationStep {
         modelDef: pretranslate,
         final: true,
         fromSources: that.getDependencies(),
+        modelWasModified: false,
       };
     }
 
@@ -606,6 +607,7 @@ class TranslateStep implements TranslationStep {
           };
         } else {
           that.modelDef = docCompile.modelDef;
+          that.modelWasModified = docCompile.modelWasModified;
         }
       } else {
         that.root.logError(
@@ -630,6 +632,7 @@ class TranslateStep implements TranslationStep {
           imports: [...that.imports],
         },
         fromSources: that.getDependencies(),
+        modelWasModified: that.modelWasModified,
         ...that.problemResponse(),
         final: true,
       };
@@ -643,6 +646,7 @@ export abstract class MalloyTranslation {
   childTranslators: Map<string, MalloyTranslation>;
   sqlSources: SQLSourceDef[] = [];
   modelDef: ModelDef;
+  modelWasModified = false;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
 

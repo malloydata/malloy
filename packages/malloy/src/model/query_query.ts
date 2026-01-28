@@ -171,7 +171,7 @@ export class QueryQuery extends QueryField {
           fields: [...sourceDef.fields, ...firstStage.extendSource],
         },
         parentStruct.sourceArguments,
-        parent.parent ? {struct: parent} : {model: parent.model},
+        parent.parent ? {struct: parent} : {model: parent.getModel()},
         parent.prepareResultOptions
       );
       turtleWithFilters = {
@@ -2088,13 +2088,13 @@ export class QueryQuery extends QueryField {
       };
       pipeline.shift();
       for (const transform of pipeline) {
-        const parent = this.parent.parent
+        const parentArg = this.parent.parent
           ? {struct: this.parent.parent}
           : {model: this.parent.getModel()};
         const s = new QueryStruct(
           structDef,
           undefined,
-          parent,
+          parentArg,
           this.parent.prepareResultOptions
         );
         const q = QueryQuery.makeQuery(

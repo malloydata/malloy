@@ -23,6 +23,7 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {EventStream} from '../runtime_types';
 
 // clang-format off
 
@@ -1904,6 +1905,7 @@ export interface PrepareResultOptions {
   materializedTablePrefix?: string;
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
+  eventStream?: EventStream;
 }
 
 type UTD =

@@ -30,17 +30,10 @@ import {QueryQuery} from './query_query';
 import {FieldInstanceField} from './field_instance';
 import {QueryModelImpl} from './query_model_impl';
 
-// We have a circular dependency issue, and this is the minimal
-// dependency injection needed to get around it. Ideally, we would
-// like to avoid this, and I think a thoughtful pass through
-// FieldInstance and QueryField might eliminate the need for this.
 function getLookupFun(
   mri: ModelRootInterface
 ): (name: string) => QueryStruct | undefined {
-  if (mri instanceof QueryModelImpl) {
-    return (name: string) => mri.structs.get(name);
-  }
-  return () => undefined;
+  return (name: string) => mri.structs.get(name);
 }
 
 FieldInstanceField.registerExpressionCompiler(exprToSQL);

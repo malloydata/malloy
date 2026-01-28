@@ -380,16 +380,24 @@ export class Malloy {
             modelDef: result.modelDef,
             invalidationKeys,
           });
-          for (const model of translator.newlyTranslatedDependencies()) {
-            await cacheManager?.setCachedModelDef(model.url, {
-              modelDef: model.modelDef,
+          for (const m of translator.newlyTranslatedDependencies()) {
+            await cacheManager?.setCachedModelDef(m.url, {
+              modelDef: m.modelDef,
               invalidationKeys,
             });
           }
-          return new Model(result.modelDef, result.problems || [], [
-            ...(model?.fromSources ?? []),
-            ...(result.fromSources ?? []),
-          ]);
+          // If the model wasn't modified, create new Model with result's modelDef
+          // (which has the queryList) but share the cached QueryModel from input model
+          const existingQueryModel =
+            !result.modelWasModified && model
+              ? model.getExistingQueryModel()
+              : undefined;
+          return new Model(
+            result.modelDef,
+            result.problems || [],
+            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
+            existingQueryModel
+          );
         } else if (noThrowOnError) {
           const emptyModel = {
             name: 'modelDidNotCompile',
@@ -794,16 +802,35 @@ export class MalloyError extends Error {
  */
 export class Model implements Taggable {
   private readonly references: ReferenceList;
+  private _queryModel?: QueryModel;
 
   constructor(
     private modelDef: ModelDef,
     readonly problems: LogMessage[],
-    readonly fromSources: string[]
+    readonly fromSources: string[],
+    existingQueryModel?: QueryModel
   ) {
     this.references = new ReferenceList(
       fromSources[0] ?? '',
       modelDef.references ?? []
     );
+    this._queryModel = existingQueryModel;
+  }
+
+  get queryModel(): QueryModel {
+    if (!this._queryModel) {
+      this._queryModel = new QueryModel(this.modelDef);
+    }
+    return this._queryModel;
+  }
+
+  /**
+   * Returns the cached QueryModel if it exists, without creating one.
+   * Used internally to share QueryModel between Model instances when
+   * the model wasn't modified (only queries were added).
+   */
+  getExistingQueryModel(): QueryModel | undefined {
+    return this._queryModel;
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
@@ -851,7 +878,7 @@ export class Model implements Taggable {
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
     if (query?.type === 'query') {
-      return new PreparedQuery(query, this.modelDef, this.problems, queryName);
+      return new PreparedQuery(query, this, this.problems, queryName);
     }
 
     throw new Error('Given query name does not refer to a named query.');
@@ -871,7 +898,7 @@ export class Model implements Taggable {
     }
     return new PreparedQuery(
       this.modelDef.queryList[index],
-      this.modelDef,
+      this,
       this.problems
     );
   }
@@ -896,7 +923,7 @@ export class Model implements Taggable {
     }
     return new PreparedQuery(
       this.modelDef.queryList[this.modelDef.queryList.length - 1],
-      this.modelDef,
+      this,
       this.problems
     );
   }
@@ -953,17 +980,19 @@ export class Model implements Taggable {
  * A prepared query which has all the necessary information to produce its SQL.
  */
 export class PreparedQuery implements Taggable {
-  public _modelDef: ModelDef;
   public _query: InternalQuery | NamedQuery;
 
   constructor(
     query: InternalQuery,
-    model: ModelDef,
+    private _model: Model,
     public problems: LogMessage[],
     public name?: string
   ) {
     this._query = query;
-    this._modelDef = model;
+  }
+
+  public get _modelDef(): ModelDef {
+    return this._model._modelDef;
   }
 
   tagParse(spec?: TagParseSpec) {
@@ -992,7 +1021,7 @@ export class PreparedQuery implements Taggable {
    * @param options.eventStream An event stream to use when compiling the SQL
    */
   public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
-    const queryModel = new QueryModel(this._modelDef, options?.eventStream);
+    const queryModel = this._model.queryModel;
     const translatedQuery = queryModel.compileQuery(this._query, options);
     return new PreparedResult(
       {
@@ -1687,7 +1716,12 @@ export class Explore extends Entity implements Taggable {
       structRef,
       pipeline: view.pipeline,
     };
-    return new PreparedQuery(internalQuery, this.modelDef, [], name);
+    return new PreparedQuery(
+      internalQuery,
+      this.getSingleExploreModel(),
+      [],
+      name
+    );
   }
 
   private get modelDef(): ModelDef {
@@ -1919,7 +1953,7 @@ export class Explore extends Entity implements Taggable {
           // Create a PreparedQuery from the query in the QuerySourceDef
           const preparedQuery = new PreparedQuery(
             structDef.query,
-            this.modelDef,
+            this.getSingleExploreModel(),
             []
           );
 
@@ -2957,11 +2991,10 @@ export class ModelMaterializer extends FluentState<Model> {
     sourceName: string,
     searchTerm: string,
     limit = 1000,
-    searchField: string | undefined = undefined,
-    eventStream?: EventStream
+    searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef, eventStream);
+    const queryModel = model.queryModel;
     const schema = model.getExploreByName(sourceName).structDef;
     if (!isSourceDef(schema)) {
       throw new Error('Source to be searched was unexpectedly, not a source');
@@ -3080,7 +3113,7 @@ export class ModelMaterializer extends FluentState<Model> {
     return this.makeQueryMaterializer(
       async () => {
         const model = await this.materialize();
-        return new PreparedQuery(query, model._modelDef, model.problems);
+        return new PreparedQuery(query, model, model.problems);
       },
       {
         ...this.compileQueryOptions,

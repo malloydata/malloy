@@ -20,7 +20,6 @@ import type {
 import {isSourceDef, getIdentifier, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
 import {StandardSQLDialect, type Dialect} from '../dialect';
-import type {EventStream} from '../runtime_types';
 import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
@@ -31,11 +30,8 @@ import {QueryStruct, isScalarField} from './query_node';
 import type {QueryModel, QueryResults} from './query_model_contract';
 import {rowDataToNumber} from '../api/row_data_utils';
 
-export function makeQueryModel(
-  modelDef: ModelDef | undefined,
-  eventStream?: EventStream
-): QueryModel {
-  return new QueryModelImpl(modelDef, eventStream);
+export function makeQueryModel(modelDef: ModelDef | undefined): QueryModel {
+  return new QueryModelImpl(modelDef);
 }
 
 export class QueryModelImpl implements QueryModel, ModelRootInterface {
@@ -43,10 +39,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
-  constructor(
-    modelDef: ModelDef | undefined,
-    readonly eventStream?: EventStream
-  ) {
+  constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
     }

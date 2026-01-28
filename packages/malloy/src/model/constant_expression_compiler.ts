@@ -110,11 +110,13 @@ class ConstantQueryStruct extends QueryStruct {
       dialect: dialect.name,
     };
 
-    // Create a minimal model interface that only provides eventStream
-    const minimalModel: ModelRootInterface = {eventStream};
+    // Create minimal model with empty structs map
+    const minimalModel: ModelRootInterface = {
+      structs: new Map(),
+    };
 
-    // Create minimal prepare result options
-    const minimalPrepareOptions: PrepareResultOptions = {};
+    // Create minimal prepare result options with eventStream
+    const minimalPrepareOptions: PrepareResultOptions = {eventStream};
 
     // Call parent constructor with minimal requirements
     super(
@@ -126,9 +128,6 @@ class ConstantQueryStruct extends QueryStruct {
 
     this.dialect = dialect;
     this._constantArguments = parameters;
-    if (eventStream) {
-      this.model.eventStream = eventStream;
-    }
   }
 
   /**
