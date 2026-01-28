@@ -510,6 +510,7 @@ export class Document extends MalloyElement implements NameSpace {
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
+  modelWasModified = false;
   annotation: Annotation = {};
   experiments = new Tag({});
 
@@ -565,6 +566,7 @@ export class Document extends MalloyElement implements NameSpace {
         queryList: this.queryList,
       },
       needs,
+      modelWasModified: this.modelWasModified,
     };
     return ret;
   }
@@ -630,6 +632,11 @@ export class Document extends MalloyElement implements NameSpace {
     }
     if (isSourceDef(ent.entry)) {
       this.checkExperimentalDialect(this, ent.entry.dialect);
+    }
+
+    // Track if the model was modified after initialization
+    if (this.didInitModel) {
+      this.modelWasModified = true;
     }
 
     this.documentModel[str] = ent;

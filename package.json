@@ -39,7 +39,7 @@
     "lint-fix": "gts fix",
     "test": "echo 'npm run test' not supported, see test/README.md for details ; exit 1",
     "test-publisher": "MALLOY_DATABASE=publisher jest",
-    "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --reporters jest-silent-reporter summary",
+    "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects malloy-core malloy-render db-all db-duckdb db-duckdb-core --reporters jest-silent-reporter summary",
     "ci-core": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --reporters --selectProjects malloy-core malloy-render --reporters jest-silent-reporter summary --runInBand",
     "ci-bigquery": "MALLOY_DATABASE=bigquery JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-bigquery --reporters jest-silent-reporter summary",
     "ci-duckdb-wasm": "MALLOY_DATABASE=duckdb_wasm JEST_SILENT_REPORTER_SHOW_PATHS=true jest --selectProjects db-all db-duckdb --reporters jest-silent-reporter summary --runInBand",

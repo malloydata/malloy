@@ -28,4 +28,5 @@ import type {ModelDataRequest} from '../../translate-response';
 export interface DocumentCompileResult {
   modelDef: ModelDef;
   needs: ModelDataRequest;
+  modelWasModified: boolean;
 }

@@ -122,6 +122,7 @@ interface TranslatedResponseData
     FinalResponse {
   modelDef: ModelDef;
   fromSources: string[];
+  modelWasModified: boolean;
 }
 
 interface TablePath

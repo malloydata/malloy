@@ -251,12 +251,9 @@ export interface ParentQueryStruct {
   struct: QueryStruct;
 }
 
-/*
- * So that we don't have to includeQueryModel. Put properties
- * of query model which are needed in here.
- */
+// Interface for model - provides struct lookup capability
 export interface ModelRootInterface {
-  eventStream?: EventStream;
+  structs: Map<string, QueryStruct>;
 }
 
 export interface ParentQueryModel {
@@ -292,8 +289,6 @@ export class QueryStruct {
     parent: ParentQueryStruct | ParentQueryModel,
     readonly prepareResultOptions: PrepareResultOptions
   ) {
-    this.setParent(parent);
-
     if ('model' in parent) {
       this.model = parent.model;
       this.pathAliasMap = new Map<string, string>();
@@ -303,6 +298,7 @@ export class QueryStruct {
         throw new Error('All root StructDefs should be a baseTable');
       }
     } else {
+      this.parent = parent.struct;
       this.model = this.getModel();
       this.pathAliasMap = this.root().pathAliasMap;
       this.connectionName = this.root().connectionName;
@@ -627,18 +623,7 @@ export class QueryStruct {
   }
 
   get eventStream(): EventStream | undefined {
-    return this.getModel().eventStream;
-  }
-
-  setParent(parent: ParentQueryStruct | ParentQueryModel) {
-    if ('struct' in parent) {
-      this.parent = parent.struct;
-    }
-    if ('model' in parent) {
-      this.model = parent.model;
-    } else {
-      this.model = this.getModel();
-    }
+    return this.prepareResultOptions?.eventStream;
   }
 
   /** makes a new queryable field object from a fieldDef */
