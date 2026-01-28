@@ -17,13 +17,12 @@ import {isSourceDef} from '../../model';
 import {getDialect} from '../../dialect';
 import type {Dialect} from '../../dialect';
 import type {RunSQLOptions} from '../../run_sql_options';
-import {BuildModel} from '../../build_api';
 import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
 import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
 import type {PreparedResult, Explore} from './core';
-import {Model, PreparedQuery} from './core';
+import {Model, NamedQuery, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
 // Note: compile.ts will call setMalloyFunctions to wire up the circular dependency
 
@@ -109,6 +108,13 @@ class FluentState<T> {
     materialize: () => Promise<PreparedResult>
   ): PreparedResultMaterializer {
     return new PreparedResultMaterializer(this.runtime, materialize);
+  }
+
+  protected makeNamedQueryMaterializer(
+    materialize: () => Promise<NamedQuery>,
+    options?: CompileQueryOptions
+  ): NamedQueryMaterializer {
+    return new NamedQueryMaterializer(this.runtime, materialize, options);
   }
 }
 
@@ -738,12 +744,136 @@ export class ModelMaterializer extends FluentState<Model> {
   }
 
   /**
+   * Load a named query from this loaded `Model`.
+   *
+   * @param name The name of the query to load.
+   * @return A `NamedQueryMaterializer` capable of materializing the requested query,
+   * loading its prepared result, or running it.
+   */
+  public getNamedQuery(
+    name: string,
+    options?: CompileQueryOptions
+  ): NamedQueryMaterializer {
+    return this.makeNamedQueryMaterializer(
+      async () => {
+        return (await this.materialize()).getNamedQuery(name);
+      },
+      {
+        ...this.compileQueryOptions,
+        ...options,
+      }
+    );
+  }
+
+  /**
    * Compile and materialize this loaded `Model`.
    *
    * @return A promise to the compiled model that is loaded.
    */
   public getModel(): Promise<Model> {
     return this.materialize();
+  }
+}
+
+// =============================================================================
+// NamedQueryMaterializer
+// =============================================================================
+
+/**
+ * An object representing the task of loading a `NamedQuery`, capable of
+ * materializing the query, loading its prepared result, or running it.
+ */
+export class NamedQueryMaterializer extends FluentState<NamedQuery> {
+  private readonly compileQueryOptions: CompileQueryOptions | undefined;
+
+  constructor(
+    protected runtime: Runtime,
+    materialize: () => Promise<NamedQuery>,
+    options?: CompileQueryOptions
+  ) {
+    super(runtime, materialize);
+    this.compileQueryOptions = options;
+  }
+
+  /**
+   * Get the `NamedQuery` object.
+   *
+   * @return A promise to the materialized NamedQuery.
+   */
+  public getNamedQuery(): Promise<NamedQuery> {
+    return this.materialize();
+  }
+
+  /**
+   * Load the prepared result for this named query.
+   *
+   * @return A `QueryMaterializer` capable of running the query.
+   */
+  public load(options?: CompileQueryOptions): QueryMaterializer {
+    return this.makeQueryMaterializer(
+      async () => {
+        const namedQuery = await this.materialize();
+        // Convert NamedQuery to PreparedQuery for QueryMaterializer
+        return new PreparedQuery(
+          namedQuery._queryDef,
+          namedQuery._model,
+          namedQuery._model.problems,
+          namedQuery.name
+        );
+      },
+      {
+        ...this.compileQueryOptions,
+        ...options,
+      }
+    );
+  }
+
+  /**
+   * Run this named query.
+   *
+   * @return The query results from running this query.
+   */
+  async run(options?: RunSQLOptions & CompileQueryOptions): Promise<Result> {
+    return this.load(options).run(options);
+  }
+
+  /**
+   * Run this named query and stream results.
+   */
+  async *runStream(
+    options?: RunSQLOptions & CompileQueryOptions
+  ): AsyncIterableIterator<DataRecord> {
+    const materializer = this.load(options);
+    for await (const row of materializer.runStream(options)) {
+      yield row;
+    }
+  }
+
+  /**
+   * Load the prepared result of this named query.
+   *
+   * @return A `PreparedResultMaterializer` capable of materializing the prepared result.
+   */
+  public loadPreparedResult(
+    options?: CompileQueryOptions
+  ): PreparedResultMaterializer {
+    return this.makePreparedResultMaterializer(async () => {
+      const namedQuery = await this.materialize();
+      const mergedOptions: CompileQueryOptions = {
+        ...this.compileQueryOptions,
+        ...options,
+      };
+      return namedQuery.getPreparedResult(mergedOptions);
+    });
+  }
+
+  /**
+   * Materialize the prepared result for this named query.
+   *
+   * @return A promise to the PreparedResult containing generated SQL.
+   */
+  public getPreparedResult(options?: CompileQueryOptions): Promise<PreparedResult> {
+    return this.loadPreparedResult(options).getPreparedResult();
   }
 }
 
@@ -826,12 +956,8 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // If buildManifest is provided, compute queryDigests
       let queryDigests: Record<string, string> | undefined;
       if (mergedOptions.buildManifest) {
-        const buildModel = new BuildModel(
-          preparedQuery._modelDef,
-          this.runtime.connections
-        );
-        await buildModel.getBuildGraphs();
-        queryDigests = buildModel.getQueryDigests();
+        await preparedQuery.model.getBuildGraphs(this.runtime.connections);
+        queryDigests = preparedQuery.model.getQueryDigests();
       }
 
       // Build PrepareResultOptions from CompileQueryOptions + computed queryDigests

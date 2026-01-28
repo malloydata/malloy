@@ -39,3 +39,45 @@ export interface CompileQueryOptions {
   /** If true, throw when a persist query's digest is not in the manifest */
   strictPersist?: boolean;
 }
+
+// =============================================================================
+// Build Graph Types (for persistence)
+// =============================================================================
+
+/**
+ * Identity of a node in the build graph.
+ */
+export interface BuildNodeId {
+  /** Human-readable query name */
+  name: string;
+  /** Unique identity for cache lookup */
+  queryDigest: string;
+}
+
+/**
+ * A node in the build graph.
+ */
+export interface BuildNode {
+  id: BuildNodeId;
+  /** Dependencies of this node. Present for DAG reconstruction, not build ordering. */
+  dependsOn: BuildNodeId[];
+}
+
+/**
+ * An ordered build plan for queries on a single connection.
+ *
+ * The leveled array structure determines build order: queries in the same
+ * level can be built in parallel, levels must be built sequentially.
+ *
+ * The `dependsOn` fields in each BuildNode are for reconstructing the
+ * original dependency DAG, not for determining build order.
+ *
+ * Builders can group graphs by `connectionName` to parallelize across
+ * different database connections.
+ */
+export interface BuildGraph {
+  /** The connection all queries in this graph run on */
+  connectionName: string;
+  /** The leveled build nodes */
+  nodes: BuildNode[][];
+}

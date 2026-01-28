@@ -1,0 +1,30 @@
+// Test file for mock_builder.ts
+
+source: flights is duckdb.table('flights') extend {
+  measure: flight_count is count()
+}
+
+// Simple persist query - will get auto-generated table name
+#@ persist
+query: carrier_stats is flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+
+// Persist query with explicit table name
+#@ persist name=origin_summary
+query: origin_stats is flights -> {
+  group_by: origin
+  aggregate: flight_count
+}
+
+// Create a source from the first persist query
+source: carrier_stats_source is carrier_stats
+
+// This persist query depends on carrier_stats
+#@ persist name=top_carriers
+query: top_carrier_list is carrier_stats_source -> {
+  select: *
+  order_by: flight_count desc
+  limit: 10
+}

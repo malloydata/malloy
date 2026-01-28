@@ -5,7 +5,6 @@
 
 import {runtimeFor} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import {BuildModel} from '@malloydata/malloy';
 import {buildInternalGraph} from '@malloydata/malloy/test/internal';
 
 const tstDB = 'duckdb';
@@ -304,33 +303,33 @@ describe('persistent query support', () => {
     });
   });
 
-  describe('BuildQuery', () => {
+  describe('NamedQuery', () => {
     test.todo('getDigest returns undefined before graph computation');
     test.todo('getDigest returns digest after graph computation');
-    test.todo('compileQuery returns SQL without manifest');
-    test.todo('compileQuery substitutes table names with manifest');
+    test.todo('getPreparedResult returns SQL without manifest');
+    test.todo('getPreparedResult substitutes table names with manifest');
     test.todo(
-      'compileQuery with stale manifest (digest not found) expands query'
+      'getPreparedResult with stale manifest (digest not found) expands query'
     );
     test.todo(
-      'compileQuery with strict mode throws when digest not in manifest'
+      'getPreparedResult with strict mode throws when digest not in manifest'
     );
   });
 
-  describe('BuildModel', () => {
-    test.todo('getBuildQuery returns BuildQuery for valid name');
-    test.todo('getBuildQuery throws for non-existent name');
-    test.todo('getBuildQuery throws for source name (not a query)');
+  describe('Model named query methods', () => {
+    test.todo('getNamedQuery returns NamedQuery for valid name');
+    test.todo('getNamedQuery throws for non-existent name');
+    test.todo('getNamedQuery throws for source name (not a query)');
     test.todo('getNamedQueries returns all named queries');
     test.todo('getNamedQueries excludes sources');
     test.todo('getPersistQueries filters to only #@ persist queries');
     test.todo('getPersistQueries returns empty array when no persist queries');
   });
 
-  describe('BuildModel.getBuildGraphs', () => {
+  describe('Model.getBuildGraphs', () => {
     it('returns leaves from multiple disjoint dependency chains', async () => {
       // Two independent chains: A→B and C→D
-      // Minimal build set should include both B and D
+      // Each leaf gets its own graph, preserving file order
       const testModel = wrapTestModel(
         tstRuntime,
         `
@@ -361,25 +360,26 @@ describe('persistent query support', () => {
       );
 
       const model = await testModel.model.getModel();
-      const buildModel = new BuildModel(model._modelDef, connections);
-      const graphs = await buildModel.getBuildGraphs();
+      const graphs = await model.getBuildGraphs(connections);
 
-      expect(graphs).toHaveLength(1);
-      const graph = graphs[0];
+      // Two graphs, one per leaf (preserving file order)
+      expect(graphs).toHaveLength(2);
 
-      // Single level with both leaves
-      expect(graph).toHaveLength(1);
-      expect(graph[0]).toHaveLength(2);
+      // Each graph has connectionName and nodes
+      expect(graphs[0].connectionName).toBe('duckdb');
+      expect(graphs[1].connectionName).toBe('duckdb');
 
-      const leafNames = graph[0].map(n => n.id.name).sort();
-      expect(leafNames).toEqual(['query_b', 'query_d']);
+      // First graph: query_b
+      expect(graphs[0].nodes[0][0].id.name).toBe('query_b');
+      expect(graphs[0].nodes[0][0].dependsOn.map(d => d.name)).toEqual([
+        'query_a',
+      ]);
 
-      // Verify dependencies
-      const nodeB = graph[0].find(n => n.id.name === 'query_b')!;
-      const nodeD = graph[0].find(n => n.id.name === 'query_d')!;
-
-      expect(nodeB.dependsOn.map(d => d.name)).toEqual(['query_a']);
-      expect(nodeD.dependsOn.map(d => d.name)).toEqual(['query_c']);
+      // Second graph: query_d
+      expect(graphs[1].nodes[0][0].id.name).toBe('query_d');
+      expect(graphs[1].nodes[0][0].dependsOn.map(d => d.name)).toEqual([
+        'query_c',
+      ]);
     });
 
     it('returns minimal build set (only leaf queries, not intermediate dependencies)', async () => {
@@ -408,20 +408,20 @@ describe('persistent query support', () => {
       );
 
       const model = await testModel.model.getModel();
-      const buildModel = new BuildModel(model._modelDef, connections);
-      const graphs = await buildModel.getBuildGraphs();
+      const graphs = await model.getBuildGraphs(connections);
 
       // Should have one graph with only query_c (the leaf)
       // query_a and query_b are dependencies, not targets
       expect(graphs).toHaveLength(1);
       const graph = graphs[0];
 
+      expect(graph.connectionName).toBe('duckdb');
       // Minimal build set: only the leaf node
-      expect(graph).toHaveLength(1);
-      expect(graph[0]).toHaveLength(1);
-      expect(graph[0][0].id.name).toBe('query_c');
+      expect(graph.nodes).toHaveLength(1);
+      expect(graph.nodes[0]).toHaveLength(1);
+      expect(graph.nodes[0][0].id.name).toBe('query_c');
       // query_c depends on query_a and query_b (transitively)
-      const depNames = graph[0][0].dependsOn.map(d => d.name).sort();
+      const depNames = graph.nodes[0][0].dependsOn.map(d => d.name).sort();
       expect(depNames).toEqual(['query_a', 'query_b']);
     });
 
@@ -429,9 +429,8 @@ describe('persistent query support', () => {
       const model = await singlePersistQueryModel().model.getModel();
 
       // Get digest with original connection
-      const buildModel1 = new BuildModel(model._modelDef, connections);
-      const graphs1 = await buildModel1.getBuildGraphs();
-      const digest1 = graphs1[0][0][0].id.queryDigest;
+      const graphs1 = await model.getBuildGraphs(connections);
+      const digest1 = graphs1[0].nodes[0][0].id.queryDigest;
 
       // Mock getDigest to return a different value
       const spy = jest
@@ -439,10 +438,10 @@ describe('persistent query support', () => {
         .mockReturnValue('different-connection-digest');
 
       try {
-        // Get digest with mocked connection
-        const buildModel2 = new BuildModel(model._modelDef, connections);
-        const graphs2 = await buildModel2.getBuildGraphs();
-        const digest2 = graphs2[0][0][0].id.queryDigest;
+        // Get digest with mocked connection - need fresh model to recompute
+        const model2 = await singlePersistQueryModel().model.getModel();
+        const graphs2 = await model2.getBuildGraphs(connections);
+        const digest2 = graphs2[0].nodes[0][0].id.queryDigest;
 
         expect(digest1).not.toBe(digest2);
       } finally {
@@ -463,8 +462,7 @@ describe('persistent query support', () => {
       `
       );
       const model = await testModel.model.getModel();
-      const buildModel = new BuildModel(model._modelDef, connections);
-      const graphs = await buildModel.getBuildGraphs();
+      const graphs = await model.getBuildGraphs(connections);
 
       expect(graphs).toEqual([]);
     });
@@ -496,44 +494,43 @@ describe('persistent query support', () => {
       `
       ).model.getModel();
 
-      const buildModel1 = new BuildModel(model1._modelDef, connections);
-      const buildModel2 = new BuildModel(model2._modelDef, connections);
+      const graphs1 = await model1.getBuildGraphs(connections);
+      const graphs2 = await model2.getBuildGraphs(connections);
 
-      const graphs1 = await buildModel1.getBuildGraphs();
-      const graphs2 = await buildModel2.getBuildGraphs();
-
-      const digest1 = graphs1[0][0][0].id.queryDigest;
-      const digest2 = graphs2[0][0][0].id.queryDigest;
+      const digest1 = graphs1[0].nodes[0][0].id.queryDigest;
+      const digest2 = graphs2[0].nodes[0][0].id.queryDigest;
 
       expect(digest1).not.toBe(digest2);
     });
 
     it('returns build graph with digests for persist query', async () => {
       const model = await singlePersistQueryModel().model.getModel();
-      const buildModel = new BuildModel(model._modelDef, connections);
-      const graphs = await buildModel.getBuildGraphs();
+      const graphs = await model.getBuildGraphs(connections);
 
       expect(graphs).toHaveLength(1);
-      expect(graphs[0]).toMatchObject([
-        [
-          {
-            id: {name: 'carrier_counts', queryDigest: expect.any(String)},
-            dependsOn: [],
-          },
+      expect(graphs[0]).toMatchObject({
+        connectionName: 'duckdb',
+        nodes: [
+          [
+            {
+              id: {name: 'carrier_counts', queryDigest: expect.any(String)},
+              dependsOn: [],
+            },
+          ],
         ],
-      ]);
+      });
     });
 
     it('returns only leaf node with dependencies for dependent queries', async () => {
       const model = await twoLevelDependentQueriesModel().model.getModel();
-      const buildModel = new BuildModel(model._modelDef, connections);
-      const graphs = await buildModel.getBuildGraphs();
+      const graphs = await model.getBuildGraphs(connections);
 
       expect(graphs).toHaveLength(1);
       const graph = graphs[0];
 
+      expect(graph.connectionName).toBe('duckdb');
       // Minimal build set: only top_carriers (the leaf), not base_stats
-      expect(graph).toMatchObject([
+      expect(graph.nodes).toMatchObject([
         [
           {
             id: {name: 'top_carriers', queryDigest: expect.any(String)},

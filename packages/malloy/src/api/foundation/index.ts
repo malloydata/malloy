@@ -10,6 +10,9 @@ export type {
   ParseOptions,
   CompileOptions,
   CompileQueryOptions,
+  BuildNodeId,
+  BuildNode,
+  BuildGraph,
 } from './types';
 
 // URL readers and connection helpers
@@ -64,6 +67,7 @@ export {
   Query,
   QueryField,
   Model,
+  NamedQuery,
   PreparedQuery,
   PreparedResult,
 } from './core';
@@ -87,6 +91,7 @@ export {
   ConnectionRuntime,
   SingleConnectionRuntime,
   ModelMaterializer,
+  NamedQueryMaterializer,
   QueryMaterializer,
   PreparedResultMaterializer,
   ExploreMaterializer,

@@ -162,6 +162,7 @@ export {
 export type {LogMessage, TranslateResponse} from './lang';
 export {
   Model,
+  NamedQuery,
   Malloy,
   Runtime,
   AtomicFieldType,
@@ -178,6 +179,7 @@ export {
   PreparedResult,
   Result,
   QueryMaterializer,
+  NamedQueryMaterializer,
   CSVWriter,
   JSONWriter,
   Parse,
@@ -249,6 +251,5 @@ export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
 export {annotationToTag, annotationToTaglines} from './annotation';
-export {BuildModel, BuildQuery} from './build_api';
-export type {BuildGraph, BuildNode, BuildNodeId} from './build_api';
+export type {BuildGraph, BuildNode, BuildNodeId} from './api/foundation';
 export {makeDigest} from './model';
