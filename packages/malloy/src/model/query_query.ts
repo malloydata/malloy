@@ -771,7 +771,7 @@ export class QueryQuery extends QueryField {
       case 'query_source': {
         // TODO(persist): This is where manifest substitution will happen.
         // If qs.prepareResultOptions has a manifest and this query has #@ persist:
-        //   1. Look up query name in model.persistDigestMap to get digest
+        //   1. Look up query name in model.persistedQueryDigests to get digest
         //   2. Look up digest in manifest to get table name
         //   3. If found, return dialect.quoteTablePath(tableName)
         //   4. If not found and strict mode, throw error

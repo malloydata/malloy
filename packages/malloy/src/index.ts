@@ -185,7 +185,7 @@ export {
   Explore,
   InMemoryModelCache,
   CacheManager,
-} from './malloy';
+} from './api/foundation';
 export type {
   PreparedQuery,
   Field,
@@ -212,7 +212,7 @@ export type {
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
-} from './malloy';
+} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,

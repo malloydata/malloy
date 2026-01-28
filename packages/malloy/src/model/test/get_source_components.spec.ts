@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Model} from '../../malloy';
+import {Model} from '../../api/foundation';
 import type {
   TableSourceDef,
   SQLSourceDef,
@@ -279,7 +279,7 @@ describe('Explore.getSourceComponents', () => {
     // Create a model with a query source explore
     // We need to mock the PreparedQuery behavior for this test
     const originalPreparedQuery =
-      jest.requireActual('../../malloy').PreparedQuery;
+      jest.requireActual('../../api/foundation').PreparedQuery;
     jest
       .spyOn(originalPreparedQuery.prototype, 'getPreparedResult')
       .mockReturnValue({
