@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as crypto from 'crypto';
 import type {
   RunSQLOptions,
   MalloyQueryData,
@@ -46,6 +45,7 @@ import {
   TinyParser,
   mkArrayDef,
   sqlKey,
+  makeDigest,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -272,6 +272,14 @@ export class SnowflakeConnection
     return true;
   }
 
+  public getDigest(): string {
+    const scratch = this.scratchSpace
+      ? `${this.scratchSpace.database}:${this.scratchSpace.schema}`
+      : '';
+    const data = `snowflake:${this.name}:${scratch}`;
+    return makeDigest(data);
+  }
+
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
     return {};
   }
@@ -281,8 +289,7 @@ export class SnowflakeConnection
   }
 
   private getTempViewName(sqlCommand: string): string {
-    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
-    return `tt${hash}`;
+    return `tt${makeDigest(sqlCommand)}`;
   }
 
   public async runSQL(

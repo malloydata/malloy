@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as crypto from 'crypto';
 import type {
   Job,
   PagedResponse,
@@ -56,6 +55,7 @@ import {
   StandardSQLDialect,
   toAsyncGenerator,
   sqlKey,
+  makeDigest,
 } from '@malloydata/malloy';
 import type {TableMetadata} from '@malloydata/malloy/connection';
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -239,6 +239,11 @@ export class BigQueryConnection
 
   public canStream(): this is StreamingConnection {
     return true;
+  }
+
+  public getDigest(): string {
+    const data = `bigquery:${this.projectId}:${this.location ?? 'US'}`;
+    return makeDigest(data);
   }
 
   public get supportsNesting(): boolean {
@@ -426,7 +431,7 @@ export class BigQueryConnection
    *
    */
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
+    const hash = makeDigest(sqlCommand);
 
     const tempTableName: string | undefined = this.temporaryTables.get(hash);
     if (tempTableName !== undefined) {

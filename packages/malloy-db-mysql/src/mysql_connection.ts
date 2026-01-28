@@ -20,9 +20,9 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {MySQLDialect, sqlKey} from '@malloydata/malloy';
+import {MySQLDialect, sqlKey, makeDigest} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
-import {randomUUID, createHash} from 'crypto';
+import {randomUUID} from 'crypto';
 import * as MYSQL from 'mysql2/promise';
 
 export interface MySQLConfiguration {
@@ -106,7 +106,7 @@ export class MySQLConnection
   }
 
   async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = createHash('md5').update(sqlCommand).digest('hex');
+    const hash = makeDigest(sqlCommand);
     const tableName = `tt${hash}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
@@ -126,6 +126,12 @@ export class MySQLConnection
 
   isPool(): this is PooledConnection {
     return false;
+  }
+
+  public getDigest(): string {
+    const {host, port, database} = this.config;
+    const data = `mysql:${host ?? ''}:${port ?? 3306}:${database ?? ''}`;
+    return makeDigest(data);
   }
 
   canPersist(): this is PersistSQLResults {

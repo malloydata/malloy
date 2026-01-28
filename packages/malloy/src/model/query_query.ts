@@ -73,7 +73,6 @@ import {
   sqlFullChildReference,
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {shouldMaterialize} from './materialization/utils';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -770,58 +769,54 @@ export class QueryQuery extends QueryField {
       case 'nest_source':
         return qs.structDef.pipeSQL;
       case 'query_source': {
-        // cache derived table.
-        if (
-          qs.prepareResultOptions?.replaceMaterializedReferences &&
-          shouldMaterialize(qs.structDef.query.annotation)
-        ) {
-          return stageWriter.addMaterializedQuery(
-            getIdentifier(qs.structDef),
-            qs.structDef.query,
-            qs.prepareResultOptions?.materializedTablePrefix
-          );
-        } else {
-          // Inline what loadQuery does, circularity workaround, finds the
-          // the name of the last stage
-          const query = qs.structDef.query;
-          const turtleDef: TurtleDefPlusFilters = {
-            type: 'turtle',
-            name: 'ignoreme',
-            pipeline: query.pipeline,
-            filterList: query.filterList,
-          };
+        // TODO(persist): This is where manifest substitution will happen.
+        // If qs.prepareResultOptions has a manifest and this query has #@ persist:
+        //   1. Look up query name in model.persistDigestMap to get digest
+        //   2. Look up digest in manifest to get table name
+        //   3. If found, return dialect.quoteTablePath(tableName)
+        //   4. If not found and strict mode, throw error
+        //   5. Otherwise fall through to inline the SQL
 
-          const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+        // Inline what loadQuery does, circularity workaround, finds the
+        // the name of the last stage
+        const query = qs.structDef.query;
+        const turtleDef: TurtleDefPlusFilters = {
+          type: 'turtle',
+          name: 'ignoreme',
+          pipeline: query.pipeline,
+          filterList: query.filterList,
+        };
 
-          let sourceStruct: QueryStruct;
-          if (typeof structRef === 'string') {
-            const struct = this.structRefToQueryStruct(structRef);
-            if (!struct) {
-              throw new Error(
-                `Unexpected reference to an undefined source '${structRef}'`
-              );
-            }
-            sourceStruct = struct;
-          } else {
-            sourceStruct = new QueryStruct(
-              structRef,
-              query.sourceArguments,
-              {model: this.parent.getModel()},
-              qs.prepareResultOptions
+        const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+
+        let sourceStruct: QueryStruct;
+        if (typeof structRef === 'string') {
+          const struct = this.structRefToQueryStruct(structRef);
+          if (!struct) {
+            throw new Error(
+              `Unexpected reference to an undefined source '${structRef}'`
             );
           }
-
-          const q = QueryQuery.makeQuery(
-            turtleDef,
-            sourceStruct,
-            stageWriter,
-            qs.parent !== undefined, // isJoinedSubquery
-            this.structRefToQueryStruct
+          sourceStruct = struct;
+        } else {
+          sourceStruct = new QueryStruct(
+            structRef,
+            query.sourceArguments,
+            {model: this.parent.getModel()},
+            qs.prepareResultOptions
           );
-
-          const ret = q.generateSQLFromPipeline(stageWriter);
-          return ret.lastStageName;
         }
+
+        const q = QueryQuery.makeQuery(
+          turtleDef,
+          sourceStruct,
+          stageWriter,
+          qs.parent !== undefined, // isJoinedSubquery
+          this.structRefToQueryStruct
+        );
+
+        const ret = q.generateSQLFromPipeline(stageWriter);
+        return ret.lastStageName;
       }
       default:
         throw new Error(

@@ -27,7 +27,6 @@
 //     create extension if not exists tsm_system_rows
 //
 
-import * as crypto from 'crypto';
 import type {
   Connection,
   ConnectionConfig,
@@ -45,7 +44,12 @@ import type {
   StructDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {PostgresDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
+import {
+  PostgresDialect,
+  mkArrayDef,
+  sqlKey,
+  makeDigest,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {Client, Pool} from 'pg';
@@ -159,6 +163,17 @@ export class PostgresConnection
 
   public canStream(): this is StreamingConnection {
     return true;
+  }
+
+  public getDigest(): string {
+    // If configReader is an object (not a function), use its properties
+    if (typeof this.configReader !== 'function') {
+      const {host, port, databaseName, connectionString} = this.configReader;
+      const data = `postgres:${host ?? ''}:${port ?? ''}:${databaseName ?? ''}:${connectionString ?? ''}`;
+      return makeDigest(data);
+    }
+    // Fall back to connection name if config is async
+    return makeDigest(`postgres:${this.name}`);
   }
 
   public get supportsNesting(): boolean {
@@ -434,7 +449,7 @@ export class PostgresConnection
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
+    const hash = makeDigest(sqlCommand);
     const tableName = `tt${hash}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;

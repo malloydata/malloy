@@ -44,6 +44,12 @@ export abstract class BaseConnection implements Connection {
 
   abstract get dialectName(): string;
 
+  /**
+   * Get a digest identifying this connection's target database.
+   * Used for cache key computation in persist manifests.
+   */
+  abstract getDigest(): string;
+
   /*
    * Dialects should implement fetchTableSchema and fetchSelectSchema. The
    * runtime calls fetchSchemaForTables and fetchSchemaForSQLStruct which

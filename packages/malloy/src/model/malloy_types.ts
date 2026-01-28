@@ -1157,7 +1157,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   compositeResolvedSourceDef?: SourceDef;
 }
 
-export type NamedQuery = Query & NamedObject;
+export type NamedQueryDef = Query & NamedObject;
 
 export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
 
@@ -1727,7 +1727,7 @@ export function getIdentifier(n: AliasedName): string {
 
 export type NamedModelObject =
   | SourceDef
-  | NamedQuery
+  | NamedQueryDef
   | FunctionDef
   | ConnectionDef;
 
@@ -1803,13 +1803,6 @@ export interface DrillSource {
   sourceArguments?: Record<string, Argument>;
 }
 
-export type QueryToMaterialize = {
-  id: string;
-  path: string;
-  source: string | undefined;
-  queryName: string;
-};
-
 export interface CompiledQuery extends DrillSource {
   structs: SourceDef[];
   sql: string;
@@ -1819,9 +1812,6 @@ export interface CompiledQuery extends DrillSource {
   connectionName: string;
   queryTimezone?: string;
   annotation?: Annotation;
-  // Map of query unique id to the SQL.
-  dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
-  materialization?: QueryToMaterialize;
   defaultRowLimitAdded?: number;
 }
 
@@ -1901,11 +1891,15 @@ export interface SearchValueMapResult {
 }
 
 export interface PrepareResultOptions {
-  replaceMaterializedReferences?: boolean;
-  materializedTablePrefix?: string;
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
   eventStream?: EventStream;
+  /** Manifest of built tables (digest → entry), the build cache */
+  buildManifest?: BuildManifest;
+  /** Map from query name to digest (computed fresh via getBuildGraphs) */
+  queryDigests?: Record<string, string>;
+  /** If true, throw when a persist query's digest is not in the manifest */
+  strictPersist?: boolean;
 }
 
 type UTD =
@@ -2005,6 +1999,35 @@ export function mergeUniqueKeyRequirement(
   return {
     isCount: existing.isCount || newInfo.isCount,
   };
+}
+
+/**
+ * Entry in a BuildManifest mapping a query digest to its persisted table.
+ */
+export interface BuildManifestEntry {
+  /** The query digest (also the key in the entries map) */
+  queryDigest: string;
+  /** The table name where the query result is persisted */
+  tableName: string;
+  /** When this entry started building */
+  buildStartedAt: string;
+  /** When this entry finished building */
+  buildFinishedAt: string;
+}
+
+/**
+ * Manifest of persisted query results (the build cache).
+ * Used by compileQuery to substitute persist queries with table references.
+ */
+export interface BuildManifest {
+  /** URL of the model this manifest was built from */
+  modelUrl: string;
+  /** When this build run started */
+  buildStartedAt: string;
+  /** When this build run completed */
+  buildFinishedAt: string;
+  /** Map from query digest to built table entry */
+  buildEntries: Record<string, BuildManifestEntry>;
 }
 
 // clang-format on

@@ -10,9 +10,9 @@ packages/malloy/
 │   ├── lang/              # Translator: Parse tree → AST → IR (see src/lang/CONTEXT.md)
 │   ├── model/             # Compiler: IR → SQL (see src/model/CONTEXT.md)
 │   ├── dialect/           # Database-specific SQL generation
-│   ├── api/               # Public API interfaces
+│   ├── api/               # Alternative API styles (sessioned, stateless, async)
 │   ├── connection/        # Database connection abstractions
-│   └── malloy.ts          # Main entry point
+│   └── malloy.ts          # Public API classes (see MALLOY_API.md)
 ```
 
 ## Two-Phase Architecture
@@ -53,5 +53,6 @@ For detailed information about the compiler, see [src/model/CONTEXT.md](src/mode
 ## Subsystem Context
 
 For deeper details on specific subsystems:
+- [MALLOY_API.md](MALLOY_API.md) - Public API classes (Model, PreparedQuery, Runtime, Materializers)
 - [src/lang/CONTEXT.md](src/lang/CONTEXT.md) - Translator architecture (grammar, AST, IR generation)
 - [src/model/CONTEXT.md](src/model/CONTEXT.md) - Compiler architecture (SQL generation, expression compilation)

@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import crypto from 'crypto';
 import type {DuckDBBundles} from '@duckdb/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
+import {makeDigest} from '@malloydata/malloy';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   getBundles(): DuckDBBundles {
@@ -50,6 +50,6 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   }
 
   async createHash(sqlCommand: string): Promise<string> {
-    return crypto.createHash('md5').update(sqlCommand).digest('hex');
+    return makeDigest(sqlCommand);
   }
 }

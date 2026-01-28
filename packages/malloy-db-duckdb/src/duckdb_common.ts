@@ -94,6 +94,8 @@ export abstract class DuckDBCommon
     return true;
   }
 
+  public abstract getDigest(): string;
+
   protected abstract setup(): Promise<void>;
 
   protected abstract runDuckDBQuery(

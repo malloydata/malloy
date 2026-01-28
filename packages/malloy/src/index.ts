@@ -90,7 +90,7 @@ export type {
   QueryResultDef,
   QueryRunStats,
   QueryScalar,
-  NamedQuery,
+  NamedQueryDef,
   NamedModelObject,
   ExpressionType,
   FunctionDef,
@@ -125,6 +125,9 @@ export type {
   TimestamptzLiteralNode,
   TimeLiteralExpr,
   TypecastExpr,
+  // Build API types
+  BuildManifest,
+  BuildManifestEntry,
 } from './model';
 export {
   isSourceDef,
@@ -246,3 +249,6 @@ export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
 export {annotationToTag, annotationToTaglines} from './annotation';
+export {BuildModel, BuildQuery} from './build_api';
+export type {BuildGraph, BuildNode, BuildNodeId} from './build_api';
+export {makeDigest} from './model';

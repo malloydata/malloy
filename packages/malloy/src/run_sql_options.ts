@@ -39,8 +39,6 @@ export interface RunSQLOptions {
   modelAnnotation?: Annotation;
   /* This is an experimental feature */
   queryAnnotation?: Annotation;
-  /* Should we replace materialization with its references. */
-  replaceMaterializedReferences?: boolean;
   clientMetadata?: {
     sourceRefWithMetadata?: SourceRefWithMetadata;
   };
