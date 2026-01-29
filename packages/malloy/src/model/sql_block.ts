@@ -24,7 +24,7 @@
 import type {SQLSourceRequest} from '../lang/translate-response';
 import {makeQueryModel, type QueryModel} from './query_model';
 import type {SQLPhraseSegment, ModelDef} from './malloy_types';
-import {isSegmentSQL} from './malloy_types';
+import {isSegmentSQL, isSegmentSource} from './malloy_types';
 import {generateHash} from './utils';
 
 export function compileSQLInterpolation(
@@ -39,8 +39,34 @@ export function compileSQLInterpolation(
     if (isSegmentSQL(segment)) {
       selectStr += segment.sql;
       parenAlready = segment.sql.match(/\(\s*$/) !== null;
+    } else if (isSegmentSource(segment)) {
+      // PersistableSourceDef (sql_select or query_source)
+      let compiledSql: string;
+      if (segment.type === 'sql_select') {
+        compiledSql = segment.selectStr;
+      } else {
+        // query_source - compile the inner query
+        if (!queryModel) {
+          if (!partialModel) {
+            throw new Error(
+              'Internal error: Partial model missing when compiling SQL block'
+            );
+          }
+          queryModel = makeQueryModel(partialModel);
+        }
+        compiledSql = queryModel.compileQuery(
+          segment.query,
+          {
+            defaultRowLimit: undefined,
+            isPartialQuery: true,
+          },
+          false
+        ).sql;
+      }
+      selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
+      parenAlready = false;
     } else {
-      // TODO catch exceptions and throw errors ...
+      // Query segment
       if (!queryModel) {
         if (!partialModel) {
           throw new Error(
@@ -58,7 +84,6 @@ export function compileSQLInterpolation(
         false
       ).sql;
       selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
-      // console.log(selectStr);
       parenAlready = false;
     }
   }

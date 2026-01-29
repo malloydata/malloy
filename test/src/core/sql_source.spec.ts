@@ -46,6 +46,26 @@ describe('turducken', () => {
   });
 });
 
+describe('source interpolation', () => {
+  test('sql source in interpolation', async () => {
+    const q = runtime.loadQuery(`
+      source: sql_src is duckdb.sql("SELECT 1 as one")
+      run: duckdb.sql("""SELECT one FROM %{ sql_src }""") -> { select: * }
+    `);
+    const result = await q.run();
+    expect(result.data.value[0]['one']).toBe(1);
+  });
+
+  test('query source in interpolation', async () => {
+    const q = runtime.loadQuery(`
+      source: query_src is duckdb.sql("SELECT 1 as one") -> { select: * }
+      run: duckdb.sql("""SELECT one FROM %{ query_src }""") -> { select: * }
+    `);
+    const result = await q.run();
+    expect(result.data.value[0]['one']).toBe(1);
+  });
+});
+
 afterAll(async () => {
   await runtime.connection.close();
 });

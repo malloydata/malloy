@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {SQLPhraseSegment} from '../../../model/malloy_types';
+import {
+  isPersistableSourceDef,
+  type SQLPhraseSegment,
+} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
 import {SourceQueryElement} from '../source-query-elements/source-query-element';
@@ -55,21 +58,35 @@ export class SQLString extends MalloyElement {
     }
   }
 
-  sqlPhrases(): SQLPhraseSegment[] {
+  sqlPhrases(): [boolean, SQLPhraseSegment[]] {
     const ret: SQLPhraseSegment[] = [];
+    let valid = true;
     for (const el of this.elements) {
       if (typeof el === 'string') {
         ret.push({sql: el});
+      } else if (el.isSource()) {
+        // Check if it's a persistable source first
+        const source = el.getSource();
+        if (source) {
+          const sourceDef = source.getSourceDef(undefined);
+          if (isPersistableSourceDef(sourceDef)) {
+            ret.push(sourceDef);
+            continue;
+          }
+        }
+        el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
+        valid = false;
       } else {
+        // Not a source - try as a query
         const queryObject = el.getQuery();
         if (queryObject) {
           ret.push(queryObject.query());
         } else {
-          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
+          valid = false;
         }
       }
     }
-    return ret;
+    return [valid, ret];
   }
 }
 

@@ -44,15 +44,20 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlSourceRequest(doc: Document): SQLSourceRequest {
+  sqlSourceRequest(doc: Document): SQLSourceRequest | undefined {
     const partialModel = this.select.containsQueries
       ? doc.modelDef()
       : undefined;
-    return compileSQLInterpolation(
-      this.select.sqlPhrases(),
-      this.connectionName.refString,
-      partialModel
-    );
+
+    const [valid, phrases] = this.select.sqlPhrases();
+    if (valid) {
+      return compileSQLInterpolation(
+        phrases,
+        this.connectionName.refString,
+        partialModel
+      );
+    }
+    return undefined;
   }
 
   structRef(): InvokedStructRef {
@@ -92,6 +97,9 @@ export class SQLSource extends Source {
       this.requestBlock = this.sqlSourceRequest(doc);
     }
     const sql = this.requestBlock;
+    if (sql === undefined) {
+      return undefined;
+    }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
       this.logError(
@@ -125,10 +133,6 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     }
     if (this.requestBlock === undefined) {
-      this.logError(
-        'failed-to-fetch-sql-source-schema',
-        'Expected to have already compiled the sql block'
-      );
       return ErrorFactory.structDef;
     }
     const sql = this.requestBlock;
@@ -157,6 +161,12 @@ export class SQLSource extends Source {
       const modelAnnotation = fromDoc?.currentModelAnnotation();
       if (modelAnnotation) {
         locStruct.modelAnnotation = modelAnnotation;
+      }
+      if (this.select.containsQueries) {
+        const [_valid, phrases] = this.select.sqlPhrases();
+        if (phrases.length > 0) {
+          locStruct.selectSegments = phrases;
+        }
       }
       return locStruct;
     } else {
