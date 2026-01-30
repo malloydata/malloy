@@ -82,6 +82,7 @@ export class SQLString extends MalloyElement {
         if (queryObject) {
           ret.push(queryObject.query());
         } else {
+          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
           valid = false;
         }
       }

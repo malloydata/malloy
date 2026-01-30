@@ -134,6 +134,9 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     }
     if (this.requestBlock === undefined) {
+      // Means we couldn't make a source request or there was
+      // a problem with the source request, both will have logged
+      // errors already.
       return ErrorFactory.structDef;
     }
     const sql = this.requestBlock;
