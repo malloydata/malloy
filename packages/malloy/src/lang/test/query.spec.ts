@@ -37,6 +37,7 @@ import {
   isJoined,
   isQuerySegment,
   isAtomic,
+  hasExpression,
 } from '../../model';
 
 function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
@@ -241,6 +242,42 @@ describe('query:', () => {
           }
         }`;
       expect(nestExclude).toTranslate();
+    });
+    test('ungrouped from source matches ungrouped from query', () => {
+      // https://github.com/malloydata/malloy/issues/2137
+      // this query, when run, doesn't apply the ungrouping to the field which
+      // was defined in the source so i wrote this test which passes to
+      // make sure that the definition of the field referenced does
+      // contain the ungrouping gesture
+      const errQuery = model`
+        run: _db_.table('malloytest.airports') extend {
+          dimension: first_letter is substr(state, 1, 1)
+          measure:
+          total_elev is elevation.sum()
+          all_total_elev is all(total_elev)
+          all_total_elev_first_letter is all(total_elev, first_letter)
+        } -> {
+        group_by: first_letter
+          aggregate:
+            all_total_elev_first_letter
+            all_total_elev_first_letter2 is all(total_elev, first_letter)
+        }`;
+      expect(errQuery).toTranslate();
+      const q = errQuery.translator.getQuery(0);
+      expect(q).toBeDefined();
+      const f = q!.structRef;
+      expect(typeof f).not.toBe('string');
+      if (typeof f !== 'string') {
+        const ate = f.fields.find(
+          fd => fd.name === 'all_total_elev_first_letter'
+        );
+        expect(ate).toBeDefined();
+        if (hasExpression(ate!)) {
+          expect(ate.e.node).toEqual('all');
+        } else {
+          expect(hasExpression(ate!)).toBe(true);
+        }
+      }
     });
   });
   describe('query operation typechecking', () => {
