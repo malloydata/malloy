@@ -29,7 +29,7 @@ import {generateHash} from './utils';
 
 /**
  * The translator needs to know the output schema of an SQLSourceDef
- * this will prepare an SQL string sutiable to answer that question.
+ * this will prepare an SQL string suitable to answer that question.
  */
 export function getSourceRequest(
   select: SQLPhraseSegment[],

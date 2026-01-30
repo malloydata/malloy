@@ -2415,7 +2415,12 @@ class QueryQueryRaw extends QueryQuery {
         'Invalid struct for QueryQueryRaw, currently only supports SQL'
       );
     }
-    return stageWriter.addStage(getCompiledSQL(this.parent.structDef, this.parent.prepareResultOptions ?? {}));
+    return stageWriter.addStage(
+      getCompiledSQL(
+        this.parent.structDef,
+        this.parent.prepareResultOptions ?? {}
+      )
+    );
   }
 
   prepare() {

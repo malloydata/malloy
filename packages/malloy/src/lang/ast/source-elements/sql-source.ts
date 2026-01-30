@@ -21,10 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  StructDef,
-  InvokedStructRef,
-  SourceDef,
+import {
+  isSegmentSource,
+  type StructDef,
+  type InvokedStructRef,
+  type SourceDef,
 } from '../../../model/malloy_types';
 import {getSourceRequest, sqlKey} from '../../../model/sql_block';
 import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
@@ -164,7 +165,7 @@ export class SQLSource extends Source {
       }
       if (this.select.containsQueries) {
         const [_valid, phrases] = this.select.sqlPhrases();
-        if (phrases.length > 0) {
+        if (phrases.some(isSegmentSource)) {
           locStruct.selectSegments = phrases;
         }
       }
