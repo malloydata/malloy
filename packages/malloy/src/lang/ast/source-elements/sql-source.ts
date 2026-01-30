@@ -21,12 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {
-  StructDef,
-  InvokedStructRef,
-  SourceDef,
+import {
+  isSegmentSource,
+  type StructDef,
+  type InvokedStructRef,
+  type SourceDef,
 } from '../../../model/malloy_types';
-import {compileSQLInterpolation, sqlKey} from '../../../model/sql_block';
+import {getSourceRequest, sqlKey} from '../../../model/sql_block';
 import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
@@ -44,15 +45,20 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlSourceRequest(doc: Document): SQLSourceRequest {
+  sqlSourceRequest(doc: Document): SQLSourceRequest | undefined {
     const partialModel = this.select.containsQueries
       ? doc.modelDef()
       : undefined;
-    return compileSQLInterpolation(
-      this.select.sqlPhrases(),
-      this.connectionName.refString,
-      partialModel
-    );
+
+    const [valid, phrases] = this.select.sqlPhrases();
+    if (valid) {
+      return getSourceRequest(
+        phrases,
+        this.connectionName.refString,
+        partialModel
+      );
+    }
+    return undefined;
   }
 
   structRef(): InvokedStructRef {
@@ -92,6 +98,9 @@ export class SQLSource extends Source {
       this.requestBlock = this.sqlSourceRequest(doc);
     }
     const sql = this.requestBlock;
+    if (sql === undefined) {
+      return undefined;
+    }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
       this.logError(
@@ -125,10 +134,9 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     }
     if (this.requestBlock === undefined) {
-      this.logError(
-        'failed-to-fetch-sql-source-schema',
-        'Expected to have already compiled the sql block'
-      );
+      // Means we couldn't make a source request or there was
+      // a problem with the source request, both will have logged
+      // errors already.
       return ErrorFactory.structDef;
     }
     const sql = this.requestBlock;
@@ -157,6 +165,12 @@ export class SQLSource extends Source {
       const modelAnnotation = fromDoc?.currentModelAnnotation();
       if (modelAnnotation) {
         locStruct.modelAnnotation = modelAnnotation;
+      }
+      if (this.select.containsQueries) {
+        const [_valid, phrases] = this.select.sqlPhrases();
+        if (phrases.some(isSegmentSource)) {
+          locStruct.selectSegments = phrases;
+        }
       }
       return locStruct;
     } else {

@@ -22,7 +22,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TestTranslator, aTableDef} from './test-translator';
+import {
+  TEST_DIALECT,
+  TestTranslator,
+  aTableDef,
+  errorMessage,
+  model,
+} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
 import type {SQLSourceDef} from '../../model';
@@ -40,7 +46,7 @@ describe('connection sql()', () => {
       [key]: {
         type: 'sql_select',
         name: key,
-        dialect: 'standardsql',
+        dialect: TEST_DIALECT,
         connection: cname,
         selectStr: selStmt,
         fields: aTableDef.fields,
@@ -48,43 +54,44 @@ describe('connection sql()', () => {
     };
   }
 
+  function translateWithSchemas(m: TestTranslator): void {
+    for (;;) {
+      const response = m.translate();
+      if (response.compileSQL) {
+        m.update({compileSQL: makeSchemaResponse(response.compileSQL)});
+      } else {
+        break;
+      }
+    }
+  }
+
   test('source from sql', () => {
-    const model = new TestTranslator(`
+    const m = new TestTranslator(`
       source: users is aConnection.sql("""${selStmt}""")
       source: malloyUsers is users extend { primary_key: ai }
     `);
-    expect(model).toParse();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    if (needs) {
-      model.update({compileSQL: makeSchemaResponse(needs)});
-      expect(model).toTranslate();
-      const users = model.getSourceDef('malloyUsers');
-      expect(users).toBeDefined();
-    }
+    translateWithSchemas(m);
+    expect(m).toTranslate();
+    const users = m.getSourceDef('malloyUsers');
+    expect(users).toBeDefined();
   });
 
   test('source from imported sql-based-source', () => {
     const createModel = `
       source: malloyUsers is _db_.sql('${selStmt}') extend { primary_key: ai }
     `;
-    const model = new TestTranslator(`
+    const m = new TestTranslator(`
       import "createModel.malloy"
       source: importUsers is malloyUsers
       run: malloyUsers -> { select: * }
       run: importUsers -> { select: * }
     `);
-    model.importZone.define(
+    m.importZone.define(
       'internal://test/langtests/createModel.malloy',
       createModel
     );
-    expect(model).toParse();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    model.update({compileSQL: makeSchemaResponse(needs!)});
-    expect(model).toTranslate();
+    translateWithSchemas(m);
+    expect(m).toTranslate();
   });
 
   it('simple turducken', () => {
@@ -136,17 +143,13 @@ describe('connection sql()', () => {
     expect(m).toParse();
   });
   test('source from extended sql-based-source', () => {
-    const model = new TestTranslator(`
+    const m = new TestTranslator(`
       source: sql_block is aConnection.sql("""${selStmt}""")
       source: malloy_source is sql_block extend { primary_key: ai }
     `);
-    expect(model).toParse();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    model.update({compileSQL: makeSchemaResponse(needs!)});
-    expect(model).toTranslate();
-    const modelDef = model?.translate()?.modelDef;
+    translateWithSchemas(m);
+    expect(m).toTranslate();
+    const modelDef = m.translate()?.modelDef;
 
     // this tests the underlying api that .extendModel calls
     const extModel = new MalloyTranslator('sqlblocktest://main');
@@ -158,5 +161,37 @@ describe('connection sql()', () => {
     // because extModel is not a TestTranslator we can't use the hotness
     expect(tr.problems).toEqual([]);
     expect(tr.modelDef).toBeDefined();
+  });
+
+  describe('interpolations in sql blocks', () => {
+    test('non-persistable source in interpolation fails', () => {
+      expect(
+        'source: wrapper is aConnection.sql("""SELECT * FROM %{ a }""")'
+      ).toLog(errorMessage('Cannot expand into a query'));
+    });
+    test('sql block as source in interpolation', () => {
+      const m = model`
+        source: sql_src is  aConnection.sql("""${selStmt}""")
+        run: aConnection.sql("""SELECT * FROM %{ sql_src }""") -> { select: * }
+      `;
+      translateWithSchemas(m.translator);
+      expect(m).toTranslate();
+    });
+    test('sql block as query in interpolation', () => {
+      const m = model`
+        query: sql_query is  aConnection.sql("""${selStmt}""")
+        run: aConnection.sql("""SELECT * FROM %{ sql_query }""") -> { select: * }
+      `;
+      translateWithSchemas(m.translator);
+      expect(m).toTranslate();
+    });
+    test('persistable query in interpolation', () => {
+      const m = model`
+        source: safe_query is  a -> { select: * }
+        run: aConnection.sql("""SELECT * FROM %{ safe_query }""") -> { select: * }
+      `;
+      translateWithSchemas(m.translator);
+      expect(m).toTranslate();
+    });
   });
 });

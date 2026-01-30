@@ -1365,14 +1365,20 @@ export interface CompositeSourceDef extends SourceDefBase {
 export interface SQLStringSegment {
   sql: string;
 }
-export type SQLPhraseSegment = Query | SQLStringSegment;
+export type SQLPhraseSegment = Query | PersistableSourceDef | SQLStringSegment;
 export function isSegmentSQL(f: SQLPhraseSegment): f is SQLStringSegment {
   return 'sql' in f;
+}
+export function isSegmentSource(
+  f: SQLPhraseSegment
+): f is PersistableSourceDef {
+  return 'type' in f && (f.type === 'sql_select' || f.type === 'query_source');
 }
 
 export interface SQLSourceDef extends SourceDefBase {
   type: 'sql_select';
   selectStr: string;
+  selectSegments?: SQLPhraseSegment[];
 }
 
 export interface QuerySourceDef extends SourceDefBase {
@@ -1423,6 +1429,15 @@ export type SourceDef =
   | FinalizeSourceDef
   | NestSourceDef
   | CompositeSourceDef;
+
+/** Sources that can be persisted (materialized to tables) */
+export type PersistableSourceDef = SQLSourceDef | QuerySourceDef;
+
+export function isPersistableSourceDef(
+  sd: SourceDef
+): sd is PersistableSourceDef {
+  return sd.type === 'sql_select' || sd.type === 'query_source';
+}
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
