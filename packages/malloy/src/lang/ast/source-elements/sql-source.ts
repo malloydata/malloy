@@ -26,7 +26,7 @@ import type {
   InvokedStructRef,
   SourceDef,
 } from '../../../model/malloy_types';
-import {compileSQLInterpolation, sqlKey} from '../../../model/sql_block';
+import {getSourceRequest, sqlKey} from '../../../model/sql_block';
 import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
@@ -51,7 +51,7 @@ export class SQLSource extends Source {
 
     const [valid, phrases] = this.select.sqlPhrases();
     if (valid) {
-      return compileSQLInterpolation(
+      return getSourceRequest(
         phrases,
         this.connectionName.refString,
         partialModel

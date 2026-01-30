@@ -27,7 +27,11 @@ import type {SQLPhraseSegment, ModelDef} from './malloy_types';
 import {isSegmentSQL, isSegmentSource} from './malloy_types';
 import {generateHash} from './utils';
 
-export function compileSQLInterpolation(
+/**
+ * The translator needs to know the output schema of an SQLSourceDef
+ * this will prepare an SQL string sutiable to answer that question.
+ */
+export function getSourceRequest(
   select: SQLPhraseSegment[],
   connection: string,
   partialModel: ModelDef | undefined

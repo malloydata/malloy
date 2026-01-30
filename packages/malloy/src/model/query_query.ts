@@ -74,6 +74,7 @@ import {
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {shouldMaterialize} from './materialization/utils';
+import {getCompiledSQL} from './sql_compiled';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -766,7 +767,7 @@ export class QueryQuery extends QueryField {
       case 'finalize':
         return qs.structDef.name;
       case 'sql_select':
-        return `(${qs.structDef.selectStr})`;
+        return `(${getCompiledSQL(qs.structDef, qs.prepareResultOptions ?? {})})`;
       case 'nest_source':
         return qs.structDef.pipeSQL;
       case 'query_source': {
@@ -2414,7 +2415,7 @@ class QueryQueryRaw extends QueryQuery {
         'Invalid struct for QueryQueryRaw, currently only supports SQL'
       );
     }
-    return stageWriter.addStage(this.parent.structDef.selectStr);
+    return stageWriter.addStage(getCompiledSQL(this.parent.structDef, this.parent.prepareResultOptions ?? {}));
   }
 
   prepare() {
