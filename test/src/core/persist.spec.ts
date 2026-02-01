@@ -3,541 +3,1084 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {runtimeFor} from '../runtimes';
+import {runtimeFor, testFileSpace} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import {buildInternalGraph} from '@malloydata/malloy/test/internal';
 
 const tstDB = 'duckdb';
 const tstRuntime = runtimeFor(tstDB);
-
-const connections = {
-  lookupConnection: async () => tstRuntime.connection,
-};
-
-// Shared test models
-const singlePersistQueryModel = () =>
-  wrapTestModel(
-    tstRuntime,
-    `source: flights is ${tstDB}.table('malloytest.flights')
-
-    #@ persist
-    query: carrier_counts is flights -> {
-      group_by: carrier
-      aggregate: flight_count is count()
-    }
-  `
-  );
-
-const twoLevelDependentQueriesModel = () =>
-  wrapTestModel(
-    tstRuntime,
-    `
-    source: flights is ${tstDB}.table('malloytest.flights')
-
-    #@ persist
-    query: base_stats is flights -> {
-      group_by: carrier
-      aggregate: flight_count is count()
-    }
-
-    source: stats_source is base_stats
-
-    #@ persist
-    query: top_carriers is stats_source -> {
-      select: *
-    }
-  `
-  );
 
 afterAll(async () => {
   await tstRuntime.connection.close();
 });
 
-describe('persistent query support', () => {
-  describe('buildInternalGraph', () => {
-    it('returns empty array for empty input', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `source: flights is ${tstDB}.table('malloytest.flights')`
-      );
+describe('source persistence', () => {
+  describe('PersistSource', () => {
+    describe('makeBuildId', () => {
+      it('different sourceID produce different buildIds', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
 
-      const model = await testModel.model.getModel();
-      const modelDef = model._modelDef;
-
-      const graph = buildInternalGraph([], modelDef);
-
-      expect(graph).toEqual([]);
-    });
-
-    it('groups independent queries in same level for parallel execution', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: query_a is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        #@ persist
-        query: query_b is flights -> {
-          group_by: origin
-          aggregate: flight_count is count()
-        }
-
-        #@ persist
-        query: query_c is flights -> {
-          group_by: destination
-          aggregate: flight_count is count()
-        }
-      `
-      );
-
-      const model = await testModel.model.getModel();
-      const modelDef = model._modelDef;
-
-      const graph = buildInternalGraph(
-        ['query_a', 'query_b', 'query_c'],
-        modelDef
-      );
-
-      // All three should be in the same level since they're independent
-      expect(graph).toHaveLength(1);
-      expect(graph[0]).toHaveLength(3);
-      const names = graph[0].map(n => n.name).sort();
-      expect(names).toEqual(['query_a', 'query_b', 'query_c']);
-      // All should have no dependencies
-      for (const node of graph[0]) {
-        expect(node.dependsOn).toEqual([]);
-      }
-    });
-
-    it('handles diamond dependencies (A->B, A->C, B->D, C->D)', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: query_a is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        source: source_a is query_a
-
-        #@ persist
-        query: query_b is source_a -> { select: * }
-
-        #@ persist
-        query: query_c is source_a -> { select: * }
-
-        source: source_b is query_b
-        source: source_c is query_c
-
-        #@ persist
-        query: query_d is source_b -> {
-          extend: { join_one: c is source_c on true }
-          select: *
-        }
-      `
-      );
-
-      const model = await testModel.model.getModel();
-      const modelDef = model._modelDef;
-
-      const graph = buildInternalGraph(
-        ['query_a', 'query_b', 'query_c', 'query_d'],
-        modelDef
-      );
-
-      // Level 0: query_a (no deps)
-      // Level 1: query_b, query_c (both depend on query_a)
-      // Level 2: query_d (depends on query_b and query_c)
-      expect(graph).toHaveLength(3);
-
-      expect(graph[0]).toMatchObject([{name: 'query_a', dependsOn: []}]);
-
-      const level1Names = graph[1].map(n => n.name).sort();
-      expect(level1Names).toEqual(['query_b', 'query_c']);
-      for (const node of graph[1]) {
-        expect(node.dependsOn).toEqual(['query_a']);
-      }
-
-      expect(graph[2]).toHaveLength(1);
-      expect(graph[2][0].name).toBe('query_d');
-      // query_d depends on query_a transitively through both query_b and query_c
-      expect(graph[2][0].dependsOn.sort()).toEqual([
-        'query_a',
-        'query_b',
-        'query_c',
-      ]);
-    });
-
-    it('ignores non-persist query dependencies', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        // This query is NOT marked with persist
-        query: intermediate is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        source: intermediate_source is intermediate
-
-        #@ persist
-        query: final_query is intermediate_source -> { select: * }
-      `
-      );
-
-      const model = await testModel.model.getModel();
-      const modelDef = model._modelDef;
-
-      // Only pass the persist query, not the intermediate one
-      const graph = buildInternalGraph(['final_query'], modelDef);
-
-      // Should have single level with no dependencies (intermediate is not in persist set)
-      expect(graph).toMatchObject([[{name: 'final_query', dependsOn: []}]]);
-    });
-
-    it('detects dependencies through joined query_source', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: carrier_stats is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        source: carrier_stats_source is carrier_stats
-
-        #@ persist
-        query: flights_with_stats is flights -> {
-          extend: {
-            join_one: stats is carrier_stats_source on carrier = stats.carrier
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
           }
-          select: carrier, origin, stats.flight_count
-        }
-      `
-      );
 
-      const model = await testModel.model.getModel();
-      const modelDef = model._modelDef;
-
-      const graph = buildInternalGraph(
-        ['carrier_stats', 'flights_with_stats'],
-        modelDef
-      );
-
-      expect(graph).toMatchObject([
-        [{name: 'carrier_stats', dependsOn: []}],
-        [{name: 'flights_with_stats', dependsOn: ['carrier_stats']}],
-      ]);
-    });
-
-    it('detects dependencies through extendSource joins', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: carrier_lookup is flights -> {
-          group_by: carrier
-          aggregate: total_flights is count()
-        }
-
-        source: carrier_lookup_source is carrier_lookup
-
-        source: base_flights is flights
-
-        #@ persist
-        query: enriched_flights is base_flights -> {
-          extend: {
-            join_one: lookup is carrier_lookup_source on carrier = lookup.carrier
+          #@ persist
+          source: source_b is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
           }
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-      `
-      );
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
 
-      const model = await testModel.model.getModel();
-      const modelDef = model._modelDef;
+        const sourceA = Object.values(plan.sources).find(s =>
+          s.sourceId.includes('source_a')
+        )!;
+        const sourceB = Object.values(plan.sources).find(s =>
+          s.sourceId.includes('source_b')
+        )!;
 
-      const graph = buildInternalGraph(
-        ['carrier_lookup', 'enriched_flights'],
-        modelDef
-      );
+        const sqlA = sourceA.getSQL();
+        const sqlB = sourceB.getSQL();
+        const digest = 'test-digest';
 
-      expect(graph).toMatchObject([
-        [{name: 'carrier_lookup', dependsOn: []}],
-        [{name: 'enriched_flights', dependsOn: ['carrier_lookup']}],
-      ]);
-    });
+        const buildIdA = sourceA.makeBuildId(digest, sqlA);
+        const buildIdB = sourceB.makeBuildId(digest, sqlB);
 
-    it('returns single node for query with no persist dependencies', async () => {
-      const model = await singlePersistQueryModel().model.getModel();
-      const graph = buildInternalGraph(['carrier_counts'], model._modelDef);
-      expect(graph).toMatchObject([[{name: 'carrier_counts', dependsOn: []}]]);
-    });
+        expect(buildIdA).not.toBe(buildIdB);
+        expect(buildIdA).toContain('source_a');
+        expect(buildIdB).toContain('source_b');
+      });
 
-    it('returns leveled graph for queries with dependencies', async () => {
-      const model = await twoLevelDependentQueriesModel().model.getModel();
-      const graph = buildInternalGraph(
-        ['base_stats', 'top_carriers'],
-        model._modelDef
-      );
-      expect(graph).toMatchObject([
-        [{name: 'base_stats', dependsOn: []}],
-        [{name: 'top_carriers', dependsOn: ['base_stats']}],
-      ]);
-    });
-  });
+      it('different connection digests produce different buildIds', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
 
-  describe('NamedQuery', () => {
-    test.todo('getDigest returns undefined before graph computation');
-    test.todo('getDigest returns digest after graph computation');
-    test.todo('getPreparedResult returns SQL without manifest');
-    test.todo('getPreparedResult substitutes table names with manifest');
-    test.todo(
-      'getPreparedResult with stale manifest (digest not found) expands query'
-    );
-    test.todo(
-      'getPreparedResult with strict mode throws when digest not in manifest'
-    );
-  });
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
 
-  describe('Model named query methods', () => {
-    test.todo('getNamedQuery returns NamedQuery for valid name');
-    test.todo('getNamedQuery throws for non-existent name');
-    test.todo('getNamedQuery throws for source name (not a query)');
-    test.todo('getNamedQueries returns all named queries');
-    test.todo('getNamedQueries excludes sources');
-    test.todo('getPersistQueries filters to only #@ persist queries');
-    test.todo('getPersistQueries returns empty array when no persist queries');
-  });
+        const source = Object.values(plan.sources)[0];
+        const sql = source.getSQL();
 
-  describe('Model.getBuildGraphs', () => {
-    it('returns leaves from multiple disjoint dependency chains', async () => {
-      // Two independent chains: A→B and C→D
-      // Each leaf gets its own graph, preserving file order
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
+        const buildId1 = source.makeBuildId('digest-user1', sql);
+        const buildId2 = source.makeBuildId('digest-user2', sql);
 
-        #@ persist
-        query: query_a is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
+        expect(buildId1).not.toBe(buildId2);
+        expect(buildId1).toContain('digest-user1');
+        expect(buildId2).toContain('digest-user2');
+      });
 
-        source: source_a is query_a
+      it('different SQL produces different buildIds', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
 
-        #@ persist
-        query: query_b is source_a -> { select: * }
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
 
-        #@ persist
-        query: query_c is flights -> {
-          group_by: origin
-          aggregate: flight_count is count()
-        }
+        const source = Object.values(plan.sources)[0];
+        const digest = 'test-digest';
 
-        source: source_c is query_c
+        const buildId1 = source.makeBuildId(digest, 'SELECT 1');
+        const buildId2 = source.makeBuildId(digest, 'SELECT 2');
 
-        #@ persist
-        query: query_d is source_c -> { select: * }
-      `
-      );
-
-      const model = await testModel.model.getModel();
-      const graphs = await model.getBuildGraphs(connections);
-
-      // Two graphs, one per leaf (preserving file order)
-      expect(graphs).toHaveLength(2);
-
-      // Each graph has connectionName and nodes
-      expect(graphs[0].connectionName).toBe('duckdb');
-      expect(graphs[1].connectionName).toBe('duckdb');
-
-      // First graph: query_b
-      expect(graphs[0].nodes[0][0].id.name).toBe('query_b');
-      expect(graphs[0].nodes[0][0].dependsOn.map(d => d.name)).toEqual([
-        'query_a',
-      ]);
-
-      // Second graph: query_d
-      expect(graphs[1].nodes[0][0].id.name).toBe('query_d');
-      expect(graphs[1].nodes[0][0].dependsOn.map(d => d.name)).toEqual([
-        'query_c',
-      ]);
-    });
-
-    it('returns minimal build set (only leaf queries, not intermediate dependencies)', async () => {
-      // A -> B -> C chain: only C should be in the minimal build set
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: query_a is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        source: source_a is query_a
-
-        #@ persist
-        query: query_b is source_a -> { select: * }
-
-        source: source_b is query_b
-
-        #@ persist
-        query: query_c is source_b -> { select: * }
-      `
-      );
-
-      const model = await testModel.model.getModel();
-      const graphs = await model.getBuildGraphs(connections);
-
-      // Should have one graph with only query_c (the leaf)
-      // query_a and query_b are dependencies, not targets
-      expect(graphs).toHaveLength(1);
-      const graph = graphs[0];
-
-      expect(graph.connectionName).toBe('duckdb');
-      // Minimal build set: only the leaf node
-      expect(graph.nodes).toHaveLength(1);
-      expect(graph.nodes[0]).toHaveLength(1);
-      expect(graph.nodes[0][0].id.name).toBe('query_c');
-      // query_c depends on query_a and query_b (transitively)
-      const depNames = graph.nodes[0][0].dependsOn.map(d => d.name).sort();
-      expect(depNames).toEqual(['query_a', 'query_b']);
-    });
-
-    it('digest changes when connection changes', async () => {
-      const model = await singlePersistQueryModel().model.getModel();
-
-      // Get digest with original connection
-      const graphs1 = await model.getBuildGraphs(connections);
-      const digest1 = graphs1[0].nodes[0][0].id.queryDigest;
-
-      // Mock getDigest to return a different value
-      const spy = jest
-        .spyOn(tstRuntime.connection, 'getDigest')
-        .mockReturnValue('different-connection-digest');
-
-      try {
-        // Get digest with mocked connection - need fresh model to recompute
-        const model2 = await singlePersistQueryModel().model.getModel();
-        const graphs2 = await model2.getBuildGraphs(connections);
-        const digest2 = graphs2[0].nodes[0][0].id.queryDigest;
-
-        expect(digest1).not.toBe(digest2);
-      } finally {
-        spy.mockRestore();
-      }
-    });
-
-    it('returns empty array when no persist queries', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        query: not_persisted is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-      `
-      );
-      const model = await testModel.model.getModel();
-      const graphs = await model.getBuildGraphs(connections);
-
-      expect(graphs).toEqual([]);
-    });
-
-    it('digest changes when SQL changes', async () => {
-      const model1 = await wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: my_query is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-      `
-      ).model.getModel();
-
-      const model2 = await wrapTestModel(
-        tstRuntime,
-        `
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist
-        query: my_query is flights -> {
-          group_by: origin
-          aggregate: flight_count is count()
-        }
-      `
-      ).model.getModel();
-
-      const graphs1 = await model1.getBuildGraphs(connections);
-      const graphs2 = await model2.getBuildGraphs(connections);
-
-      const digest1 = graphs1[0].nodes[0][0].id.queryDigest;
-      const digest2 = graphs2[0].nodes[0][0].id.queryDigest;
-
-      expect(digest1).not.toBe(digest2);
-    });
-
-    it('returns build graph with digests for persist query', async () => {
-      const model = await singlePersistQueryModel().model.getModel();
-      const graphs = await model.getBuildGraphs(connections);
-
-      expect(graphs).toHaveLength(1);
-      expect(graphs[0]).toMatchObject({
-        connectionName: 'duckdb',
-        nodes: [
-          [
-            {
-              id: {name: 'carrier_counts', queryDigest: expect.any(String)},
-              dependsOn: [],
-            },
-          ],
-        ],
+        expect(buildId1).not.toBe(buildId2);
+        // Both should have the same sourceId and digest prefix
+        const prefix = `${source.sourceId}:${digest}:`;
+        expect(buildId1.startsWith(prefix)).toBe(true);
+        expect(buildId2.startsWith(prefix)).toBe(true);
       });
     });
 
-    it('returns only leaf node with dependencies for dependent queries', async () => {
-      const model = await twoLevelDependentQueriesModel().model.getModel();
-      const graphs = await model.getBuildGraphs(connections);
+    describe('getSQL', () => {
+      it('returns SQL for query_source', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
 
-      expect(graphs).toHaveLength(1);
-      const graph = graphs[0];
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
 
-      expect(graph.connectionName).toBe('duckdb');
-      // Minimal build set: only top_carriers (the leaf), not base_stats
-      expect(graph.nodes).toMatchObject([
-        [
-          {
-            id: {name: 'top_carriers', queryDigest: expect.any(String)},
-            dependsOn: [{name: 'base_stats', queryDigest: expect.any(String)}],
-          },
-        ],
-      ]);
+        const source = Object.values(plan.sources)[0];
+        const sql = source.getSQL();
+
+        expect(sql).toContain('SELECT');
+        expect(sql).toContain('carrier');
+        expect(sql).toContain('COUNT(');
+      });
+
+      it('returns SQL for sql_select', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          #@ persist
+          source: custom_sql is ${tstDB}.sql("""
+            SELECT carrier, COUNT(*) as flight_count
+            FROM malloytest.flights
+            GROUP BY carrier
+          """)
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        const source = Object.values(plan.sources)[0];
+        const sql = source.getSQL();
+
+        expect(sql).toContain('SELECT');
+        expect(sql).toContain('carrier');
+        expect(sql).toContain('COUNT(*)');
+      });
+
+      test.todo('substitutes manifest tables when buildManifest provided');
+      test.todo('expands SQL when manifest entry not found');
+      test.todo('throws in strict mode when manifest entry not found');
+    });
+  });
+
+  describe('Model.getBuildPlan', () => {
+    it('returns empty plan when no persist sources', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        source: not_persisted is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      expect(plan.graphs).toEqual([]);
+      expect(plan.sources).toEqual({});
+    });
+
+    it('returns single source with no dependencies', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      expect(plan.graphs).toHaveLength(1);
+      expect(plan.graphs[0].connectionName).toBe('duckdb');
+      expect(plan.graphs[0].nodes).toHaveLength(1);
+      expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+      expect(plan.graphs[0].nodes[0][0].dependsOn).toEqual([]);
+
+      expect(Object.keys(plan.sources)).toHaveLength(1);
+    });
+
+    describe('dependency ordering', () => {
+      it('independent sources in same level', async () => {
+        // Two independent persist sources should both appear as leaves
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: by_carrier is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: by_origin is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        // Both are independent leaves, so they should be in the same level
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(2);
+
+        // Both should have no dependencies
+        for (const node of graph.nodes[0]) {
+          expect(node.dependsOn).toEqual([]);
+        }
+      });
+
+      it('dependent sources in different levels', async () => {
+        // A -> B: B depends on A, only B is a leaf
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        // Only B is a leaf (minimal build set)
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const node = graph.nodes[0][0];
+        expect(node.sourceId).toMatch(/source_b/);
+        expect(node.dependsOn).toHaveLength(1);
+        expect(node.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      // Diamond pattern using extend (not ->)
+      // A is base, B and C both extend A, D depends on both B and C
+      it('diamond dependency pattern with extended sources', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // B extends A (not -> query, but extend)
+          #@ persist
+          source: source_b is source_a extend {
+            dimension: b_marker is 'b'
+          } -> { select: * }
+
+          // C extends A
+          #@ persist
+          source: source_c is source_a extend {
+            dimension: c_marker is 'c'
+          } -> { select: * }
+
+          // D depends on both B and C via SQL interpolation
+          #@ persist
+          source: source_d is ${tstDB}.sql("""SELECT * FROM %{ source_b } UNION ALL SELECT * FROM %{ source_c }""")
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        // Only D is a leaf
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const nodeD = graph.nodes[0][0];
+        expect(nodeD.sourceId).toMatch(/source_d/);
+
+        // D should depend on A, B, and C (A transitively through extends)
+        expect(nodeD.dependsOn).toHaveLength(3);
+        expect(nodeD.dependsOn.some(d => d.includes('source_a'))).toBe(true);
+        expect(nodeD.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+        expect(nodeD.dependsOn.some(d => d.includes('source_c'))).toBe(true);
+      });
+
+      it('diamond dependency pattern with query_source chains', async () => {
+        // Diamond using query_source (-> {...}) not extend
+        // A is base, B and C both derive from A, D depends on both B and C
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is source_a -> { select: * }
+
+          #@ persist
+          source: source_d is ${tstDB}.sql("""SELECT * FROM %{ source_b } UNION ALL SELECT * FROM %{ source_c }""")
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        // Only D is a leaf
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        const nodeD = graph.nodes[0][0];
+        expect(nodeD.sourceId).toMatch(/source_d/);
+
+        // D should depend on A, B, and C (transitively)
+        expect(nodeD.dependsOn).toHaveLength(3);
+        expect(nodeD.dependsOn.some(d => d.includes('source_a'))).toBe(true);
+        expect(nodeD.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+        expect(nodeD.dependsOn.some(d => d.includes('source_c'))).toBe(true);
+      });
+    });
+
+    describe('dependency detection', () => {
+      // query_source dependencies
+      it('query_source: detects dependency on structRef source', async () => {
+        // B directly references A via structRef
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        const nodeB = plan.graphs[0].nodes[0].find(n =>
+          n.sourceId.includes('source_b')
+        )!;
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      // B extends A, creating a dependency through extends
+      it('query_source: detects dependency through source extend', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // B extends A (adds fields) then queries
+          #@ persist
+          source: source_b is source_a extend {
+            dimension: extra_field is 'test'
+          } -> { select: * }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // B is the only leaf, depends on A through extends
+        const nodeB = plan.graphs[0].nodes[0].find(n =>
+          n.sourceId.includes('source_b')
+        )!;
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      // Chain: A -> B (extends A) -> C (extends B)
+      // C should depend on both A and B through the extends chain
+      it('query_source: detects dependency through chained extends', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // B extends A
+          #@ persist
+          source: source_b is source_a extend {
+            dimension: b_field is 'b'
+          } -> { select: * }
+
+          // C extends B (which extends A)
+          #@ persist
+          source: source_c is source_b extend {
+            dimension: c_field is 'c'
+          } -> { select: * }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // C is the only leaf
+        expect(plan.graphs[0].nodes).toHaveLength(1);
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const nodeC = plan.graphs[0].nodes[0][0];
+        expect(nodeC.sourceId).toMatch(/source_c/);
+
+        // C should depend on both A and B
+        expect(nodeC.dependsOn).toHaveLength(2);
+        expect(nodeC.dependsOn.some(d => d.includes('source_a'))).toBe(true);
+        expect(nodeC.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+      });
+
+      // sql_select dependencies
+      it('sql_select: detects dependency on interpolated persist source', async () => {
+        // B interpolates A in SQL
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is ${tstDB}.sql("""SELECT * FROM %{ source_a }""")
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Only B is a leaf
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const nodeB = plan.graphs[0].nodes[0][0];
+        expect(nodeB.sourceId).toMatch(/source_b/);
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      it('sql_select: detects dependency on query in interpolation', async () => {
+        // B interpolates a query expression referencing A
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is ${tstDB}.sql("""
+            SELECT * FROM %{ source_a -> { select: * } }
+          """)
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Only B is a leaf
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const nodeB = plan.graphs[0].nodes[0][0];
+        expect(nodeB.sourceId).toMatch(/source_b/);
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      it('sql_select: detects transitive dependency through non-persistent interpolated source', async () => {
+        // A (persistent) -> B (NOT persistent) -> C (persistent sql_select interpolating B)
+        // C should depend on A transitively
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // NOT persistent - intermediate source
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is ${tstDB}.sql("""SELECT * FROM %{ source_b }""")
+          `
+        );
+
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // C is the only leaf
+        expect(plan.graphs).toHaveLength(1);
+        expect(plan.graphs[0].nodes).toHaveLength(1);
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const node = plan.graphs[0].nodes[0][0];
+        expect(node.sourceId).toMatch(/source_c/);
+
+        // C should depend on A (transitively through non-persistent B)
+        expect(node.dependsOn).toHaveLength(1);
+        expect(node.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      // Transitive through non-persistent
+      it('detects transitive dependency through non-persistent intermediate source', async () => {
+        // A (persistent) -> B (NOT persistent) -> C (persistent)
+        // C should depend on A transitively
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // NOT persistent - intermediate source
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is source_b -> { select: * }
+          `
+        );
+
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // C is the only leaf (A is depended on by C transitively)
+        expect(plan.graphs).toHaveLength(1);
+        expect(plan.graphs[0].nodes).toHaveLength(1);
+        expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+        const node = plan.graphs[0].nodes[0][0];
+        expect(node.sourceId).toMatch(/source_c/);
+
+        // C should depend on A (transitively through non-persistent B)
+        expect(node.dependsOn).toHaveLength(1);
+        expect(node.dependsOn[0]).toMatch(/source_a/);
+      });
+
+      // NOT dependencies
+      it('does NOT detect dependencies in source fields array (only extends)', async () => {
+        // Source A exists but B doesn't reference it - they're independent
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Both are independent leaves
+        expect(plan.graphs[0].nodes[0]).toHaveLength(2);
+
+        const nodeA = plan.graphs[0].nodes[0].find(n =>
+          n.sourceId.includes('source_a')
+        )!;
+        const nodeB = plan.graphs[0].nodes[0].find(n =>
+          n.sourceId.includes('source_b')
+        )!;
+
+        // Neither depends on the other
+        expect(nodeA.dependsOn).toEqual([]);
+        expect(nodeB.dependsOn).toEqual([]);
+      });
+    });
+
+    describe('minimal build set', () => {
+      it('returns only leaf sources, not intermediate dependencies', async () => {
+        // Chain: A → B → C - only C should be in the build graph
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is source_b -> { select: * }
+          `
+        );
+
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Should have one graph with only source_c (the leaf)
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        // Minimal build set: only the leaf node
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(1);
+
+        // The single node should be source_c
+        const node = graph.nodes[0][0];
+        expect(node.sourceId).toMatch(/^source_c@/);
+
+        // source_c depends on source_a and source_b
+        expect(node.dependsOn).toHaveLength(2);
+        expect(node.dependsOn.some(d => d.includes('source_a'))).toBe(true);
+        expect(node.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+      });
+
+      it('returns leaves from multiple disjoint chains', async () => {
+        // Two independent chains: A→B and C→D
+        // Both B and D are leaves
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: source_a is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_b is source_a -> { select: * }
+
+          #@ persist
+          source: source_c is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: source_d is source_c -> { select: * }
+          `
+        );
+
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Should have one graph (same connection) with two leaves
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+
+        // Single level with two leaf nodes (B and D)
+        expect(graph.nodes).toHaveLength(1);
+        expect(graph.nodes[0]).toHaveLength(2);
+
+        const nodeIds = graph.nodes[0].map(n => n.sourceId);
+        expect(nodeIds.some(id => id.includes('source_b'))).toBe(true);
+        expect(nodeIds.some(id => id.includes('source_d'))).toBe(true);
+
+        // B depends on A, D depends on C
+        const nodeB = graph.nodes[0].find(n =>
+          n.sourceId.includes('source_b')
+        )!;
+        const nodeD = graph.nodes[0].find(n =>
+          n.sourceId.includes('source_d')
+        )!;
+
+        expect(nodeB.dependsOn).toHaveLength(1);
+        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+
+        expect(nodeD.dependsOn).toHaveLength(1);
+        expect(nodeD.dependsOn[0]).toMatch(/source_c/);
+      });
+    });
+
+    describe('connection grouping', () => {
+      test.todo('groups sources by connection');
+      test.todo('returns separate graphs for different connections');
+    });
+
+    describe('persist annotation filtering', () => {
+      it('only includes sources with #@ persist', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: persisted is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: not_persisted is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Only the persisted source should be in the plan
+        expect(Object.keys(plan.sources)).toHaveLength(1);
+        expect(Object.values(plan.sources)[0].name).toBe('persisted');
+      });
+
+      it('ignores sources without persist annotation', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          // Has annotation but not persist
+          # Some other annotation
+          source: annotated_not_persist is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          source: no_annotation is flights -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // No persist sources
+        expect(plan.graphs).toEqual([]);
+        expect(plan.sources).toEqual({});
+      });
+
+      it('ignores non-persistable source types (table)', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          // Table sources cannot be persisted (they're already tables)
+          #@ persist
+          source: flights is ${tstDB}.table('malloytest.flights')
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Table sources are not persistable, so should be ignored
+        expect(plan.graphs).toEqual([]);
+        expect(plan.sources).toEqual({});
+      });
+    });
+  });
+
+  describe('sql_select persistence', () => {
+    it('sql_select source can be persisted', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        #@ persist
+        source: custom_query is ${tstDB}.sql("""
+          SELECT carrier, COUNT(*) as cnt
+          FROM malloytest.flights
+          GROUP BY carrier
+        """)
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      expect(Object.keys(plan.sources)).toHaveLength(1);
+      const source = Object.values(plan.sources)[0];
+      expect(source.name).toBe('custom_query');
+      expect(source.sourceId).toMatch(/custom_query@/);
+    });
+
+    it('sql_select with interpolated persist source has dependency', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: combined is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats }
+          WHERE flight_count > 100
+        """)
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      // combined is the only leaf (depends on carrier_stats)
+      expect(plan.graphs[0].nodes[0]).toHaveLength(1);
+
+      const node = plan.graphs[0].nodes[0][0];
+      expect(node.sourceId).toMatch(/combined/);
+      expect(node.dependsOn).toHaveLength(1);
+      expect(node.dependsOn[0]).toMatch(/carrier_stats/);
+    });
+
+    it('getSQL expands interpolated sources to subqueries', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: wrapper is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats }
+        """)
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      const wrapperSource = Object.values(plan.sources).find(
+        s => s.name === 'wrapper'
+      )!;
+
+      // Without a manifest, getSQL should expand the interpolated source to a subquery
+      const sql = wrapperSource.getSQL();
+
+      // The SQL should contain the expanded query, not just a table reference
+      expect(sql).toContain('SELECT');
+      // The expanded SQL should include the carrier_stats query content
+      expect(sql).toContain('carrier');
+    });
+
+    test.todo('getSQL substitutes from manifest');
+  });
+
+  describe('build workflow integration', () => {
+    it('full build workflow: getBuildPlan -> getSQL -> makeBuildId', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+        `
+      );
+      const model = await testModel.model.getModel();
+
+      // Step 1: Get the build plan
+      const plan = model.getBuildPlan();
+      expect(plan.graphs).toHaveLength(1);
+      expect(Object.keys(plan.sources)).toHaveLength(1);
+
+      // Step 2: For each source in the plan, get the SQL
+      const source = Object.values(plan.sources)[0];
+      const sql = source.getSQL();
+      expect(sql).toContain('SELECT');
+      expect(sql).toContain('carrier');
+
+      // Step 3: Compute the buildId (would need connection digest in real scenario)
+      const mockConnectionDigest = 'mock-connection-digest';
+      const buildId = source.makeBuildId(mockConnectionDigest, sql);
+
+      // Verify buildId format: sourceId:connectionDigest:sqlDigest
+      // Note: sourceId contains URL which has "://" so we can't just split by ":"
+      expect(buildId).toContain(source.sourceId);
+      expect(buildId).toContain(mockConnectionDigest);
+      // The buildId should start with sourceId and contain digest and sql hash
+      expect(buildId.startsWith(source.sourceId + ':')).toBe(true);
+
+      // Verify we can access source metadata for table naming
+      const parsed = source.tagParse({prefix: /^#@ /});
+      expect(parsed.tag.has('persist')).toBe(true);
+    });
+
+    test.todo('manifest round-trip: build then query with manifest');
+  });
+
+  describe('cross-model imports', () => {
+    afterEach(() => {
+      // Clean up test files
+      testFileSpace.deleteFile(new URL('test://model1.malloy'));
+      testFileSpace.deleteFile(new URL('test://model2.malloy'));
+      testFileSpace.deleteFile(new URL('test://model3.malloy'));
+    });
+
+    it('detects dependency on imported persist source through extend', async () => {
+      // Model 1: defines a persist source
+      const model1 = `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: base_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `;
+
+      // Model 2: imports model1 and extends the persist source
+      const model2 = `
+        import "test://model1.malloy"
+
+        #@ persist
+        source: extended_stats is base_stats extend {
+          dimension: extra_field is 'test'
+        } -> { select: * }
+      `;
+
+      testFileSpace.setFile(new URL('test://model1.malloy'), model1);
+      testFileSpace.setFile(new URL('test://model2.malloy'), model2);
+
+      const testModel = {
+        model: tstRuntime.loadModel(new URL('test://model2.malloy')),
+        dialect: tstRuntime.dialect,
+      };
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      // extended_stats should depend on base_stats from model1
+      expect(plan.graphs).toHaveLength(1);
+      const node = plan.graphs[0].nodes[0].find(n =>
+        n.sourceId.includes('extended_stats')
+      );
+      expect(node).toBeDefined();
+
+      // The dependency should include base_stats (from the imported model)
+      expect(node!.dependsOn.some(d => d.includes('base_stats'))).toBe(true);
+    });
+
+    // TODO: Requires cross-model sourceID map merging - see plan for SourceRef refactor
+    it.skip('detects transitive dependency through imported extend chain', async () => {
+      // Model 1: defines persist source A
+      const model1 = `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: source_a is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `;
+
+      // Model 2: imports model1, extends A to create B (also persist)
+      const model2 = `
+        import "test://model1.malloy"
+
+        #@ persist
+        source: source_b is source_a extend {
+          dimension: b_field is 'b'
+        } -> { select: * }
+      `;
+
+      // Model 3: imports model2, extends B to create C
+      const model3 = `
+        import "test://model2.malloy"
+
+        #@ persist
+        source: source_c is source_b extend {
+          dimension: c_field is 'c'
+        } -> { select: * }
+      `;
+
+      testFileSpace.setFile(new URL('test://model1.malloy'), model1);
+      testFileSpace.setFile(new URL('test://model2.malloy'), model2);
+      testFileSpace.setFile(new URL('test://model3.malloy'), model3);
+
+      const testModel = {
+        model: tstRuntime.loadModel(new URL('test://model3.malloy')),
+        dialect: tstRuntime.dialect,
+      };
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      // source_c should depend on both source_a and source_b
+      expect(plan.graphs).toHaveLength(1);
+      const nodeC = plan.graphs[0].nodes[0].find(n =>
+        n.sourceId.includes('source_c')
+      );
+      expect(nodeC).toBeDefined();
+
+      // C should depend on A (transitively) and B
+      expect(nodeC!.dependsOn.some(d => d.includes('source_a'))).toBe(true);
+      expect(nodeC!.dependsOn.some(d => d.includes('source_b'))).toBe(true);
     });
   });
 });

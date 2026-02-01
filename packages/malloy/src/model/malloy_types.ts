@@ -1326,6 +1326,8 @@ interface StructDefBase extends HasLocation, NamedObject {
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
+  /** Marker for error placeholder structs created by ErrorFactory */
+  errorFactory?: boolean;
 }
 
 export interface PartitionCompositeDesc {
@@ -1375,13 +1377,25 @@ export function isSegmentSource(
   return 'type' in f && (f.type === 'sql_select' || f.type === 'query_source');
 }
 
-export interface SQLSourceDef extends SourceDefBase {
+/** Format: "name@modelUrl" - uniquely identifies a source for persistence */
+export type SourceID = string;
+
+export interface PersistableSourceProperties {
+  sourceID?: SourceID;
+  extends?: SourceID;
+}
+
+export interface SQLSourceDef
+  extends SourceDefBase,
+    PersistableSourceProperties {
   type: 'sql_select';
   selectStr: string;
   selectSegments?: SQLPhraseSegment[];
 }
 
-export interface QuerySourceDef extends SourceDefBase {
+export interface QuerySourceDef
+  extends SourceDefBase,
+    PersistableSourceProperties {
   type: 'query_source';
   query: Query;
 }

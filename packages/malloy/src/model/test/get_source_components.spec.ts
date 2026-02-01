@@ -278,8 +278,9 @@ describe('Explore.getSourceComponents', () => {
   test('should return source info for query source explore', () => {
     // Create a model with a query source explore
     // We need to mock the PreparedQuery behavior for this test
-    const originalPreparedQuery =
-      jest.requireActual('../../api/foundation').PreparedQuery;
+    const originalPreparedQuery = jest.requireActual(
+      '../../api/foundation'
+    ).PreparedQuery;
     jest
       .spyOn(originalPreparedQuery.prototype, 'getPreparedResult')
       .mockReturnValue({

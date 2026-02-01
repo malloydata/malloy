@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {SourceDef, QuerySourceDef} from '../../../model/malloy_types';
+import type {SourceDef} from '../../../model/malloy_types';
+import {mkQuerySourceDef} from '../../../model/source_def_utils';
 import {Source} from './source';
 import type {QueryElement} from '../types/query-element';
 import type {ParameterSpace} from '../field-space/parameter-space';
@@ -43,13 +44,11 @@ export class QuerySource extends Source {
     pList: HasParameter[] | undefined
   ): SourceDef {
     const comp = this.query.queryComp(false);
-    const queryStruct: QuerySourceDef = {
-      ...comp.outputStruct,
-      name: `QuerySource-${uuidv4()}`,
-      type: 'query_source',
-      query: comp.query,
-      arguments: comp.query.sourceArguments,
-    };
+    const queryStruct = mkQuerySourceDef(
+      comp.outputStruct,
+      comp.query,
+      `QuerySource-${uuidv4()}`
+    );
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return {
       ...queryStruct,

@@ -58,4 +58,11 @@ export {
 export {indent, composeSQLExpr, makeDigest} from './utils';
 export {constantExprToSQL} from './constant_expression_compiler';
 export {buildInternalGraph} from './persist_utils';
-export type {InternalBuildNode, InternalBuildGraph} from './persist_utils';
+export {getCompiledSQL} from './sql_compiled';
+export {
+  mkSourceID,
+  mkQuerySourceDef,
+  mkSQLSourceDef,
+  mkTableSourceDef,
+} from './source_def_utils';
+export type {SourceID} from './source_def_utils';

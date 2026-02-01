@@ -181,7 +181,7 @@ export class TestURLReader extends InMemoryURLReader {
   }
 }
 
-const files = new TestURLReader();
+export const testFileSpace = new TestURLReader();
 
 export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
@@ -266,7 +266,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 
 export function testRuntimeFor(connection: Connection) {
   return createTestRuntime(connection, {
-    urlReader: files,
+    urlReader: testFileSpace,
     eventStream: new EventEmitter(),
     cacheManager: new TestCacheManager(new InMemoryModelCache()),
   });

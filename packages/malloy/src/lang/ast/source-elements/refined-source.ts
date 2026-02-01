@@ -26,7 +26,10 @@ import type {
   Annotation,
   SourceDef,
 } from '../../../model/malloy_types';
-import {expressionIsCalculation} from '../../../model/malloy_types';
+import {
+  expressionIsCalculation,
+  isPersistableSourceDef,
+} from '../../../model/malloy_types';
 
 import {RefinedSpace} from '../field-space/refined-space';
 import type {HasParameter} from '../parameters/has-parameter';
@@ -131,7 +134,12 @@ export class RefinedSource extends Source {
     }
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const from = {...this.source.getSourceDef(paramSpace)};
+    const baseSourceDef = this.source.getSourceDef(paramSpace);
+    // Track the sourceID of the base source for extends tracking
+    const baseSourceID = isPersistableSourceDef(baseSourceDef)
+      ? baseSourceDef.sourceID
+      : undefined;
+    const from = {...baseSourceDef};
     const includeState = processIncludeList(this.includeList, from);
     const thisIncludeState = getIncludeStateForJoin([], includeState);
     for (const modifier of inlineAccessModifiers) {
@@ -188,6 +196,12 @@ export class RefinedSource extends Source {
         }
       }
     }
+    // Track extension relationship for persistence dependency tracking
+    // If the base source has a sourceID, record it in extends
+    if (baseSourceID && isPersistableSourceDef(retStruct)) {
+      retStruct.extends = baseSourceID;
+    }
+
     if (moreFilters) {
       return {...retStruct, filterList};
     }

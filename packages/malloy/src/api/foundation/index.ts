@@ -10,7 +10,6 @@ export type {
   ParseOptions,
   CompileOptions,
   CompileQueryOptions,
-  BuildNodeId,
   BuildNode,
   BuildGraph,
 } from './types';
@@ -53,6 +52,8 @@ export {
   type SerializedExplore,
   type SortableField,
   type PreparedResultJSON,
+  // Types
+  type BuildPlan,
   // Classes
   Explore,
   ExploreField,
@@ -68,6 +69,8 @@ export {
   QueryField,
   Model,
   NamedQuery,
+  PersistSource,
+  PersistExplore, // @deprecated - use PersistSource
   PreparedQuery,
   PreparedResult,
 } from './core';

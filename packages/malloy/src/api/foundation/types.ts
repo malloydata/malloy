@@ -45,38 +45,27 @@ export interface CompileQueryOptions {
 // =============================================================================
 
 /**
- * Identity of a node in the build graph.
- */
-export interface BuildNodeId {
-  /** Human-readable query name */
-  name: string;
-  /** Unique identity for cache lookup */
-  queryDigest: string;
-}
-
-/**
  * A node in the build graph.
+ * Uses sourceId (sourceName@modelURL) for identity.
  */
 export interface BuildNode {
-  id: BuildNodeId;
-  /** Dependencies of this node. Present for DAG reconstruction, not build ordering. */
-  dependsOn: BuildNodeId[];
+  /** Source identity: "sourceName@modelURL" */
+  sourceId: string;
+  /** Dependencies (other sourceIds) that must be built first */
+  dependsOn: string[];
 }
 
 /**
- * An ordered build plan for queries on a single connection.
+ * An ordered build plan for sources on a single connection.
  *
- * The leveled array structure determines build order: queries in the same
+ * The leveled array structure determines build order: sources in the same
  * level can be built in parallel, levels must be built sequentially.
- *
- * The `dependsOn` fields in each BuildNode are for reconstructing the
- * original dependency DAG, not for determining build order.
  *
  * Builders can group graphs by `connectionName` to parallelize across
  * different database connections.
  */
 export interface BuildGraph {
-  /** The connection all queries in this graph run on */
+  /** The connection all sources in this graph run on */
   connectionName: string;
   /** The leveled build nodes */
   nodes: BuildNode[][];

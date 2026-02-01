@@ -73,7 +73,6 @@ import {
   sqlFullChildReference,
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {shouldMaterialize} from './materialization/utils';
 import {getCompiledSQL} from './sql_compiled';
 
 function pathToCol(path: string[]): string {

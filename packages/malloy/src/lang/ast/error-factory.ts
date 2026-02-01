@@ -39,13 +39,9 @@ import type {
 
 const ERR_NAME = '~malformed~';
 
-interface FactoryError {
-  errorFactory: true;
-}
-
 export class ErrorFactory {
   static get structDef(): TableSourceDef {
-    const factoryStruct: StructDef & FactoryError = {
+    return {
       type: 'table',
       name: ERR_NAME,
       dialect: '~malformed~',
@@ -54,11 +50,10 @@ export class ErrorFactory {
       fields: [],
       errorFactory: true,
     };
-    return factoryStruct;
   }
 
   static get joinDef(): JoinFieldDef {
-    const factoryJoin: JoinFieldDef & FactoryError = {
+    return {
       type: 'table',
       name: ERR_NAME,
       dialect: '~malformed~',
@@ -69,11 +64,10 @@ export class ErrorFactory {
       matrixOperation: 'left',
       errorFactory: true,
     };
-    return factoryJoin;
   }
 
   static didCreate(s: StructDef | JoinFieldDef): boolean {
-    return 'errorFactory' in s;
+    return s.errorFactory === true;
   }
 
   static get query(): Query {

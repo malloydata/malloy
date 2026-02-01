@@ -251,5 +251,6 @@ export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
 export {annotationToTag, annotationToTaglines} from './annotation';
-export type {BuildGraph, BuildNode, BuildNodeId} from './api/foundation';
+export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
+export {PersistSource} from './api/foundation';
 export {makeDigest} from './model';

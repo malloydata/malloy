@@ -21,8 +21,8 @@ import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
 import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
-import type {PreparedResult, Explore} from './core';
-import {Model, NamedQuery, PreparedQuery} from './core';
+import type {PreparedResult, Explore, NamedQuery} from './core';
+import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
 // Note: compile.ts will call setMalloyFunctions to wire up the circular dependency
 
@@ -872,7 +872,9 @@ export class NamedQueryMaterializer extends FluentState<NamedQuery> {
    *
    * @return A promise to the PreparedResult containing generated SQL.
    */
-  public getPreparedResult(options?: CompileQueryOptions): Promise<PreparedResult> {
+  public getPreparedResult(
+    options?: CompileQueryOptions
+  ): Promise<PreparedResult> {
     return this.loadPreparedResult(options).getPreparedResult();
   }
 }

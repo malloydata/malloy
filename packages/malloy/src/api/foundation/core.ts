@@ -32,6 +32,7 @@ import type {
   TableSourceDef,
   SourceComponentInfo,
   DocumentReference,
+  PersistableSourceDef,
 } from '../../model';
 import {
   fieldIsIntrinsic,
@@ -41,13 +42,15 @@ import {
   isSourceDef,
   isJoined,
   isRecordOrRepeatedRecord,
-  buildInternalGraph,
+  isPersistableSourceDef,
+  getCompiledSQL,
 } from '../../model';
 import {makeDigest} from '../../model/utils';
 import type {Dialect} from '../../dialect';
 import {getDialect} from '../../dialect';
 import type {Connection, LookupConnection} from '../../connection/types';
-import type {BuildGraph, BuildNode} from './types';
+import type {BuildGraph, BuildNode, CompileQueryOptions} from './types';
+import {buildSourceGraph} from '../../model/persist_utils';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {
@@ -58,7 +61,6 @@ import {
 import {locationContainsPosition} from '../../lang/utils';
 import {ReferenceList} from '../../lang/reference-list';
 import type {Taggable} from '../../taggable';
-import type {CompileQueryOptions} from './types';
 
 type ComponentSourceDef = TableSourceDef | SQLSourceDef | QuerySourceDef;
 function isSourceComponent(source: StructDef): source is ComponentSourceDef {
@@ -1218,88 +1220,121 @@ export class Model implements Taggable {
   }
 
   /**
-   * Get the build graphs for all #@ persist queries.
+   * Get the build plan for all #@ persist sources.
    *
-   * Each graph contains queries for a single connection. Queries in the same
-   * level can be built in parallel, levels must be built sequentially.
+   * Returns a BuildPlan containing:
+   * - `graphs`: Build graphs for leaf sources only (minimal build set)
+   * - `sources`: Map from sourceId to PersistSource (all persist sources)
    *
-   * Graphs are returned in file order. Builders can group by connectionName
-   * to parallelize across different database connections.
+   * The minimal build set contains only "leaf" sources - those not depended
+   * on by any other persist source. Each leaf includes its transitive
+   * dependencies in the dependsOn field.
    *
-   * @param connections Connection lookup for computing digests.
-   * @return Array of BuildGraphs, ordered by file position.
+   * @return BuildPlan with graphs and sources map
    */
-  public async getBuildGraphs(
-    connections: LookupConnection<Connection>
-  ): Promise<BuildGraph[]> {
-    const persistQueries = this.getPersistQueries();
-    const persistQueryNames = persistQueries.map(q => q.name);
+  public getBuildPlan(): BuildPlan {
+    // Find all sources with #@ persist annotation
+    const persistSources: PersistSource[] = [];
+    const sourcesMap: Record<string, PersistSource> = {};
 
-    if (persistQueryNames.length === 0) {
-      return [];
+    for (const explore of this.explores) {
+      const sd = explore.structDef;
+      if (!isSourceDef(sd) || !isPersistableSourceDef(sd)) continue;
+
+      // Check for #@ persist annotation
+      const parsed = explore.tagParse({prefix: /^#@ /});
+      if (!parsed.tag.has('persist')) continue;
+
+      const persistSource = new PersistSource(explore, this);
+      persistSources.push(persistSource);
+      sourcesMap[persistSource.sourceId] = persistSource;
     }
 
-    // Build internal graph (sync, model layer)
-    const internalGraph = buildInternalGraph(persistQueryNames, this.modelDef);
+    if (persistSources.length === 0) {
+      return {graphs: [], sources: {}};
+    }
 
-    // Compute digests and collect connection info (async - needs connection lookup)
-    const digestMap = this.queryModel.persistedQueryDigests;
-    const connectionMap: Record<string, string> = {}; // name -> connectionName
-    for (const level of internalGraph) {
+    // Get the persistable source defs for graph building
+    const persistableDefs = persistSources.map(ps => ps._sourceDef);
+
+    // Build the full dependency graph
+    const sourceGraph = buildSourceGraph(persistableDefs, this.modelDef);
+
+    // Build a map from sourceId to its direct dependencies
+    const directDeps = new Map<string, string[]>();
+    for (const level of sourceGraph) {
       for (const node of level) {
-        const namedQuery = this.getNamedQuery(node.name);
-        const sql = namedQuery.getPreparedResult().sql;
-        const connectionName = namedQuery.connectionName;
-        connectionMap[node.name] = connectionName;
-        const connection = await connections.lookupConnection(connectionName);
-        digestMap[node.name] = makeDigest(connection.getDigest(), sql);
+        directDeps.set(node.sourceID, node.dependsOn);
       }
     }
 
-    // Find leaf nodes (queries not depended upon by any other persist query)
-    const dependedUpon = new Set<string>();
-    for (const level of internalGraph) {
-      for (const node of level) {
-        for (const dep of node.dependsOn) {
-          dependedUpon.add(dep);
+    // Find all sourceIds that are depended on by others
+    const dependedOn = new Set<string>();
+    for (const deps of directDeps.values()) {
+      for (const dep of deps) {
+        dependedOn.add(dep);
+      }
+    }
+
+    // Leaf sources are those NOT depended on by any other persist source
+    const leafSourceIds = [...directDeps.keys()].filter(
+      id => !dependedOn.has(id)
+    );
+
+    // Compute transitive dependencies for each leaf
+    function getTransitiveDeps(sourceId: string): string[] {
+      const transitive = new Set<string>();
+      const stack = [...(directDeps.get(sourceId) ?? [])];
+      while (stack.length > 0) {
+        const dep = stack.pop()!;
+        if (!transitive.has(dep)) {
+          transitive.add(dep);
+          stack.push(...(directDeps.get(dep) ?? []));
         }
       }
+      return [...transitive];
     }
 
-    // Build leaf nodes, preserving file order
-    const leafNodes: Array<{node: BuildNode; connectionName: string}> = [];
-    for (const level of internalGraph) {
-      for (const node of level) {
-        if (!dependedUpon.has(node.name)) {
-          leafNodes.push({
-            connectionName: connectionMap[node.name],
-            node: {
-              id: {
-                name: node.name,
-                queryDigest: digestMap[node.name],
-              },
-              dependsOn: node.dependsOn.map(dep => ({
-                name: dep,
-                queryDigest: digestMap[dep],
-              })),
-            },
-          });
-        }
+    // Group leaf nodes by connection
+    const graphsByConnection = new Map<string, BuildNode[]>();
+
+    for (const sourceId of leafSourceIds) {
+      const persistSource = sourcesMap[sourceId];
+      if (!persistSource) continue;
+
+      const connName = persistSource.connectionName;
+      if (!graphsByConnection.has(connName)) {
+        graphsByConnection.set(connName, []);
       }
+
+      graphsByConnection.get(connName)!.push({
+        sourceId,
+        dependsOn: getTransitiveDeps(sourceId),
+      });
     }
 
-    // Return one graph per leaf, preserving order
-    return leafNodes.map(({connectionName, node}) => ({
-      connectionName,
-      nodes: [[node]],
-    }));
+    // Convert to BuildGraph array (each leaf is its own single-level graph)
+    const graphs: BuildGraph[] = [];
+    for (const [connectionName, nodes] of graphsByConnection) {
+      // Each leaf gets its own entry in the single level
+      graphs.push({connectionName, nodes: [nodes]});
+    }
+
+    return {graphs, sources: sourcesMap};
   }
 
   /**
-   * Get the computed query digests (name → digest map).
-   * Must be called after getBuildGraphs() which computes the digests.
-   *
-   * @return Map from query name to digest
+   * @deprecated Use getBuildPlan() instead
+   */
+  public async getBuildGraphs(
+    _connections: LookupConnection<Connection>
+  ): Promise<BuildGraph[]> {
+    const plan = this.getBuildPlan();
+    return plan.graphs;
+  }
+
+  /**
+   * @deprecated No longer needed with source-based persistence
    */
   public getQueryDigests(): Record<string, string> {
     return this.queryModel.persistedQueryDigests;
@@ -1428,6 +1463,185 @@ export class NamedQuery implements Taggable {
     return this.model;
   }
 }
+
+// =============================================================================
+// Build Plan Types (for persistence)
+// =============================================================================
+
+/**
+ * The complete build plan for persistent sources in a model.
+ *
+ * Returned by `Model.getBuildPlan()`. Contains:
+ * - `graphs`: Dependency-ordered build graphs grouped by connection
+ * - `sources`: Map from sourceId to PersistSource for accessing source details
+ */
+export interface BuildPlan {
+  /** Build graphs grouped by connection, with leveled nodes for parallel execution */
+  graphs: BuildGraph[];
+  /** Map from sourceId to PersistSource for accessing source details */
+  sources: Record<string, PersistSource>;
+}
+
+// =============================================================================
+// PersistSource
+// =============================================================================
+
+/**
+ * A wrapper around a source that has #@ persist annotation.
+ *
+ * Only sources backed by queries can be persisted:
+ * - `query_source`: `source: x is y -> {...}`
+ * - `sql_select`: `source: x is conn.sql("...")`
+ *
+ * Provides access to source identity, SQL generation, and metadata needed
+ * for building and caching source results.
+ */
+export class PersistSource implements Taggable {
+  private readonly persistableDef: PersistableSourceDef;
+
+  constructor(
+    private readonly explore: Explore,
+    private readonly model: Model
+  ) {
+    const sd = explore.structDef;
+    if (!isSourceDef(sd)) {
+      throw new Error(`Cannot create PersistSource from non-source type`);
+    }
+    if (!isPersistableSourceDef(sd)) {
+      throw new Error(
+        `Cannot persist source '${explore.name}' of type '${sd.type}'. ` +
+          `Only query_source and sql_select sources can be persisted.`
+      );
+    }
+    this.persistableDef = sd;
+  }
+
+  /**
+   * The name of this source.
+   */
+  get name(): string {
+    return this.explore.name;
+  }
+
+  /**
+   * The stable identity of this source: "sourceName@modelURL".
+   * Used as lookup key during compilation and in build graphs.
+   */
+  get sourceId(): string {
+    const id = this.persistableDef.sourceID;
+    if (!id) {
+      throw new Error(
+        `PersistSource '${this.name}' has no sourceId. ` +
+          `This should not happen - sourceId is set at translation time.`
+      );
+    }
+    return id;
+  }
+
+  /**
+   * The underlying Explore.
+   */
+  get _explore(): Explore {
+    return this.explore;
+  }
+
+  /**
+   * The annotation on this source.
+   */
+  get annotation(): Annotation | undefined {
+    return this.persistableDef.annotation;
+  }
+
+  /**
+   * Parse the source's tags.
+   */
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return this.explore.tagParse(spec);
+  }
+
+  /**
+   * Get annotation taglines matching an optional prefix.
+   */
+  getTaglines(prefix?: RegExp): string[] {
+    return this.explore.getTaglines(prefix);
+  }
+
+  /**
+   * The connection name for this source.
+   */
+  get connectionName(): string {
+    return this.persistableDef.connection;
+  }
+
+  /**
+   * The dialect name for this source.
+   */
+  get dialectName(): string {
+    return this.persistableDef.dialect;
+  }
+
+  /**
+   * The dialect for this source.
+   */
+  get dialect(): Dialect {
+    return getDialect(this.dialectName);
+  }
+
+  /**
+   * Compute the BuildId for this source.
+   *
+   * BuildId is the cache key that includes connection config and SQL content.
+   * Different connection configs or SQL changes produce different BuildIds.
+   *
+   * @param connectionDigest - Digest from connection.getDigest()
+   * @param sql - The SQL for this source (from getSQL())
+   * @return The BuildId string for manifest lookup
+   */
+  makeBuildId(connectionDigest: string, sql: string): string {
+    const sqlDigest = makeDigest(sql);
+    return `${this.sourceId}:${connectionDigest}:${sqlDigest}`;
+  }
+
+  /**
+   * Get the SQL for this persist source.
+   *
+   * For sql_select sources, returns the SQL string (with segment expansion).
+   * For query_source sources, compiles the inner query to SQL.
+   *
+   * @param options - Compile options including buildManifest for persistence.
+   * @return The SQL string for this source.
+   */
+  getSQL(options?: CompileQueryOptions): string {
+    const sd = this.persistableDef;
+
+    if (sd.type === 'sql_select') {
+      return getCompiledSQL(sd, options ?? {});
+    } else {
+      const queryModel = this.model.queryModel;
+      const compiled = queryModel.compileQuery(sd.query, options);
+      return compiled.sql;
+    }
+  }
+
+  /**
+   * Get the underlying persistable source definition.
+   */
+  get _sourceDef(): PersistableSourceDef {
+    return this.persistableDef;
+  }
+
+  /**
+   * Get the Model this source belongs to.
+   */
+  get _model(): Model {
+    return this.model;
+  }
+}
+
+/**
+ * @deprecated Use PersistSource instead
+ */
+export const PersistExplore = PersistSource;
 
 // =============================================================================
 // PreparedQuery
