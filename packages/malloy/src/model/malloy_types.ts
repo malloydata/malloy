@@ -1261,7 +1261,7 @@ export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
  */
 
 export interface SegmentUsageSummary {
-  activeJoins?: FieldUsage[];
+  activeJoins?: ActiveJoin[];
   expandedFieldUsage?: FieldUsage[];
   expandedUngroupings?: AggregateUngrouping[];
 }
@@ -1286,6 +1286,16 @@ export interface FieldUsage {
   at?: DocumentLocation;
   uniqueKeyRequirement?: UniqueKeyRequirement;
   analyticFunctionUse?: boolean;
+  // [REVIEW] Added flag to track field usage originating from JOIN ON expressions
+  // This is essential for detecting when ON expressions reference nested joins
+  fromOnExpression?: boolean;
+}
+
+export interface ActiveJoin {
+  path: string[];
+  // [REVIEW] Added flag to indicate when a join's ON expression references nested joins
+  // When true, SQL generation will rewrite ON condition to 1=1 and move logic to WHERE clause
+  onReferencesChildren?: boolean;
 }
 
 export function bareFieldUsage(fu: FieldUsage): boolean {

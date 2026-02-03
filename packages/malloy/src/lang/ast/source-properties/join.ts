@@ -202,7 +202,12 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
-    inStruct.fieldUsage = exprX.fieldUsage;
+    // [REVIEW] Mark all field usage from JOIN ON expressions with fromOnExpression=true
+    // This allows the dependency system to track which field references come from ON conditions
+    inStruct.fieldUsage = exprX.fieldUsage?.map(usage => ({
+      ...usage,
+      fromOnExpression: true,
+    }));
   }
 
   getStructDef(parameterSpace: ParameterSpace): JoinFieldDef {

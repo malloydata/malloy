@@ -31,6 +31,7 @@ import type {
   PartitionCompositeDesc,
   FilterCondition,
   StructDef,
+  ActiveJoin,
 } from '../model/malloy_types';
 import {
   expressionIsScalar,
@@ -411,6 +412,7 @@ interface JoinDependency {
   path: string[];
   dependsOn: Set<string>;
   checked?: boolean;
+  onReferencesChildren?: boolean;
 }
 
 function getJoin(
@@ -426,8 +428,8 @@ function getJoin(
 
 function findActiveJoins(
   dependencies: Record<string, JoinDependency>
-): FieldUsage[] {
-  const sorted: FieldUsage[] = [];
+): ActiveJoin[] {
+  const sorted: ActiveJoin[] = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
 
@@ -450,7 +452,10 @@ function findActiveJoins(
 
     // Add this join's path to the sorted list after its dependencies
     if (dep) {
-      sorted.push({path: dep.path});
+      sorted.push({
+        path: dep.path,
+        onReferencesChildren: dep.onReferencesChildren,
+      });
     }
   };
 
@@ -477,7 +482,7 @@ function expandFieldUsage(
 ): {
   result: FieldUsage[];
   missingFields: FieldUsage[];
-  activeJoins: FieldUsage[];
+  activeJoins: ActiveJoin[];
   ungroupings: AggregateUngrouping[];
 } {
   const seen: Record<string, FieldUsage> = {};
@@ -485,6 +490,21 @@ function expandFieldUsage(
   const toProcess: FieldUsage[] = [];
   const activeJoinGraph: Record<string, JoinDependency> = {};
   const ungroupings: AggregateUngrouping[] = [];
+  // Track field dependencies: childFieldKey -> parentFieldKey
+  const fieldDependencies: Record<string, string> = {};
+
+  // Helper function to propagate fromOnExpression updates through dependency tree
+  const propagateFromOnExpression = (fieldKey: string, value: boolean) => {
+    if (seen[fieldKey] && !seen[fieldKey].fromOnExpression && value) {
+      seen[fieldKey].fromOnExpression = true;
+      // Recursively propagate to all fields that depend on this one
+      for (const [childKey, parentKey] of Object.entries(fieldDependencies)) {
+        if (parentKey === fieldKey) {
+          propagateFromOnExpression(childKey, true);
+        }
+      }
+    }
+  };
 
   // Initialize: mark original inputs and add them to processing queue
   for (const usage of fieldUsage) {
@@ -512,8 +532,11 @@ function expandFieldUsage(
       for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
         const key = pathToKey('field', usage.path);
         if (!seen[key]) {
-          seen[key] = usage;
+          seen[key] = {...usage, fromOnExpression: reference.fromOnExpression};
           toProcess.push(usage);
+          // Record that this field was added because of the reference field
+          const parentKey = pathToKey('field', reference.path);
+          fieldDependencies[key] = parentKey;
         } else if (usage.uniqueKeyRequirement) {
           seen[key].uniqueKeyRequirement = {
             isCount:
@@ -547,6 +570,21 @@ function expandFieldUsage(
           if (!seen[key]) {
             seen[key] = usage;
             toProcess.push(usage);
+          } else if (usage.fromOnExpression && !seen[key].fromOnExpression) {
+            // Update existing entry and propagate to dependencies
+            propagateFromOnExpression(key, true);
+          }
+
+          // Check if this join's ON expression references nested source joins
+          if (
+            usage.fromOnExpression &&
+            usage.path.length > joinPath.length + 1
+          ) {
+            const nestedPath = usage.path.slice(0, joinPath.length + 1);
+            const nestedDef = inNamespace(nestedPath, fieldNameSpace);
+            if (nestedDef && isSourceDef(nestedDef)) {
+              thisDep.onReferencesChildren = true;
+            }
           }
 
           // Track join-to-join dependencies
@@ -558,6 +596,24 @@ function expandFieldUsage(
             const dependencyKey = pathToKey('join', dependencyPath);
             getJoin(activeJoinGraph, dependencyKey, dependencyPath);
             thisDep.dependsOn.add(dependencyKey);
+          }
+        }
+
+        // After processing all field usage, check for nested references in the seen map
+        for (const seenUsage of Object.values(seen)) {
+          if (
+            seenUsage.fromOnExpression &&
+            seenUsage.path.length > joinPath.length + 1
+          ) {
+            // Check if this path goes through the current join
+            if (pathBegins(seenUsage.path, joinPath)) {
+              const nestedPath = seenUsage.path.slice(0, joinPath.length + 1);
+              const nestedDef = inNamespace(nestedPath, fieldNameSpace);
+              if (nestedDef && isSourceDef(nestedDef)) {
+                thisDep.onReferencesChildren = true;
+                break; // Only need to set it once
+              }
+            }
           }
         }
       }

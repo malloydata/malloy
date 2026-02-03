@@ -250,14 +250,19 @@ export class QueryQuery extends QueryField {
 
   private addDependantPath(
     path: string[],
-    uniqueKeyRequirement: UniqueKeyRequirement
+    uniqueKeyRequirement: UniqueKeyRequirement,
+    onReferencesChildren?: boolean
   ) {
     const node = this.parent.getFieldByName(path);
     const joinableParent =
       node instanceof QueryFieldStruct
         ? node.queryStruct.getJoinableParent()
         : node.parent.getJoinableParent();
-    this.rootResult.addStructToJoin(joinableParent, uniqueKeyRequirement);
+    this.rootResult.addStructToJoin(
+      joinableParent,
+      uniqueKeyRequirement,
+      onReferencesChildren
+    );
   }
 
   private dependenciesFromFieldUsage() {
@@ -271,7 +276,11 @@ export class QueryQuery extends QueryField {
     }
 
     for (const joinUsage of this.firstSegment.activeJoins || []) {
-      this.addDependantPath(joinUsage.path, undefined);
+      this.addDependantPath(
+        joinUsage.path,
+        undefined,
+        joinUsage.onReferencesChildren
+      );
     }
     for (const usage of this.firstSegment.expandedFieldUsage || []) {
       if (usage.analyticFunctionUse) {
@@ -860,22 +869,45 @@ export class QueryQuery extends QueryField {
         throw new Error('Expected joined struct to have a parent.');
       }
       if (qsDef.onExpression) {
-        // Create a temporary field instance to generate the SQL
-        const boolField = new QueryFieldBoolean(
-          {
-            type: 'boolean',
-            name: 'ignoreme',
-            e: qsDef.onExpression,
-          },
-          qs.parent
-        );
-        const tempInstance = new FieldInstanceField(
-          boolField,
-          {type: 'where'}, // It's used in a WHERE-like context
-          this.rootResult,
-          undefined
-        );
-        onCondition = tempInstance.generateExpression();
+        // If this join's ON references nested joins, move it to WHERE
+        if (ji.onReferencesChildren) {
+          // Add ON expression to filter conditions
+          const onAsFilter = new QueryFieldBoolean(
+            {
+              type: 'boolean',
+              name: 'ignoreme',
+              e: qsDef.onExpression,
+            },
+            qs.parent
+          );
+
+          // Add to existing filter conditions or create new array
+          if (ji.joinFilterConditions) {
+            ji.joinFilterConditions.push(onAsFilter);
+          } else {
+            ji.joinFilterConditions = [onAsFilter];
+          }
+
+          // Replace ON with 1=1
+          onCondition = '1=1';
+        } else {
+          // Normal ON expression handling (existing code)
+          const boolField = new QueryFieldBoolean(
+            {
+              type: 'boolean',
+              name: 'ignoreme',
+              e: qsDef.onExpression,
+            },
+            qs.parent
+          );
+          const tempInstance = new FieldInstanceField(
+            boolField,
+            {type: 'where'}, // It's used in a WHERE-like context
+            this.rootResult,
+            undefined
+          );
+          onCondition = tempInstance.generateExpression();
+        }
       } else {
         onCondition = '1=1';
       }
