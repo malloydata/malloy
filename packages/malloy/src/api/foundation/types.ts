@@ -45,14 +45,14 @@ export interface CompileQueryOptions {
 // =============================================================================
 
 /**
- * A node in the build graph.
- * Uses sourceId (sourceName@modelURL) for identity.
+ * A node in the build graph (recursive DAG structure).
+ * Uses sourceID (sourceName@modelURL) for identity.
  */
 export interface BuildNode {
   /** Source identity: "sourceName@modelURL" */
-  sourceId: string;
-  /** Dependencies (other sourceIds) that must be built first */
-  dependsOn: string[];
+  sourceID: string;
+  /** Dependencies as nested BuildNodes (recursive DAG) */
+  dependsOn: BuildNode[];
 }
 
 /**

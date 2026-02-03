@@ -5,6 +5,22 @@
 
 import {runtimeFor, testFileSpace} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
+import type {BuildNode} from '@malloydata/malloy';
+
+// Helper to extract all sourceIDs from a nested BuildNode array (recursive)
+function getAllSourceIDs(nodes: BuildNode[]): string[] {
+  const ids: string[] = [];
+  for (const node of nodes) {
+    ids.push(node.sourceID);
+    ids.push(...getAllSourceIDs(node.dependsOn));
+  }
+  return ids;
+}
+
+// Helper to check if a sourceID pattern exists anywhere in nested deps
+function hasDependency(nodes: BuildNode[], pattern: string): boolean {
+  return getAllSourceIDs(nodes).some(id => id.includes(pattern));
+}
 
 const tstDB = 'duckdb';
 const tstRuntime = runtimeFor(tstDB);
@@ -39,10 +55,10 @@ describe('source persistence', () => {
         const plan = model.getBuildPlan();
 
         const sourceA = Object.values(plan.sources).find(s =>
-          s.sourceId.includes('source_a')
+          s.sourceID.includes('source_a')
         )!;
         const sourceB = Object.values(plan.sources).find(s =>
-          s.sourceId.includes('source_b')
+          s.sourceID.includes('source_b')
         )!;
 
         const sqlA = sourceA.getSQL();
@@ -108,7 +124,7 @@ describe('source persistence', () => {
 
         expect(buildId1).not.toBe(buildId2);
         // Both should have the same sourceId and digest prefix
-        const prefix = `${source.sourceId}:${digest}:`;
+        const prefix = `${source.sourceID}:${digest}:`;
         expect(buildId1.startsWith(prefix)).toBe(true);
         expect(buildId2.startsWith(prefix)).toBe(true);
       });
@@ -278,9 +294,9 @@ describe('source persistence', () => {
         expect(graph.nodes[0]).toHaveLength(1);
 
         const node = graph.nodes[0][0];
-        expect(node.sourceId).toMatch(/source_b/);
+        expect(node.sourceID).toMatch(/source_b/);
         expect(node.dependsOn).toHaveLength(1);
-        expect(node.dependsOn[0]).toMatch(/source_a/);
+        expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       // Diamond pattern using extend (not ->)
@@ -325,13 +341,14 @@ describe('source persistence', () => {
         expect(graph.nodes[0]).toHaveLength(1);
 
         const nodeD = graph.nodes[0][0];
-        expect(nodeD.sourceId).toMatch(/source_d/);
+        expect(nodeD.sourceID).toMatch(/source_d/);
 
-        // D should depend on A, B, and C (A transitively through extends)
-        expect(nodeD.dependsOn).toHaveLength(3);
-        expect(nodeD.dependsOn.some(d => d.includes('source_a'))).toBe(true);
-        expect(nodeD.dependsOn.some(d => d.includes('source_b'))).toBe(true);
-        expect(nodeD.dependsOn.some(d => d.includes('source_c'))).toBe(true);
+        // D should depend on A, B, and C (A nested inside B's deps)
+        const allDeps = getAllSourceIDs(nodeD.dependsOn);
+        expect(allDeps).toHaveLength(3);
+        expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
+        expect(hasDependency(nodeD.dependsOn, 'source_b')).toBe(true);
+        expect(hasDependency(nodeD.dependsOn, 'source_c')).toBe(true);
       });
 
       it('diamond dependency pattern with query_source chains', async () => {
@@ -369,13 +386,14 @@ describe('source persistence', () => {
         expect(graph.nodes[0]).toHaveLength(1);
 
         const nodeD = graph.nodes[0][0];
-        expect(nodeD.sourceId).toMatch(/source_d/);
+        expect(nodeD.sourceID).toMatch(/source_d/);
 
-        // D should depend on A, B, and C (transitively)
-        expect(nodeD.dependsOn).toHaveLength(3);
-        expect(nodeD.dependsOn.some(d => d.includes('source_a'))).toBe(true);
-        expect(nodeD.dependsOn.some(d => d.includes('source_b'))).toBe(true);
-        expect(nodeD.dependsOn.some(d => d.includes('source_c'))).toBe(true);
+        // D should depend on A, B, and C (A nested inside B and C's deps)
+        const allDeps = getAllSourceIDs(nodeD.dependsOn);
+        expect(allDeps).toHaveLength(3);
+        expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
+        expect(hasDependency(nodeD.dependsOn, 'source_b')).toBe(true);
+        expect(hasDependency(nodeD.dependsOn, 'source_c')).toBe(true);
       });
     });
 
@@ -402,10 +420,10 @@ describe('source persistence', () => {
         const plan = model.getBuildPlan();
 
         const nodeB = plan.graphs[0].nodes[0].find(n =>
-          n.sourceId.includes('source_b')
+          n.sourceID.includes('source_b')
         )!;
         expect(nodeB.dependsOn).toHaveLength(1);
-        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       // B extends A, creating a dependency through extends
@@ -433,10 +451,10 @@ describe('source persistence', () => {
 
         // B is the only leaf, depends on A through extends
         const nodeB = plan.graphs[0].nodes[0].find(n =>
-          n.sourceId.includes('source_b')
+          n.sourceID.includes('source_b')
         )!;
         expect(nodeB.dependsOn).toHaveLength(1);
-        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       // Chain: A -> B (extends A) -> C (extends B)
@@ -474,12 +492,13 @@ describe('source persistence', () => {
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const nodeC = plan.graphs[0].nodes[0][0];
-        expect(nodeC.sourceId).toMatch(/source_c/);
+        expect(nodeC.sourceID).toMatch(/source_c/);
 
-        // C should depend on both A and B
-        expect(nodeC.dependsOn).toHaveLength(2);
-        expect(nodeC.dependsOn.some(d => d.includes('source_a'))).toBe(true);
-        expect(nodeC.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+        // C should depend on both A and B (A nested inside B)
+        const allDeps = getAllSourceIDs(nodeC.dependsOn);
+        expect(allDeps).toHaveLength(2);
+        expect(hasDependency(nodeC.dependsOn, 'source_a')).toBe(true);
+        expect(hasDependency(nodeC.dependsOn, 'source_b')).toBe(true);
       });
 
       // sql_select dependencies
@@ -507,9 +526,9 @@ describe('source persistence', () => {
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const nodeB = plan.graphs[0].nodes[0][0];
-        expect(nodeB.sourceId).toMatch(/source_b/);
+        expect(nodeB.sourceID).toMatch(/source_b/);
         expect(nodeB.dependsOn).toHaveLength(1);
-        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       it('sql_select: detects dependency on query in interpolation', async () => {
@@ -538,9 +557,9 @@ describe('source persistence', () => {
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const nodeB = plan.graphs[0].nodes[0][0];
-        expect(nodeB.sourceId).toMatch(/source_b/);
+        expect(nodeB.sourceID).toMatch(/source_b/);
         expect(nodeB.dependsOn).toHaveLength(1);
-        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       it('sql_select: detects transitive dependency through non-persistent interpolated source', async () => {
@@ -574,11 +593,11 @@ describe('source persistence', () => {
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const node = plan.graphs[0].nodes[0][0];
-        expect(node.sourceId).toMatch(/source_c/);
+        expect(node.sourceID).toMatch(/source_c/);
 
         // C should depend on A (transitively through non-persistent B)
         expect(node.dependsOn).toHaveLength(1);
-        expect(node.dependsOn[0]).toMatch(/source_a/);
+        expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       // Transitive through non-persistent
@@ -613,11 +632,11 @@ describe('source persistence', () => {
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const node = plan.graphs[0].nodes[0][0];
-        expect(node.sourceId).toMatch(/source_c/);
+        expect(node.sourceID).toMatch(/source_c/);
 
         // C should depend on A (transitively through non-persistent B)
         expect(node.dependsOn).toHaveLength(1);
-        expect(node.dependsOn[0]).toMatch(/source_a/);
+        expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
       // NOT dependencies
@@ -648,10 +667,10 @@ describe('source persistence', () => {
         expect(plan.graphs[0].nodes[0]).toHaveLength(2);
 
         const nodeA = plan.graphs[0].nodes[0].find(n =>
-          n.sourceId.includes('source_a')
+          n.sourceID.includes('source_a')
         )!;
         const nodeB = plan.graphs[0].nodes[0].find(n =>
-          n.sourceId.includes('source_b')
+          n.sourceID.includes('source_b')
         )!;
 
         // Neither depends on the other
@@ -695,12 +714,13 @@ describe('source persistence', () => {
 
         // The single node should be source_c
         const node = graph.nodes[0][0];
-        expect(node.sourceId).toMatch(/^source_c@/);
+        expect(node.sourceID).toMatch(/^source_c@/);
 
-        // source_c depends on source_a and source_b
-        expect(node.dependsOn).toHaveLength(2);
-        expect(node.dependsOn.some(d => d.includes('source_a'))).toBe(true);
-        expect(node.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+        // source_c depends on source_a and source_b (A nested inside B)
+        const allDeps = getAllSourceIDs(node.dependsOn);
+        expect(allDeps).toHaveLength(2);
+        expect(hasDependency(node.dependsOn, 'source_a')).toBe(true);
+        expect(hasDependency(node.dependsOn, 'source_b')).toBe(true);
       });
 
       it('returns leaves from multiple disjoint chains', async () => {
@@ -742,23 +762,23 @@ describe('source persistence', () => {
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(2);
 
-        const nodeIds = graph.nodes[0].map(n => n.sourceId);
+        const nodeIds = graph.nodes[0].map(n => n.sourceID);
         expect(nodeIds.some(id => id.includes('source_b'))).toBe(true);
         expect(nodeIds.some(id => id.includes('source_d'))).toBe(true);
 
         // B depends on A, D depends on C
         const nodeB = graph.nodes[0].find(n =>
-          n.sourceId.includes('source_b')
+          n.sourceID.includes('source_b')
         )!;
         const nodeD = graph.nodes[0].find(n =>
-          n.sourceId.includes('source_d')
+          n.sourceID.includes('source_d')
         )!;
 
         expect(nodeB.dependsOn).toHaveLength(1);
-        expect(nodeB.dependsOn[0]).toMatch(/source_a/);
+        expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
 
         expect(nodeD.dependsOn).toHaveLength(1);
-        expect(nodeD.dependsOn[0]).toMatch(/source_c/);
+        expect(nodeD.dependsOn[0].sourceID).toMatch(/source_c/);
       });
     });
 
@@ -859,7 +879,7 @@ describe('source persistence', () => {
       expect(Object.keys(plan.sources)).toHaveLength(1);
       const source = Object.values(plan.sources)[0];
       expect(source.name).toBe('custom_query');
-      expect(source.sourceId).toMatch(/custom_query@/);
+      expect(source.sourceID).toMatch(/custom_query@/);
     });
 
     it('sql_select with interpolated persist source has dependency', async () => {
@@ -888,9 +908,9 @@ describe('source persistence', () => {
       expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
       const node = plan.graphs[0].nodes[0][0];
-      expect(node.sourceId).toMatch(/combined/);
+      expect(node.sourceID).toMatch(/combined/);
       expect(node.dependsOn).toHaveLength(1);
-      expect(node.dependsOn[0]).toMatch(/carrier_stats/);
+      expect(node.dependsOn[0].sourceID).toMatch(/carrier_stats/);
     });
 
     it('getSQL expands interpolated sources to subqueries', async () => {
@@ -963,10 +983,10 @@ describe('source persistence', () => {
 
       // Verify buildId format: sourceId:connectionDigest:sqlDigest
       // Note: sourceId contains URL which has "://" so we can't just split by ":"
-      expect(buildId).toContain(source.sourceId);
+      expect(buildId).toContain(source.sourceID);
       expect(buildId).toContain(mockConnectionDigest);
       // The buildId should start with sourceId and contain digest and sql hash
-      expect(buildId.startsWith(source.sourceId + ':')).toBe(true);
+      expect(buildId.startsWith(source.sourceID + ':')).toBe(true);
 
       // Verify we can access source metadata for table naming
       const parsed = source.tagParse({prefix: /^#@ /});
@@ -1019,16 +1039,17 @@ describe('source persistence', () => {
       // extended_stats should depend on base_stats from model1
       expect(plan.graphs).toHaveLength(1);
       const node = plan.graphs[0].nodes[0].find(n =>
-        n.sourceId.includes('extended_stats')
+        n.sourceID.includes('extended_stats')
       );
       expect(node).toBeDefined();
 
       // The dependency should include base_stats (from the imported model)
-      expect(node!.dependsOn.some(d => d.includes('base_stats'))).toBe(true);
+      expect(node!.dependsOn.some(d => d.sourceID.includes('base_stats'))).toBe(
+        true
+      );
     });
 
-    // TODO: Requires cross-model sourceID map merging - see plan for SourceRef refactor
-    it.skip('detects transitive dependency through imported extend chain', async () => {
+    it('detects persistent base through non-persistent imported extend chain', async () => {
       // Model 1: defines persist source A
       const model1 = `
         source: flights is ${tstDB}.table('malloytest.flights')
@@ -1040,24 +1061,22 @@ describe('source persistence', () => {
         }
       `;
 
-      // Model 2: imports model1, extends A to create B (also persist)
+      // Model 2: imports model1, extends A to create B (NOT persist)
       const model2 = `
         import "test://model1.malloy"
 
-        #@ persist
         source: source_b is source_a extend {
           dimension: b_field is 'b'
-        } -> { select: * }
+        }
       `;
 
-      // Model 3: imports model2, extends B to create C
+      // Model 3: imports model2, extends B to create C (NOT persist)
       const model3 = `
         import "test://model2.malloy"
 
-        #@ persist
         source: source_c is source_b extend {
           dimension: c_field is 'c'
-        } -> { select: * }
+        }
       `;
 
       testFileSpace.setFile(new URL('test://model1.malloy'), model1);
@@ -1069,18 +1088,95 @@ describe('source persistence', () => {
         dialect: tstRuntime.dialect,
       };
       const model = await testModel.model.getModel();
+
       const plan = model.getBuildPlan();
 
-      // source_c should depend on both source_a and source_b
+      // Persistence is inherited through extends chain, so all three sources
+      // are persistent. source_c is the root (nothing depends on it).
+      // All three will generate the same SQL and use the same build artifact.
       expect(plan.graphs).toHaveLength(1);
-      const nodeC = plan.graphs[0].nodes[0].find(n =>
-        n.sourceId.includes('source_c')
-      );
-      expect(nodeC).toBeDefined();
+      const graph = plan.graphs[0];
 
-      // C should depend on A (transitively) and B
-      expect(nodeC!.dependsOn.some(d => d.includes('source_a'))).toBe(true);
-      expect(nodeC!.dependsOn.some(d => d.includes('source_b'))).toBe(true);
+      // Build graph has 1 level with the root node (source_c)
+      // Dependencies are nested in dependsOn
+      expect(graph.nodes).toHaveLength(1);
+      expect(graph.nodes[0]).toHaveLength(1);
+
+      // Root: source_c
+      const source_c = graph.nodes[0][0];
+      expect(source_c.sourceID).toContain('source_c');
+
+      // source_c depends on source_b
+      expect(source_c.dependsOn).toHaveLength(1);
+      const source_b = source_c.dependsOn[0];
+      expect(source_b.sourceID).toContain('source_b');
+
+      // source_b depends on source_a
+      expect(source_b.dependsOn).toHaveLength(1);
+      const source_a = source_b.dependsOn[0];
+      expect(source_a.sourceID).toContain('source_a');
+
+      // source_a has no dependencies
+      expect(source_a.dependsOn).toHaveLength(0);
+    });
+
+    it('breaks persistence inheritance with #@ -persist', async () => {
+      // Model 1: defines persist source A
+      const model1 = `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: source_a is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `;
+
+      // Model 2: imports model1, extends A to create B with #@ -persist
+      // This breaks the persistence inheritance chain
+      const model2 = `
+        import "test://model1.malloy"
+
+        #@ -persist
+        source: source_b is source_a extend {
+          dimension: b_field is 'b'
+        }
+      `;
+
+      // Model 3: imports model2, extends B to create C (NOT persistent)
+      // source_c is not persistent because source_b broke the chain
+      const model3 = `
+        import "test://model2.malloy"
+
+        source: source_c is source_b extend {
+          dimension: c_field is 'c'
+        }
+      `;
+
+      testFileSpace.setFile(new URL('test://model1.malloy'), model1);
+      testFileSpace.setFile(new URL('test://model2.malloy'), model2);
+      testFileSpace.setFile(new URL('test://model3.malloy'), model3);
+
+      const testModel = {
+        model: tstRuntime.loadModel(new URL('test://model3.malloy')),
+        dialect: tstRuntime.dialect,
+      };
+      const model = await testModel.model.getModel();
+
+      const plan = model.getBuildPlan();
+
+      // Only source_a is persistent - source_b used #@ -persist to break the chain
+      expect(plan.graphs).toHaveLength(1);
+      const graph = plan.graphs[0];
+
+      // Build graph has 1 level with just source_a
+      expect(graph.nodes).toHaveLength(1);
+      expect(graph.nodes[0]).toHaveLength(1);
+
+      // Root: source_a (the only persistent source)
+      const source_a = graph.nodes[0][0];
+      expect(source_a.sourceID).toContain('source_a');
+      expect(source_a.dependsOn).toHaveLength(0);
     });
   });
 });

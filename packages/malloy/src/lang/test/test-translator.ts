@@ -398,6 +398,7 @@ export class TestTranslator extends MalloyTranslator {
     name: testURI,
     exports: [],
     queryList: [],
+    sourceRegistry: {},
     dependencies: {},
     contents: {
       _db_: {type: 'connection', name: '_db_'},

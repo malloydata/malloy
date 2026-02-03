@@ -15,15 +15,23 @@
 
 import type {
   FieldDef,
+  ModelDef,
+  PersistableSourceDef,
   Query,
   QuerySourceDef,
   SourceDef,
+  SourceID,
+  SourceRegistryEntry,
+  SourceRegistryValue,
   SQLPhraseSegment,
   SQLSourceDef,
   TableSourceDef,
 } from './malloy_types';
-
-export type SourceID = string; // Format: "name@modelUrl"
+import {
+  isSourceDef,
+  isPersistableSourceDef,
+  isSourceRegistryReference,
+} from './malloy_types';
 
 export function mkSourceID(name: string, url: string | undefined): SourceID {
   return `${name}@${url ?? 'unknown'}`;
@@ -148,4 +156,58 @@ export function mkTableSourceDef(
     dialect,
     fields,
   };
+}
+
+// =============================================================================
+// Source Registry Utilities
+// =============================================================================
+
+/**
+ * Resolve a sourceID to a SourceDef using the sourceRegistry.
+ *
+ * @param modelDef The model definition containing the registry
+ * @param sourceID The sourceID to resolve
+ * @returns The SourceDef if found, undefined otherwise
+ */
+export function resolveSourceID(
+  modelDef: ModelDef,
+  sourceID: SourceID
+): PersistableSourceDef | undefined {
+  const value = modelDef.sourceRegistry[sourceID];
+  if (!value) return undefined;
+
+  if (isSourceRegistryReference(value.entry)) {
+    const obj = modelDef.contents[value.entry.name];
+    return obj && isSourceDef(obj) && isPersistableSourceDef(obj)
+      ? obj
+      : undefined;
+  }
+
+  // It's a PersistableSourceDef
+  return value.entry;
+}
+
+/**
+ * Add an entry to the sourceRegistry.
+ *
+ * @param registry The sourceRegistry to modify (from ModelDef or Document)
+ * @param sourceID The sourceID to register
+ * @param entry Either a SourceRegistryReference (for namespace sources) or a PersistableSourceDef (for hidden deps)
+ */
+export function registerSource(
+  registry: Record<SourceID, SourceRegistryValue>,
+  sourceID: SourceID,
+  entry: SourceRegistryEntry
+): void {
+  registry[sourceID] = {entry};
+}
+
+/**
+ * Check if a sourceID is already in the registry.
+ */
+export function hasSourceRegistryEntry(
+  modelDef: ModelDef,
+  sourceID: SourceID
+): boolean {
+  return sourceID in modelDef.sourceRegistry;
 }

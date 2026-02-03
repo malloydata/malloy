@@ -45,12 +45,16 @@ import {
   isPersistableSourceDef,
   getCompiledSQL,
 } from '../../model';
-import {makeDigest} from '../../model/utils';
+import {makeDigest, mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
 import {getDialect} from '../../dialect';
 import type {Connection, LookupConnection} from '../../connection/types';
 import type {BuildGraph, BuildNode, CompileQueryOptions} from './types';
-import {buildSourceGraph} from '../../model/persist_utils';
+import {
+  findPersistentDependencies,
+  minimalBuildGraph,
+} from '../../model/persist_utils';
+import {resolveSourceID} from '../../model/source_def_utils';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {
@@ -304,13 +308,9 @@ export class Explore extends Entity implements Taggable {
         `Cannot create pseudo model for struct type ${this.structDef.type}`
       );
     }
-    return {
-      name: 'generated_model',
-      exports: [],
-      contents: {[this.structDef.name]: this.structDef},
-      queryList: [],
-      dependencies: {},
-    };
+    const def = mkModelDef('generated_model');
+    def.contents[this.structDef.name] = this.structDef;
+    return def;
   }
 
   public getSingleExploreModel(): Model {
@@ -1222,101 +1222,76 @@ export class Model implements Taggable {
   /**
    * Get the build plan for all #@ persist sources.
    *
+   * Walks through ALL queries and sources in the model, finding any persistent
+   * dependencies they reference (including hidden dependencies from imports).
+   *
    * Returns a BuildPlan containing:
-   * - `graphs`: Build graphs for leaf sources only (minimal build set)
+   * - `graphs`: Build graphs for root sources only (minimal build set)
    * - `sources`: Map from sourceId to PersistSource (all persist sources)
    *
-   * The minimal build set contains only "leaf" sources - those not depended
-   * on by any other persist source. Each leaf includes its transitive
-   * dependencies in the dependsOn field.
+   * The minimal build set contains only "root" sources - those not depended
+   * on by any other persist source. Each root includes its transitive
+   * dependencies in the dependsOn field, preserving the tree structure
+   * for parallel building.
    *
    * @return BuildPlan with graphs and sources map
    */
   public getBuildPlan(): BuildPlan {
-    // Find all sources with #@ persist annotation
-    const persistSources: PersistSource[] = [];
-    const sourcesMap: Record<string, PersistSource> = {};
+    const allDeps: BuildNode[] = [];
 
-    for (const explore of this.explores) {
-      const sd = explore.structDef;
-      if (!isSourceDef(sd) || !isPersistableSourceDef(sd)) continue;
-
-      // Check for #@ persist annotation
-      const parsed = explore.tagParse({prefix: /^#@ /});
-      if (!parsed.tag.has('persist')) continue;
-
-      const persistSource = new PersistSource(explore, this);
-      persistSources.push(persistSource);
-      sourcesMap[persistSource.sourceId] = persistSource;
+    // Walk all objects in the model to find persistent dependencies
+    for (const obj of Object.values(this.modelDef.contents)) {
+      if (obj.type === 'query' || isSourceDef(obj)) {
+        allDeps.push(...findPersistentDependencies(obj, this.modelDef));
+      }
     }
 
-    if (persistSources.length === 0) {
+    // Also walk queryList (unnamed queries)
+    for (const query of this.modelDef.queryList) {
+      allDeps.push(...findPersistentDependencies(query, this.modelDef));
+    }
+
+    if (allDeps.length === 0) {
       return {graphs: [], sources: {}};
     }
 
-    // Get the persistable source defs for graph building
-    const persistableDefs = persistSources.map(ps => ps._sourceDef);
+    // Find the minimal set of root graphs
+    const rootNodes = minimalBuildGraph(allDeps);
 
-    // Build the full dependency graph
-    const sourceGraph = buildSourceGraph(persistableDefs, this.modelDef);
-
-    // Build a map from sourceId to its direct dependencies
-    const directDeps = new Map<string, string[]>();
-    for (const level of sourceGraph) {
-      for (const node of level) {
-        directDeps.set(node.sourceID, node.dependsOn);
-      }
-    }
-
-    // Find all sourceIds that are depended on by others
-    const dependedOn = new Set<string>();
-    for (const deps of directDeps.values()) {
-      for (const dep of deps) {
-        dependedOn.add(dep);
-      }
-    }
-
-    // Leaf sources are those NOT depended on by any other persist source
-    const leafSourceIds = [...directDeps.keys()].filter(
-      id => !dependedOn.has(id)
-    );
-
-    // Compute transitive dependencies for each leaf
-    function getTransitiveDeps(sourceId: string): string[] {
-      const transitive = new Set<string>();
-      const stack = [...(directDeps.get(sourceId) ?? [])];
-      while (stack.length > 0) {
-        const dep = stack.pop()!;
-        if (!transitive.has(dep)) {
-          transitive.add(dep);
-          stack.push(...(directDeps.get(dep) ?? []));
+    // Build the sources map from all persistent sourceIDs encountered
+    const sourcesMap: Record<string, PersistSource> = {};
+    const collectSources = (nodes: BuildNode[]) => {
+      for (const node of nodes) {
+        if (!(node.sourceID in sourcesMap)) {
+          const sourceDef = resolveSourceID(this.modelDef, node.sourceID);
+          if (sourceDef) {
+            sourcesMap[node.sourceID] = new PersistSource(
+              new Explore(sourceDef),
+              this
+            );
+          }
         }
+        collectSources(node.dependsOn);
       }
-      return [...transitive];
-    }
+    };
+    collectSources(rootNodes);
 
-    // Group leaf nodes by connection
+    // Group root nodes by connection
     const graphsByConnection = new Map<string, BuildNode[]>();
-
-    for (const sourceId of leafSourceIds) {
-      const persistSource = sourcesMap[sourceId];
+    for (const node of rootNodes) {
+      const persistSource = sourcesMap[node.sourceID];
       if (!persistSource) continue;
 
       const connName = persistSource.connectionName;
       if (!graphsByConnection.has(connName)) {
         graphsByConnection.set(connName, []);
       }
-
-      graphsByConnection.get(connName)!.push({
-        sourceId,
-        dependsOn: getTransitiveDeps(sourceId),
-      });
+      graphsByConnection.get(connName)!.push(node);
     }
 
-    // Convert to BuildGraph array (each leaf is its own single-level graph)
+    // Convert to BuildGraph array
     const graphs: BuildGraph[] = [];
     for (const [connectionName, nodes] of graphsByConnection) {
-      // Each leaf gets its own entry in the single level
       graphs.push({connectionName, nodes: [nodes]});
     }
 
@@ -1505,12 +1480,12 @@ export class PersistSource implements Taggable {
   ) {
     const sd = explore.structDef;
     if (!isSourceDef(sd)) {
-      throw new Error(`Cannot create PersistSource from non-source type`);
+      throw new Error('Cannot create PersistSource from non-source type');
     }
     if (!isPersistableSourceDef(sd)) {
       throw new Error(
         `Cannot persist source '${explore.name}' of type '${sd.type}'. ` +
-          `Only query_source and sql_select sources can be persisted.`
+          'Only query_source and sql_select sources can be persisted.'
       );
     }
     this.persistableDef = sd;
@@ -1527,12 +1502,12 @@ export class PersistSource implements Taggable {
    * The stable identity of this source: "sourceName@modelURL".
    * Used as lookup key during compilation and in build graphs.
    */
-  get sourceId(): string {
+  get sourceID(): string {
     const id = this.persistableDef.sourceID;
     if (!id) {
       throw new Error(
-        `PersistSource '${this.name}' has no sourceId. ` +
-          `This should not happen - sourceId is set at translation time.`
+        `PersistSource '${this.name}' has no sourceID. ` +
+          'This should not happen - sourceID is set at translation time.'
       );
     }
     return id;
@@ -1599,7 +1574,7 @@ export class PersistSource implements Taggable {
    */
   makeBuildId(connectionDigest: string, sql: string): string {
     const sqlDigest = makeDigest(sql);
-    return `${this.sourceId}:${connectionDigest}:${sqlDigest}`;
+    return `${this.sourceID}:${connectionDigest}:${sqlDigest}`;
   }
 
   /**

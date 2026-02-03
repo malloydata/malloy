@@ -14,5 +14,6 @@
  * please file an issue to discuss adding a proper public API.
  */
 
-export {buildInternalGraph, buildSourceGraph} from '../model/persist_utils';
-export type {SourceBuildGraph, SourceBuildNode} from '../model/persist_utils';
+export {buildSourceGraph} from '../model/persist_utils';
+export type {SourceBuildGraph} from '../model/persist_utils';
+export type {BuildNode} from '../api/foundation/types';

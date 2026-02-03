@@ -1380,6 +1380,39 @@ export function isSegmentSource(
 /** Format: "name@modelUrl" - uniquely identifies a source for persistence */
 export type SourceID = string;
 
+/**
+ * Reference to a source in modelDef.contents by name.
+ * Used in sourceRegistry to avoid duplicating SourceDefs that are in the namespace.
+ */
+export interface SourceRegistryReference {
+  type: 'source_registry_reference';
+  name: string;
+}
+
+/**
+ * Inner entry type: either a reference to contents or an actual PersistableSourceDef.
+ * - SourceRegistryReference: source is in namespace (contents), look it up by name
+ * - PersistableSourceDef: source is not in namespace (hidden dependency), stored directly
+ */
+export type SourceRegistryEntry =
+  | SourceRegistryReference
+  | PersistableSourceDef;
+
+/**
+ * Value in the sourceRegistry, wrapping the entry with persistence info.
+ * persist is lazily computed: undefined = not checked, true/false = checked
+ */
+export interface SourceRegistryValue {
+  entry: SourceRegistryEntry;
+  persist?: boolean;
+}
+
+export function isSourceRegistryReference(
+  entry: SourceRegistryEntry
+): entry is SourceRegistryReference {
+  return entry.type === 'source_registry_reference';
+}
+
 export interface PersistableSourceProperties {
   sourceID?: SourceID;
   extends?: SourceID;
@@ -1769,6 +1802,13 @@ export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
+  /**
+   * Registry mapping sourceID to source definitions for build graph construction.
+   * For sources in namespace: maps to SourceRegistryReference (look up in contents)
+   * For hidden dependencies: maps to actual PersistableSourceDef (not in namespace)
+   * Each entry includes a lazily-computed persist flag.
+   */
+  sourceRegistry: Record<SourceID, SourceRegistryValue>;
   annotation?: ModelAnnotation;
   queryList: Query[];
   dependencies: DependencyTree;

@@ -27,6 +27,7 @@ import type {
   Expr,
   ExprWithKids,
   GenericSQLExpr,
+  ModelDef,
   StructDef,
 } from './malloy_types';
 import {
@@ -301,4 +302,19 @@ export class GenerateState {
     newState.totalGroupSet = groupSet;
     return newState;
   }
+}
+
+/**
+ * Create an empty ModelDef with the given name.
+ * Use this factory to ensure all required fields are present.
+ */
+export function mkModelDef(name: string): ModelDef {
+  return {
+    name,
+    exports: [],
+    contents: {},
+    sourceRegistry: {},
+    queryList: [],
+    dependencies: {},
+  };
 }

@@ -23,6 +23,7 @@ function createModelWithExplore(exploreDef: SourceDef): Model {
     contents: {
       [exploreDef.name]: exploreDef,
     },
+    sourceRegistry: {},
     queryList: [],
     dependencies: {},
   };
@@ -309,6 +310,7 @@ describe('Explore.getSourceComponents', () => {
       contents: {
         'query_source_explore': querySourceExplore,
       },
+      sourceRegistry: {},
       queryList: [],
       dependencies: {},
     });

@@ -17,6 +17,7 @@ import type {
   InvalidationKey,
 } from '../../runtime_types';
 import type {SQLSourceDef, DependencyTree, QueryRunStats} from '../../model';
+import {mkModelDef} from '../../model';
 import {sqlKey} from '../../model/sql_block';
 import type {RunSQLOptions} from '../../run_sql_options';
 import {MALLOY_VERSION} from '../../version';
@@ -328,13 +329,7 @@ export class Malloy {
             existingQueryModel
           );
         } else if (noThrowOnError) {
-          const emptyModel = {
-            name: 'modelDidNotCompile',
-            exports: [],
-            contents: {},
-            dependencies: {},
-            queryList: [],
-          };
+          const emptyModel = mkModelDef('modelDidNotCompile');
           const modelFromCompile = model?._modelDef || emptyModel;
           return new Model(modelFromCompile, result.problems || [], [
             ...(model?.fromSources ?? []),
@@ -573,13 +568,7 @@ export class Malloy {
           sourceFilters: [],
           profilingUrl: data.profilingUrl,
         },
-        {
-          name: 'empty_model',
-          exports: [],
-          contents: {},
-          queryList: [],
-          dependencies: {},
-        }
+        mkModelDef('empty_model')
       );
     } else if (preparedResult) {
       const result = await connection.runSQL(preparedResult.sql, options);

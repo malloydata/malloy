@@ -11,7 +11,6 @@ import type {
   Query,
   QuerySegment,
   StructRef,
-  FieldDef,
 } from './malloy_types';
 import {
   isSourceDef,
@@ -20,21 +19,15 @@ import {
   isJoined,
   isSegmentSource,
 } from './malloy_types';
-
-/**
- * A node in the source build graph.
- * Uses sourceID (name@url) for identity.
- */
-export interface SourceBuildNode {
-  sourceID: string;
-  dependsOn: string[];
-}
+import {resolveSourceID} from './source_def_utils';
+import {annotationToTag} from '../annotation';
+import type {BuildNode} from '../api/foundation/types';
 
 /**
  * Source build graph: leveled array for parallel execution.
  * Sources in the same level can be built in parallel.
  */
-export type SourceBuildGraph = SourceBuildNode[][];
+export type SourceBuildGraph = BuildNode[][];
 
 /**
  * Resolve a source name to its definition from model contents.
@@ -48,88 +41,123 @@ function resolveSource(
 }
 
 /**
- * Find all persist source dependencies for a persistable source.
- *
- * Dependency detection rules:
- *
- * For sql_select sources:
- * - Walk selectSegments for interpolation elements
- * - If element is a persistable source with sourceID → dependency
- * - If element is a query → walk that query
- *
- * For query_source sources:
- * - Check structRef → if it resolves to a source with persistent sourceID → dependency
- * - Walk each pipeline stage's extendSource for joins
- * - If joined structdef has persistent sourceID → dependency
- *
- * NOT dependencies:
- * - Fields array of a source (joins there are from the source definition, not the query)
- *
- * @returns Array of dependency sourceIDs
+ * Check if a source has the #@ persist annotation.
  */
-function findSourceDependencies(
-  source: PersistableSourceDef,
-  modelDef: ModelDef,
-  persistSourceIds: Set<string>
-): string[] {
-  const deps: string[] = [];
+function checkPersistAnnotation(source: SourceDef): boolean {
+  if (!source.annotation) return false;
+  const {tag} = annotationToTag(source.annotation, {prefix: /^#@ /});
+  return tag.has('persist');
+}
+
+/**
+ * Check if a sourceID is persistent, using lazy evaluation and caching.
+ * Sets the persist flag on the registry entry as a side effect.
+ */
+function isPersistent(sourceID: string, modelDef: ModelDef): boolean {
+  const value = modelDef.sourceRegistry[sourceID];
+  if (!value) return false;
+
+  if (value.persist === undefined) {
+    const sourceDef = resolveSourceID(modelDef, sourceID);
+    value.persist = sourceDef ? checkPersistAnnotation(sourceDef) : false;
+  }
+  return value.persist;
+}
+
+/**
+ * Find persistent dependencies for a source or query, returning a nested DAG.
+ *
+ * Walks the full dependency tree but only includes persistent sources in the
+ * result. Non-persistent sources are "flattened out" - their persistent
+ * dependencies bubble up to become direct dependencies of the caller.
+ *
+ * Example: source_c (persist) -> source_b (NOT persist) -> source_a (persist)
+ * Returns: [{sourceID: source_a, dependsOn: []}]
+ * (source_b is flattened out, source_a becomes direct dependency)
+ *
+ * ## The 6 Dependency Paths in the IR
+ *
+ * Starting from a Query or SourceDef, these are ALL the ways a SourceDef
+ * can be referenced (and thus must be walked for dependency tracking):
+ *
+ * 1. **Query.structRef** → SourceDef (the FROM clause)
+ * 2. **Query.pipeline[].extendSource[]** → JoinFieldDef (joins in extend blocks)
+ * 3. **SourceDef.fields[]** → JoinFieldDef (joins defined on a source)
+ * 4. **PersistableSourceDef.extends** → SourceID (extend chain reference)
+ * 5. **SQLSourceDef.selectSegments[]** → Query | PersistableSourceDef (SQL interpolation)
+ * 6. **QuerySourceDef.query** → Query (nested query in query_source)
+ *
+ * Note: CompositeSourceDef.sources[] is ignored - composite sources and
+ * persistence may be incompatible features.
+ *
+ * @param root The source or query to find dependencies for
+ * @param modelDef The model definition containing the source registry
+ * @returns Array of BuildNode representing the persistent dependency DAG
+ */
+export function findPersistentDependencies(
+  root: SourceDef | Query,
+  modelDef: ModelDef
+): BuildNode[] {
   const visited = new Set<string>();
 
-  function addDep(sourceID: string) {
-    if (!visited.has(sourceID) && persistSourceIds.has(sourceID)) {
-      visited.add(sourceID);
-      deps.push(sourceID);
+  function processSourceID(sourceID: string): BuildNode[] {
+    if (visited.has(sourceID)) {
+      return [];
+    }
+    visited.add(sourceID);
+
+    const sourceDef = resolveSourceID(modelDef, sourceID);
+    if (!sourceDef) {
+      return [];
+    }
+
+    const childDeps = processSourceDef(sourceDef);
+    const persistent = isPersistent(sourceID, modelDef);
+
+    if (persistent) {
+      return [{sourceID, dependsOn: childDeps}];
+    } else {
+      return childDeps;
     }
   }
 
-  /**
-   * Check a StructRef for persistent dependencies.
-   * If it's a persistable source with sourceID, add it as a dependency.
-   * If it's a query_source (persistent or not), walk its inner query
-   * to find transitive persistent dependencies.
-   */
-  function checkStructRef(ref: StructRef) {
-    if (typeof ref === 'string') {
-      // It's a reference to a named source - resolve it
-      const referencedSource = resolveSource(modelDef, ref);
-      if (referencedSource) {
-        checkSourceDef(referencedSource);
-      }
-    } else if (isSourceDef(ref)) {
-      checkSourceDef(ref);
-    }
-  }
+  function processSourceDef(source: SourceDef): BuildNode[] {
+    const results: BuildNode[] = [];
 
-  /**
-   * Check a SourceDef for persistent dependencies.
-   */
-  function checkSourceDef(source: SourceDef) {
-    // If this source is persistable with a sourceID, it's a direct dependency
-    if (isPersistableSourceDef(source) && source.sourceID) {
-      addDep(source.sourceID);
-    }
-
-    // Follow extends chain to find dependencies through source extensions
-    // (e.g., source: b is a extend {...} - if 'a' has sourceID, add it)
+    // Path 4: PersistableSourceDef.extends
     if (isPersistableSourceDef(source) && source.extends) {
-      addDep(source.extends);
+      results.push(...processSourceID(source.extends));
     }
 
-    // If it's a query_source, walk its inner query for transitive dependencies
-    // (even if this source itself is not persistent)
+    // Path 6: QuerySourceDef.query
     if (source.type === 'query_source') {
-      walkQuery(source.query);
+      results.push(...processQuery(source.query));
     }
+
+    // Path 5: SQLSourceDef.selectSegments[]
+    if (source.type === 'sql_select' && source.selectSegments) {
+      for (const segment of source.selectSegments) {
+        results.push(...processSQLSegment(segment));
+      }
+    }
+
+    // Path 3: SourceDef.fields[] - joins defined on the source
+    for (const field of source.fields) {
+      if (isJoined(field) && isSourceDef(field)) {
+        results.push(...processJoinedSource(field));
+      }
+    }
+
+    return results;
   }
 
-  /**
-   * Walk a query looking for dependencies in structRef and pipeline extends.
-   */
-  function walkQuery(query: Query) {
-    // Check the query's source
-    checkStructRef(query.structRef);
+  function processQuery(query: Query): BuildNode[] {
+    const results: BuildNode[] = [];
 
-    // Walk pipeline stages looking for extend blocks with joins
+    // Path 1: Query.structRef
+    results.push(...processStructRef(query.structRef));
+
+    // Path 2: Query.pipeline[].extendSource[]
     for (const segment of query.pipeline) {
       if (
         segment.type === 'reduce' ||
@@ -139,51 +167,153 @@ function findSourceDependencies(
         const querySegment = segment as QuerySegment;
         if (querySegment.extendSource) {
           for (const field of querySegment.extendSource) {
-            // Check if this is a joined source
             if (isJoined(field) && isSourceDef(field)) {
-              if (isPersistableSourceDef(field) && field.sourceID) {
-                addDep(field.sourceID);
-              }
-              // If it's a query_source join, walk its inner query
-              if (field.type === 'query_source') {
-                walkQuery(field.query);
-              }
+              results.push(...processJoinedSource(field));
             }
           }
         }
       }
     }
+
+    return results;
   }
 
-  /**
-   * Walk an SQL segment (from selectSegments).
-   */
-  function walkSegment(segment: SQLPhraseSegment) {
-    if (isSegmentSQL(segment)) {
-      return; // Plain SQL - no dependencies
-    } else if (isSegmentSource(segment)) {
-      // It's a SourceDef (sql_select or query_source) - use checkSourceDef
-      // to handle both direct dependencies and transitive walks
-      checkSourceDef(segment);
-    } else {
-      // It's a Query - walk it for dependencies
-      walkQuery(segment);
+  function processJoinedSource(source: SourceDef): BuildNode[] {
+    // If it has a sourceID, go through the registry
+    if (isPersistableSourceDef(source) && source.sourceID) {
+      return processSourceID(source.sourceID);
     }
+    // Otherwise walk through it transparently
+    return processSourceDef(source);
   }
 
-  // Main dispatch based on source type
-  if (source.type === 'query_source') {
-    walkQuery(source.query);
-  } else if (source.type === 'sql_select') {
-    // For sql_select, walk selectSegments looking for embedded sources/queries
-    if (source.selectSegments) {
-      for (const segment of source.selectSegments) {
-        walkSegment(segment);
+  function processStructRef(ref: StructRef): BuildNode[] {
+    if (typeof ref === 'string') {
+      const source = resolveSource(modelDef, ref);
+      if (!source) return [];
+      if (isPersistableSourceDef(source) && source.sourceID) {
+        return processSourceID(source.sourceID);
       }
+      return processSourceDef(source);
+    } else if (isSourceDef(ref)) {
+      if (isPersistableSourceDef(ref) && ref.sourceID) {
+        return processSourceID(ref.sourceID);
+      }
+      return processSourceDef(ref);
+    }
+    return [];
+  }
+
+  function processSQLSegment(segment: SQLPhraseSegment): BuildNode[] {
+    if (isSegmentSQL(segment)) {
+      return [];
+    } else if (isSegmentSource(segment)) {
+      if (isPersistableSourceDef(segment) && segment.sourceID) {
+        return processSourceID(segment.sourceID);
+      }
+      return processSourceDef(segment);
+    } else {
+      // It's a Query
+      return processQuery(segment);
     }
   }
 
-  return deps;
+  // Entry point: handle both SourceDef and Query
+  // Query has required 'structRef', SourceDef does not
+  if ('structRef' in root) {
+    return processQuery(root);
+  } else {
+    // If the root source itself is persistable and has a sourceID, process it through
+    // processSourceID so it gets included in the result if persistent
+    if (isPersistableSourceDef(root) && root.sourceID) {
+      return processSourceID(root.sourceID);
+    }
+    return processSourceDef(root);
+  }
+}
+
+/**
+ * Collect all sourceIDs from a BuildNode forest (for analysis only).
+ */
+function collectAllSourceIDs(nodes: BuildNode[]): Set<string> {
+  const result = new Set<string>();
+  for (const node of nodes) {
+    result.add(node.sourceID);
+    for (const id of collectAllSourceIDs(node.dependsOn)) {
+      result.add(id);
+    }
+  }
+  return result;
+}
+
+/**
+ * Collect all sourceIDs that appear in any dependsOn (for analysis only).
+ */
+function collectAllDependedOn(nodes: BuildNode[]): Set<string> {
+  const result = new Set<string>();
+  for (const node of nodes) {
+    for (const dep of node.dependsOn) {
+      result.add(dep.sourceID);
+    }
+    for (const id of collectAllDependedOn(node.dependsOn)) {
+      result.add(id);
+    }
+  }
+  return result;
+}
+
+/**
+ * Find the minimal set of root build graphs from a forest of BuildNodes.
+ *
+ * Uses flattening for ANALYSIS ONLY to identify unique nodes and find roots.
+ * Returns original graph structures (NOT flattened) - preserves branching
+ * for parallel builds.
+ *
+ * Roots are sourceIDs that exist but nothing depends on them - these are
+ * the entry points for building.
+ *
+ * @param deps Array of BuildNode trees (potentially overlapping)
+ * @returns Array of root BuildNode trees (deduplicated)
+ */
+export function minimalBuildGraph(deps: BuildNode[]): BuildNode[] {
+  if (deps.length === 0) return [];
+
+  // Use flattening for analysis only
+  const allSourceIDs = collectAllSourceIDs(deps);
+  const dependedOn = collectAllDependedOn(deps);
+
+  // Roots are sourceIDs that exist but nothing depends on them
+  const rootIDs = new Set<string>();
+  for (const id of allSourceIDs) {
+    if (!dependedOn.has(id)) {
+      rootIDs.add(id);
+    }
+  }
+
+  // Return original graph structures for roots (deduplicated by sourceID)
+  const seen = new Set<string>();
+  const roots: BuildNode[] = [];
+  for (const node of deps) {
+    if (rootIDs.has(node.sourceID) && !seen.has(node.sourceID)) {
+      seen.add(node.sourceID);
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+/**
+ * Extract all sourceIDs from a nested BuildNode array (flattens the DAG).
+ * @deprecated Use collectAllSourceIDs instead
+ */
+function extractSourceIDs(nodes: BuildNode[]): string[] {
+  const ids: string[] = [];
+  for (const node of nodes) {
+    ids.push(node.sourceID);
+    ids.push(...extractSourceIDs(node.dependsOn));
+  }
+  return ids;
 }
 
 /**
@@ -200,17 +330,17 @@ export function buildSourceGraph(
   persistSources: PersistableSourceDef[],
   modelDef: ModelDef
 ): SourceBuildGraph {
-  // Build set of all persist sourceIDs for filtering dependencies
+  // Build set of all persist sourceIDs
   const persistSourceIds = new Set(
     persistSources.map(s => s.sourceID).filter((id): id is string => !!id)
   );
 
-  // Build dependency map for all persist sources
-  const depMap = new Map<string, string[]>();
+  // Build dependency map using findPersistentDependencies
+  const depMap = new Map<string, BuildNode[]>();
 
   for (const source of persistSources) {
     if (!source.sourceID) continue;
-    const deps = findSourceDependencies(source, modelDef, persistSourceIds);
+    const deps = findPersistentDependencies(source, modelDef);
     depMap.set(source.sourceID, deps);
   }
 
@@ -221,10 +351,11 @@ export function buildSourceGraph(
 
   while (remaining.size > 0) {
     // Find all nodes with no unmet dependencies
-    const level: SourceBuildNode[] = [];
+    const level: BuildNode[] = [];
     for (const sourceID of remaining) {
       const deps = depMap.get(sourceID) ?? [];
-      const unmetDeps = deps.filter(dep => !completed.has(dep));
+      const depIDs = extractSourceIDs(deps);
+      const unmetDeps = depIDs.filter(dep => !completed.has(dep));
       if (unmetDeps.length === 0) {
         level.push({
           sourceID,
@@ -249,145 +380,4 @@ export function buildSourceGraph(
   }
 
   return levels;
-}
-
-// =============================================================================
-// Legacy query-based graph building (kept for backwards compatibility)
-// =============================================================================
-
-/**
- * @deprecated Use buildSourceGraph for source-based persistence
- */
-export function buildInternalGraph(
-  persistQueryNames: string[],
-  modelDef: ModelDef
-): SourceBuildGraph {
-  // Build dependency map for all persist queries
-  const depMap = new Map<string, string[]>();
-  const persistSet = new Set(persistQueryNames);
-
-  for (const name of persistQueryNames) {
-    const query = resolveQuery(modelDef, name);
-    if (query) {
-      // Find all query dependencies, then filter to only persist ones
-      const allDeps = findQueryDependencies(query, modelDef);
-      const persistDeps = allDeps.filter(dep => persistSet.has(dep));
-      depMap.set(name, persistDeps);
-    }
-  }
-
-  // Topological sort into levels (Kahn's algorithm)
-  const levels: Array<Array<{name: string; dependsOn: string[]}>> = [];
-  const remaining = new Set(persistQueryNames);
-  const completed = new Set<string>();
-
-  while (remaining.size > 0) {
-    const level: Array<{name: string; dependsOn: string[]}> = [];
-    for (const name of remaining) {
-      const deps = depMap.get(name) ?? [];
-      const unmetDeps = deps.filter(dep => !completed.has(dep));
-      if (unmetDeps.length === 0) {
-        level.push({name, dependsOn: deps});
-      }
-    }
-
-    if (level.length === 0 && remaining.size > 0) {
-      throw new Error(
-        `Cycle detected in persist dependencies: ${[...remaining].join(', ')}`
-      );
-    }
-
-    levels.push(level);
-    for (const node of level) {
-      remaining.delete(node.name);
-      completed.add(node.name);
-    }
-  }
-
-  // Convert to SourceBuildGraph format (using name as sourceID for legacy compat)
-  return levels.map(level =>
-    level.map(node => ({sourceID: node.name, dependsOn: node.dependsOn}))
-  );
-}
-
-function resolveQuery(modelDef: ModelDef, name: string): Query | undefined {
-  const obj = modelDef.contents[name];
-  return obj?.type === 'query' ? (obj as Query) : undefined;
-}
-
-function findQueryDependencies(query: Query, modelDef: ModelDef): string[] {
-  const deps: string[] = [];
-  const visited = new Set<string>();
-
-  function addDep(name: string) {
-    if (!visited.has(name)) {
-      visited.add(name);
-      deps.push(name);
-    }
-  }
-
-  function resolveStructRef(ref: StructRef): SourceDef | undefined {
-    if (typeof ref === 'string') {
-      return resolveSource(modelDef, ref);
-    }
-    return isSourceDef(ref) ? ref : undefined;
-  }
-
-  function walkSource(source: SourceDef) {
-    if (source.type === 'query_source') {
-      const innerQuery = source.query;
-      if (innerQuery.name) {
-        addDep(innerQuery.name);
-      }
-      walkQuery(innerQuery);
-    }
-    for (const field of source.fields) {
-      walkField(field);
-    }
-  }
-
-  function walkField(field: FieldDef) {
-    if (isJoined(field)) {
-      if (field.type === 'query_source') {
-        const joinedQuerySource = field as SourceDef & {
-          type: 'query_source';
-          query: Query;
-        };
-        const innerQuery = joinedQuerySource.query;
-        if (innerQuery.name) {
-          addDep(innerQuery.name);
-        }
-        walkQuery(innerQuery);
-      }
-      if ('fields' in field) {
-        for (const subField of field.fields as FieldDef[]) {
-          walkField(subField);
-        }
-      }
-    }
-  }
-
-  function walkQuery(q: Query) {
-    const source = resolveStructRef(q.structRef);
-    if (source) {
-      walkSource(source);
-    }
-    for (const segment of q.pipeline) {
-      if (
-        segment.type === 'reduce' ||
-        segment.type === 'project' ||
-        segment.type === 'partial'
-      ) {
-        const querySegment = segment as QuerySegment;
-        if (querySegment.extendSource) {
-          for (const extField of querySegment.extendSource) {
-            walkField(extField);
-          }
-        }
-      }
-    }
-  }
-
-  walkQuery(query);
-  return deps;
 }

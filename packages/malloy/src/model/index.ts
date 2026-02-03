@@ -55,14 +55,15 @@ export {
   getResultStructDefForQuery,
   getResultStructDefForView,
 } from './query_model_impl';
-export {indent, composeSQLExpr, makeDigest} from './utils';
+export {indent, composeSQLExpr, makeDigest, mkModelDef} from './utils';
 export {constantExprToSQL} from './constant_expression_compiler';
-export {buildInternalGraph} from './persist_utils';
 export {getCompiledSQL} from './sql_compiled';
 export {
   mkSourceID,
   mkQuerySourceDef,
   mkSQLSourceDef,
   mkTableSourceDef,
+  resolveSourceID,
+  registerSource,
+  hasSourceRegistryEntry,
 } from './source_def_utils';
-export type {SourceID} from './source_def_utils';
