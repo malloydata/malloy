@@ -566,6 +566,71 @@ view: brand_counts is {
 
 ---
 
+## Embedded Field Tags
+
+These tags are applied directly to fields within a query to control how they map to chart axes. They override the automatic axis inference.
+
+### `# x`
+
+Marks a dimension field for use as the chart's X-axis.
+
+**Example:**
+
+```malloy
+# bar_chart
+view: sales_trend is {
+  # x
+  group_by: sale_date is order_date.month
+  aggregate: total_sales
+}
+```
+
+### `# y`
+
+Marks an aggregate field for use as the chart's Y-axis. Multiple `# y` fields create a measure series (multiple bars/lines of different colors).
+
+**Example:**
+
+```malloy
+// Single Y-axis
+# bar_chart
+view: sales_by_brand is {
+  group_by: brand
+  # y
+  aggregate: total_sales
+}
+
+// Multiple Y fields create measure series
+# bar_chart
+view: sales_vs_margin is {
+  group_by: category
+  # y
+  aggregate: total_sales
+  # y
+  aggregate: total_margin
+}
+```
+
+### `# series`
+
+Marks a dimension field for use as the chart's series grouping (different colored bars/lines).
+
+**Example:**
+
+```malloy
+# line_chart { series.limit=5 }
+view: brand_trends is {
+  # x
+  group_by: sale_month is order_date.month
+  # series
+  group_by: brand
+  aggregate: total_sales
+  order_by: sale_month
+}
+```
+
+---
+
 ## Field-Level Formatting & Rendering Tags
 
 These tags are typically applied directly to individual fields within a query.
@@ -633,6 +698,30 @@ source: financials extend {
   # currency { scale=m suffix=finance decimals=2 }
   measure: revenue_finance is sales.sum()  // $42.54MM
 }
+```
+
+#### Currency Scaling
+
+For large numbers, you can scale currency values to improve readability in dashboards and tables.
+
+**Properties:**
+
+- `.scale`: Divides the value and adds a suffix.
+  - Values: `thousands` (K), `millions` (M), `billions` (B).
+  - Syntax: `# currency { scale=thousands }`
+- `.decimals`: Controls the number of decimal places for scaled values.
+  - Syntax: `# currency { scale=millions decimals=2 }`
+- `.no_suffix`: Shows the scaled number without the K/M/B suffix.
+  - Syntax: `# currency { scale=thousands no_suffix }`
+
+**Example:**
+
+```malloy
+// Shows "$1.5M" for $1,500,000
+measure: revenue_m is sales.sum() # currency { scale=millions decimals=1 }
+
+// Shows "$1,500" for $1,500,000 (scaled but no suffix)
+measure: revenue_k_raw is sales.sum() # currency { scale=thousands no_suffix }
 ```
 
 ### `# percent`
@@ -789,6 +878,8 @@ dimension: internal_id is id
 ### `# label`
 
 Overrides the default display name (label/title) for a field or dashboard item.
+
+**Note:** `# label` works for table column headers and dashboard KPI titles, but does **not** affect chart axis labels. For chart titles, use the `.title` and `.subtitle` properties on the chart tag (e.g., `# bar_chart { title='My Title' }`).
 
 **Example:**
 

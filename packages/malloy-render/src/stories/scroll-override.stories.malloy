@@ -61,7 +61,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
             limit: 10
           }
           top_products is {
-            select: name, retail_price, cost
+            select: product_name is name, retail_price, cost
             order_by: retail_price desc
             limit: 5
           }
