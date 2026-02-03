@@ -677,6 +677,72 @@ describe('source persistence', () => {
         expect(nodeA.dependsOn).toEqual([]);
         expect(nodeB.dependsOn).toEqual([]);
       });
+
+      it('non-persistent source joining persistent source shows dependency', async () => {
+        // A non-persistent source that joins a persistent source should
+        // have that persistent source in the build graph
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+          source: carriers is ${tstDB}.table('malloytest.carriers')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // Non-persistent source that joins the persistent source
+          source: carriers_with_stats is carriers extend {
+            join_one: stats is carrier_stats on stats.carrier = code
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // carrier_stats should be in the build graph
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+        expect(
+          graph.nodes[0].some(n => n.sourceID.includes('carrier_stats'))
+        ).toBe(true);
+      });
+
+      it('query with join in extend block detects persistent dependency', async () => {
+        // Path 2: Query.pipeline[].extendSource[] - joins added in extend blocks
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+          source: carriers is ${tstDB}.table('malloytest.carriers')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          // Query that adds a join to a persistent source in an extend block
+          query: carriers_query is carriers -> {
+            extend: {
+              join_one: stats is carrier_stats on stats.carrier = code
+            }
+            select: *
+          }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // carrier_stats should be in the build graph
+        expect(plan.graphs).toHaveLength(1);
+        const graph = plan.graphs[0];
+        expect(
+          graph.nodes[0].some(n => n.sourceID.includes('carrier_stats'))
+        ).toBe(true);
+      });
     });
 
     describe('minimal build set', () => {
