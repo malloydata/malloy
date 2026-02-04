@@ -28,6 +28,8 @@ import type {
   Expression,
   TurtleDefPlusFilters,
   UniqueKeyRequirement,
+  Query,
+  PrepareResultOptions,
 } from './malloy_types';
 import {
   isRawSegment,
@@ -766,57 +768,30 @@ export class QueryQuery extends QueryField {
       case 'finalize':
         return qs.structDef.name;
       case 'sql_select':
-        return `(${getCompiledSQL(qs.structDef, qs.prepareResultOptions ?? {})})`;
+        return `(${getCompiledSQL(
+          qs.structDef,
+          qs.prepareResultOptions ?? {},
+          path => this.parent.dialect.quoteTablePath(path),
+          (query, opts) => {
+            // Compile query to isolated SQL (not into parent's stageWriter)
+            const ret = this.compileQueryToStages(
+              query,
+              opts,
+              undefined,
+              false
+            );
+            return ret.sql!;
+          }
+        )})`;
       case 'nest_source':
         return qs.structDef.pipeSQL;
       case 'query_source': {
-        // TODO(persist): This is where manifest substitution will happen.
-        // If qs.prepareResultOptions has a manifest and this query has #@ persist:
-        //   1. Look up query name in model.persistedQueryDigests to get digest
-        //   2. Look up digest in manifest to get table name
-        //   3. If found, return dialect.quoteTablePath(tableName)
-        //   4. If not found and strict mode, throw error
-        //   5. Otherwise fall through to inline the SQL
-
-        // Inline what loadQuery does, circularity workaround, finds the
-        // the name of the last stage
-        const query = qs.structDef.query;
-        const turtleDef: TurtleDefPlusFilters = {
-          type: 'turtle',
-          name: 'ignoreme',
-          pipeline: query.pipeline,
-          filterList: query.filterList,
-        };
-
-        const structRef = query.compositeResolvedSourceDef ?? query.structRef;
-
-        let sourceStruct: QueryStruct;
-        if (typeof structRef === 'string') {
-          const struct = this.structRefToQueryStruct(structRef);
-          if (!struct) {
-            throw new Error(
-              `Unexpected reference to an undefined source '${structRef}'`
-            );
-          }
-          sourceStruct = struct;
-        } else {
-          sourceStruct = new QueryStruct(
-            structRef,
-            query.sourceArguments,
-            {model: this.parent.getModel()},
-            qs.prepareResultOptions
-          );
-        }
-
-        const q = QueryQuery.makeQuery(
-          turtleDef,
-          sourceStruct,
+        const ret = this.compileQueryToStages(
+          qs.structDef.query,
+          qs.prepareResultOptions,
           stageWriter,
-          qs.parent !== undefined, // isJoinedSubquery
-          this.structRefToQueryStruct
+          qs.parent !== undefined
         );
-
-        const ret = q.generateSQLFromPipeline(stageWriter);
         return ret.lastStageName;
       }
       default:
@@ -826,6 +801,71 @@ export class QueryQuery extends QueryField {
           )}' type '${qs.structDef.type}`
         );
     }
+  }
+
+  /**
+   * Compile a Query into SQL stages. Used by both query_source compilation
+   * and getCompiledSQL for interpolated sources.
+   *
+   * @param query The query to compile
+   * @param prepareResultOptions Options including manifest for substitution
+   * @param stageWriter If provided, stages are added to this writer and lastStageName is returned.
+   *                    If undefined, a new isolated writer is created and full SQL is returned.
+   * @param isJoinedSubquery Whether this is a joined subquery
+   * @returns { lastStageName, stageWriter, sql } - sql is only set if stageWriter was undefined
+   */
+  compileQueryToStages(
+    query: Query,
+    prepareResultOptions: PrepareResultOptions,
+    stageWriter: StageWriter | undefined,
+    isJoinedSubquery: boolean
+  ): {lastStageName: string; stageWriter: StageWriter; sql?: string} {
+    const turtleDef: TurtleDefPlusFilters = {
+      type: 'turtle',
+      name: 'ignoreme',
+      pipeline: query.pipeline,
+      filterList: query.filterList,
+    };
+
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+
+    let sourceStruct: QueryStruct;
+    if (typeof structRef === 'string') {
+      const struct = this.structRefToQueryStruct(structRef);
+      if (!struct) {
+        throw new Error(
+          `Unexpected reference to an undefined source '${structRef}'`
+        );
+      }
+      sourceStruct = struct;
+    } else {
+      sourceStruct = new QueryStruct(
+        structRef,
+        query.sourceArguments,
+        {model: this.parent.getModel()},
+        prepareResultOptions
+      );
+    }
+
+    // Create isolated stageWriter if none provided
+    const isolated = stageWriter === undefined;
+    const writer = stageWriter ?? new StageWriter(true, undefined);
+
+    const q = QueryQuery.makeQuery(
+      turtleDef,
+      sourceStruct,
+      writer,
+      isJoinedSubquery,
+      this.structRefToQueryStruct
+    );
+
+    const ret = q.generateSQLFromPipeline(writer);
+
+    return {
+      lastStageName: ret.lastStageName,
+      stageWriter: writer,
+      sql: isolated ? writer.generateSQLStages() : undefined,
+    };
   }
 
   generateSQLJoinBlock(
@@ -2413,7 +2453,13 @@ class QueryQueryRaw extends QueryQuery {
     return stageWriter.addStage(
       getCompiledSQL(
         this.parent.structDef,
-        this.parent.prepareResultOptions ?? {}
+        this.parent.prepareResultOptions ?? {},
+        path => this.parent.dialect.quoteTablePath(path),
+        (query, opts) => {
+          // Compile query to isolated SQL (not into parent's stageWriter)
+          const ret = this.compileQueryToStages(query, opts, undefined, false);
+          return ret.sql!;
+        }
       )
     );
   }

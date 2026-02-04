@@ -955,19 +955,29 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         ...options,
       };
 
-      // If buildManifest is provided, compute queryDigests
-      let queryDigests: Record<string, string> | undefined;
+      // If buildManifest is provided, compute connectionDigests for manifest lookups
+      // TODO: This is inefficient - we call getBuildPlan just to find connection names.
+      // Consider adding a listConnections() method to LookupConnection, or caching this.
+      let connectionDigests: Record<string, string> | undefined;
       if (mergedOptions.buildManifest) {
-        await preparedQuery.model.getBuildGraphs(this.runtime.connections);
-        queryDigests = preparedQuery.model.getQueryDigests();
+        const plan = preparedQuery.model.getBuildPlan();
+        const connectionNames = new Set(
+          Object.values(plan.sources).map(s => s.connectionName)
+        );
+        connectionDigests = {};
+        for (const connName of connectionNames) {
+          const conn =
+            await this.runtime.connections.lookupConnection(connName);
+          connectionDigests[connName] = await conn.getDigest();
+        }
       }
 
-      // Build PrepareResultOptions from CompileQueryOptions + computed queryDigests
+      // Build PrepareResultOptions from CompileQueryOptions + connectionDigests
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
         buildManifest: mergedOptions.buildManifest,
+        connectionDigests,
         strictPersist: mergedOptions.strictPersist,
-        queryDigests,
       };
 
       return preparedQuery.getPreparedResult({

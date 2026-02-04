@@ -14,6 +14,7 @@
  */
 
 import type {
+  BuildID,
   FieldDef,
   ModelDef,
   PersistableSourceDef,
@@ -27,6 +28,7 @@ import type {
   SQLSourceDef,
   TableSourceDef,
 } from './malloy_types';
+import {makeDigest} from './utils';
 import {
   isSourceDef,
   isPersistableSourceDef,
@@ -35,6 +37,14 @@ import {
 
 export function mkSourceID(name: string, url: string | undefined): SourceID {
   return `${name}@${url ?? 'unknown'}`;
+}
+
+/**
+ * Create a BuildID from connection digest and SQL.
+ * BuildID is a hash that uniquely identifies a build artifact.
+ */
+export function mkBuildID(connectionDigest: string, sql: string): BuildID {
+  return makeDigest(connectionDigest, sql);
 }
 
 /**

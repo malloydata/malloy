@@ -1380,6 +1380,9 @@ export function isSegmentSource(
 /** Format: "name@modelUrl" - uniquely identifies a source for persistence */
 export type SourceID = string;
 
+/** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
+export type BuildID = string;
+
 /**
  * Reference to a source in modelDef.contents by name.
  * Used in sourceRegistry to avoid duplicating SourceDefs that are in the namespace.
@@ -1468,6 +1471,17 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
   );
 }
 
+/**
+ * Union of all source definition types.
+ *
+ * IMPORTANT: Never use object spread to copy a SourceDef. Use the factory
+ * methods in source_def_utils.ts to merge changes into a source def:
+ * - mkSQLSourceDef(base, ...) - create SQLSourceDef from base
+ * - mkQuerySourceDef(base, ...) - create QuerySourceDef from base
+ *
+ * These factories explicitly copy only safe fields, preventing accidental
+ * propagation of sourceID/extends which must only be set in DefineSource.
+ */
 export type SourceDef =
   | TableSourceDef
   | SQLSourceDef
@@ -1963,10 +1977,10 @@ export interface PrepareResultOptions {
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
   eventStream?: EventStream;
-  /** Manifest of built tables (digest → entry), the build cache */
+  /** Manifest of built tables (BuildID → entry), the build cache */
   buildManifest?: BuildManifest;
-  /** Map from query name to digest (computed fresh via getBuildGraphs) */
-  queryDigests?: Record<string, string>;
+  /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
+  connectionDigests?: Record<string, string>;
   /** If true, throw when a persist query's digest is not in the manifest */
   strictPersist?: boolean;
 }
@@ -2071,11 +2085,11 @@ export function mergeUniqueKeyRequirement(
 }
 
 /**
- * Entry in a BuildManifest mapping a query digest to its persisted table.
+ * Entry in a BuildManifest for a persisted table.
  */
 export interface BuildManifestEntry {
-  /** The query digest (also the key in the entries map) */
-  queryDigest: string;
+  /** The build ID - hash(connectionDigest, sql) - also the key in buildEntries */
+  buildId: BuildID;
   /** The table name where the query result is persisted */
   tableName: string;
   /** When this entry started building */
@@ -2089,14 +2103,14 @@ export interface BuildManifestEntry {
  * Used by compileQuery to substitute persist queries with table references.
  */
 export interface BuildManifest {
-  /** URL of the model this manifest was built from */
+  /** URL of the model this manifest is for */
   modelUrl: string;
   /** When this build run started */
   buildStartedAt: string;
   /** When this build run completed */
   buildFinishedAt: string;
-  /** Map from query digest to built table entry */
-  buildEntries: Record<string, BuildManifestEntry>;
+  /** Map from BuildID to entry */
+  buildEntries: Record<BuildID, BuildManifestEntry>;
 }
 
 // clang-format on

@@ -5,6 +5,7 @@
 
 import type {LogMessage} from '../../lang';
 import type {
+  BuildID,
   CompiledQuery,
   DocumentLocation,
   BooleanFieldDef,
@@ -45,7 +46,7 @@ import {
   isPersistableSourceDef,
   getCompiledSQL,
 } from '../../model';
-import {makeDigest, mkModelDef} from '../../model/utils';
+import {mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
 import {getDialect} from '../../dialect';
 import type {Connection, LookupConnection} from '../../connection/types';
@@ -54,7 +55,7 @@ import {
   findPersistentDependencies,
   minimalBuildGraph,
 } from '../../model/persist_utils';
-import {resolveSourceID} from '../../model/source_def_utils';
+import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {
@@ -1563,18 +1564,17 @@ export class PersistSource implements Taggable {
   }
 
   /**
-   * Compute the BuildId for this source.
+   * Compute the BuildID for this source.
    *
-   * BuildId is the cache key that includes connection config and SQL content.
-   * Different connection configs or SQL changes produce different BuildIds.
+   * BuildID is a hash of the connection config and SQL content.
+   * Different connection configs or SQL changes produce different BuildIDs.
    *
    * @param connectionDigest - Digest from connection.getDigest()
    * @param sql - The SQL for this source (from getSQL())
-   * @return The BuildId string for manifest lookup
+   * @return The BuildID for manifest lookup
    */
-  makeBuildId(connectionDigest: string, sql: string): string {
-    const sqlDigest = makeDigest(sql);
-    return `${this.sourceID}:${connectionDigest}:${sqlDigest}`;
+  makeBuildId(connectionDigest: string, sql: string): BuildID {
+    return mkBuildID(connectionDigest, sql);
   }
 
   /**
@@ -1588,11 +1588,16 @@ export class PersistSource implements Taggable {
    */
   getSQL(options?: CompileQueryOptions): string {
     const sd = this.persistableDef;
+    const queryModel = this.model.queryModel;
 
     if (sd.type === 'sql_select') {
-      return getCompiledSQL(sd, options ?? {});
+      return getCompiledSQL(
+        sd,
+        options ?? {},
+        path => this.dialect.quoteTablePath(path),
+        (query, opts) => queryModel.compileQuery(query, opts).sql
+      );
     } else {
-      const queryModel = this.model.queryModel;
       const compiled = queryModel.compileQuery(sd.query, options);
       return compiled.sql;
     }

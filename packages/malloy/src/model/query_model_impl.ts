@@ -205,15 +205,13 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     prepareResultOptions?: PrepareResultOptions,
     finalize = true
   ): CompiledQuery {
-    let newModel: QueryModel | undefined;
     const addDefaultRowLimit = this.addDefaultRowLimit(
       query,
       prepareResultOptions?.defaultRowLimit
     );
     query = addDefaultRowLimit.query;
     const addedDefaultRowLimit = addDefaultRowLimit.addedDefaultRowLimit;
-    const m = newModel || this;
-    const ret = m.loadQuery(
+    const ret = this.loadQuery(
       query,
       undefined,
       prepareResultOptions,

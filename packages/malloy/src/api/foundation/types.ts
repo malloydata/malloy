@@ -34,9 +34,11 @@ export interface CompileOptions {
 export interface CompileQueryOptions {
   eventStream?: EventStream;
   defaultRowLimit?: number;
-  /** Manifest of built tables for persist query substitution */
+  /** Manifest of built tables (BuildID → entry) for persist substitution */
   buildManifest?: BuildManifest;
-  /** If true, throw when a persist query's digest is not in the manifest */
+  /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
+  connectionDigests?: Record<string, string>;
+  /** If true, throw when a persist source's BuildID is not in the manifest */
   strictPersist?: boolean;
 }
 

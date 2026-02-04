@@ -60,6 +60,7 @@ export {constantExprToSQL} from './constant_expression_compiler';
 export {getCompiledSQL} from './sql_compiled';
 export {
   mkSourceID,
+  mkBuildID,
   mkQuerySourceDef,
   mkSQLSourceDef,
   mkTableSourceDef,

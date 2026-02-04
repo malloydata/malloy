@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {runtimeFor, testFileSpace} from '../runtimes';
+import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import type {BuildNode} from '@malloydata/malloy';
+import type {BuildNode, BuildManifest} from '@malloydata/malloy';
+import {ConnectionRuntime} from '@malloydata/malloy';
 
 // Helper to extract all sourceIDs from a nested BuildNode array (recursive)
 function getAllSourceIDs(nodes: BuildNode[]): string[] {
@@ -68,9 +69,11 @@ describe('source persistence', () => {
         const buildIdA = sourceA.makeBuildId(digest, sqlA);
         const buildIdB = sourceB.makeBuildId(digest, sqlB);
 
+        // Different SQL produces different buildIds (buildId is a hash)
         expect(buildIdA).not.toBe(buildIdB);
-        expect(buildIdA).toContain('source_a');
-        expect(buildIdB).toContain('source_b');
+        // BuildId is a hash, not a formatted string
+        expect(buildIdA).toMatch(/^[a-f0-9]{32}$/);
+        expect(buildIdB).toMatch(/^[a-f0-9]{32}$/);
       });
 
       it('different connection digests produce different buildIds', async () => {
@@ -95,9 +98,11 @@ describe('source persistence', () => {
         const buildId1 = source.makeBuildId('digest-user1', sql);
         const buildId2 = source.makeBuildId('digest-user2', sql);
 
+        // Different connection digests produce different buildIds
         expect(buildId1).not.toBe(buildId2);
-        expect(buildId1).toContain('digest-user1');
-        expect(buildId2).toContain('digest-user2');
+        // BuildId is a hash
+        expect(buildId1).toMatch(/^[a-f0-9]{32}$/);
+        expect(buildId2).toMatch(/^[a-f0-9]{32}$/);
       });
 
       it('different SQL produces different buildIds', async () => {
@@ -122,11 +127,11 @@ describe('source persistence', () => {
         const buildId1 = source.makeBuildId(digest, 'SELECT 1');
         const buildId2 = source.makeBuildId(digest, 'SELECT 2');
 
+        // Different SQL produces different buildIds
         expect(buildId1).not.toBe(buildId2);
-        // Both should have the same sourceId and digest prefix
-        const prefix = `${source.sourceID}:${digest}:`;
-        expect(buildId1.startsWith(prefix)).toBe(true);
-        expect(buildId2.startsWith(prefix)).toBe(true);
+        // BuildId is a hash
+        expect(buildId1).toMatch(/^[a-f0-9]{32}$/);
+        expect(buildId2).toMatch(/^[a-f0-9]{32}$/);
       });
     });
 
@@ -178,9 +183,166 @@ describe('source persistence', () => {
         expect(sql).toContain('COUNT(*)');
       });
 
-      test.todo('substitutes manifest tables when buildManifest provided');
-      test.todo('expands SQL when manifest entry not found');
-      test.todo('throws in strict mode when manifest entry not found');
+      it('substitutes manifest tables when buildManifest provided', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: wrapper is ${tstDB}.sql("""
+            SELECT * FROM %{ carrier_stats }
+          """)
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Get the connection digest
+        const conn = await tstRuntime.connections.lookupConnection(tstDB);
+        const connectionDigest = await conn.getDigest();
+
+        // Get carrier_stats source and compute its buildId
+        const carrierStats = Object.values(plan.sources).find(
+          s => s.name === 'carrier_stats'
+        )!;
+        const carrierStatsSQL = carrierStats.getSQL();
+        const carrierStatsBuildId = carrierStats.makeBuildId(
+          connectionDigest,
+          carrierStatsSQL
+        );
+
+        // Create a manifest with the carrier_stats entry
+        const manifest: BuildManifest = {
+          modelUrl: 'test://test.malloy',
+          buildStartedAt: new Date().toISOString(),
+          buildFinishedAt: new Date().toISOString(),
+          buildEntries: {
+            [carrierStatsBuildId]: {
+              buildId: carrierStatsBuildId,
+              tableName: 'my_schema.persisted_carrier_stats',
+              buildStartedAt: new Date().toISOString(),
+              buildFinishedAt: new Date().toISOString(),
+            },
+          },
+        };
+
+        // Get wrapper source and call getSQL with manifest
+        const wrapper = Object.values(plan.sources).find(
+          s => s.name === 'wrapper'
+        )!;
+        const sql = wrapper.getSQL({
+          buildManifest: manifest,
+          connectionDigests: {[tstDB]: connectionDigest},
+        });
+
+        // The SQL should reference the persisted table, not expand inline
+        expect(sql).toContain('my_schema.persisted_carrier_stats');
+        // Should NOT contain the full expanded query
+        expect(sql).not.toContain('COUNT(');
+      });
+
+      it('expands SQL when manifest entry not found', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: wrapper is ${tstDB}.sql("""
+            SELECT * FROM %{ carrier_stats }
+          """)
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Get the connection digest
+        const conn = await tstRuntime.connections.lookupConnection(tstDB);
+        const connectionDigest = await conn.getDigest();
+
+        // Create an empty manifest (no entries)
+        const manifest: BuildManifest = {
+          modelUrl: 'test://test.malloy',
+          buildStartedAt: new Date().toISOString(),
+          buildFinishedAt: new Date().toISOString(),
+          buildEntries: {},
+        };
+
+        // Get wrapper source and call getSQL with empty manifest
+        const wrapper = Object.values(plan.sources).find(
+          s => s.name === 'wrapper'
+        )!;
+        const sql = wrapper.getSQL({
+          buildManifest: manifest,
+          connectionDigests: {[tstDB]: connectionDigest},
+        });
+
+        // Should expand inline since not in manifest
+        expect(sql).toContain('SELECT');
+        expect(sql).toContain('carrier');
+        expect(sql).toContain('COUNT(');
+      });
+
+      it('throws in strict mode when manifest entry not found', async () => {
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: wrapper is ${tstDB}.sql("""
+            SELECT * FROM %{ carrier_stats }
+          """)
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Get the connection digest
+        const conn = await tstRuntime.connections.lookupConnection(tstDB);
+        const connectionDigest = await conn.getDigest();
+
+        // Create an empty manifest (no entries)
+        const manifest: BuildManifest = {
+          modelUrl: 'test://test.malloy',
+          buildStartedAt: new Date().toISOString(),
+          buildFinishedAt: new Date().toISOString(),
+          buildEntries: {},
+        };
+
+        // Get wrapper source and call getSQL with strictPersist
+        const wrapper = Object.values(plan.sources).find(
+          s => s.name === 'wrapper'
+        )!;
+
+        // Should throw in strict mode
+        expect(() =>
+          wrapper.getSQL({
+            buildManifest: manifest,
+            connectionDigests: {[tstDB]: connectionDigest},
+            strictPersist: true,
+          })
+        ).toThrow(/not found in manifest/);
+      });
     });
   });
 
@@ -849,8 +1011,121 @@ describe('source persistence', () => {
     });
 
     describe('connection grouping', () => {
-      test.todo('groups sources by connection');
-      test.todo('returns separate graphs for different connections');
+      // Create a second duckdb connection for multi-connection tests
+      const duckdb2Conn = new DuckDBROTestConnection(
+        'duckdb2',
+        'test/data/duckdb/duckdb_test.db'
+      );
+
+      afterAll(async () => {
+        await duckdb2Conn.close();
+      });
+
+      it('groups sources by connection', async () => {
+        // Create a model with persist sources on two different connections
+        testFileSpace.setFile(
+          new URL('test://multi-conn.malloy'),
+          `
+          source: flights1 is duckdb.table('malloytest.flights')
+          source: flights2 is duckdb2.table('malloytest.flights')
+
+          #@ persist
+          source: stats1 is flights1 -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: stats2 is flights2 -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+
+        // Use a runtime that has both connections
+        const multiRuntime = new ConnectionRuntime({
+          urlReader: testFileSpace,
+          connections: [tstRuntime.connection, duckdb2Conn],
+        });
+
+        const model = await multiRuntime
+          .loadModel(new URL('test://multi-conn.malloy'))
+          .getModel();
+        const plan = model.getBuildPlan();
+
+        // Should have two separate graphs, one for each connection
+        expect(plan.graphs).toHaveLength(2);
+
+        // Each graph should have one source
+        const connNames = plan.graphs.map(g => g.connectionName).sort();
+        expect(connNames).toEqual(['duckdb', 'duckdb2']);
+
+        // Clean up
+        testFileSpace.deleteFile(new URL('test://multi-conn.malloy'));
+      });
+
+      it('returns separate graphs for different connections', async () => {
+        // More detailed test: verify graph structure with dependencies
+        testFileSpace.setFile(
+          new URL('test://multi-conn2.malloy'),
+          `
+          source: flights1 is duckdb.table('malloytest.flights')
+          source: flights2 is duckdb2.table('malloytest.flights')
+
+          #@ persist
+          source: base1 is flights1 -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: derived1 is base1 -> { select: * }
+
+          #@ persist
+          source: base2 is flights2 -> {
+            group_by: origin
+            aggregate: flight_count is count()
+          }
+          `
+        );
+
+        const multiRuntime = new ConnectionRuntime({
+          urlReader: testFileSpace,
+          connections: [tstRuntime.connection, duckdb2Conn],
+        });
+
+        const model = await multiRuntime
+          .loadModel(new URL('test://multi-conn2.malloy'))
+          .getModel();
+        const plan = model.getBuildPlan();
+
+        // Should have two separate graphs
+        expect(plan.graphs).toHaveLength(2);
+
+        // Find each graph by connection
+        const graph1 = plan.graphs.find(g => g.connectionName === 'duckdb')!;
+        const graph2 = plan.graphs.find(g => g.connectionName === 'duckdb2')!;
+
+        expect(graph1).toBeDefined();
+        expect(graph2).toBeDefined();
+
+        // duckdb graph: derived1 is leaf, depends on base1
+        expect(graph1.nodes).toHaveLength(1);
+        expect(graph1.nodes[0]).toHaveLength(1);
+        expect(graph1.nodes[0][0].sourceID).toContain('derived1');
+        expect(graph1.nodes[0][0].dependsOn).toHaveLength(1);
+        expect(graph1.nodes[0][0].dependsOn[0].sourceID).toContain('base1');
+
+        // duckdb2 graph: base2 is leaf with no dependencies
+        expect(graph2.nodes).toHaveLength(1);
+        expect(graph2.nodes[0]).toHaveLength(1);
+        expect(graph2.nodes[0][0].sourceID).toContain('base2');
+        expect(graph2.nodes[0][0].dependsOn).toHaveLength(0);
+
+        // Clean up
+        testFileSpace.deleteFile(new URL('test://multi-conn2.malloy'));
+      });
     });
 
     describe('persist annotation filtering', () => {
@@ -1013,7 +1288,70 @@ describe('source persistence', () => {
       expect(sql).toContain('carrier');
     });
 
-    test.todo('getSQL substitutes from manifest');
+    it('getSQL substitutes from manifest', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: wrapper is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats }
+        """)
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      // Get the connection digest
+      const conn = await tstRuntime.connections.lookupConnection(tstDB);
+      const connectionDigest = await conn.getDigest();
+
+      // Get carrier_stats source and compute its buildId
+      const carrierStats = Object.values(plan.sources).find(
+        s => s.name === 'carrier_stats'
+      )!;
+      const carrierStatsSQL = carrierStats.getSQL();
+      const carrierStatsBuildId = carrierStats.makeBuildId(
+        connectionDigest,
+        carrierStatsSQL
+      );
+
+      // Create a manifest with the carrier_stats entry
+      const manifest: BuildManifest = {
+        modelUrl: 'test://test.malloy',
+        buildStartedAt: new Date().toISOString(),
+        buildFinishedAt: new Date().toISOString(),
+        buildEntries: {
+          [carrierStatsBuildId]: {
+            buildId: carrierStatsBuildId,
+            tableName: 'cache.carrier_stats_built',
+            buildStartedAt: new Date().toISOString(),
+            buildFinishedAt: new Date().toISOString(),
+          },
+        },
+      };
+
+      // Get wrapper source (sql_select) and call getSQL with manifest
+      const wrapper = Object.values(plan.sources).find(
+        s => s.name === 'wrapper'
+      )!;
+      const sql = wrapper.getSQL({
+        buildManifest: manifest,
+        connectionDigests: {[tstDB]: connectionDigest},
+      });
+
+      // The SQL should reference the persisted table
+      expect(sql).toContain('cache.carrier_stats_built');
+      // Should NOT contain the expanded query
+      expect(sql).not.toContain('COUNT(');
+    });
   });
 
   describe('build workflow integration', () => {
@@ -1047,19 +1385,100 @@ describe('source persistence', () => {
       const mockConnectionDigest = 'mock-connection-digest';
       const buildId = source.makeBuildId(mockConnectionDigest, sql);
 
-      // Verify buildId format: sourceId:connectionDigest:sqlDigest
-      // Note: sourceId contains URL which has "://" so we can't just split by ":"
-      expect(buildId).toContain(source.sourceID);
-      expect(buildId).toContain(mockConnectionDigest);
-      // The buildId should start with sourceId and contain digest and sql hash
-      expect(buildId.startsWith(source.sourceID + ':')).toBe(true);
+      // BuildId is a hash of connectionDigest and sql
+      expect(buildId).toMatch(/^[a-f0-9]{32}$/);
+
+      // Verify determinism: same inputs produce same buildId
+      const buildId2 = source.makeBuildId(mockConnectionDigest, sql);
+      expect(buildId).toBe(buildId2);
 
       // Verify we can access source metadata for table naming
       const parsed = source.tagParse({prefix: /^#@ /});
       expect(parsed.tag.has('persist')).toBe(true);
     });
 
-    test.todo('manifest round-trip: build then query with manifest');
+    it('manifest round-trip: build then query with manifest', async () => {
+      // This test simulates what the builder does:
+      // 1. Load model, get build plan
+      // 2. For each source: get SQL, compute BuildID, add to manifest
+      // 3. Then use the manifest when running a query that references persist sources
+
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        #@ persist
+        source: wrapper is ${tstDB}.sql("""
+          SELECT * FROM %{ carrier_stats } WHERE flight_count > 100
+        """)
+        `
+      );
+      const model = await testModel.model.getModel();
+      const plan = model.getBuildPlan();
+
+      // Get the real connection digest
+      const conn = await tstRuntime.connections.lookupConnection(tstDB);
+      const connectionDigest = await conn.getDigest();
+
+      // Simulate builder: iterate sources and build manifest
+      const manifest: BuildManifest = {
+        modelUrl: 'test://test.malloy',
+        buildStartedAt: new Date().toISOString(),
+        buildFinishedAt: new Date().toISOString(),
+        buildEntries: {},
+      };
+
+      // Build carrier_stats first (it's a dependency of wrapper)
+      const carrierStats = Object.values(plan.sources).find(
+        s => s.name === 'carrier_stats'
+      )!;
+      const carrierStatsSQL = carrierStats.getSQL();
+      const carrierStatsBuildId = carrierStats.makeBuildId(
+        connectionDigest,
+        carrierStatsSQL
+      );
+      manifest.buildEntries[carrierStatsBuildId] = {
+        buildId: carrierStatsBuildId,
+        tableName: 'build_cache.carrier_stats_v1',
+        buildStartedAt: new Date().toISOString(),
+        buildFinishedAt: new Date().toISOString(),
+      };
+
+      // Now build wrapper with manifest (should substitute carrier_stats)
+      const wrapper = Object.values(plan.sources).find(
+        s => s.name === 'wrapper'
+      )!;
+      const wrapperSQL = wrapper.getSQL({
+        buildManifest: manifest,
+        connectionDigests: {[tstDB]: connectionDigest},
+      });
+
+      // Wrapper SQL should reference the built table
+      expect(wrapperSQL).toContain('build_cache.carrier_stats_v1');
+      expect(wrapperSQL).toContain('flight_count > 100');
+
+      // Compute wrapper's buildId and add to manifest
+      const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
+      manifest.buildEntries[wrapperBuildId] = {
+        buildId: wrapperBuildId,
+        tableName: 'build_cache.wrapper_v1',
+        buildStartedAt: new Date().toISOString(),
+        buildFinishedAt: new Date().toISOString(),
+      };
+
+      // Verify both entries are in manifest
+      expect(Object.keys(manifest.buildEntries)).toHaveLength(2);
+
+      // Verify buildIds are different (different SQL content)
+      expect(carrierStatsBuildId).not.toBe(wrapperBuildId);
+    });
   });
 
   describe('cross-model imports', () => {
