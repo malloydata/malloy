@@ -131,8 +131,14 @@ export class SnowflakeDialect extends Dialect {
     {min: MIN_DECIMAL38, max: MAX_DECIMAL38, numberType: 'bigint'},
   ];
 
-  // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
+    // Quote with double quotes if contains dangerous characters
+    if (tablePath.match(/[;-]/)) {
+      return tablePath
+        .split('.')
+        .map(part => `"${part}"`)
+        .join('.');
+    }
     return tablePath;
   }
 

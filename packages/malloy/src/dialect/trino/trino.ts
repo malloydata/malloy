@@ -134,8 +134,13 @@ export class TrinoDialect extends PostgresBase {
   supportsHyperLogLog = true;
 
   quoteTablePath(tablePath: string): string {
-    // TODO: look into escaping.
-    //return `${tablePath.replace(/malloytest/g, 'malloy_demo.malloytest')}`;
+    // Quote with double quotes if contains dangerous characters
+    if (tablePath.match(/[;-]/)) {
+      return tablePath
+        .split('.')
+        .map(part => `"${part}"`)
+        .join('.');
+    }
     return tablePath;
   }
 

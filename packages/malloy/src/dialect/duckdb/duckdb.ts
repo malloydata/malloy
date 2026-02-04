@@ -111,7 +111,8 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   quoteTablePath(tableName: string): string {
-    return tableName.match(/[/*:]/) ? `'${tableName}'` : tableName;
+    // Quote if contains special chars that could be SQL injection or need quoting
+    return tableName.match(/[/*:;-]/) ? `'${tableName}'` : tableName;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
