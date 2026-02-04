@@ -1133,4 +1133,113 @@ describe('source:', () => {
       }
     });
   });
+
+  describe('sourceRegistry', () => {
+    test('query source with sourceID is added to sourceRegistry', () => {
+      const m = new TestTranslator(`
+        source: query_src is a -> {
+          group_by: astr
+          aggregate: acount is count()
+        }
+      `);
+      expect(m).toTranslate();
+      const modelDef = m.translate().modelDef;
+      expect(modelDef).toBeDefined();
+      if (modelDef) {
+        const src = m.getSourceDef('query_src');
+        expect(src).toBeDefined();
+        expect(src?.type).toBe('query_source');
+        if (src && 'sourceID' in src && src.sourceID) {
+          const registryValue = modelDef.sourceRegistry[src.sourceID];
+          expect(registryValue).toBeDefined();
+          expect(registryValue?.entry).toMatchObject({
+            type: 'source_registry_reference',
+            name: 'query_src',
+          });
+        } else {
+          fail('Expected query_src to have a sourceID');
+        }
+      }
+    });
+
+    test('extending query_source sets extends property to base sourceID', () => {
+      const m = new TestTranslator(`
+        source: base_src is a -> {
+          group_by: astr
+          aggregate: acount is count()
+        }
+
+        source: extended_src is base_src extend {
+          dimension: extra is 'test'
+        }
+      `);
+      expect(m).toTranslate();
+      const modelDef = m.translate().modelDef;
+      expect(modelDef).toBeDefined();
+      if (modelDef) {
+        const baseSrc = m.getSourceDef('base_src');
+        const extSrc = m.getSourceDef('extended_src');
+        expect(baseSrc).toBeDefined();
+        expect(extSrc).toBeDefined();
+        expect(baseSrc?.type).toBe('query_source');
+        expect(extSrc?.type).toBe('query_source');
+
+        // Base source should have sourceID
+        if (baseSrc && 'sourceID' in baseSrc && baseSrc.sourceID) {
+          const baseSourceID = baseSrc.sourceID;
+          expect(baseSourceID).toContain('base_src@');
+
+          // Extended source should have extends pointing to base sourceID
+          if (extSrc && 'extends' in extSrc) {
+            expect(extSrc.extends).toBe(baseSourceID);
+          } else {
+            fail('Expected extended_src to have extends property');
+          }
+        } else {
+          fail('Expected base_src to have a sourceID');
+        }
+      }
+    });
+
+    test('defined source sets as property, preserves name from base', () => {
+      // When defining a source, 'as' should be set to the new name
+      // 'name' should be preserved from the base (it may contain important info like SQL)
+      const m = new TestTranslator(`
+        source: my_source is a -> {
+          group_by: astr
+        }
+      `);
+      expect(m).toTranslate();
+      const src = m.getSourceDef('my_source');
+      expect(src).toBeDefined();
+      if (src) {
+        expect(src.as).toBe('my_source');
+        // name comes from the base - for query_source it will be something from 'a'
+        // The key point is that 'as' is set correctly
+      }
+    });
+
+    test('extended source sets as property, preserves name from base', () => {
+      const m = new TestTranslator(`
+        source: base_src is a -> {
+          group_by: astr
+        }
+
+        source: extended_src is base_src extend {
+          dimension: extra is 'test'
+        }
+      `);
+      expect(m).toTranslate();
+      const baseSrc = m.getSourceDef('base_src');
+      const extSrc = m.getSourceDef('extended_src');
+      expect(baseSrc).toBeDefined();
+      expect(extSrc).toBeDefined();
+      if (baseSrc && extSrc) {
+        expect(baseSrc.as).toBe('base_src');
+        expect(extSrc.as).toBe('extended_src');
+        // Extended source preserves name from base
+        expect(extSrc.name).toBe(baseSrc.name);
+      }
+    });
+  });
 });

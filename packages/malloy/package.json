@@ -50,6 +50,7 @@
     "@malloydata/malloy-tag": "0.0.336",
     "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",
+    "blueimp-md5": "^2.19.0",
     "jaro-winkler": "^0.2.8",
     "jest-diff": "^29.6.2",
     "lodash": "^4.17.20",
@@ -57,6 +58,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@types/blueimp-md5": "^2.18.2",
     "@types/jaro-winkler": "^0.2.3",
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^3.5.0",

@@ -61,6 +61,12 @@ export interface InfoConnection {
    */
   get name(): string;
   get dialectName(): string;
+
+  /**
+   * Get a digest identifying this connection's target database.
+   * Used for cache key computation in persist manifests.
+   */
+  getDigest(): string;
 }
 
 export type ConnectionParameterValue =

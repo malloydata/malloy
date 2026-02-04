@@ -22,10 +22,12 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
+import md5 from 'blueimp-md5';
 import type {
   Expr,
   ExprWithKids,
   GenericSQLExpr,
+  ModelDef,
   StructDef,
 } from './malloy_types';
 import {
@@ -115,6 +117,27 @@ export class AndChain {
 export function generateHash(input: string): string {
   const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
   return uuidv5(input, MALLOY_UUID);
+}
+
+/**
+ * Compute a digest for lookup/identity purposes (not cryptographic).
+ *
+ * Uses blueimp-md5 for these reasons:
+ * - Works in both Node.js and browsers (no native crypto dependency)
+ * - Synchronous API (unlike Web Crypto which is async)
+ * - Well-maintained by Sebastian Tschan (blueimp), a known maintainer
+ * - High adoption (~1.7M weekly downloads)
+ * - MD5 is fast and produces short hex strings - perfect for cache keys
+ *
+ * Takes variable string arguments and combines them in a collision-resistant
+ * way by including the length of each string (similar to pathToKey pattern).
+ */
+export function makeDigest(...parts: string[]): string {
+  // Combine parts with length prefix to avoid collisions
+  // e.g., ("ab", "c") vs ("a", "bc") both concat to "abc"
+  // but with lengths: "2:ab/1:c" vs "1:a/2:bc"
+  const combined = parts.map(p => `${p.length}:${p}`).join('/');
+  return md5(combined);
 }
 
 export function joinWith<T>(els: T[][], sep: T): T[] {
@@ -279,4 +302,19 @@ export class GenerateState {
     newState.totalGroupSet = groupSet;
     return newState;
   }
+}
+
+/**
+ * Create an empty ModelDef with the given name.
+ * Use this factory to ensure all required fields are present.
+ */
+export function mkModelDef(name: string): ModelDef {
+  return {
+    name,
+    exports: [],
+    contents: {},
+    sourceRegistry: {},
+    queryList: [],
+    dependencies: {},
+  };
 }

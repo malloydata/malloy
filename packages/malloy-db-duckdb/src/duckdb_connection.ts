@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBInstance} from '@duckdb/node-api';
 import type {DuckDBConnection as DuckDBNodeConnection} from '@duckdb/node-api';
@@ -31,6 +30,7 @@ import type {
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
+import {makeDigest} from '@malloydata/malloy';
 import packageJson from '@malloydata/malloy/package.json';
 
 export interface DuckDBConnectionOptions extends ConnectionConfig {
@@ -117,6 +117,11 @@ export class DuckDBConnection extends DuckDBCommon {
       this.databasePath.startsWith('md:') ||
       this.databasePath.startsWith('motherduck:');
     this.connecting = this.init();
+  }
+
+  public getDigest(): string {
+    const data = `duckdb:${this.databasePath}:${this.workingDirectory}`;
+    return makeDigest(data);
   }
 
   private async init(): Promise<void> {
@@ -262,7 +267,7 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   async createHash(sqlCommand: string): Promise<string> {
-    return crypto.createHash('md5').update(sqlCommand).digest('hex');
+    return makeDigest(sqlCommand);
   }
 
   async close(): Promise<void> {
@@ -276,5 +281,20 @@ export class DuckDBConnection extends DuckDBCommon {
         delete DuckDBConnection.activeDBs[this.databasePath];
       }
     }
+  }
+
+  /**
+   * Forcefully close all cached DuckDB instances. Useful for test cleanup
+   * to release file locks between test runs.
+   */
+  static closeAllInstances(): void {
+    for (const path of Object.keys(DuckDBConnection.activeDBs)) {
+      try {
+        DuckDBConnection.activeDBs[path].instance.closeSync();
+      } catch {
+        // Ignore errors during cleanup
+      }
+    }
+    DuckDBConnection.activeDBs = {};
   }
 }

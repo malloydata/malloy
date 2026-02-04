@@ -30,9 +30,12 @@ import type {
   ModelAnnotation,
   NamedModelObject,
   Query,
+  SourceID,
+  SourceRegistryValue,
   StructDef,
 } from '../../../model/malloy_types';
-import {isSourceDef} from '../../../model/malloy_types';
+import {isSourceDef, isPersistableSourceDef} from '../../../model/malloy_types';
+import {mkModelDef} from '../../../model/utils';
 import {Tag} from '@malloydata/malloy-tag';
 import type {
   LogMessageOptions,
@@ -507,6 +510,7 @@ export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
+  documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   queryList: Query[] = [];
   statements: DocStatementList;
   didInitModel = false;
@@ -525,6 +529,7 @@ export class Document extends MalloyElement implements NameSpace {
       return;
     }
     this.documentModel = {};
+    this.documentSrcRegistry = {};
     this.queryList = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
@@ -592,13 +597,7 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   modelDef(): ModelDef {
-    const def: ModelDef = {
-      name: '',
-      exports: [],
-      contents: {},
-      queryList: [],
-      dependencies: {},
-    };
+    const def = mkModelDef('');
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }
@@ -615,6 +614,8 @@ export class Document extends MalloyElement implements NameSpace {
         def.contents[entry] = newEntry;
       }
     }
+    // Copy the accumulated sourceRegistry
+    def.sourceRegistry = {...this.documentSrcRegistry};
     return def;
   }
 
@@ -640,6 +641,20 @@ export class Document extends MalloyElement implements NameSpace {
     }
 
     this.documentModel[str] = ent;
+
+    // Maintain sourceRegistry for persistable sources with sourceID
+    if (
+      isSourceDef(ent.entry) &&
+      isPersistableSourceDef(ent.entry) &&
+      ent.entry.sourceID
+    ) {
+      this.documentSrcRegistry[ent.entry.sourceID] = {
+        entry: {
+          type: 'source_registry_reference',
+          name: str,
+        },
+      };
+    }
   }
 
   /**

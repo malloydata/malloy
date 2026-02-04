@@ -194,4 +194,68 @@ describe('connection sql()', () => {
       expect(m).toTranslate();
     });
   });
+
+  describe('sourceRegistry', () => {
+    test('sql source with sourceID is added to sourceRegistry', () => {
+      const m = new TestTranslator(`
+        source: sql_src is aConnection.sql("""${selStmt}""")
+      `);
+      translateWithSchemas(m);
+      expect(m).toTranslate();
+      const modelDef = m.translate().modelDef;
+      expect(modelDef).toBeDefined();
+      if (modelDef) {
+        const src = m.getSourceDef('sql_src');
+        expect(src).toBeDefined();
+        expect(src?.type).toBe('sql_select');
+        if (src && 'sourceID' in src && src.sourceID) {
+          const registryValue = modelDef.sourceRegistry[src.sourceID];
+          expect(registryValue).toBeDefined();
+          expect(registryValue?.entry).toMatchObject({
+            type: 'source_registry_reference',
+            name: 'sql_src',
+          });
+        } else {
+          fail('Expected sql_src to have a sourceID');
+        }
+      }
+    });
+
+    test('extending sql_select sets extends property to base sourceID', () => {
+      const m = new TestTranslator(`
+        source: base_sql is aConnection.sql("""${selStmt}""")
+
+        source: extended_sql is base_sql extend {
+          dimension: extra is 'test'
+        }
+      `);
+      translateWithSchemas(m);
+      expect(m).toTranslate();
+      const modelDef = m.translate().modelDef;
+      expect(modelDef).toBeDefined();
+      if (modelDef) {
+        const baseSrc = m.getSourceDef('base_sql');
+        const extSrc = m.getSourceDef('extended_sql');
+        expect(baseSrc).toBeDefined();
+        expect(extSrc).toBeDefined();
+        expect(baseSrc?.type).toBe('sql_select');
+        expect(extSrc?.type).toBe('sql_select');
+
+        // Base source should have sourceID
+        if (baseSrc && 'sourceID' in baseSrc && baseSrc.sourceID) {
+          const baseSourceID = baseSrc.sourceID;
+          expect(baseSourceID).toContain('base_sql@');
+
+          // Extended source should have extends pointing to base sourceID
+          if (extSrc && 'extends' in extSrc) {
+            expect(extSrc.extends).toBe(baseSourceID);
+          } else {
+            fail('Expected extended_sql to have extends property');
+          }
+        } else {
+          fail('Expected base_sql to have a sourceID');
+        }
+      }
+    });
+  });
 });

@@ -27,13 +27,12 @@ import type {
   DocumentReference,
   ImportLocation,
   ModelDef,
-  NamedModelObject,
   SourceDef,
   SQLSourceDef,
   DependencyTree,
   DocumentRange,
 } from '../model/malloy_types';
-import {isSourceDef} from '../model/malloy_types';
+import {mkModelDef} from '../model/utils';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import type {
@@ -668,13 +667,7 @@ export abstract class MalloyTranslation {
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
-    this.modelDef = {
-      name: sourceURL,
-      exports: [],
-      contents: {},
-      queryList: [],
-      dependencies: {},
-    };
+    this.modelDef = mkModelDef(sourceURL);
     /**
      * This is sort of the makefile for the translation, all the steps
      * and the dependencies of the steps are declared here. Then when
@@ -872,23 +865,14 @@ export abstract class MalloyTranslation {
     }
   }
 
-  getChildExports(importURL: string): Record<string, NamedModelObject> {
-    const exports: Record<string, NamedModelObject> = {};
+  importModelDef(importURL: string): ModelDef | undefined {
     const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
     if (child) {
-      const did = child.translate();
-      if (did.modelDef) {
-        for (const fromChild of child.modelDef.exports) {
-          const modelEntry = child.modelDef.contents[fromChild];
-          if (isSourceDef(modelEntry) || modelEntry.type === 'query') {
-            exports[fromChild] = modelEntry;
-          }
-        }
-      }
-      // else nothing, assuming there are already errors in the log
+      const result = child.translate();
+      return result.modelDef;
     }
-    return exports;
+    return undefined;
   }
 
   private finalAnswer?: TranslateResponse;

@@ -33,6 +33,7 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
+import {makeDigest} from '@malloydata/malloy';
 import {Type} from 'apache-arrow';
 import type {StructRow, Table, Schema, Field, DataType} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
@@ -306,6 +307,14 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       this.databasePath?.startsWith('motherduck:') ||
       false;
     this.connecting = this.init();
+  }
+
+  public getDigest(): string {
+    return makeDigest(
+      'duckdb-wasm',
+      this.databasePath ?? ':memory:',
+      this.workingDirectory
+    );
   }
 
   protected async init(): Promise<void> {

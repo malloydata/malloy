@@ -30,6 +30,7 @@ describe('pretranslated models', () => {
               fields: [],
             },
           },
+          sourceRegistry: {},
           dependencies: {
             'internal://test/langtests/grandchild': {
               'internal://test/langtests/grandgrandchild1': {},

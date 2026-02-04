@@ -24,6 +24,23 @@
 import type {ModelDataRequest} from '../../translate-response';
 import type {DocStatement, Document} from '../types/malloy-element';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import type {SourceID} from '../../../model/malloy_types';
+import {
+  isSourceDef,
+  isPersistableSourceDef,
+  isSourceRegistryReference,
+} from '../../../model/malloy_types';
+import {registerSource} from '../../../model/source_def_utils';
+import {findPersistentDependencies} from '../../../model/persist_utils';
+import type {BuildNode} from '../../../api/foundation/types';
+
+/** Walk BuildNode tree and collect all sourceIDs */
+function collectSourceIDs(nodes: BuildNode[], into: Set<SourceID>): void {
+  for (const node of nodes) {
+    into.add(node.sourceID);
+    collectSourceIDs(node.dependsOn, into);
+  }
+}
 
 export class ImportSourceName extends MalloyElement {
   elementType = 'importSourceName';
@@ -96,41 +113,67 @@ export class ImportStatement
       const pretranslated = trans.root.pretranslatedModels.get(this.fullURL);
       const src = trans.root.importZone.getEntry(this.fullURL);
       if (pretranslated || src.status === 'present') {
-        const importable = trans.getChildExports(this.fullURL);
-        if (this.notEmpty()) {
-          // just import the named objects
+        const importedModel = trans.importModelDef(this.fullURL);
+        if (importedModel) {
+          const importAll = this.empty();
+          const explicitImport: Record<string, string> = {};
           for (const importOne of this.list) {
-            const fetchName = importOne.from || importOne;
-            if (doc.getEntry(importOne.text)) {
+            const dstName = importOne.text;
+            const srcName = importOne.from ? importOne.from.text : dstName;
+            if (importedModel.contents[srcName] === undefined) {
+              importOne.logError(
+                'selective-import-not-found',
+                `Cannot find '${srcName}', not imported`
+              );
+            } else if (doc.getEntry(dstName)) {
               importOne.logError(
                 'name-conflict-on-selective-import',
-                `Cannot redefine '${importOne.text}'`
+                `Cannot redefine '${dstName}'`
               );
-            } else if (importable[fetchName.text]) {
-              const importMe = {...importable[fetchName.text]};
-              if (importOne.from) {
-                importMe.as = importOne.text;
-              }
-              doc.setEntry(importOne.text, {entry: importMe, exported: false});
             } else {
-              fetchName.logError(
-                'selective-import-not-found',
-                `Cannot find '${fetchName.text}', not imported`
-              );
+              explicitImport[srcName] = dstName;
             }
           }
-        } else {
-          // import everything
-          for (const [importing, entry] of Object.entries(
-            trans.getChildExports(this.fullURL)
-          )) {
-            if (doc.getEntry(importing)) {
-              this.logError(
-                'name-conflict-on-indiscriminate-import',
-                `Cannot redefine '${importing}'`
-              );
-            } else {
-              doc.setEntry(importing, {entry, exported: false});
+          const neededSourceIDs = new Set<SourceID>();
+          for (const srcName of importedModel.exports) {
+            const picked = explicitImport[srcName];
+            const dstName = picked || srcName;
+            if (importAll || picked) {
+              const importMe = {...importedModel.contents[srcName]};
+              importMe.as = dstName;
+              doc.setEntry(dstName, {entry: importMe, exported: false});
+
+              // Collect dependencies for persistable sources
+              if (isSourceDef(importMe) && isPersistableSourceDef(importMe)) {
+                const deps = findPersistentDependencies(
+                  importMe,
+                  importedModel
+                );
+                collectSourceIDs(deps, neededSourceIDs);
+              }
+            }
+          }
+
+          // Register hidden dependencies from child's registry
+          for (const sourceID of neededSourceIDs) {
+            if (!(sourceID in doc.documentSrcRegistry)) {
+              const value = importedModel.sourceRegistry[sourceID];
+              if (value) {
+                // If entry is a reference, resolve it to actual SourceDef
+                // (parent can't resolve by name since it's not in namespace)
+                let entry = value.entry;
+                if (isSourceRegistryReference(entry)) {
+                  const resolved = importedModel.contents[entry.name];
+                  if (
+                    resolved &&
+                    isSourceDef(resolved) &&
+                    isPersistableSourceDef(resolved)
+                  ) {
+                    entry = resolved;
+                  }
+                }
+                registerSource(doc.documentSrcRegistry, sourceID, entry);
+              }
             }
           }
         }

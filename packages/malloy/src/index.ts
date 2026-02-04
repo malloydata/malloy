@@ -90,7 +90,7 @@ export type {
   QueryResultDef,
   QueryRunStats,
   QueryScalar,
-  NamedQuery,
+  NamedQueryDef,
   NamedModelObject,
   ExpressionType,
   FunctionDef,
@@ -125,6 +125,9 @@ export type {
   TimestamptzLiteralNode,
   TimeLiteralExpr,
   TypecastExpr,
+  // Build API types
+  BuildManifest,
+  BuildManifestEntry,
 } from './model';
 export {
   isSourceDef,
@@ -182,7 +185,7 @@ export {
   Explore,
   InMemoryModelCache,
   CacheManager,
-} from './malloy';
+} from './api/foundation';
 export type {
   PreparedQuery,
   Field,
@@ -209,7 +212,7 @@ export type {
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
-} from './malloy';
+} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,
@@ -246,3 +249,6 @@ export * as API from './api';
 export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
 export {annotationToTag, annotationToTaglines} from './annotation';
+export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
+export {PersistSource} from './api/foundation';
+export {makeDigest} from './model';

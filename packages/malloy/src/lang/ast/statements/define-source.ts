@@ -22,6 +22,8 @@
  */
 
 import type {Annotation, StructDef} from '../../../model/malloy_types';
+import {isPersistableSourceDef} from '../../../model/malloy_types';
+import {mkSourceID} from '../../../model/source_def_utils';
 import {ErrorFactory} from '../error-factory';
 import type {HasParameter} from '../parameters/has-parameter';
 import type {DocStatement, Document} from '../types/malloy-element';
@@ -77,6 +79,9 @@ export class DefineSource
       as: this.name,
       location: this.location,
     };
+    if (isPersistableSourceDef(entry)) {
+      entry.sourceID = mkSourceID(this.name, this.location?.url);
+    }
     if (this.note) {
       entry.annotation = structDef.annotation
         ? {...this.note, inherits: structDef.annotation}

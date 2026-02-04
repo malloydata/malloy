@@ -18,6 +18,7 @@ import type {
   RunSQLOptions,
   TestableConnection,
 } from '@malloydata/malloy';
+import {makeDigest} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import type {
   Connection,
@@ -142,6 +143,11 @@ export class PublisherConnection
 
   public canStream(): this is StreamingConnection {
     return this.connectionAttributes.canStream as boolean;
+  }
+
+  public getDigest(): string {
+    const data = `publisher:${this.projectName}:${this.name}`;
+    return makeDigest(data);
   }
 
   public async fetchTableSchema(

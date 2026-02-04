@@ -20,10 +20,6 @@ import type {
 import {isSourceDef, getIdentifier, isAtomic} from './malloy_types';
 import {StageWriter} from './stage_writer';
 import {StandardSQLDialect, type Dialect} from '../dialect';
-import {
-  buildQueryMaterializationSpec,
-  shouldMaterialize,
-} from './materialization/utils';
 import type {Connection} from '../connection/types';
 import type {ModelRootInterface} from './query_node';
 import {QueryStruct, isScalarField} from './query_node';
@@ -39,6 +35,7 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
+
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
@@ -207,15 +204,13 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
     prepareResultOptions?: PrepareResultOptions,
     finalize = true
   ): CompiledQuery {
-    let newModel: QueryModel | undefined;
     const addDefaultRowLimit = this.addDefaultRowLimit(
       query,
       prepareResultOptions?.defaultRowLimit
     );
     query = addDefaultRowLimit.query;
     const addedDefaultRowLimit = addDefaultRowLimit.addedDefaultRowLimit;
-    const m = newModel || this;
-    const ret = m.loadQuery(
+    const ret = this.loadQuery(
       query,
       undefined,
       prepareResultOptions,
@@ -241,14 +236,6 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
       sql: ret.stageWriter.generateSQLStages(),
-      dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
-      materialization: shouldMaterialize(query.annotation)
-        ? buildQueryMaterializationSpec(
-            query.location?.url,
-            query.name,
-            prepareResultOptions?.materializedTablePrefix
-          )
-        : undefined,
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,

@@ -22,7 +22,7 @@
  */
 
 import type {StructDef, TableSourceDef} from '../../model/malloy_types';
-import {Explore} from '../../malloy';
+import {Explore} from '../../api/foundation';
 
 export const CHILD_EXPLORE: TableSourceDef = {
   type: 'table',

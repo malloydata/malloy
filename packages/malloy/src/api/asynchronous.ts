@@ -9,7 +9,7 @@ import type * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
 import type {InfoConnection, Connection, LookupConnection} from './connection';
 import type {URLReader} from '../runtime_types';
-import type {CacheManager} from '../malloy';
+import type {CacheManager} from './foundation';
 import {DEFAULT_LOG_RANGE} from './util';
 import {Timer} from '../timing';
 

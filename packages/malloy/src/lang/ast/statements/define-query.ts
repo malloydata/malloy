@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Annotation, NamedQuery} from '../../../model/malloy_types';
+import type {Annotation, NamedQueryDef} from '../../../model/malloy_types';
 
 import type {DocStatement, Document} from '../types/malloy-element';
 import {MalloyElement, DocStatementList} from '../types/malloy-element';
@@ -63,7 +63,7 @@ export class DefineQuery
       );
       return;
     }
-    const entry: NamedQuery = {
+    const entry: NamedQueryDef = {
       ...queryEl.query(),
       type: 'query',
       name: this.name,

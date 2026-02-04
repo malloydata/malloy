@@ -4,13 +4,7 @@
  */
 
 import type {Dialect} from '../dialect';
-import type {
-  QueryToMaterialize,
-  StructDef,
-  ResultStructMetadataDef,
-  Query,
-} from './malloy_types';
-import {buildQueryMaterializationSpec} from './materialization/utils';
+import type {StructDef, ResultStructMetadataDef} from './malloy_types';
 import {indent, generateHash, getDialectFieldList} from './utils';
 
 export class StageWriter {
@@ -18,7 +12,6 @@ export class StageWriter {
   stageNames: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
-  dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
   stageNumber = 0;
@@ -79,37 +72,6 @@ export class StageWriter {
     sql = dialect.sqlCreateFunction(id, sql);
     this.root().udfs.push(sql);
     return id;
-  }
-
-  addMaterializedQuery(
-    fieldName: string,
-    query: Query,
-    materializatedTablePrefix?: string
-  ): string {
-    const name = query.name;
-    if (!name) {
-      throw new Error(
-        `Source ${fieldName} on a unnamed query that is tagged as materialize, only named queries can be materialized.`
-      );
-    }
-
-    const path = query.location?.url;
-    if (!path) {
-      throw new Error(
-        `Trying to materialize query ${name}, but its path is not set.`
-      );
-    }
-
-    // Creating an object that should uniquely identify a query within a Malloy model repo.
-    const queryMaterializationSpec = buildQueryMaterializationSpec(
-      path,
-      name,
-      materializatedTablePrefix
-    );
-    this.root().dependenciesToMaterialize[queryMaterializationSpec.id] =
-      queryMaterializationSpec;
-
-    return queryMaterializationSpec.id;
   }
 
   addPDT(baseName: string, dialect: Dialect): string {

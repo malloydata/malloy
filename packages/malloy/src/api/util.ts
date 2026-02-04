@@ -11,7 +11,7 @@ import type {
   InfoConnection as LegacyInfoConnection,
   Connection as LegacyConnection,
 } from '../connection';
-import type {Result} from '../malloy';
+import type {Result} from './foundation';
 import type {Expr} from '../model';
 import {type QueryData, type QueryDataRow, type QueryValue} from '../model';
 import {

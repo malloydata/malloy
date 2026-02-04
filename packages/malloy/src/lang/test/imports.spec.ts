@@ -99,13 +99,13 @@ source: botProjQSrc is botProjQ
     const newSrc = docParse.getSourceDef('newSrc');
     const maybeField = newSrc?.fields.find(f => f.name === 'b');
     expect(maybeField).toBeDefined();
-    const f = maybeField!;
-    expect(isJoined(f)).toBeTruthy();
-    if (isJoined(f)) {
-      expect(f.type).toBe('query_source');
-      if (f.type === 'query_source') {
-        expect(typeof f.query.structRef).not.toBe('string');
+    if (maybeField && isJoined(maybeField)) {
+      expect(maybeField.type).toBe('query_source');
+      if (maybeField.type === 'query_source') {
+        expect(typeof maybeField.query.structRef).not.toBe('string');
       }
+    } else {
+      fail('Expected maybeField to be a joined field');
     }
   });
   test('missing import', () => {
@@ -156,7 +156,7 @@ source: botProjQSrc is botProjQ
     const child = docParse.translatorForDependency(
       'internal://test/langtests/child'
     );
-    expect(child!.translate().modelDef?.dependencies).toMatchObject({
+    expect(child?.translate().modelDef?.dependencies).toMatchObject({
       'internal://test/langtests/grandChild': {},
     });
   });
@@ -241,6 +241,24 @@ source: botProjQSrc is botProjQ
     const bb = docParse.getSourceDef('bb');
     expect(bb).toBeDefined();
   });
+  test('renaming import sets as property, preserves name', () => {
+    // When renaming on import, 'as' should be the new name
+    // 'name' should be preserved from the original source
+    const docParse = new TestTranslator(
+      'import { renamed is original } from "child"'
+    );
+    docParse.update({
+      urls: {'internal://test/langtests/child': 'source: original is a'},
+    });
+    expect(docParse).toTranslate();
+    const renamed = docParse.getSourceDef('renamed');
+    expect(renamed).toBeDefined();
+    if (renamed) {
+      expect(renamed.as).toBe('renamed');
+      // name is preserved from the original source (comes from 'a' which is table)
+      expect(renamed.name).toBe('a');
+    }
+  });
   test('selective import of source, not found', () => {
     const doc = model`import { ${'bb'} } from "child"`;
     const xr = doc.translator.unresolved();
@@ -282,5 +300,57 @@ source: botProjQSrc is botProjQ
       },
     });
     expect(doc.translator).toLog(errorMessage("Cannot redefine 'cc'"));
+  });
+
+  describe('sourceRegistry across imports', () => {
+    test('persistent base propagates through non-persistent import chain', () => {
+      // grandchild: persistent base
+      // child: non-persistent, extends base
+      // parent: non-persistent, extends child's source
+      // Result: parent's sourceRegistry should contain the persistent base
+      const docParse = new TestTranslator(`
+        import "child"
+        source: source_c is source_b extend { dimension: c_field is 'c' }
+      `);
+      docParse.update({
+        urls: {
+          'internal://test/langtests/child': `
+            import "grandchild"
+            source: source_b is source_a extend { dimension: b_field is 'b' }
+          `,
+          'internal://test/langtests/grandchild': `
+            #@ persist
+            source: source_a is a -> { group_by: astr }
+          `,
+        },
+      });
+
+      expect(docParse).toTranslate();
+      const modelDef = docParse.translate().modelDef;
+      expect(modelDef).toBeDefined();
+
+      // source_c is in namespace (defined locally, non-persistent)
+      const source_c = docParse.getSourceDef('source_c');
+      expect(source_c).toBeDefined();
+
+      // source_b is in namespace (imported, non-persistent)
+      const source_b = docParse.getSourceDef('source_b');
+      expect(source_b).toBeDefined();
+
+      // source_a is NOT in namespace (hidden persistent dependency)
+      const source_a = docParse.getSourceDef('source_a');
+      expect(source_a).toBeUndefined();
+
+      // sourceRegistry should contain source_a as hidden persistent dependency
+      if (modelDef) {
+        const source_a_id = 'source_a@internal://test/langtests/grandchild';
+        const source_a_value = modelDef.sourceRegistry[source_a_id];
+        expect(source_a_value).toBeDefined();
+        if (source_a_value) {
+          // Hidden dependency should be actual SourceDef, not a reference
+          expect(source_a_value.entry.type).toBe('query_source');
+        }
+      }
+    });
   });
 });

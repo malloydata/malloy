@@ -1157,7 +1157,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   compositeResolvedSourceDef?: SourceDef;
 }
 
-export type NamedQuery = Query & NamedObject;
+export type NamedQueryDef = Query & NamedObject;
 
 export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
 
@@ -1326,6 +1326,8 @@ interface StructDefBase extends HasLocation, NamedObject {
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
+  /** Marker for error placeholder structs created by ErrorFactory */
+  errorFactory?: boolean;
 }
 
 export interface PartitionCompositeDesc {
@@ -1375,13 +1377,61 @@ export function isSegmentSource(
   return 'type' in f && (f.type === 'sql_select' || f.type === 'query_source');
 }
 
-export interface SQLSourceDef extends SourceDefBase {
+/** Format: "name@modelUrl" - uniquely identifies a source for persistence */
+export type SourceID = string;
+
+/** Hash of (connectionDigest, sql) - uniquely identifies a built artifact */
+export type BuildID = string;
+
+/**
+ * Reference to a source in modelDef.contents by name.
+ * Used in sourceRegistry to avoid duplicating SourceDefs that are in the namespace.
+ */
+export interface SourceRegistryReference {
+  type: 'source_registry_reference';
+  name: string;
+}
+
+/**
+ * Inner entry type: either a reference to contents or an actual PersistableSourceDef.
+ * - SourceRegistryReference: source is in namespace (contents), look it up by name
+ * - PersistableSourceDef: source is not in namespace (hidden dependency), stored directly
+ */
+export type SourceRegistryEntry =
+  | SourceRegistryReference
+  | PersistableSourceDef;
+
+/**
+ * Value in the sourceRegistry, wrapping the entry with persistence info.
+ * persist is lazily computed: undefined = not checked, true/false = checked
+ */
+export interface SourceRegistryValue {
+  entry: SourceRegistryEntry;
+  persist?: boolean;
+}
+
+export function isSourceRegistryReference(
+  entry: SourceRegistryEntry
+): entry is SourceRegistryReference {
+  return entry.type === 'source_registry_reference';
+}
+
+export interface PersistableSourceProperties {
+  sourceID?: SourceID;
+  extends?: SourceID;
+}
+
+export interface SQLSourceDef
+  extends SourceDefBase,
+    PersistableSourceProperties {
   type: 'sql_select';
   selectStr: string;
   selectSegments?: SQLPhraseSegment[];
 }
 
-export interface QuerySourceDef extends SourceDefBase {
+export interface QuerySourceDef
+  extends SourceDefBase,
+    PersistableSourceProperties {
   type: 'query_source';
   query: Query;
 }
@@ -1421,6 +1471,17 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
   );
 }
 
+/**
+ * Union of all source definition types.
+ *
+ * IMPORTANT: Never use object spread to copy a SourceDef. Use the factory
+ * methods in source_def_utils.ts to merge changes into a source def:
+ * - mkSQLSourceDef(base, ...) - create SQLSourceDef from base
+ * - mkQuerySourceDef(base, ...) - create QuerySourceDef from base
+ *
+ * These factories explicitly copy only safe fields, preventing accidental
+ * propagation of sourceID/extends which must only be set in DefineSource.
+ */
 export type SourceDef =
   | TableSourceDef
   | SQLSourceDef
@@ -1742,7 +1803,7 @@ export function getIdentifier(n: AliasedName): string {
 
 export type NamedModelObject =
   | SourceDef
-  | NamedQuery
+  | NamedQueryDef
   | FunctionDef
   | ConnectionDef;
 
@@ -1755,6 +1816,13 @@ export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
+  /**
+   * Registry mapping sourceID to source definitions for build graph construction.
+   * For sources in namespace: maps to SourceRegistryReference (look up in contents)
+   * For hidden dependencies: maps to actual PersistableSourceDef (not in namespace)
+   * Each entry includes a lazily-computed persist flag.
+   */
+  sourceRegistry: Record<SourceID, SourceRegistryValue>;
   annotation?: ModelAnnotation;
   queryList: Query[];
   dependencies: DependencyTree;
@@ -1818,13 +1886,6 @@ export interface DrillSource {
   sourceArguments?: Record<string, Argument>;
 }
 
-export type QueryToMaterialize = {
-  id: string;
-  path: string;
-  source: string | undefined;
-  queryName: string;
-};
-
 export interface CompiledQuery extends DrillSource {
   structs: SourceDef[];
   sql: string;
@@ -1834,9 +1895,6 @@ export interface CompiledQuery extends DrillSource {
   connectionName: string;
   queryTimezone?: string;
   annotation?: Annotation;
-  // Map of query unique id to the SQL.
-  dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
-  materialization?: QueryToMaterialize;
   defaultRowLimitAdded?: number;
 }
 
@@ -1916,11 +1974,15 @@ export interface SearchValueMapResult {
 }
 
 export interface PrepareResultOptions {
-  replaceMaterializedReferences?: boolean;
-  materializedTablePrefix?: string;
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
   eventStream?: EventStream;
+  /** Manifest of built tables (BuildID → entry), the build cache */
+  buildManifest?: BuildManifest;
+  /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
+  connectionDigests?: Record<string, string>;
+  /** If true, throw when a persist query's digest is not in the manifest */
+  strictPersist?: boolean;
 }
 
 type UTD =
@@ -2020,6 +2082,28 @@ export function mergeUniqueKeyRequirement(
   return {
     isCount: existing.isCount || newInfo.isCount,
   };
+}
+
+/**
+ * Entry in a BuildManifest for a persisted table.
+ */
+export interface BuildManifestEntry {
+  /** Hash of (connectionDigest, sql) - also the key in buildEntries */
+  buildId: BuildID;
+  tableName: string;
+  buildStartedAt: string;
+  buildFinishedAt: string;
+}
+
+/**
+ * Manifest of persisted query results (the build cache).
+ * Used by compileQuery to substitute persist queries with table references.
+ */
+export interface BuildManifest {
+  modelUrl: string;
+  buildStartedAt: string;
+  buildFinishedAt: string;
+  buildEntries: Record<BuildID, BuildManifestEntry>;
 }
 
 // clang-format on

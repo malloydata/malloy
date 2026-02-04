@@ -48,6 +48,7 @@ import {
   TinyParser,
   isRepeatedRecord,
   sqlKey,
+  makeDigest,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -222,6 +223,11 @@ export abstract class TrinoPrestoConnection
 
   public canPersist(): this is PersistSQLResults {
     return true;
+  }
+
+  public getDigest(): string {
+    const data = `trino:${this.name}`;
+    return makeDigest(data);
   }
 
   public get supportsNesting(): boolean {

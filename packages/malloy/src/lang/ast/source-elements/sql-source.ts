@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  isSegmentSource,
-  type StructDef,
-  type InvokedStructRef,
-  type SourceDef,
+import type {
+  InvokedStructRef,
+  SourceDef,
+  SQLSourceDef,
 } from '../../../model/malloy_types';
+import {mkSQLSourceDef} from '../../../model/source_def_utils';
 import {getSourceRequest, sqlKey} from '../../../model/sql_block';
 import type {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
@@ -152,7 +152,8 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
-      const locStruct: StructDef = {
+      // Create a base struct with updated fields (adding location and fieldUsage)
+      const baseStruct: SourceDef = {
         ...lookup.value,
         fields: lookup.value.fields.map(f => ({
           ...f,
@@ -161,16 +162,18 @@ export class SQLSource extends Source {
         })),
         location: this.location,
       };
+      // Use factory to create SQLSourceDef without propagating sourceID/extends
+      const [_valid, phrases] = this.select.sqlPhrases();
+      const selectSegments = this.select.containsQueries ? phrases : undefined;
+      const locStruct: SQLSourceDef = mkSQLSourceDef(
+        baseStruct,
+        lookup.value.selectStr,
+        selectSegments
+      );
       const fromDoc = this.document();
       const modelAnnotation = fromDoc?.currentModelAnnotation();
       if (modelAnnotation) {
         locStruct.modelAnnotation = modelAnnotation;
-      }
-      if (this.select.containsQueries) {
-        const [_valid, phrases] = this.select.sqlPhrases();
-        if (phrases.some(isSegmentSource)) {
-          locStruct.selectSegments = phrases;
-        }
       }
       return locStruct;
     } else {
