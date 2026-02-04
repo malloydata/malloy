@@ -881,7 +881,12 @@ export class QueryQuery extends QueryField {
 
     // Create isolated stageWriter if none provided
     const isolated = stageWriter === undefined;
-    const writer = stageWriter ?? new StageWriter(true, undefined);
+    // When isPartialQuery is set (e.g., SQL interpolation), don't use CTEs
+    // for dialects that don't support them in subqueries
+    const noCTE =
+      prepareResultOptions.isPartialQuery &&
+      !sourceStruct.dialect.supportsCTEinCoorelatedSubQueries;
+    const writer = stageWriter ?? new StageWriter(!noCTE, undefined);
 
     const q = QueryQuery.makeQuery(
       turtleDef,

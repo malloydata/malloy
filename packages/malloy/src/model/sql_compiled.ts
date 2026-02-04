@@ -125,7 +125,8 @@ function expandQuery(
   _quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback
 ): string {
-  const sql = compileQuery(query, opts);
+  // Set isPartialQuery so CTEs aren't used (they can't be nested in subqueries)
+  const sql = compileQuery(query, {...opts, isPartialQuery: true});
   return `(${sql})`;
 }
 
