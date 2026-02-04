@@ -35,7 +35,6 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
-  persistedQueryDigests: Record<string, string> = {};
 
   constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {

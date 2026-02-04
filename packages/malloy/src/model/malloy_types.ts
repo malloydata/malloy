@@ -2088,13 +2088,10 @@ export function mergeUniqueKeyRequirement(
  * Entry in a BuildManifest for a persisted table.
  */
 export interface BuildManifestEntry {
-  /** The build ID - hash(connectionDigest, sql) - also the key in buildEntries */
+  /** Hash of (connectionDigest, sql) - also the key in buildEntries */
   buildId: BuildID;
-  /** The table name where the query result is persisted */
   tableName: string;
-  /** When this entry started building */
   buildStartedAt: string;
-  /** When this entry finished building */
   buildFinishedAt: string;
 }
 
@@ -2103,13 +2100,9 @@ export interface BuildManifestEntry {
  * Used by compileQuery to substitute persist queries with table references.
  */
 export interface BuildManifest {
-  /** URL of the model this manifest is for */
   modelUrl: string;
-  /** When this build run started */
   buildStartedAt: string;
-  /** When this build run completed */
   buildFinishedAt: string;
-  /** Map from BuildID to entry */
   buildEntries: Record<BuildID, BuildManifestEntry>;
 }
 

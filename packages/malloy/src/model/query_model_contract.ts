@@ -66,5 +66,4 @@ export interface QueryModel {
     limit: number,
     searchField: string | undefined
   ): Promise<SearchIndexResult[] | undefined>;
-  persistedQueryDigests: Record<string, string>;
 }

@@ -29,6 +29,55 @@ const tstRuntime = runtimeFor(tstDB);
 // All persist tests require the experimental.persistence annotation
 const PERSIST_ANNOTATION = '## experimental.persistence';
 
+// Combine model + plan setup
+async function getPersistPlan(malloyCode: string) {
+  const testModel = wrapTestModel(
+    tstRuntime,
+    `${PERSIST_ANNOTATION}\n${malloyCode}`
+  );
+  const model = await testModel.model.getModel();
+  return {model, plan: model.getBuildPlan()};
+}
+
+// Find node by pattern in graph nodes
+function findNode(nodes: BuildNode[][], pattern: string) {
+  return nodes.flat().find(n => n.sourceID.includes(pattern))!;
+}
+
+// Create empty manifest
+function createManifest(): BuildManifest {
+  return {
+    modelUrl: 'test://test.malloy',
+    buildStartedAt: new Date().toISOString(),
+    buildFinishedAt: new Date().toISOString(),
+    buildEntries: {},
+  };
+}
+
+// Add entry to manifest
+function addManifestEntry(
+  manifest: BuildManifest,
+  buildId: string,
+  tableName: string
+) {
+  manifest.buildEntries[buildId] = {
+    buildId,
+    tableName,
+    buildStartedAt: new Date().toISOString(),
+    buildFinishedAt: new Date().toISOString(),
+  };
+}
+
+// Connection digest (cached)
+let cachedDigest: string | undefined;
+async function getDigest() {
+  if (!cachedDigest) {
+    const conn = await tstRuntime.connections.lookupConnection(tstDB);
+    cachedDigest = await conn.getDigest();
+  }
+  return cachedDigest;
+}
+
 afterAll(async () => {
   await tstRuntime.connection.close();
 });
@@ -37,9 +86,7 @@ describe('source persistence', () => {
   describe('PersistSource', () => {
     describe('makeBuildId', () => {
       it('different sourceID produce different buildIds', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -53,10 +100,7 @@ describe('source persistence', () => {
             group_by: origin
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         const sourceA = Object.values(plan.sources).find(s =>
           s.sourceID.includes('source_a')
@@ -80,9 +124,7 @@ describe('source persistence', () => {
       });
 
       it('different connection digests produce different buildIds', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -90,10 +132,7 @@ describe('source persistence', () => {
             group_by: carrier
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         const source = Object.values(plan.sources)[0];
         const sql = source.getSQL();
@@ -109,9 +148,7 @@ describe('source persistence', () => {
       });
 
       it('different SQL produces different buildIds', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -119,10 +156,7 @@ describe('source persistence', () => {
             group_by: carrier
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         const source = Object.values(plan.sources)[0];
         const digest = 'test-digest';
@@ -140,9 +174,7 @@ describe('source persistence', () => {
 
     describe('getSQL', () => {
       it('returns SQL for query_source', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -150,10 +182,7 @@ describe('source persistence', () => {
             group_by: carrier
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         const source = Object.values(plan.sources)[0];
         const sql = source.getSQL();
@@ -164,19 +193,14 @@ describe('source persistence', () => {
       });
 
       it('returns SQL for sql_select', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           #@ persist
           source: custom_sql is ${tstDB}.sql("""
             SELECT carrier, COUNT(*) as flight_count
             FROM malloytest.flights
             GROUP BY carrier
           """)
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         const source = Object.values(plan.sources)[0];
         const sql = source.getSQL();
@@ -187,9 +211,7 @@ describe('source persistence', () => {
       });
 
       it('substitutes manifest tables when buildManifest provided', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -202,14 +224,9 @@ describe('source persistence', () => {
           source: wrapper is ${tstDB}.sql("""
             SELECT * FROM %{ carrier_stats }
           """)
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Get the connection digest
-        const conn = await tstRuntime.connections.lookupConnection(tstDB);
-        const connectionDigest = await conn.getDigest();
+        const connectionDigest = await getDigest();
 
         // Get carrier_stats source and compute its buildId
         const carrierStats = Object.values(plan.sources).find(
@@ -222,19 +239,12 @@ describe('source persistence', () => {
         );
 
         // Create a manifest with the carrier_stats entry
-        const manifest: BuildManifest = {
-          modelUrl: 'test://test.malloy',
-          buildStartedAt: new Date().toISOString(),
-          buildFinishedAt: new Date().toISOString(),
-          buildEntries: {
-            [carrierStatsBuildId]: {
-              buildId: carrierStatsBuildId,
-              tableName: 'my_schema.persisted_carrier_stats',
-              buildStartedAt: new Date().toISOString(),
-              buildFinishedAt: new Date().toISOString(),
-            },
-          },
-        };
+        const manifest = createManifest();
+        addManifestEntry(
+          manifest,
+          carrierStatsBuildId,
+          'my_schema.persisted_carrier_stats'
+        );
 
         // Get wrapper source and call getSQL with manifest
         const wrapper = Object.values(plan.sources).find(
@@ -252,9 +262,7 @@ describe('source persistence', () => {
       });
 
       it('expands SQL when manifest entry not found', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -267,22 +275,10 @@ describe('source persistence', () => {
           source: wrapper is ${tstDB}.sql("""
             SELECT * FROM %{ carrier_stats }
           """)
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Get the connection digest
-        const conn = await tstRuntime.connections.lookupConnection(tstDB);
-        const connectionDigest = await conn.getDigest();
-
-        // Create an empty manifest (no entries)
-        const manifest: BuildManifest = {
-          modelUrl: 'test://test.malloy',
-          buildStartedAt: new Date().toISOString(),
-          buildFinishedAt: new Date().toISOString(),
-          buildEntries: {},
-        };
+        const connectionDigest = await getDigest();
+        const manifest = createManifest();
 
         // Get wrapper source and call getSQL with empty manifest
         const wrapper = Object.values(plan.sources).find(
@@ -300,9 +296,7 @@ describe('source persistence', () => {
       });
 
       it('throws in strict mode when manifest entry not found', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -315,24 +309,11 @@ describe('source persistence', () => {
           source: wrapper is ${tstDB}.sql("""
             SELECT * FROM %{ carrier_stats }
           """)
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Get the connection digest
-        const conn = await tstRuntime.connections.lookupConnection(tstDB);
-        const connectionDigest = await conn.getDigest();
+        const connectionDigest = await getDigest();
+        const manifest = createManifest();
 
-        // Create an empty manifest (no entries)
-        const manifest: BuildManifest = {
-          modelUrl: 'test://test.malloy',
-          buildStartedAt: new Date().toISOString(),
-          buildFinishedAt: new Date().toISOString(),
-          buildEntries: {},
-        };
-
-        // Get wrapper source and call getSQL with strictPersist
         const wrapper = Object.values(plan.sources).find(
           s => s.name === 'wrapper'
         )!;
@@ -348,11 +329,7 @@ describe('source persistence', () => {
       });
 
       it('query_source substitutes manifest tables for its structRef', async () => {
-        // This tests that when source B does `source_a -> { ... }`,
-        // and source_a is in the manifest, B's SQL references the table
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -363,16 +340,10 @@ describe('source persistence', () => {
 
           #@ persist
           source: derived is carrier_stats -> { select: * }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Get the connection digest
-        const conn = await tstRuntime.connections.lookupConnection(tstDB);
-        const connectionDigest = await conn.getDigest();
+        const connectionDigest = await getDigest();
 
-        // Get carrier_stats source and compute its buildId
         const carrierStats = Object.values(plan.sources).find(
           s => s.name === 'carrier_stats'
         )!;
@@ -382,22 +353,13 @@ describe('source persistence', () => {
           carrierStatsSQL
         );
 
-        // Create a manifest with the carrier_stats entry
-        const manifest: BuildManifest = {
-          modelUrl: 'test://test.malloy',
-          buildStartedAt: new Date().toISOString(),
-          buildFinishedAt: new Date().toISOString(),
-          buildEntries: {
-            [carrierStatsBuildId]: {
-              buildId: carrierStatsBuildId,
-              tableName: 'cached.carrier_stats_table',
-              buildStartedAt: new Date().toISOString(),
-              buildFinishedAt: new Date().toISOString(),
-            },
-          },
-        };
+        const manifest = createManifest();
+        addManifestEntry(
+          manifest,
+          carrierStatsBuildId,
+          'cached.carrier_stats_table'
+        );
 
-        // Get derived source and call getSQL with manifest
         const derived = Object.values(plan.sources).find(
           s => s.name === 'derived'
         )!;
@@ -406,9 +368,7 @@ describe('source persistence', () => {
           connectionDigests: {[tstDB]: connectionDigest},
         });
 
-        // The SQL should reference the persisted table, not expand inline
         expect(sql).toContain('cached.carrier_stats_table');
-        // Should NOT contain the original table (flights) or COUNT
         expect(sql).not.toContain('COUNT(');
       });
     });
@@ -416,28 +376,21 @@ describe('source persistence', () => {
 
   describe('Model.getBuildPlan', () => {
     it('returns empty plan when no persist sources', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         source: not_persisted is flights -> {
           group_by: carrier
           aggregate: flight_count is count()
         }
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
       expect(plan.graphs).toEqual([]);
       expect(plan.sources).toEqual({});
     });
 
     it('returns single source with no dependencies', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -445,10 +398,7 @@ describe('source persistence', () => {
           group_by: carrier
           aggregate: flight_count is count()
         }
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
       expect(plan.graphs).toHaveLength(1);
       expect(plan.graphs[0].connectionName).toBe('duckdb');
@@ -461,10 +411,7 @@ describe('source persistence', () => {
 
     describe('dependency ordering', () => {
       it('independent sources in same level', async () => {
-        // Two independent persist sources should both appear as leaves
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -478,29 +425,21 @@ describe('source persistence', () => {
             group_by: origin
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
 
-        // Both are independent leaves, so they should be in the same level
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(2);
 
-        // Both should have no dependencies
         for (const node of graph.nodes[0]) {
           expect(node.dependsOn).toEqual([]);
         }
       });
 
       it('dependent sources in different levels', async () => {
-        // A -> B: B depends on A, only B is a leaf
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -511,15 +450,11 @@ describe('source persistence', () => {
 
           #@ persist
           source: source_b is source_a -> { select: * }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
 
-        // Only B is a leaf (minimal build set)
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(1);
 
@@ -529,12 +464,8 @@ describe('source persistence', () => {
         expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
-      // Diamond pattern using extend (not ->)
-      // A is base, B and C both extend A, D depends on both B and C
       it('diamond dependency pattern with extended sources', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -543,37 +474,29 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // B extends A (not -> query, but extend)
           #@ persist
           source: source_b is source_a extend {
             dimension: b_marker is 'b'
           } -> { select: * }
 
-          // C extends A
           #@ persist
           source: source_c is source_a extend {
             dimension: c_marker is 'c'
           } -> { select: * }
 
-          // D depends on both B and C via SQL interpolation
           #@ persist
           source: source_d is ${tstDB}.sql("""SELECT * FROM %{ source_b } UNION ALL SELECT * FROM %{ source_c }""")
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
 
-        // Only D is a leaf
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(1);
 
         const nodeD = graph.nodes[0][0];
         expect(nodeD.sourceID).toMatch(/source_d/);
 
-        // D should depend on A, B, and C (A nested inside B's deps)
         const allDeps = getAllSourceIDs(nodeD.dependsOn);
         expect(allDeps).toHaveLength(3);
         expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
@@ -582,11 +505,7 @@ describe('source persistence', () => {
       });
 
       it('diamond dependency pattern with query_source chains', async () => {
-        // Diamond using query_source (-> {...}) not extend
-        // A is base, B and C both derive from A, D depends on both B and C
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -603,22 +522,17 @@ describe('source persistence', () => {
 
           #@ persist
           source: source_d is ${tstDB}.sql("""SELECT * FROM %{ source_b } UNION ALL SELECT * FROM %{ source_c }""")
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
 
-        // Only D is a leaf
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(1);
 
         const nodeD = graph.nodes[0][0];
         expect(nodeD.sourceID).toMatch(/source_d/);
 
-        // D should depend on A, B, and C (A nested inside B and C's deps)
         const allDeps = getAllSourceIDs(nodeD.dependsOn);
         expect(allDeps).toHaveLength(3);
         expect(hasDependency(nodeD.dependsOn, 'source_a')).toBe(true);
@@ -628,12 +542,8 @@ describe('source persistence', () => {
     });
 
     describe('dependency detection', () => {
-      // query_source dependencies
       it('query_source: detects dependency on structRef source', async () => {
-        // B directly references A via structRef
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -644,23 +554,15 @@ describe('source persistence', () => {
 
           #@ persist
           source: source_b is source_a -> { select: * }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        const nodeB = plan.graphs[0].nodes[0].find(n =>
-          n.sourceID.includes('source_b')
-        )!;
+        const nodeB = findNode(plan.graphs[0].nodes, 'source_b');
         expect(nodeB.dependsOn).toHaveLength(1);
         expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
-      // B extends A, creating a dependency through extends
       it('query_source: detects dependency through source extend', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -669,30 +571,19 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // B extends A (adds fields) then queries
           #@ persist
           source: source_b is source_a extend {
             dimension: extra_field is 'test'
           } -> { select: * }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // B is the only leaf, depends on A through extends
-        const nodeB = plan.graphs[0].nodes[0].find(n =>
-          n.sourceID.includes('source_b')
-        )!;
+        const nodeB = findNode(plan.graphs[0].nodes, 'source_b');
         expect(nodeB.dependsOn).toHaveLength(1);
         expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
-      // Chain: A -> B (extends A) -> C (extends B)
-      // C should depend on both A and B through the extends chain
       it('query_source: detects dependency through chained extends', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -701,42 +592,31 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // B extends A
           #@ persist
           source: source_b is source_a extend {
             dimension: b_field is 'b'
           } -> { select: * }
 
-          // C extends B (which extends A)
           #@ persist
           source: source_c is source_b extend {
             dimension: c_field is 'c'
           } -> { select: * }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // C is the only leaf
         expect(plan.graphs[0].nodes).toHaveLength(1);
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const nodeC = plan.graphs[0].nodes[0][0];
         expect(nodeC.sourceID).toMatch(/source_c/);
 
-        // C should depend on both A and B (A nested inside B)
         const allDeps = getAllSourceIDs(nodeC.dependsOn);
         expect(allDeps).toHaveLength(2);
         expect(hasDependency(nodeC.dependsOn, 'source_a')).toBe(true);
         expect(hasDependency(nodeC.dependsOn, 'source_b')).toBe(true);
       });
 
-      // sql_select dependencies
       it('sql_select: detects dependency on interpolated persist source', async () => {
-        // B interpolates A in SQL
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -747,12 +627,8 @@ describe('source persistence', () => {
 
           #@ persist
           source: source_b is ${tstDB}.sql("""SELECT * FROM %{ source_a }""")
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Only B is a leaf
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const nodeB = plan.graphs[0].nodes[0][0];
@@ -762,10 +638,7 @@ describe('source persistence', () => {
       });
 
       it('sql_select: detects dependency on query in interpolation', async () => {
-        // B interpolates a query expression referencing A
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -778,12 +651,8 @@ describe('source persistence', () => {
           source: source_b is ${tstDB}.sql("""
             SELECT * FROM %{ source_a -> { select: * } }
           """)
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Only B is a leaf
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const nodeB = plan.graphs[0].nodes[0][0];
@@ -793,11 +662,7 @@ describe('source persistence', () => {
       });
 
       it('sql_select: detects transitive dependency through non-persistent interpolated source', async () => {
-        // A (persistent) -> B (NOT persistent) -> C (persistent sql_select interpolating B)
-        // C should depend on A transitively
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -806,37 +671,24 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // NOT persistent - intermediate source
           source: source_b is source_a -> { select: * }
 
           #@ persist
           source: source_c is ${tstDB}.sql("""SELECT * FROM %{ source_b }""")
-          `
-        );
+        `);
 
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
-
-        // C is the only leaf
         expect(plan.graphs).toHaveLength(1);
         expect(plan.graphs[0].nodes).toHaveLength(1);
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const node = plan.graphs[0].nodes[0][0];
         expect(node.sourceID).toMatch(/source_c/);
-
-        // C should depend on A (transitively through non-persistent B)
         expect(node.dependsOn).toHaveLength(1);
         expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
-      // Transitive through non-persistent
       it('detects transitive dependency through non-persistent intermediate source', async () => {
-        // A (persistent) -> B (NOT persistent) -> C (persistent)
-        // C should depend on A transitively
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -845,36 +697,24 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // NOT persistent - intermediate source
           source: source_b is source_a -> { select: * }
 
           #@ persist
           source: source_c is source_b -> { select: * }
-          `
-        );
+        `);
 
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
-
-        // C is the only leaf (A is depended on by C transitively)
         expect(plan.graphs).toHaveLength(1);
         expect(plan.graphs[0].nodes).toHaveLength(1);
         expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
         const node = plan.graphs[0].nodes[0][0];
         expect(node.sourceID).toMatch(/source_c/);
-
-        // C should depend on A (transitively through non-persistent B)
         expect(node.dependsOn).toHaveLength(1);
         expect(node.dependsOn[0].sourceID).toMatch(/source_a/);
       });
 
-      // NOT dependencies
       it('does NOT detect dependencies in source fields array (only extends)', async () => {
-        // Source A exists but B doesn't reference it - they're independent
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -888,32 +728,19 @@ describe('source persistence', () => {
             group_by: origin
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Both are independent leaves
         expect(plan.graphs[0].nodes[0]).toHaveLength(2);
 
-        const nodeA = plan.graphs[0].nodes[0].find(n =>
-          n.sourceID.includes('source_a')
-        )!;
-        const nodeB = plan.graphs[0].nodes[0].find(n =>
-          n.sourceID.includes('source_b')
-        )!;
+        const nodeA = findNode(plan.graphs[0].nodes, 'source_a');
+        const nodeB = findNode(plan.graphs[0].nodes, 'source_b');
 
-        // Neither depends on the other
         expect(nodeA.dependsOn).toEqual([]);
         expect(nodeB.dependsOn).toEqual([]);
       });
 
       it('non-persistent source joining persistent source shows dependency', async () => {
-        // A non-persistent source that joins a persistent source should
-        // have that persistent source in the build graph
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
           source: carriers is ${tstDB}.table('malloytest.carriers')
 
@@ -923,16 +750,11 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // Non-persistent source that joins the persistent source
           source: carriers_with_stats is carriers extend {
             join_one: stats is carrier_stats on stats.carrier = code
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // carrier_stats should be in the build graph
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
         expect(
@@ -941,10 +763,7 @@ describe('source persistence', () => {
       });
 
       it('query with join in extend block detects persistent dependency', async () => {
-        // Path 2: Query.pipeline[].extendSource[] - joins added in extend blocks
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
           source: carriers is ${tstDB}.table('malloytest.carriers')
 
@@ -954,19 +773,14 @@ describe('source persistence', () => {
             aggregate: flight_count is count()
           }
 
-          // Query that adds a join to a persistent source in an extend block
           query: carriers_query is carriers -> {
             extend: {
               join_one: stats is carrier_stats on stats.carrier = code
             }
             select: *
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // carrier_stats should be in the build graph
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
         expect(
@@ -977,10 +791,7 @@ describe('source persistence', () => {
 
     describe('minimal build set', () => {
       it('returns only leaf sources, not intermediate dependencies', async () => {
-        // Chain: A → B → C - only C should be in the build graph
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -994,25 +805,17 @@ describe('source persistence', () => {
 
           #@ persist
           source: source_c is source_b -> { select: * }
-          `
-        );
+        `);
 
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
-
-        // Should have one graph with only source_c (the leaf)
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
 
-        // Minimal build set: only the leaf node
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(1);
 
-        // The single node should be source_c
         const node = graph.nodes[0][0];
         expect(node.sourceID).toMatch(/^source_c@/);
 
-        // source_c depends on source_a and source_b (A nested inside B)
         const allDeps = getAllSourceIDs(node.dependsOn);
         expect(allDeps).toHaveLength(2);
         expect(hasDependency(node.dependsOn, 'source_a')).toBe(true);
@@ -1020,11 +823,7 @@ describe('source persistence', () => {
       });
 
       it('returns leaves from multiple disjoint chains', async () => {
-        // Two independent chains: A→B and C→D
-        // Both B and D are leaves
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -1044,17 +843,11 @@ describe('source persistence', () => {
 
           #@ persist
           source: source_d is source_c -> { select: * }
-          `
-        );
+        `);
 
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
-
-        // Should have one graph (same connection) with two leaves
         expect(plan.graphs).toHaveLength(1);
         const graph = plan.graphs[0];
 
-        // Single level with two leaf nodes (B and D)
         expect(graph.nodes).toHaveLength(1);
         expect(graph.nodes[0]).toHaveLength(2);
 
@@ -1062,13 +855,8 @@ describe('source persistence', () => {
         expect(nodeIds.some(id => id.includes('source_b'))).toBe(true);
         expect(nodeIds.some(id => id.includes('source_d'))).toBe(true);
 
-        // B depends on A, D depends on C
-        const nodeB = graph.nodes[0].find(n =>
-          n.sourceID.includes('source_b')
-        )!;
-        const nodeD = graph.nodes[0].find(n =>
-          n.sourceID.includes('source_d')
-        )!;
+        const nodeB = findNode(graph.nodes, 'source_b');
+        const nodeD = findNode(graph.nodes, 'source_d');
 
         expect(nodeB.dependsOn).toHaveLength(1);
         expect(nodeB.dependsOn[0].sourceID).toMatch(/source_a/);
@@ -1198,9 +986,7 @@ describe('source persistence', () => {
 
     describe('persist annotation filtering', () => {
       it('only includes sources with #@ persist', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -1213,23 +999,16 @@ describe('source persistence', () => {
             group_by: origin
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Only the persisted source should be in the plan
         expect(Object.keys(plan.sources)).toHaveLength(1);
         expect(Object.values(plan.sources)[0].name).toBe('persisted');
       });
 
       it('ignores sources without persist annotation', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
+        const {plan} = await getPersistPlan(`
           source: flights is ${tstDB}.table('malloytest.flights')
 
-          // Has annotation but not persist
           # Some other annotation
           source: annotated_not_persist is flights -> {
             group_by: carrier
@@ -1240,29 +1019,18 @@ describe('source persistence', () => {
             group_by: origin
             aggregate: flight_count is count()
           }
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // No persist sources
         expect(plan.graphs).toEqual([]);
         expect(plan.sources).toEqual({});
       });
 
       it('ignores non-persistable source types (table)', async () => {
-        const testModel = wrapTestModel(
-          tstRuntime,
-          `${PERSIST_ANNOTATION}
-          // Table sources cannot be persisted (they're already tables)
+        const {plan} = await getPersistPlan(`
           #@ persist
           source: flights is ${tstDB}.table('malloytest.flights')
-          `
-        );
-        const model = await testModel.model.getModel();
-        const plan = model.getBuildPlan();
+        `);
 
-        // Table sources are not persistable, so should be ignored
         expect(plan.graphs).toEqual([]);
         expect(plan.sources).toEqual({});
       });
@@ -1271,19 +1039,14 @@ describe('source persistence', () => {
 
   describe('sql_select persistence', () => {
     it('sql_select source can be persisted', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         #@ persist
         source: custom_query is ${tstDB}.sql("""
           SELECT carrier, COUNT(*) as cnt
           FROM malloytest.flights
           GROUP BY carrier
         """)
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
       expect(Object.keys(plan.sources)).toHaveLength(1);
       const source = Object.values(plan.sources)[0];
@@ -1292,9 +1055,7 @@ describe('source persistence', () => {
     });
 
     it('sql_select with interpolated persist source has dependency', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1308,12 +1069,8 @@ describe('source persistence', () => {
           SELECT * FROM %{ carrier_stats }
           WHERE flight_count > 100
         """)
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
-      // combined is the only leaf (depends on carrier_stats)
       expect(plan.graphs[0].nodes[0]).toHaveLength(1);
 
       const node = plan.graphs[0].nodes[0][0];
@@ -1323,9 +1080,7 @@ describe('source persistence', () => {
     });
 
     it('getSQL expands interpolated sources to subqueries', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1338,28 +1093,20 @@ describe('source persistence', () => {
         source: wrapper is ${tstDB}.sql("""
           SELECT * FROM %{ carrier_stats }
         """)
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
       const wrapperSource = Object.values(plan.sources).find(
         s => s.name === 'wrapper'
       )!;
 
-      // Without a manifest, getSQL should expand the interpolated source to a subquery
       const sql = wrapperSource.getSQL();
 
-      // The SQL should contain the expanded query, not just a table reference
       expect(sql).toContain('SELECT');
-      // The expanded SQL should include the carrier_stats query content
       expect(sql).toContain('carrier');
     });
 
     it('getSQL substitutes from manifest', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1372,16 +1119,10 @@ describe('source persistence', () => {
         source: wrapper is ${tstDB}.sql("""
           SELECT * FROM %{ carrier_stats }
         """)
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
-      // Get the connection digest
-      const conn = await tstRuntime.connections.lookupConnection(tstDB);
-      const connectionDigest = await conn.getDigest();
+      const connectionDigest = await getDigest();
 
-      // Get carrier_stats source and compute its buildId
       const carrierStats = Object.values(plan.sources).find(
         s => s.name === 'carrier_stats'
       )!;
@@ -1391,22 +1132,13 @@ describe('source persistence', () => {
         carrierStatsSQL
       );
 
-      // Create a manifest with the carrier_stats entry
-      const manifest: BuildManifest = {
-        modelUrl: 'test://test.malloy',
-        buildStartedAt: new Date().toISOString(),
-        buildFinishedAt: new Date().toISOString(),
-        buildEntries: {
-          [carrierStatsBuildId]: {
-            buildId: carrierStatsBuildId,
-            tableName: 'cache.carrier_stats_built',
-            buildStartedAt: new Date().toISOString(),
-            buildFinishedAt: new Date().toISOString(),
-          },
-        },
-      };
+      const manifest = createManifest();
+      addManifestEntry(
+        manifest,
+        carrierStatsBuildId,
+        'cache.carrier_stats_built'
+      );
 
-      // Get wrapper source (sql_select) and call getSQL with manifest
       const wrapper = Object.values(plan.sources).find(
         s => s.name === 'wrapper'
       )!;
@@ -1415,18 +1147,14 @@ describe('source persistence', () => {
         connectionDigests: {[tstDB]: connectionDigest},
       });
 
-      // The SQL should reference the persisted table
       expect(sql).toContain('cache.carrier_stats_built');
-      // Should NOT contain the expanded query
       expect(sql).not.toContain('COUNT(');
     });
   });
 
   describe('build workflow integration', () => {
     it('full build workflow: getBuildPlan -> getSQL -> makeBuildId', async () => {
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1434,46 +1162,30 @@ describe('source persistence', () => {
           group_by: carrier
           aggregate: flight_count is count()
         }
-        `
-      );
-      const model = await testModel.model.getModel();
+      `);
 
-      // Step 1: Get the build plan
-      const plan = model.getBuildPlan();
       expect(plan.graphs).toHaveLength(1);
       expect(Object.keys(plan.sources)).toHaveLength(1);
 
-      // Step 2: For each source in the plan, get the SQL
       const source = Object.values(plan.sources)[0];
       const sql = source.getSQL();
       expect(sql).toContain('SELECT');
       expect(sql).toContain('carrier');
 
-      // Step 3: Compute the buildId (would need connection digest in real scenario)
       const mockConnectionDigest = 'mock-connection-digest';
       const buildId = source.makeBuildId(mockConnectionDigest, sql);
 
-      // BuildId is a hash of connectionDigest and sql
       expect(buildId).toMatch(/^[a-f0-9]{32}$/);
 
-      // Verify determinism: same inputs produce same buildId
       const buildId2 = source.makeBuildId(mockConnectionDigest, sql);
       expect(buildId).toBe(buildId2);
 
-      // Verify we can access source metadata for table naming
       const parsed = source.tagParse({prefix: /^#@ /});
       expect(parsed.tag.has('persist')).toBe(true);
     });
 
     it('manifest round-trip: build then query with manifest', async () => {
-      // This test simulates what the builder does:
-      // 1. Load model, get build plan
-      // 2. For each source: get SQL, compute BuildID, add to manifest
-      // 3. Then use the manifest when running a query that references persist sources
-
-      const testModel = wrapTestModel(
-        tstRuntime,
-        `${PERSIST_ANNOTATION}
+      const {plan} = await getPersistPlan(`
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1486,24 +1198,11 @@ describe('source persistence', () => {
         source: wrapper is ${tstDB}.sql("""
           SELECT * FROM %{ carrier_stats } WHERE flight_count > 100
         """)
-        `
-      );
-      const model = await testModel.model.getModel();
-      const plan = model.getBuildPlan();
+      `);
 
-      // Get the real connection digest
-      const conn = await tstRuntime.connections.lookupConnection(tstDB);
-      const connectionDigest = await conn.getDigest();
+      const connectionDigest = await getDigest();
+      const manifest = createManifest();
 
-      // Simulate builder: iterate sources and build manifest
-      const manifest: BuildManifest = {
-        modelUrl: 'test://test.malloy',
-        buildStartedAt: new Date().toISOString(),
-        buildFinishedAt: new Date().toISOString(),
-        buildEntries: {},
-      };
-
-      // Build carrier_stats first (it's a dependency of wrapper)
       const carrierStats = Object.values(plan.sources).find(
         s => s.name === 'carrier_stats'
       )!;
@@ -1512,14 +1211,12 @@ describe('source persistence', () => {
         connectionDigest,
         carrierStatsSQL
       );
-      manifest.buildEntries[carrierStatsBuildId] = {
-        buildId: carrierStatsBuildId,
-        tableName: 'build_cache.carrier_stats_v1',
-        buildStartedAt: new Date().toISOString(),
-        buildFinishedAt: new Date().toISOString(),
-      };
+      addManifestEntry(
+        manifest,
+        carrierStatsBuildId,
+        'build_cache.carrier_stats_v1'
+      );
 
-      // Now build wrapper with manifest (should substitute carrier_stats)
       const wrapper = Object.values(plan.sources).find(
         s => s.name === 'wrapper'
       )!;
@@ -1528,23 +1225,13 @@ describe('source persistence', () => {
         connectionDigests: {[tstDB]: connectionDigest},
       });
 
-      // Wrapper SQL should reference the built table
       expect(wrapperSQL).toContain('build_cache.carrier_stats_v1');
       expect(wrapperSQL).toContain('flight_count > 100');
 
-      // Compute wrapper's buildId and add to manifest
       const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
-      manifest.buildEntries[wrapperBuildId] = {
-        buildId: wrapperBuildId,
-        tableName: 'build_cache.wrapper_v1',
-        buildStartedAt: new Date().toISOString(),
-        buildFinishedAt: new Date().toISOString(),
-      };
+      addManifestEntry(manifest, wrapperBuildId, 'build_cache.wrapper_v1');
 
-      // Verify both entries are in manifest
       expect(Object.keys(manifest.buildEntries)).toHaveLength(2);
-
-      // Verify buildIds are different (different SQL content)
       expect(carrierStatsBuildId).not.toBe(wrapperBuildId);
     });
   });
@@ -1762,12 +1449,7 @@ describe('source persistence', () => {
         `
       );
 
-      const manifest: BuildManifest = {
-        modelUrl: 'test://test.malloy',
-        buildStartedAt: new Date().toISOString(),
-        buildFinishedAt: new Date().toISOString(),
-        buildEntries: {},
-      };
+      const manifest = createManifest();
 
       await expect(
         testModel.model

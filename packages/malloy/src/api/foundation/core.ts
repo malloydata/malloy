@@ -49,7 +49,6 @@ import {
 import {mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
 import {getDialect} from '../../dialect';
-import type {Connection, LookupConnection} from '../../connection/types';
 import type {BuildGraph, BuildNode, CompileQueryOptions} from './types';
 import {
   findPersistentDependencies,
@@ -1263,23 +1262,6 @@ export class Model implements Taggable {
     }
 
     return {graphs, sources: sourcesMap};
-  }
-
-  /**
-   * @deprecated Use getBuildPlan() instead
-   */
-  public async getBuildGraphs(
-    _connections: LookupConnection<Connection>
-  ): Promise<BuildGraph[]> {
-    const plan = this.getBuildPlan();
-    return plan.graphs;
-  }
-
-  /**
-   * @deprecated No longer needed with source-based persistence
-   */
-  public getQueryDigests(): Record<string, string> {
-    return this.queryModel.persistedQueryDigests;
   }
 }
 

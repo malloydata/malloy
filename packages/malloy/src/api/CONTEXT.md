@@ -73,7 +73,6 @@ These are the actual compiler internals that do the work. Not a public API.
 - Takes a compiled `ModelDef` and compiles queries to SQL
 - Entry point: `new QueryModel(modelDef).compileQuery(query)`
 - Internally creates `QueryQuery` instances
-- **Cached at Model level** (PR #2643) - `persistedQueryDigests` map persists across query compilations
 
 ### QueryQuery (`src/model/query_query.ts`)
 - The actual SQL generation engine

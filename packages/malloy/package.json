@@ -6,7 +6,6 @@
     ".": "./dist/index.js",
     "./test": "./dist/test/index.js",
     "./test/matchers": "./dist/test/matchers.js",
-    "./test/internal": "./dist/test/internal.js",
     "./connection": "./dist/connection/index.js",
     "./package.json": "./package.json"
   },
@@ -20,9 +19,6 @@
       ],
       "test/matchers": [
         "./dist/test/matchers.d.ts"
-      ],
-      "test/internal": [
-        "./dist/test/internal.d.ts"
       ],
       "connection": [
         "./dist/connection/index.d.ts"
