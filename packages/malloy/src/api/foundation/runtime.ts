@@ -24,31 +24,7 @@ import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
 import type {PreparedResult, Explore} from './core';
 import {Model, PreparedQuery} from './core';
 import type {DataRecord, Result} from './result';
-// Note: compile.ts will call setMalloyFunctions to wire up the circular dependency
-
-// Forward declaration - will be set by compile.ts to avoid circular import issues
-// Using any for the function types since Malloy methods have multiple overloads
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export let MalloyCompile: any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export let MalloyRun: any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export let MalloyRunStream: any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export let MalloyEstimateQueryCost: any;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function setMalloyFunctions(fns: {
-  compile: typeof MalloyCompile;
-  run: typeof MalloyRun;
-  runStream: typeof MalloyRunStream;
-  estimateQueryCost: typeof MalloyEstimateQueryCost;
-}) {
-  MalloyCompile = fns.compile;
-  MalloyRun = fns.run;
-  MalloyRunStream = fns.runStream;
-  MalloyEstimateQueryCost = fns.estimateQueryCost;
-}
+import {Malloy} from './compile';
 
 // =============================================================================
 // Type Aliases
@@ -206,7 +182,7 @@ export class Runtime {
     return new ModelMaterializer(
       this,
       async () => {
-        return MalloyCompile({
+        return Malloy.compile({
           ...compilable,
           urlReader: this.urlReader,
           connections: this.connections,
@@ -520,7 +496,7 @@ export class ModelMaterializer extends FluentState<Model> {
       }
       const compilable = query instanceof URL ? {url: query} : {source: query};
       const model = await this.getModel();
-      const queryModel = await MalloyCompile({
+      const queryModel = await Malloy.compile({
         ...compilable,
         urlReader,
         connections,
@@ -561,7 +537,7 @@ export class ModelMaterializer extends FluentState<Model> {
         const compilable =
           query instanceof URL ? {url: query} : {source: query};
         const model = await this.getModel();
-        const queryModel = await MalloyCompile({
+        const queryModel = await Malloy.compile({
           ...compilable,
           urlReader,
           connections,
@@ -786,7 +762,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult(options);
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
-    return MalloyRun({connections, preparedResult, options: finalOptions});
+    return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
   async *runStream(
@@ -795,7 +771,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     const preparedResult = await this.getPreparedResult(options);
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
-    const stream = MalloyRunStream({
+    const stream = Malloy.runStream({
       connections,
       preparedResult,
       options: finalOptions,
@@ -900,7 +876,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   ): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult(options);
-    return MalloyEstimateQueryCost({connections, preparedResult});
+    return Malloy.estimateQueryCost({connections, preparedResult});
   }
 
   get eventStream(): EventStream | undefined {
@@ -927,7 +903,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
-    return MalloyRun({
+    return Malloy.run({
       connections,
       preparedResult,
       options: finalOptions,
@@ -940,7 +916,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
-    const stream = MalloyRunStream({
+    const stream = Malloy.runStream({
       connections,
       preparedResult,
       options: finalOptions,

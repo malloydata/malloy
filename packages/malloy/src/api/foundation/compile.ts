@@ -28,7 +28,6 @@ import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
 import type {PreparedResult} from './core';
 import {Model, Explore} from './core';
 import {Result, DataRecord} from './result';
-import {setMalloyFunctions} from './runtime';
 
 const MALLOY_INTERNAL_URL = 'internal://internal.malloy';
 
@@ -699,11 +698,3 @@ export class Malloy {
     }
   }
 }
-
-// Initialize the runtime module with Malloy functions
-setMalloyFunctions({
-  compile: Malloy.compile,
-  run: Malloy.run,
-  runStream: Malloy.runStream,
-  estimateQueryCost: Malloy.estimateQueryCost,
-});
