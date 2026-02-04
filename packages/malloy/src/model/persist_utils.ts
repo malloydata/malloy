@@ -5,7 +5,6 @@
 
 import type {
   ModelDef,
-  PersistableSourceDef,
   SourceDef,
   SQLPhraseSegment,
   Query,
@@ -22,12 +21,6 @@ import {
 import {resolveSourceID} from './source_def_utils';
 import {annotationToTag} from '../annotation';
 import type {BuildNode} from '../api/foundation/types';
-
-/**
- * Source build graph: leveled array for parallel execution.
- * Sources in the same level can be built in parallel.
- */
-export type SourceBuildGraph = BuildNode[][];
 
 /**
  * Resolve a source name to its definition from model contents.
@@ -301,83 +294,4 @@ export function minimalBuildGraph(deps: BuildNode[]): BuildNode[] {
   }
 
   return roots;
-}
-
-/**
- * Extract all sourceIDs from a nested BuildNode array (flattens the DAG).
- * @deprecated Use collectAllSourceIDs instead
- */
-function extractSourceIDs(nodes: BuildNode[]): string[] {
-  const ids: string[] = [];
-  for (const node of nodes) {
-    ids.push(node.sourceID);
-    ids.push(...extractSourceIDs(node.dependsOn));
-  }
-  return ids;
-}
-
-/**
- * Build an internal build graph from persist sources.
- *
- * Performs topological sort to order sources by dependencies.
- * Returns a leveled array where sources in the same level can be built in parallel.
- *
- * @param persistSources Array of PersistableSourceDefs (must have sourceID set)
- * @param modelDef The model definition containing sources
- * @returns Leveled build graph
- */
-export function buildSourceGraph(
-  persistSources: PersistableSourceDef[],
-  modelDef: ModelDef
-): SourceBuildGraph {
-  // Build set of all persist sourceIDs
-  const persistSourceIds = new Set(
-    persistSources.map(s => s.sourceID).filter((id): id is string => !!id)
-  );
-
-  // Build dependency map using findPersistentDependencies
-  const depMap = new Map<string, BuildNode[]>();
-
-  for (const source of persistSources) {
-    if (!source.sourceID) continue;
-    const deps = findPersistentDependencies(source, modelDef);
-    depMap.set(source.sourceID, deps);
-  }
-
-  // Topological sort into levels (Kahn's algorithm)
-  const levels: SourceBuildGraph = [];
-  const remaining = new Set(persistSourceIds);
-  const completed = new Set<string>();
-
-  while (remaining.size > 0) {
-    // Find all nodes with no unmet dependencies
-    const level: BuildNode[] = [];
-    for (const sourceID of remaining) {
-      const deps = depMap.get(sourceID) ?? [];
-      const depIDs = extractSourceIDs(deps);
-      const unmetDeps = depIDs.filter(dep => !completed.has(dep));
-      if (unmetDeps.length === 0) {
-        level.push({
-          sourceID,
-          dependsOn: deps,
-        });
-      }
-    }
-
-    if (level.length === 0 && remaining.size > 0) {
-      // Cycle detected - should not happen with valid persist annotations
-      throw new Error(
-        `Cycle detected in persist dependencies: ${[...remaining].join(', ')}`
-      );
-    }
-
-    // Add level and mark as completed
-    levels.push(level);
-    for (const node of level) {
-      remaining.delete(node.sourceID);
-      completed.add(node.sourceID);
-    }
-  }
-
-  return levels;
 }

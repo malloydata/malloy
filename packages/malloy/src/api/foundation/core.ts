@@ -1179,48 +1179,6 @@ export class Model implements Taggable {
   }
 
   /**
-   * Get a named query from the model.
-   *
-   * @param name The name of the query to retrieve.
-   * @return A `NamedQuery` for the requested query.
-   * @throws Error if the name does not refer to a named query.
-   */
-  public getNamedQuery(name: string): NamedQuery {
-    const query = this.modelDef.contents[name];
-    if (query?.type === 'query') {
-      return new NamedQuery(query as NamedQueryDef, this);
-    }
-    throw new Error(`'${name}' does not refer to a named query.`);
-  }
-
-  /**
-   * Get all named queries in the model as `NamedQuery` instances.
-   *
-   * @return An array of `NamedQuery` instances.
-   */
-  public getNamedQueries(): NamedQuery[] {
-    const queries: NamedQuery[] = [];
-    for (const [, obj] of Object.entries(this.modelDef.contents)) {
-      if (obj?.type === 'query') {
-        queries.push(new NamedQuery(obj as NamedQueryDef, this));
-      }
-    }
-    return queries;
-  }
-
-  /**
-   * Get all queries marked with #@ persist annotation.
-   *
-   * @return An array of `NamedQuery` instances for queries with persist annotation.
-   */
-  public getPersistQueries(): NamedQuery[] {
-    return this.getNamedQueries().filter(q => {
-      const parsed = q.tagParse({prefix: /^#@ /});
-      return parsed.tag.has('persist');
-    });
-  }
-
-  /**
    * Get the build plan for all #@ persist sources.
    *
    * Walks through ALL queries and sources in the model, finding any persistent
@@ -1322,129 +1280,6 @@ export class Model implements Taggable {
    */
   public getQueryDigests(): Record<string, string> {
     return this.queryModel.persistedQueryDigests;
-  }
-}
-
-// =============================================================================
-// NamedQuery
-// =============================================================================
-
-/**
- * A named query from a compiled Model.
- *
- * Provides access to query identity, SQL generation, and metadata needed
- * for building and caching query results. This is the primary object for
- * working with named queries in the foundation API.
- */
-export class NamedQuery implements Taggable {
-  constructor(
-    private readonly def: NamedQueryDef,
-    private readonly model: Model
-  ) {}
-
-  /**
-   * The name of this query.
-   */
-  get name(): string {
-    return this.def.name;
-  }
-
-  /**
-   * The annotation on this query.
-   */
-  get annotation(): Annotation | undefined {
-    return this.def.annotation;
-  }
-
-  /**
-   * Parse the query's tags.
-   */
-  tagParse(spec?: TagParseSpec): MalloyTagParse {
-    const modelScope = annotationToTag(this.model._modelDef.annotation).tag;
-    spec = addModelScope(spec, modelScope);
-    return annotationToTag(this.def.annotation, spec);
-  }
-
-  /**
-   * Get annotation taglines matching an optional prefix.
-   */
-  getTaglines(prefix?: RegExp): string[] {
-    return annotationToTaglines(this.def.annotation, prefix);
-  }
-
-  /**
-   * The source definition for this query.
-   */
-  private get sourceDef(): SourceDef {
-    const structRef = this.def.structRef;
-    const modelDef = this.model._modelDef;
-    const source =
-      typeof structRef === 'string' ? modelDef.contents[structRef] : structRef;
-    if (!isSourceDef(source)) {
-      throw new Error('Invalid source for query');
-    }
-    return source;
-  }
-
-  /**
-   * The connection name for this query's source.
-   */
-  get connectionName(): string {
-    return this.sourceDef.connection;
-  }
-
-  /**
-   * The dialect name for this query's source.
-   */
-  get dialectName(): string {
-    return this.sourceDef.dialect;
-  }
-
-  /**
-   * The dialect for this query's source.
-   */
-  get dialect(): Dialect {
-    return getDialect(this.dialectName);
-  }
-
-  /**
-   * Get the digest for this query from the QueryModel's digest map.
-   * Returns undefined if digests haven't been computed yet.
-   */
-  getDigest(): string | undefined {
-    return this.model.queryModel.persistedQueryDigests[this.name];
-  }
-
-  /**
-   * Generate the SQL for this query.
-   *
-   * @param options - Compile options including buildManifest for persistence.
-   * @return A PreparedResult containing the generated SQL.
-   */
-  getPreparedResult(options?: CompileQueryOptions): PreparedResult {
-    const queryModel = this.model.queryModel;
-    const translatedQuery = queryModel.compileQuery(this.def, options);
-    return new PreparedResult(
-      {
-        ...translatedQuery,
-        queryName: this.name,
-      },
-      this.model._modelDef
-    );
-  }
-
-  /**
-   * Get the underlying query definition.
-   */
-  get _queryDef(): NamedQueryDef {
-    return this.def;
-  }
-
-  /**
-   * Get the Model this query belongs to.
-   */
-  get _model(): Model {
-    return this.model;
   }
 }
 
@@ -1625,11 +1460,6 @@ export class PersistSource implements Taggable {
     return this.model;
   }
 }
-
-/**
- * @deprecated Use PersistSource instead
- */
-export const PersistExplore = PersistSource;
 
 // =============================================================================
 // PreparedQuery

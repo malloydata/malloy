@@ -162,7 +162,6 @@ export {
 export type {LogMessage, TranslateResponse} from './lang';
 export {
   Model,
-  NamedQuery,
   Malloy,
   Runtime,
   AtomicFieldType,
@@ -179,7 +178,6 @@ export {
   PreparedResult,
   Result,
   QueryMaterializer,
-  NamedQueryMaterializer,
   CSVWriter,
   JSONWriter,
   Parse,

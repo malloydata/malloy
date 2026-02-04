@@ -68,9 +68,7 @@ export {
   Query,
   QueryField,
   Model,
-  NamedQuery,
   PersistSource,
-  PersistExplore, // @deprecated - use PersistSource
   PreparedQuery,
   PreparedResult,
 } from './core';
@@ -94,7 +92,6 @@ export {
   ConnectionRuntime,
   SingleConnectionRuntime,
   ModelMaterializer,
-  NamedQueryMaterializer,
   QueryMaterializer,
   PreparedResultMaterializer,
   ExploreMaterializer,
