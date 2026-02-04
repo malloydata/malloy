@@ -26,8 +26,8 @@ function hasDependency(nodes: BuildNode[], pattern: string): boolean {
 const tstDB = 'duckdb';
 const tstRuntime = runtimeFor(tstDB);
 
-// All persist tests require the experimental.persistence annotation
-const PERSIST_ANNOTATION = '## experimental.persistence';
+// All persist tests require the experimental.persistence compiler flag
+const PERSIST_ANNOTATION = '##! experimental.persistence';
 
 // Combine model + plan setup
 async function getPersistPlan(malloyCode: string) {

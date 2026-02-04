@@ -30,3 +30,4 @@ Add yours to the list, make sure no one else is using yours.
 * `aggregate_order_by`
 * `aggregate_limit`
 * `sql_functions`
+* `persistence`

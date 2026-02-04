@@ -1195,11 +1195,11 @@ export class Model implements Taggable {
    * @return BuildPlan with graphs and sources map
    */
   public getBuildPlan(): BuildPlan {
-    // Require experimental.persistence annotation
-    const modelTag = this.tagParse().tag;
+    // Require experimental.persistence compiler flag
+    const modelTag = this.tagParse({prefix: /^##! /}).tag;
     if (!modelTag.has('experimental', 'persistence')) {
       throw new Error(
-        'Model must have ## experimental.persistence annotation to use getBuildPlan()'
+        'Model must have ##! experimental.persistence to use getBuildPlan()'
       );
     }
 
