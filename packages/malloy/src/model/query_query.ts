@@ -76,6 +76,7 @@ import {
 } from './field_instance';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {getCompiledSQL} from './sql_compiled';
+import {mkBuildID} from './source_def_utils';
 
 function pathToCol(path: string[]): string {
   return path.map(el => encodeURIComponent(el)).join('/');
@@ -776,7 +777,7 @@ export class QueryQuery extends QueryField {
             // Compile query to isolated SQL (not into parent's stageWriter)
             const ret = this.compileQueryToStages(
               query,
-              opts,
+              opts ?? {},
               undefined,
               false
             );
@@ -786,6 +787,37 @@ export class QueryQuery extends QueryField {
       case 'nest_source':
         return qs.structDef.pipeSQL;
       case 'query_source': {
+        const {buildManifest, connectionDigests, strictPersist} =
+          qs.prepareResultOptions ?? {};
+
+        // Check manifest for this source
+        if (buildManifest && connectionDigests) {
+          const connDigest = connectionDigests[qs.structDef.connection];
+          if (connDigest) {
+            // Compile with empty opts to get manifest-ignorant SQL for BuildID
+            const fullRet = this.compileQueryToStages(
+              qs.structDef.query,
+              {},
+              undefined,
+              false
+            );
+            const buildId = mkBuildID(connDigest, fullRet.sql!);
+            const entry = buildManifest.buildEntries[buildId];
+
+            if (entry) {
+              // Found in manifest - use persisted table
+              return this.parent.dialect.quoteTablePath(entry.tableName);
+            }
+
+            if (strictPersist) {
+              throw new Error(
+                `Persist source '${qs.structDef.sourceID}' not found in manifest (buildId: ${buildId})`
+              );
+            }
+          }
+        }
+
+        // Not in manifest - compile normally
         const ret = this.compileQueryToStages(
           qs.structDef.query,
           qs.prepareResultOptions,
@@ -2457,7 +2489,12 @@ class QueryQueryRaw extends QueryQuery {
         path => this.parent.dialect.quoteTablePath(path),
         (query, opts) => {
           // Compile query to isolated SQL (not into parent's stageWriter)
-          const ret = this.compileQueryToStages(query, opts, undefined, false);
+          const ret = this.compileQueryToStages(
+            query,
+            opts ?? {},
+            undefined,
+            false
+          );
           return ret.sql!;
         }
       )

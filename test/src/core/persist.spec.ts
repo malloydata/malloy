@@ -343,6 +343,71 @@ describe('source persistence', () => {
           })
         ).toThrow(/not found in manifest/);
       });
+
+      it('query_source substitutes manifest tables for its structRef', async () => {
+        // This tests that when source B does `source_a -> { ... }`,
+        // and source_a is in the manifest, B's SQL references the table
+        const testModel = wrapTestModel(
+          tstRuntime,
+          `
+          source: flights is ${tstDB}.table('malloytest.flights')
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          }
+
+          #@ persist
+          source: derived is carrier_stats -> { select: * }
+          `
+        );
+        const model = await testModel.model.getModel();
+        const plan = model.getBuildPlan();
+
+        // Get the connection digest
+        const conn = await tstRuntime.connections.lookupConnection(tstDB);
+        const connectionDigest = await conn.getDigest();
+
+        // Get carrier_stats source and compute its buildId
+        const carrierStats = Object.values(plan.sources).find(
+          s => s.name === 'carrier_stats'
+        )!;
+        const carrierStatsSQL = carrierStats.getSQL();
+        const carrierStatsBuildId = carrierStats.makeBuildId(
+          connectionDigest,
+          carrierStatsSQL
+        );
+
+        // Create a manifest with the carrier_stats entry
+        const manifest: BuildManifest = {
+          modelUrl: 'test://test.malloy',
+          buildStartedAt: new Date().toISOString(),
+          buildFinishedAt: new Date().toISOString(),
+          buildEntries: {
+            [carrierStatsBuildId]: {
+              buildId: carrierStatsBuildId,
+              tableName: 'cached.carrier_stats_table',
+              buildStartedAt: new Date().toISOString(),
+              buildFinishedAt: new Date().toISOString(),
+            },
+          },
+        };
+
+        // Get derived source and call getSQL with manifest
+        const derived = Object.values(plan.sources).find(
+          s => s.name === 'derived'
+        )!;
+        const sql = derived.getSQL({
+          buildManifest: manifest,
+          connectionDigests: {[tstDB]: connectionDigest},
+        });
+
+        // The SQL should reference the persisted table, not expand inline
+        expect(sql).toContain('cached.carrier_stats_table');
+        // Should NOT contain the original table (flights) or COUNT
+        expect(sql).not.toContain('COUNT(');
+      });
     });
   });
 
