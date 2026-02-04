@@ -10,9 +10,9 @@ packages/malloy/
 │   ├── lang/              # Translator: Parse tree → AST → IR (see src/lang/CONTEXT.md)
 │   ├── model/             # Compiler: IR → SQL (see src/model/CONTEXT.md)
 │   ├── dialect/           # Database-specific SQL generation
-│   ├── api/               # Alternative API styles (sessioned, stateless, async)
-│   ├── connection/        # Database connection abstractions
-│   └── malloy.ts          # Public API classes (see MALLOY_API.md)
+│   ├── api/               # API layers (see src/api/CONTEXT.md)
+│   │   └── foundation/    # Public API classes (see MALLOY_API.md)
+│   └── connection/        # Database connection abstractions
 ```
 
 ## Two-Phase Architecture

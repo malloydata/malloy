@@ -1,6 +1,6 @@
-# malloy.ts - Public API Classes
+# Foundation API - Public API Classes
 
-The file `src/malloy.ts` is the main public API surface for the Malloy package. It exports classes that wrap internal IR types and provide user-facing functionality.
+The directory `src/api/foundation/` is the main public API surface for the Malloy package. It exports classes that wrap internal IR types and provide user-facing functionality. See `src/api/CONTEXT.md` for a complete overview of all API layers.
 
 ## Core Data Classes
 
