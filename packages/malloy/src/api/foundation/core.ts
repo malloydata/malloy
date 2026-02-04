@@ -1238,6 +1238,14 @@ export class Model implements Taggable {
    * @return BuildPlan with graphs and sources map
    */
   public getBuildPlan(): BuildPlan {
+    // Require experimental.persistence annotation
+    const modelTag = this.tagParse().tag;
+    if (!modelTag.has('experimental', 'persistence')) {
+      throw new Error(
+        'Model must have ## experimental.persistence annotation to use getBuildPlan()'
+      );
+    }
+
     const allDeps: BuildNode[] = [];
 
     // Walk all objects in the model to find persistent dependencies

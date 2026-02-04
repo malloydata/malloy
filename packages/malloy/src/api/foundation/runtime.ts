@@ -960,6 +960,13 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // Consider adding a listConnections() method to LookupConnection, or caching this.
       let connectionDigests: Record<string, string> | undefined;
       if (mergedOptions.buildManifest) {
+        // Require experimental.persistence annotation to use buildManifest
+        const modelTag = preparedQuery.model.tagParse().tag;
+        if (!modelTag.has('experimental', 'persistence')) {
+          throw new Error(
+            'Model must have ## experimental.persistence annotation to use buildManifest'
+          );
+        }
         const plan = preparedQuery.model.getBuildPlan();
         const connectionNames = new Set(
           Object.values(plan.sources).map(s => s.connectionName)

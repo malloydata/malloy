@@ -26,6 +26,9 @@ function hasDependency(nodes: BuildNode[], pattern: string): boolean {
 const tstDB = 'duckdb';
 const tstRuntime = runtimeFor(tstDB);
 
+// All persist tests require the experimental.persistence annotation
+const PERSIST_ANNOTATION = '## experimental.persistence';
+
 afterAll(async () => {
   await tstRuntime.connection.close();
 });
@@ -36,7 +39,7 @@ describe('source persistence', () => {
       it('different sourceID produce different buildIds', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -79,7 +82,7 @@ describe('source persistence', () => {
       it('different connection digests produce different buildIds', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -108,7 +111,7 @@ describe('source persistence', () => {
       it('different SQL produces different buildIds', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -139,7 +142,7 @@ describe('source persistence', () => {
       it('returns SQL for query_source', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -163,7 +166,7 @@ describe('source persistence', () => {
       it('returns SQL for sql_select', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           #@ persist
           source: custom_sql is ${tstDB}.sql("""
             SELECT carrier, COUNT(*) as flight_count
@@ -186,7 +189,7 @@ describe('source persistence', () => {
       it('substitutes manifest tables when buildManifest provided', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -251,7 +254,7 @@ describe('source persistence', () => {
       it('expands SQL when manifest entry not found', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -299,7 +302,7 @@ describe('source persistence', () => {
       it('throws in strict mode when manifest entry not found', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -349,7 +352,7 @@ describe('source persistence', () => {
         // and source_a is in the manifest, B's SQL references the table
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -415,7 +418,7 @@ describe('source persistence', () => {
     it('returns empty plan when no persist sources', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         source: not_persisted is flights -> {
@@ -434,7 +437,7 @@ describe('source persistence', () => {
     it('returns single source with no dependencies', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -461,7 +464,7 @@ describe('source persistence', () => {
         // Two independent persist sources should both appear as leaves
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -497,7 +500,7 @@ describe('source persistence', () => {
         // A -> B: B depends on A, only B is a leaf
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -531,7 +534,7 @@ describe('source persistence', () => {
       it('diamond dependency pattern with extended sources', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -583,7 +586,7 @@ describe('source persistence', () => {
         // A is base, B and C both derive from A, D depends on both B and C
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -630,7 +633,7 @@ describe('source persistence', () => {
         // B directly references A via structRef
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -657,7 +660,7 @@ describe('source persistence', () => {
       it('query_source: detects dependency through source extend', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -689,7 +692,7 @@ describe('source persistence', () => {
       it('query_source: detects dependency through chained extends', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -733,7 +736,7 @@ describe('source persistence', () => {
         // B interpolates A in SQL
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -762,7 +765,7 @@ describe('source persistence', () => {
         // B interpolates a query expression referencing A
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -794,7 +797,7 @@ describe('source persistence', () => {
         // C should depend on A transitively
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -833,7 +836,7 @@ describe('source persistence', () => {
         // C should depend on A transitively
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -871,7 +874,7 @@ describe('source persistence', () => {
         // Source A exists but B doesn't reference it - they're independent
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -910,7 +913,7 @@ describe('source persistence', () => {
         // have that persistent source in the build graph
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
           source: carriers is ${tstDB}.table('malloytest.carriers')
 
@@ -941,7 +944,7 @@ describe('source persistence', () => {
         // Path 2: Query.pipeline[].extendSource[] - joins added in extend blocks
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
           source: carriers is ${tstDB}.table('malloytest.carriers')
 
@@ -977,7 +980,7 @@ describe('source persistence', () => {
         // Chain: A → B → C - only C should be in the build graph
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -1021,7 +1024,7 @@ describe('source persistence', () => {
         // Both B and D are leaves
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -1090,7 +1093,7 @@ describe('source persistence', () => {
         // Create a model with persist sources on two different connections
         testFileSpace.setFile(
           new URL('test://multi-conn.malloy'),
-          `
+          `${PERSIST_ANNOTATION}
           source: flights1 is duckdb.table('malloytest.flights')
           source: flights2 is duckdb2.table('malloytest.flights')
 
@@ -1134,7 +1137,7 @@ describe('source persistence', () => {
         // More detailed test: verify graph structure with dependencies
         testFileSpace.setFile(
           new URL('test://multi-conn2.malloy'),
-          `
+          `${PERSIST_ANNOTATION}
           source: flights1 is duckdb.table('malloytest.flights')
           source: flights2 is duckdb2.table('malloytest.flights')
 
@@ -1197,7 +1200,7 @@ describe('source persistence', () => {
       it('only includes sources with #@ persist', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           #@ persist
@@ -1223,7 +1226,7 @@ describe('source persistence', () => {
       it('ignores sources without persist annotation', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('malloytest.flights')
 
           // Has annotation but not persist
@@ -1250,7 +1253,7 @@ describe('source persistence', () => {
       it('ignores non-persistable source types (table)', async () => {
         const testModel = wrapTestModel(
           tstRuntime,
-          `
+          `${PERSIST_ANNOTATION}
           // Table sources cannot be persisted (they're already tables)
           #@ persist
           source: flights is ${tstDB}.table('malloytest.flights')
@@ -1270,7 +1273,7 @@ describe('source persistence', () => {
     it('sql_select source can be persisted', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         #@ persist
         source: custom_query is ${tstDB}.sql("""
           SELECT carrier, COUNT(*) as cnt
@@ -1291,7 +1294,7 @@ describe('source persistence', () => {
     it('sql_select with interpolated persist source has dependency', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1322,7 +1325,7 @@ describe('source persistence', () => {
     it('getSQL expands interpolated sources to subqueries', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1356,7 +1359,7 @@ describe('source persistence', () => {
     it('getSQL substitutes from manifest', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1423,7 +1426,7 @@ describe('source persistence', () => {
     it('full build workflow: getBuildPlan -> getSQL -> makeBuildId', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1470,7 +1473,7 @@ describe('source persistence', () => {
 
       const testModel = wrapTestModel(
         tstRuntime,
-        `
+        `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1556,7 +1559,7 @@ describe('source persistence', () => {
 
     it('detects dependency on imported persist source through extend', async () => {
       // Model 1: defines a persist source
-      const model1 = `
+      const model1 = `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1567,7 +1570,7 @@ describe('source persistence', () => {
       `;
 
       // Model 2: imports model1 and extends the persist source
-      const model2 = `
+      const model2 = `${PERSIST_ANNOTATION}
         import "test://model1.malloy"
 
         #@ persist
@@ -1601,7 +1604,7 @@ describe('source persistence', () => {
 
     it('detects persistent base through non-persistent imported extend chain', async () => {
       // Model 1: defines persist source A
-      const model1 = `
+      const model1 = `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1612,7 +1615,7 @@ describe('source persistence', () => {
       `;
 
       // Model 2: imports model1, extends A to create B (NOT persist)
-      const model2 = `
+      const model2 = `${PERSIST_ANNOTATION}
         import "test://model1.malloy"
 
         source: source_b is source_a extend {
@@ -1621,7 +1624,7 @@ describe('source persistence', () => {
       `;
 
       // Model 3: imports model2, extends B to create C (NOT persist)
-      const model3 = `
+      const model3 = `${PERSIST_ANNOTATION}
         import "test://model2.malloy"
 
         source: source_c is source_b extend {
@@ -1672,7 +1675,7 @@ describe('source persistence', () => {
 
     it('breaks persistence inheritance with #@ -persist', async () => {
       // Model 1: defines persist source A
-      const model1 = `
+      const model1 = `${PERSIST_ANNOTATION}
         source: flights is ${tstDB}.table('malloytest.flights')
 
         #@ persist
@@ -1684,7 +1687,7 @@ describe('source persistence', () => {
 
       // Model 2: imports model1, extends A to create B with #@ -persist
       // This breaks the persistence inheritance chain
-      const model2 = `
+      const model2 = `${PERSIST_ANNOTATION}
         import "test://model1.malloy"
 
         #@ -persist
@@ -1695,7 +1698,7 @@ describe('source persistence', () => {
 
       // Model 3: imports model2, extends B to create C (NOT persistent)
       // source_c is not persistent because source_b broke the chain
-      const model3 = `
+      const model3 = `${PERSIST_ANNOTATION}
         import "test://model2.malloy"
 
         source: source_c is source_b extend {
@@ -1727,6 +1730,50 @@ describe('source persistence', () => {
       const source_a = graph.nodes[0][0];
       expect(source_a.sourceID).toContain('source_a');
       expect(source_a.dependsOn).toHaveLength(0);
+    });
+  });
+
+  describe('experimental.persistence annotation requirement', () => {
+    it('getBuildPlan throws without experimental.persistence annotation', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: carrier_stats is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+        `
+      );
+      const model = await testModel.model.getModel();
+
+      expect(() => model.getBuildPlan()).toThrow('experimental.persistence');
+    });
+
+    it('running query with buildManifest throws without experimental.persistence annotation', async () => {
+      const testModel = wrapTestModel(
+        tstRuntime,
+        `
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        query: test_query is flights -> { group_by: carrier }
+        `
+      );
+
+      const manifest: BuildManifest = {
+        modelUrl: 'test://test.malloy',
+        buildStartedAt: new Date().toISOString(),
+        buildFinishedAt: new Date().toISOString(),
+        buildEntries: {},
+      };
+
+      await expect(
+        testModel.model
+          .loadQueryByName('test_query')
+          .run({buildManifest: manifest})
+      ).rejects.toThrow('experimental.persistence');
     });
   });
 });
