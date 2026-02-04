@@ -282,4 +282,19 @@ export class DuckDBConnection extends DuckDBCommon {
       }
     }
   }
+
+  /**
+   * Forcefully close all cached DuckDB instances. Useful for test cleanup
+   * to release file locks between test runs.
+   */
+  static closeAllInstances(): void {
+    for (const path of Object.keys(DuckDBConnection.activeDBs)) {
+      try {
+        DuckDBConnection.activeDBs[path].instance.closeSync();
+      } catch {
+        // Ignore errors during cleanup
+      }
+    }
+    DuckDBConnection.activeDBs = {};
+  }
 }
