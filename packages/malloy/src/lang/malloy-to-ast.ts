@@ -62,7 +62,7 @@ import {
   isParameterType,
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
-import {tagFromLine} from '@malloydata/malloy-tag';
+import {parseTag} from '@malloydata/malloy-tag';
 import {isNotUndefined, rangeFromContext} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -103,7 +103,7 @@ export class MalloyToAST
     this.timer = new Timer('generate_ast');
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
     for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = tagFromLine(flag, this.compilerFlags);
+      const withNewTag = parseTag(flag, this.compilerFlags);
       this.compilerFlags = withNewTag.tag;
     }
     this.timer.contribute([parseCompilerFlagsTimer.stop()]);
