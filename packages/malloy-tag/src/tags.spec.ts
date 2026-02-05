@@ -112,17 +112,17 @@ describe('tagParse to Tag', () => {
 
     ['x={y z} -x.y', {x: {properties: {z: {}, y: {deleted: true}}}}],
     ['x={y z} x {-y}', {x: {properties: {z: {}, y: {deleted: true}}}}],
-    ['x=1 x {xx=11}', {x: {eq: '1', properties: {xx: {eq: '11'}}}}],
-    ['x.y=xx x=1 {...}', {x: {eq: '1', properties: {y: {eq: 'xx'}}}}],
-    ['a {b c} a=1', {a: {eq: '1'}}],
-    ['a=1 a=...{b}', {a: {eq: '1', properties: {b: {}}}}],
-    ['x=.01', {x: {eq: '.01'}}],
-    ['x=-7', {x: {eq: '-7'}}],
-    ['x=7', {x: {eq: '7'}}],
-    ['x=7.0', {x: {eq: '7.0'}}],
-    ['x=.7', {x: {eq: '.7'}}],
-    ['x=.7e2', {x: {eq: '.7e2'}}],
-    ['x=7E2', {x: {eq: '7E2'}}],
+    ['x=1 x {xx=11}', {x: {eq: 1, properties: {xx: {eq: 11}}}}],
+    ['x.y=xx x=1 {...}', {x: {eq: 1, properties: {y: {eq: 'xx'}}}}],
+    ['a {b c} a=1', {a: {eq: 1}}],
+    ['a=1 a=...{b}', {a: {eq: 1, properties: {b: {}}}}],
+    ['x=.01', {x: {eq: 0.01}}],
+    ['x=-7', {x: {eq: -7}}],
+    ['x=7', {x: {eq: 7}}],
+    ['x=7.0', {x: {eq: 7.0}}],
+    ['x=.7', {x: {eq: 0.7}}],
+    ['x=.7e2', {x: {eq: 70}}],
+    ['x=7E2', {x: {eq: 700}}],
     ['`spacey name`=Zaphod', {'spacey name': {eq: 'Zaphod'}}],
     ["name='single quoted'", {name: {eq: 'single quoted'}}],
     [
@@ -148,7 +148,7 @@ describe('tagParse to Tag', () => {
     ['can remove.properties -...', {}],
     // Colon syntax REPLACES properties (deletes old props)
     ['name: { prop }', {name: {properties: {prop: {}}}}],
-    ['name: { a=1 b=2 }', {name: {properties: {a: {eq: '1'}, b: {eq: '2'}}}}],
+    ['name: { a=1 b=2 }', {name: {properties: {a: {eq: 1}, b: {eq: 2}}}}],
     ['name { old } name: { new }', {name: {properties: {new: {}}}}],
     // Space syntax MERGES properties (keeps old props)
     ['name { old } name { new }', {name: {properties: {old: {}, new: {}}}}],
@@ -166,13 +166,37 @@ describe('tagParse to Tag', () => {
     // Multi-line input
     [
       'person {\n  name="ted"\n  age=42\n}',
-      {person: {properties: {name: {eq: 'ted'}, age: {eq: '42'}}}},
+      {person: {properties: {name: {eq: 'ted'}, age: {eq: 42}}}},
     ],
     // Triple-quoted strings (multi-line values)
     ['desc="""hello"""', {desc: {eq: 'hello'}}],
     ['desc="""line one\nline two"""', {desc: {eq: 'line one\nline two'}}],
     ['desc="""has " quote"""', {desc: {eq: 'has " quote'}}],
     ['desc="""has "" two quotes"""', {desc: {eq: 'has "" two quotes'}}],
+    // Boolean values
+    ['enabled=@true', {enabled: {eq: true}}],
+    ['disabled=@false', {disabled: {eq: false}}],
+    // Date values
+    ['created=@2024-01-15', {created: {eq: new Date('2024-01-15')}}],
+    [
+      'updated=@2024-01-15T10:30:00Z',
+      {updated: {eq: new Date('2024-01-15T10:30:00Z')}},
+    ],
+    // Mixed types
+    [
+      'config { enabled=@true count=42 name=test }',
+      {
+        config: {
+          properties: {
+            enabled: {eq: true},
+            count: {eq: 42},
+            name: {eq: 'test'},
+          },
+        },
+      },
+    ],
+    // Arrays with typed values
+    ['flags=[@true, @false]', {flags: {eq: [{eq: true}, {eq: false}]}}],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
@@ -308,6 +332,42 @@ describe('Tag access', () => {
     expect(getTags.tag.has('b', 'd')).toBeTruthy();
     expect(getTags.tag.has('c')).toBeFalsy();
   });
+  test('boolean accessor', () => {
+    const {tag} = parseTag('enabled=@true disabled=@false');
+    expect(tag.boolean('enabled')).toBe(true);
+    expect(tag.boolean('disabled')).toBe(false);
+    expect(tag.boolean('missing')).toBeUndefined();
+  });
+  test('isTrue and isFalse', () => {
+    const {tag} = parseTag('enabled=@true disabled=@false name=test');
+    expect(tag.isTrue('enabled')).toBe(true);
+    expect(tag.isFalse('enabled')).toBe(false);
+    expect(tag.isTrue('disabled')).toBe(false);
+    expect(tag.isFalse('disabled')).toBe(true);
+    // Non-boolean values
+    expect(tag.isTrue('name')).toBe(false);
+    expect(tag.isFalse('name')).toBe(false);
+    // Missing values
+    expect(tag.isTrue('missing')).toBe(false);
+    expect(tag.isFalse('missing')).toBe(false);
+  });
+  test('date accessor', () => {
+    const {tag} = parseTag('created=@2024-01-15 updated=@2024-01-15T10:30:00Z');
+    const created = tag.date('created');
+    expect(created).toBeInstanceOf(Date);
+    expect(created?.toISOString()).toBe('2024-01-15T00:00:00.000Z');
+    const updated = tag.date('updated');
+    expect(updated).toBeInstanceOf(Date);
+    expect(updated?.toISOString()).toBe('2024-01-15T10:30:00.000Z');
+    expect(tag.date('missing')).toBeUndefined();
+  });
+  test('text returns string for all scalar types', () => {
+    const {tag} = parseTag('n=42 b=@true d=@2024-01-15 s=hello');
+    expect(tag.text('n')).toBe('42');
+    expect(tag.text('b')).toBe('true');
+    expect(tag.text('d')).toBe('2024-01-15T00:00:00.000Z');
+    expect(tag.text('s')).toBe('hello');
+  });
   test('property access on existing tag (which does not yet have properties)', () => {
     const parsePlot = parseTag('# plot');
     const parsed = parseTag('# plot.x=2', parsePlot.tag);
@@ -323,7 +383,7 @@ describe('Tag access', () => {
     const base = Tag.withPrefix('# ');
     const ext = base.set(['a', 'b', 0], 3).set(['a', 'b', 1], 4);
     expect(ext).tagsAre({
-      a: {properties: {b: {eq: [{eq: '3'}, {eq: '4'}]}}},
+      a: {properties: {b: {eq: [{eq: 3}, {eq: 4}]}}},
     });
     expect(ext.toString()).toBe('# a.b = [3, 4]\n');
   });
@@ -334,8 +394,8 @@ describe('Tag access', () => {
       .set(['c', 0], 'foo')
       .set(['c', 0, 'a'], 4);
     expect(ext).tagsAre({
-      a: {properties: {b: {eq: [{properties: {a: {eq: '3'}}}]}}},
-      c: {eq: [{eq: 'foo', properties: {a: {eq: '4'}}}]},
+      a: {properties: {b: {eq: [{properties: {a: {eq: 3}}}]}}},
+      c: {eq: [{eq: 'foo', properties: {a: {eq: 4}}}]},
     });
     expect(ext.toString()).toBe('# a.b = [{ a = 3 }] c = [foo { a = 4 }]\n');
   });

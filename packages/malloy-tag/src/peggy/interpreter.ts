@@ -165,6 +165,10 @@ export class Interpreter {
   private resolveValue(value: TagValue): TagInterface {
     switch (value.kind) {
       case 'string':
+      case 'number':
+      case 'boolean':
+        return {eq: value.value};
+      case 'date':
         return {eq: value.value};
       case 'array':
         return {eq: this.resolveArray(value.elements)};

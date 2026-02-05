@@ -8,10 +8,15 @@
  * The Peggy parser outputs these, and the interpreter executes them to build a Tag.
  */
 
-// Values that can be assigned
-export type TagValue =
+// Scalar value types
+export type ScalarValue =
   | {kind: 'string'; value: string}
-  | {kind: 'array'; elements: ArrayElement[]};
+  | {kind: 'number'; value: number}
+  | {kind: 'boolean'; value: boolean}
+  | {kind: 'date'; value: Date};
+
+// Values that can be assigned
+export type TagValue = ScalarValue | {kind: 'array'; elements: ArrayElement[]};
 
 export type ArrayElement = {
   value?: TagValue;
