@@ -27,6 +27,6 @@
     "@malloydata/malloy": "0.0.336"
   },
   "devDependencies": {
-    "peggy": "^3.0.2"
+    "peggy": "^4.2.0"
   }
 }
