@@ -59,15 +59,12 @@ export function annotationToTag(
       matchingNotes.push(note);
     }
   }
-  for (let i = 0; i < matchingNotes.length; i++) {
-    const note = matchingNotes[i];
-    if (note.text.match(prefix)) {
-      const noteParse = Tag.fromTagLine(note.text, i, extending);
-      extending = noteParse.tag;
-      allErrs.push(
-        ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
-      );
-    }
+  for (const note of matchingNotes) {
+    const noteParse = Tag.fromTagLine(note.text, 0, extending);
+    extending = noteParse.tag;
+    allErrs.push(
+      ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
+    );
   }
   return {tag: extending, log: allErrs};
 }

@@ -77,6 +77,3 @@ export function parseTagLine(
   return {tag: result.tag, log: errors};
 }
 
-export type {TagStatement, TagValue, ArrayElement} from './statements';
-export {Interpreter} from './interpreter';
-export type {InterpreterError, InterpreterResult} from './interpreter';
