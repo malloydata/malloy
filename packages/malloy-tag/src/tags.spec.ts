@@ -146,6 +146,9 @@ describe('tagParse to Tag', () => {
       },
     ],
     ['can remove.properties -...', {}],
+    // Colon syntax for replacing properties (same as name = { })
+    ['name: { prop }', {name: {properties: {prop: {}}}}],
+    ['name: { a=1 b=2 }', {name: {properties: {a: {eq: '1'}, b: {eq: '2'}}}}],
     // Multi-line input
     [
       'person {\n  name="ted"\n  age=42\n}',

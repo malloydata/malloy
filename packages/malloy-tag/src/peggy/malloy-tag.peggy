@@ -54,7 +54,7 @@ tagEq
       return result;
     }
 
-// name = { properties }  or  name = ... { properties }
+// name = { properties }  or  name = ... { properties }  or  name: { properties }
 tagReplaceProperties
   = path:propName _ "=" _ dotty:"..."? _ props:properties {
       return {
@@ -62,6 +62,14 @@ tagReplaceProperties
         path,
         properties: props.statements,
         preserveValue: dotty !== null
+      };
+    }
+  / path:propName _ ":" _ props:properties {
+      return {
+        kind: 'replaceProperties',
+        path,
+        properties: props.statements,
+        preserveValue: false
       };
     }
 
