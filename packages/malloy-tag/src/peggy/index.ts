@@ -76,4 +76,3 @@ export function parseTagLine(
 
   return {tag: result.tag, log: errors};
 }
-
