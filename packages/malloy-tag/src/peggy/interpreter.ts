@@ -21,16 +21,10 @@ export interface InterpreterResult {
  * Executes TagStatements to build a Tag object.
  */
 export class Interpreter {
-  private scopes: Tag[] = [];
   private errors: InterpreterError[] = [];
-
-  constructor(outerScopes: Tag[] = []) {
-    this.scopes = [...outerScopes];
-  }
 
   execute(statements: TagStatement[], extending?: Tag): InterpreterResult {
     const tag = extending?.clone() ?? new Tag({});
-    this.scopes.unshift(tag);
 
     for (const stmt of statements) {
       this.executeStatement(stmt, tag);
@@ -182,8 +176,6 @@ export class Interpreter {
         return {eq: value.value};
       case 'array':
         return {eq: this.resolveArray(value.elements)};
-      case 'reference':
-        return this.resolveReference(value.path);
     }
   }
 
@@ -209,27 +201,5 @@ export class Interpreter {
 
       return result;
     });
-  }
-
-  /**
-   * Resolve a $() reference by looking up the path in scopes.
-   */
-  private resolveReference(path: string[]): TagInterface {
-    for (const scope of this.scopes) {
-      // First scope that has the first path component gets to resolve the whole path
-      if (scope.has(path[0])) {
-        const refTo = scope.tag(...path);
-        if (refTo) {
-          return structuredClone(refTo);
-        }
-        break;
-      }
-    }
-
-    this.errors.push({
-      code: 'tag-property-not-found',
-      message: `Reference to undefined property ${path.join('.')}`,
-    });
-    return {};
   }
 }

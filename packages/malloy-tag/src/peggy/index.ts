@@ -15,14 +15,12 @@ import * as parser from './peg-tag-parser';
  * @param source - The source line to parse. If the string starts with #,
  *   all characters up to the first space are skipped.
  * @param extending - A tag which this line will extend
- * @param outerScope - Outer "scopes" for $() references
  * @param onLine - Line number for error reporting
  * @returns TagParse with the resulting tag and any errors
  */
 export function parseTagLine(
   source: string,
   extending: Tag | undefined,
-  outerScope: Tag[],
   onLine: number
 ): TagParse {
   // Skip the prefix if present (e.g., "# " or "#(docs) ")
@@ -63,7 +61,7 @@ export function parseTagLine(
     return {tag: extending?.clone() ?? new Tag({}), log: errors};
   }
 
-  const interpreter = new Interpreter(outerScope);
+  const interpreter = new Interpreter();
   const result = interpreter.execute(statements, extending);
 
   // Convert interpreter errors to TagErrors

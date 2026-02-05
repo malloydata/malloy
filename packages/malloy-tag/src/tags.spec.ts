@@ -115,14 +115,6 @@ describe('tagParse to Tag', () => {
     ['x.y=xx x=1 {...}', {x: {eq: '1', properties: {y: {eq: 'xx'}}}}],
     ['a {b c} a=1', {a: {eq: '1'}}],
     ['a=1 a=...{b}', {a: {eq: '1', properties: {b: {}}}}],
-    [
-      'a=red { shade=dark } color=$(a) shade=$(a.shade)',
-      {
-        a: {eq: 'red', properties: {shade: {eq: 'dark'}}},
-        color: {eq: 'red', properties: {shade: {eq: 'dark'}}},
-        shade: {eq: 'dark'},
-      },
-    ],
     ['x=.01', {x: {eq: '.01'}}],
     ['x=-7', {x: {eq: '-7'}}],
     ['x=7', {x: {eq: '7'}}],
@@ -131,6 +123,7 @@ describe('tagParse to Tag', () => {
     ['x=.7e2', {x: {eq: '.7e2'}}],
     ['x=7E2', {x: {eq: '7E2'}}],
     ['`spacey name`=Zaphod', {'spacey name': {eq: 'Zaphod'}}],
+    ["name='single quoted'", {name: {eq: 'single quoted'}}],
     [
       'image { alt=hello { field=department } }',
       {
@@ -487,6 +480,26 @@ describe('Tag prefix handling', () => {
     // The "# this is not a comment" is parsed as tag content, not ignored
     // because single-line parsing doesn't have comment support
     expect(tag.has('name')).toBe(true);
+  });
+});
+
+describe('Empty and whitespace input', () => {
+  test('empty string produces empty tag', () => {
+    const {tag, log} = Tag.fromTagLine('');
+    expect(log).toEqual([]);
+    expect(tag.properties).toBeUndefined();
+  });
+
+  test('whitespace only produces empty tag', () => {
+    const {tag, log} = Tag.fromTagLine('   ');
+    expect(log).toEqual([]);
+    expect(tag.properties).toBeUndefined();
+  });
+
+  test('whitespace with comment produces empty tag', () => {
+    const {tag, log} = Tag.fromTagLine('   # this is a comment');
+    expect(log).toEqual([]);
+    expect(tag.properties).toBeUndefined();
   });
 });
 

@@ -98,17 +98,10 @@ propName
 // Values that can be assigned with =
 eqValue
   = arrayValue
-  / reference
   / stringValue
 
 stringValue
   = s:string { return { kind: 'string', value: s }; }
-
-// $() reference
-reference
-  = "$(" _ path:propName _ ")" {
-      return { kind: 'reference', path };
-    }
 
 // Array: [element, element, ...]
 arrayValue
@@ -117,7 +110,7 @@ arrayValue
       return { kind: 'array', elements: [head, ...tail] };
     }
 
-// Array element: can be value, value with props, just props, nested array, or reference
+// Array element: can be value, value with props, just props, or nested array
 arrayElement
   = value:string _ props:properties {
       return {
@@ -132,9 +125,6 @@ arrayElement
       return { properties: props.statements };
     }
   / value:arrayValue {
-      return { value };
-    }
-  / value:reference {
       return { value };
     }
 

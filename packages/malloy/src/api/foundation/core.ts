@@ -57,11 +57,7 @@ import {
 import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
-import {
-  addModelScope,
-  annotationToTag,
-  annotationToTaglines,
-} from '../../annotation';
+import {annotationToTag, annotationToTaglines} from '../../annotation';
 import {locationContainsPosition} from '../../lang/utils';
 import {ReferenceList} from '../../lang/reference-list';
 import type {Taggable} from '../../taggable';
@@ -620,7 +616,6 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    spec = addModelScope(spec, this.parent.modelTag);
     return annotationToTag(this.fieldTypeDef.annotation, spec);
   }
 
@@ -892,7 +887,6 @@ export class QueryField extends Query implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    spec = addModelScope(spec, this.parent.modelTag);
     return annotationToTag(this.turtleDef.annotation, spec);
   }
 
@@ -964,7 +958,6 @@ export class ExploreField extends Explore {
   }
 
   override tagParse(spec?: TagParseSpec) {
-    spec = addModelScope(spec, this._parentExplore.modelTag);
     return annotationToTag(this._structDef.annotation, spec);
   }
 
@@ -1464,8 +1457,6 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    const modelScope = annotationToTag(this._modelDef.annotation).tag;
-    spec = addModelScope(spec, modelScope);
     return annotationToTag(this._query.annotation, spec);
   }
 
@@ -1553,8 +1544,6 @@ export class PreparedResult implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): MalloyTagParse {
-    const modelScope = annotationToTag(this.modelDef.annotation).tag;
-    spec = addModelScope(spec, modelScope);
     return annotationToTag(this.inner.annotation, spec);
   }
 

@@ -88,25 +88,23 @@ describe('tags in results', () => {
         ## modelDef=ok
         source: one is duckdb.sql("SELECT 1 as one")
         # b4query
-        run: # afterQuery import=$(modelDef)
+        run: # afterQuery
           one -> { select: * }`
     );
-    const qTag = {b4query: {}, afterQuery: {}, import: {eq: 'ok'}};
+    const qTag = {b4query: {}, afterQuery: {}};
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
     expect(query.tagParse().tag).tagsAre(qTag);
     const result = await loaded.run();
     expect(result.tagParse().tag).tagsAre(qTag);
   });
-  const wantTag = {BQ: {}, AQ: {}, Bis: {}, Ais: {}, import: {eq: 'ok'}};
+  const wantTag = {BQ: {}, AQ: {}, Bis: {}, Ais: {}};
   test('named query', async () => {
     const loaded = runtime.loadQuery(
       `
-        ## modelDef=ok
         source: one is duckdb.sql("SELECT 1 as one")
         # BQ
         query: # AQ
-          # import=$(modelDef)
           theName
           # Bis
           is
@@ -124,9 +122,8 @@ describe('tags in results', () => {
   test('turtle query', async () => {
     const loaded = runtime.loadQuery(
       `
-        ## modelDef=ok
         source: one is duckdb.sql("SELECT 1 as one") extend {
-          # BQ import=$(modelDef)
+          # BQ
           view: # AQ
             in_one
             # Bis
@@ -182,14 +179,13 @@ describe('tags in results', () => {
     // Stage 2 should have both its own annotation and the inherited one from stage 1
     expect(tp.tag).tagsAre({stage1Note: {}, stage2Note: {}});
   });
-  test('atomic field model scope tag', async () => {
+  test('atomic field tag', async () => {
     const loaded = runtime.loadQuery(
       `
-          ## modelDef=ok
           source: one is duckdb.sql("SELECT 1 as one")
           run: one -> {
             select:
-              # note1 import=$(modelDef)
+              # note1
               one
           }`
     );
@@ -199,12 +195,11 @@ describe('tags in results', () => {
     expect(one).toBeDefined();
     const tp = one.tagParse();
     expect(tp.log).toEqual([]);
-    expect(tp.tag).tagsAre({note1: {}, import: {eq: 'ok'}});
+    expect(tp.tag).tagsAre({note1: {}});
   });
   test('nested query has tag', async () => {
     const loaded = runtime.loadQuery(
       `
-          ## modelDef=ok
           source: one is duckdb.sql("SELECT 1 as one")
           source: malloy_one is one extend {
             view: in_one is {
@@ -214,7 +209,7 @@ describe('tags in results', () => {
               group_by: one
               # note1
               nest:
-                # note2 import=$(modelDef)
+                # note2
                 in_one
             }
           }
@@ -227,7 +222,6 @@ describe('tags in results', () => {
     expect(one.tagParse().tag).tagsAre({
       note1: {},
       note2: {},
-      import: {eq: 'ok'},
     });
   });
   test('render usage test case', async () => {
@@ -264,29 +258,6 @@ describe('tags in results', () => {
     expect(height.tagParse().tag).tagsAre({barchart: {}});
     expect(age.tagParse().tag).tagsAre({barchart: {}});
     expect(name.tagParse().tag).tagsAre({name: {}});
-  });
-  test('User defined scopes nest properly', async () => {
-    const loaded = runtime.loadQuery(
-      `
-          ## scope=model
-          run: duckdb.sql("SELECT 1 as one") -> {
-            select:
-              # valueFrom=$(scope)
-              one
-          }`
-    );
-    const result = await loaded.run();
-    const shape = result.resultExplore;
-    const field = shape.getFieldByName('one');
-    expect(field).toBeDefined();
-    let tp = field.tagParse().tag;
-    expect(tp).tagsAre({valueFrom: {eq: 'model'}});
-    const sessionScope = Tag.fromTagLine('# scope=session', undefined).tag;
-    tp = field.tagParse({scopes: [sessionScope]}).tag;
-    expect(tp).tagsAre({valueFrom: {eq: 'session'}});
-    const globalScope = Tag.fromTagLine('# scope=global', undefined).tag;
-    tp = field.tagParse({scopes: [globalScope, sessionScope]}).tag;
-    expect(tp).tagsAre({valueFrom: {eq: 'global'}});
   });
   test('inherited model tags override', async () => {
     const model = runtime.loadModel(

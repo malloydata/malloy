@@ -11,8 +11,7 @@
 // Values that can be assigned
 export type TagValue =
   | {kind: 'string'; value: string}
-  | {kind: 'array'; elements: ArrayElement[]}
-  | {kind: 'reference'; path: string[]};
+  | {kind: 'array'; elements: ArrayElement[]};
 
 export type ArrayElement = {
   value?: TagValue;

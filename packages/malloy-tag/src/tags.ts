@@ -132,16 +132,14 @@ export class Tag implements TagInterface {
    *   all characters up to the first space.
    * @param lineNumber -- A line number to be associated with the parse errors.
    * @param extending A tag which this line will be extending
-   * @param importing Outer "scopes" for $() references
    * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
    */
   static fromTagLine(
     source: string,
     lineNumber = 0,
-    extending?: Tag,
-    ...importing: Tag[]
+    extending?: Tag
   ): TagParse {
-    return parseTagLine(source, extending, importing, lineNumber);
+    return parseTagLine(source, extending, lineNumber);
   }
 
   /**
@@ -149,15 +147,14 @@ export class Tag implements TagInterface {
    * @param lines -- The source line to be parsed. If the string starts with #, then it skips
    *   all characters up to the first space.
    * @param extending A tag which this line will be extending
-   * @param importing Outer "scopes" for $() references
    * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
    */
-  static fromTagLines(lines: string[], extending?: Tag, ...importing: Tag[]) {
+  static fromTagLines(lines: string[], extending?: Tag) {
     const allErrs: TagError[] = [];
     let current: Tag | undefined = extending;
     for (let i = 0; i < lines.length; i++) {
       const text = lines[i];
-      const noteParse = parseTagLine(text, current, importing, i);
+      const noteParse = parseTagLine(text, current, i);
       current = noteParse.tag;
       allErrs.push(...noteParse.log);
     }

@@ -6,20 +6,6 @@ import type {LogMessage} from './lang';
 export interface TagParseSpec {
   prefix?: RegExp;
   extending?: Tag;
-  scopes?: Tag[];
-}
-
-export function addModelScope(
-  spec: TagParseSpec | undefined,
-  modelScope: Tag
-): TagParseSpec {
-  const useSpec = spec ? {...spec} : {};
-  if (useSpec.scopes) {
-    useSpec.scopes = useSpec.scopes.concat(modelScope);
-  } else {
-    useSpec.scopes = [modelScope];
-  }
-  return useSpec;
 }
 
 export function annotationToTaglines(
@@ -76,12 +62,7 @@ export function annotationToTag(
   for (let i = 0; i < matchingNotes.length; i++) {
     const note = matchingNotes[i];
     if (note.text.match(prefix)) {
-      const noteParse = Tag.fromTagLine(
-        note.text,
-        i,
-        extending,
-        ...(spec.scopes ?? [])
-      );
+      const noteParse = Tag.fromTagLine(note.text, i, extending);
       extending = noteParse.tag;
       allErrs.push(
         ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
