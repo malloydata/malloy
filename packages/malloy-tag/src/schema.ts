@@ -8,7 +8,11 @@ import {Tag} from './tags';
 export interface SchemaError {
   message: string;
   path: string[];
-  code: 'missing-required' | 'wrong-type' | 'unknown-property' | 'invalid-schema';
+  code:
+    | 'missing-required'
+    | 'wrong-type'
+    | 'unknown-property'
+    | 'invalid-schema';
 }
 
 type SchemaType =
@@ -51,7 +55,13 @@ function isArrayType(type: SchemaType): boolean {
 function getArrayElementType(
   type: SchemaType
 ): 'string' | 'number' | 'boolean' | 'date' | 'tag' | 'any' {
-  return type.slice(0, -2) as 'string' | 'number' | 'boolean' | 'date' | 'tag' | 'any';
+  return type.slice(0, -2) as
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'date'
+    | 'tag'
+    | 'any';
 }
 
 interface TypeResult {
@@ -187,14 +197,7 @@ function validateProperties(
     }
 
     const schemaProp = Tag.tagFrom(requiredProps[propName]);
-    validateProperty(
-      propTag,
-      schemaProp,
-      propName,
-      path,
-      errors,
-      allowUnknown
-    );
+    validateProperty(propTag, schemaProp, propName, path, errors, allowUnknown);
   }
 
   // Check optional properties that exist
@@ -205,14 +208,7 @@ function validateProperties(
     }
 
     const schemaProp = Tag.tagFrom(optionalProps[propName]);
-    validateProperty(
-      propTag,
-      schemaProp,
-      propName,
-      path,
-      errors,
-      allowUnknown
-    );
+    validateProperty(propTag, schemaProp, propName, path, errors, allowUnknown);
   }
 
   // Check for unknown properties

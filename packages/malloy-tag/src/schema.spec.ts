@@ -4,7 +4,7 @@
  */
 
 import {parseTag} from './peggy';
-import {validateTag, SchemaError} from './schema';
+import {validateTag} from './schema';
 
 describe('schema validation', () => {
   describe('missing required properties', () => {
@@ -24,9 +24,7 @@ describe('schema validation', () => {
 
     test('errors for multiple missing required properties', () => {
       const {tag} = parseTag('');
-      const {tag: schema} = parseTag(
-        'required: { name=string age=number }'
-      );
+      const {tag: schema} = parseTag('required: { name=string age=number }');
 
       const errors = validateTag(tag, schema);
 
@@ -60,7 +58,8 @@ describe('schema validation', () => {
 
       expect(errors).toHaveLength(1);
       expect(errors[0]).toEqual({
-        message: "Property 'name' has wrong type: expected 'string', got 'number'",
+        message:
+          "Property 'name' has wrong type: expected 'string', got 'number'",
         path: ['name'],
         code: 'wrong-type',
       });
@@ -74,7 +73,8 @@ describe('schema validation', () => {
 
       expect(errors).toHaveLength(1);
       expect(errors[0]).toEqual({
-        message: "Property 'age' has wrong type: expected 'number', got 'string'",
+        message:
+          "Property 'age' has wrong type: expected 'number', got 'string'",
         path: ['age'],
         code: 'wrong-type',
       });
@@ -169,9 +169,7 @@ describe('schema validation', () => {
   describe('valid tags pass validation', () => {
     test('valid tag with required properties', () => {
       const {tag} = parseTag('name=alice age=30');
-      const {tag: schema} = parseTag(
-        'required: { name=string age=number }'
-      );
+      const {tag: schema} = parseTag('required: { name=string age=number }');
 
       const errors = validateTag(tag, schema);
 
@@ -397,7 +395,8 @@ describe('schema validation', () => {
 
       expect(errors).toHaveLength(1);
       expect(errors[0]).toEqual({
-        message: "Property 'age' has wrong type: expected 'number', got 'string'",
+        message:
+          "Property 'age' has wrong type: expected 'number', got 'string'",
         path: ['age'],
         code: 'wrong-type',
       });
@@ -611,7 +610,9 @@ describe('schema validation', () => {
     });
 
     test('tag[] with element schema validates each element', () => {
-      const {tag} = parseTag('items=[{size=10 color=red}, {size=20 color=blue}]');
+      const {tag} = parseTag(
+        'items=[{size=10 color=red}, {size=20 color=blue}]'
+      );
       const {tag: schema} = parseTag(
         'required: { items="tag[]" { required: { size=number color=string } } }'
       );
@@ -622,7 +623,9 @@ describe('schema validation', () => {
     });
 
     test('tag[] element schema reports errors with index in path', () => {
-      const {tag} = parseTag('items=[{size=10 color=red}, {size=bad color=blue}]');
+      const {tag} = parseTag(
+        'items=[{size=10 color=red}, {size=bad color=blue}]'
+      );
       const {tag: schema} = parseTag(
         'required: { items="tag[]" { required: { size=number color=string } } }'
       );
