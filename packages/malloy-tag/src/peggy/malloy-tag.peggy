@@ -106,10 +106,27 @@ propName
 // Values that can be assigned with =
 eqValue
   = arrayValue
+  / booleanValue
+  / dateValue
+  / numberValue
   / stringValue
 
+booleanValue
+  = "@true" { return { kind: 'boolean', value: true }; }
+  / "@false" { return { kind: 'boolean', value: false }; }
+
+dateValue
+  = "@" date:$isoDate { return { kind: 'date', value: new Date(date) }; }
+
+// ISO 8601 date/datetime patterns
+isoDate
+  = [0-9][0-9][0-9][0-9] "-" [0-9][0-9] "-" [0-9][0-9] ("T" [0-9][0-9] ":" [0-9][0-9] (":" [0-9][0-9] ("." [0-9]+)?)? ("Z" / [+-] [0-9][0-9] ":"? [0-9][0-9])?)?
+
+numberValue
+  = n:numericLiteral { return { kind: 'number', value: parseFloat(n) }; }
+
 stringValue
-  = s:string { return { kind: 'string', value: s }; }
+  = s:textString { return { kind: 'string', value: s }; }
 
 // Array: [element, element, ...]
 arrayValue
@@ -118,16 +135,23 @@ arrayValue
       return { kind: 'array', elements: [head, ...tail] };
     }
 
+// Scalar value for array elements (typed)
+scalarValue
+  = booleanValue
+  / dateValue
+  / numberValue
+  / s:textString { return { kind: 'string', value: s }; }
+
 // Array element: can be value, value with props, just props, or nested array
 arrayElement
-  = value:string _ props:properties {
+  = value:scalarValue _ props:properties {
       return {
-        value: { kind: 'string', value },
+        value,
         properties: props.statements
       };
     }
-  / value:string {
-      return { value: { kind: 'string', value } };
+  / value:scalarValue {
+      return { value };
     }
   / props:properties {
       return { properties: props.statements };
@@ -146,12 +170,18 @@ identifier
   = bqString
   / bareString
 
-// String literals
+// String literals (text only, not numbers)
+textString
+  = tripleString
+  / sqString
+  / dqString
+  / bareString
+
+// String or number (for array elements which could be either)
 string
   = tripleString
   / sqString
   / dqString
-  / numericLiteral
   / bareString
 
 // Bare string: alphanumeric and underscore

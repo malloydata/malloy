@@ -33,7 +33,8 @@ export interface TagError {
 // is why only TagDict interface is exported.
 export type TagDict = Record<string, TagInterface>;
 
-type TagValue = string | TagInterface[];
+export type TagScalar = string | number | boolean | Date;
+type TagValue = TagScalar | TagInterface[];
 
 export interface TagInterface {
   eq?: TagValue;
@@ -50,7 +51,14 @@ export interface TagParse {
 export type PathSegment = string | number;
 export type Path = PathSegment[];
 
-export type TagSetValue = string | number | string[] | number[] | null;
+export type TagSetValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | string[]
+  | number[]
+  | null;
 
 /**
  * Class for interacting with the parsed output of an annotation
@@ -58,14 +66,19 @@ export type TagSetValue = string | number | string[] | number[] | null;
  * generate parsed data, and as an API to that data.
  * ```
  * tag.text(p?)         => string value of tag.p or undefined
- * tag.array(p?)        => Tag[] value of tag.p or undefined
  * tag.numeric(p?)      => numeric value of tag.p or undefined
- * tag.textArray(p ?)   => string[] value of elements in tag.p or undefined
- * tag.numericArray(p?) => string[] value of elements in tag.p or undefined
- * tag.tag(p?)           => Tag value of tag.p
- * tag.has(p?)           => boolean "tag contains tag.p"
- * tag.bare(p?)          => tag.p exists and has no properties
+ * tag.boolean(p?)      => boolean value of tag.p or undefined
+ * tag.isTrue(p?)       => true if tag.p is boolean true
+ * tag.isFalse(p?)      => true if tag.p is boolean false
+ * tag.date(p?)         => Date value of tag.p or undefined
+ * tag.array(p?)        => Tag[] value of tag.p or undefined
+ * tag.textArray(p?)    => string[] value of elements in tag.p or undefined
+ * tag.numericArray(p?) => number[] value of elements in tag.p or undefined
+ * tag.tag(p?)          => Tag value of tag.p
+ * tag.has(p?)          => boolean "tag contains tag.p"
+ * tag.bare(p?)         => tag.p exists and has no properties
  * tag.dict             => Record<string,Tag> of tag properties
+ * tag.toObject()       => Plain JS object representation
  * ```
  */
 export class Tag implements TagInterface {
@@ -104,13 +117,13 @@ export class Tag implements TagInterface {
       return str + `=${this.eq}`;
     }
     str += ' {';
-    if (this.eq) {
-      if (typeof this.eq === 'string') {
-        str += `\n${spaces}  =: ${this.eq}`;
-      } else {
+    if (this.eq !== undefined) {
+      if (Array.isArray(this.eq)) {
         str += `\n${spaces}  =: [\n${spaces}    ${this.eq
           .map(el => Tag.tagFrom(el).peek(indent + 4))
           .join(`\n${spaces}    `)}\n${spaces}  ]`;
+      } else {
+        str += `\n${spaces}  =: ${this.eq}`;
       }
     }
 
@@ -148,20 +161,52 @@ export class Tag implements TagInterface {
   }
 
   text(...at: Path): string | undefined {
-    const str = this.find(at)?.eq;
-    if (typeof str === 'string') {
-      return str;
+    const val = this.find(at)?.eq;
+    if (val === undefined || Array.isArray(val)) {
+      return undefined;
     }
+    if (val instanceof Date) {
+      return val.toISOString();
+    }
+    return String(val);
   }
 
   numeric(...at: Path): number | undefined {
-    const str = this.find(at)?.eq;
-    if (typeof str === 'string') {
-      const num = Number.parseFloat(str);
+    const val = this.find(at)?.eq;
+    if (typeof val === 'number') {
+      return val;
+    }
+    if (typeof val === 'string') {
+      const num = Number.parseFloat(val);
       if (!Number.isNaN(num)) {
         return num;
       }
     }
+    return undefined;
+  }
+
+  boolean(...at: Path): boolean | undefined {
+    const val = this.find(at)?.eq;
+    if (typeof val === 'boolean') {
+      return val;
+    }
+    return undefined;
+  }
+
+  isTrue(...at: Path): boolean {
+    return this.find(at)?.eq === true;
+  }
+
+  isFalse(...at: Path): boolean {
+    return this.find(at)?.eq === false;
+  }
+
+  date(...at: Path): Date | undefined {
+    const val = this.find(at)?.eq;
+    if (val instanceof Date) {
+      return val;
+    }
+    return undefined;
   }
 
   bare(...at: Path): boolean | undefined {
@@ -186,32 +231,38 @@ export class Tag implements TagInterface {
 
   array(...at: Path): Tag[] | undefined {
     const array = this.find(at)?.eq;
-    if (array === undefined || typeof array === 'string') {
+    if (!Array.isArray(array)) {
       return undefined;
     }
-    return array.map(el =>
-      typeof el === 'string' ? new Tag({eq: el}) : Tag.tagFrom(el)
-    );
+    return array.map(el => Tag.tagFrom(el));
   }
 
   textArray(...at: Path): string[] | undefined {
     const array = this.find(at)?.eq;
-    if (array === undefined || typeof array === 'string') {
+    if (!Array.isArray(array)) {
       return undefined;
     }
-    return array.reduce<string[]>(
-      (allStrs, el) =>
-        typeof el.eq === 'string' ? allStrs.concat(el.eq) : allStrs,
-      []
-    );
+    return array.reduce<string[]>((allStrs, el) => {
+      const val = el.eq;
+      if (val === undefined || Array.isArray(val)) {
+        return allStrs;
+      }
+      if (val instanceof Date) {
+        return allStrs.concat(val.toISOString());
+      }
+      return allStrs.concat(String(val));
+    }, []);
   }
 
   numericArray(...at: Path): number[] | undefined {
     const array = this.find(at)?.eq;
-    if (array === undefined || typeof array === 'string') {
+    if (!Array.isArray(array)) {
       return undefined;
     }
     return array.reduce<number[]>((allNums, el) => {
+      if (typeof el.eq === 'number') {
+        return allNums.concat(el.eq);
+      }
       if (typeof el.eq === 'string') {
         const num = Number.parseFloat(el.eq);
         if (!Number.isNaN(num)) {
@@ -234,9 +285,10 @@ export class Tag implements TagInterface {
     return new Tag(structuredClone(this));
   }
 
-  private static toValue(str: string): string | number {
-    const num = Number(str);
-    return !Number.isNaN(num) ? num : str;
+  private static scalarToObject(
+    val: TagScalar
+  ): string | number | boolean | Date {
+    return val;
   }
 
   private static tagToObject(tag: TagInterface): unknown {
@@ -262,19 +314,18 @@ export class Tag implements TagInterface {
 
     // Value only
     if (hasValue && !hasProps) {
-      if (typeof tag.eq === 'string') {
-        return Tag.toValue(tag.eq);
+      if (Array.isArray(tag.eq)) {
+        return tag.eq.map(el => Tag.tagToObject(el));
       }
-      // Array value
-      return tag.eq!.map(el => Tag.tagToObject(el));
+      return Tag.scalarToObject(tag.eq!);
     }
 
     // Both value and properties
     const result: Record<string, unknown> = {};
-    if (typeof tag.eq === 'string') {
-      result['='] = Tag.toValue(tag.eq);
+    if (Array.isArray(tag.eq)) {
+      result['='] = tag.eq.map(el => Tag.tagToObject(el));
     } else {
-      result['='] = tag.eq!.map(el => Tag.tagToObject(el));
+      result['='] = Tag.scalarToObject(tag.eq!);
     }
     for (const [key, val] of Object.entries(tag.properties!)) {
       if (!val.deleted) {
@@ -314,6 +365,19 @@ export class Tag implements TagInterface {
     return `"${Tag.escapeString(str)}"`;
   }
 
+  private static serializeScalar(val: TagScalar): string {
+    if (typeof val === 'boolean') {
+      return val ? '@true' : '@false';
+    }
+    if (val instanceof Date) {
+      return `@${val.toISOString()}`;
+    }
+    if (typeof val === 'number') {
+      return String(val);
+    }
+    return Tag.quoteAndEscape(val);
+  }
+
   toString(): string {
     let annotation = this.prefix ?? '# ';
     function addChildren(tag: TagInterface) {
@@ -336,7 +400,7 @@ export class Tag implements TagInterface {
           }
           annotation += ']';
         } else {
-          annotation += Tag.quoteAndEscape(`${child.eq}`);
+          annotation += Tag.serializeScalar(child.eq);
         }
       }
       if (child.properties) {
@@ -431,13 +495,16 @@ export class Tag implements TagInterface {
     }
     if (value === null) {
       currentTag.eq = undefined;
-    } else if (typeof value === 'string') {
+    } else if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      value instanceof Date
+    ) {
       currentTag.eq = value;
-    } else if (typeof value === 'number') {
-      currentTag.eq = value.toString(); // TODO big numbers?
     } else if (Array.isArray(value)) {
       currentTag.eq = value.map((v: string | number) => {
-        return {eq: typeof v === 'string' ? v : v.toString()};
+        return {eq: v};
       });
     }
     return copy;
