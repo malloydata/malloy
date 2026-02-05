@@ -6,7 +6,7 @@
  */
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {TagSetValue} from '@malloydata/malloy-tag';
-import {Tag} from '@malloydata/malloy-tag';
+import {Tag, tagFromLines} from '@malloydata/malloy-tag';
 import * as Filter from '@malloydata/malloy-filter';
 
 export type ParsedFilter =
@@ -395,7 +395,7 @@ abstract class ASTNode<T> {
     const lines = a.annotations
       ?.map(a => a.value)
       ?.filter(l => l.startsWith(prefix));
-    return Tag.fromTagLines(lines ?? []).tag ?? new Tag();
+    return tagFromLines(lines ?? []).tag ?? new Tag();
   }
 
   static fieldWasCalculation(a: Malloy.FieldInfo) {
@@ -5086,7 +5086,7 @@ export class ASTAnnotationList extends ASTListNode<
   }
 
   getTag(prefix: RegExp | string = '# '): Tag {
-    const extending = Tag.fromTagLines(
+    const extending = tagFromLines(
       this.getInheritedAnnotations().map(a => a.value)
     ).tag;
     return tagFromAnnotations(prefix, this.items, extending);
@@ -5176,17 +5176,16 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 
   getIntrinsicTag(): Tag {
-    return Tag.fromTagLines([this.value]).tag ?? new Tag();
+    return tagFromLines([this.value]).tag ?? new Tag();
   }
 
   getTag(): Tag {
     const extending =
       this.index === 0
-        ? Tag.fromTagLines(
-            this.list.getInheritedAnnotations().map(a => a.value)
-          ).tag ?? new Tag()
+        ? tagFromLines(this.list.getInheritedAnnotations().map(a => a.value))
+            .tag ?? new Tag()
         : this.list.index(this.index - 1).getTag();
-    return Tag.fromTagLines([this.value], extending).tag ?? new Tag();
+    return tagFromLines([this.value], extending).tag ?? new Tag();
   }
 
   hasPrefix(prefix: string) {
@@ -5217,7 +5216,7 @@ function tagFromAnnotations(
   const filteredLines = lines.filter(l =>
     typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
   );
-  return Tag.fromTagLines(filteredLines, inherited).tag ?? new Tag();
+  return tagFromLines(filteredLines, inherited).tag ?? new Tag();
 }
 
 function serializeFilter(filter: ParsedFilter) {

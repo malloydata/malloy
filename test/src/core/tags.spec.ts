@@ -22,8 +22,8 @@
  */
 
 import {annotationToTag} from '@malloydata/malloy';
-import type {TagDict} from '@malloydata/malloy-tag';
-import {Tag} from '@malloydata/malloy-tag';
+import type {TagDict, Tag} from '@malloydata/malloy-tag';
+import {tagFromLine} from '@malloydata/malloy-tag';
 import {runtimeFor} from '../runtimes';
 
 declare global {
@@ -38,7 +38,7 @@ declare global {
 expect.extend({
   tagsAre(src: string | Tag, result: Tag) {
     if (typeof src === 'string') {
-      const {tag, log} = Tag.fromTagLine(src);
+      const {tag, log} = tagFromLine(src);
       const errs = log.map(e => e.message);
       if (log.length > 0) {
         return {

@@ -1,5 +1,5 @@
 import type {TagError} from '@malloydata/malloy-tag';
-import {Tag} from '@malloydata/malloy-tag';
+import {Tag, tagFromLine} from '@malloydata/malloy-tag';
 import type {Annotation, Note} from './model';
 import type {LogMessage} from './lang';
 
@@ -60,7 +60,7 @@ export function annotationToTag(
     }
   }
   for (const note of matchingNotes) {
-    const noteParse = Tag.fromTagLine(note.text, extending);
+    const noteParse = tagFromLine(note.text, extending);
     extending = noteParse.tag;
     allErrs.push(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))

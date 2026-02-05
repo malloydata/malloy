@@ -23,6 +23,7 @@
 
 import type {TagDict} from './tags';
 import {Tag} from './tags';
+import {tagFromLine} from './peggy';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -36,7 +37,7 @@ declare global {
 expect.extend({
   tagsAre(src: string | Tag, result: Tag) {
     if (typeof src === 'string') {
-      const {tag, log} = Tag.fromTagLine(src);
+      const {tag, log} = tagFromLine(src);
       const errs = log.map(e => e.message);
       if (log.length > 0) {
         return {
@@ -158,7 +159,7 @@ describe('tagParse to Tag', () => {
 describe('Tag access', () => {
   test('just text', () => {
     const strToParse = 'a=b';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -166,7 +167,7 @@ describe('Tag access', () => {
   });
   test('tag path', () => {
     const strToParse = 'a.b.c.d.e=f';
-    const tagParse = Tag.fromTagLine(strToParse);
+    const tagParse = tagFromLine(strToParse);
     expect(tagParse.log).toEqual([]);
     const abcde = tagParse.tag.tag('a', 'b', 'c', 'd', 'e');
     expect(abcde).toBeDefined();
@@ -174,7 +175,7 @@ describe('Tag access', () => {
   });
   test('just array', () => {
     const strToParse = 'a=[b]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     const aval = a?.array();
@@ -186,7 +187,7 @@ describe('Tag access', () => {
   });
   test('tag path into array', () => {
     const strToParse = 'a.b.c = [{d=e}]';
-    const tagParse = Tag.fromTagLine(strToParse);
+    const tagParse = tagFromLine(strToParse);
     expect(tagParse.log).toEqual([]);
     const abcde = tagParse.tag.tag('a', 'b', 'c', 0, 'd');
     expect(abcde).toBeDefined();
@@ -194,7 +195,7 @@ describe('Tag access', () => {
   });
   test('array as text', () => {
     const strToParse = 'a=[b]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -202,7 +203,7 @@ describe('Tag access', () => {
   });
   test('text as array', () => {
     const strToParse = 'a=b';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -210,7 +211,7 @@ describe('Tag access', () => {
   });
   test('just numeric', () => {
     const strToParse = 'a=7';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -220,7 +221,7 @@ describe('Tag access', () => {
   });
   test('text as numeric', () => {
     const strToParse = 'a=seven';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -229,7 +230,7 @@ describe('Tag access', () => {
   });
   test('array as numeric', () => {
     const strToParse = 'a=[seven]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -238,7 +239,7 @@ describe('Tag access', () => {
   });
   test('full text array', () => {
     const strToParse = 'a=[b,c]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -247,7 +248,7 @@ describe('Tag access', () => {
   });
   test('filtered text array', () => {
     const strToParse = 'a=[b,c,{d}]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -256,7 +257,7 @@ describe('Tag access', () => {
   });
   test('full numeric array', () => {
     const strToParse = 'a=[1,2]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -265,7 +266,7 @@ describe('Tag access', () => {
   });
   test('filtered numeric array', () => {
     const strToParse = 'a=[1,2,three]';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -274,15 +275,15 @@ describe('Tag access', () => {
   });
   test('has', () => {
     const strToParse = 'a b.d';
-    const getTags = Tag.fromTagLine(strToParse);
+    const getTags = tagFromLine(strToParse);
     expect(getTags.log).toEqual([]);
     expect(getTags.tag.has('a')).toBeTruthy();
     expect(getTags.tag.has('b', 'd')).toBeTruthy();
     expect(getTags.tag.has('c')).toBeFalsy();
   });
   test('property access on existing tag (which does not yet have properties)', () => {
-    const parsePlot = Tag.fromTagLine('# plot');
-    const parsed = Tag.fromTagLine('# plot.x=2', parsePlot.tag);
+    const parsePlot = tagFromLine('# plot');
+    const parsed = tagFromLine('# plot.x=2', parsePlot.tag);
     const allTags = parsed.tag;
     const plotTag = allTags.tag('plot');
     const xTag = plotTag!.tag('x');
@@ -312,7 +313,7 @@ describe('Tag access', () => {
     expect(ext.toString()).toBe('# a.b = [{ a = 3 }] c = [foo { a = 4 }]\n');
   });
   test('soft remove', () => {
-    const base = Tag.fromTagLine('# a.b.c = [{ d = 1 }]').tag;
+    const base = tagFromLine('# a.b.c = [{ d = 1 }]').tag;
     const ext = base.delete('a', 'b', 'c', 0, 'd').delete('a', 'b', 'c', 0);
     expect(ext).tagsAre({
       a: {properties: {b: {properties: {c: {eq: []}}}}},
@@ -320,7 +321,7 @@ describe('Tag access', () => {
     expect(ext.toString()).toBe('# a.b.c = []\n');
   });
   test('hard remove', () => {
-    const base = Tag.fromTagLine('# hello').tag;
+    const base = tagFromLine('# hello').tag;
     const ext = base.unset('goodbye').unset('a', 'dieu');
     expect(ext).tagsAre({
       hello: {},
@@ -407,47 +408,47 @@ describe('Tag access', () => {
   });
   describe('parsing escape sequences in strings', () => {
     test('\\n becomes newline', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\nworld"');
+      const {tag} = tagFromLine('x="hello\\nworld"');
       expect(tag.text('x')).toBe('hello\nworld');
     });
     test('\\t becomes tab', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\tworld"');
+      const {tag} = tagFromLine('x="hello\\tworld"');
       expect(tag.text('x')).toBe('hello\tworld');
     });
     test('\\r becomes carriage return', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\rworld"');
+      const {tag} = tagFromLine('x="hello\\rworld"');
       expect(tag.text('x')).toBe('hello\rworld');
     });
     test('\\b becomes backspace', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\bworld"');
+      const {tag} = tagFromLine('x="hello\\bworld"');
       expect(tag.text('x')).toBe('hello\bworld');
     });
     test('\\f becomes form feed', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\fworld"');
+      const {tag} = tagFromLine('x="hello\\fworld"');
       expect(tag.text('x')).toBe('hello\fworld');
     });
     test('\\uXXXX becomes unicode character', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\u0026world"');
+      const {tag} = tagFromLine('x="hello\\u0026world"');
       expect(tag.text('x')).toBe('hello&world');
     });
     test('\\uXXXX with uppercase hex', () => {
-      const {tag} = Tag.fromTagLine('x="\\u003F"');
+      const {tag} = tagFromLine('x="\\u003F"');
       expect(tag.text('x')).toBe('?');
     });
     test('\\\\ becomes backslash', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\\\world"');
+      const {tag} = tagFromLine('x="hello\\\\world"');
       expect(tag.text('x')).toBe('hello\\world');
     });
     test('\\" becomes double quote', () => {
-      const {tag} = Tag.fromTagLine('x="hello\\"world"');
+      const {tag} = tagFromLine('x="hello\\"world"');
       expect(tag.text('x')).toBe('hello"world');
     });
     test("\\' in single quoted string", () => {
-      const {tag} = Tag.fromTagLine("x='hello\\'world'");
+      const {tag} = tagFromLine("x='hello\\'world'");
       expect(tag.text('x')).toBe("hello'world");
     });
     test('\\` in backtick identifier', () => {
-      const {tag} = Tag.fromTagLine('`hello\\`world`=value');
+      const {tag} = tagFromLine('`hello\\`world`=value');
       expect(tag.text('hello`world')).toBe('value');
     });
   });
@@ -455,19 +456,19 @@ describe('Tag access', () => {
 
 describe('Tag prefix handling', () => {
   test('# prefix skips to first space', () => {
-    const {tag, log} = Tag.fromTagLine('# name=value');
+    const {tag, log} = tagFromLine('# name=value');
     expect(log).toEqual([]);
     expect(tag.text('name')).toEqual('value');
   });
 
   test('#(docs) prefix skips to first space', () => {
-    const {tag, log} = Tag.fromTagLine('#(docs) name=value');
+    const {tag, log} = tagFromLine('#(docs) name=value');
     expect(log).toEqual([]);
     expect(tag.text('name')).toEqual('value');
   });
 
   test('# with no space returns empty tag', () => {
-    const {tag, log} = Tag.fromTagLine('#noSpace');
+    const {tag, log} = tagFromLine('#noSpace');
     expect(log).toEqual([]);
     expect(tag.properties).toBeUndefined();
   });
@@ -475,7 +476,7 @@ describe('Tag prefix handling', () => {
   test('everything after # on same line is ignored (comment behavior)', () => {
     // When parsing a single tag line, # at start means "skip prefix"
     // The rest of the line after the space is the tag content
-    const {tag, log} = Tag.fromTagLine('# name=value # this is not a comment');
+    const {tag, log} = tagFromLine('# name=value # this is not a comment');
     expect(log).toEqual([]);
     // The "# this is not a comment" is parsed as tag content, not ignored
     // because single-line parsing doesn't have comment support
@@ -485,19 +486,19 @@ describe('Tag prefix handling', () => {
 
 describe('Empty and whitespace input', () => {
   test('empty string produces empty tag', () => {
-    const {tag, log} = Tag.fromTagLine('');
+    const {tag, log} = tagFromLine('');
     expect(log).toEqual([]);
     expect(tag.properties).toBeUndefined();
   });
 
   test('whitespace only produces empty tag', () => {
-    const {tag, log} = Tag.fromTagLine('   ');
+    const {tag, log} = tagFromLine('   ');
     expect(log).toEqual([]);
     expect(tag.properties).toBeUndefined();
   });
 
   test('whitespace with comment produces empty tag', () => {
-    const {tag, log} = Tag.fromTagLine('   # this is a comment');
+    const {tag, log} = tagFromLine('   # this is a comment');
     expect(log).toEqual([]);
     expect(tag.properties).toBeUndefined();
   });
@@ -505,7 +506,7 @@ describe('Empty and whitespace input', () => {
 
 describe('Error handling', () => {
   test('syntax error has 0-based line and offset', () => {
-    const {log} = Tag.fromTagLine('a = [');
+    const {log} = tagFromLine('a = [');
     expect(log.length).toBe(1);
     expect(log[0].code).toBe('tag-parse-syntax-error');
     expect(log[0].line).toBe(0);
@@ -514,7 +515,7 @@ describe('Error handling', () => {
   });
 
   test('error offset accounts for input position', () => {
-    const {log} = Tag.fromTagLine('valid another_valid oops=');
+    const {log} = tagFromLine('valid another_valid oops=');
     expect(log.length).toBe(1);
     expect(log[0].line).toBe(0);
     // Error should be near end of line
@@ -523,7 +524,7 @@ describe('Error handling', () => {
 
   test('error offset after prefix stripping', () => {
     // "# " is stripped, so input becomes " a = ["
-    const {log} = Tag.fromTagLine('# a = [');
+    const {log} = tagFromLine('# a = [');
     expect(log.length).toBe(1);
     expect(log[0].line).toBe(0);
     // Offset is relative to stripped input (after "#")
@@ -532,7 +533,7 @@ describe('Error handling', () => {
 
   test('longer prefix is stripped correctly', () => {
     // "#(docs) " is stripped
-    const {log} = Tag.fromTagLine('#(docs) a = [');
+    const {log} = tagFromLine('#(docs) a = [');
     expect(log.length).toBe(1);
     expect(log[0].line).toBe(0);
     // Offset is relative to stripped input (after "#(docs)")
@@ -542,7 +543,7 @@ describe('Error handling', () => {
 
 function idempotent(tag: Tag) {
   const str = tag.toString();
-  const clone = Tag.fromTagLine(str).tag;
+  const clone = tagFromLine(str).tag;
   clone.prefix = tag.prefix;
   expect(clone.toString()).toBe(str);
 }

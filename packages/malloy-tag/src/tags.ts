@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {parseTagLine} from './peggy';
-
 export interface TagError {
   message: string;
   line: number;
@@ -124,41 +122,6 @@ export class Tag implements TagInterface {
     }
     str += `\n${spaces}}`;
     return str;
-  }
-
-  /**
-   * Parse a line of Malloy tag language into a Tag which can be queried
-   * @param source -- The source line to be parsed. If the string starts with #, then it skips
-   *   all characters up to the first space.
-   * @param extending A tag which this line will be extending
-   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }. Error positions
-   *   are 0-based line/offset within the input string.
-   */
-  static fromTagLine(source: string, extending?: Tag): TagParse {
-    return parseTagLine(source, extending);
-  }
-
-  /**
-   * Parse multiple lines of Malloy tag language, merging them into a single Tag
-   * @param lines -- The source lines to be parsed. If a string starts with #, then it skips
-   *   all characters up to the first space.
-   * @param extending A tag which these lines will be extending
-   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }. Error line numbers
-   *   indicate the index in the lines array where the error occurred.
-   */
-  static fromTagLines(lines: string[], extending?: Tag) {
-    const allErrs: TagError[] = [];
-    let current: Tag | undefined = extending;
-    for (let i = 0; i < lines.length; i++) {
-      const text = lines[i];
-      const noteParse = parseTagLine(text, current);
-      current = noteParse.tag;
-      // Adjust error line to be the index in the lines array
-      for (const err of noteParse.log) {
-        allErrs.push({...err, line: i + err.line});
-      }
-    }
-    return {tag: current, log: allErrs};
   }
 
   constructor(from: TagInterface = {}) {

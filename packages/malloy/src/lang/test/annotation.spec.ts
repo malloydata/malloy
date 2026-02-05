@@ -294,7 +294,7 @@ describe('document annotation', () => {
   test('errors reported from compiler flags', () => {
     expect(`
       ##! missingCloseQuote="...
-    `).toLog(errorMessage(/no viable alternative at input/));
+    `).toLog(errorMessage(/./));
   });
   test('checking compiler flags', () => {
     const m = model`

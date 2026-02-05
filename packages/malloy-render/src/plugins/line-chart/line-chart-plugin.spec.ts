@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
+import {tagFromLine} from '@malloydata/malloy-tag';
 import type {LineChartSettings} from './line-chart-settings';
 import {defaultLineChartSettings} from './line-chart-settings';
 import {lineChartSettingsToTag} from './settings-to-tag';
@@ -241,7 +241,7 @@ describe('LineChartPlugin settingsToTag', () => {
     expect(tagString).toContain('limit = 8');
 
     // Parse it back to verify structure
-    const parsedTag = Tag.fromTagLine(tagString).tag;
+    const parsedTag = tagFromLine(tagString).tag;
     expect(parsedTag.text('viz')).toBe('line');
     expect(parsedTag.text('viz', 'x')).toBe('date');
     expect(parsedTag.text('viz', 'y')).toBe('sales');
@@ -264,7 +264,7 @@ describe('LineChartPlugin settingsToTag', () => {
     expect(tagString).toContain('y = [revenue, cost, "profit margin"]');
 
     // Verify the array can be parsed back
-    const parsedTag = Tag.fromTagLine(tagString).tag;
+    const parsedTag = tagFromLine(tagString).tag;
     const yArray = parsedTag.array('viz', 'y');
     expect(yArray).toBeDefined();
     expect(yArray?.length).toBe(3);
@@ -297,7 +297,7 @@ describe('LineChartPlugin settingsToTag', () => {
     expect(tagString).not.toContain('["Sales $"]');
 
     // Verify the values can be parsed back correctly
-    const parsedTag = Tag.fromTagLine(tagString).tag;
+    const parsedTag = tagFromLine(tagString).tag;
     expect(parsedTag.text('viz', 'x')).toBe('brand');
     expect(parsedTag.text('viz', 'y')).toBe('Sales $');
   });
@@ -318,7 +318,7 @@ describe('LineChartPlugin settingsToTag', () => {
     expect(tagString).toContain('y = [Revenue, Cost, "Profit Margin"]');
 
     // Verify the array can be parsed back
-    const parsedTag = Tag.fromTagLine(tagString).tag;
+    const parsedTag = tagFromLine(tagString).tag;
     const yArray = parsedTag.array('viz', 'y');
     expect(yArray).toBeDefined();
     expect(yArray?.length).toBe(3);
