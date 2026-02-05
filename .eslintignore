@@ -1,5 +1,6 @@
 build/
 packages/malloy-malloy-sql/src/grammar
+packages/malloy-tag/src/peggy/peg-tag-parser.js
 packages/malloy-syntax-highlight/**/*.monarch.ts
 packages/malloy-interfaces/docs
 packages/malloy-query-builder/docs
