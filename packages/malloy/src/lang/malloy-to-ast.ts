@@ -102,7 +102,7 @@ export class MalloyToAST
     this.timer = new Timer('generate_ast');
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
     for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = Tag.fromTagLine(flag, 0, this.compilerFlags);
+      const withNewTag = Tag.fromTagLine(flag, this.compilerFlags);
       this.compilerFlags = withNewTag.tag;
     }
     this.timer.contribute([parseCompilerFlagsTimer.stop()]);

@@ -60,7 +60,7 @@ export function annotationToTag(
     }
   }
   for (const note of matchingNotes) {
-    const noteParse = Tag.fromTagLine(note.text, 0, extending);
+    const noteParse = Tag.fromTagLine(note.text, extending);
     extending = noteParse.tag;
     allErrs.push(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
@@ -70,10 +70,25 @@ export function annotationToTag(
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {
-  const loc = {
-    line: note.at.range.start.line,
-    character: note.at.range.start.character + e.offset,
-  };
+  // Calculate prefix length (same logic as parseTagLine)
+  let prefixLen = 0;
+  if (note.text[0] === '#') {
+    const skipTo = note.text.indexOf(' ');
+    if (skipTo > 0) {
+      prefixLen = skipTo;
+    }
+  }
+
+  // Map error position to source location
+  // e.line is 0-based line within the (stripped) input
+  // e.offset is 0-based column within that line
+  const line = note.at.range.start.line + e.line;
+  const character =
+    e.line === 0
+      ? note.at.range.start.character + prefixLen + e.offset
+      : e.offset;
+
+  const loc = {line, character};
   return {
     code: 'tag-parse-error',
     severity: 'error',

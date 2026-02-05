@@ -15,13 +15,12 @@ import * as parser from './peg-tag-parser';
  * @param source - The source line to parse. If the string starts with #,
  *   all characters up to the first space are skipped.
  * @param extending - A tag which this line will extend
- * @param onLine - Line number for error reporting
- * @returns TagParse with the resulting tag and any errors
+ * @returns TagParse with the resulting tag and any errors. Error positions
+ *   are 0-based line/offset within the input string (after prefix stripping).
  */
 export function parseTagLine(
   source: string,
-  extending: Tag | undefined,
-  onLine: number
+  extending: Tag | undefined
 ): TagParse {
   // Skip the prefix if present (e.g., "# " or "#(docs) ")
   if (source[0] === '#') {
@@ -44,17 +43,18 @@ export function parseTagLine(
         message: string;
         location: {start: {line: number; column: number}};
       };
+      // Return 0-based line and offset within the input string
       errors.push({
         code: 'tag-parse-syntax-error',
         message: peggyError.message,
-        line: onLine,
+        line: peggyError.location.start.line - 1,
         offset: peggyError.location.start.column - 1,
       });
     } else {
       errors.push({
         code: 'tag-parse-syntax-error',
         message: String(e),
-        line: onLine,
+        line: 0,
         offset: 0,
       });
     }
@@ -65,11 +65,12 @@ export function parseTagLine(
   const result = interpreter.execute(statements, extending);
 
   // Convert interpreter errors to TagErrors
+  // Interpreter errors don't have location info, so use 0
   for (const err of result.errors) {
     errors.push({
       code: err.code,
       message: err.message,
-      line: onLine,
+      line: 0,
       offset: 0,
     });
   }

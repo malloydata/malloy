@@ -38,7 +38,7 @@ declare global {
 expect.extend({
   tagsAre(src: string | Tag, result: Tag) {
     if (typeof src === 'string') {
-      const {tag, log} = Tag.fromTagLine(src, undefined);
+      const {tag, log} = Tag.fromTagLine(src);
       const errs = log.map(e => e.message);
       if (log.length > 0) {
         return {
