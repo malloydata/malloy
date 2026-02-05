@@ -743,6 +743,60 @@ required: {
 
 This validates that `items` is an array where every element has `size` (number) and `color` (string). Errors include the array index in the path (e.g., `items.1.size`).
 
+### Custom Types
+
+Define reusable types in the `types` section and reference them by name:
+
+```motly
+types: {
+  personType: {
+    required: {
+      name = string
+      age = number
+    }
+  }
+}
+required: {
+  user = personType
+  manager = personType
+}
+```
+
+Custom type names cannot conflict with built-in types (string, number, etc.).
+
+#### Custom Type Arrays
+
+Use quoted `"typeName[]"` for arrays of custom types:
+
+```motly
+types: {
+  personType: {
+    required: { name = string age = number }
+  }
+}
+required: {
+  people = "personType[]"
+}
+```
+
+#### Recursive Types
+
+Custom types can reference themselves for recursive structures:
+
+```motly
+types: {
+  treeNode: {
+    required: { value = number }
+    optional: { children = "treeNode[]" }
+  }
+}
+required: {
+  root = treeNode
+}
+```
+
+This validates trees of arbitrary depth where each node has a `value` and optional `children`.
+
 ### Unknown Properties
 
 By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown = @true`:

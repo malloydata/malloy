@@ -66,26 +66,43 @@ function getArrayElementType(
 
 interface TypeResult {
   type?: SchemaType;
+  typeRef?: string;
+  typeRefArray?: boolean;
   invalidType?: string;
 }
 
-function getExpectedType(schemaProp: Tag): TypeResult {
-  // Check for shorthand: prop=string, prop=number, etc.
+type TypesMap = Record<string, Tag>;
+
+function parseTypeSpecifier(value: string, customTypes: TypesMap): TypeResult {
+  // Check built-in types first (including built-in array types)
+  if (isValidSchemaType(value)) {
+    return {type: value};
+  }
+
+  // Check for array suffix for custom types
+  const isArray = value.endsWith('[]');
+  const baseName = isArray ? value.slice(0, -2) : value;
+
+  // Check if it's a custom type reference
+  if (baseName in customTypes) {
+    return {typeRef: baseName, typeRefArray: isArray};
+  }
+
+  // Unknown type
+  return {invalidType: value};
+}
+
+function getExpectedType(schemaProp: Tag, customTypes: TypesMap): TypeResult {
+  // Check for shorthand: prop=string, prop=number, prop=customType, etc.
   const eqValue = schemaProp.text();
   if (eqValue !== undefined) {
-    if (isValidSchemaType(eqValue)) {
-      return {type: eqValue};
-    }
-    return {invalidType: eqValue};
+    return parseTypeSpecifier(eqValue, customTypes);
   }
 
   // Check for full form: prop: { type=string }
   const typeValue = schemaProp.text('type');
   if (typeValue !== undefined) {
-    if (isValidSchemaType(typeValue)) {
-      return {type: typeValue};
-    }
-    return {invalidType: typeValue};
+    return parseTypeSpecifier(typeValue, customTypes);
   }
 
   return {};
@@ -176,7 +193,8 @@ function validateProperties(
   schema: Tag,
   path: string[],
   errors: SchemaError[],
-  allowUnknown: boolean
+  allowUnknown: boolean,
+  customTypes: TypesMap
 ): void {
   const requiredSection = schema.tag('required');
   const optionalSection = schema.tag('optional');
@@ -197,7 +215,15 @@ function validateProperties(
     }
 
     const schemaProp = Tag.tagFrom(requiredProps[propName]);
-    validateProperty(propTag, schemaProp, propName, path, errors, allowUnknown);
+    validateProperty(
+      propTag,
+      schemaProp,
+      propName,
+      path,
+      errors,
+      allowUnknown,
+      customTypes
+    );
   }
 
   // Check optional properties that exist
@@ -208,7 +234,15 @@ function validateProperties(
     }
 
     const schemaProp = Tag.tagFrom(optionalProps[propName]);
-    validateProperty(propTag, schemaProp, propName, path, errors, allowUnknown);
+    validateProperty(
+      propTag,
+      schemaProp,
+      propName,
+      path,
+      errors,
+      allowUnknown,
+      customTypes
+    );
   }
 
   // Check for unknown properties
@@ -232,10 +266,16 @@ function validateProperty(
   propName: string,
   parentPath: string[],
   errors: SchemaError[],
-  allowUnknown: boolean
+  allowUnknown: boolean,
+  customTypes: TypesMap
 ): void {
   const path = [...parentPath, propName];
-  const {type: expectedType, invalidType} = getExpectedType(schemaProp);
+  const {
+    type: expectedType,
+    typeRef,
+    typeRefArray,
+    invalidType,
+  } = getExpectedType(schemaProp, customTypes);
 
   if (invalidType !== undefined) {
     errors.push({
@@ -244,6 +284,51 @@ function validateProperty(
       code: 'invalid-schema',
     });
     return; // Don't continue validation with invalid schema
+  }
+
+  // Handle custom type reference
+  if (typeRef !== undefined) {
+    const refSchema = customTypes[typeRef];
+    // Use the referenced type's allowUnknown setting, not the parent's
+    const refAllowUnknown = refSchema.isTrue('allowUnknown');
+
+    if (typeRefArray) {
+      // Validate as array of custom type
+      const actualType = getActualType(propTag);
+      if (!actualType.endsWith('[]')) {
+        errors.push({
+          message: `Property '${propName}' has wrong type: expected '${typeRef}[]', got '${actualType}'`,
+          path,
+          code: 'wrong-type',
+        });
+        return;
+      }
+
+      const array = propTag.array();
+      if (array) {
+        for (let i = 0; i < array.length; i++) {
+          validateProperties(
+            array[i],
+            refSchema,
+            [...path, String(i)],
+            errors,
+            refAllowUnknown,
+            customTypes
+          );
+        }
+      }
+    } else {
+      // Validate against referenced type schema
+      validateProperties(
+        propTag,
+        refSchema,
+        path,
+        errors,
+        refAllowUnknown,
+        customTypes
+      );
+    }
+    return;
   }
 
   if (expectedType !== undefined) {
@@ -274,12 +359,20 @@ function validateProperty(
             schemaProp,
             [...path, String(i)],
             errors,
-            allowUnknown
+            allowUnknown,
+            customTypes
           );
         }
       }
     } else {
-      validateProperties(propTag, schemaProp, path, errors, allowUnknown);
+      validateProperties(
+        propTag,
+        schemaProp,
+        path,
+        errors,
+        allowUnknown,
+        customTypes
+      );
     }
   }
 }
@@ -290,14 +383,14 @@ function validateProperty(
  * The schema is itself a Tag that defines required and optional properties:
  *
  * ```motly
+ * types: {
+ *   itemType: {
+ *     required: { name=string price=number }
+ *   }
+ * }
  * required: {
  *   color=string
- *   size: {
- *     required: {
- *       width=number
- *       height=number
- *     }
- *   }
+ *   items="itemType[]"
  * }
  * optional: {
  *   border=number
@@ -306,6 +399,7 @@ function validateProperty(
  *
  * Type specifiers: string, number, boolean, date, tag, any
  * Array types: string[], number[], boolean[], date[], tag[], any[]
+ * Custom types: defined in `types` section, referenced by name or name[]
  *
  * @param tag The tag to validate
  * @param schema The schema to validate against (as a Tag)
@@ -314,6 +408,16 @@ function validateProperty(
 export function validateTag(tag: Tag, schema: Tag): SchemaError[] {
   const errors: SchemaError[] = [];
   const allowUnknown = schema.isTrue('allowUnknown');
-  validateProperties(tag, schema, [], errors, allowUnknown);
+
+  // Extract custom types from schema
+  const typesSection = schema.tag('types');
+  const customTypes: TypesMap = {};
+  if (typesSection) {
+    for (const [name, typeDef] of Object.entries(typesSection.dict)) {
+      customTypes[name] = typeDef;
+    }
+  }
+
+  validateProperties(tag, schema, [], errors, allowUnknown, customTypes);
   return errors;
 }
