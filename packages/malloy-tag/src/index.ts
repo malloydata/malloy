@@ -7,3 +7,5 @@
 export * from './tags';
 export {parseTag} from './peggy';
 export * as ParseUtil from './util';
+export {validateTag} from './schema';
+export type {SchemaError} from './schema';

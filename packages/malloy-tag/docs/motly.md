@@ -623,3 +623,243 @@ if (app.has('database', 'credentials')) {
   const username = app.text('database', 'credentials', 'username');
 }
 ```
+
+## Schema Validation
+
+MOTLY supports schema validation to ensure configuration files conform to expected structures. Schemas are themselves written in MOTLY format.
+
+### Defining a Schema
+
+A schema defines `required` and `optional` properties with their expected types:
+
+```motly
+required: {
+  name = string
+  port = number
+  enabled = boolean
+}
+optional: {
+  timeout = number
+  tags = "string[]"
+}
+```
+
+### Type Specifiers
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `string` | Text value | `name = string` |
+| `number` | Numeric value | `port = number` |
+| `boolean` | True or false | `enabled = boolean` |
+| `date` | ISO 8601 date | `created = date` |
+| `tag` | Nested object (no scalar value) | `config = tag` |
+| `any` | Any type allowed | `value = any` |
+| `"string[]"` | Array of strings | `tags = "string[]"` |
+| `"number[]"` | Array of numbers | `ports = "number[]"` |
+| `"boolean[]"` | Array of booleans | `flags = "boolean[]"` |
+| `"date[]"` | Array of dates | `dates = "date[]"` |
+| `"tag[]"` | Array of objects | `items = "tag[]"` |
+| `"any[]"` | Array of any type | `items = "any[]"` |
+
+Note: Array types must be quoted to prevent the `[]` from being parsed as an array literal.
+
+### Nested Schemas
+
+Define nested object structures by nesting `required` and `optional` blocks:
+
+```motly
+required: {
+  database: {
+    required: {
+      host = string
+      port = number
+    }
+    optional: {
+      ssl = boolean
+      pool: {
+        required: {
+          min = number
+          max = number
+        }
+      }
+    }
+  }
+}
+```
+
+### Combining Type and Nested Validation
+
+Properties can have both a type constraint and nested property validation. Use the shorthand form:
+
+```motly
+required: {
+  server = tag {
+    required: {
+      host = string
+      port = number
+    }
+  }
+}
+```
+
+Or the full form with `type`:
+
+```motly
+required: {
+  server: {
+    type = tag
+    required: {
+      host = string
+      port = number
+    }
+  }
+}
+```
+
+This works for any type. For example, validating a property that must be a string but can also have metadata:
+
+```motly
+required: {
+  name = string {
+    optional: { locale = string }
+  }
+}
+```
+
+### Array Element Validation
+
+For arrays of objects (`tag[]`), the nested schema validates each element:
+
+```motly
+required: {
+  items = "tag[]" {
+    required: {
+      size = number
+      color = string
+    }
+  }
+}
+```
+
+This validates that `items` is an array where every element has `size` (number) and `color` (string). Errors include the array index in the path (e.g., `items.1.size`).
+
+### Unknown Properties
+
+By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown = @true`:
+
+```motly
+allowUnknown = @true
+required: {
+  name = string
+}
+```
+
+### Validation API
+
+```typescript
+import {parseTag, validateTag} from '@malloydata/malloy-tag';
+
+// Parse the configuration
+const {tag: config} = parseTag(`
+  name = "my-app"
+  port = 8080
+  enabled = @true
+  tags = [web, api, production]
+`);
+
+// Parse the schema
+const {tag: schema} = parseTag(`
+  required: {
+    name = string
+    port = number
+    enabled = boolean
+  }
+  optional: {
+    timeout = number
+    tags = "string[]"
+  }
+`);
+
+// Validate
+const errors = validateTag(config, schema);
+
+if (errors.length === 0) {
+  console.log('Configuration is valid!');
+} else {
+  for (const error of errors) {
+    console.log(`${error.code}: ${error.message} at ${error.path.join('.')}`);
+  }
+}
+```
+
+### Error Codes
+
+| Code | Description |
+|------|-------------|
+| `missing-required` | A required property is not present |
+| `wrong-type` | Property value has incorrect type |
+| `unknown-property` | Property not defined in schema |
+| `invalid-schema` | Schema contains invalid type (e.g., typo like `stirng`) |
+
+### Complete Example
+
+**Schema (app-schema.motly):**
+
+```motly
+required: {
+  app: {
+    required: {
+      name = string
+      version = number
+    }
+    optional: {
+      debug = boolean
+    }
+  }
+  server: {
+    required: {
+      host = string
+      port = number
+    }
+    optional: {
+      ssl = boolean
+      timeout = number
+    }
+  }
+}
+optional: {
+  features = "string[]"
+  metadata = tag
+}
+```
+
+**Configuration (app.motly):**
+
+```motly
+app: {
+  name = "My Application"
+  version = 1.2
+  debug = @false
+}
+
+server: {
+  host = localhost
+  port = 8080
+  ssl = @true
+}
+
+features = [logging, metrics]
+```
+
+**Validation:**
+
+```typescript
+import {parseTag, validateTag} from '@malloydata/malloy-tag';
+import * as fs from 'fs';
+
+const {tag: config} = parseTag(fs.readFileSync('app.motly', 'utf-8'));
+const {tag: schema} = parseTag(fs.readFileSync('app-schema.motly', 'utf-8'));
+
+const errors = validateTag(config, schema);
+// errors = [] (valid configuration)
+```

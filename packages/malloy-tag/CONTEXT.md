@@ -1,6 +1,6 @@
-# Malloy Tag Language
+# Malloy Tag Language (MOTLY)
 
-The Malloy Tag Language is a concise, readable syntax for adding structured metadata to Malloy objects through annotations. It's designed to work seamlessly with Malloy's annotation system.
+The Malloy Tag Language (also called MOTLY - Malloy Object Tagging Language) is a concise, readable syntax for adding structured metadata to Malloy objects through annotations. It's designed to work seamlessly with Malloy's annotation system and can also be used as a standalone configuration language.
 
 ## Purpose
 
@@ -20,29 +20,78 @@ The Tag Language supports several data types:
 ```
 A tag name without a value is a boolean (implicitly `true`).
 
+### Typed Values
+Values prefixed with `@` are typed:
+```malloy
+# enabled=@true
+# debug=@false
+# created=@2024-01-15
+# updated=@2024-01-15T10:30:00Z
+```
+
 ### String Values
 ```malloy
 # color=blue
 # name="User Name"
+# description="""
+Multi-line string
+with preserved newlines.
+"""
 ```
-Unquoted strings for simple values, quoted strings for values with spaces or special characters.
+Unquoted strings for simple values (alphanumeric and underscore), quoted strings for values with spaces or special characters, triple-quoted for multi-line.
 
 ### Numeric Values
 ```malloy
 # size=10
 # width=100.5
+# rate=-0.05
 ```
 Numbers are automatically parsed as numeric types.
 
+### Arrays
+```malloy
+# colors=[red, green, blue]
+# ports=[80, 443, 8080]
+# users=[{ name=alice role=admin }, { name=bob role=user }]
+```
+
 ### Nested Properties
 ```malloy
-# box { width=100 height=200 }
+# box: { width=100 height=200 }
 ```
-Curly braces create nested property groups.
+Colon and curly braces create nested property groups.
+
+### Deep Path Notation
+```malloy
+# database.connection.pool.max=100
+```
+Dot notation for setting nested values directly.
+
+### Delete Property
+```malloy
+# -deprecated_field
+```
+Minus prefix removes a property.
 
 ### Combined Example
 ```malloy
-#(myApp) hidden color=blue size=10 box { width=100 height=200 } name="Blue Thing"
+#(myApp) hidden color=blue size=10 box: { width=100 height=200 } name="Blue Thing"
+```
+
+## Colon vs Space Syntax
+
+Two ways to add properties to objects with different semantics:
+
+**Colon syntax (`: { }`) replaces all properties:**
+```malloy
+# server: { host=localhost port=8080 }
+# server: { url="http://example.com" }  # Replaces - only url remains
+```
+
+**Space syntax (`{ }`) merges with existing properties:**
+```malloy
+# server: { host=localhost }
+# server { port=8080 }  # Merges - both host and port exist
 ```
 
 ## Annotation Prefixes
@@ -82,14 +131,39 @@ The expected workflow for using tag annotations:
 ## Implementation
 
 The `malloy-tag` package provides:
-- **Parser** for tag language syntax
+- **Peggy-based parser** for tag language syntax
+- **Tag class** with methods for type-safe value access
 - **Type definitions** for parsed tag structures
-- **Utilities** for working with tags in JavaScript/TypeScript
+
+### Key API Methods
+
+```typescript
+import {Tag} from '@malloydata/malloy-tag';
+
+const {tag, log} = Tag.parse('enabled=@true port=8080 name="My App"');
+
+// Convert to plain JavaScript object
+const obj = tag.toObject();  // { enabled: true, port: 8080, name: "My App" }
+
+// Type-safe accessors
+tag.text('name');           // "My App"
+tag.numeric('port');        // 8080
+tag.boolean('enabled');     // true
+tag.isTrue('enabled');      // true
+tag.date('created');        // Date object
+tag.textArray('features');  // string[]
+tag.has('name');            // true
+
+// Nested access
+tag.text('server', 'host');
+tag.tag('server');          // Get nested Tag object
+```
 
 ## Documentation
 
 For complete tag language syntax and examples, see:
-https://docs.malloydata.dev/documentation/language/tags
+- `docs/motly.md` in this package (comprehensive reference)
+- https://docs.malloydata.dev/documentation/language/tags
 
 ## Important Notes
 
