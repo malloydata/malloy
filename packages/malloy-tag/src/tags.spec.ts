@@ -146,9 +146,23 @@ describe('tagParse to Tag', () => {
       },
     ],
     ['can remove.properties -...', {}],
-    // Colon syntax for replacing properties (same as name = { })
+    // Colon syntax REPLACES properties (deletes old props)
     ['name: { prop }', {name: {properties: {prop: {}}}}],
     ['name: { a=1 b=2 }', {name: {properties: {a: {eq: '1'}, b: {eq: '2'}}}}],
+    ['name { old } name: { new }', {name: {properties: {new: {}}}}],
+    // Space syntax MERGES properties (keeps old props)
+    ['name { old } name { new }', {name: {properties: {old: {}, new: {}}}}],
+    // Colon and space syntax with dotted paths
+    ['a.b: { c }', {a: {properties: {b: {properties: {c: {}}}}}}],
+    [
+      'a.b { c } a.b { d }',
+      {a: {properties: {b: {properties: {c: {}, d: {}}}}}},
+    ],
+    ['a.b { c } a.b: { d }', {a: {properties: {b: {properties: {d: {}}}}}}],
+    // Colon syntax deletes existing value
+    ['name=val name: { prop }', {name: {properties: {prop: {}}}}],
+    // Space syntax preserves existing value
+    ['name=val name { prop }', {name: {eq: 'val', properties: {prop: {}}}}],
     // Multi-line input
     [
       'person {\n  name="ted"\n  age=42\n}',
