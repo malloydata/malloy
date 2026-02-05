@@ -177,13 +177,6 @@ textString
   / dqString
   / bareString
 
-// String or number (for array elements which could be either)
-string
-  = tripleString
-  / sqString
-  / dqString
-  / bareString
-
 // Bare string: alphanumeric and underscore
 bareString
   = chars:$[0-9A-Za-z_\u00C0-\u024F\u1E00-\u1EFF]+ { return chars; }
