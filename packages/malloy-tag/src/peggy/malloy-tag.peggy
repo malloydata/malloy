@@ -5,13 +5,19 @@
 
 {{
   // Helper to parse escape sequences in strings
+  // Handles: \b \f \n \r \t \uXXXX and passthrough for other escapes
   function parseEscapes(str) {
-    return str.replace(/\\(.)/g, (_, char) => {
-      switch (char) {
+    return str.replace(/\\(u[0-9A-Fa-f]{4}|.)/g, (match, capture) => {
+      if (capture.startsWith('u') && capture.length === 5) {
+        return String.fromCharCode(parseInt(capture.slice(1), 16));
+      }
+      switch (capture) {
+        case 'b': return '\b';
+        case 'f': return '\f';
         case 'n': return '\n';
-        case 't': return '\t';
         case 'r': return '\r';
-        default: return char;
+        case 't': return '\t';
+        default: return capture;
       }
     });
   }

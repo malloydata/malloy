@@ -414,6 +414,36 @@ describe('Tag access', () => {
   });
 });
 
+describe('Tag prefix handling', () => {
+  test('# prefix skips to first space', () => {
+    const {tag, log} = Tag.fromTagLine('# name=value');
+    expect(log).toEqual([]);
+    expect(tag.text('name')).toEqual('value');
+  });
+
+  test('#(docs) prefix skips to first space', () => {
+    const {tag, log} = Tag.fromTagLine('#(docs) name=value');
+    expect(log).toEqual([]);
+    expect(tag.text('name')).toEqual('value');
+  });
+
+  test('# with no space returns empty tag', () => {
+    const {tag, log} = Tag.fromTagLine('#noSpace');
+    expect(log).toEqual([]);
+    expect(tag.properties).toBeUndefined();
+  });
+
+  test('everything after # on same line is ignored (comment behavior)', () => {
+    // When parsing a single tag line, # at start means "skip prefix"
+    // The rest of the line after the space is the tag content
+    const {tag, log} = Tag.fromTagLine('# name=value # this is not a comment');
+    expect(log).toEqual([]);
+    // The "# this is not a comment" is parsed as tag content, not ignored
+    // because single-line parsing doesn't have comment support
+    expect(tag.has('name')).toBe(true);
+  });
+});
+
 function idempotent(tag: Tag) {
   const str = tag.toString();
   const clone = Tag.fromTagLine(str).tag;

@@ -14,20 +14,16 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "node scripts/build_parser.js",
     "build-peggy": "peggy -o src/peggy/peg-tag-parser.js src/peggy/malloy-tag.peggy",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped && rm -rf src/lib && rm -f src/peggy/peg-tag-parser.js",
-    "build": "npm run build-parser && npm run build-peggy && tsc --build && npm run generate-flow",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped && rm -f src/peggy/peg-tag-parser.js",
+    "build": "npm run build-peggy && tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "antlr4ts": "^0.5.0-alpha.4",
-    "assert": "^2.0.0",
-    "uuid": "^8.3.2"
+    "assert": "^2.0.0"
   },
   "devDependencies": {
-    "antlr4ts-cli": "^0.5.0-alpha.4",
     "peggy": "^4.2.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2"
