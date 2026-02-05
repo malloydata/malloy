@@ -1,25 +1,11 @@
 import type {TagError} from '@malloydata/malloy-tag';
-import {Tag} from '@malloydata/malloy-tag';
+import {Tag, parseTag} from '@malloydata/malloy-tag';
 import type {Annotation, Note} from './model';
 import type {LogMessage} from './lang';
 
 export interface TagParseSpec {
   prefix?: RegExp;
   extending?: Tag;
-  scopes?: Tag[];
-}
-
-export function addModelScope(
-  spec: TagParseSpec | undefined,
-  modelScope: Tag
-): TagParseSpec {
-  const useSpec = spec ? {...spec} : {};
-  if (useSpec.scopes) {
-    useSpec.scopes = useSpec.scopes.concat(modelScope);
-  } else {
-    useSpec.scopes = [modelScope];
-  }
-  return useSpec;
 }
 
 export function annotationToTaglines(
@@ -73,29 +59,36 @@ export function annotationToTag(
       matchingNotes.push(note);
     }
   }
-  for (let i = 0; i < matchingNotes.length; i++) {
-    const note = matchingNotes[i];
-    if (note.text.match(prefix)) {
-      const noteParse = Tag.fromTagLine(
-        note.text,
-        i,
-        extending,
-        ...(spec.scopes ?? [])
-      );
-      extending = noteParse.tag;
-      allErrs.push(
-        ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
-      );
-    }
+  for (const note of matchingNotes) {
+    const noteParse = parseTag(note.text, extending);
+    extending = noteParse.tag;
+    allErrs.push(
+      ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
+    );
   }
   return {tag: extending, log: allErrs};
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {
-  const loc = {
-    line: note.at.range.start.line,
-    character: note.at.range.start.character + e.offset,
-  };
+  // Calculate prefix length (same logic as parseTagLine)
+  let prefixLen = 0;
+  if (note.text[0] === '#') {
+    const skipTo = note.text.indexOf(' ');
+    if (skipTo > 0) {
+      prefixLen = skipTo;
+    }
+  }
+
+  // Map error position to source location
+  // e.line is 0-based line within the (stripped) input
+  // e.offset is 0-based column within that line
+  const line = note.at.range.start.line + e.line;
+  const character =
+    e.line === 0
+      ? note.at.range.start.character + prefixLen + e.offset
+      : e.offset;
+
+  const loc = {line, character};
   return {
     code: 'tag-parse-error',
     severity: 'error',

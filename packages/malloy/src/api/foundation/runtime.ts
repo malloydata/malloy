@@ -818,7 +818,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         for (const connName of connectionNames) {
           const conn =
             await this.runtime.connections.lookupConnection(connName);
-          connectionDigests[connName] = await conn.getDigest();
+          connectionDigests[connName] = conn.getDigest();
         }
       }
 
