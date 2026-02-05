@@ -140,7 +140,8 @@ identifier
 
 // String literals
 string
-  = sqString
+  = tripleString
+  / sqString
   / dqString
   / numericLiteral
   / bareString
@@ -149,17 +150,21 @@ string
 bareString
   = chars:$[0-9A-Za-z_\u00C0-\u024F\u1E00-\u1EFF]+ { return chars; }
 
-// Single-quoted string
+// Triple-quoted string (multi-line allowed)
+tripleString
+  = '"""' chars:$([^"\\] / '"' !('""') / "\\" .)* '"""' { return parseEscapes(chars); }
+
+// Single-quoted string (no raw newlines)
 sqString
-  = "'" chars:$([^'\\] / "\\" .)* "'" { return parseEscapes(chars); }
+  = "'" chars:$([^'\\\r\n] / "\\" .)* "'" { return parseEscapes(chars); }
 
-// Double-quoted string
+// Double-quoted string (no raw newlines)
 dqString
-  = '"' chars:$([^"\\] / "\\" .)* '"' { return parseEscapes(chars); }
+  = '"' chars:$([^"\\\r\n] / "\\" .)* '"' { return parseEscapes(chars); }
 
-// Backtick-quoted string (for identifiers with special chars)
+// Backtick-quoted string (for identifiers with special chars, no raw newlines)
 bqString
-  = '`' chars:$([^`\\] / "\\" .)* '`' { return parseEscapes(chars); }
+  = '`' chars:$([^`\\\r\n] / "\\" .)* '`' { return parseEscapes(chars); }
 
 // Numeric literals
 numericLiteral

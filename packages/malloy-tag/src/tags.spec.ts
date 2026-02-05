@@ -146,6 +146,16 @@ describe('tagParse to Tag', () => {
       },
     ],
     ['can remove.properties -...', {}],
+    // Multi-line input
+    [
+      'person {\n  name="ted"\n  age=42\n}',
+      {person: {properties: {name: {eq: 'ted'}, age: {eq: '42'}}}},
+    ],
+    // Triple-quoted strings (multi-line values)
+    ['desc="""hello"""', {desc: {eq: 'hello'}}],
+    ['desc="""line one\nline two"""', {desc: {eq: 'line one\nline two'}}],
+    ['desc="""has " quote"""', {desc: {eq: 'has " quote'}}],
+    ['desc="""has "" two quotes"""', {desc: {eq: 'has "" two quotes'}}],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
@@ -538,6 +548,21 @@ describe('Error handling', () => {
     expect(log[0].line).toBe(0);
     // Offset is relative to stripped input (after "#(docs)")
     expect(log[0].offset).toBeGreaterThan(0);
+  });
+
+  test('error on second line reports correct line number', () => {
+    // Error is on line 1 (0-based), the unclosed bracket
+    const {log} = parseTag('valid=1\ninvalid=[');
+    expect(log.length).toBe(1);
+    expect(log[0].line).toBe(1);
+    expect(log[0].offset).toBeGreaterThan(0);
+  });
+
+  test('unclosed string with newline produces error', () => {
+    // Regular strings cannot contain raw newlines - must close on same line
+    const {log} = parseTag('desc="forgot to close\n');
+    expect(log.length).toBe(1);
+    expect(log[0].line).toBe(0);
   });
 });
 

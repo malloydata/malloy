@@ -10,18 +10,10 @@ import type {TagStatement} from './statements';
 import * as parser from './dist/peg-tag-parser';
 
 /**
- * Parse a line of Malloy tag language into a Tag.
- *
- * @param source - The source line to parse. If the string starts with #,
- *   all characters up to the first space are skipped.
- * @param extending - A tag which this line will extend
- * @returns TagParse with the resulting tag and any errors. Error positions
- *   are 0-based line/offset within the input string (after prefix stripping).
+ * Parse a single line of Malloy tag language into a Tag.
+ * Internal helper - use parseTag() as the public API.
  */
-export function parseTagLine(
-  source: string,
-  extending: Tag | undefined
-): TagParse {
+function parseTagLine(source: string, extending: Tag | undefined): TagParse {
   // Skip the prefix if present (e.g., "# " or "#(docs) ")
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
@@ -83,7 +75,7 @@ export function parseTag(source: string | string[], extending?: Tag): TagParse {
   }
 
   const allErrs: TagError[] = [];
-  let current: Tag | undefined = extending;
+  let current: Tag = extending ?? new Tag({});
   for (let i = 0; i < source.length; i++) {
     const text = source[i];
     const noteParse = parseTagLine(text, current);
@@ -93,5 +85,5 @@ export function parseTag(source: string | string[], extending?: Tag): TagParse {
       allErrs.push({...err, line: i + err.line});
     }
   }
-  return {tag: current ?? new Tag({}), log: allErrs};
+  return {tag: current, log: allErrs};
 }
