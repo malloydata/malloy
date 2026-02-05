@@ -1,6 +1,6 @@
 # MOTLY Configuration Language
 
-MOTLY (Malloy Object Tree Language, Yeah!) is a lightweight, human-friendly configuration language designed for readability and ease of use. It originated as the annotation/tag language in Malloy but we are documenting it here as a possible choice for use as a configuration language.
+MOTLY is a lightweight, human-friendly configuration language designed for readability and ease of use. It originated as the annotation/tag language in Malloy but we are documenting it here as a possible choice for use as a configuration language.
 
 The extension would be either `.motly` or maybe `.mtly`
 
@@ -11,6 +11,16 @@ The extension would be either `.motly` or maybe `.mtly`
 - **Typed**: Native support for strings, numbers, booleans, and dates
 - **Nested**: Natural object nesting with braces
 - **Comments**: Line comments with `#`
+
+### What does MOTLY mean?
+
+MOTLY isn't really an acronym, it was just the end of a search for a name which could also be the file extension, but if it were, it could stand for:
+
+  - Malloy Object Tagging Language, Yahoo!
+  - More Objects Than Lines, Yippee!
+  - Markup Objects Tersely, Like YAML
+  - Makes Other Things Look Yucky
+  - Might Overtake TOML Later, Y'know
 
 ## Quick Example
 
