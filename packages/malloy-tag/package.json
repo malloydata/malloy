@@ -14,8 +14,8 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-peggy": "peggy -o src/peggy/peg-tag-parser.js src/peggy/malloy-tag.peggy",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped && rm -f src/peggy/peg-tag-parser.js",
+    "build-peggy": "mkdir -p src/peggy/dist && peggy -o src/peggy/dist/peg-tag-parser.js src/peggy/malloy-tag.peggy",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped && rm -rf src/peggy/dist",
     "build": "npm run build-peggy && tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"

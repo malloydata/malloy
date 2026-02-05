@@ -7,30 +7,18 @@ import type {TagDict, TagInterface} from '../tags';
 import {Tag} from '../tags';
 import type {TagStatement, TagValue, ArrayElement} from './statements';
 
-export interface InterpreterError {
-  message: string;
-  code: string;
-}
-
-export interface InterpreterResult {
-  tag: Tag;
-  errors: InterpreterError[];
-}
-
 /**
  * Executes TagStatements to build a Tag object.
  */
 export class Interpreter {
-  private errors: InterpreterError[] = [];
-
-  execute(statements: TagStatement[], extending?: Tag): InterpreterResult {
+  execute(statements: TagStatement[], extending?: Tag): Tag {
     const tag = extending?.clone() ?? new Tag({});
 
     for (const stmt of statements) {
       this.executeStatement(stmt, tag);
     }
 
-    return {tag, errors: this.errors};
+    return tag;
   }
 
   private executeStatement(stmt: TagStatement, tag: Tag): void {
@@ -149,6 +137,10 @@ export class Interpreter {
    * tags as needed. Returns [finalKey, parentDict] so caller can write to it.
    */
   private buildAccessPath(tag: Tag, path: string[]): [string, TagDict] {
+    if (path.length === 0) {
+      throw new Error('INTERNAL ERROR: buildAccessPath called with empty path');
+    }
+
     let parentDict = tag.getProperties();
 
     for (const segment of path.slice(0, -1)) {

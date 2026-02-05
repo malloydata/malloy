@@ -7,7 +7,7 @@ import type {TagParse, TagError} from '../tags';
 import {Tag} from '../tags';
 import {Interpreter} from './interpreter';
 import type {TagStatement} from './statements';
-import * as parser from './peg-tag-parser';
+import * as parser from './dist/peg-tag-parser';
 
 /**
  * Parse a line of Malloy tag language into a Tag.
@@ -62,20 +62,9 @@ export function parseTagLine(
   }
 
   const interpreter = new Interpreter();
-  const result = interpreter.execute(statements, extending);
+  const tag = interpreter.execute(statements, extending);
 
-  // Convert interpreter errors to TagErrors
-  // Interpreter errors don't have location info, so use 0
-  for (const err of result.errors) {
-    errors.push({
-      code: err.code,
-      message: err.message,
-      line: 0,
-      offset: 0,
-    });
-  }
-
-  return {tag: result.tag, log: errors};
+  return {tag, log: errors};
 }
 
 /**

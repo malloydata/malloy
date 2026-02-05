@@ -387,7 +387,7 @@ describe('Tag access', () => {
       expect(ext.toString()).toBe('#(malloy) value = "\\""\n');
       idempotent(ext);
     });
-    test.skip('value is empty string', () => {
+    test('value is empty string', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '');
       expect(ext.toString()).toBe('#(malloy) value = ""\n');

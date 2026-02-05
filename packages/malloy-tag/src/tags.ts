@@ -125,7 +125,7 @@ export class Tag implements TagInterface {
   }
 
   constructor(from: TagInterface = {}) {
-    if (from.eq) {
+    if (from.eq !== undefined) {
       this.eq = from.eq;
     }
     if (from.properties) {
@@ -222,7 +222,7 @@ export class Tag implements TagInterface {
     }, []);
   }
 
-  // Has the sometimes desireable side effect of initalizing properties
+  // Has the sometimes desirable side effect of initializing properties
   getProperties(): TagDict {
     if (this.properties === undefined) {
       this.properties = {};
