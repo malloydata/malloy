@@ -685,4 +685,201 @@ describe('schema validation', () => {
       expect(errors[0].message).toContain("Invalid type 'nubmer'");
     });
   });
+
+  describe('custom types', () => {
+    test('validates using custom type reference', () => {
+      const {tag} = parseTag('person { name=alice age=30 }');
+      const {tag: schema} = parseTag(`
+        types: {
+          personType: {
+            required: { name=string age=number }
+          }
+        }
+        required: { person=personType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('reports error when custom type validation fails', () => {
+      const {tag} = parseTag('person { name=alice }');
+      const {tag: schema} = parseTag(`
+        types: {
+          personType: {
+            required: { name=string age=number }
+          }
+        }
+        required: { person=personType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('missing-required');
+      expect(errors[0].path).toEqual(['person', 'age']);
+    });
+
+    test('validates array of custom type', () => {
+      const {tag} = parseTag('people=[{name=alice age=30}, {name=bob age=25}]');
+      const {tag: schema} = parseTag(
+        'types: { personType: { required: { name=string age=number } } } required: { people="personType[]" }'
+      );
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('reports error in array of custom type with index', () => {
+      const {tag} = parseTag('people=[{name=alice age=30}, {name=bob}]');
+      const {tag: schema} = parseTag(
+        'types: { personType: { required: { name=string age=number } } } required: { people="personType[]" }'
+      );
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('missing-required');
+      expect(errors[0].path).toEqual(['people', '1', 'age']);
+    });
+
+    test('custom type array rejects non-array', () => {
+      const {tag} = parseTag('person { name=alice age=30 }');
+      const {tag: schema} = parseTag(
+        'types: { personType: { required: { name=string age=number } } } required: { person="personType[]" }'
+      );
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].message).toContain("expected 'personType[]'");
+    });
+
+    test('recursive type validates nested structure', () => {
+      const {tag} = parseTag(
+        'node { value=1 children=[{ value=2 }, { value=3 children=[{ value=4 }] }] }'
+      );
+      const {tag: schema} = parseTag(
+        'types: { treeNode: { required: { value=number } optional: { children="treeNode[]" } } } required: { node=treeNode }'
+      );
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('recursive type catches deep errors', () => {
+      const {tag} = parseTag(
+        'node { value=1 children=[{ value=2 }, { value=bad }] }'
+      );
+      const {tag: schema} = parseTag(
+        'types: { treeNode: { required: { value=number } optional: { children="treeNode[]" } } } required: { node=treeNode }'
+      );
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].path).toEqual(['node', 'children', '1', 'value']);
+    });
+
+    test('multiple custom types in same schema', () => {
+      const {tag} = parseTag(`
+        user { name=alice }
+        address { city=boston }
+      `);
+      const {tag: schema} = parseTag(`
+        types: {
+          userType: { required: { name=string } }
+          addressType: { required: { city=string } }
+        }
+        required: {
+          user=userType
+          address=addressType
+        }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('custom type with type constraint on value', () => {
+      const {tag} = parseTag('config=settings { debug=@true }');
+      const {tag: schema} = parseTag(`
+        types: {
+          configType: {
+            type=string
+            optional: { debug=boolean }
+          }
+        }
+        required: { config=configType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('schema for schemas validates itself', () => {
+      // A schema that describes what a valid schema looks like
+      // propDict: a dictionary where each value is a propSchema (allowUnknown for arbitrary prop names)
+      // propSchema: has optional type, required, optional fields
+      const {tag: metaSchema} = parseTag(
+        'types: { ' +
+          'propSchema: { ' +
+          'allowUnknown=@true ' +
+          'optional: { type=string required=propDict optional=propDict allowUnknown=boolean } ' +
+          '} ' +
+          'propDict: { ' +
+          'allowUnknown=@true ' +
+          '} ' +
+          '} ' +
+          'optional: { ' +
+          'types=propDict ' +
+          'required=propDict ' +
+          'optional=propDict ' +
+          'allowUnknown=boolean ' +
+          '}'
+      );
+
+      // Validate the meta-schema against itself
+      const errors = validateTag(metaSchema, metaSchema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('schema for schemas catches invalid schema', () => {
+      const {tag: metaSchema} = parseTag(
+        'types: { ' +
+          'propSchema: { ' +
+          'allowUnknown=@true ' +
+          'optional: { type=string required=propDict optional=propDict allowUnknown=boolean } ' +
+          '} ' +
+          'propDict: { ' +
+          'allowUnknown=@true ' +
+          '} ' +
+          '} ' +
+          'optional: { ' +
+          'types=propDict ' +
+          'required=propDict ' +
+          'optional=propDict ' +
+          'allowUnknown=boolean ' +
+          '}'
+      );
+
+      // An invalid schema with wrong type for allowUnknown
+      const {tag: badSchema} = parseTag(
+        'required: { name=string } allowUnknown=yes'
+      );
+
+      const errors = validateTag(badSchema, metaSchema);
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some(e => e.path.includes('allowUnknown'))).toBe(true);
+    });
+  });
 });
