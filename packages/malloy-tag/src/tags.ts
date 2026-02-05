@@ -234,6 +234,68 @@ export class Tag implements TagInterface {
     return new Tag(structuredClone(this));
   }
 
+  private static toValue(str: string): string | number {
+    const num = Number(str);
+    return !Number.isNaN(num) ? num : str;
+  }
+
+  private static tagToObject(tag: TagInterface): unknown {
+    const hasProps =
+      tag.properties !== undefined && Object.keys(tag.properties).length > 0;
+    const hasValue = tag.eq !== undefined;
+
+    // Bare tag (no value, no properties)
+    if (!hasValue && !hasProps) {
+      return true;
+    }
+
+    // Properties only
+    if (!hasValue && hasProps) {
+      const result: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(tag.properties!)) {
+        if (!val.deleted) {
+          result[key] = Tag.tagToObject(val);
+        }
+      }
+      return result;
+    }
+
+    // Value only
+    if (hasValue && !hasProps) {
+      if (typeof tag.eq === 'string') {
+        return Tag.toValue(tag.eq);
+      }
+      // Array value
+      return tag.eq!.map(el => Tag.tagToObject(el));
+    }
+
+    // Both value and properties
+    const result: Record<string, unknown> = {};
+    if (typeof tag.eq === 'string') {
+      result['='] = Tag.toValue(tag.eq);
+    } else {
+      result['='] = tag.eq!.map(el => Tag.tagToObject(el));
+    }
+    for (const [key, val] of Object.entries(tag.properties!)) {
+      if (!val.deleted) {
+        result[key] = Tag.tagToObject(val);
+      }
+    }
+    return result;
+  }
+
+  toObject(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    if (this.properties) {
+      for (const [key, val] of Object.entries(this.properties)) {
+        if (!val.deleted) {
+          result[key] = Tag.tagToObject(val);
+        }
+      }
+    }
+    return result;
+  }
+
   private static escapeString(str: string) {
     return str
       .replace(/\\/g, '\\\\')

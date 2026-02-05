@@ -589,3 +589,92 @@ function idempotent(tag: Tag) {
   clone.prefix = tag.prefix;
   expect(clone.toString()).toBe(str);
 }
+
+describe('toObject', () => {
+  test('bare tag becomes true', () => {
+    const {tag} = parseTag('hidden');
+    expect(tag.toObject()).toEqual({hidden: true});
+  });
+
+  test('string value becomes string', () => {
+    const {tag} = parseTag('color=blue');
+    expect(tag.toObject()).toEqual({color: 'blue'});
+  });
+
+  test('numeric value becomes number', () => {
+    const {tag} = parseTag('size=10');
+    expect(tag.toObject()).toEqual({size: 10});
+  });
+
+  test('float value becomes number', () => {
+    const {tag} = parseTag('ratio=3.14');
+    expect(tag.toObject()).toEqual({ratio: 3.14});
+  });
+
+  test('properties only becomes nested object', () => {
+    const {tag} = parseTag('box { width=100 height=200 }');
+    expect(tag.toObject()).toEqual({box: {width: 100, height: 200}});
+  });
+
+  test('value and properties uses = key', () => {
+    const {tag} = parseTag('link="http://example.com" { target=_blank }');
+    expect(tag.toObject()).toEqual({
+      link: {'=': 'http://example.com', 'target': '_blank'},
+    });
+  });
+
+  test('array of simple values', () => {
+    const {tag} = parseTag('items=[a, b, c]');
+    expect(tag.toObject()).toEqual({items: ['a', 'b', 'c']});
+  });
+
+  test('array of numeric values', () => {
+    const {tag} = parseTag('nums=[1, 2, 3]');
+    expect(tag.toObject()).toEqual({nums: [1, 2, 3]});
+  });
+
+  test('array with properties on elements', () => {
+    const {tag} = parseTag('items=[a { x=1 }, b { y=2 }]');
+    expect(tag.toObject()).toEqual({
+      items: [
+        {'=': 'a', 'x': 1},
+        {'=': 'b', 'y': 2},
+      ],
+    });
+  });
+
+  test('complex nested structure', () => {
+    const {tag} = parseTag('# hidden color=blue size=10 box { width=100 }');
+    expect(tag.toObject()).toEqual({
+      hidden: true,
+      color: 'blue',
+      size: 10,
+      box: {width: 100},
+    });
+  });
+
+  test('deleted properties are excluded', () => {
+    const {tag} = parseTag('a b -a');
+    expect(tag.toObject()).toEqual({b: true});
+  });
+
+  test('empty tag returns empty object', () => {
+    const {tag} = parseTag('');
+    expect(tag.toObject()).toEqual({});
+  });
+
+  test('deeply nested properties', () => {
+    const {tag} = parseTag('a.b.c=1');
+    expect(tag.toObject()).toEqual({a: {b: {c: 1}}});
+  });
+
+  test('array of objects (dictionaries)', () => {
+    const {tag} = parseTag('items=[{name=alice age=30}, {name=bob age=25}]');
+    expect(tag.toObject()).toEqual({
+      items: [
+        {name: 'alice', age: 30},
+        {name: 'bob', age: 25},
+      ],
+    });
+  });
+});
