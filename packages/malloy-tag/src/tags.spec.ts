@@ -412,6 +412,52 @@ describe('Tag access', () => {
       idempotent(ext);
     });
   });
+  describe('parsing escape sequences in strings', () => {
+    test('\\n becomes newline', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\nworld"');
+      expect(tag.text('x')).toBe('hello\nworld');
+    });
+    test('\\t becomes tab', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\tworld"');
+      expect(tag.text('x')).toBe('hello\tworld');
+    });
+    test('\\r becomes carriage return', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\rworld"');
+      expect(tag.text('x')).toBe('hello\rworld');
+    });
+    test('\\b becomes backspace', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\bworld"');
+      expect(tag.text('x')).toBe('hello\bworld');
+    });
+    test('\\f becomes form feed', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\fworld"');
+      expect(tag.text('x')).toBe('hello\fworld');
+    });
+    test('\\uXXXX becomes unicode character', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\u0026world"');
+      expect(tag.text('x')).toBe('hello&world');
+    });
+    test('\\uXXXX with uppercase hex', () => {
+      const {tag} = Tag.fromTagLine('x="\\u003F"');
+      expect(tag.text('x')).toBe('?');
+    });
+    test('\\\\ becomes backslash', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\\\world"');
+      expect(tag.text('x')).toBe('hello\\world');
+    });
+    test('\\" becomes double quote', () => {
+      const {tag} = Tag.fromTagLine('x="hello\\"world"');
+      expect(tag.text('x')).toBe('hello"world');
+    });
+    test("\\' in single quoted string", () => {
+      const {tag} = Tag.fromTagLine("x='hello\\'world'");
+      expect(tag.text('x')).toBe("hello'world");
+    });
+    test('\\` in backtick identifier', () => {
+      const {tag} = Tag.fromTagLine('`hello\\`world`=value');
+      expect(tag.text('hello`world')).toBe('value');
+    });
+  });
 });
 
 describe('Tag prefix handling', () => {
