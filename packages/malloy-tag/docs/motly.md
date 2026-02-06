@@ -636,15 +636,15 @@ MOTLY supports schema validation to ensure configuration files conform to expect
 
 ### Defining a Schema
 
-A schema defines `required` and `optional` properties with their expected types:
+A schema defines `required` and `optional` properties with their expected Types:
 
 ```motly
-required: {
+Required: {
   name = string
   port = number
   enabled = boolean
 }
-optional: {
+Optional: {
   timeout = number
   tags = "string[]"
 }
@@ -675,16 +675,16 @@ Note: Array types must be quoted to prevent the `[]` from being parsed as an arr
 Define nested object structures by nesting `required` and `optional` blocks:
 
 ```motly
-required: {
+Required: {
   database: {
-    required: {
+    Required: {
       host = string
       port = number
     }
-    optional: {
+    Optional: {
       ssl = boolean
       pool: {
-        required: {
+        Required: {
           min = number
           max = number
         }
@@ -699,9 +699,9 @@ required: {
 Properties can have both a type constraint and nested property validation. Use the shorthand form:
 
 ```motly
-required: {
+Required: {
   server = tag {
-    required: {
+    Required: {
       host = string
       port = number
     }
@@ -709,13 +709,13 @@ required: {
 }
 ```
 
-Or the full form with `type`:
+Or the full form with `Type`:
 
 ```motly
-required: {
+Required: {
   server: {
-    type = tag
-    required: {
+    Type = tag
+    Required: {
       host = string
       port = number
     }
@@ -726,9 +726,9 @@ required: {
 This works for any type. For example, validating a property that must be a string but can also have metadata:
 
 ```motly
-required: {
+Required: {
   name = string {
-    optional: { locale = string }
+    Optional: { locale = string }
   }
 }
 ```
@@ -738,9 +738,9 @@ required: {
 For arrays of objects (`tag[]`), the nested schema validates each element:
 
 ```motly
-required: {
+Required: {
   items = "tag[]" {
-    required: {
+    Required: {
       size = number
       color = string
     }
@@ -755,15 +755,15 @@ This validates that `items` is an array where every element has `size` (number) 
 Define reusable types in the `types` section and reference them by name:
 
 ```motly
-types: {
+Types: {
   personType: {
-    required: {
+    Required: {
       name = string
       age = number
     }
   }
 }
-required: {
+Required: {
   user = personType
   manager = personType
 }
@@ -773,15 +773,15 @@ Custom type names cannot conflict with built-in types (string, number, etc.).
 
 #### Custom Type Arrays
 
-Use quoted `"typeName[]"` for arrays of custom types:
+Use quoted `"typeName[]"` for arrays of custom Types:
 
 ```motly
-types: {
+Types: {
   personType: {
-    required: { name = string age = number }
+    Required: { name = string age = number }
   }
 }
-required: {
+Required: {
   people = "personType[]"
 }
 ```
@@ -791,13 +791,13 @@ required: {
 Custom types can reference themselves for recursive structures:
 
 ```motly
-types: {
+Types: {
   treeNode: {
-    required: { value = number }
-    optional: { children = "treeNode[]" }
+    Required: { value = number }
+    Optional: { children = "treeNode[]" }
   }
 }
-required: {
+Required: {
   root = treeNode
 }
 ```
@@ -809,11 +809,11 @@ This validates trees of arbitrary depth where each node has a `value` and option
 Define a custom type as an array of allowed values:
 
 ```motly
-types: {
+Types: {
   statusType = [pending, active, completed]
   levelType = [1, 2, 3]
 }
-required: {
+Required: {
   status = statusType
   level = levelType
 }
@@ -826,11 +826,11 @@ Values not in the array are rejected with an `invalid-enum-value` error.
 Define a custom type with a `matches` property containing a regex:
 
 ```motly
-types: {
+Types: {
   emailType.matches = "^[^@]+@[^@]+$"
   semverType.matches = "^\\d+\\.\\d+\\.\\d+$"
 }
-required: {
+Required: {
   email = emailType
   version = semverType
 }
@@ -838,16 +838,64 @@ required: {
 
 Non-matching strings are rejected with a `pattern-mismatch` error. Non-string values are rejected with a `wrong-type` error.
 
-### Unknown Properties
+### Union Types (oneOf)
 
-By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown`:
+Define a custom type that accepts multiple types using `oneOf`:
 
 ```motly
-allowUnknown
-required: {
+Types: {
+  StringOrNumber.oneOf = [string, number]
+}
+Required: {
+  value = StringOrNumber
+}
+```
+
+The value is validated against each type in the list until one matches. Union types can include built-in types, custom types, enums, and pattern types:
+
+```motly
+Types: {
+  StatusEnum = [pending, active, completed]
+  FlexibleValue.oneOf = [string, number, StatusEnum]
+}
+Required: {
+  data = FlexibleValue
+}
+```
+
+### Additional Properties
+
+By default, properties not listed in `Required` or `Optional` cause validation errors. The `Additional` keyword controls this behavior:
+
+**Allow any additional properties (flag form):**
+
+```motly
+Additional
+Required: {
   name = string
 }
 ```
+
+**Validate additional properties against a type:**
+
+```motly
+Types: {
+  MetadataType: {
+    Required: { key = string value = string }
+  }
+}
+Required: {
+  name = string
+}
+Additional = MetadataType
+```
+
+With typed `Additional`, unknown properties must match the specified type. This is useful for dictionaries or extensible configurations.
+
+**Behavior summary:**
+- No `Additional`: reject unknown properties (default)
+- `Additional`: allow any additional properties (same as `Additional = any`)
+- `Additional = TypeName`: validate additional properties against the type
 
 ### Validation API
 
@@ -864,12 +912,12 @@ const {tag: config} = parseTag(`
 
 // Parse the schema
 const {tag: schema} = parseTag(`
-  required: {
+  Required: {
     name = string
     port = number
     enabled = boolean
   }
-  optional: {
+  Optional: {
     timeout = number
     tags = "string[]"
   }
@@ -903,32 +951,32 @@ if (errors.length === 0) {
 **Schema (app-schema.motly):**
 
 ```motly
-types: {
+Types: {
   logLevel = [debug, info, warn, error]
   semver.matches = "^\\d+\\.\\d+\\.\\d+$"
 }
-required: {
+Required: {
   app: {
-    required: {
+    Required: {
       name = string
       version = semver
     }
-    optional: {
+    Optional: {
       debug = boolean
     }
   }
   server: {
-    required: {
+    Required: {
       host = string
       port = number
     }
-    optional: {
+    Optional: {
       ssl = boolean
       timeout = number
     }
   }
 }
-optional: {
+Optional: {
   features = "string[]"
   logLevel = logLevel
   metadata = tag
