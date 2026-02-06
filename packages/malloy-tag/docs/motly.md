@@ -149,7 +149,8 @@ scheduled = @2024-01-15T10:30:00+05:00
 Arrays are enclosed in square brackets:
 
 ```motly
-# Simple array
+# Simple array of strings
+# (inside an array, bare words are always strings, never property names)
 colors = [red, green, blue]
 
 # Array of numbers
@@ -622,6 +623,11 @@ const outputs = app.textArray('logging', 'outputs'); // ["stdout", "file"]
 if (app.has('database', 'credentials')) {
   const username = app.text('database', 'credentials', 'username');
 }
+
+// Iterate over properties
+for (const [name, value] of app.tag('server').entries()) {
+  console.log(`${name}: ${value.eq}`);
+}
 ```
 
 ## Schema Validation
@@ -653,6 +659,7 @@ optional: {
 | `boolean` | True or false | `enabled = boolean` |
 | `date` | ISO 8601 date | `created = date` |
 | `tag` | Nested object (no scalar value) | `config = tag` |
+| `flag` | Presence-only (no value or properties) | `hidden = flag` |
 | `any` | Any type allowed | `value = any` |
 | `"string[]"` | Array of strings | `tags = "string[]"` |
 | `"number[]"` | Array of numbers | `ports = "number[]"` |
@@ -799,10 +806,10 @@ This validates trees of arbitrary depth where each node has a `value` and option
 
 ### Unknown Properties
 
-By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown = @true`:
+By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown`:
 
 ```motly
-allowUnknown = @true
+allowUnknown
 required: {
   name = string
 }
@@ -916,4 +923,140 @@ const {tag: schema} = parseTag(fs.readFileSync('app-schema.motly', 'utf-8'));
 
 const errors = validateTag(config, schema);
 // errors = [] (valid configuration)
+```
+
+## Schema Directive
+
+A MOTLY file can declare its schema using a `#!` directive on the first line. This allows editors and tools to automatically validate the file.
+
+### Syntax
+
+The directive uses MOTLY syntax after `#!`:
+
+```motly
+#! schema=config-v1 url="https://schemas.example.com/config.motly"
+```
+
+Properties:
+- `schema` - A short identifier code for the schema
+- `url` - Location of the schema file (URL or relative path)
+
+### Examples
+
+```motly
+#! schema=app-config url="./schemas/app.motly"
+name = "My Application"
+port = 8080
+```
+
+```motly
+#! schema=malloy-render url="https://malloydata.github.io/schemas/render-v1.motly"
+renderer = bar_chart
+```
+
+### Conventions
+
+- **Registered codes**: Future schema registries may provide well-known codes
+- **Private codes**: Use `x-` prefix for organization-specific schemas (e.g., `x-acme-deploy`)
+- **Either or both**: A file may specify just `schema`, just `url`, or both:
+  - `#! schema=well-known-config` - code only, for well-known schemas
+  - `#! url="./local-schema.motly"` - url only, for local schemas
+  - `#! schema=x-acme url="..."` - both, for private schemas with fallback URL
+
+### For Tool Authors
+
+To support schema directives:
+1. Check if line 1 starts with `#!`
+2. Strip the `#!` prefix and parse the remainder as MOTLY
+3. Extract `schema` and/or `url` properties
+4. Fetch and apply the schema for validation
+
+Note: There is currently no schema registry. This convention is documented for future tooling.
+
+## Grammar (EBNF)
+
+```ebnf
+(* Entry point *)
+document        ::= { statement }
+
+(* Statements *)
+statement       ::= assignment
+                  | replaceProps
+                  | updateProps
+                  | clearAll
+                  | definition
+
+assignment      ::= propName "=" value [ properties ]
+replaceProps    ::= propName ":" properties
+                  | propName "=" [ "..." ] properties
+updateProps     ::= propName properties
+definition      ::= [ "-" ] propName
+clearAll        ::= "-..."
+
+(* Property paths *)
+propName        ::= identifier { "." identifier }
+
+(* Values *)
+value           ::= array | boolean | date | number | string
+
+boolean         ::= "@true" | "@false"
+date            ::= "@" isoDate
+number          ::= [ "-" ] digits [ "." digits ] [ exponent ]
+                  | [ "-" ] "." digits [ exponent ]
+string          ::= tripleString | sqString | dqString | bareString
+
+exponent        ::= ( "e" | "E" ) [ "+" | "-" ] digits
+digits          ::= digit { digit }
+digit           ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+(* ISO 8601 date/datetime *)
+isoDate         ::= year "-" month "-" day [ "T" hour ":" minute [ ":" second [ "." fraction ] ] timezone ]
+timezone        ::= "Z" | ( "+" | "-" ) hour [ ":" ] minute
+year            ::= digit digit digit digit
+month           ::= digit digit
+day             ::= digit digit
+hour            ::= digit digit
+minute          ::= digit digit
+second          ::= digit digit
+fraction        ::= digits
+
+(* Arrays *)
+array           ::= "[" [ arrayElements ] "]"
+arrayElements   ::= arrayElement { "," arrayElement } [ "," ]
+arrayElement    ::= scalarValue [ properties ]
+                  | properties
+                  | array
+
+scalarValue     ::= boolean | date | number | string
+
+(* Properties block *)
+properties      ::= "{" { statement } "}"
+                  | "{" "..." "}"
+
+(* Identifiers - for property names *)
+identifier      ::= bqString | bareString
+
+(* String literals *)
+bareString      ::= bareChar { bareChar }
+bareChar        ::= letter | digit | "_"
+letter          ::= "A"-"Z" | "a"-"z" | extendedLatin
+extendedLatin   ::= (* Unicode: U+00C0-U+024F, U+1E00-U+1EFF *)
+
+tripleString    ::= '"""' { tripleChar } '"""'
+tripleChar      ::= (* any character except unescaped """ *)
+
+sqString        ::= "'" { sqChar } "'"
+sqChar          ::= (* any character except ', \, newline, or escape sequence *)
+
+dqString        ::= '"' { dqChar } '"'
+dqChar          ::= (* any character except ", \, newline, or escape sequence *)
+
+bqString        ::= "`" { bqChar } "`"
+bqChar          ::= (* any character except `, \, newline, or escape sequence *)
+
+(* Escape sequences in strings: \b \f \n \r \t \uXXXX \char *)
+
+(* Whitespace and comments - allowed between tokens *)
+whitespace      ::= " " | "\t" | "\r" | "\n"
+comment         ::= "#" { (* any char except newline *) } newline
 ```

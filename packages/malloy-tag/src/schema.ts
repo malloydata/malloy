@@ -21,6 +21,7 @@ type SchemaType =
   | 'boolean'
   | 'date'
   | 'tag'
+  | 'flag'
   | 'any'
   | 'string[]'
   | 'number[]'
@@ -35,6 +36,7 @@ const VALID_TYPES: SchemaType[] = [
   'boolean',
   'date',
   'tag',
+  'flag',
   'any',
   'string[]',
   'number[]',
@@ -112,6 +114,11 @@ function getActualType(tag: Tag): string {
   const eq = tag.eq;
 
   if (eq === undefined) {
+    // No value - check if it has properties
+    if (!tag.hasProperties()) {
+      // No value and no properties - it's a flag (presence-only)
+      return 'flag';
+    }
     // Has properties but no value - it's a "tag" type
     return 'tag';
   }
@@ -198,58 +205,57 @@ function validateProperties(
 ): void {
   const requiredSection = schema.tag('required');
   const optionalSection = schema.tag('optional');
+  const knownProps = new Set<string>();
 
-  const requiredProps = requiredSection?.dict ?? {};
-  const optionalProps = optionalSection?.dict ?? {};
-
-  // Check for missing required properties
-  for (const propName of Object.keys(requiredProps)) {
-    const propTag = tag.tag(propName);
-    if (propTag === undefined) {
-      errors.push({
-        message: `Missing required property '${propName}'`,
-        path: [...path, propName],
-        code: 'missing-required',
-      });
-      continue;
+  // Check required properties
+  if (requiredSection) {
+    for (const [propName, schemaProp] of requiredSection.entries()) {
+      knownProps.add(propName);
+      const propTag = tag.tag(propName);
+      if (propTag === undefined) {
+        errors.push({
+          message: `Missing required property '${propName}'`,
+          path: [...path, propName],
+          code: 'missing-required',
+        });
+        continue;
+      }
+      validateProperty(
+        propTag,
+        schemaProp,
+        propName,
+        path,
+        errors,
+        allowUnknown,
+        customTypes
+      );
     }
-
-    const schemaProp = Tag.tagFrom(requiredProps[propName]);
-    validateProperty(
-      propTag,
-      schemaProp,
-      propName,
-      path,
-      errors,
-      allowUnknown,
-      customTypes
-    );
   }
 
   // Check optional properties that exist
-  for (const propName of Object.keys(optionalProps)) {
-    const propTag = tag.tag(propName);
-    if (propTag === undefined) {
-      continue; // Optional, so OK if missing
+  if (optionalSection) {
+    for (const [propName, schemaProp] of optionalSection.entries()) {
+      knownProps.add(propName);
+      const propTag = tag.tag(propName);
+      if (propTag === undefined) {
+        continue; // Optional, so OK if missing
+      }
+      validateProperty(
+        propTag,
+        schemaProp,
+        propName,
+        path,
+        errors,
+        allowUnknown,
+        customTypes
+      );
     }
-
-    const schemaProp = Tag.tagFrom(optionalProps[propName]);
-    validateProperty(
-      propTag,
-      schemaProp,
-      propName,
-      path,
-      errors,
-      allowUnknown,
-      customTypes
-    );
   }
 
-  // Check for unknown properties
-  if (!allowUnknown) {
-    const tagDict = tag.dict;
-    for (const propName of Object.keys(tagDict)) {
-      if (!(propName in requiredProps) && !(propName in optionalProps)) {
+  // Check for unknown properties (only if schema defines any)
+  if (!allowUnknown && knownProps.size > 0) {
+    for (const [propName] of tag.entries()) {
+      if (!knownProps.has(propName)) {
         errors.push({
           message: `Unknown property '${propName}'`,
           path: [...path, propName],
@@ -407,13 +413,13 @@ function validateProperty(
  */
 export function validateTag(tag: Tag, schema: Tag): SchemaError[] {
   const errors: SchemaError[] = [];
-  const allowUnknown = schema.isTrue('allowUnknown');
+  const allowUnknown = schema.has('allowUnknown');
 
   // Extract custom types from schema
   const typesSection = schema.tag('types');
   const customTypes: TypesMap = {};
   if (typesSection) {
-    for (const [name, typeDef] of Object.entries(typesSection.dict)) {
+    for (const [name, typeDef] of typesSection.entries()) {
       customTypes[name] = typeDef;
     }
   }

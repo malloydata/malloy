@@ -121,6 +121,63 @@ describe('schema validation', () => {
 
       expect(errors).toHaveLength(0);
     });
+
+    test('validates flag type correctly', () => {
+      const {tag} = parseTag('hidden readonly');
+      const {tag: schema} = parseTag('required: { hidden=flag readonly=flag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('errors when flag expected but scalar provided', () => {
+      const {tag} = parseTag('hidden=@true');
+      const {tag: schema} = parseTag('required: { hidden=flag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].message).toContain("expected 'flag'");
+      expect(errors[0].message).toContain("got 'boolean'");
+    });
+
+    test('errors when flag expected but tag with properties provided', () => {
+      const {tag} = parseTag('hidden { x=1 }');
+      const {tag: schema} = parseTag('required: { hidden=flag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].message).toContain("expected 'flag'");
+      expect(errors[0].message).toContain("got 'tag'");
+    });
+
+    test('optional flag works when present', () => {
+      const {tag} = parseTag('name=test deprecated');
+      const {tag: schema} = parseTag(`
+        required: { name=string }
+        optional: { deprecated=flag }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('optional flag works when absent', () => {
+      const {tag} = parseTag('name=test');
+      const {tag: schema} = parseTag(`
+        required: { name=string }
+        optional: { deprecated=flag }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
   });
 
   describe('unknown property errors', () => {
@@ -138,11 +195,9 @@ describe('schema validation', () => {
       });
     });
 
-    test('allows unknown properties with allowUnknown=@true', () => {
+    test('allows unknown properties with allowUnknown flag', () => {
       const {tag} = parseTag('name=alice extra=value');
-      const {tag: schema} = parseTag(
-        'allowUnknown=@true required: { name=string }'
-      );
+      const {tag: schema} = parseTag('allowUnknown required: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -342,6 +397,15 @@ describe('schema validation', () => {
 
       expect(errors).toHaveLength(0);
     });
+
+    test('any accepts flag', () => {
+      const {tag} = parseTag('value');
+      const {tag: schema} = parseTag('required: { value=any }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
   });
 
   describe('full form type syntax', () => {
@@ -495,13 +559,13 @@ describe('schema validation', () => {
 
       const errors = validateTag(tag, schema);
 
-      // Unknown properties should error even with empty schema
-      expect(errors).toHaveLength(2);
+      // Empty schema = no rules = all lawful
+      expect(errors).toHaveLength(0);
     });
 
     test('empty schema with allowUnknown passes any tag', () => {
       const {tag} = parseTag('anything=goes here=too');
-      const {tag: schema} = parseTag('allowUnknown=@true');
+      const {tag: schema} = parseTag('allowUnknown');
 
       const errors = validateTag(tag, schema);
 
@@ -831,18 +895,18 @@ describe('schema validation', () => {
       const {tag: metaSchema} = parseTag(
         'types: { ' +
           'propSchema: { ' +
-          'allowUnknown=@true ' +
-          'optional: { type=string required=propDict optional=propDict allowUnknown=boolean } ' +
+          'allowUnknown ' +
+          'optional: { type=string required=propDict optional=propDict allowUnknown=flag } ' +
           '} ' +
           'propDict: { ' +
-          'allowUnknown=@true ' +
+          'allowUnknown ' +
           '} ' +
           '} ' +
           'optional: { ' +
           'types=propDict ' +
           'required=propDict ' +
           'optional=propDict ' +
-          'allowUnknown=boolean ' +
+          'allowUnknown=flag ' +
           '}'
       );
 
@@ -856,22 +920,22 @@ describe('schema validation', () => {
       const {tag: metaSchema} = parseTag(
         'types: { ' +
           'propSchema: { ' +
-          'allowUnknown=@true ' +
-          'optional: { type=string required=propDict optional=propDict allowUnknown=boolean } ' +
+          'allowUnknown ' +
+          'optional: { type=string required=propDict optional=propDict allowUnknown=flag } ' +
           '} ' +
           'propDict: { ' +
-          'allowUnknown=@true ' +
+          'allowUnknown ' +
           '} ' +
           '} ' +
           'optional: { ' +
           'types=propDict ' +
           'required=propDict ' +
           'optional=propDict ' +
-          'allowUnknown=boolean ' +
+          'allowUnknown=flag ' +
           '}'
       );
 
-      // An invalid schema with wrong type for allowUnknown
+      // An invalid schema with wrong type for allowUnknown (has value, should be flag)
       const {tag: badSchema} = parseTag(
         'required: { name=string } allowUnknown=yes'
       );
