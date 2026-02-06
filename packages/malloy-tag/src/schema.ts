@@ -12,7 +12,9 @@ export interface SchemaError {
     | 'missing-required'
     | 'wrong-type'
     | 'unknown-property'
-    | 'invalid-schema';
+    | 'invalid-schema'
+    | 'invalid-enum-value'
+    | 'pattern-mismatch';
 }
 
 type SchemaType =
@@ -266,6 +268,81 @@ function validateProperties(
   }
 }
 
+function validateEnumValue(
+  tag: Tag,
+  refSchema: Tag,
+  typeName: string,
+  path: string[],
+  errors: SchemaError[]
+): void {
+  const actualValue = tag.eq;
+  const allowedStrings = refSchema.textArray();
+  const allowedNumbers = refSchema.numericArray();
+
+  // Check string enums
+  if (
+    typeof actualValue === 'string' &&
+    allowedStrings &&
+    allowedStrings.includes(actualValue)
+  ) {
+    return;
+  }
+
+  // Check numeric enums
+  if (
+    typeof actualValue === 'number' &&
+    allowedNumbers &&
+    allowedNumbers.includes(actualValue)
+  ) {
+    return;
+  }
+
+  const allowedValues = allowedStrings ?? allowedNumbers ?? [];
+  const allowedStr = allowedValues.map(v => String(v)).join(', ');
+  errors.push({
+    message: `Value '${actualValue}' is not a valid ${typeName}. Allowed values: [${allowedStr}]`,
+    path,
+    code: 'invalid-enum-value',
+  });
+}
+
+function validatePattern(
+  tag: Tag,
+  pattern: string,
+  typeName: string,
+  path: string[],
+  errors: SchemaError[]
+): void {
+  const actualValue = tag.eq;
+
+  // Pattern only applies to strings
+  if (typeof actualValue !== 'string') {
+    errors.push({
+      message: `Value must be a string to match pattern for type '${typeName}', got ${typeof actualValue}`,
+      path,
+      code: 'wrong-type',
+    });
+    return;
+  }
+
+  try {
+    const regex = new RegExp(pattern);
+    if (!regex.test(actualValue)) {
+      errors.push({
+        message: `Value '${actualValue}' does not match pattern for type '${typeName}'`,
+        path,
+        code: 'pattern-mismatch',
+      });
+    }
+  } catch {
+    errors.push({
+      message: `Invalid regex pattern '${pattern}' in type '${typeName}'`,
+      path,
+      code: 'invalid-schema',
+    });
+  }
+}
+
 function validateProperty(
   propTag: Tag,
   schemaProp: Tag,
@@ -295,8 +372,68 @@ function validateProperty(
   // Handle custom type reference
   if (typeRef !== undefined) {
     const refSchema = customTypes[typeRef];
-    // Use the referenced type's allowUnknown setting, not the parent's
-    const refAllowUnknown = refSchema.isTrue('allowUnknown');
+
+    // Check if this is an enum type (custom type value is an array)
+    if (Array.isArray(refSchema.eq)) {
+      if (typeRefArray) {
+        // Array of enum type
+        const array = propTag.array();
+        if (!array) {
+          const actualType = getActualType(propTag);
+          errors.push({
+            message: `Property '${propName}' has wrong type: expected '${typeRef}[]', got '${actualType}'`,
+            path,
+            code: 'wrong-type',
+          });
+          return;
+        }
+        for (let i = 0; i < array.length; i++) {
+          validateEnumValue(
+            array[i],
+            refSchema,
+            typeRef,
+            [...path, String(i)],
+            errors
+          );
+        }
+      } else {
+        validateEnumValue(propTag, refSchema, typeRef, path, errors);
+      }
+      return;
+    }
+
+    // Check if this is a pattern type (custom type has 'matches' property)
+    const pattern = refSchema.text('matches');
+    if (pattern !== undefined) {
+      if (typeRefArray) {
+        // Array of pattern type
+        const array = propTag.array();
+        if (!array) {
+          const actualType = getActualType(propTag);
+          errors.push({
+            message: `Property '${propName}' has wrong type: expected '${typeRef}[]', got '${actualType}'`,
+            path,
+            code: 'wrong-type',
+          });
+          return;
+        }
+        for (let i = 0; i < array.length; i++) {
+          validatePattern(
+            array[i],
+            pattern,
+            typeRef,
+            [...path, String(i)],
+            errors
+          );
+        }
+      } else {
+        validatePattern(propTag, pattern, typeRef, path, errors);
+      }
+      return;
+    }
+
+    // Regular custom type - validate properties
+    const refAllowUnknown = refSchema.has('allowUnknown');
 
     if (typeRefArray) {
       // Validate as array of custom type

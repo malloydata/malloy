@@ -946,4 +946,163 @@ describe('schema validation', () => {
       expect(errors.some(e => e.path.includes('allowUnknown'))).toBe(true);
     });
   });
+
+  describe('enum types', () => {
+    test('validates string enum', () => {
+      const {tag} = parseTag('status=active');
+      const {tag: schema} = parseTag(`
+        types: { statusType = [pending, active, completed] }
+        required: { status=statusType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid enum value', () => {
+      const {tag} = parseTag('status=unknown');
+      const {tag: schema} = parseTag(`
+        types: { statusType = [pending, active, completed] }
+        required: { status=statusType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-enum-value');
+      expect(errors[0].message).toContain('unknown');
+      expect(errors[0].message).toContain('pending, active, completed');
+    });
+
+    test('validates numeric enum', () => {
+      const {tag} = parseTag('level=2');
+      const {tag: schema} = parseTag(`
+        types: { levelType = [1, 2, 3] }
+        required: { level=levelType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid numeric enum value', () => {
+      const {tag} = parseTag('level=5');
+      const {tag: schema} = parseTag(`
+        types: { levelType = [1, 2, 3] }
+        required: { level=levelType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-enum-value');
+    });
+
+    test('validates array of enum type', () => {
+      const {tag} = parseTag('statuses=[active, pending]');
+      const {tag: schema} = parseTag(`
+        types: { statusType = [pending, active, completed] }
+        required: { statuses="statusType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid value in enum array', () => {
+      const {tag} = parseTag('statuses=[active, invalid]');
+      const {tag: schema} = parseTag(`
+        types: { statusType = [pending, active, completed] }
+        required: { statuses="statusType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-enum-value');
+      expect(errors[0].path).toEqual(['statuses', '1']);
+    });
+  });
+
+  describe('pattern types', () => {
+    test('validates string matching pattern', () => {
+      const {tag} = parseTag('email="test@example.com"');
+      const {tag: schema} = parseTag(`
+        types: { emailType.matches = "^[^@]+@[^@]+$" }
+        required: { email=emailType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects string not matching pattern', () => {
+      const {tag} = parseTag('email="not-an-email"');
+      const {tag: schema} = parseTag(`
+        types: { emailType.matches = "^[^@]+@[^@]+$" }
+        required: { email=emailType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('pattern-mismatch');
+    });
+
+    test('rejects non-string for pattern type', () => {
+      const {tag} = parseTag('email=123');
+      const {tag: schema} = parseTag(`
+        types: { emailType.matches = ".*" }
+        required: { email=emailType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+    });
+
+    test('validates array of pattern type', () => {
+      const {tag} = parseTag('emails=["a@b.com", "c@d.org"]');
+      const {tag: schema} = parseTag(`
+        types: { emailType.matches = "^[^@]+@[^@]+$" }
+        required: { emails="emailType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid value in pattern array', () => {
+      const {tag} = parseTag('emails=["a@b.com", "invalid"]');
+      const {tag: schema} = parseTag(`
+        types: { emailType.matches = "^[^@]+@[^@]+$" }
+        required: { emails="emailType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('pattern-mismatch');
+      expect(errors[0].path).toEqual(['emails', '1']);
+    });
+
+    test('reports error for invalid regex in schema', () => {
+      const {tag} = parseTag('value=test');
+      const {tag: schema} = parseTag(`
+        types: { badPattern.matches = "[invalid" }
+        required: { value=badPattern }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-schema');
+    });
+  });
 });

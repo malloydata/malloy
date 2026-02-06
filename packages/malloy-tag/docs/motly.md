@@ -804,6 +804,40 @@ required: {
 
 This validates trees of arbitrary depth where each node has a `value` and optional `children`.
 
+### Enum Types
+
+Define a custom type as an array of allowed values:
+
+```motly
+types: {
+  statusType = [pending, active, completed]
+  levelType = [1, 2, 3]
+}
+required: {
+  status = statusType
+  level = levelType
+}
+```
+
+Values not in the array are rejected with an `invalid-enum-value` error.
+
+### Pattern Types
+
+Define a custom type with a `matches` property containing a regex:
+
+```motly
+types: {
+  emailType.matches = "^[^@]+@[^@]+$"
+  semverType.matches = "^\\d+\\.\\d+\\.\\d+$"
+}
+required: {
+  email = emailType
+  version = semverType
+}
+```
+
+Non-matching strings are rejected with a `pattern-mismatch` error. Non-string values are rejected with a `wrong-type` error.
+
 ### Unknown Properties
 
 By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown`:
@@ -860,18 +894,24 @@ if (errors.length === 0) {
 | `missing-required` | A required property is not present |
 | `wrong-type` | Property value has incorrect type |
 | `unknown-property` | Property not defined in schema |
-| `invalid-schema` | Schema contains invalid type (e.g., typo like `stirng`) |
+| `invalid-schema` | Schema contains invalid type or regex |
+| `invalid-enum-value` | Value not in the allowed enum values |
+| `pattern-mismatch` | String doesn't match the required pattern |
 
 ### Complete Example
 
 **Schema (app-schema.motly):**
 
 ```motly
+types: {
+  logLevel = [debug, info, warn, error]
+  semver.matches = "^\\d+\\.\\d+\\.\\d+$"
+}
 required: {
   app: {
     required: {
       name = string
-      version = number
+      version = semver
     }
     optional: {
       debug = boolean
@@ -890,6 +930,7 @@ required: {
 }
 optional: {
   features = "string[]"
+  logLevel = logLevel
   metadata = tag
 }
 ```
@@ -899,7 +940,7 @@ optional: {
 ```motly
 app: {
   name = "My Application"
-  version = 1.2
+  version = "1.2.0"
   debug = @false
 }
 
@@ -910,6 +951,7 @@ server: {
 }
 
 features = [logging, metrics]
+logLevel = info
 ```
 
 **Validation:**
