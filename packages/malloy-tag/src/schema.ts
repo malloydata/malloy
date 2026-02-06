@@ -268,37 +268,91 @@ function validateProperties(
   }
 }
 
+interface EnumInfo {
+  kind: 'string' | 'number';
+  values: string[] | number[];
+}
+
+function getEnumInfo(refSchema: Tag, typeName: string): EnumInfo | SchemaError {
+  const array = refSchema.array();
+  if (!array || array.length === 0) {
+    return {
+      message: `Enum type '${typeName}' has no values`,
+      path: [],
+      code: 'invalid-schema',
+    };
+  }
+
+  // Check what types are in the array
+  let hasStrings = false;
+  let hasNumbers = false;
+  const stringValues: string[] = [];
+  const numberValues: number[] = [];
+
+  for (const el of array) {
+    const val = el.eq;
+    if (typeof val === 'string') {
+      hasStrings = true;
+      stringValues.push(val);
+    } else if (typeof val === 'number') {
+      hasNumbers = true;
+      numberValues.push(val);
+    }
+  }
+
+  // Check for mixed types
+  if (hasStrings && hasNumbers) {
+    return {
+      message: `Enum type '${typeName}' has mixed types (must be all strings or all numbers)`,
+      path: [],
+      code: 'invalid-schema',
+    };
+  }
+
+  if (hasStrings) {
+    return {kind: 'string', values: stringValues};
+  }
+  if (hasNumbers) {
+    return {kind: 'number', values: numberValues};
+  }
+
+  return {
+    message: `Enum type '${typeName}' has no valid values (must be strings or numbers)`,
+    path: [],
+    code: 'invalid-schema',
+  };
+}
+
+function isSchemaError(x: EnumInfo | SchemaError): x is SchemaError {
+  return 'code' in x;
+}
+
 function validateEnumValue(
   tag: Tag,
-  refSchema: Tag,
+  enumInfo: EnumInfo,
   typeName: string,
   path: string[],
   errors: SchemaError[]
 ): void {
   const actualValue = tag.eq;
-  const allowedStrings = refSchema.textArray();
-  const allowedNumbers = refSchema.numericArray();
 
-  // Check string enums
-  if (
-    typeof actualValue === 'string' &&
-    allowedStrings &&
-    allowedStrings.includes(actualValue)
-  ) {
-    return;
+  if (enumInfo.kind === 'string') {
+    if (
+      typeof actualValue === 'string' &&
+      (enumInfo.values as string[]).includes(actualValue)
+    ) {
+      return;
+    }
+  } else {
+    if (
+      typeof actualValue === 'number' &&
+      (enumInfo.values as number[]).includes(actualValue)
+    ) {
+      return;
+    }
   }
 
-  // Check numeric enums
-  if (
-    typeof actualValue === 'number' &&
-    allowedNumbers &&
-    allowedNumbers.includes(actualValue)
-  ) {
-    return;
-  }
-
-  const allowedValues = allowedStrings ?? allowedNumbers ?? [];
-  const allowedStr = allowedValues.map(v => String(v)).join(', ');
+  const allowedStr = enumInfo.values.map(v => String(v)).join(', ');
   errors.push({
     message: `Value '${actualValue}' is not a valid ${typeName}. Allowed values: [${allowedStr}]`,
     path,
@@ -343,6 +397,33 @@ function validatePattern(
   }
 }
 
+function validateEachElement(
+  propTag: Tag,
+  isArray: boolean | undefined,
+  typeName: string,
+  path: string[],
+  errors: SchemaError[],
+  validate: (el: {tag: Tag; path: string[]}) => void
+): void {
+  if (isArray === true) {
+    const array = propTag.array();
+    if (!array) {
+      const actualType = getActualType(propTag);
+      errors.push({
+        message: `Expected '${typeName}[]', got '${actualType}'`,
+        path,
+        code: 'wrong-type',
+      });
+      return;
+    }
+    for (let i = 0; i < array.length; i++) {
+      validate({tag: array[i], path: [...path, String(i)]});
+    }
+  } else {
+    validate({tag: propTag, path});
+  }
+}
+
 function validateProperty(
   propTag: Tag,
   schemaProp: Tag,
@@ -375,60 +456,23 @@ function validateProperty(
 
     // Check if this is an enum type (custom type value is an array)
     if (Array.isArray(refSchema.eq)) {
-      if (typeRefArray) {
-        // Array of enum type
-        const array = propTag.array();
-        if (!array) {
-          const actualType = getActualType(propTag);
-          errors.push({
-            message: `Property '${propName}' has wrong type: expected '${typeRef}[]', got '${actualType}'`,
-            path,
-            code: 'wrong-type',
-          });
-          return;
-        }
-        for (let i = 0; i < array.length; i++) {
-          validateEnumValue(
-            array[i],
-            refSchema,
-            typeRef,
-            [...path, String(i)],
-            errors
-          );
-        }
-      } else {
-        validateEnumValue(propTag, refSchema, typeRef, path, errors);
+      const enumInfo = getEnumInfo(refSchema, typeRef);
+      if (isSchemaError(enumInfo)) {
+        errors.push({...enumInfo, path});
+        return;
       }
+      validateEachElement(propTag, typeRefArray, typeRef, path, errors, el =>
+        validateEnumValue(el.tag, enumInfo, typeRef, el.path, errors)
+      );
       return;
     }
 
     // Check if this is a pattern type (custom type has 'matches' property)
     const pattern = refSchema.text('matches');
     if (pattern !== undefined) {
-      if (typeRefArray) {
-        // Array of pattern type
-        const array = propTag.array();
-        if (!array) {
-          const actualType = getActualType(propTag);
-          errors.push({
-            message: `Property '${propName}' has wrong type: expected '${typeRef}[]', got '${actualType}'`,
-            path,
-            code: 'wrong-type',
-          });
-          return;
-        }
-        for (let i = 0; i < array.length; i++) {
-          validatePattern(
-            array[i],
-            pattern,
-            typeRef,
-            [...path, String(i)],
-            errors
-          );
-        }
-      } else {
-        validatePattern(propTag, pattern, typeRef, path, errors);
-      }
+      validateEachElement(propTag, typeRefArray, typeRef, path, errors, el =>
+        validatePattern(el.tag, pattern, typeRef, el.path, errors)
+      );
       return;
     }
 

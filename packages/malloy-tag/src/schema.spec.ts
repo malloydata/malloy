@@ -1025,6 +1025,34 @@ describe('schema validation', () => {
       expect(errors[0].code).toBe('invalid-enum-value');
       expect(errors[0].path).toEqual(['statuses', '1']);
     });
+
+    test('rejects empty enum type', () => {
+      const {tag} = parseTag('status=active');
+      const {tag: schema} = parseTag(`
+        types: { statusType = [] }
+        required: { status=statusType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-schema');
+      expect(errors[0].message).toContain('no values');
+    });
+
+    test('rejects mixed type enum', () => {
+      const {tag} = parseTag('value=1');
+      const {tag: schema} = parseTag(`
+        types: { mixedType = [1, two, 3] }
+        required: { value=mixedType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-schema');
+      expect(errors[0].message).toContain('mixed types');
+    });
   });
 
   describe('pattern types', () => {
