@@ -3,14 +3,28 @@
  * SPDX-License-Identifier: MIT
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import {parseTag} from './peggy';
 import {validateTag} from './schema';
+
+// Load the meta-schema from file
+const metaSchemaPath = path.join(__dirname, 'motly-schema.motly');
+const metaSchemaSource = fs.readFileSync(metaSchemaPath, 'utf-8');
+const {tag: metaSchema, log: metaSchemaLog} = parseTag(metaSchemaSource);
+
+// Fail fast if meta-schema has parse errors
+if (metaSchemaLog.length > 0) {
+  throw new Error(
+    `Meta-schema failed to parse:\n${metaSchemaLog.map(e => e.message).join('\n')}`
+  );
+}
 
 describe('schema validation', () => {
   describe('missing required properties', () => {
     test('errors when required property is missing', () => {
       const {tag} = parseTag('');
-      const {tag: schema} = parseTag('required: { name=string }');
+      const {tag: schema} = parseTag('Required: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -24,7 +38,7 @@ describe('schema validation', () => {
 
     test('errors for multiple missing required properties', () => {
       const {tag} = parseTag('');
-      const {tag: schema} = parseTag('required: { name=string age=number }');
+      const {tag: schema} = parseTag('Required: { name=string age=number }');
 
       const errors = validateTag(tag, schema);
 
@@ -35,7 +49,7 @@ describe('schema validation', () => {
     test('errors for missing nested required property', () => {
       const {tag} = parseTag('size { width=10 }');
       const {tag: schema} = parseTag(
-        'required: { size: { required: { width=number height=number } } }'
+        'Required: { size: { Required: { width=number height=number } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -52,7 +66,7 @@ describe('schema validation', () => {
   describe('wrong type errors', () => {
     test('errors when string expected but number provided', () => {
       const {tag} = parseTag('name=42');
-      const {tag: schema} = parseTag('required: { name=string }');
+      const {tag: schema} = parseTag('Required: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -67,7 +81,7 @@ describe('schema validation', () => {
 
     test('errors when number expected but string provided', () => {
       const {tag} = parseTag('age=hello');
-      const {tag: schema} = parseTag('required: { age=number }');
+      const {tag: schema} = parseTag('Required: { age=number }');
 
       const errors = validateTag(tag, schema);
 
@@ -82,7 +96,7 @@ describe('schema validation', () => {
 
     test('errors when boolean expected but string provided', () => {
       const {tag} = parseTag('enabled=yes');
-      const {tag: schema} = parseTag('required: { enabled=boolean }');
+      const {tag: schema} = parseTag('Required: { enabled=boolean }');
 
       const errors = validateTag(tag, schema);
 
@@ -93,7 +107,7 @@ describe('schema validation', () => {
 
     test('errors when date expected but string provided', () => {
       const {tag} = parseTag('created=yesterday');
-      const {tag: schema} = parseTag('required: { created=date }');
+      const {tag: schema} = parseTag('Required: { created=date }');
 
       const errors = validateTag(tag, schema);
 
@@ -104,7 +118,7 @@ describe('schema validation', () => {
 
     test('errors when tag expected but scalar provided', () => {
       const {tag} = parseTag('config=value');
-      const {tag: schema} = parseTag('required: { config=tag }');
+      const {tag: schema} = parseTag('Required: { config=tag }');
 
       const errors = validateTag(tag, schema);
 
@@ -115,7 +129,64 @@ describe('schema validation', () => {
 
     test('validates tag type correctly', () => {
       const {tag} = parseTag('config { a=1 b=2 }');
-      const {tag: schema} = parseTag('required: { config=tag }');
+      const {tag: schema} = parseTag('Required: { config=tag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('validates flag type correctly', () => {
+      const {tag} = parseTag('hidden readonly');
+      const {tag: schema} = parseTag('Required: { hidden=flag readonly=flag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('errors when flag expected but scalar provided', () => {
+      const {tag} = parseTag('hidden=@true');
+      const {tag: schema} = parseTag('Required: { hidden=flag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].message).toContain("expected 'flag'");
+      expect(errors[0].message).toContain("got 'boolean'");
+    });
+
+    test('errors when flag expected but tag with properties provided', () => {
+      const {tag} = parseTag('hidden { x=1 }');
+      const {tag: schema} = parseTag('Required: { hidden=flag }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].message).toContain("expected 'flag'");
+      expect(errors[0].message).toContain("got 'tag'");
+    });
+
+    test('optional flag works when present', () => {
+      const {tag} = parseTag('name=test deprecated');
+      const {tag: schema} = parseTag(`
+        Required: { name=string }
+        Optional: { deprecated=flag }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('optional flag works when absent', () => {
+      const {tag} = parseTag('name=test');
+      const {tag: schema} = parseTag(`
+        Required: { name=string }
+        Optional: { deprecated=flag }
+      `);
 
       const errors = validateTag(tag, schema);
 
@@ -126,7 +197,7 @@ describe('schema validation', () => {
   describe('unknown property errors', () => {
     test('errors on unknown property', () => {
       const {tag} = parseTag('name=alice unknown=value');
-      const {tag: schema} = parseTag('required: { name=string }');
+      const {tag: schema} = parseTag('Required: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -138,11 +209,9 @@ describe('schema validation', () => {
       });
     });
 
-    test('allows unknown properties with allowUnknown=@true', () => {
+    test('allows unknown properties with Additional flag', () => {
       const {tag} = parseTag('name=alice extra=value');
-      const {tag: schema} = parseTag(
-        'allowUnknown=@true required: { name=string }'
-      );
+      const {tag: schema} = parseTag('Additional Required: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -152,7 +221,7 @@ describe('schema validation', () => {
     test('errors on unknown nested property', () => {
       const {tag} = parseTag('size { width=10 extra=5 }');
       const {tag: schema} = parseTag(
-        'required: { size: { required: { width=number } } }'
+        'Required: { size: { Required: { width=number } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -169,7 +238,7 @@ describe('schema validation', () => {
   describe('valid tags pass validation', () => {
     test('valid tag with required properties', () => {
       const {tag} = parseTag('name=alice age=30');
-      const {tag: schema} = parseTag('required: { name=string age=number }');
+      const {tag: schema} = parseTag('Required: { name=string age=number }');
 
       const errors = validateTag(tag, schema);
 
@@ -179,7 +248,7 @@ describe('schema validation', () => {
     test('valid tag with optional properties', () => {
       const {tag} = parseTag('name=alice');
       const {tag: schema} = parseTag(
-        'required: { name=string } optional: { age=number }'
+        'Required: { name=string } Optional: { age=number }'
       );
 
       const errors = validateTag(tag, schema);
@@ -190,7 +259,7 @@ describe('schema validation', () => {
     test('valid tag with optional property present', () => {
       const {tag} = parseTag('name=alice age=30');
       const {tag: schema} = parseTag(
-        'required: { name=string } optional: { age=number }'
+        'Required: { name=string } Optional: { age=number }'
       );
 
       const errors = validateTag(tag, schema);
@@ -201,7 +270,7 @@ describe('schema validation', () => {
     test('valid nested properties', () => {
       const {tag} = parseTag('size { width=100 height=200 }');
       const {tag: schema} = parseTag(
-        'required: { size: { required: { width=number height=number } } }'
+        'Required: { size: { Required: { width=number height=number } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -213,7 +282,7 @@ describe('schema validation', () => {
   describe('array type validation', () => {
     test('validates string[] type', () => {
       const {tag} = parseTag('colors=[red, green, blue]');
-      const {tag: schema} = parseTag('required: { colors="string[]" }');
+      const {tag: schema} = parseTag('Required: { colors="string[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -222,7 +291,7 @@ describe('schema validation', () => {
 
     test('errors when string[] expected but number[] provided', () => {
       const {tag} = parseTag('values=[1, 2, 3]');
-      const {tag: schema} = parseTag('required: { values="string[]" }');
+      const {tag: schema} = parseTag('Required: { values="string[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -234,7 +303,7 @@ describe('schema validation', () => {
 
     test('validates number[] type', () => {
       const {tag} = parseTag('counts=[1, 2, 3]');
-      const {tag: schema} = parseTag('required: { counts="number[]" }');
+      const {tag: schema} = parseTag('Required: { counts="number[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -243,7 +312,7 @@ describe('schema validation', () => {
 
     test('validates boolean[] type', () => {
       const {tag} = parseTag('flags=[@true, @false, @true]');
-      const {tag: schema} = parseTag('required: { flags="boolean[]" }');
+      const {tag: schema} = parseTag('Required: { flags="boolean[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -252,7 +321,7 @@ describe('schema validation', () => {
 
     test('validates date[] type', () => {
       const {tag} = parseTag('dates=[@2024-01-01, @2024-02-01]');
-      const {tag: schema} = parseTag('required: { dates="date[]" }');
+      const {tag: schema} = parseTag('Required: { dates="date[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -261,7 +330,7 @@ describe('schema validation', () => {
 
     test('any[] accepts any array', () => {
       const {tag} = parseTag('items=[1, 2, 3]');
-      const {tag: schema} = parseTag('required: { items="any[]" }');
+      const {tag: schema} = parseTag('Required: { items="any[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -270,7 +339,7 @@ describe('schema validation', () => {
 
     test('errors when array expected but scalar provided', () => {
       const {tag} = parseTag('colors=red');
-      const {tag: schema} = parseTag('required: { colors="string[]" }');
+      const {tag: schema} = parseTag('Required: { colors="string[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -280,7 +349,7 @@ describe('schema validation', () => {
 
     test('empty array matches any array type', () => {
       const {tag} = parseTag('items=[]');
-      const {tag: schema} = parseTag('required: { items="string[]" }');
+      const {tag: schema} = parseTag('Required: { items="string[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -291,7 +360,7 @@ describe('schema validation', () => {
   describe('any type validation', () => {
     test('any accepts string', () => {
       const {tag} = parseTag('value=hello');
-      const {tag: schema} = parseTag('required: { value=any }');
+      const {tag: schema} = parseTag('Required: { value=any }');
 
       const errors = validateTag(tag, schema);
 
@@ -300,7 +369,7 @@ describe('schema validation', () => {
 
     test('any accepts number', () => {
       const {tag} = parseTag('value=42');
-      const {tag: schema} = parseTag('required: { value=any }');
+      const {tag: schema} = parseTag('Required: { value=any }');
 
       const errors = validateTag(tag, schema);
 
@@ -309,7 +378,7 @@ describe('schema validation', () => {
 
     test('any accepts boolean', () => {
       const {tag} = parseTag('value=@true');
-      const {tag: schema} = parseTag('required: { value=any }');
+      const {tag: schema} = parseTag('Required: { value=any }');
 
       const errors = validateTag(tag, schema);
 
@@ -318,7 +387,7 @@ describe('schema validation', () => {
 
     test('any accepts date', () => {
       const {tag} = parseTag('value=@2024-01-15');
-      const {tag: schema} = parseTag('required: { value=any }');
+      const {tag: schema} = parseTag('Required: { value=any }');
 
       const errors = validateTag(tag, schema);
 
@@ -327,7 +396,7 @@ describe('schema validation', () => {
 
     test('any accepts tag', () => {
       const {tag} = parseTag('value { a=1 }');
-      const {tag: schema} = parseTag('required: { value=any }');
+      const {tag: schema} = parseTag('Required: { value=any }');
 
       const errors = validateTag(tag, schema);
 
@@ -336,7 +405,16 @@ describe('schema validation', () => {
 
     test('any accepts array', () => {
       const {tag} = parseTag('value=[1, 2, 3]');
-      const {tag: schema} = parseTag('required: { value=any }');
+      const {tag: schema} = parseTag('Required: { value=any }');
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('any accepts flag', () => {
+      const {tag} = parseTag('value');
+      const {tag: schema} = parseTag('Required: { value=any }');
 
       const errors = validateTag(tag, schema);
 
@@ -347,7 +425,7 @@ describe('schema validation', () => {
   describe('full form type syntax', () => {
     test('validates with type in full form', () => {
       const {tag} = parseTag('name=alice');
-      const {tag: schema} = parseTag('required: { name: { type=string } }');
+      const {tag: schema} = parseTag('Required: { name: { Type=string } }');
 
       const errors = validateTag(tag, schema);
 
@@ -357,10 +435,10 @@ describe('schema validation', () => {
     test('validates nested with full form', () => {
       const {tag} = parseTag('person { name=alice age=30 }');
       const {tag: schema} = parseTag(`
-        required: {
+        Required: {
           person: {
-            type=tag
-            required: {
+            Type=tag
+            Required: {
               name=string
               age=number
             }
@@ -375,7 +453,7 @@ describe('schema validation', () => {
 
     test('errors on type mismatch with full form', () => {
       const {tag} = parseTag('name=42');
-      const {tag: schema} = parseTag('required: { name: { type=string } }');
+      const {tag: schema} = parseTag('Required: { name: { Type=string } }');
 
       const errors = validateTag(tag, schema);
 
@@ -388,7 +466,7 @@ describe('schema validation', () => {
     test('validates type of optional property when present', () => {
       const {tag} = parseTag('name=alice age=notanumber');
       const {tag: schema} = parseTag(
-        'required: { name=string } optional: { age=number }'
+        'Required: { name=string } Optional: { age=number }'
       );
 
       const errors = validateTag(tag, schema);
@@ -418,20 +496,20 @@ describe('schema validation', () => {
         }
       `);
       const {tag: schema} = parseTag(`
-        required: {
+        Required: {
           config: {
-            required: {
+            Required: {
               database: {
-                required: {
+                Required: {
                   host=string
                   port=number
                 }
               }
               features: {
-                required: {
+                Required: {
                   enabled=boolean
                 }
-                optional: {
+                Optional: {
                   flags="boolean[]"
                 }
               }
@@ -455,11 +533,11 @@ describe('schema validation', () => {
         }
       `);
       const {tag: schema} = parseTag(`
-        required: {
+        Required: {
           config: {
-            required: {
+            Required: {
               database: {
-                required: {
+                Required: {
                   host=string
                   port=number
                 }
@@ -482,7 +560,7 @@ describe('schema validation', () => {
   describe('edge cases', () => {
     test('empty tag against schema with only optional properties', () => {
       const {tag} = parseTag('');
-      const {tag: schema} = parseTag('optional: { name=string }');
+      const {tag: schema} = parseTag('Optional: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -495,13 +573,13 @@ describe('schema validation', () => {
 
       const errors = validateTag(tag, schema);
 
-      // Unknown properties should error even with empty schema
-      expect(errors).toHaveLength(2);
+      // Empty schema = no rules = all lawful
+      expect(errors).toHaveLength(0);
     });
 
-    test('empty schema with allowUnknown passes any tag', () => {
+    test('empty schema with Additional passes any tag', () => {
       const {tag} = parseTag('anything=goes here=too');
-      const {tag: schema} = parseTag('allowUnknown=@true');
+      const {tag: schema} = parseTag('Additional');
 
       const errors = validateTag(tag, schema);
 
@@ -510,7 +588,7 @@ describe('schema validation', () => {
 
     test('property with no type in schema allows any value', () => {
       const {tag} = parseTag('name=42');
-      const {tag: schema} = parseTag('required: { name }');
+      const {tag: schema} = parseTag('Required: { name }');
 
       const errors = validateTag(tag, schema);
 
@@ -520,7 +598,7 @@ describe('schema validation', () => {
 
     test('mixed array reports as mixed type', () => {
       const {tag} = parseTag('items=[1, hello, @true]');
-      const {tag: schema} = parseTag('required: { items="string[]" }');
+      const {tag: schema} = parseTag('Required: { items="string[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -531,7 +609,7 @@ describe('schema validation', () => {
 
     test('any[] accepts mixed arrays', () => {
       const {tag} = parseTag('items=[1, hello, @true]');
-      const {tag: schema} = parseTag('required: { items="any[]" }');
+      const {tag: schema} = parseTag('Required: { items="any[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -540,7 +618,7 @@ describe('schema validation', () => {
 
     test('value with properties validates only value type', () => {
       const {tag} = parseTag('name=alice { extra=1 }');
-      const {tag: schema} = parseTag('required: { name=string }');
+      const {tag: schema} = parseTag('Required: { name=string }');
 
       const errors = validateTag(tag, schema);
 
@@ -552,10 +630,10 @@ describe('schema validation', () => {
     test('value with properties and nested schema (full form)', () => {
       const {tag} = parseTag('name=alice { extra=1 }');
       const {tag: schema} = parseTag(`
-        required: {
+        Required: {
           name: {
-            type=string
-            optional: { extra=number }
+            Type=string
+            Optional: { extra=number }
           }
         }
       `);
@@ -568,8 +646,8 @@ describe('schema validation', () => {
     test('value with properties and nested schema (shorthand)', () => {
       const {tag} = parseTag('name=alice { extra=1 }');
       const {tag: schema} = parseTag(`
-        required: {
-          name=string { optional: { extra=number } }
+        Required: {
+          name=string { Optional: { extra=number } }
         }
       `);
 
@@ -580,7 +658,7 @@ describe('schema validation', () => {
 
     test('arrays of objects have tag element type', () => {
       const {tag} = parseTag('items=[{a=1}, {b=2}]');
-      const {tag: schema} = parseTag('required: { items="string[]" }');
+      const {tag: schema} = parseTag('Required: { items="string[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -591,7 +669,7 @@ describe('schema validation', () => {
 
     test('tag[] validates arrays of objects', () => {
       const {tag} = parseTag('items=[{a=1}, {b=2}]');
-      const {tag: schema} = parseTag('required: { items="tag[]" }');
+      const {tag: schema} = parseTag('Required: { items="tag[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -600,7 +678,7 @@ describe('schema validation', () => {
 
     test('tag[] rejects arrays of scalars', () => {
       const {tag} = parseTag('items=[1, 2, 3]');
-      const {tag: schema} = parseTag('required: { items="tag[]" }');
+      const {tag: schema} = parseTag('Required: { items="tag[]" }');
 
       const errors = validateTag(tag, schema);
 
@@ -614,7 +692,7 @@ describe('schema validation', () => {
         'items=[{size=10 color=red}, {size=20 color=blue}]'
       );
       const {tag: schema} = parseTag(
-        'required: { items="tag[]" { required: { size=number color=string } } }'
+        'Required: { items="tag[]" { Required: { size=number color=string } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -627,7 +705,7 @@ describe('schema validation', () => {
         'items=[{size=10 color=red}, {size=bad color=blue}]'
       );
       const {tag: schema} = parseTag(
-        'required: { items="tag[]" { required: { size=number color=string } } }'
+        'Required: { items="tag[]" { Required: { size=number color=string } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -640,7 +718,7 @@ describe('schema validation', () => {
     test('tag[] element schema catches missing required', () => {
       const {tag} = parseTag('items=[{size=10}, {color=blue}]');
       const {tag: schema} = parseTag(
-        'required: { items="tag[]" { required: { size=number color=string } } }'
+        'Required: { items="tag[]" { Required: { size=number color=string } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -653,7 +731,7 @@ describe('schema validation', () => {
     test('tag[] element schema catches unknown properties', () => {
       const {tag} = parseTag('items=[{size=10 color=red extra=bad}]');
       const {tag: schema} = parseTag(
-        'required: { items="tag[]" { required: { size=number color=string } } }'
+        'Required: { items="tag[]" { Required: { size=number color=string } } }'
       );
 
       const errors = validateTag(tag, schema);
@@ -665,7 +743,7 @@ describe('schema validation', () => {
 
     test('misspelled type in schema reports invalid-schema error', () => {
       const {tag} = parseTag('name=42');
-      const {tag: schema} = parseTag('required: { name=stirng }'); // typo
+      const {tag: schema} = parseTag('Required: { name=stirng }'); // typo
 
       const errors = validateTag(tag, schema);
 
@@ -676,7 +754,7 @@ describe('schema validation', () => {
 
     test('invalid type in full form reports invalid-schema error', () => {
       const {tag} = parseTag('name=42');
-      const {tag: schema} = parseTag('required: { name: { type=nubmer } }'); // typo
+      const {tag: schema} = parseTag('Required: { name: { Type=nubmer } }'); // typo
 
       const errors = validateTag(tag, schema);
 
@@ -690,12 +768,12 @@ describe('schema validation', () => {
     test('validates using custom type reference', () => {
       const {tag} = parseTag('person { name=alice age=30 }');
       const {tag: schema} = parseTag(`
-        types: {
+        Types: {
           personType: {
-            required: { name=string age=number }
+            Required: { name=string age=number }
           }
         }
-        required: { person=personType }
+        Required: { person=personType }
       `);
 
       const errors = validateTag(tag, schema);
@@ -706,12 +784,12 @@ describe('schema validation', () => {
     test('reports error when custom type validation fails', () => {
       const {tag} = parseTag('person { name=alice }');
       const {tag: schema} = parseTag(`
-        types: {
+        Types: {
           personType: {
-            required: { name=string age=number }
+            Required: { name=string age=number }
           }
         }
-        required: { person=personType }
+        Required: { person=personType }
       `);
 
       const errors = validateTag(tag, schema);
@@ -724,7 +802,7 @@ describe('schema validation', () => {
     test('validates array of custom type', () => {
       const {tag} = parseTag('people=[{name=alice age=30}, {name=bob age=25}]');
       const {tag: schema} = parseTag(
-        'types: { personType: { required: { name=string age=number } } } required: { people="personType[]" }'
+        'Types: { personType: { Required: { name=string age=number } } } Required: { people="personType[]" }'
       );
 
       const errors = validateTag(tag, schema);
@@ -735,7 +813,7 @@ describe('schema validation', () => {
     test('reports error in array of custom type with index', () => {
       const {tag} = parseTag('people=[{name=alice age=30}, {name=bob}]');
       const {tag: schema} = parseTag(
-        'types: { personType: { required: { name=string age=number } } } required: { people="personType[]" }'
+        'Types: { personType: { Required: { name=string age=number } } } Required: { people="personType[]" }'
       );
 
       const errors = validateTag(tag, schema);
@@ -748,7 +826,7 @@ describe('schema validation', () => {
     test('custom type array rejects non-array', () => {
       const {tag} = parseTag('person { name=alice age=30 }');
       const {tag: schema} = parseTag(
-        'types: { personType: { required: { name=string age=number } } } required: { person="personType[]" }'
+        'Types: { personType: { Required: { name=string age=number } } } Required: { person="personType[]" }'
       );
 
       const errors = validateTag(tag, schema);
@@ -763,7 +841,7 @@ describe('schema validation', () => {
         'node { value=1 children=[{ value=2 }, { value=3 children=[{ value=4 }] }] }'
       );
       const {tag: schema} = parseTag(
-        'types: { treeNode: { required: { value=number } optional: { children="treeNode[]" } } } required: { node=treeNode }'
+        'Types: { treeNode: { Required: { value=number } Optional: { children="treeNode[]" } } } Required: { node=treeNode }'
       );
 
       const errors = validateTag(tag, schema);
@@ -776,7 +854,7 @@ describe('schema validation', () => {
         'node { value=1 children=[{ value=2 }, { value=bad }] }'
       );
       const {tag: schema} = parseTag(
-        'types: { treeNode: { required: { value=number } optional: { children="treeNode[]" } } } required: { node=treeNode }'
+        'Types: { treeNode: { Required: { value=number } Optional: { children="treeNode[]" } } } Required: { node=treeNode }'
       );
 
       const errors = validateTag(tag, schema);
@@ -792,11 +870,11 @@ describe('schema validation', () => {
         address { city=boston }
       `);
       const {tag: schema} = parseTag(`
-        types: {
-          userType: { required: { name=string } }
-          addressType: { required: { city=string } }
+        Types: {
+          userType: { Required: { name=string } }
+          addressType: { Required: { city=string } }
         }
-        required: {
+        Required: {
           user=userType
           address=addressType
         }
@@ -810,13 +888,13 @@ describe('schema validation', () => {
     test('custom type with type constraint on value', () => {
       const {tag} = parseTag('config=settings { debug=@true }');
       const {tag: schema} = parseTag(`
-        types: {
+        Types: {
           configType: {
-            type=string
-            optional: { debug=boolean }
+            Type=string
+            Optional: { debug=boolean }
           }
         }
-        required: { config=configType }
+        Required: { config=configType }
       `);
 
       const errors = validateTag(tag, schema);
@@ -824,62 +902,379 @@ describe('schema validation', () => {
       expect(errors).toHaveLength(0);
     });
 
-    test('schema for schemas validates itself', () => {
-      // A schema that describes what a valid schema looks like
-      // propDict: a dictionary where each value is a propSchema (allowUnknown for arbitrary prop names)
-      // propSchema: has optional type, required, optional fields
-      const {tag: metaSchema} = parseTag(
-        'types: { ' +
-          'propSchema: { ' +
-          'allowUnknown=@true ' +
-          'optional: { type=string required=propDict optional=propDict allowUnknown=boolean } ' +
-          '} ' +
-          'propDict: { ' +
-          'allowUnknown=@true ' +
-          '} ' +
-          '} ' +
-          'optional: { ' +
-          'types=propDict ' +
-          'required=propDict ' +
-          'optional=propDict ' +
-          'allowUnknown=boolean ' +
-          '}'
-      );
-
-      // Validate the meta-schema against itself
+    test('meta-schema validates itself', () => {
+      // The meta-schema loaded from motly-schema.motly should validate against itself
       const errors = validateTag(metaSchema, metaSchema);
 
       expect(errors).toHaveLength(0);
     });
 
-    test('schema for schemas catches invalid schema', () => {
-      const {tag: metaSchema} = parseTag(
-        'types: { ' +
-          'propSchema: { ' +
-          'allowUnknown=@true ' +
-          'optional: { type=string required=propDict optional=propDict allowUnknown=boolean } ' +
-          '} ' +
-          'propDict: { ' +
-          'allowUnknown=@true ' +
-          '} ' +
-          '} ' +
-          'optional: { ' +
-          'types=propDict ' +
-          'required=propDict ' +
-          'optional=propDict ' +
-          'allowUnknown=boolean ' +
-          '}'
-      );
+    test('meta-schema validates a simple schema', () => {
+      const {tag: simpleSchema} = parseTag(`
+        Required: { name=string age=number }
+        Optional: { email=string }
+      `);
 
-      // An invalid schema with wrong type for allowUnknown
-      const {tag: badSchema} = parseTag(
-        'required: { name=string } allowUnknown=yes'
-      );
+      const errors = validateTag(simpleSchema, metaSchema);
 
-      const errors = validateTag(badSchema, metaSchema);
+      expect(errors).toHaveLength(0);
+    });
 
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.path.includes('allowUnknown'))).toBe(true);
+    test('meta-schema validates schema with custom types', () => {
+      const {tag: schema} = parseTag(`
+        Types: {
+          PersonType: {
+            Required: { name=string }
+            Optional: { age=number }
+          }
+        }
+        Required: { person=PersonType }
+      `);
+
+      const errors = validateTag(schema, metaSchema);
+
+      expect(errors).toHaveLength(0);
+    });
+  });
+
+  describe('enum types', () => {
+    test('validates string enum', () => {
+      const {tag} = parseTag('status=active');
+      const {tag: schema} = parseTag(`
+        Types: { statusType = [pending, active, completed] }
+        Required: { status=statusType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid enum value', () => {
+      const {tag} = parseTag('status=unknown');
+      const {tag: schema} = parseTag(`
+        Types: { statusType = [pending, active, completed] }
+        Required: { status=statusType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-enum-value');
+      expect(errors[0].message).toContain('unknown');
+      expect(errors[0].message).toContain('pending, active, completed');
+    });
+
+    test('validates numeric enum', () => {
+      const {tag} = parseTag('level=2');
+      const {tag: schema} = parseTag(`
+        Types: { levelType = [1, 2, 3] }
+        Required: { level=levelType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid numeric enum value', () => {
+      const {tag} = parseTag('level=5');
+      const {tag: schema} = parseTag(`
+        Types: { levelType = [1, 2, 3] }
+        Required: { level=levelType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-enum-value');
+    });
+
+    test('validates array of enum type', () => {
+      const {tag} = parseTag('statuses=[active, pending]');
+      const {tag: schema} = parseTag(`
+        Types: { statusType = [pending, active, completed] }
+        Required: { statuses="statusType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid value in enum array', () => {
+      const {tag} = parseTag('statuses=[active, invalid]');
+      const {tag: schema} = parseTag(`
+        Types: { statusType = [pending, active, completed] }
+        Required: { statuses="statusType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-enum-value');
+      expect(errors[0].path).toEqual(['statuses', '1']);
+    });
+
+    test('rejects empty enum type', () => {
+      const {tag} = parseTag('status=active');
+      const {tag: schema} = parseTag(`
+        Types: { statusType = [] }
+        Required: { status=statusType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-schema');
+      expect(errors[0].message).toContain('no values');
+    });
+
+    test('rejects mixed type enum', () => {
+      const {tag} = parseTag('value=1');
+      const {tag: schema} = parseTag(`
+        Types: { mixedType = [1, two, 3] }
+        Required: { value=mixedType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-schema');
+      expect(errors[0].message).toContain('mixed types');
+    });
+  });
+
+  describe('pattern types', () => {
+    test('validates string matching pattern', () => {
+      const {tag} = parseTag('email="test@example.com"');
+      const {tag: schema} = parseTag(`
+        Types: { emailType.matches = "^[^@]+@[^@]+$" }
+        Required: { email=emailType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects string not matching pattern', () => {
+      const {tag} = parseTag('email="not-an-email"');
+      const {tag: schema} = parseTag(`
+        Types: { emailType.matches = "^[^@]+@[^@]+$" }
+        Required: { email=emailType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('pattern-mismatch');
+    });
+
+    test('rejects non-string for pattern type', () => {
+      const {tag} = parseTag('email=123');
+      const {tag: schema} = parseTag(`
+        Types: { emailType.matches = ".*" }
+        Required: { email=emailType }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+    });
+
+    test('validates array of pattern type', () => {
+      const {tag} = parseTag('emails=["a@b.com", "c@d.org"]');
+      const {tag: schema} = parseTag(`
+        Types: { emailType.matches = "^[^@]+@[^@]+$" }
+        Required: { emails="emailType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects invalid value in pattern array', () => {
+      const {tag} = parseTag('emails=["a@b.com", "invalid"]');
+      const {tag: schema} = parseTag(`
+        Types: { emailType.matches = "^[^@]+@[^@]+$" }
+        Required: { emails="emailType[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('pattern-mismatch');
+      expect(errors[0].path).toEqual(['emails', '1']);
+    });
+
+    test('reports error for invalid regex in schema', () => {
+      const {tag} = parseTag('value=test');
+      const {tag: schema} = parseTag(`
+        Types: { badPattern.matches = "[invalid" }
+        Required: { value=badPattern }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('invalid-schema');
+    });
+  });
+
+  describe('oneOf union types', () => {
+    test('validates value matching first type in oneOf', () => {
+      const {tag} = parseTag('value=hello');
+      const {tag: schema} = parseTag(`
+        Types: { StringOrNumber.oneOf = [string, number] }
+        Required: { value=StringOrNumber }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('validates value matching second type in oneOf', () => {
+      const {tag} = parseTag('value=42');
+      const {tag: schema} = parseTag(`
+        Types: { StringOrNumber.oneOf = [string, number] }
+        Required: { value=StringOrNumber }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('rejects value not matching any type in oneOf', () => {
+      const {tag} = parseTag('value=@true');
+      const {tag: schema} = parseTag(`
+        Types: { StringOrNumber.oneOf = [string, number] }
+        Required: { value=StringOrNumber }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].message).toContain('oneOf');
+    });
+
+    test('oneOf with custom structural types', () => {
+      const {tag} = parseTag('item { name=test }');
+      const {tag: schema} = parseTag(`
+        Types: {
+          TypeA: { Required: { name=string } }
+          TypeB: { Required: { count=number } }
+          AorB.oneOf = [TypeA, TypeB]
+        }
+        Required: { item=AorB }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('oneOf with enum type', () => {
+      const {tag} = parseTag('value=active');
+      const {tag: schema} = parseTag(`
+        Types: {
+          StatusEnum = [pending, active, completed]
+          StringOrStatus.oneOf = [number, StatusEnum]
+        }
+        Required: { value=StringOrStatus }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('array of oneOf type', () => {
+      const {tag} = parseTag('values=[hello, 42, world]');
+      const {tag: schema} = parseTag(`
+        Types: { StringOrNumber.oneOf = [string, number] }
+        Required: { values="StringOrNumber[]" }
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+  });
+
+  describe('typed Additional', () => {
+    test('Additional with type validates unknown properties', () => {
+      const {tag} = parseTag('name=alice extra1=hello extra2=world');
+      const {tag: schema} = parseTag(`
+        Required: { name=string }
+        Additional=string
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('Additional with type rejects invalid unknown properties', () => {
+      const {tag} = parseTag('name=alice extra=42');
+      const {tag: schema} = parseTag(`
+        Required: { name=string }
+        Additional=string
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe('wrong-type');
+      expect(errors[0].path).toEqual(['extra']);
+    });
+
+    test('Additional with custom type', () => {
+      const {tag} = parseTag('name=test prop1 { x=1 } prop2 { x=2 }');
+      const {tag: schema} = parseTag(`
+        Types: {
+          PropType: { Required: { x=number } }
+        }
+        Required: { name=string }
+        Additional=PropType
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
+    });
+
+    test('Additional with custom type catches errors', () => {
+      const {tag} = parseTag('name=test prop1 { x=bad }');
+      const {tag: schema} = parseTag(`
+        Types: {
+          PropType: { Required: { x=number } }
+        }
+        Required: { name=string }
+        Additional=PropType
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].path).toEqual(['prop1', 'x']);
+    });
+
+    test('Additional flag is same as Additional=any', () => {
+      const {tag} = parseTag('name=alice anything=goes here=too');
+      const {tag: schema} = parseTag(`
+        Required: { name=string }
+        Additional
+      `);
+
+      const errors = validateTag(tag, schema);
+
+      expect(errors).toHaveLength(0);
     });
   });
 });

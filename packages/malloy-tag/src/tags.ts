@@ -229,6 +229,31 @@ export class Tag implements TagInterface {
     return newDict;
   }
 
+  /** Iterate over [name, Tag] pairs for each property */
+  *entries(): Generator<[string, Tag]> {
+    if (this.properties) {
+      for (const key in this.properties) {
+        yield [key, Tag.tagFrom(this.properties[key])];
+      }
+    }
+  }
+
+  /** Iterate over property names */
+  *keys(): Generator<string> {
+    if (this.properties) {
+      for (const key in this.properties) {
+        yield key;
+      }
+    }
+  }
+
+  /** Check if this tag has any properties */
+  hasProperties(): boolean {
+    return (
+      this.properties !== undefined && Object.keys(this.properties).length > 0
+    );
+  }
+
   array(...at: Path): Tag[] | undefined {
     const array = this.find(at)?.eq;
     if (!Array.isArray(array)) {

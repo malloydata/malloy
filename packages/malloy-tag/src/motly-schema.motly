@@ -1,0 +1,52 @@
+#! schema=motly-schema url="https://raw.githubusercontent.com/malloydata/malloy/main/packages/malloy-tag/src/motly-schema.motly"
+
+# Meta-schema: A schema that validates MOTLY schemas
+# This file describes the structure of valid schema definitions
+
+Types: {
+  # A property definition: either shorthand string or full form with nested schema
+  PropDef.oneOf = [string, PropDefFull]
+
+  PropDefFull: {
+    Optional: {
+      Type = string
+      Required = PropDict
+      Optional = PropDict
+    }
+    Additional
+  }
+
+  # A dictionary of property definitions (property names are arbitrary)
+  PropDict: { Additional = PropDef }
+
+  # A type definition: one of several forms
+  TypeDef.oneOf = [EnumType, PatternType, UnionType, StructuralType]
+
+  # Enum type: value is an array of allowed values
+  EnumType: { Type = "any[]" }
+
+  # Pattern type: has a matches property with regex string
+  PatternType: { Required: { matches = string } }
+
+  # Union type: has oneOf property listing type names
+  UnionType: { Required: { oneOf = "string[]" } }
+
+  # Structural type: has Required/Optional sections defining properties
+  StructuralType: {
+    Optional: {
+      Required = PropDict
+      Optional = PropDict
+    }
+    Additional
+  }
+
+  # A dictionary of type definitions (type names are arbitrary)
+  TypeDict: { Additional = TypeDef }
+}
+
+Optional: {
+  Types = TypeDict
+  Required = PropDict
+  Optional = PropDict
+}
+Additional

@@ -149,7 +149,8 @@ scheduled = @2024-01-15T10:30:00+05:00
 Arrays are enclosed in square brackets:
 
 ```motly
-# Simple array
+# Simple array of strings
+# (inside an array, bare words are always strings, never property names)
 colors = [red, green, blue]
 
 # Array of numbers
@@ -622,6 +623,11 @@ const outputs = app.textArray('logging', 'outputs'); // ["stdout", "file"]
 if (app.has('database', 'credentials')) {
   const username = app.text('database', 'credentials', 'username');
 }
+
+// Iterate over properties
+for (const [name, value] of app.tag('server').entries()) {
+  console.log(`${name}: ${value.eq}`);
+}
 ```
 
 ## Schema Validation
@@ -630,15 +636,15 @@ MOTLY supports schema validation to ensure configuration files conform to expect
 
 ### Defining a Schema
 
-A schema defines `required` and `optional` properties with their expected types:
+A schema defines `required` and `optional` properties with their expected Types:
 
 ```motly
-required: {
+Required: {
   name = string
   port = number
   enabled = boolean
 }
-optional: {
+Optional: {
   timeout = number
   tags = "string[]"
 }
@@ -653,6 +659,7 @@ optional: {
 | `boolean` | True or false | `enabled = boolean` |
 | `date` | ISO 8601 date | `created = date` |
 | `tag` | Nested object (no scalar value) | `config = tag` |
+| `flag` | Presence-only (no value or properties) | `hidden = flag` |
 | `any` | Any type allowed | `value = any` |
 | `"string[]"` | Array of strings | `tags = "string[]"` |
 | `"number[]"` | Array of numbers | `ports = "number[]"` |
@@ -668,16 +675,16 @@ Note: Array types must be quoted to prevent the `[]` from being parsed as an arr
 Define nested object structures by nesting `required` and `optional` blocks:
 
 ```motly
-required: {
+Required: {
   database: {
-    required: {
+    Required: {
       host = string
       port = number
     }
-    optional: {
+    Optional: {
       ssl = boolean
       pool: {
-        required: {
+        Required: {
           min = number
           max = number
         }
@@ -692,9 +699,9 @@ required: {
 Properties can have both a type constraint and nested property validation. Use the shorthand form:
 
 ```motly
-required: {
+Required: {
   server = tag {
-    required: {
+    Required: {
       host = string
       port = number
     }
@@ -702,13 +709,13 @@ required: {
 }
 ```
 
-Or the full form with `type`:
+Or the full form with `Type`:
 
 ```motly
-required: {
+Required: {
   server: {
-    type = tag
-    required: {
+    Type = tag
+    Required: {
       host = string
       port = number
     }
@@ -719,9 +726,9 @@ required: {
 This works for any type. For example, validating a property that must be a string but can also have metadata:
 
 ```motly
-required: {
+Required: {
   name = string {
-    optional: { locale = string }
+    Optional: { locale = string }
   }
 }
 ```
@@ -731,9 +738,9 @@ required: {
 For arrays of objects (`tag[]`), the nested schema validates each element:
 
 ```motly
-required: {
+Required: {
   items = "tag[]" {
-    required: {
+    Required: {
       size = number
       color = string
     }
@@ -748,15 +755,15 @@ This validates that `items` is an array where every element has `size` (number) 
 Define reusable types in the `types` section and reference them by name:
 
 ```motly
-types: {
+Types: {
   personType: {
-    required: {
+    Required: {
       name = string
       age = number
     }
   }
 }
-required: {
+Required: {
   user = personType
   manager = personType
 }
@@ -766,15 +773,15 @@ Custom type names cannot conflict with built-in types (string, number, etc.).
 
 #### Custom Type Arrays
 
-Use quoted `"typeName[]"` for arrays of custom types:
+Use quoted `"typeName[]"` for arrays of custom Types:
 
 ```motly
-types: {
+Types: {
   personType: {
-    required: { name = string age = number }
+    Required: { name = string age = number }
   }
 }
-required: {
+Required: {
   people = "personType[]"
 }
 ```
@@ -784,29 +791,111 @@ required: {
 Custom types can reference themselves for recursive structures:
 
 ```motly
-types: {
+Types: {
   treeNode: {
-    required: { value = number }
-    optional: { children = "treeNode[]" }
+    Required: { value = number }
+    Optional: { children = "treeNode[]" }
   }
 }
-required: {
+Required: {
   root = treeNode
 }
 ```
 
 This validates trees of arbitrary depth where each node has a `value` and optional `children`.
 
-### Unknown Properties
+### Enum Types
 
-By default, properties not listed in `required` or `optional` cause validation errors. To allow extra properties, add `allowUnknown = @true`:
+Define a custom type as an array of allowed values:
 
 ```motly
-allowUnknown = @true
-required: {
+Types: {
+  statusType = [pending, active, completed]
+  levelType = [1, 2, 3]
+}
+Required: {
+  status = statusType
+  level = levelType
+}
+```
+
+Values not in the array are rejected with an `invalid-enum-value` error.
+
+### Pattern Types
+
+Define a custom type with a `matches` property containing a regex:
+
+```motly
+Types: {
+  emailType.matches = "^[^@]+@[^@]+$"
+  semverType.matches = "^\\d+\\.\\d+\\.\\d+$"
+}
+Required: {
+  email = emailType
+  version = semverType
+}
+```
+
+Non-matching strings are rejected with a `pattern-mismatch` error. Non-string values are rejected with a `wrong-type` error.
+
+### Union Types (oneOf)
+
+Define a custom type that accepts multiple types using `oneOf`:
+
+```motly
+Types: {
+  StringOrNumber.oneOf = [string, number]
+}
+Required: {
+  value = StringOrNumber
+}
+```
+
+The value is validated against each type in the list until one matches. Union types can include built-in types, custom types, enums, and pattern types:
+
+```motly
+Types: {
+  StatusEnum = [pending, active, completed]
+  FlexibleValue.oneOf = [string, number, StatusEnum]
+}
+Required: {
+  data = FlexibleValue
+}
+```
+
+### Additional Properties
+
+By default, properties not listed in `Required` or `Optional` cause validation errors. The `Additional` keyword controls this behavior:
+
+**Allow any additional properties (flag form):**
+
+```motly
+Additional
+Required: {
   name = string
 }
 ```
+
+**Validate additional properties against a type:**
+
+```motly
+Types: {
+  MetadataType: {
+    Required: { key = string value = string }
+  }
+}
+Required: {
+  name = string
+}
+Additional = MetadataType
+```
+
+With typed `Additional`, unknown properties must match the specified type. This is useful for dictionaries or extensible configurations.
+
+**Behavior summary:**
+- No `Additional`: reject unknown properties (default)
+- `Additional`: allow any additional properties (same as `Additional = any`)
+- `Additional = TypeName`: validate additional properties against the type
 
 ### Validation API
 
@@ -823,12 +912,12 @@ const {tag: config} = parseTag(`
 
 // Parse the schema
 const {tag: schema} = parseTag(`
-  required: {
+  Required: {
     name = string
     port = number
     enabled = boolean
   }
-  optional: {
+  Optional: {
     timeout = number
     tags = "string[]"
   }
@@ -853,36 +942,43 @@ if (errors.length === 0) {
 | `missing-required` | A required property is not present |
 | `wrong-type` | Property value has incorrect type |
 | `unknown-property` | Property not defined in schema |
-| `invalid-schema` | Schema contains invalid type (e.g., typo like `stirng`) |
+| `invalid-schema` | Schema contains invalid type or regex |
+| `invalid-enum-value` | Value not in the allowed enum values |
+| `pattern-mismatch` | String doesn't match the required pattern |
 
 ### Complete Example
 
 **Schema (app-schema.motly):**
 
 ```motly
-required: {
+Types: {
+  logLevel = [debug, info, warn, error]
+  semver.matches = "^\\d+\\.\\d+\\.\\d+$"
+}
+Required: {
   app: {
-    required: {
+    Required: {
       name = string
-      version = number
+      version = semver
     }
-    optional: {
+    Optional: {
       debug = boolean
     }
   }
   server: {
-    required: {
+    Required: {
       host = string
       port = number
     }
-    optional: {
+    Optional: {
       ssl = boolean
       timeout = number
     }
   }
 }
-optional: {
+Optional: {
   features = "string[]"
+  logLevel = logLevel
   metadata = tag
 }
 ```
@@ -892,7 +988,7 @@ optional: {
 ```motly
 app: {
   name = "My Application"
-  version = 1.2
+  version = "1.2.0"
   debug = @false
 }
 
@@ -903,6 +999,7 @@ server: {
 }
 
 features = [logging, metrics]
+logLevel = info
 ```
 
 **Validation:**
@@ -916,4 +1013,140 @@ const {tag: schema} = parseTag(fs.readFileSync('app-schema.motly', 'utf-8'));
 
 const errors = validateTag(config, schema);
 // errors = [] (valid configuration)
+```
+
+## Schema Directive
+
+A MOTLY file can declare its schema using a `#!` directive on the first line. This allows editors and tools to automatically validate the file.
+
+### Syntax
+
+The directive uses MOTLY syntax after `#!`:
+
+```motly
+#! schema=config-v1 url="https://schemas.example.com/config.motly"
+```
+
+Properties:
+- `schema` - A short identifier code for the schema
+- `url` - Location of the schema file (URL or relative path)
+
+### Examples
+
+```motly
+#! schema=app-config url="./schemas/app.motly"
+name = "My Application"
+port = 8080
+```
+
+```motly
+#! schema=malloy-render url="https://malloydata.github.io/schemas/render-v1.motly"
+renderer = bar_chart
+```
+
+### Conventions
+
+- **Registered codes**: Future schema registries may provide well-known codes
+- **Private codes**: Use `x-` prefix for organization-specific schemas (e.g., `x-acme-deploy`)
+- **Either or both**: A file may specify just `schema`, just `url`, or both:
+  - `#! schema=well-known-config` - code only, for well-known schemas
+  - `#! url="./local-schema.motly"` - url only, for local schemas
+  - `#! schema=x-acme url="..."` - both, for private schemas with fallback URL
+
+### For Tool Authors
+
+To support schema directives:
+1. Check if line 1 starts with `#!`
+2. Strip the `#!` prefix and parse the remainder as MOTLY
+3. Extract `schema` and/or `url` properties
+4. Fetch and apply the schema for validation
+
+Note: There is currently no schema registry. This convention is documented for future tooling.
+
+## Grammar (EBNF)
+
+```ebnf
+(* Entry point *)
+document        ::= { statement }
+
+(* Statements *)
+statement       ::= assignment
+                  | replaceProps
+                  | updateProps
+                  | clearAll
+                  | definition
+
+assignment      ::= propName "=" value [ properties ]
+replaceProps    ::= propName ":" properties
+                  | propName "=" [ "..." ] properties
+updateProps     ::= propName properties
+definition      ::= [ "-" ] propName
+clearAll        ::= "-..."
+
+(* Property paths *)
+propName        ::= identifier { "." identifier }
+
+(* Values *)
+value           ::= array | boolean | date | number | string
+
+boolean         ::= "@true" | "@false"
+date            ::= "@" isoDate
+number          ::= [ "-" ] digits [ "." digits ] [ exponent ]
+                  | [ "-" ] "." digits [ exponent ]
+string          ::= tripleString | sqString | dqString | bareString
+
+exponent        ::= ( "e" | "E" ) [ "+" | "-" ] digits
+digits          ::= digit { digit }
+digit           ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+(* ISO 8601 date/datetime *)
+isoDate         ::= year "-" month "-" day [ "T" hour ":" minute [ ":" second [ "." fraction ] ] timezone ]
+timezone        ::= "Z" | ( "+" | "-" ) hour [ ":" ] minute
+year            ::= digit digit digit digit
+month           ::= digit digit
+day             ::= digit digit
+hour            ::= digit digit
+minute          ::= digit digit
+second          ::= digit digit
+fraction        ::= digits
+
+(* Arrays *)
+array           ::= "[" [ arrayElements ] "]"
+arrayElements   ::= arrayElement { "," arrayElement } [ "," ]
+arrayElement    ::= scalarValue [ properties ]
+                  | properties
+                  | array
+
+scalarValue     ::= boolean | date | number | string
+
+(* Properties block *)
+properties      ::= "{" { statement } "}"
+                  | "{" "..." "}"
+
+(* Identifiers - for property names *)
+identifier      ::= bqString | bareString
+
+(* String literals *)
+bareString      ::= bareChar { bareChar }
+bareChar        ::= letter | digit | "_"
+letter          ::= "A"-"Z" | "a"-"z" | extendedLatin
+extendedLatin   ::= (* Unicode: U+00C0-U+024F, U+1E00-U+1EFF *)
+
+tripleString    ::= '"""' { tripleChar } '"""'
+tripleChar      ::= (* any character except unescaped """ *)
+
+sqString        ::= "'" { sqChar } "'"
+sqChar          ::= (* any character except ', \, newline, or escape sequence *)
+
+dqString        ::= '"' { dqChar } '"'
+dqChar          ::= (* any character except ", \, newline, or escape sequence *)
+
+bqString        ::= "`" { bqChar } "`"
+bqChar          ::= (* any character except `, \, newline, or escape sequence *)
+
+(* Escape sequences in strings: \b \f \n \r \t \uXXXX \char *)
+
+(* Whitespace and comments - allowed between tokens *)
+whitespace      ::= " " | "\t" | "\r" | "\n"
+comment         ::= "#" { (* any char except newline *) } newline
 ```
