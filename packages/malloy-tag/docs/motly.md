@@ -170,6 +170,88 @@ users = [
 config = [@true, 42, hello, @2024-01-15]
 ```
 
+## References (Experimental)
+
+References allow one value to point to another value in the same document. When accessed, the reference resolves to the target value.
+
+### Basic References
+
+Use `$` followed by a path to reference another property:
+
+```motly
+defaults: {
+  timeout = 30
+  retries = 3
+}
+
+api: {
+  timeout = $defaults.timeout
+  retries = $defaults.retries
+}
+```
+
+When you access `api.timeout`, it resolves to `30`.
+
+### Relative References
+
+Use `^` to go up levels in the tree:
+
+```motly
+server: {
+  host = localhost
+
+  endpoints: {
+    api: {
+      # $^ goes up one level (to endpoints)
+      # $^^ goes up two levels (to server)
+      url = $^^host
+    }
+  }
+}
+```
+
+| Syntax | Meaning |
+|--------|---------|
+| `$path` | Absolute path from root |
+| `$^path` | Up one level, then path |
+| `$^^path` | Up two levels, then path |
+
+### Array Indexing
+
+Reference specific array elements with brackets:
+
+```motly
+users = [
+  { name = alice  role = admin }
+  { name = bob    role = user }
+]
+
+primary_user = $users[0].name
+```
+
+### Reference Behavior
+
+- References resolve when accessed, not when defined
+- Unresolved references return `undefined`
+- Circular references are detected and return `undefined`
+- `toJSON()` serializes references as `{linkTo: "$path"}` (preserves structure)
+- `toObject()` resolves references to their actual values
+
+### Validation
+
+Use `validateReferences()` to check all references resolve:
+
+```typescript
+const {tag} = parseTag(`
+  source = hello
+  valid = $source
+  invalid = $nonexistent
+`);
+
+const errors = tag.validateReferences();
+// errors = ["Unresolved reference at invalid: $nonexistent"]
+```
+
 ## Objects
 
 ### Basic Nesting
@@ -492,6 +574,9 @@ monitoring: {
 | `"""multi"""` | Multi-line string | `desc = """..."""` |
 | `# comment` | Line comment | `# This is a comment` |
 | `-key` | Delete property | `-deprecated_field` |
+| `$path` | Reference (absolute) | `timeout = $defaults.timeout` |
+| `$^path` | Reference (relative) | `host = $^^server.host` |
+| `$arr[0]` | Reference with index | `first = $items[0]` |
 
 ## Bare String Rules
 
@@ -1087,13 +1172,16 @@ clearAll        ::= "-..."
 propName        ::= identifier { "." identifier }
 
 (* Values *)
-value           ::= array | boolean | date | number | string
+value           ::= array | boolean | date | number | string | reference
 
 boolean         ::= "@true" | "@false"
 date            ::= "@" isoDate
 number          ::= [ "-" ] digits [ "." digits ] [ exponent ]
                   | [ "-" ] "." digits [ exponent ]
 string          ::= tripleString | sqString | dqString | bareString
+reference       ::= "$" { "^" } refPath
+refPath         ::= refElement { "." refElement }
+refElement      ::= identifier [ "[" digits "]" ]
 
 exponent        ::= ( "e" | "E" ) [ "+" | "-" ] digits
 digits          ::= digit { digit }
