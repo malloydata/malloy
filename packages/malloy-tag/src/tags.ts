@@ -28,20 +28,36 @@ export interface TagError {
   code: string;
 }
 
-// The distinction between the interface and the Tag class exists solely to
-// make it possible to write tests and specify expected results This
-// is why only TagDict interface is exported.
+// TagInterface exists for tests and serialization only.
+// Internally, Tag uses Tag instances for properties and array elements.
 export type TagDict = Record<string, TagInterface>;
 
 export type TagScalar = string | number | boolean | Date;
-type TagValue = TagScalar | TagInterface[];
+type TagValue = TagScalar | Tag[];
 
+// Input format - for tests and constructors (no links)
 export interface TagInterface {
-  eq?: TagValue;
+  eq?: TagScalar | TagInterface[];
   properties?: TagDict;
   deleted?: boolean;
   prefix?: string;
 }
+
+// Output format - for toJSON (can contain links)
+// This format is round-trippable: a Tag.fromJSON(TagJSON) could reconstruct
+// the original Tag tree, including RefTags from TagLink.linkTo strings.
+export interface TagLink {
+  linkTo: string;
+}
+
+export interface TagJSONInterface {
+  eq?: TagScalar | TagJSON[];
+  properties?: Record<string, TagJSON>;
+  deleted?: boolean;
+  prefix?: string;
+}
+
+export type TagJSON = TagJSONInterface | TagLink;
 
 export interface TagParse {
   tag: Tag;
@@ -58,6 +74,7 @@ export type TagSetValue =
   | Date
   | string[]
   | number[]
+  | Tag
   | null;
 
 /**
@@ -81,9 +98,9 @@ export type TagSetValue =
  * tag.toObject()       => Plain JS object representation
  * ```
  */
-export class Tag implements TagInterface {
+export class Tag {
   eq?: TagValue;
-  properties?: TagDict;
+  properties?: Record<string, Tag>;
   prefix?: string;
   deleted?: boolean;
   private _parent?: Tag;
@@ -106,17 +123,6 @@ export class Tag implements TagInterface {
       current = current._parent;
     }
     return current;
-  }
-
-  /**
-   * Convert a TagInterface to a Tag, setting parent if provided.
-   * If already a Tag, returns it directly (parent unchanged).
-   */
-  static tagFrom(from: TagInterface = {}, parent?: Tag) {
-    if (from instanceof Tag) {
-      return from;
-    }
-    return new Tag(from, parent);
   }
 
   // --- Just for debugging ---
@@ -145,7 +151,7 @@ export class Tag implements TagInterface {
     if (this.eq !== undefined) {
       if (Array.isArray(this.eq)) {
         str += `\n${spaces}  =: [\n${spaces}    ${this.eq
-          .map(el => Tag.tagFrom(el).peek(indent + 4))
+          .map(el => el.peek(indent + 4))
           .join(`\n${spaces}    `)}\n${spaces}  ]`;
       } else {
         str += `\n${spaces}  =: ${this.eq}`;
@@ -154,8 +160,7 @@ export class Tag implements TagInterface {
 
     if (this.properties) {
       for (const k in this.properties) {
-        const val = Tag.tagFrom(this.properties[k]);
-        str += `\n${spaces}  ${k}: ${val.peek(indent + 2)}`;
+        str += `\n${spaces}  ${k}: ${this.properties[k].peek(indent + 2)}`;
       }
     }
     str += `\n${spaces}}`;
@@ -163,20 +168,31 @@ export class Tag implements TagInterface {
   }
 
   constructor(from: TagInterface = {}, parent?: Tag) {
+    if (parent !== undefined) {
+      this._parent = parent;
+    }
     if (from.eq !== undefined) {
-      this.eq = from.eq;
+      if (Array.isArray(from.eq)) {
+        // Convert array elements to Tags
+        this.eq = from.eq.map(el =>
+          el instanceof Tag ? el : new Tag(el, this)
+        );
+      } else {
+        this.eq = from.eq;
+      }
     }
     if (from.properties) {
-      this.properties = from.properties;
+      // Convert property values to Tags
+      this.properties = {};
+      for (const [key, val] of Object.entries(from.properties)) {
+        this.properties[key] = val instanceof Tag ? val : new Tag(val, this);
+      }
     }
     if (from.deleted) {
       this.deleted = from.deleted;
     }
     if (from.prefix) {
       this.prefix = from.prefix;
-    }
-    if (parent !== undefined) {
-      this._parent = parent;
     }
   }
 
@@ -252,36 +268,26 @@ export class Tag implements TagInterface {
 
   /** Virtual accessor for a property - overridden in RefTag to resolve */
   getProperty(name: string): Tag | undefined {
-    const props = this.properties;
-    if (props && name in props) {
-      return Tag.tagFrom(props[name], this);
-    }
-    return undefined;
+    return this.properties?.[name];
   }
 
   /** Virtual accessor for an array element - overridden in RefTag to resolve */
   getArrayElement(index: number): Tag | undefined {
     if (Array.isArray(this.eq) && index < this.eq.length) {
-      return Tag.tagFrom(this.eq[index], this);
+      return this.eq[index];
     }
     return undefined;
   }
 
   get dict(): Record<string, Tag> {
-    const newDict: Record<string, Tag> = {};
-    if (this.properties) {
-      for (const key in this.properties) {
-        newDict[key] = Tag.tagFrom(this.properties[key], this);
-      }
-    }
-    return newDict;
+    return this.properties ?? {};
   }
 
   /** Iterate over [name, Tag] pairs for each property */
   *entries(): Generator<[string, Tag]> {
     if (this.properties) {
       for (const key in this.properties) {
-        yield [key, Tag.tagFrom(this.properties[key], this)];
+        yield [key, this.properties[key]];
       }
     }
   }
@@ -362,15 +368,35 @@ export class Tag implements TagInterface {
   }
 
   // Has the sometimes desirable side effect of initializing properties
-  getProperties(): TagDict {
+  getProperties(): Record<string, Tag> {
     if (this.properties === undefined) {
       this.properties = {};
     }
     return this.properties;
   }
 
-  clone(): Tag {
-    return new Tag(structuredClone(this));
+  clone(newParent?: Tag): Tag {
+    const cloned = new Tag({}, newParent);
+    cloned.prefix = this.prefix;
+    cloned.deleted = this.deleted;
+
+    if (this.eq !== undefined) {
+      if (Array.isArray(this.eq)) {
+        cloned.eq = this.eq.map(el => el.clone(cloned));
+      } else {
+        // Scalar value - copy directly (Date needs special handling)
+        cloned.eq = this.eq instanceof Date ? new Date(this.eq) : this.eq;
+      }
+    }
+
+    if (this.properties) {
+      cloned.properties = {};
+      for (const [key, val] of Object.entries(this.properties)) {
+        cloned.properties[key] = val.clone(cloned);
+      }
+    }
+
+    return cloned;
   }
 
   private static scalarToObject(
@@ -433,8 +459,7 @@ export class Tag implements TagInterface {
     if (this.properties) {
       for (const [key, prop] of Object.entries(this.properties)) {
         if (!prop.deleted) {
-          const tag = Tag.tagFrom(prop, this);
-          result[key] = tag.toObjectValue(resolving);
+          result[key] = prop.toObjectValue(resolving);
         }
       }
     }
@@ -464,10 +489,7 @@ export class Tag implements TagInterface {
     // Value only
     if (hasValue && !hasProps) {
       if (Array.isArray(this.eq)) {
-        return this.eq.map(el => {
-          const tag = Tag.tagFrom(el, this);
-          return tag.toObjectValue(resolving);
-        });
+        return this.eq.map(el => el.toObjectValue(resolving));
       }
       return this.eq;
     }
@@ -475,10 +497,7 @@ export class Tag implements TagInterface {
     // Both value and properties
     const result: Record<string, unknown> = this.toObject(resolving);
     if (Array.isArray(this.eq)) {
-      result['='] = this.eq.map(el => {
-        const tag = Tag.tagFrom(el, this);
-        return tag.toObjectValue(resolving);
-      });
+      result['='] = this.eq.map(el => el.toObjectValue(resolving));
     } else {
       result['='] = this.eq;
     }
@@ -489,13 +508,20 @@ export class Tag implements TagInterface {
    * Custom JSON serialization that excludes _parent to avoid circular references.
    * This is called automatically by JSON.stringify().
    */
-  toJSON(): unknown {
-    const result: TagInterface = {};
+  toJSON(): TagJSON {
+    const result: TagJSONInterface = {};
     if (this.eq !== undefined) {
-      result.eq = this.eq;
+      if (Array.isArray(this.eq)) {
+        result.eq = this.eq.map(el => el.toJSON());
+      } else {
+        result.eq = this.eq;
+      }
     }
     if (this.properties !== undefined) {
-      result.properties = this.properties;
+      result.properties = {};
+      for (const [key, val] of Object.entries(this.properties)) {
+        result.properties[key] = val.toJSON();
+      }
     }
     if (this.deleted) {
       result.deleted = true;
@@ -523,15 +549,13 @@ export class Tag implements TagInterface {
     if (this.properties) {
       for (const [key, prop] of Object.entries(this.properties)) {
         if (!prop.deleted) {
-          const tag = Tag.tagFrom(prop, this);
-          tag.collectReferenceErrors(errors, [...path, key]);
+          prop.collectReferenceErrors(errors, [...path, key]);
         }
       }
     }
     if (Array.isArray(this.eq)) {
       this.eq.forEach((el, i) => {
-        const tag = Tag.tagFrom(el, this);
-        tag.collectReferenceErrors(errors, [...path, `[${i}]`]);
+        el.collectReferenceErrors(errors, [...path, `[${i}]`]);
       });
     }
   }
@@ -646,16 +670,23 @@ export class Tag implements TagInterface {
   }
 
   set(path: Path, value: TagSetValue = null): Tag {
-    const copy = Tag.tagFrom(this);
-    let currentTag: TagInterface = copy;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let currentTag: Tag = this;
+    let parentTag: Tag | undefined;
+    let lastSegment: PathSegment | undefined;
+
     for (const segment of path) {
+      parentTag = currentTag;
+      lastSegment = segment;
       if (typeof segment === 'number') {
         if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
-          currentTag.eq = Array.from({length: segment + 1}).map(_ => ({}));
+          currentTag.eq = Array.from({length: segment + 1}).map(
+            () => new Tag({}, currentTag)
+          );
         } else if (currentTag.eq.length <= segment) {
           const values = currentTag.eq;
           const newVal = Array.from({length: segment + 1}).map((_, i) =>
-            i < values.length ? values[i] : {}
+            i < values.length ? values[i] : new Tag({}, currentTag)
           );
           currentTag.eq = newVal;
         }
@@ -663,7 +694,7 @@ export class Tag implements TagInterface {
       } else {
         const properties = currentTag.properties;
         if (properties === undefined) {
-          currentTag.properties = {[segment]: {}};
+          currentTag.properties = {[segment]: new Tag({}, currentTag)};
           currentTag = currentTag.properties[segment];
         } else if (segment in properties) {
           currentTag = properties[segment];
@@ -671,13 +702,24 @@ export class Tag implements TagInterface {
             currentTag.deleted = false;
           }
         } else {
-          properties[segment] = {};
+          properties[segment] = new Tag({}, currentTag);
           currentTag = properties[segment];
         }
       }
     }
+
     if (value === null) {
       currentTag.eq = undefined;
+    } else if (value instanceof Tag) {
+      // Clone the tag with correct parent and replace in parent's slot
+      const cloned = value.clone(parentTag);
+      if (parentTag && lastSegment !== undefined) {
+        if (typeof lastSegment === 'number' && Array.isArray(parentTag.eq)) {
+          parentTag.eq[lastSegment] = cloned;
+        } else if (typeof lastSegment === 'string' && parentTag.properties) {
+          parentTag.properties[lastSegment] = cloned;
+        }
+      }
     } else if (
       typeof value === 'string' ||
       typeof value === 'number' ||
@@ -687,10 +729,10 @@ export class Tag implements TagInterface {
       currentTag.eq = value;
     } else if (Array.isArray(value)) {
       currentTag.eq = value.map((v: string | number) => {
-        return {eq: v};
+        return new Tag({eq: v}, currentTag);
       });
     }
-    return copy;
+    return this;
   }
 
   delete(...path: Path): Tag {
@@ -702,18 +744,20 @@ export class Tag implements TagInterface {
   }
 
   private remove(path: Path, hard = false): Tag {
-    const origCopy = Tag.tagFrom(this);
-    let currentTag: TagInterface = origCopy;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let currentTag: Tag = this;
     for (const segment of path.slice(0, path.length - 1)) {
       if (typeof segment === 'number') {
         if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
-          if (!hard) return origCopy;
-          currentTag.eq = Array.from({length: segment}).map(_ => ({}));
+          if (!hard) return this;
+          currentTag.eq = Array.from({length: segment}).map(
+            () => new Tag({}, currentTag)
+          );
         } else if (currentTag.eq.length <= segment) {
-          if (!hard) return origCopy;
+          if (!hard) return this;
           const values = currentTag.eq;
           const newVal = Array.from({length: segment}).map((_, i) =>
-            i < values.length ? values[i] : {}
+            i < values.length ? values[i] : new Tag({}, currentTag)
           );
           currentTag.eq = newVal;
         }
@@ -721,14 +765,14 @@ export class Tag implements TagInterface {
       } else {
         const properties = currentTag.properties;
         if (properties === undefined) {
-          if (!hard) return origCopy;
-          currentTag.properties = {[segment]: {}};
+          if (!hard) return this;
+          currentTag.properties = {[segment]: new Tag({}, currentTag)};
           currentTag = currentTag.properties[segment];
         } else if (segment in properties) {
           currentTag = properties[segment];
         } else {
-          if (!hard) return origCopy;
-          properties[segment] = {};
+          if (!hard) return this;
+          properties[segment] = new Tag({}, currentTag);
           currentTag = properties[segment];
         }
       }
@@ -739,14 +783,14 @@ export class Tag implements TagInterface {
         delete currentTag.properties[segment];
       } else if (hard) {
         currentTag.properties ??= {};
-        currentTag.properties[segment] = {deleted: true};
+        currentTag.properties[segment] = new Tag({deleted: true}, currentTag);
       }
     } else {
       if (Array.isArray(currentTag.eq)) {
         currentTag.eq.splice(segment, 1);
       }
     }
-    return origCopy;
+    return this;
   }
 }
 
@@ -798,6 +842,18 @@ export class RefTag extends Tag {
   }
 
   /**
+   * Quote an identifier if it contains special characters.
+   */
+  private quoteSegment(seg: string): string {
+    // Match bareString from peggy grammar: [0-9A-Za-z_\u00C0-\u024F\u1E00-\u1EFF]+
+    if (/^[0-9A-Za-z_\u00C0-\u024F\u1E00-\u1EFF]+$/.test(seg)) {
+      return seg;
+    }
+    // Otherwise, backquote it (escaping backslashes and backquotes)
+    return '`' + seg.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`';
+  }
+
+  /**
    * Convert this reference to its string representation.
    */
   toRefString(): string {
@@ -807,7 +863,8 @@ export class RefTag extends Tag {
         if (typeof seg === 'number') {
           return `[${seg}]`;
         }
-        return i === 0 ? seg : `.${seg}`;
+        const quoted = this.quoteSegment(seg);
+        return i === 0 ? quoted : `.${quoted}`;
       })
       .join('');
     return prefix + pathStr;
@@ -859,7 +916,7 @@ export class RefTag extends Tag {
   /**
    * For JSON serialization, return a marker object instead of resolving.
    */
-  override toJSON(): unknown {
+  override toJSON(): TagJSON {
     return {linkTo: this.toRefString()};
   }
 
@@ -871,6 +928,13 @@ export class RefTag extends Tag {
       const location = path.length > 0 ? path.join('.') : 'root';
       errors.push(`Unresolved reference at ${location}: ${this.toRefString()}`);
     }
+  }
+
+  /**
+   * Clone this RefTag, preserving the reference information.
+   */
+  override clone(newParent?: Tag): RefTag {
+    return new RefTag(this.ups, [...this.refPath], newParent);
   }
 }
 

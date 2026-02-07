@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {TagDict} from '../tags';
 import {Tag, RefTag} from '../tags';
 import type {TagStatement, TagValue, ArrayElement} from './statements';
 
@@ -66,10 +65,22 @@ export class Interpreter {
       writeInto[writeKey] = resultTag;
     } else if (stmt.preserveProperties) {
       // name = value { ... } - preserve existing properties, update value
-      const existing = writeInto[writeKey] ?? {};
-      const resultTag = this.createTagWithValue(stmt.value, parentTag);
-      resultTag.properties = existing.properties;
-      writeInto[writeKey] = resultTag;
+      const existing = writeInto[writeKey];
+      if (existing && stmt.value.kind !== 'reference') {
+        // Update value in place, preserving properties and parent chains
+        this.setTagValue(existing, stmt.value);
+      } else {
+        // No existing tag, or reference value (which requires a RefTag)
+        const resultTag = this.createTagWithValue(stmt.value, parentTag);
+        if (existing?.properties) {
+          // Clone properties with correct parent to preserve parent chains
+          resultTag.properties = {};
+          for (const [key, val] of Object.entries(existing.properties)) {
+            resultTag.properties[key] = val.clone(resultTag);
+          }
+        }
+        writeInto[writeKey] = resultTag;
+      }
     } else {
       // name = value - simple assignment
       writeInto[writeKey] = this.createTagWithValue(stmt.value, parentTag);
@@ -92,8 +103,11 @@ export class Interpreter {
 
     if (stmt.preserveValue) {
       // name = ... { properties } - preserve value, replace properties
-      const existing = writeInto[writeKey] ?? {};
-      const resultTag = new Tag({eq: existing.eq}, parentTag);
+      const existing = writeInto[writeKey];
+      const resultTag = new Tag({}, parentTag);
+      if (existing) {
+        resultTag.eq = existing.eq;
+      }
       for (const propStmt of stmt.properties) {
         this.executeStatement(propStmt, resultTag);
       }
@@ -120,16 +134,9 @@ export class Interpreter {
       tag,
       stmt.path
     );
-    const existingData = writeInto[writeKey] ?? {};
-
     // Create or reuse the result tag - this is the tag that will be stored
     // and that child tags will have as their parent
-    let resultTag: Tag;
-    if (existingData instanceof Tag) {
-      resultTag = existingData;
-    } else {
-      resultTag = new Tag(existingData, parentTag);
-    }
+    const resultTag = writeInto[writeKey] ?? new Tag({}, parentTag);
 
     // Execute nested statements in the context of the result tag
     for (const propStmt of stmt.properties) {
@@ -158,7 +165,10 @@ export class Interpreter {
    * Navigate to the parent of the final path segment, creating intermediate
    * tags as needed. Returns [finalKey, parentDict, parentTag] so caller can write to it.
    */
-  private buildAccessPath(tag: Tag, path: string[]): [string, TagDict, Tag] {
+  private buildAccessPath(
+    tag: Tag,
+    path: string[]
+  ): [string, Record<string, Tag>, Tag] {
     if (path.length === 0) {
       throw new Error('INTERNAL ERROR: buildAccessPath called with empty path');
     }
@@ -174,7 +184,7 @@ export class Interpreter {
       } else {
         // Ensure properties exists on this intermediate tag
         parentDict[segment].properties ??= {};
-        next = Tag.tagFrom(parentDict[segment], currentTag);
+        next = parentDict[segment];
       }
       currentTag = next;
       parentDict = next.getProperties();
@@ -216,6 +226,21 @@ export class Interpreter {
 
       return resultTag;
     });
+  }
+
+  /**
+   * Update an existing tag's value in place, preserving its properties.
+   * Note: References must be handled separately since they require a RefTag.
+   */
+  private setTagValue(
+    tag: Tag,
+    valueData: Exclude<TagValue, {kind: 'reference'}>
+  ): void {
+    if (valueData.kind === 'array') {
+      tag.eq = this.resolveArrayWithParent(valueData.elements, tag);
+    } else {
+      tag.eq = valueData.value;
+    }
   }
 
   /**

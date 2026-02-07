@@ -66,6 +66,15 @@ export function annotationToTag(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
     );
   }
+  // Validate references and add any warnings
+  const refErrors = extending.validateReferences();
+  for (const refError of refErrors) {
+    allErrs.push({
+      code: 'tag-reference-error',
+      severity: 'warn',
+      message: refError,
+    });
+  }
   return {tag: extending, log: allErrs};
 }
 

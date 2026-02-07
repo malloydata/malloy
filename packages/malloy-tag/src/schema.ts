@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {Tag} from './tags';
+import type {Tag} from './tags';
 
 export interface SchemaError {
   message: string;
@@ -132,14 +132,13 @@ function getActualType(tag: Tag): string {
     }
 
     const elementTypes = eq.map(el => {
-      const elTag = Tag.tagFrom(el);
-      if (elTag.eq === undefined) {
+      if (el.eq === undefined) {
         return 'tag';
       }
-      if (typeof elTag.eq === 'string') return 'string';
-      if (typeof elTag.eq === 'number') return 'number';
-      if (typeof elTag.eq === 'boolean') return 'boolean';
-      if (elTag.eq instanceof Date) return 'date';
+      if (typeof el.eq === 'string') return 'string';
+      if (typeof el.eq === 'number') return 'number';
+      if (typeof el.eq === 'boolean') return 'boolean';
+      if (el.eq instanceof Date) return 'date';
       return 'unknown';
     });
 

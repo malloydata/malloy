@@ -465,7 +465,7 @@ describe('Tag access', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '\n');
       expect(ext.toString()).toBe('#(malloy) value = "\\n"\n');
-      expect(base.text('value')).toBe('\n');
+      expect(ext.text('value')).toBe('\n');
       idempotent(ext);
     });
     test('value has a double quote', () => {
@@ -946,6 +946,22 @@ describe('References (RefTag)', () => {
       const {tag} = parseTag('ref=$nonexistent');
       const obj = tag.toObject();
       expect(obj['ref']).toBeUndefined();
+    });
+  });
+
+  describe('cloning with references', () => {
+    test('reference survives when extending tag is cloned', () => {
+      // Parse two lines - first creates reference, second extends it
+      const {tag} = parseTag(['source=hello target=$source', 'extra=data']);
+      // The reference should still work after the second parse cloned the first result
+      expect(tag.text('target')).toBe('hello');
+    });
+
+    test('clone preserves RefTag', () => {
+      const {tag} = parseTag('source=hello target=$source');
+      const cloned = tag.clone();
+      // After cloning, the reference should still resolve
+      expect(cloned.text('target')).toBe('hello');
     });
   });
 });
