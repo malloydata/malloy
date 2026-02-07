@@ -23,7 +23,7 @@
 
 import {annotationToTag} from '@malloydata/malloy';
 import type {TagDict, Tag} from '@malloydata/malloy-tag';
-import {parseTag} from '@malloydata/malloy-tag';
+import {parseTag, interfaceFromDict} from '@malloydata/malloy-tag';
 import {runtimeFor} from '../runtimes';
 
 declare global {
@@ -48,7 +48,7 @@ expect.extend({
       }
       src = tag;
     }
-    const got = src.properties;
+    const got = src.properties ? interfaceFromDict(src.properties) : undefined;
     if (this.equals(got, result)) {
       return {
         pass: true,

@@ -13,7 +13,8 @@ export type ScalarValue =
   | {kind: 'string'; value: string}
   | {kind: 'number'; value: number}
   | {kind: 'boolean'; value: boolean}
-  | {kind: 'date'; value: Date};
+  | {kind: 'date'; value: Date}
+  | {kind: 'reference'; ups: number; path: (string | number)[]};
 
 // Values that can be assigned
 export type TagValue = ScalarValue | {kind: 'array'; elements: ArrayElement[]};

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {TagDict, TagInterface} from '../tags';
-import {Tag} from '../tags';
+import type {TagDict} from '../tags';
+import {Tag, RefTag} from '../tags';
 import type {TagStatement, TagValue, ArrayElement} from './statements';
 
 /**
@@ -12,6 +12,7 @@ import type {TagStatement, TagValue, ArrayElement} from './statements';
  */
 export class Interpreter {
   execute(statements: TagStatement[], extending?: Tag): Tag {
+    // Root tag has no parent
     const tag = extending?.clone() ?? new Tag({});
 
     for (const stmt of statements) {
@@ -51,22 +52,27 @@ export class Interpreter {
     },
     tag: Tag
   ): void {
-    const [writeKey, writeInto] = this.buildAccessPath(tag, stmt.path);
-    const valueTag = this.resolveValue(stmt.value);
+    const [writeKey, writeInto, parentTag] = this.buildAccessPath(
+      tag,
+      stmt.path
+    );
 
     if (stmt.properties) {
       // name = value { new_properties } - replace properties with new ones
-      const propsTag = new Tag({});
+      const resultTag = this.createTagWithValue(stmt.value, parentTag);
       for (const propStmt of stmt.properties) {
-        this.executeStatement(propStmt, propsTag);
+        this.executeStatement(propStmt, resultTag);
       }
-      writeInto[writeKey] = {...valueTag, properties: propsTag.properties};
+      writeInto[writeKey] = resultTag;
     } else if (stmt.preserveProperties) {
       // name = value { ... } - preserve existing properties, update value
-      writeInto[writeKey] = {...writeInto[writeKey], ...valueTag};
+      const existing = writeInto[writeKey] ?? {};
+      const resultTag = this.createTagWithValue(stmt.value, parentTag);
+      resultTag.properties = existing.properties;
+      writeInto[writeKey] = resultTag;
     } else {
       // name = value - simple assignment
-      writeInto[writeKey] = valueTag;
+      writeInto[writeKey] = this.createTagWithValue(stmt.value, parentTag);
     }
   }
 
@@ -79,21 +85,26 @@ export class Interpreter {
     },
     tag: Tag
   ): void {
-    const [writeKey, writeInto] = this.buildAccessPath(tag, stmt.path);
-    const propsTag = new Tag({});
-    for (const propStmt of stmt.properties) {
-      this.executeStatement(propStmt, propsTag);
-    }
+    const [writeKey, writeInto, parentTag] = this.buildAccessPath(
+      tag,
+      stmt.path
+    );
 
     if (stmt.preserveValue) {
       // name = ... { properties } - preserve value, replace properties
-      writeInto[writeKey] = {
-        ...writeInto[writeKey],
-        properties: propsTag.properties,
-      };
+      const existing = writeInto[writeKey] ?? {};
+      const resultTag = new Tag({eq: existing.eq}, parentTag);
+      for (const propStmt of stmt.properties) {
+        this.executeStatement(propStmt, resultTag);
+      }
+      writeInto[writeKey] = resultTag;
     } else {
       // name = { properties } - no value, replace properties
-      writeInto[writeKey] = {properties: propsTag.properties};
+      const resultTag = new Tag({}, parentTag);
+      for (const propStmt of stmt.properties) {
+        this.executeStatement(propStmt, resultTag);
+      }
+      writeInto[writeKey] = resultTag;
     }
   }
 
@@ -105,97 +116,125 @@ export class Interpreter {
     },
     tag: Tag
   ): void {
-    const [writeKey, writeInto] = this.buildAccessPath(tag, stmt.path);
-    const existing = Tag.tagFrom(writeInto[writeKey] ?? {});
+    const [writeKey, writeInto, parentTag] = this.buildAccessPath(
+      tag,
+      stmt.path
+    );
+    const existingData = writeInto[writeKey] ?? {};
 
-    // Execute nested statements in the context of the existing tag
-    for (const propStmt of stmt.properties) {
-      this.executeStatement(propStmt, existing);
+    // Create or reuse the result tag - this is the tag that will be stored
+    // and that child tags will have as their parent
+    let resultTag: Tag;
+    if (existingData instanceof Tag) {
+      resultTag = existingData;
+    } else {
+      resultTag = new Tag(existingData, parentTag);
     }
 
-    const thisObj = writeInto[writeKey] ?? {};
-    writeInto[writeKey] = {
-      ...thisObj,
-      properties: {...thisObj.properties, ...existing.properties},
-    };
+    // Execute nested statements in the context of the result tag
+    for (const propStmt of stmt.properties) {
+      this.executeStatement(propStmt, resultTag);
+    }
+
+    writeInto[writeKey] = resultTag;
   }
 
   private executeDefine(
     stmt: {kind: 'define'; path: string[]; deleted: boolean},
     tag: Tag
   ): void {
-    const [writeKey, writeInto] = this.buildAccessPath(tag, stmt.path);
+    const [writeKey, writeInto, parentTag] = this.buildAccessPath(
+      tag,
+      stmt.path
+    );
     if (stmt.deleted) {
-      writeInto[writeKey] = {deleted: true};
+      writeInto[writeKey] = new Tag({deleted: true}, parentTag);
     } else {
-      writeInto[writeKey] = {};
+      writeInto[writeKey] = new Tag({}, parentTag);
     }
   }
 
   /**
    * Navigate to the parent of the final path segment, creating intermediate
-   * tags as needed. Returns [finalKey, parentDict] so caller can write to it.
+   * tags as needed. Returns [finalKey, parentDict, parentTag] so caller can write to it.
    */
-  private buildAccessPath(tag: Tag, path: string[]): [string, TagDict] {
+  private buildAccessPath(tag: Tag, path: string[]): [string, TagDict, Tag] {
     if (path.length === 0) {
       throw new Error('INTERNAL ERROR: buildAccessPath called with empty path');
     }
 
+    let currentTag = tag;
     let parentDict = tag.getProperties();
 
     for (const segment of path.slice(0, -1)) {
       let next: Tag;
       if (parentDict[segment] === undefined) {
-        next = new Tag({});
+        next = new Tag({}, currentTag);
         parentDict[segment] = next;
       } else {
         // Ensure properties exists on this intermediate tag
         parentDict[segment].properties ??= {};
-        next = Tag.tagFrom(parentDict[segment]);
+        next = Tag.tagFrom(parentDict[segment], currentTag);
       }
+      currentTag = next;
       parentDict = next.getProperties();
     }
 
-    return [path[path.length - 1], parentDict];
+    return [path[path.length - 1], parentDict, currentTag];
   }
 
   /**
-   * Resolve a TagValue to a TagInterface.
+   * Resolve array elements to Tag[] with proper parent links.
    */
-  private resolveValue(value: TagValue): TagInterface {
-    switch (value.kind) {
-      case 'string':
-      case 'number':
-      case 'boolean':
-        return {eq: value.value};
-      case 'date':
-        return {eq: value.value};
-      case 'array':
-        return {eq: this.resolveArray(value.elements)};
-    }
-  }
-
-  /**
-   * Resolve array elements to TagInterface[].
-   */
-  private resolveArray(elements: ArrayElement[]): TagInterface[] {
+  private resolveArrayWithParent(elements: ArrayElement[], parent: Tag): Tag[] {
     return elements.map(el => {
-      let result: TagInterface = {};
+      // Reference without properties becomes a RefTag
+      if (el.value?.kind === 'reference' && !el.properties) {
+        return new RefTag(el.value.ups, el.value.path, parent);
+      }
+
+      const resultTag = new Tag({}, parent);
 
       if (el.value) {
-        const resolved = this.resolveValue(el.value);
-        result = {...resolved};
+        if (el.value.kind === 'array') {
+          // Nested array
+          resultTag.eq = this.resolveArrayWithParent(
+            el.value.elements,
+            resultTag
+          );
+        } else if (el.value.kind !== 'reference') {
+          resultTag.eq = el.value.value;
+        }
+        // References with properties are ignored (just the properties are kept)
       }
 
       if (el.properties) {
-        const propsTag = new Tag({});
         for (const stmt of el.properties) {
-          this.executeStatement(stmt, propsTag);
+          this.executeStatement(stmt, resultTag);
         }
-        result.properties = propsTag.properties;
       }
 
-      return result;
+      return resultTag;
     });
+  }
+
+  /**
+   * Create a Tag with value, resolving arrays with proper parent links.
+   * Returns a RefTag for reference values.
+   */
+  private createTagWithValue(valueData: TagValue, parent: Tag): Tag {
+    if (valueData.kind === 'reference') {
+      return new RefTag(valueData.ups, valueData.path, parent);
+    }
+
+    const resultTag = new Tag({}, parent);
+
+    if (valueData.kind === 'array') {
+      resultTag.eq = this.resolveArrayWithParent(valueData.elements, resultTag);
+    } else {
+      resultTag.eq = valueData.value;
+    }
+
+    return resultTag;
   }
 }

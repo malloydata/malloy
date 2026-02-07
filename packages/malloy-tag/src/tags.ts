@@ -86,12 +86,37 @@ export class Tag implements TagInterface {
   properties?: TagDict;
   prefix?: string;
   deleted?: boolean;
+  private _parent?: Tag;
 
-  static tagFrom(from: TagInterface = {}) {
+  /**
+   * Get the parent tag, if this tag is part of a tree.
+   */
+  get parent(): Tag | undefined {
+    return this._parent;
+  }
+
+  /**
+   * Get the root tag by traversing up the parent chain.
+   * Returns this tag if it has no parent.
+   */
+  get root(): Tag {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let current: Tag = this;
+    while (current._parent !== undefined) {
+      current = current._parent;
+    }
+    return current;
+  }
+
+  /**
+   * Convert a TagInterface to a Tag, setting parent if provided.
+   * If already a Tag, returns it directly (parent unchanged).
+   */
+  static tagFrom(from: TagInterface = {}, parent?: Tag) {
     if (from instanceof Tag) {
       return from;
     }
-    return new Tag(from);
+    return new Tag(from, parent);
   }
 
   // --- Just for debugging ---
@@ -137,7 +162,7 @@ export class Tag implements TagInterface {
     return str;
   }
 
-  constructor(from: TagInterface = {}) {
+  constructor(from: TagInterface = {}, parent?: Tag) {
     if (from.eq !== undefined) {
       this.eq = from.eq;
     }
@@ -150,6 +175,9 @@ export class Tag implements TagInterface {
     if (from.prefix) {
       this.prefix = from.prefix;
     }
+    if (parent !== undefined) {
+      this._parent = parent;
+    }
   }
 
   static withPrefix(prefix: string) {
@@ -161,7 +189,7 @@ export class Tag implements TagInterface {
   }
 
   text(...at: Path): string | undefined {
-    const val = this.find(at)?.eq;
+    const val = this.find(at)?.getEq();
     if (val === undefined || Array.isArray(val)) {
       return undefined;
     }
@@ -172,7 +200,7 @@ export class Tag implements TagInterface {
   }
 
   numeric(...at: Path): number | undefined {
-    const val = this.find(at)?.eq;
+    const val = this.find(at)?.getEq();
     if (typeof val === 'number') {
       return val;
     }
@@ -186,7 +214,7 @@ export class Tag implements TagInterface {
   }
 
   boolean(...at: Path): boolean | undefined {
-    const val = this.find(at)?.eq;
+    const val = this.find(at)?.getEq();
     if (typeof val === 'boolean') {
       return val;
     }
@@ -194,15 +222,15 @@ export class Tag implements TagInterface {
   }
 
   isTrue(...at: Path): boolean {
-    return this.find(at)?.eq === true;
+    return this.find(at)?.getEq() === true;
   }
 
   isFalse(...at: Path): boolean {
-    return this.find(at)?.eq === false;
+    return this.find(at)?.getEq() === false;
   }
 
   date(...at: Path): Date | undefined {
-    const val = this.find(at)?.eq;
+    const val = this.find(at)?.getEq();
     if (val instanceof Date) {
       return val;
     }
@@ -214,16 +242,36 @@ export class Tag implements TagInterface {
     if (p === undefined) {
       return;
     }
-    return (
-      p.properties === undefined || Object.entries(p.properties).length === 0
-    );
+    return !p.hasProperties();
+  }
+
+  /** Virtual accessor for eq - overridden in RefTag to resolve */
+  getEq(): TagValue | undefined {
+    return this.eq;
+  }
+
+  /** Virtual accessor for a property - overridden in RefTag to resolve */
+  getProperty(name: string): Tag | undefined {
+    const props = this.properties;
+    if (props && name in props) {
+      return Tag.tagFrom(props[name], this);
+    }
+    return undefined;
+  }
+
+  /** Virtual accessor for an array element - overridden in RefTag to resolve */
+  getArrayElement(index: number): Tag | undefined {
+    if (Array.isArray(this.eq) && index < this.eq.length) {
+      return Tag.tagFrom(this.eq[index], this);
+    }
+    return undefined;
   }
 
   get dict(): Record<string, Tag> {
     const newDict: Record<string, Tag> = {};
     if (this.properties) {
       for (const key in this.properties) {
-        newDict[key] = Tag.tagFrom(this.properties[key]);
+        newDict[key] = Tag.tagFrom(this.properties[key], this);
       }
     }
     return newDict;
@@ -233,7 +281,7 @@ export class Tag implements TagInterface {
   *entries(): Generator<[string, Tag]> {
     if (this.properties) {
       for (const key in this.properties) {
-        yield [key, Tag.tagFrom(this.properties[key])];
+        yield [key, Tag.tagFrom(this.properties[key], this)];
       }
     }
   }
@@ -255,20 +303,29 @@ export class Tag implements TagInterface {
   }
 
   array(...at: Path): Tag[] | undefined {
-    const array = this.find(at)?.eq;
-    if (!Array.isArray(array)) {
+    const found = this.find(at);
+    if (found === undefined) {
       return undefined;
     }
-    return array.map(el => Tag.tagFrom(el));
+    const arr = found.getEq();
+    if (!Array.isArray(arr)) {
+      return undefined;
+    }
+    return arr.map((_, i) => found.getArrayElement(i)!);
   }
 
   textArray(...at: Path): string[] | undefined {
-    const array = this.find(at)?.eq;
-    if (!Array.isArray(array)) {
+    const found = this.find(at);
+    if (found === undefined) {
       return undefined;
     }
-    return array.reduce<string[]>((allStrs, el) => {
-      const val = el.eq;
+    const arr = found.getEq();
+    if (!Array.isArray(arr)) {
+      return undefined;
+    }
+    return arr.reduce<string[]>((allStrs, _, i) => {
+      const el = found.getArrayElement(i);
+      const val = el?.getEq();
       if (val === undefined || Array.isArray(val)) {
         return allStrs;
       }
@@ -280,16 +337,22 @@ export class Tag implements TagInterface {
   }
 
   numericArray(...at: Path): number[] | undefined {
-    const array = this.find(at)?.eq;
-    if (!Array.isArray(array)) {
+    const found = this.find(at);
+    if (found === undefined) {
       return undefined;
     }
-    return array.reduce<number[]>((allNums, el) => {
-      if (typeof el.eq === 'number') {
-        return allNums.concat(el.eq);
+    const arr = found.getEq();
+    if (!Array.isArray(arr)) {
+      return undefined;
+    }
+    return arr.reduce<number[]>((allNums, _, i) => {
+      const el = found.getArrayElement(i);
+      const val = el?.getEq();
+      if (typeof val === 'number') {
+        return allNums.concat(val);
       }
-      if (typeof el.eq === 'string') {
-        const num = Number.parseFloat(el.eq);
+      if (typeof val === 'string') {
+        const num = Number.parseFloat(val);
         if (!Number.isNaN(num)) {
           return allNums.concat(num);
         }
@@ -360,16 +423,117 @@ export class Tag implements TagInterface {
     return result;
   }
 
-  toObject(): Record<string, unknown> {
+  /**
+   * Convert to a plain JS object. References are resolved to actual
+   * object pointers (which may be circular in JS - that's fine).
+   * @param resolving - RefTags currently being resolved (for cycle detection)
+   */
+  toObject(resolving: Set<RefTag> = new Set()): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     if (this.properties) {
-      for (const [key, val] of Object.entries(this.properties)) {
-        if (!val.deleted) {
-          result[key] = Tag.tagToObject(val);
+      for (const [key, prop] of Object.entries(this.properties)) {
+        if (!prop.deleted) {
+          const tag = Tag.tagFrom(prop, this);
+          result[key] = tag.toObjectValue(resolving);
         }
       }
     }
     return result;
+  }
+
+  /**
+   * Convert this tag's value to a plain JS object.
+   * Override in RefTag to resolve references.
+   * @param resolving - RefTags currently being resolved (for cycle detection)
+   */
+  toObjectValue(resolving: Set<RefTag>): unknown {
+    const hasProps =
+      this.properties !== undefined && Object.keys(this.properties).length > 0;
+    const hasValue = this.eq !== undefined;
+
+    // Bare tag (no value, no properties)
+    if (!hasValue && !hasProps) {
+      return true;
+    }
+
+    // Properties only
+    if (!hasValue && hasProps) {
+      return this.toObject(resolving);
+    }
+
+    // Value only
+    if (hasValue && !hasProps) {
+      if (Array.isArray(this.eq)) {
+        return this.eq.map(el => {
+          const tag = Tag.tagFrom(el, this);
+          return tag.toObjectValue(resolving);
+        });
+      }
+      return this.eq;
+    }
+
+    // Both value and properties
+    const result: Record<string, unknown> = this.toObject(resolving);
+    if (Array.isArray(this.eq)) {
+      result['='] = this.eq.map(el => {
+        const tag = Tag.tagFrom(el, this);
+        return tag.toObjectValue(resolving);
+      });
+    } else {
+      result['='] = this.eq;
+    }
+    return result;
+  }
+
+  /**
+   * Custom JSON serialization that excludes _parent to avoid circular references.
+   * This is called automatically by JSON.stringify().
+   */
+  toJSON(): unknown {
+    const result: TagInterface = {};
+    if (this.eq !== undefined) {
+      result.eq = this.eq;
+    }
+    if (this.properties !== undefined) {
+      result.properties = this.properties;
+    }
+    if (this.deleted) {
+      result.deleted = true;
+    }
+    if (this.prefix) {
+      result.prefix = this.prefix;
+    }
+    return result;
+  }
+
+  /**
+   * Validate all references in this tag tree.
+   * Returns an array of error messages for unresolved references.
+   */
+  validateReferences(): string[] {
+    const errors: string[] = [];
+    this.collectReferenceErrors(errors, []);
+    return errors;
+  }
+
+  /**
+   * Recursively collect reference errors.
+   */
+  collectReferenceErrors(errors: string[], path: string[]): void {
+    if (this.properties) {
+      for (const [key, prop] of Object.entries(this.properties)) {
+        if (!prop.deleted) {
+          const tag = Tag.tagFrom(prop, this);
+          tag.collectReferenceErrors(errors, [...path, key]);
+        }
+      }
+    }
+    if (Array.isArray(this.eq)) {
+      this.eq.forEach((el, i) => {
+        const tag = Tag.tagFrom(el, this);
+        tag.collectReferenceErrors(errors, [...path, `[${i}]`]);
+      });
+    }
   }
 
   private static escapeString(str: string) {
@@ -460,25 +624,19 @@ export class Tag implements TagInterface {
   }
 
   find(path: Path): Tag | undefined {
-    let currentTag: Tag = Tag.tagFrom(this);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let currentTag: Tag = this;
     for (const segment of path) {
+      let next: Tag | undefined;
       if (typeof segment === 'number') {
-        if (
-          currentTag.eq === undefined ||
-          !Array.isArray(currentTag.eq) ||
-          currentTag.eq.length <= segment
-        ) {
-          return;
-        }
-        currentTag = Tag.tagFrom(currentTag.eq[segment]);
+        next = currentTag.getArrayElement(segment);
       } else {
-        const properties = currentTag.properties ?? {};
-        if (segment in properties) {
-          currentTag = Tag.tagFrom(properties[segment]);
-        } else {
-          return;
-        }
+        next = currentTag.getProperty(segment);
       }
+      if (next === undefined) {
+        return undefined;
+      }
+      currentTag = next;
     }
     return currentTag.deleted ? undefined : currentTag;
   }
@@ -590,4 +748,165 @@ export class Tag implements TagInterface {
     }
     return origCopy;
   }
+}
+
+/**
+ * A tag that references another location in the tag tree.
+ * When accessed, it dereferences to the target tag.
+ *
+ * Reference syntax:
+ *   $path.to.thing     - absolute from root
+ *   $^thing            - up one level, then 'thing'
+ *   $^^thing           - up two levels, then 'thing'
+ *   $items[0].name     - with array indexing
+ */
+export class RefTag extends Tag {
+  readonly ups: number;
+  readonly refPath: Path;
+
+  constructor(ups: number, refPath: Path, parent?: Tag) {
+    super({}, parent);
+    this.ups = ups;
+    this.refPath = refPath;
+  }
+
+  /**
+   * Resolve this reference to the target tag.
+   * Returns undefined if the reference cannot be resolved.
+   */
+  resolve(): Tag | undefined {
+    // Start from the appropriate point based on ups
+    let current: Tag | undefined;
+    if (this.ups === 0) {
+      // Absolute reference from root
+      current = this.root;
+    } else {
+      // Relative reference - go up 'ups' levels from parent
+      // $^ means go up 1 level from the containing scope
+      current = this.parent;
+      for (let i = 0; i < this.ups && current !== undefined; i++) {
+        current = current.parent;
+      }
+    }
+
+    if (current === undefined) {
+      return undefined;
+    }
+
+    // Follow the path
+    return current.find(this.refPath);
+  }
+
+  /**
+   * Convert this reference to its string representation.
+   */
+  toRefString(): string {
+    const prefix = '$' + '^'.repeat(this.ups);
+    const pathStr = this.refPath
+      .map((seg, i) => {
+        if (typeof seg === 'number') {
+          return `[${seg}]`;
+        }
+        return i === 0 ? seg : `.${seg}`;
+      })
+      .join('');
+    return prefix + pathStr;
+  }
+
+  // Override virtual accessors to resolve the reference
+  override getEq(): TagValue | undefined {
+    return this.resolve()?.getEq();
+  }
+
+  override getProperty(name: string): Tag | undefined {
+    return this.resolve()?.getProperty(name);
+  }
+
+  override getArrayElement(index: number): Tag | undefined {
+    return this.resolve()?.getArrayElement(index);
+  }
+
+  override hasProperties(): boolean {
+    return this.resolve()?.hasProperties() ?? false;
+  }
+
+  /**
+   * For toObject, resolve the reference and return the target's object value.
+   * This creates actual object pointers (circular references are allowed).
+   * Detects cycles in the reference chain to prevent infinite recursion.
+   */
+  override toObjectValue(resolving: Set<RefTag>): unknown {
+    // Check for cycle in reference chain
+    if (resolving.has(this)) {
+      // We're in a cycle - return undefined to break it
+      // (The cycle will be completed when the outer resolution finishes)
+      return undefined;
+    }
+
+    const resolved = this.resolve();
+    if (resolved === undefined) {
+      return undefined;
+    }
+
+    // Track that we're resolving this RefTag
+    resolving.add(this);
+    const result = resolved.toObjectValue(resolving);
+    resolving.delete(this);
+
+    return result;
+  }
+
+  /**
+   * For JSON serialization, return a marker object instead of resolving.
+   */
+  override toJSON(): unknown {
+    return {linkTo: this.toRefString()};
+  }
+
+  /**
+   * Check if this reference resolves, add error if not.
+   */
+  override collectReferenceErrors(errors: string[], path: string[]): void {
+    if (this.resolve() === undefined) {
+      const location = path.length > 0 ? path.join('.') : 'root';
+      errors.push(`Unresolved reference at ${location}: ${this.toRefString()}`);
+    }
+  }
+}
+
+/**
+ * Convert a Tag to a plain TagInterface without internal fields like _parent.
+ * Useful for test comparisons.
+ */
+export function interfaceFromTag(tag: TagInterface): TagInterface {
+  const result: TagInterface = {};
+
+  if (tag.eq !== undefined) {
+    if (Array.isArray(tag.eq)) {
+      result.eq = tag.eq.map(el => interfaceFromTag(el));
+    } else {
+      result.eq = tag.eq;
+    }
+  }
+
+  if (tag.properties !== undefined) {
+    result.properties = interfaceFromDict(tag.properties);
+  }
+
+  if (tag.deleted) {
+    result.deleted = true;
+  }
+
+  return result;
+}
+
+/**
+ * Convert a TagDict to a plain TagDict without internal fields.
+ */
+export function interfaceFromDict(dict: TagDict): TagDict {
+  const result: TagDict = {};
+  for (const [key, val] of Object.entries(dict)) {
+    result[key] = interfaceFromTag(val);
+  }
+  return result;
 }

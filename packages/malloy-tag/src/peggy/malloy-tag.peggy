@@ -108,8 +108,25 @@ eqValue
   = arrayValue
   / booleanValue
   / dateValue
+  / referenceValue
   / numberValue
   / stringValue
+
+// Reference to another value in the tag tree
+// $path.to.thing - absolute from root
+// $^thing - up one level
+// $^^thing - up two levels
+// $items[0].name - with array indexing
+referenceValue
+  = "$" ups:"^"* first:refPathElement rest:("." @refPathElement)* {
+      const path = [first, ...rest].flat();
+      return { kind: 'reference', ups: ups.length, path };
+    }
+
+refPathElement
+  = name:identifier index:("[" _ @$[0-9]+ _ "]")? {
+      return index !== null ? [name, parseInt(index, 10)] : [name];
+    }
 
 booleanValue
   = "@true" { return { kind: 'boolean', value: true }; }
@@ -139,6 +156,7 @@ arrayValue
 scalarValue
   = booleanValue
   / dateValue
+  / referenceValue
   / numberValue
   / s:textString { return { kind: 'string', value: s }; }
 
