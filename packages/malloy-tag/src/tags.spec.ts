@@ -22,7 +22,7 @@
  */
 
 import type {TagDict} from './tags';
-import {Tag} from './tags';
+import {Tag, RefTag, interfaceFromDict} from './tags';
 import {parseTag} from './peggy';
 
 declare global {
@@ -47,7 +47,7 @@ expect.extend({
       }
       src = tag;
     }
-    const got = src.properties;
+    const got = src.properties ? interfaceFromDict(src.properties) : undefined;
     if (this.equals(got, result)) {
       return {
         pass: true,
@@ -465,7 +465,7 @@ describe('Tag access', () => {
       const base = Tag.withPrefix('#(malloy) ');
       const ext = base.set(['value'], '\n');
       expect(ext.toString()).toBe('#(malloy) value = "\\n"\n');
-      expect(base.text('value')).toBe('\n');
+      expect(ext.text('value')).toBe('\n');
       idempotent(ext);
     });
     test('value has a double quote', () => {
@@ -735,6 +735,233 @@ describe('toObject', () => {
         {name: 'alice', age: 30},
         {name: 'bob', age: 25},
       ],
+    });
+  });
+});
+
+describe('Tag parent tracking', () => {
+  test('root tag has no parent', () => {
+    const {tag} = parseTag('a=1');
+    expect(tag.parent).toBeUndefined();
+    expect(tag.root).toBe(tag);
+  });
+
+  test('child tag has parent set', () => {
+    const {tag} = parseTag('a { b=1 }');
+    const a = tag.tag('a');
+    expect(a?.parent).toBe(tag);
+  });
+
+  test('nested child has correct parent chain', () => {
+    const {tag} = parseTag('a { b { c=1 } }');
+    const a = tag.tag('a');
+    const b = a?.tag('b');
+    const c = b?.tag('c');
+
+    expect(a?.parent).toBe(tag);
+    expect(b?.parent).toBe(a);
+    expect(c?.parent).toBe(b);
+  });
+
+  test('root traverses to top of tree', () => {
+    const {tag} = parseTag('a { b { c=1 } }');
+    const c = tag.tag('a', 'b', 'c');
+
+    expect(c?.root).toBe(tag);
+  });
+
+  test('array elements have parent set to containing tag', () => {
+    const {tag} = parseTag('items=[a, b, c]');
+    const items = tag.tag('items');
+    const arr = items?.array();
+
+    expect(arr?.[0].parent).toBe(items);
+    expect(arr?.[1].parent).toBe(items);
+    expect(arr?.[2].parent).toBe(items);
+  });
+
+  test('nested array elements have correct parents', () => {
+    const {tag} = parseTag('items=[{name=alice}, {name=bob}]');
+    const items = tag.tag('items');
+    const arr = items?.array();
+    const alice = arr?.[0];
+    const name = alice?.tag('name');
+
+    expect(alice?.parent).toBe(items);
+    expect(name?.parent).toBe(alice);
+  });
+
+  test('dict accessor returns tags with correct parent', () => {
+    const {tag} = parseTag('a=1 b=2 c=3');
+    const dict = tag.dict;
+
+    expect(dict['a'].parent).toBe(tag);
+    expect(dict['b'].parent).toBe(tag);
+    expect(dict['c'].parent).toBe(tag);
+  });
+
+  test('entries iterator returns tags with correct parent', () => {
+    const {tag} = parseTag('a=1 b=2');
+    for (const [, child] of tag.entries()) {
+      expect(child.parent).toBe(tag);
+    }
+  });
+});
+
+describe('References (RefTag)', () => {
+  test('absolute reference resolves to root property', () => {
+    const {tag} = parseTag('source=hello target=$source');
+    expect(tag.text('target')).toBe('hello');
+  });
+
+  test('absolute reference with path resolves correctly', () => {
+    const {tag} = parseTag(
+      'config { db { host=localhost } } target=$config.db.host'
+    );
+    expect(tag.text('target')).toBe('localhost');
+  });
+
+  test('relative reference up one level', () => {
+    const {tag} = parseTag('outer { value=42 inner { ref=$^value } }');
+    expect(tag.numeric('outer', 'inner', 'ref')).toBe(42);
+  });
+
+  test('relative reference up two levels', () => {
+    const {tag} = parseTag('root=hello outer { inner { ref=$^^root } }');
+    expect(tag.text('outer', 'inner', 'ref')).toBe('hello');
+  });
+
+  test('reference with array index', () => {
+    const {tag} = parseTag('items=[first, second, third] target=$items[1]');
+    expect(tag.text('target')).toBe('second');
+  });
+
+  test('reference in array', () => {
+    const {tag} = parseTag('source=value refs=[$source, $source]');
+    const arr = tag.textArray('refs');
+    expect(arr).toEqual(['value', 'value']);
+  });
+
+  test('unresolved reference returns undefined', () => {
+    const {tag} = parseTag('ref=$nonexistent');
+    expect(tag.text('ref')).toBeUndefined();
+  });
+
+  test('RefTag.toRefString() returns source representation', () => {
+    const {tag} = parseTag('ref=$path.to.thing');
+    const ref = tag.tag('ref');
+    expect(ref).toBeInstanceOf(RefTag);
+    expect((ref as RefTag).toRefString()).toBe('$path.to.thing');
+  });
+
+  test('RefTag.toRefString() with ups', () => {
+    const {tag} = parseTag('a { ref=$^^root.path }');
+    const ref = tag.tag('a', 'ref');
+    expect(ref).toBeInstanceOf(RefTag);
+    expect((ref as RefTag).toRefString()).toBe('$^^root.path');
+  });
+
+  test('RefTag.toRefString() with array index', () => {
+    const {tag} = parseTag('ref=$items[0].name');
+    const ref = tag.tag('ref');
+    expect(ref).toBeInstanceOf(RefTag);
+    expect((ref as RefTag).toRefString()).toBe('$items[0].name');
+  });
+
+  test('chained reference access', () => {
+    const {tag} = parseTag('data { name=alice age=30 } ref=$data');
+    expect(tag.text('ref', 'name')).toBe('alice');
+    expect(tag.numeric('ref', 'age')).toBe(30);
+  });
+
+  test('reference has correct parent', () => {
+    const {tag} = parseTag('outer { ref=$something }');
+    const outer = tag.tag('outer');
+    const ref = outer?.tag('ref');
+    expect(ref?.parent).toBe(outer);
+  });
+
+  describe('validateReferences', () => {
+    test('no errors for valid references', () => {
+      const {tag} = parseTag('source=hello target=$source');
+      expect(tag.validateReferences()).toEqual([]);
+    });
+
+    test('error for unresolved reference', () => {
+      const {tag} = parseTag('ref=$nonexistent');
+      const errors = tag.validateReferences();
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('Unresolved reference');
+      expect(errors[0]).toContain('$nonexistent');
+    });
+
+    test('error for unresolved nested reference', () => {
+      const {tag} = parseTag('outer { inner { ref=$missing } }');
+      const errors = tag.validateReferences();
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('outer.inner.ref');
+    });
+
+    test('error for reference that goes up too far', () => {
+      const {tag} = parseTag('ref=$^^^^^way.too.far');
+      const errors = tag.validateReferences();
+      expect(errors).toHaveLength(1);
+    });
+
+    test('multiple unresolved references', () => {
+      const {tag} = parseTag('a=$missing1 b=$missing2');
+      const errors = tag.validateReferences();
+      expect(errors).toHaveLength(2);
+    });
+  });
+
+  describe('toJSON for references', () => {
+    test('RefTag serializes to linkTo marker', () => {
+      const {tag} = parseTag('ref=$path.to.thing');
+      const ref = tag.tag('ref');
+      expect(ref?.toJSON()).toEqual({linkTo: '$path.to.thing'});
+    });
+
+    test('RefTag with ups serializes correctly', () => {
+      const {tag} = parseTag('a { ref=$^^root }');
+      const ref = tag.tag('a', 'ref');
+      expect(ref?.toJSON()).toEqual({linkTo: '$^^root'});
+    });
+  });
+
+  describe('toObject with references', () => {
+    test('reference resolves to actual value', () => {
+      const {tag} = parseTag('source=hello target=$source');
+      const obj = tag.toObject();
+      expect(obj['target']).toBe('hello');
+    });
+
+    test('reference to object resolves correctly', () => {
+      const {tag} = parseTag('data { name=alice } ref=$data');
+      const obj = tag.toObject();
+      expect(obj['ref']).toEqual({name: 'alice'});
+    });
+
+    test('unresolved reference becomes undefined', () => {
+      const {tag} = parseTag('ref=$nonexistent');
+      const obj = tag.toObject();
+      expect(obj['ref']).toBeUndefined();
+    });
+  });
+
+  describe('cloning with references', () => {
+    test('reference survives when extending tag is cloned', () => {
+      // Parse two lines - first creates reference, second extends it
+      const {tag} = parseTag(['source=hello target=$source', 'extra=data']);
+      // The reference should still work after the second parse cloned the first result
+      expect(tag.text('target')).toBe('hello');
+    });
+
+    test('clone preserves RefTag', () => {
+      const {tag} = parseTag('source=hello target=$source');
+      const cloned = tag.clone();
+      // After cloning, the reference should still resolve
+      expect(cloned.text('target')).toBe('hello');
     });
   });
 });
