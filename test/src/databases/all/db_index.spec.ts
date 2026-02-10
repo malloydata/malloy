@@ -39,11 +39,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   test.when(runtime.dialect.supportsTempTables)(
     `basic index  - ${databaseName}`,
     async () => {
-      const model = await runtime.loadModel(
-        `
-        source: airports is ${databaseName}.table('malloytest.airports') extend {
-        }
-    `
+      const model = runtime.loadModel(
+        `source: airports is ${databaseName}.table('malloytest.airports')`
       );
       let result = await model.search('airports', 'SANTA', 10);
 
