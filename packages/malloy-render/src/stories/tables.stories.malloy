@@ -290,6 +290,27 @@ source: pivot_test is duckdb.table("static/data/products.parquet") extend {
       product_count is count()
     limit: 5
   }
+
+  #(story) story="Transpose Limit Exceeded"
+  # transpose.limit=3
+  view: transpose_limit_exceeded is {
+    group_by: category
+    aggregate:
+      avg_retail is retail_price.avg()
+      total_cost is cost.sum()
+    limit: 5
+  }
+
+  #(story) story="Transpose Custom Limit"
+  # transpose.limit=50
+  view: transpose_custom_limit is {
+    group_by: brand
+    aggregate:
+      avg_retail is retail_price.avg()
+      total_cost is cost.sum()
+      product_count is count()
+    limit: 30
+  }
 }
 
 source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_column, '123e4567-e89b-12d3-a456-426614174000'::UUID AS uuid_column, {'name': 'foo'} AS user") extend {
