@@ -7,7 +7,6 @@ import {
   registerConnectionType,
   getConnectionProperties,
   getRegisteredConnectionTypes,
-  parseConnections,
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
@@ -50,144 +49,6 @@ describe('connection registry', () => {
         mockConnection(config.name, config),
       properties: [],
     });
-  });
-
-  test('basic connection lookup', async () => {
-    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }');
-    const conn = await lookup.lookupConnection('mydb');
-    expect(conn.name).toBe('mydb');
-  });
-
-  test('default connection is the first one defined', async () => {
-    const lookup = parseConnections(
-      'Connections: { first: { is=mockdb } second: { is=mockdb2 } }'
-    );
-    const conn = await lookup.lookupConnection();
-    expect(conn.name).toBe('first');
-  });
-
-  test('passes config properties to factory', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb host="localhost" port=5432 } }'
-    );
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    expect(conn._config['host']).toBe('localhost');
-    expect(conn._config['port']).toBe(5432);
-  });
-
-  test('caches connections after first lookup', async () => {
-    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }');
-    const conn1 = await lookup.lookupConnection('mydb');
-    const conn2 = await lookup.lookupConnection('mydb');
-    expect(conn1).toBe(conn2);
-  });
-
-  test('mode override: partial merge', async () => {
-    const lookup = parseConnections(
-      'Connections: {\n' +
-        '  mydb: { is=mockdb host="prod-host" port=5432 }\n' +
-        '}\n' +
-        'Modes: {\n' +
-        '  staging: {\n' +
-        '    Connections: {\n' +
-        '      mydb: { host="staging-host" }\n' +
-        '    }\n' +
-        '  }\n' +
-        '}',
-      {mode: 'staging'}
-    );
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    expect(conn._config['host']).toBe('staging-host');
-    expect(conn._config['port']).toBe(5432); // preserved from base
-  });
-
-  test('mode override: full replacement with is', async () => {
-    const lookup = parseConnections(
-      'Connections: {\n' +
-        '  mydb: { is=mockdb host="prod-host" }\n' +
-        '}\n' +
-        'Modes: {\n' +
-        '  staging: {\n' +
-        '    Connections: {\n' +
-        '      mydb: { is=mockdb2 host="staging-host" }\n' +
-        '    }\n' +
-        '  }\n' +
-        '}',
-      {mode: 'staging'}
-    );
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    // host from mode override, not from base
-    expect(conn._config['host']).toBe('staging-host');
-    // port was on base only, full replacement means it's gone
-    expect(conn._config['port']).toBeUndefined();
-  });
-
-  test('env var substitution', async () => {
-    process.env['TEST_REGISTRY_HOST'] = 'env-host';
-    try {
-      const lookup = parseConnections(
-        'Connections: { mydb: { is=mockdb host="${TEST_REGISTRY_HOST}" } }'
-      );
-      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-        _config: ConnectionConfig;
-      };
-      expect(conn._config['host']).toBe('env-host');
-    } finally {
-      delete process.env['TEST_REGISTRY_HOST'];
-    }
-  });
-
-  test('missing env var substitutes empty string', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb host="${NONEXISTENT_TEST_VAR_XYZ}" } }'
-    );
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    expect(conn._config['host']).toBe('');
-  });
-
-  test('unregistered connection type throws', async () => {
-    const lookup = parseConnections('Connections: { mydb: { is=unknowndb } }');
-    await expect(lookup.lookupConnection('mydb')).rejects.toThrow(
-      /No registered connection type "unknowndb"/
-    );
-  });
-
-  test('unknown connection name throws', async () => {
-    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }');
-    await expect(lookup.lookupConnection('other')).rejects.toThrow(
-      /No connection named "other"/
-    );
-  });
-
-  test('missing is property throws', () => {
-    expect(() =>
-      parseConnections('Connections: { mydb: { host="localhost" } }')
-    ).toThrow(/missing required "is" property/);
-  });
-
-  test('no connections defined throws on lookup', async () => {
-    const lookup = parseConnections('');
-    await expect(lookup.lookupConnection()).rejects.toThrow(
-      /No connections defined/
-    );
-  });
-
-  test('boolean config values', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb readOnly=@true } }'
-    );
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    expect(conn._config['readOnly']).toBe(true);
   });
 
   test('getConnectionProperties returns properties for registered type', () => {
@@ -307,6 +168,26 @@ describe('connection registry', () => {
     const lookup = createConnectionsFromConfig(config);
     await expect(lookup.lookupConnection('mydb')).rejects.toThrow(
       /No registered connection type "unknowndb"/
+    );
+  });
+
+  test('createConnectionsFromConfig throws for unknown connection name', async () => {
+    const config = {
+      connections: {
+        mydb: {is: 'mockdb'},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config);
+    await expect(lookup.lookupConnection('other')).rejects.toThrow(
+      /No connection named "other"/
+    );
+  });
+
+  test('createConnectionsFromConfig throws when no connections defined', async () => {
+    const config = {connections: {}};
+    const lookup = createConnectionsFromConfig(config);
+    await expect(lookup.lookupConnection()).rejects.toThrow(
+      /No connections defined/
     );
   });
 

@@ -14,13 +14,11 @@ import type {
 import type {
   ConnectionTypeDef,
   ConnectionPropertyDefinition,
-  ParseConnectionsOptions,
   ConnectionsConfig,
 } from '../../connection/registry';
 import {
   registerConnectionType as _registerConnectionType,
   getConnectionProperties as _getConnectionProperties,
-  parseConnections as _parseConnections,
   getRegisteredConnectionTypes as _getRegisteredConnectionTypes,
   readConnectionsConfig as _readConnectionsConfig,
   writeConnectionsConfig as _writeConnectionsConfig,
@@ -144,17 +142,6 @@ export class Malloy {
     typeName: string
   ): ConnectionPropertyDefinition[] | undefined {
     return _getConnectionProperties(typeName);
-  }
-
-  /**
-   * Parse a MOTLY connection config and return a LookupConnection
-   * that lazily creates connections using registered type factories.
-   */
-  static parseConnections(
-    configText: string,
-    options?: ParseConnectionsOptions
-  ): LookupConnection<Connection> {
-    return _parseConnections(configText, options);
   }
 
   /**

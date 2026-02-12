@@ -242,7 +242,6 @@ export {
   registerConnectionType,
   getConnectionProperties,
   getRegisteredConnectionTypes,
-  parseConnections,
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
@@ -252,7 +251,6 @@ export type {
   ConnectionPropertyType,
   ConnectionPropertyDefinition,
   ConnectionTypeDef,
-  ParseConnectionsOptions,
   ConnectionConfigEntry,
   ConnectionsConfig,
 } from './connection/registry';
