@@ -125,7 +125,7 @@ export class Malloy {
   }
 
   /**
-   * Register a connection type for use with `parseConnections()`.
+   * Register a connection type with the global registry.
    * Typically called by db-* packages on import as a side effect.
    */
   static registerConnectionType(
