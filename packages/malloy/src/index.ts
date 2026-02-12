@@ -255,7 +255,6 @@ export type {
   ParseConnectionsOptions,
   ConnectionConfigEntry,
   ConnectionsConfig,
-  CreateConnectionsFromConfigOptions,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
 export {

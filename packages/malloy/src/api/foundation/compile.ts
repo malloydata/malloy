@@ -16,7 +16,6 @@ import type {
   ConnectionPropertyDefinition,
   ParseConnectionsOptions,
   ConnectionsConfig,
-  CreateConnectionsFromConfigOptions,
 } from '../../connection/registry';
 import {
   registerConnectionType as _registerConnectionType,
@@ -183,10 +182,9 @@ export class Malloy {
    * Create a LookupConnection from a ConnectionsConfig using registered factories.
    */
   static createConnectionsFromConfig(
-    config: ConnectionsConfig,
-    options?: CreateConnectionsFromConfigOptions
+    config: ConnectionsConfig
   ): LookupConnection<Connection> {
-    return _createConnectionsFromConfig(config, options);
+    return _createConnectionsFromConfig(config);
   }
 
   private static _parse(

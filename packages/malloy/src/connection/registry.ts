@@ -60,21 +60,11 @@ export interface ConnectionsConfig {
 }
 
 /**
- * Options for createConnectionsFromConfig().
- */
-export interface CreateConnectionsFromConfigOptions {
-  /** Working directory injected into all connection configs. */
-  workingDirectory?: string;
-}
-
-/**
  * Options for parseConnections().
  */
 export interface ParseConnectionsOptions {
   /** Mode name for mode overrides (e.g. "staging", "production"). */
   mode?: string;
-  /** Working directory injected into all connection configs. */
-  workingDirectory?: string;
 }
 
 // Module-level registry
@@ -146,8 +136,7 @@ export function writeConnectionsConfig(config: ConnectionsConfig): string {
  * Uses the same lazy-creation + caching pattern as parseConnections.
  */
 export function createConnectionsFromConfig(
-  config: ConnectionsConfig,
-  options?: CreateConnectionsFromConfigOptions
+  config: ConnectionsConfig
 ): LookupConnection<Connection> {
   const entries = Object.entries(config.connections);
   const firstConnectionName = entries.length > 0 ? entries[0][0] : undefined;
@@ -187,9 +176,6 @@ export function createConnectionsFromConfig(
         if (value !== undefined) {
           connConfig[key] = value;
         }
-      }
-      if (options?.workingDirectory) {
-        connConfig['workingDirectory'] = options.workingDirectory;
       }
 
       const connection = typeDef.factory(connConfig);
@@ -322,13 +308,6 @@ export function parseConnections(
           specs.set(name, {typeName, config: tagToConfig(name, modeConnTag)});
         }
       }
-    }
-  }
-
-  // Inject workingDirectory into all configs
-  if (options?.workingDirectory) {
-    for (const spec of specs.values()) {
-      spec.config['workingDirectory'] = options.workingDirectory;
     }
   }
 

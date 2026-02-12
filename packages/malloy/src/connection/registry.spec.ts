@@ -180,16 +180,6 @@ describe('connection registry', () => {
     );
   });
 
-  test('workingDirectory is injected into all configs', async () => {
-    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }', {
-      workingDirectory: '/tmp/test',
-    });
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    expect(conn._config['workingDirectory']).toBe('/tmp/test');
-  });
-
   test('boolean config values', async () => {
     const lookup = parseConnections(
       'Connections: { mydb: { is=mockdb readOnly=@true } }'
@@ -294,21 +284,6 @@ describe('connection registry', () => {
     };
     expect(conn._config['host']).toBe('localhost');
     expect(conn._config['port']).toBe(5432);
-  });
-
-  test('createConnectionsFromConfig injects workingDirectory', async () => {
-    const config = {
-      connections: {
-        mydb: {is: 'mockdb'},
-      },
-    };
-    const lookup = createConnectionsFromConfig(config, {
-      workingDirectory: '/tmp/test',
-    });
-    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-      _config: ConnectionConfig;
-    };
-    expect(conn._config['workingDirectory']).toBe('/tmp/test');
   });
 
   test('createConnectionsFromConfig default connection is first entry', async () => {
