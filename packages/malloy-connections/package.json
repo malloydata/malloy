@@ -1,0 +1,43 @@
+{
+  "name": "@malloydata/malloy-connections",
+  "version": "0.0.337",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "index": [
+        "./dist/index.d.ts"
+      ]
+    }
+  },
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "0.0.337",
+    "@malloydata/db-bigquery": "0.0.337",
+    "@malloydata/db-duckdb": "0.0.337",
+    "@malloydata/db-mysql": "0.0.337",
+    "@malloydata/db-postgres": "0.0.337",
+    "@malloydata/db-snowflake": "0.0.337",
+    "@malloydata/db-trino": "0.0.337"
+  }
+}

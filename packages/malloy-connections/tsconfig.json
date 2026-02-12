@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.packages.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true
+  },
+  "references": [
+    {"path": "../malloy"},
+    {"path": "../malloy-db-bigquery"},
+    {"path": "../malloy-db-duckdb"},
+    {"path": "../malloy-db-mysql"},
+    {"path": "../malloy-db-postgres"},
+    {"path": "../malloy-db-snowflake"},
+    {"path": "../malloy-db-trino"}
+  ]
+}

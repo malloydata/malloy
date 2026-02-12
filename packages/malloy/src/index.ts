@@ -226,10 +226,7 @@ export type {
 export type {
   Connection,
   ConnectionConfig,
-  ConnectionFactory,
-  ConnectionParameter,
   ConnectionParameterValue,
-  ConnectionConfigSchema,
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
@@ -238,6 +235,22 @@ export type {
   TestableConnection,
   StreamingConnection,
 } from './connection/types';
+export {
+  registerConnectionType,
+  getConnectionProperties,
+  getRegisteredConnectionTypes,
+  readConnectionsConfig,
+  writeConnectionsConfig,
+  createConnectionsFromConfig,
+} from './connection/registry';
+export type {
+  ConnectionTypeFactory,
+  ConnectionPropertyType,
+  ConnectionPropertyDefinition,
+  ConnectionTypeDef,
+  ConnectionConfigEntry,
+  ConnectionsConfig,
+} from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
 export {
   modelDefToModelInfo,

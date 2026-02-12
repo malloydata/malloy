@@ -7,7 +7,6 @@ import type {
   SQLSourceDef,
   TableSourceDef,
 } from '../model/malloy_types';
-import type {Dialect} from '../dialect';
 import type {SQLSourceRequest} from '../lang/translate-response';
 
 /**
@@ -75,29 +74,9 @@ export type ConnectionParameterValue =
   | boolean
   | Array<ConnectionParameterValue>;
 
-export interface ConnectionParameter {
-  name: string;
-  label: string;
-  type: 'string' | 'number' | 'boolean';
-  isOptional?: boolean;
-  isSecret?: boolean;
-  defaultValue?: ConnectionParameterValue;
-}
-
-export type ConnectionConfigSchema = ConnectionParameter[];
-
 export interface ConnectionConfig {
   name: string;
   [key: string]: ConnectionParameterValue | undefined;
-}
-
-export interface ConnectionFactory {
-  connectionName: string;
-  configSchema: ConnectionConfigSchema;
-  createConnection(
-    connectionConfig: ConnectionConfig,
-    dialectRegistrar?: (dialect: Dialect) => void
-  ): Connection & TestableConnection;
 }
 
 export interface ConnectionMetadata {

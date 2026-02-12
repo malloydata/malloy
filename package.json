@@ -17,6 +17,7 @@
       "packages/malloy-db-postgres",
       "packages/malloy-db-snowflake",
       "packages/malloy-db-publisher",
+      "packages/malloy-connections",
       "packages/malloy-malloy-sql",
       "packages/malloy-render",
       "packages/malloy-syntax-highlight",

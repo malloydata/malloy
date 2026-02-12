@@ -28,3 +28,57 @@ export {
   TrinoPrestoConnection,
 } from './trino_connection';
 export {TrinoExecutor} from './trino_executor';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {
+  ConnectionConfig,
+  ConnectionPropertyDefinition,
+} from '@malloydata/malloy';
+import {TrinoConnection, PrestoConnection} from './trino_connection';
+import type {TrinoConnectionConfiguration} from './trino_connection';
+
+function configToTrinoConfig(config: ConnectionConfig): {
+  name: string;
+  trinoConfig: TrinoConnectionConfiguration;
+} {
+  return {
+    name: config.name,
+    trinoConfig: {
+      server:
+        typeof config['server'] === 'string' ? config['server'] : undefined,
+      port: typeof config['port'] === 'number' ? config['port'] : undefined,
+      catalog:
+        typeof config['catalog'] === 'string' ? config['catalog'] : undefined,
+      schema:
+        typeof config['schema'] === 'string' ? config['schema'] : undefined,
+      user: typeof config['user'] === 'string' ? config['user'] : undefined,
+      password:
+        typeof config['password'] === 'string' ? config['password'] : undefined,
+    },
+  };
+}
+
+const trinoProperties: ConnectionPropertyDefinition[] = [
+  {name: 'server', displayName: 'Server', type: 'string', optional: true},
+  {name: 'port', displayName: 'Port', type: 'number', optional: true},
+  {name: 'catalog', displayName: 'Catalog', type: 'string', optional: true},
+  {name: 'schema', displayName: 'Schema', type: 'string', optional: true},
+  {name: 'user', displayName: 'User', type: 'string', optional: true},
+  {name: 'password', displayName: 'Password', type: 'password', optional: true},
+];
+
+registerConnectionType('trino', {
+  factory: (config: ConnectionConfig) => {
+    const {name, trinoConfig} = configToTrinoConfig(config);
+    return new TrinoConnection(name, undefined, trinoConfig);
+  },
+  properties: trinoProperties,
+});
+
+registerConnectionType('presto', {
+  factory: (config: ConnectionConfig) => {
+    const {name, trinoConfig} = configToTrinoConfig(config);
+    return new PrestoConnection(name, undefined, trinoConfig);
+  },
+  properties: trinoProperties,
+});

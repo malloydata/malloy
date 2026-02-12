@@ -22,3 +22,52 @@
  */
 
 export {BigQueryConnection} from './bigquery_connection';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
+import {BigQueryConnection} from './bigquery_connection';
+
+registerConnectionType('bigquery', {
+  factory: (config: ConnectionConfig) => {
+    return new BigQueryConnection(config);
+  },
+  properties: [
+    {
+      name: 'projectId',
+      displayName: 'Project ID',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'serviceAccountKeyPath',
+      displayName: 'Service Account Key',
+      type: 'file',
+      optional: true,
+      fileFilters: {JSON: ['json']},
+    },
+    {
+      name: 'location',
+      displayName: 'Location',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'maximumBytesBilled',
+      displayName: 'Maximum Bytes Billed',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'timeoutMs',
+      displayName: 'Timeout (ms)',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'billingProjectId',
+      displayName: 'Billing Project ID',
+      type: 'string',
+      optional: true,
+    },
+  ],
+});

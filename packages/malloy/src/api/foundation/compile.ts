@@ -12,6 +12,19 @@ import type {
   FetchSchemaOptions,
 } from '../../connection/types';
 import type {
+  ConnectionTypeDef,
+  ConnectionPropertyDefinition,
+  ConnectionsConfig,
+} from '../../connection/registry';
+import {
+  registerConnectionType as _registerConnectionType,
+  getConnectionProperties as _getConnectionProperties,
+  getRegisteredConnectionTypes as _getRegisteredConnectionTypes,
+  readConnectionsConfig as _readConnectionsConfig,
+  writeConnectionsConfig as _writeConnectionsConfig,
+  createConnectionsFromConfig as _createConnectionsFromConfig,
+} from '../../connection/registry';
+import type {
   URLReader,
   EventStream,
   InvalidationKey,
@@ -109,6 +122,56 @@ export class MalloyError extends Error {
 export class Malloy {
   public static get version(): string {
     return MALLOY_VERSION;
+  }
+
+  /**
+   * Register a connection type with the global registry.
+   * Typically called by db-* packages on import as a side effect.
+   */
+  static registerConnectionType(
+    typeName: string,
+    def: ConnectionTypeDef
+  ): void {
+    _registerConnectionType(typeName, def);
+  }
+
+  /**
+   * Get the property definitions for a registered connection type.
+   */
+  static getConnectionProperties(
+    typeName: string
+  ): ConnectionPropertyDefinition[] | undefined {
+    return _getConnectionProperties(typeName);
+  }
+
+  /**
+   * Get the names of all registered connection types.
+   */
+  static getRegisteredConnectionTypes(): string[] {
+    return _getRegisteredConnectionTypes();
+  }
+
+  /**
+   * Parse a JSON config string into an editable ConnectionsConfig.
+   */
+  static readConnectionsConfig(jsonText: string): ConnectionsConfig {
+    return _readConnectionsConfig(jsonText);
+  }
+
+  /**
+   * Serialize a ConnectionsConfig to a JSON string.
+   */
+  static writeConnectionsConfig(config: ConnectionsConfig): string {
+    return _writeConnectionsConfig(config);
+  }
+
+  /**
+   * Create a LookupConnection from a ConnectionsConfig using registered factories.
+   */
+  static createConnectionsFromConfig(
+    config: ConnectionsConfig
+  ): LookupConnection<Connection> {
+    return _createConnectionsFromConfig(config);
   }
 
   private static _parse(
