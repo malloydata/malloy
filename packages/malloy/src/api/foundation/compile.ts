@@ -12,11 +12,13 @@ import type {
   FetchSchemaOptions,
 } from '../../connection/types';
 import type {
-  ConnectionTypeFactory,
+  ConnectionTypeDef,
+  ConnectionPropertyDefinition,
   ParseConnectionsOptions,
 } from '../../connection/registry';
 import {
   registerConnectionType as _registerConnectionType,
+  getConnectionProperties as _getConnectionProperties,
   parseConnections as _parseConnections,
 } from '../../connection/registry';
 import type {
@@ -120,14 +122,23 @@ export class Malloy {
   }
 
   /**
-   * Register a connection type factory for use with `parseConnections()`.
+   * Register a connection type for use with `parseConnections()`.
    * Typically called by db-* packages on import as a side effect.
    */
   static registerConnectionType(
     typeName: string,
-    factory: ConnectionTypeFactory
+    def: ConnectionTypeDef
   ): void {
-    _registerConnectionType(typeName, factory);
+    _registerConnectionType(typeName, def);
+  }
+
+  /**
+   * Get the property definitions for a registered connection type.
+   */
+  static getConnectionProperties(
+    typeName: string
+  ): ConnectionPropertyDefinition[] | undefined {
+    return _getConnectionProperties(typeName);
   }
 
   /**

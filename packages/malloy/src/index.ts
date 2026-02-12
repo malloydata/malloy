@@ -238,9 +238,16 @@ export type {
   TestableConnection,
   StreamingConnection,
 } from './connection/types';
-export {registerConnectionType, parseConnections} from './connection/registry';
+export {
+  registerConnectionType,
+  getConnectionProperties,
+  parseConnections,
+} from './connection/registry';
 export type {
   ConnectionTypeFactory,
+  ConnectionPropertyType,
+  ConnectionPropertyDefinition,
+  ConnectionTypeDef,
   ParseConnectionsOptions,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';

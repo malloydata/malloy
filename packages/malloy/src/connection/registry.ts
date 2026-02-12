@@ -13,6 +13,38 @@ import type {Connection, ConnectionConfig, LookupConnection} from './types';
 export type ConnectionTypeFactory = (config: ConnectionConfig) => Connection;
 
 /**
+ * The type of a connection property value.
+ */
+export type ConnectionPropertyType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'password'
+  | 'file';
+
+/**
+ * Describes a single configuration property for a connection type.
+ */
+export interface ConnectionPropertyDefinition {
+  name: string;
+  displayName: string;
+  type: ConnectionPropertyType;
+  optional?: true;
+  default?: string;
+  description?: string;
+  /** For type 'file': extension filters for picker dialogs. */
+  fileFilters?: Record<string, string[]>;
+}
+
+/**
+ * A connection type definition: factory plus property metadata.
+ */
+export interface ConnectionTypeDef {
+  factory: ConnectionTypeFactory;
+  properties: ConnectionPropertyDefinition[];
+}
+
+/**
  * Options for parseConnections().
  */
 export interface ParseConnectionsOptions {
@@ -23,19 +55,31 @@ export interface ParseConnectionsOptions {
 }
 
 // Module-level registry
-const registry = new Map<string, ConnectionTypeFactory>();
+const registry = new Map<string, ConnectionTypeDef>();
 
 /**
- * Register a connection type factory.
+ * Register a connection type with its factory and property definitions.
  *
  * @param typeName The connection type name (e.g. "duckdb", "bigquery").
- * @param factory A function that creates a Connection from a ConnectionConfig.
+ * @param def The connection type definition (factory + properties).
  */
 export function registerConnectionType(
   typeName: string,
-  factory: ConnectionTypeFactory
+  def: ConnectionTypeDef
 ): void {
-  registry.set(typeName, factory);
+  registry.set(typeName, def);
+}
+
+/**
+ * Get the property definitions for a registered connection type.
+ *
+ * @param typeName The connection type name.
+ * @returns The property definitions, or undefined if the type is not registered.
+ */
+export function getConnectionProperties(
+  typeName: string
+): ConnectionPropertyDefinition[] | undefined {
+  return registry.get(typeName)?.properties;
 }
 
 /**
@@ -195,15 +239,15 @@ export function parseConnections(
         );
       }
 
-      const factory = registry.get(spec.typeName);
-      if (!factory) {
+      const typeDef = registry.get(spec.typeName);
+      if (!typeDef) {
         throw new Error(
           `No registered connection type "${spec.typeName}" for connection "${connectionName}". ` +
             `Did you forget to import the connection package?`
         );
       }
 
-      const connection = factory(spec.config);
+      const connection = typeDef.factory(spec.config);
       cache.set(connectionName, connection);
       return connection;
     },

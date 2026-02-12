@@ -27,12 +27,48 @@ import {registerConnectionType} from '@malloydata/malloy';
 import type {ConnectionConfig} from '@malloydata/malloy';
 import {DuckDBConnection} from './duckdb_connection';
 
-registerConnectionType('duckdb', (config: ConnectionConfig) => {
-  const options = {...config};
-  // Map user-friendly "path" to the constructor's "databasePath"
-  if ('path' in options && !('databasePath' in options)) {
-    options['databasePath'] = options['path'];
-    delete options['path'];
-  }
-  return new DuckDBConnection(options);
+registerConnectionType('duckdb', {
+  factory: (config: ConnectionConfig) => {
+    const options = {...config};
+    // Map user-friendly "path" to the constructor's "databasePath"
+    if ('path' in options && !('databasePath' in options)) {
+      options['databasePath'] = options['path'];
+      delete options['path'];
+    }
+    return new DuckDBConnection(options);
+  },
+  properties: [
+    {
+      name: 'databasePath',
+      displayName: 'Database Path',
+      type: 'file',
+      optional: true,
+      default: ':memory:',
+      fileFilters: {DuckDB: ['db', 'duckdb', 'ddb']},
+    },
+    {
+      name: 'workingDirectory',
+      displayName: 'Working Directory',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'motherDuckToken',
+      displayName: 'MotherDuck Token',
+      type: 'password',
+      optional: true,
+    },
+    {
+      name: 'additionalExtensions',
+      displayName: 'Additional Extensions',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'readOnly',
+      displayName: 'Read Only',
+      type: 'boolean',
+      optional: true,
+    },
+  ],
 });

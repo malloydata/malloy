@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import {registerConnectionType, parseConnections} from './registry';
+import {
+  registerConnectionType,
+  getConnectionProperties,
+  parseConnections,
+} from './registry';
 import type {ConnectionConfig, Connection} from './types';
 
 // Minimal mock connection for testing
@@ -29,14 +33,19 @@ function mockConnection(name: string, config: ConnectionConfig): Connection {
 describe('connection registry', () => {
   beforeEach(() => {
     // Register mock types for testing
-    registerConnectionType(
-      'mockdb',
-      (config: ConnectionConfig) => mockConnection(config.name, config)
-    );
-    registerConnectionType(
-      'mockdb2',
-      (config: ConnectionConfig) => mockConnection(config.name, config)
-    );
+    registerConnectionType('mockdb', {
+      factory: (config: ConnectionConfig) =>
+        mockConnection(config.name, config),
+      properties: [
+        {name: 'host', displayName: 'Host', type: 'string', optional: true},
+        {name: 'port', displayName: 'Port', type: 'number', optional: true},
+      ],
+    });
+    registerConnectionType('mockdb2', {
+      factory: (config: ConnectionConfig) =>
+        mockConnection(config.name, config),
+      properties: [],
+    });
   });
 
   test('basic connection lookup', async () => {
@@ -196,5 +205,19 @@ describe('connection registry', () => {
       _config: ConnectionConfig;
     };
     expect(conn._config['readOnly']).toBe(true);
+  });
+
+  test('getConnectionProperties returns properties for registered type', () => {
+    const props = getConnectionProperties('mockdb');
+    expect(props).toBeDefined();
+    expect(props).toHaveLength(2);
+    expect(props![0].name).toBe('host');
+    expect(props![0].type).toBe('string');
+    expect(props![1].name).toBe('port');
+    expect(props![1].type).toBe('number');
+  });
+
+  test('getConnectionProperties returns undefined for unknown type', () => {
+    expect(getConnectionProperties('nonexistent')).toBeUndefined();
   });
 });
