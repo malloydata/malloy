@@ -28,3 +28,33 @@ export {
   TrinoPrestoConnection,
 } from './trino_connection';
 export {TrinoExecutor} from './trino_executor';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
+import {TrinoConnection, PrestoConnection} from './trino_connection';
+
+function configToTrinoConfig(config: ConnectionConfig) {
+  const {name, server, port, catalog, schema, user, password, ...rest} = config;
+  return {
+    name,
+    trinoConfig: {
+      server: server as string | undefined,
+      port: port as number | undefined,
+      catalog: catalog as string | undefined,
+      schema: schema as string | undefined,
+      user: user as string | undefined,
+      password: password as string | undefined,
+      ...rest,
+    },
+  };
+}
+
+registerConnectionType('trino', (config: ConnectionConfig) => {
+  const {name, trinoConfig} = configToTrinoConfig(config);
+  return new TrinoConnection(name, undefined, trinoConfig);
+});
+
+registerConnectionType('presto', (config: ConnectionConfig) => {
+  const {name, trinoConfig} = configToTrinoConfig(config);
+  return new PrestoConnection(name, undefined, trinoConfig);
+});

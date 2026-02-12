@@ -22,3 +22,17 @@
  */
 
 export {DuckDBConnection} from './duckdb_connection';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
+import {DuckDBConnection} from './duckdb_connection';
+
+registerConnectionType('duckdb', (config: ConnectionConfig) => {
+  const options = {...config};
+  // Map user-friendly "path" to the constructor's "databasePath"
+  if ('path' in options && !('databasePath' in options)) {
+    options['databasePath'] = options['path'];
+    delete options['path'];
+  }
+  return new DuckDBConnection(options);
+});

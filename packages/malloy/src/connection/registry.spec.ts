@@ -1,0 +1,200 @@
+/*
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
+ */
+
+import {registerConnectionType, parseConnections} from './registry';
+import type {ConnectionConfig, Connection} from './types';
+
+// Minimal mock connection for testing
+function mockConnection(name: string, config: ConnectionConfig): Connection {
+  return {
+    name,
+    dialectName: 'mock',
+    getDigest: () => 'mock-digest',
+    fetchSchemaForTables: jest.fn(),
+    fetchSchemaForSQLStruct: jest.fn(),
+    runSQL: jest.fn(),
+    isPool: () => false,
+    canPersist: () => false,
+    canStream: () => false,
+    close: jest.fn(),
+    estimateQueryCost: jest.fn(),
+    fetchMetadata: jest.fn(),
+    fetchTableMetadata: jest.fn(),
+    _config: config, // Stash config for assertions
+  } as unknown as Connection & {_config: ConnectionConfig};
+}
+
+describe('connection registry', () => {
+  beforeEach(() => {
+    // Register mock types for testing
+    registerConnectionType(
+      'mockdb',
+      (config: ConnectionConfig) => mockConnection(config.name, config)
+    );
+    registerConnectionType(
+      'mockdb2',
+      (config: ConnectionConfig) => mockConnection(config.name, config)
+    );
+  });
+
+  test('basic connection lookup', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb } }'
+    );
+    const conn = await lookup.lookupConnection('mydb');
+    expect(conn.name).toBe('mydb');
+  });
+
+  test('default connection is the first one defined', async () => {
+    const lookup = parseConnections(
+      'Connections: { first: { is=mockdb } second: { is=mockdb2 } }'
+    );
+    const conn = await lookup.lookupConnection();
+    expect(conn.name).toBe('first');
+  });
+
+  test('passes config properties to factory', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb host="localhost" port=5432 } }'
+    );
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['host']).toBe('localhost');
+    expect(conn._config['port']).toBe(5432);
+  });
+
+  test('caches connections after first lookup', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb } }'
+    );
+    const conn1 = await lookup.lookupConnection('mydb');
+    const conn2 = await lookup.lookupConnection('mydb');
+    expect(conn1).toBe(conn2);
+  });
+
+  test('mode override: partial merge', async () => {
+    const lookup = parseConnections(
+      'Connections: {\n' +
+        '  mydb: { is=mockdb host="prod-host" port=5432 }\n' +
+        '}\n' +
+        'Modes: {\n' +
+        '  staging: {\n' +
+        '    Connections: {\n' +
+        '      mydb: { host="staging-host" }\n' +
+        '    }\n' +
+        '  }\n' +
+        '}',
+      {mode: 'staging'}
+    );
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['host']).toBe('staging-host');
+    expect(conn._config['port']).toBe(5432); // preserved from base
+  });
+
+  test('mode override: full replacement with is', async () => {
+    const lookup = parseConnections(
+      'Connections: {\n' +
+        '  mydb: { is=mockdb host="prod-host" }\n' +
+        '}\n' +
+        'Modes: {\n' +
+        '  staging: {\n' +
+        '    Connections: {\n' +
+        '      mydb: { is=mockdb2 host="staging-host" }\n' +
+        '    }\n' +
+        '  }\n' +
+        '}',
+      {mode: 'staging'}
+    );
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    // host from mode override, not from base
+    expect(conn._config['host']).toBe('staging-host');
+    // port was on base only, full replacement means it's gone
+    expect(conn._config['port']).toBeUndefined();
+  });
+
+  test('env var substitution', async () => {
+    process.env['TEST_REGISTRY_HOST'] = 'env-host';
+    try {
+      const lookup = parseConnections(
+        'Connections: { mydb: { is=mockdb host="${TEST_REGISTRY_HOST}" } }'
+      );
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      expect(conn._config['host']).toBe('env-host');
+    } finally {
+      delete process.env['TEST_REGISTRY_HOST'];
+    }
+  });
+
+  test('missing env var substitutes empty string', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb host="${NONEXISTENT_TEST_VAR_XYZ}" } }'
+    );
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['host']).toBe('');
+  });
+
+  test('unregistered connection type throws', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=unknowndb } }'
+    );
+    await expect(lookup.lookupConnection('mydb')).rejects.toThrow(
+      /No registered connection type "unknowndb"/
+    );
+  });
+
+  test('unknown connection name throws', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb } }'
+    );
+    await expect(lookup.lookupConnection('other')).rejects.toThrow(
+      /No connection named "other"/
+    );
+  });
+
+  test('missing is property throws', () => {
+    expect(() =>
+      parseConnections(
+        'Connections: { mydb: { host="localhost" } }'
+      )
+    ).toThrow(/missing required "is" property/);
+  });
+
+  test('no connections defined throws on lookup', async () => {
+    const lookup = parseConnections('');
+    await expect(lookup.lookupConnection()).rejects.toThrow(
+      /No connections defined/
+    );
+  });
+
+  test('workingDirectory is injected into all configs', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb } }',
+      {workingDirectory: '/tmp/test'}
+    );
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['workingDirectory']).toBe('/tmp/test');
+  });
+
+  test('boolean config values', async () => {
+    const lookup = parseConnections(
+      'Connections: { mydb: { is=mockdb readOnly=@true } }'
+    );
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['readOnly']).toBe(true);
+  });
+});

@@ -22,3 +22,11 @@
  */
 
 export {BigQueryConnection} from './bigquery_connection';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
+import {BigQueryConnection} from './bigquery_connection';
+
+registerConnectionType('bigquery', (config: ConnectionConfig) => {
+  return new BigQueryConnection(config);
+});

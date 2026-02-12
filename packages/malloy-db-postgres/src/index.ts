@@ -25,3 +25,11 @@ export {
   PostgresConnection,
   PooledPostgresConnection,
 } from './postgres_connection';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
+import {PostgresConnection} from './postgres_connection';
+
+registerConnectionType('postgres', (config: ConnectionConfig) => {
+  return new PostgresConnection(config);
+});

@@ -12,6 +12,14 @@ import type {
   FetchSchemaOptions,
 } from '../../connection/types';
 import type {
+  ConnectionTypeFactory,
+  ParseConnectionsOptions,
+} from '../../connection/registry';
+import {
+  registerConnectionType as _registerConnectionType,
+  parseConnections as _parseConnections,
+} from '../../connection/registry';
+import type {
   URLReader,
   EventStream,
   InvalidationKey,
@@ -109,6 +117,28 @@ export class MalloyError extends Error {
 export class Malloy {
   public static get version(): string {
     return MALLOY_VERSION;
+  }
+
+  /**
+   * Register a connection type factory for use with `parseConnections()`.
+   * Typically called by db-* packages on import as a side effect.
+   */
+  static registerConnectionType(
+    typeName: string,
+    factory: ConnectionTypeFactory
+  ): void {
+    _registerConnectionType(typeName, factory);
+  }
+
+  /**
+   * Parse a MOTLY connection config and return a LookupConnection
+   * that lazily creates connections using registered type factories.
+   */
+  static parseConnections(
+    configText: string,
+    options?: ParseConnectionsOptions
+  ): LookupConnection<Connection> {
+    return _parseConnections(configText, options);
   }
 
   private static _parse(

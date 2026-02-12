@@ -22,3 +22,22 @@
  */
 
 export {SnowflakeConnection} from './snowflake_connection';
+
+import {registerConnectionType} from '@malloydata/malloy';
+import type {ConnectionConfig} from '@malloydata/malloy';
+import type {ConnectionOptions} from 'snowflake-sdk';
+import {SnowflakeConnection} from './snowflake_connection';
+
+registerConnectionType('snowflake', (config: ConnectionConfig) => {
+  const {name, ...props} = config;
+  // Map flat MOTLY properties to snowflake-sdk ConnectionOptions
+  const connOptions: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(props)) {
+    if (value !== undefined) {
+      connOptions[key] = value;
+    }
+  }
+  return new SnowflakeConnection(name, {
+    connOptions: connOptions as unknown as ConnectionOptions,
+  });
+});
