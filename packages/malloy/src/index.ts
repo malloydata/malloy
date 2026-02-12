@@ -226,10 +226,7 @@ export type {
 export type {
   Connection,
   ConnectionConfig,
-  ConnectionFactory,
-  ConnectionParameter,
   ConnectionParameterValue,
-  ConnectionConfigSchema,
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
