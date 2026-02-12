@@ -1109,9 +1109,11 @@ export class MalloyToAST
     if (ncx) {
       return new ast.OrderBy(this.getNumber(ncx), dir);
     }
-    const fieldCx = pcx.fieldName();
-    if (fieldCx) {
-      return new ast.OrderBy(this.getFieldName(fieldCx), dir);
+    const pathCx = pcx.fieldPath();
+    if (pathCx) {
+      const names = pathCx.fieldName();
+      const lastFieldName = names[names.length - 1];
+      return new ast.OrderBy(this.getFieldName(lastFieldName), dir);
     }
     throw this.internalError(pcx, "can't parse order_by specification");
   }
