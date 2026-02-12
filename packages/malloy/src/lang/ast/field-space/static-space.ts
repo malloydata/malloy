@@ -92,7 +92,7 @@ export class StaticSpace implements FieldSpace {
 
   private get map(): FieldMap {
     if (this.memoMap === undefined) {
-      this.memoMap = {};
+      this.memoMap = Object.create(null) as FieldMap;
       for (const f of this.fromStruct.fields) {
         const name = f.as || f.name;
         this.memoMap[name] = this.defToSpaceField(f);
@@ -117,7 +117,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   protected dropEntries(): void {
-    this.memoMap = {};
+    this.memoMap = Object.create(null) as FieldMap;
   }
 
   protected dropEntry(name: string): void {
@@ -144,7 +144,7 @@ export class StaticSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     const ret = {...this.fromStruct};
     if (isSourceDef(ret)) {
-      ret.parameters = {};
+      ret.parameters = Object.create(null);
     }
     ret.fields = [];
     return ret;
@@ -280,7 +280,7 @@ export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
   }
   emptyStructDef(): SourceDef {
     const ret = {...this.source};
-    ret.parameters = {};
+    ret.parameters = Object.create(null);
     ret.fields = [];
     return ret;
   }
