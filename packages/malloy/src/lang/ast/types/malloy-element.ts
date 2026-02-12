@@ -511,7 +511,7 @@ function annotationID(a: Annotation): string {
 export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
   globalNameSpace: NameSpace = new GlobalNameSpace();
-  documentModel: Record<string, ModelEntry> = {};
+  documentModel: Record<string, ModelEntry> = Object.create(null);
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   queryList: Query[] = [];
   statements: DocStatementList;
@@ -530,7 +530,7 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.didInitModel) {
       return;
     }
-    this.documentModel = {};
+    this.documentModel = Object.create(null);
     this.documentSrcRegistry = {};
     this.queryList = [];
     if (extendingModelDef) {

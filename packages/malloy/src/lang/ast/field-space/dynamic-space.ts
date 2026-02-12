@@ -102,7 +102,7 @@ export abstract class DynamicSpace
     if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
-      const parameters = {};
+      const parameters: Record<string, model.Parameter> = Object.create(null);
       for (const [name, entry] of this.entries()) {
         if (entry instanceof SpaceParam) {
           parameters[name] = entry.parameter();
