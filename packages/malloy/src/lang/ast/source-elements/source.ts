@@ -47,7 +47,7 @@ export abstract class Source extends MalloyElement {
     pList: HasParameter[] | undefined
   ): Record<string, Parameter> | undefined {
     if (pList === undefined) return undefined;
-    const parameters = {};
+    const parameters: Record<string, Parameter> = Object.create(null);
     for (const hasP of pList) {
       const pVal = hasP.parameter();
       parameters[pVal.name] = pVal;

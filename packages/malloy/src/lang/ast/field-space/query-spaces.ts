@@ -71,7 +71,10 @@ export abstract class QueryOperationSpace
   expandedWild: Record<
     string,
     {path: string[]; entry: SpaceEntry; at: model.DocumentLocation}
-  > = {};
+  > = Object.create(null) as Record<
+    string,
+    {path: string[]; entry: SpaceEntry; at: model.DocumentLocation}
+  >;
   drillDimensions: {
     nestPath: string[];
     firstDrill: MalloyElement;

@@ -22,7 +22,7 @@ export class ParameterSpace implements FieldSpace {
 
   private readonly _map: Record<string, SpaceEntry>;
   constructor(parameters: HasParameter[]) {
-    this._map = {};
+    this._map = Object.create(null) as Record<string, SpaceEntry>;
     for (const parameter of parameters) {
       this._map[parameter.name] = new AbstractParameter(parameter);
     }

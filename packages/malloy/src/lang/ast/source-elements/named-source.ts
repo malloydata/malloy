@@ -151,7 +151,7 @@ export class NamedSource extends Source {
   ): Record<string, Parameter> {
     const base = this.modelStruct();
     if (base === undefined) {
-      return {};
+      return Object.create(null) as Record<string, Parameter>;
     }
 
     return this.evaluateArguments(parameterSpace, base.parameters, []);
@@ -269,7 +269,7 @@ export class NamedSource extends Source {
       return notFound;
     }
 
-    const outParameters = {};
+    const outParameters: Record<string, Parameter> = Object.create(null);
     for (const parameter of pList ?? []) {
       const compiled = parameter.parameter();
       outParameters[compiled.name] = compiled;
