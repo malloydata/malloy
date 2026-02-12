@@ -490,7 +490,7 @@ ordering
   ;
 
 orderBySpec
-  : (INTEGER_LITERAL | fieldName) ( ASC | DESC ) ?
+  : (INTEGER_LITERAL | fieldPath) ( ASC | DESC ) ?
   ;
 
 limitStatement

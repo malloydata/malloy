@@ -1108,6 +1108,14 @@ describe('query:', () => {
           expect(reduce.orderBy).toEqual([{field: 'astr', dir: 'asc'}]);
         }
       });
+      test('order by dotted field path from join', () => {
+        expect('run: ab->{ group_by: b.astr; order_by: b.astr }').toTranslate();
+      });
+      test('order by dotted field path with direction', () => {
+        expect(
+          'run: ab->{ group_by: b.astr; order_by: b.astr desc }'
+        ).toTranslate();
+      });
     });
     test('order by multiple', () => {
       expect(`

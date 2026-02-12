@@ -387,8 +387,9 @@ export class MalloyToQuery
     for (const spec of specs) {
       if (spec.INTEGER_LITERAL()) {
         this.notAllowed(spec, 'Indexed order by statements');
-      } else if (spec.fieldName()) {
-        const fieldName = getId(spec.fieldName()!);
+      } else if (spec.fieldPath()) {
+        const names = spec.fieldPath()!.fieldName();
+        const fieldName = getId(names[names.length - 1]);
         const direction = spec.ASC() ? 'asc' : spec.DESC() ? 'desc' : undefined;
         orders.push({
           kind: 'order_by',
