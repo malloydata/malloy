@@ -241,7 +241,11 @@ export type {
 export {
   registerConnectionType,
   getConnectionProperties,
+  getRegisteredConnectionTypes,
   parseConnections,
+  readConnectionsConfig,
+  writeConnectionsConfig,
+  createConnectionsFromConfig,
 } from './connection/registry';
 export type {
   ConnectionTypeFactory,
@@ -249,6 +253,9 @@ export type {
   ConnectionPropertyDefinition,
   ConnectionTypeDef,
   ParseConnectionsOptions,
+  ConnectionConfigEntry,
+  ConnectionsConfig,
+  CreateConnectionsFromConfigOptions,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
 export {

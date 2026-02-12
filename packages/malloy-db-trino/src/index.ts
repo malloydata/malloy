@@ -53,9 +53,7 @@ function configToTrinoConfig(config: ConnectionConfig): {
         typeof config['schema'] === 'string' ? config['schema'] : undefined,
       user: typeof config['user'] === 'string' ? config['user'] : undefined,
       password:
-        typeof config['password'] === 'string'
-          ? config['password']
-          : undefined,
+        typeof config['password'] === 'string' ? config['password'] : undefined,
     },
   };
 }

@@ -6,7 +6,11 @@
 import {
   registerConnectionType,
   getConnectionProperties,
+  getRegisteredConnectionTypes,
   parseConnections,
+  readConnectionsConfig,
+  writeConnectionsConfig,
+  createConnectionsFromConfig,
 } from './registry';
 import type {ConnectionConfig, Connection} from './types';
 
@@ -49,9 +53,7 @@ describe('connection registry', () => {
   });
 
   test('basic connection lookup', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb } }'
-    );
+    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }');
     const conn = await lookup.lookupConnection('mydb');
     expect(conn.name).toBe('mydb');
   });
@@ -76,9 +78,7 @@ describe('connection registry', () => {
   });
 
   test('caches connections after first lookup', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb } }'
-    );
+    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }');
     const conn1 = await lookup.lookupConnection('mydb');
     const conn2 = await lookup.lookupConnection('mydb');
     expect(conn1).toBe(conn2);
@@ -154,18 +154,14 @@ describe('connection registry', () => {
   });
 
   test('unregistered connection type throws', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=unknowndb } }'
-    );
+    const lookup = parseConnections('Connections: { mydb: { is=unknowndb } }');
     await expect(lookup.lookupConnection('mydb')).rejects.toThrow(
       /No registered connection type "unknowndb"/
     );
   });
 
   test('unknown connection name throws', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb } }'
-    );
+    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }');
     await expect(lookup.lookupConnection('other')).rejects.toThrow(
       /No connection named "other"/
     );
@@ -173,9 +169,7 @@ describe('connection registry', () => {
 
   test('missing is property throws', () => {
     expect(() =>
-      parseConnections(
-        'Connections: { mydb: { host="localhost" } }'
-      )
+      parseConnections('Connections: { mydb: { host="localhost" } }')
     ).toThrow(/missing required "is" property/);
   });
 
@@ -187,10 +181,9 @@ describe('connection registry', () => {
   });
 
   test('workingDirectory is injected into all configs', async () => {
-    const lookup = parseConnections(
-      'Connections: { mydb: { is=mockdb } }',
-      {workingDirectory: '/tmp/test'}
-    );
+    const lookup = parseConnections('Connections: { mydb: { is=mockdb } }', {
+      workingDirectory: '/tmp/test',
+    });
     const conn = (await lookup.lookupConnection('mydb')) as unknown as {
       _config: ConnectionConfig;
     };
@@ -219,5 +212,138 @@ describe('connection registry', () => {
 
   test('getConnectionProperties returns undefined for unknown type', () => {
     expect(getConnectionProperties('nonexistent')).toBeUndefined();
+  });
+
+  test('getRegisteredConnectionTypes returns registered type names', () => {
+    const types = getRegisteredConnectionTypes();
+    expect(types).toContain('mockdb');
+    expect(types).toContain('mockdb2');
+  });
+
+  test('readConnectionsConfig parses valid JSON', () => {
+    const json = JSON.stringify({
+      connections: {
+        mydb: {is: 'mockdb', host: 'localhost', port: 5432},
+      },
+    });
+    const config = readConnectionsConfig(json);
+    expect(config.connections['mydb']['is']).toBe('mockdb');
+    expect(config.connections['mydb']['host']).toBe('localhost');
+    expect(config.connections['mydb']['port']).toBe(5432);
+  });
+
+  test('readConnectionsConfig throws on missing is field', () => {
+    const json = JSON.stringify({
+      connections: {
+        mydb: {host: 'localhost'},
+      },
+    });
+    expect(() => readConnectionsConfig(json)).toThrow(
+      /missing required "is" property/
+    );
+  });
+
+  test('readConnectionsConfig throws on missing connections object', () => {
+    expect(() => readConnectionsConfig('{}')).toThrow(
+      /missing "connections" object/
+    );
+  });
+
+  test('writeConnectionsConfig produces 2-space indented JSON', () => {
+    const config = {
+      connections: {
+        mydb: {is: 'mockdb', host: 'localhost'},
+      },
+    };
+    const json = writeConnectionsConfig(config);
+    expect(json).toBe(JSON.stringify(config, null, 2));
+  });
+
+  test('writeConnectionsConfig round-trips through readConnectionsConfig', () => {
+    const original = {
+      connections: {
+        mydb: {is: 'mockdb', host: 'localhost', port: 5432, readOnly: true},
+        other: {is: 'mockdb2'},
+      },
+    };
+    const json = writeConnectionsConfig(original);
+    const parsed = readConnectionsConfig(json);
+    expect(parsed).toEqual(original);
+  });
+
+  test('createConnectionsFromConfig creates working connections', async () => {
+    const config = {
+      connections: {
+        mydb: {is: 'mockdb', host: 'localhost'},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config);
+    const conn = await lookup.lookupConnection('mydb');
+    expect(conn.name).toBe('mydb');
+  });
+
+  test('createConnectionsFromConfig passes properties to factory', async () => {
+    const config = {
+      connections: {
+        mydb: {is: 'mockdb', host: 'localhost', port: 5432},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config);
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['host']).toBe('localhost');
+    expect(conn._config['port']).toBe(5432);
+  });
+
+  test('createConnectionsFromConfig injects workingDirectory', async () => {
+    const config = {
+      connections: {
+        mydb: {is: 'mockdb'},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config, {
+      workingDirectory: '/tmp/test',
+    });
+    const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+      _config: ConnectionConfig;
+    };
+    expect(conn._config['workingDirectory']).toBe('/tmp/test');
+  });
+
+  test('createConnectionsFromConfig default connection is first entry', async () => {
+    const config = {
+      connections: {
+        first: {is: 'mockdb'},
+        second: {is: 'mockdb2'},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config);
+    const conn = await lookup.lookupConnection();
+    expect(conn.name).toBe('first');
+  });
+
+  test('createConnectionsFromConfig throws for unregistered type', async () => {
+    const config = {
+      connections: {
+        mydb: {is: 'unknowndb'},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config);
+    await expect(lookup.lookupConnection('mydb')).rejects.toThrow(
+      /No registered connection type "unknowndb"/
+    );
+  });
+
+  test('createConnectionsFromConfig caches connections', async () => {
+    const config = {
+      connections: {
+        mydb: {is: 'mockdb'},
+      },
+    };
+    const lookup = createConnectionsFromConfig(config);
+    const conn1 = await lookup.lookupConnection('mydb');
+    const conn2 = await lookup.lookupConnection('mydb');
+    expect(conn1).toBe(conn2);
   });
 });

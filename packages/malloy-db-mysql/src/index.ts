@@ -17,14 +17,10 @@ registerConnectionType('mysql', {
       host: typeof config['host'] === 'string' ? config['host'] : undefined,
       port: typeof config['port'] === 'number' ? config['port'] : undefined,
       database:
-        typeof config['database'] === 'string'
-          ? config['database']
-          : undefined,
+        typeof config['database'] === 'string' ? config['database'] : undefined,
       user: typeof config['user'] === 'string' ? config['user'] : undefined,
       password:
-        typeof config['password'] === 'string'
-          ? config['password']
-          : undefined,
+        typeof config['password'] === 'string' ? config['password'] : undefined,
     });
   },
   properties: [
@@ -38,6 +34,11 @@ registerConnectionType('mysql', {
     },
     {name: 'database', displayName: 'Database', type: 'string', optional: true},
     {name: 'user', displayName: 'User', type: 'string', optional: true},
-    {name: 'password', displayName: 'Password', type: 'password', optional: true},
+    {
+      name: 'password',
+      displayName: 'Password',
+      type: 'password',
+      optional: true,
+    },
   ],
 });

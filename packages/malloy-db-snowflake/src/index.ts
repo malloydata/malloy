@@ -42,9 +42,19 @@ registerConnectionType('snowflake', {
   properties: [
     {name: 'account', displayName: 'Account', type: 'string'},
     {name: 'username', displayName: 'Username', type: 'string', optional: true},
-    {name: 'password', displayName: 'Password', type: 'password', optional: true},
+    {
+      name: 'password',
+      displayName: 'Password',
+      type: 'password',
+      optional: true,
+    },
     {name: 'role', displayName: 'Role', type: 'string', optional: true},
-    {name: 'warehouse', displayName: 'Warehouse', type: 'string', optional: true},
+    {
+      name: 'warehouse',
+      displayName: 'Warehouse',
+      type: 'string',
+      optional: true,
+    },
     {name: 'database', displayName: 'Database', type: 'string', optional: true},
     {name: 'schema', displayName: 'Schema', type: 'string', optional: true},
     {
@@ -57,7 +67,17 @@ registerConnectionType('snowflake', {
         'All Files': ['*'],
       },
     },
-    {name: 'privateKeyPass', displayName: 'Private Key Passphrase', type: 'password', optional: true},
-    {name: 'timeoutMs', displayName: 'Timeout (ms)', type: 'number', optional: true},
+    {
+      name: 'privateKeyPass',
+      displayName: 'Private Key Passphrase',
+      type: 'password',
+      optional: true,
+    },
+    {
+      name: 'timeoutMs',
+      displayName: 'Timeout (ms)',
+      type: 'number',
+      optional: true,
+    },
   ],
 });

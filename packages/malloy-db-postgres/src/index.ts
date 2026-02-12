@@ -38,7 +38,12 @@ registerConnectionType('postgres', {
     {name: 'host', displayName: 'Host', type: 'string', optional: true},
     {name: 'port', displayName: 'Port', type: 'number', optional: true},
     {name: 'username', displayName: 'Username', type: 'string', optional: true},
-    {name: 'password', displayName: 'Password', type: 'password', optional: true},
+    {
+      name: 'password',
+      displayName: 'Password',
+      type: 'password',
+      optional: true,
+    },
     {
       name: 'databaseName',
       displayName: 'Database Name',

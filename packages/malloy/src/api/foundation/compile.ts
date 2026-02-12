@@ -15,11 +15,17 @@ import type {
   ConnectionTypeDef,
   ConnectionPropertyDefinition,
   ParseConnectionsOptions,
+  ConnectionsConfig,
+  CreateConnectionsFromConfigOptions,
 } from '../../connection/registry';
 import {
   registerConnectionType as _registerConnectionType,
   getConnectionProperties as _getConnectionProperties,
   parseConnections as _parseConnections,
+  getRegisteredConnectionTypes as _getRegisteredConnectionTypes,
+  readConnectionsConfig as _readConnectionsConfig,
+  writeConnectionsConfig as _writeConnectionsConfig,
+  createConnectionsFromConfig as _createConnectionsFromConfig,
 } from '../../connection/registry';
 import type {
   URLReader,
@@ -150,6 +156,37 @@ export class Malloy {
     options?: ParseConnectionsOptions
   ): LookupConnection<Connection> {
     return _parseConnections(configText, options);
+  }
+
+  /**
+   * Get the names of all registered connection types.
+   */
+  static getRegisteredConnectionTypes(): string[] {
+    return _getRegisteredConnectionTypes();
+  }
+
+  /**
+   * Parse a JSON config string into an editable ConnectionsConfig.
+   */
+  static readConnectionsConfig(jsonText: string): ConnectionsConfig {
+    return _readConnectionsConfig(jsonText);
+  }
+
+  /**
+   * Serialize a ConnectionsConfig to a JSON string.
+   */
+  static writeConnectionsConfig(config: ConnectionsConfig): string {
+    return _writeConnectionsConfig(config);
+  }
+
+  /**
+   * Create a LookupConnection from a ConnectionsConfig using registered factories.
+   */
+  static createConnectionsFromConfig(
+    config: ConnectionsConfig,
+    options?: CreateConnectionsFromConfigOptions
+  ): LookupConnection<Connection> {
+    return _createConnectionsFromConfig(config, options);
   }
 
   private static _parse(
