@@ -450,7 +450,7 @@ export class PostgresConnection
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = makeDigest(sqlCommand);
-    const tableName = `tt${hash}`;
+    const tableName = `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
     // console.log(cmd);

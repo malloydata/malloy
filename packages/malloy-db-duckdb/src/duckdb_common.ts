@@ -36,7 +36,12 @@ import type {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {DuckDBDialect, mkFieldDef, sqlKey} from '@malloydata/malloy';
+import {
+  DuckDBDialect,
+  makeDigest,
+  mkFieldDef,
+  sqlKey,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 export interface DuckDBQueryOptions {
@@ -212,11 +217,9 @@ export abstract class DuckDBCommon
     await this.runRawSQL('SELECT 1');
   }
 
-  abstract createHash(sqlCommand: string): Promise<string>;
-
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = await this.createHash(sqlCommand);
-    const tableName = `tt${hash}`;
+    const hash = makeDigest(sqlCommand);
+    const tableName = `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
     // console.log(cmd);
