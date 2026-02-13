@@ -14,8 +14,7 @@ import {useConfig} from '../render';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './table.css?raw';
 
-/** Maximum number of columns in transpose mode */
-const TRANSPOSE_COLUMN_LIMIT = 20;
+const DEFAULT_TRANSPOSE_COLUMN_LIMIT = 20;
 
 /**
  * TransposeTable renders a table with rows and columns swapped.
@@ -28,6 +27,10 @@ const TransposeTable: Component<{
   MalloyViz.addStylesheet(styles);
 
   const config = useConfig();
+
+  const transposeLimit =
+    props.data.field.tag.numeric('transpose', 'limit') ??
+    DEFAULT_TRANSPOSE_COLUMN_LIMIT;
 
   const visibleFields = createMemo(() =>
     props.data.field.fields.filter(f => !f.isHidden())
@@ -46,10 +49,11 @@ const TransposeTable: Component<{
   });
 
   // Enforce transpose column limit
-  if (rows().length > TRANSPOSE_COLUMN_LIMIT) {
+  if (rows().length > transposeLimit) {
     return (
       <div class="transpose-error">
-        Transpose limit of {TRANSPOSE_COLUMN_LIMIT} columns exceeded.
+        Transpose column limit of {transposeLimit} exceeded ({rows().length}{' '}
+        columns). Use <code># transpose.limit=N</code> to increase.
       </div>
     );
   }

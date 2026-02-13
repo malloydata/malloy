@@ -66,9 +66,6 @@ export type PivotConfig = {
 /** Maximum number of pivot columns allowed */
 export const PIVOT_COLUMN_LIMIT = 30;
 
-/** Maximum number of transpose columns allowed */
-export const TRANSPOSE_COLUMN_LIMIT = 20;
-
 /**
  * Creates a unique key for a pivot dimension combination.
  */

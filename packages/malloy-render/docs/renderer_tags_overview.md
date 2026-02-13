@@ -451,8 +451,9 @@ Explicitly renders data as a table. This is often the default for nested results
   - Syntax: `# pivot` (applied to a `nest:` or a query)
     - `.dimensions`: Specifies which fields to use as pivot dimensions. If not specified, all `group_by` fields are used.
     - Syntax: `# pivot { dimensions=[field1, field2] }`
-- `.transpose`: Rotates a table so rows become columns and columns become rows. Original column names become row headers, original row values become column headers. Maximum 20 transpose columns.
+- `.transpose`: Rotates a table so rows become columns and columns become rows. Original column names become row headers, original row values become column headers. Default limit of 20 transpose columns.
   - Syntax: `# transpose` (applied to the view)
+  - `.limit`: Override the default column limit. Syntax: `# transpose.limit=100`
 - `.size=fill`: Makes the table attempt to fill the width of its container.
   - Syntax: `# table.size=fill`
 - `# column` (applied to a specific field within the view): Controls individual column appearance.
