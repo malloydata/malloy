@@ -119,8 +119,8 @@ describe('source persistence', () => {
         // Different SQL produces different buildIds (buildId is a hash)
         expect(buildIdA).not.toBe(buildIdB);
         // BuildId is a hash, not a formatted string
-        expect(buildIdA).toMatch(/^[a-f0-9]{32}$/);
-        expect(buildIdB).toMatch(/^[a-f0-9]{32}$/);
+        expect(buildIdA).toMatch(/^[a-f0-9]{64}$/);
+        expect(buildIdB).toMatch(/^[a-f0-9]{64}$/);
       });
 
       it('different connection digests produce different buildIds', async () => {
@@ -143,8 +143,8 @@ describe('source persistence', () => {
         // Different connection digests produce different buildIds
         expect(buildId1).not.toBe(buildId2);
         // BuildId is a hash
-        expect(buildId1).toMatch(/^[a-f0-9]{32}$/);
-        expect(buildId2).toMatch(/^[a-f0-9]{32}$/);
+        expect(buildId1).toMatch(/^[a-f0-9]{64}$/);
+        expect(buildId2).toMatch(/^[a-f0-9]{64}$/);
       });
 
       it('different SQL produces different buildIds', async () => {
@@ -167,8 +167,8 @@ describe('source persistence', () => {
         // Different SQL produces different buildIds
         expect(buildId1).not.toBe(buildId2);
         // BuildId is a hash
-        expect(buildId1).toMatch(/^[a-f0-9]{32}$/);
-        expect(buildId2).toMatch(/^[a-f0-9]{32}$/);
+        expect(buildId1).toMatch(/^[a-f0-9]{64}$/);
+        expect(buildId2).toMatch(/^[a-f0-9]{64}$/);
       });
     });
 
@@ -1175,7 +1175,7 @@ describe('source persistence', () => {
       const mockConnectionDigest = 'mock-connection-digest';
       const buildId = source.makeBuildId(mockConnectionDigest, sql);
 
-      expect(buildId).toMatch(/^[a-f0-9]{32}$/);
+      expect(buildId).toMatch(/^[a-f0-9]{64}$/);
 
       const buildId2 = source.makeBuildId(mockConnectionDigest, sql);
       expect(buildId).toBe(buildId2);

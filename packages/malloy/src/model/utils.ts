@@ -22,7 +22,8 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import md5 from 'blueimp-md5';
+import {sha256} from '@noble/hashes/sha256';
+import {bytesToHex} from '@noble/hashes/utils';
 import type {
   Expr,
   ExprWithKids,
@@ -120,14 +121,12 @@ export function generateHash(input: string): string {
 }
 
 /**
- * Compute a digest for lookup/identity purposes (not cryptographic).
+ * Compute a digest for lookup/identity purposes.
  *
- * Uses blueimp-md5 for these reasons:
+ * Uses @noble/hashes sha256:
  * - Works in both Node.js and browsers (no native crypto dependency)
  * - Synchronous API (unlike Web Crypto which is async)
- * - Well-maintained by Sebastian Tschan (blueimp), a known maintainer
- * - High adoption (~1.7M weekly downloads)
- * - MD5 is fast and produces short hex strings - perfect for cache keys
+ * - SHA-256 is appropriate since inputs may contain connection credentials
  *
  * Takes variable string arguments and combines them in a collision-resistant
  * way by including the length of each string (similar to pathToKey pattern).
@@ -137,7 +136,7 @@ export function makeDigest(...parts: string[]): string {
   // e.g., ("ab", "c") vs ("a", "bc") both concat to "abc"
   // but with lengths: "2:ab/1:c" vs "1:a/2:bc"
   const combined = parts.map(p => `${p.length}:${p}`).join('/');
-  return md5(combined);
+  return bytesToHex(sha256(combined));
 }
 
 export function joinWith<T>(els: T[][], sep: T): T[] {
