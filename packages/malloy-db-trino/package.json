@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-trino",
-  "version": "0.0.337",
+  "version": "0.0.338",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.337",
+    "@malloydata/malloy": "0.0.338",
     "@prestodb/presto-js-client": "^1.0.0",
     "gaxios": "^4.2.0",
     "luxon": "^3.5.0",
