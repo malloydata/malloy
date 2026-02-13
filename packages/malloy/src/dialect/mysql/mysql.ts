@@ -151,6 +151,7 @@ export class MySQLDialect extends Dialect {
   compoundObjectInSchema = false;
   booleanType: BooleanTypeSupport = 'simulated';
   orderByClause: OrderByClauseType = 'ordinal';
+  maxIdentifierLength = 64;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {

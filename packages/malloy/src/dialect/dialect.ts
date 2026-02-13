@@ -192,6 +192,10 @@ export abstract class Dialect {
   // can create temp tables
   supportsTempTables = true;
 
+  // Maximum length of a table/view identifier. Used to truncate
+  // generated temp table names. 128 is a safe default for most databases.
+  maxIdentifierLength = 128;
+
   hasModOperator = true;
 
   // can LEFT JOIN UNNEST

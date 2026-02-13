@@ -43,7 +43,6 @@ import {
   MDConnection,
 } from '@motherduck/wasm-client';
 import type {QueryDataRow, QueryValue} from '@malloydata/malloy';
-import {makeDigest} from '@malloydata/malloy';
 
 function unwrapMotherDuck(value: DuckDBValue) {
   let result: QueryValue = null;
@@ -173,9 +172,5 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
     } else {
       return super.runDuckDBQuery(sql, abortSignal);
     }
-  }
-
-  async createHash(sqlCommand: string): Promise<string> {
-    return makeDigest(sqlCommand);
   }
 }

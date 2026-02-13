@@ -266,10 +266,6 @@ export class DuckDBConnection extends DuckDBCommon {
     }
   }
 
-  async createHash(sqlCommand: string): Promise<string> {
-    return makeDigest(sqlCommand);
-  }
-
   async close(): Promise<void> {
     const activeDB = DuckDBConnection.activeDBs[this.databasePath];
     if (activeDB) {

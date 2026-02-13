@@ -289,7 +289,8 @@ export class SnowflakeConnection
   }
 
   private getTempViewName(sqlCommand: string): string {
-    return `tt${makeDigest(sqlCommand)}`;
+    const hash = makeDigest(sqlCommand);
+    return `tt${hash.slice(0, this.dialect.maxIdentifierLength - 2)}`;
   }
 
   public async runSQL(
