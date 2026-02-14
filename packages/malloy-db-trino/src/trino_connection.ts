@@ -243,6 +243,9 @@ export abstract class TrinoPrestoConnection
   }
 
   convertRow(fields: FieldDef[], rawRow: unknown) {
+    if (rawRow === null || rawRow === undefined) {
+      return null;
+    }
     const retRow = {};
     const row = this.unpackArray(fields, rawRow);
     for (let i = 0; i < fields.length; i++) {
@@ -310,8 +313,14 @@ export abstract class TrinoPrestoConnection
     if (colSchema.type === 'record') {
       return this.convertRow(colSchema.fields, rawRow);
     } else if (isRepeatedRecord(colSchema)) {
+      if (rawRow === null || rawRow === undefined) {
+        return null;
+      }
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
     } else if (isBasicArray(colSchema)) {
+      if (rawRow === null || rawRow === undefined) {
+        return null;
+      }
       const elType = colSchema.elementTypeDef;
       let theArray = this.unpackArray([], rawRow);
       if (elType.type === 'array') {

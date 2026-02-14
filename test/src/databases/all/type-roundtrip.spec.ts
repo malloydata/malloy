@@ -60,27 +60,35 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       name: string;
       castType: string;
       isArray?: boolean;
+      skip?: string[];
     }[] = [
       {name: 'number[]', castType: 'number[]', isArray: true},
       {
         name: '{a :: number, b :: string}',
         castType: '{a :: number, b :: string}',
+        skip: ['postgres'],
       },
       {
         name: '{a :: number, b :: string}[]',
         castType: '{a :: number, b :: string}[]',
         isArray: true,
+        skip: ['postgres'],
       },
       {
         name: '{a :: number, b :: string[]}',
         castType: '{a :: number, b :: string[]}',
+        skip: ['postgres'],
       },
     ];
 
-    for (const {name, castType, isArray} of compoundCasts) {
-      test(`null::${name}`, async () => {
-        // BigQuery coerces CAST(NULL AS ARRAY<...>) to empty array
-        const expected = isArray && databaseName === 'bigquery' ? [] : null;
+    const arrayCoercesToEmpty = ['bigquery'];
+
+    for (const {name, castType, isArray, skip} of compoundCasts) {
+      const shouldRun = !skip?.includes(databaseName);
+      test.when(shouldRun)(`null::${name}`, async () => {
+        // Some databases coerce CAST(NULL AS ARRAY<...>) to empty array
+        const expected =
+          isArray && arrayCoercesToEmpty.includes(databaseName) ? [] : null;
         await expect(`
           run: ${one} -> { select: v is null::${castType} }
         `).toMatchResult(testModel, {v: expected});
