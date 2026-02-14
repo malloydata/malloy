@@ -59,10 +59,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const compoundCasts: {
       name: string;
       castType: string;
-      isArray?: boolean;
       skip?: string[];
+      // Databases where CAST(NULL AS this_type) returns [] instead of null
+      emptyOn?: string[];
     }[] = [
-      {name: 'number[]', castType: 'number[]', isArray: true},
+      {
+        name: 'number[]',
+        castType: 'number[]',
+        emptyOn: ['bigquery'],
+      },
       {
         name: '{a :: number, b :: string}',
         castType: '{a :: number, b :: string}',
@@ -71,8 +76,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       {
         name: '{a :: number, b :: string}[]',
         castType: '{a :: number, b :: string}[]',
-        isArray: true,
         skip: ['postgres'],
+        emptyOn: ['bigquery', 'trino', 'presto'],
       },
       {
         name: '{a :: number, b :: string[]}',
@@ -81,14 +86,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       },
     ];
 
-    const arrayCoercesToEmpty = ['bigquery'];
-
-    for (const {name, castType, isArray, skip} of compoundCasts) {
+    for (const {name, castType, skip, emptyOn} of compoundCasts) {
       const shouldRun = !skip?.includes(databaseName);
       test.when(shouldRun)(`null::${name}`, async () => {
-        // Some databases coerce CAST(NULL AS ARRAY<...>) to empty array
-        const expected =
-          isArray && arrayCoercesToEmpty.includes(databaseName) ? [] : null;
+        const expected = emptyOn?.includes(databaseName) ? [] : null;
         await expect(`
           run: ${one} -> { select: v is null::${castType} }
         `).toMatchResult(testModel, {v: expected});

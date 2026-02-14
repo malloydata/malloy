@@ -313,9 +313,6 @@ export abstract class TrinoPrestoConnection
     if (colSchema.type === 'record') {
       return this.convertRow(colSchema.fields, rawRow);
     } else if (isRepeatedRecord(colSchema)) {
-      if (rawRow === null || rawRow === undefined) {
-        return null;
-      }
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
     } else if (isBasicArray(colSchema)) {
       if (rawRow === null || rawRow === undefined) {
