@@ -36,6 +36,8 @@ import type {
   TimestampTypeDef,
 } from '../../model/malloy_types';
 import {
+  isAtomic,
+  isRepeatedRecord,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -522,6 +524,25 @@ ${indent(sql)}
       } else {
         return 'FLOAT64';
       }
+    } else if (malloyType.type === 'record') {
+      const typeSpec: string[] = [];
+      for (const f of malloyType.fields) {
+        if (isAtomic(f)) {
+          typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+        }
+      }
+      return `STRUCT<${typeSpec.join(', ')}>`;
+    } else if (malloyType.type === 'array') {
+      if (isRepeatedRecord(malloyType)) {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+          }
+        }
+        return `ARRAY<STRUCT<${typeSpec.join(', ')}>>`;
+      }
+      return `ARRAY<${this.malloyTypeToSQLType(malloyType.elementTypeDef)}>`;
     }
     return malloyType.type;
   }

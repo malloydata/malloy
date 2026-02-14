@@ -20,6 +20,13 @@ The compiler consumes **Intermediate Representation (IR)** produced by the trans
 - **`SourceDef`** - A data source (table or derived table) with its schema and extended fields
 - **`StructDef`** - Schema definition for any structured data (records, arrays, tables, query results)
 
+**Type Definitions:**
+- **`BasicAtomicType`** - String union of simple type names (`string | number | boolean | date | timestamp | timestamptz | json | sql native | error`). Guard: `isBasicAtomicType()`.
+- **`BasicAtomicTypeDef`** - TypeDef union for basic types (each variant may carry metadata, e.g. `NumberTypeDef` has optional `numberType`)
+- **`AtomicTypeDef`** - `BasicAtomicTypeDef | BasicArrayTypeDef | RecordTypeDef | RepeatedRecordTypeDef`
+- **`MalloyTypecastExpr`** - IR node for type casts. `dstType` is `AtomicTypeDef` (supports compound types), `srcType` is `BasicAtomicTypeDef` (only used for temporal pattern matching)
+- Helper functions: `mkFieldDef(AtomicTypeDef, name)` creates a `FieldDef`, `mkArrayTypeDef(AtomicTypeDef)` wraps a type in an array
+
 **Query Structures:**
 - **`Query`** - A complete query with source and pipeline of operations
 - **Pipeline** - Array of query operations (group, filter, project, aggregate, etc.)

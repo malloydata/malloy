@@ -895,7 +895,7 @@ export abstract class Dialect {
   sqlCastPrep(cast: TypecastExpr): {
     op: string;
     srcTypeDef: BasicAtomicTypeDef | undefined;
-    dstTypeDef: BasicAtomicTypeDef | undefined;
+    dstTypeDef: AtomicTypeDef | undefined;
     dstSQLType: string;
   } {
     let srcTypeDef = cast.srcType || cast.e.typeDef;

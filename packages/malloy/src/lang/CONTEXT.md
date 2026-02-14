@@ -17,6 +17,13 @@ The Malloy language is defined using ANTLR4 grammar files:
 - **`MalloyLexer.g4`** - Lexical analyzer that tokenizes input
 - **`MalloyParser.g4`** - Parser grammar that defines language structure
 
+**Type syntax in the grammar:**
+- `malloyBasicType` — the 6 user-writable basic types: `STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP | TIMESTAMPTZ`
+- `malloyRecordType` — record type: `{ name :: type, name :: type, ... }`
+- `malloyType` — compound type with left-recursive array syntax: `malloyBasicType | malloyRecordType | malloyType OBRACK CBRACK`
+- `malloyOrSQLType` — `malloyType | string` (string is a raw SQL type name, e.g. `'integer'`)
+- `legalParamType` — parameter types are restricted to `malloyBasicType` (no compound types)
+
 **ANTLR Labeled Alternatives Pattern:**
 The grammar uses `#labelName` in grammar rules to create type-safe visitor methods. This is a very useful pattern that generates specific visitor methods for each alternative in a rule, making the parse tree traversal type-safe and maintainable.
 

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {CastType, BasicAtomicTypeDef} from '../../../model';
+import type {AtomicTypeDef} from '../../../model/malloy_types';
 import {castTo} from '../time-utils';
 import type {ExprValue} from '../types/expr-value';
 import {computedExprValue} from '../types/expr-value';
@@ -32,17 +32,19 @@ export class ExprCast extends ExpressionDef {
   elementType = 'cast';
   constructor(
     readonly expr: ExpressionDef,
-    readonly castType: CastType | {raw: string},
+    readonly castType: AtomicTypeDef | {raw: string},
     readonly safe = false
   ) {
     super({expr: expr});
   }
 
+  // TODO: Validate senseless casts (e.g. scalar to record) at translate time
+  // for better error messages than what the dialect/database produces.
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: BasicAtomicTypeDef = {type: 'error'};
-    if (typeof this.castType === 'string') {
-      dataType = {type: this.castType};
+    let dataType: AtomicTypeDef = {type: 'error'};
+    if ('type' in this.castType) {
+      dataType = this.castType;
     } else {
       const dialect = fs.dialectObj();
       if (dialect) {

@@ -34,6 +34,7 @@ import type {
   TimestampUnit,
 } from '../../model/malloy_types';
 import {
+  isRepeatedRecord,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -424,6 +425,13 @@ export class PostgresDialect extends PostgresBase {
       }
     } else if (malloyType.type === 'string') {
       return 'varchar';
+    } else if (malloyType.type === 'record') {
+      throw new Error('PostgreSQL does not support CAST to record type');
+    } else if (malloyType.type === 'array') {
+      if (isRepeatedRecord(malloyType)) {
+        throw new Error('PostgreSQL does not support CAST to array of records');
+      }
+      return `${this.malloyTypeToSQLType(malloyType.elementTypeDef)}[]`;
     }
     return malloyType.type;
   }

@@ -303,7 +303,7 @@ export interface MalloyTypecastExpr extends ExprE {
   node: 'cast';
   safe: boolean;
   e: Expr;
-  dstType: BasicAtomicTypeDef;
+  dstType: AtomicTypeDef;
   srcType?: BasicAtomicTypeDef;
 }
 
@@ -735,19 +735,15 @@ export type TemporalFieldType = 'date' | 'timestamp' | 'timestamptz';
 export function isTemporalType(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp' || s === 'timestamptz';
 }
-export type CastType =
+export type BasicAtomicType =
   | 'string'
   | 'number'
   | TemporalFieldType
   | 'boolean'
-  | 'json';
-export type AtomicFieldType =
-  | CastType
+  | 'json'
   | 'sql native'
-  | 'record'
-  | 'array'
   | 'error';
-export function isAtomicFieldType(s: string): s is AtomicFieldType {
+export function isBasicAtomicType(s: string): s is BasicAtomicType {
   return [
     'string',
     'number',
@@ -757,10 +753,12 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'boolean',
     'json',
     'sql native',
-    'record',
-    'array',
     'error',
   ].includes(s);
+}
+export type AtomicFieldType = BasicAtomicType | 'record' | 'array';
+export function isAtomicFieldType(s: string): s is AtomicFieldType {
+  return isBasicAtomicType(s) || s === 'record' || s === 'array';
 }
 export function canOrderBy(s: string) {
   return [
@@ -771,18 +769,6 @@ export function canOrderBy(s: string) {
     'date',
     'timestamp',
     'timestamptz',
-  ].includes(s);
-}
-
-export function isCastType(s: string): s is CastType {
-  return [
-    'string',
-    'number',
-    'date',
-    'timestamp',
-    'timestamptz',
-    'boolean',
-    'json',
   ].includes(s);
 }
 
@@ -913,6 +899,19 @@ export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {
       {...valueEnt, name: 'each', e: {node: 'field', path: ['value']}},
     ],
   };
+}
+
+export function mkArrayTypeDef(
+  ofType: AtomicTypeDef
+): BasicArrayTypeDef | RepeatedRecordTypeDef {
+  if (ofType.type === 'record') {
+    return {
+      type: 'array',
+      elementTypeDef: {type: 'record_element'},
+      fields: ofType.fields,
+    };
+  }
+  return {type: 'array', elementTypeDef: ofType};
 }
 
 export interface RecordTypeDef {
