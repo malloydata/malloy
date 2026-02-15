@@ -313,7 +313,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   public getDigest(): string {
     return makeDigest(
       'duckdb-wasm',
-      this.databasePath,
+      this.databasePath ?? ':memory:',
       this.workingDirectory,
       this.setupSQL
     );
