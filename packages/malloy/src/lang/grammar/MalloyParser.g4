@@ -147,8 +147,8 @@ sourceParameters
   ;
 
 legalParamType
-  : malloyType
-  | FILTER LT malloyType GT;
+  : malloyBasicType
+  | FILTER LT malloyBasicType GT;
 
 sourceParameter
   : parameterNameDef (DOUBLECOLON legalParamType)? (IS fieldExpr)?
@@ -539,7 +539,23 @@ sampleSpec
 
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
-malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP | TIMESTAMPTZ;
+malloyType
+  : malloyBasicType
+  | malloyRecordType
+  | malloyType OBRACK CBRACK
+  ;
+
+malloyBasicType
+  : STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP | TIMESTAMPTZ
+  ;
+
+malloyRecordType
+  : OCURLY malloyRecordField (COMMA malloyRecordField)* COMMA? CCURLY
+  ;
+
+malloyRecordField
+  : id DOUBLECOLON malloyType
+  ;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
 string

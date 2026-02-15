@@ -9,7 +9,7 @@ import type {
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
-  QueryDataRow,
+  QueryRecord,
   QueryRunStats,
   StreamingConnection,
   SQLSourceDef,
@@ -236,7 +236,7 @@ export class PublisherConnection
   public async *runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     try {
       // TODO: Add support for abortSignal.
       options.abortSignal = undefined;

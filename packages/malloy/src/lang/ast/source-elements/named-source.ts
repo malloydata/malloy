@@ -29,7 +29,7 @@ import type {
   SourceDef,
 } from '../../../model/malloy_types';
 import {
-  isCastType,
+  isBasicAtomicType,
   isSourceDef,
   paramHasValue,
 } from '../../../model/malloy_types';
@@ -214,8 +214,10 @@ export class NamedSource extends Source {
             checkFilterExpression(argument.value, parameter.filterType, value);
           }
         }
-        if (pVal.type !== parameter.type && isCastType(parameter.type)) {
-          value = castTo(parameter.type, pVal.value, pVal.type, true);
+        // NOTE: isBasicAtomicType guard here excludes compound types from auto-casting.
+        // Revisit if parameters can ever have compound types.
+        if (pVal.type !== parameter.type && isBasicAtomicType(parameter.type)) {
+          value = castTo({type: parameter.type}, pVal.value, pVal.type, true);
         }
         outArguments[name] = {
           ...parameter,

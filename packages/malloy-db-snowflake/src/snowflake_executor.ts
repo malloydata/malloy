@@ -33,7 +33,7 @@ import * as toml from 'toml';
 import * as fs from 'fs';
 import * as path from 'path';
 import type {Readable} from 'stream';
-import type {QueryData, QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
+import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
 import {toAsyncGenerator} from '@malloydata/malloy';
 
 // Disable snowflake-sdk logging by default (issue #2565)
@@ -48,8 +48,8 @@ export interface ConnectionConfigFile {
   connection_name?: string;
 }
 
-// function columnNameToLowerCase(row: QueryDataRow): QueryDataRow {
-//   const ret: QueryDataRow = {};
+// function columnNameToLowerCase(row: QueryRecord): QueryRecord {
+//   const ret: QueryRecord = {};
 //   for (const key in row) {
 //     ret[key.toLowerCase()] = row[key];
 //   }
@@ -219,7 +219,7 @@ export class SnowflakeExecutor {
   public async stream(
     sqlText: string,
     options?: RunSQLOptions
-  ): Promise<AsyncIterableIterator<QueryDataRow>> {
+  ): Promise<AsyncIterableIterator<QueryRecord>> {
     const pool: Pool<Connection> = this.pool_;
     return await pool.acquire().then(async (conn: Connection) => {
       await this._setSessionParams(conn);
@@ -236,7 +236,7 @@ export class SnowflakeExecutor {
             const stream: Readable = stmt.streamRows();
             function streamSnowflake(
               onError: (error: Error) => void,
-              onData: (data: QueryDataRow) => void,
+              onData: (data: QueryRecord) => void,
               onEnd: () => void
             ) {
               function handleEnd() {
@@ -245,7 +245,7 @@ export class SnowflakeExecutor {
               }
 
               let index = 0;
-              function handleData(this: Readable, row: QueryDataRow) {
+              function handleData(this: Readable, row: QueryRecord) {
                 onData(row);
                 index += 1;
                 if (
@@ -259,7 +259,7 @@ export class SnowflakeExecutor {
               stream.on('data', handleData);
               stream.on('end', handleEnd);
             }
-            return resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
+            return resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
           },
         });
       });

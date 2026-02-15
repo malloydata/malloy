@@ -100,7 +100,7 @@ export class ForRange extends ExpressionDef {
       if (tsVersion) {
         from = tsVersion;
       } else {
-        from = castTo('timestamp', from, 'date');
+        from = castTo({type: 'timestamp'}, from, 'date');
       }
       rangeStart = new ExprTime('timestamp', from, [startV]);
     }

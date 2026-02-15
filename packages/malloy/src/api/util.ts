@@ -13,7 +13,7 @@ import type {
 } from '../connection';
 import type {Result} from './foundation';
 import type {Expr} from '../model';
-import {type QueryData, type QueryDataRow, type QueryValue} from '../model';
+import {type QueryData, type QueryRecord, type QueryValue} from '../model';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
@@ -151,7 +151,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
           )}`
         );
       }
-      return mapRow(value as QueryDataRow, {
+      return mapRow(value as QueryRecord, {
         kind: 'join',
         relationship: 'many',
         name: 'array_element',
@@ -164,7 +164,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
     }
   }
   function mapRow(
-    row: QueryDataRow,
+    row: QueryRecord,
     field: Malloy.FieldInfoWithJoin
   ): Malloy.Cell {
     const cells: Malloy.Cell[] = [];

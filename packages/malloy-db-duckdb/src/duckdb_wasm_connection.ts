@@ -25,7 +25,8 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import Worker from 'web-worker';
 import type {
   FetchSchemaOptions,
-  QueryDataRow,
+  QueryRecord,
+  QueryValue,
   QueryOptionsReader,
   RunSQLOptions,
   SQLSourceDef,
@@ -52,7 +53,7 @@ const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
  * Convert an Arrow value to vanilla JS using the Arrow DataType.
  * Uses schema type info to correctly handle decimals and nested types.
  */
-function unwrapValue(value: unknown, fieldType: DataType): unknown {
+function unwrapValue(value: unknown, fieldType: DataType): QueryValue {
   if (value === null || value === undefined) {
     return null;
   }
@@ -137,35 +138,35 @@ function unwrapDecimal(value: unknown, fieldType: DataType): number | string {
   return scale > 0 ? num / 10 ** scale : num;
 }
 
-function unwrapArray(value: unknown, elementType: DataType): unknown[] {
+function unwrapArray(value: unknown, elementType: DataType): QueryValue[] {
   const arr = Array.isArray(value) ? value : [...(value as Iterable<unknown>)];
   return arr.map(v => unwrapValue(v, elementType));
 }
 
-function unwrapStruct(
-  value: unknown,
-  children: Field[]
-): Record<string, unknown> {
+function unwrapStruct(value: unknown, children: Field[]): QueryRecord {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const obj = value as any;
-  const result: Record<string, unknown> = {};
+  const result: QueryRecord = {};
   for (const field of children) {
     result[field.name] = unwrapValue(obj[field.name], field.type);
   }
   return result;
 }
 
-function unwrapPrimitive(value: unknown): unknown {
+function unwrapPrimitive(value: unknown): QueryValue {
+  if (value === null || value === undefined) return null;
   if (value instanceof Date) return value;
   if (typeof value === 'bigint') return safeNumber(value);
-  if (typeof value !== 'object' || value === null) return value;
+  if (typeof value === 'string' || typeof value === 'number') return value;
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'object') return String(value);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const obj = value as any;
   if (obj[Symbol.toPrimitive]) {
     return safeNumber(obj[Symbol.toPrimitive]());
   }
-  return value;
+  return String(value);
 }
 
 function safeNumber(value: number | bigint | string): number | string {
@@ -211,25 +212,21 @@ function formatDecimalString(
 }
 
 /**
- * Process a single Arrow result row into a Malloy QueryDataRow.
+ * Process a single Arrow result row into a Malloy QueryRecord.
  */
-function unwrapRow(row: StructRow, schema: Schema): QueryDataRow {
+function unwrapRow(row: StructRow, schema: Schema): QueryRecord {
   const json = row.toJSON();
-  const result: QueryDataRow = {};
+  const result: QueryRecord = {};
   for (const field of schema.fields) {
-    // Cast is safe: unwrapValue returns QueryValue-compatible types
-    result[field.name] = unwrapValue(
-      json[field.name],
-      field.type
-    ) as QueryDataRow[string];
+    result[field.name] = unwrapValue(json[field.name], field.type);
   }
   return result;
 }
 
 /**
- * Process a DuckDB Table into an array of Malloy QueryDataRows.
+ * Process a DuckDB Table into an array of Malloy QueryRecords.
  */
-function unwrapTable(table: Table): QueryDataRow[] {
+function unwrapTable(table: Table): QueryRecord[] {
   return table.toArray().map(row => unwrapRow(row, table.schema));
 }
 
@@ -400,7 +397,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   protected async runDuckDBQuery(
     sql: string,
     abortSignal?: AbortSignal
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+  ): Promise<{rows: QueryRecord[]; totalRows: number}> {
     const cancel = () => {
       this.connection?.cancelSent();
     };
@@ -426,7 +423,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   public async *runSQLStream(
     sql: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     if (!this.connection) {
       throw new Error('duckdb-wasm not connected');
     }

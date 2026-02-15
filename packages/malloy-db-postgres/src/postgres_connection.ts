@@ -34,7 +34,7 @@ import type {
   PersistSQLResults,
   PooledConnection,
   QueryData,
-  QueryDataRow,
+  QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
@@ -424,14 +424,14 @@ export class PostgresConnection
   public async *runSQLStream(
     sqlCommand: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
     await client.connect();
     const rowStream = client.query(query);
     let index = 0;
     for await (const row of rowStream) {
-      yield row.row as QueryDataRow;
+      yield row.row as QueryRecord;
       index += 1;
       if (
         (rowLimit !== undefined && index >= rowLimit) ||
@@ -547,7 +547,7 @@ export class PooledPostgresConnection
   public async *runSQLStream(
     sqlCommand: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     const query = new QueryStream(sqlCommand);
     let index = 0;
     // This is a strange hack... `this.pool.query(query)` seems to return the wrong
@@ -558,7 +558,7 @@ export class PooledPostgresConnection
     const client = await pool.connect();
     const resultStream: QueryStream = client.query(query);
     for await (const row of resultStream) {
-      yield row.row as QueryDataRow;
+      yield row.row as QueryRecord;
       index += 1;
       if (
         (rowLimit !== undefined && index >= rowLimit) ||

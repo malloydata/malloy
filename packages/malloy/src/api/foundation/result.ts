@@ -5,7 +5,7 @@
 
 import type {
   QueryData,
-  QueryDataRow,
+  QueryRecord,
   QueryResult,
   QueryRunStats,
   ModelDef,
@@ -15,7 +15,7 @@ import type {
   AtomicTypeDef,
   QueryValue,
 } from '../../model';
-import {isRepeatedRecord, isBasicArray} from '../../model';
+import {isRepeatedRecord, isBasicArray, isCompoundArrayData} from '../../model';
 import {
   rowDataToNumber,
   rowDataToSerializedBigint,
@@ -626,18 +626,18 @@ function walkQueryData(
   structDef: StructDef,
   normalizers: DataNormalizers
 ): QueryData {
-  return data.map(row => walkQueryDataRow(row, structDef, normalizers));
+  return data.map(row => walkQueryRecord(row, structDef, normalizers));
 }
 
 /**
- * Walk a QueryDataRow and normalize values according to the given normalizers.
+ * Walk a QueryRecord and normalize values according to the given normalizers.
  */
-function walkQueryDataRow(
-  row: QueryDataRow,
+function walkQueryRecord(
+  row: QueryRecord,
   structDef: StructDef,
   normalizers: DataNormalizers
-): QueryDataRow {
-  const result: QueryDataRow = {};
+): QueryRecord {
+  const result: QueryRecord = {};
   for (const fieldDef of structDef.fields) {
     const fieldName = fieldDef.as ?? fieldDef.name;
     const value = row[fieldName];
@@ -697,11 +697,7 @@ function walkValue(
     if (isRepeatedRecord(fieldDef)) {
       // Array of records - recurse into each record
       return value.map(item =>
-        walkQueryDataRow(
-          item as QueryDataRow,
-          fieldDef as StructDef,
-          normalizers
-        )
+        walkQueryRecord(item as QueryRecord, fieldDef as StructDef, normalizers)
       );
     } else if (isBasicArray(fieldDef)) {
       // Scalar array - normalize each element based on elementTypeDef
@@ -716,8 +712,8 @@ function walkValue(
   // Handle records (non-array)
   if (fieldDef.type === 'record') {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      return walkQueryDataRow(
-        value as QueryDataRow,
+      return walkQueryRecord(
+        value as QueryRecord,
         fieldDef as StructDef,
         normalizers
       );
@@ -769,11 +765,7 @@ function walkScalarValue(
       ) as QueryValue;
     } else if (isRepeatedRecord(typeDef)) {
       return value.map(item =>
-        walkQueryDataRow(
-          item as QueryDataRow,
-          typeDef as StructDef,
-          normalizers
-        )
+        walkQueryRecord(item as QueryRecord, typeDef as StructDef, normalizers)
       ) as QueryValue;
     }
   }
@@ -903,13 +895,13 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
 }
 
 export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
-  private queryDataRow: QueryDataRow;
+  private queryDataRow: QueryRecord;
   protected _field: Explore;
   public readonly index: number | undefined;
   private cellCache: Map<string, DataColumn> = new Map();
 
   constructor(
-    queryDataRow: QueryDataRow,
+    queryDataRow: QueryRecord,
     index: number | undefined,
     field: Explore,
     parent: DataArrayOrRecord | undefined,
@@ -925,8 +917,8 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
    * @return Normalized data with JS native types (number | bigint, Date).
    * Use this for CSV output, tests, and general programmatic access.
    */
-  toObject(): QueryDataRow {
-    return walkQueryDataRow(
+  toObject(): QueryRecord {
+    return walkQueryRecord(
       this.queryDataRow,
       this._field.structDef,
       OBJECT_NORMALIZERS
@@ -937,8 +929,8 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
    * @return Normalized data with JSON-safe types (numbers as number | string, dates as ISO strings).
    * Use this for JSON serialization.
    */
-  toJSON(): QueryDataRow {
-    return walkQueryDataRow(
+  toJSON(): QueryRecord {
+    return walkQueryRecord(
       this.queryDataRow,
       this._field.structDef,
       JSON_NORMALIZERS
@@ -975,11 +967,11 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
           column = new DataUnsupported(value as unknown, field, this, this);
         }
       } else if (field.isExploreField()) {
-        if (Array.isArray(value)) {
+        if (isCompoundArrayData(value)) {
           column = new DataArray(value, field, this, this);
         } else {
           column = new DataRecord(
-            value as QueryDataRow,
+            value as QueryRecord,
             undefined,
             field,
             this,

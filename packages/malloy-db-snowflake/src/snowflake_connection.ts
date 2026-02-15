@@ -32,7 +32,7 @@ import type {
   SQLSourceDef,
   TableSourceDef,
   StructDef,
-  QueryDataRow,
+  QueryRecord,
   TestableConnection,
   Dialect,
   RecordDef,
@@ -308,7 +308,7 @@ export class SnowflakeConnection
   public async *runSQLStream(
     sqlCommand: string,
     options: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     const streamQueryOptions = {
       ...this.queryOptions,
       ...options,

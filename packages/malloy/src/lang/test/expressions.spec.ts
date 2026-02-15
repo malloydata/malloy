@@ -1594,6 +1594,52 @@ describe('sql native fields in schema', () => {
         expect(expr`ats::timestamptz`).toTranslate();
       });
     });
+
+    describe('compound type cast', () => {
+      test('cast to number array', () => {
+        expect(expr`ai::number[]`).toTranslate();
+      });
+      test('cast to string array', () => {
+        expect(expr`astr::string[]`).toTranslate();
+      });
+      test('cast to record type', () => {
+        expect(expr`astr::{name :: string, age :: number}`).toTranslate();
+      });
+      test('cast to array of records', () => {
+        expect(expr`astr::{name :: string, age :: number}[]`).toTranslate();
+      });
+      test('cast to nested record', () => {
+        expect(
+          expr`astr::{x :: number, y :: {a :: string, b :: number}}`
+        ).toTranslate();
+      });
+      test('cast to nested compound', () => {
+        expect(expr`astr::{x :: number, y :: string[]}[]`).toTranslate();
+      });
+      test('safe cast to array', () => {
+        expect(expr`astr:::number[]`).toTranslate();
+      });
+      test('multi-dimensional array', () => {
+        expect(expr`astr::number[][]`).toTranslate();
+      });
+      test('trailing comma in record type', () => {
+        expect(expr`ai::{a :: number, b :: string,}`).toTranslate();
+      });
+    });
+
+    describe('compound type function assertion', () => {
+      test('function returning array', () => {
+        expect(expr`some_func!number[](astr)`).toTranslate();
+      });
+      test('function returning record', () => {
+        expect(
+          expr`some_func!{name :: string, age :: number}(astr)`
+        ).toTranslate();
+      });
+      test('function returning array of records', () => {
+        expect(expr`some_func!{x :: number}[](astr)`).toTranslate();
+      });
+    });
   });
 });
 

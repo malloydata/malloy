@@ -22,7 +22,7 @@
  */
 
 import type {
-  CastType,
+  AtomicTypeDef,
   EvalSpace,
   Expr,
   ExpressionType,
@@ -81,7 +81,7 @@ export class ExprFunc extends ExpressionDef {
     readonly name: string,
     readonly args: ExpressionDef[],
     readonly isRaw: boolean,
-    readonly rawType: CastType | undefined,
+    readonly explicitType: AtomicTypeDef | undefined,
     readonly source?: FieldReference
   ) {
     super({args: args});
@@ -158,9 +158,8 @@ export class ExprFunc extends ExpressionDef {
       funcCall.push(')');
 
       const inferredType = argExprsWithoutImplicit[0] ?? {type: 'number'};
-      const dataType: ExpressionValueTypeDef = this.rawType
-        ? {type: this.rawType}
-        : inferredType;
+      const dataType: ExpressionValueTypeDef =
+        this.explicitType ?? inferredType;
       return computedExprValue({
         dataType,
         value: composeSQLExpr(funcCall),

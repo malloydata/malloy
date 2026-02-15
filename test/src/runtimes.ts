@@ -24,7 +24,7 @@
 import type {
   Connection,
   MalloyQueryData,
-  QueryDataRow,
+  QueryRecord,
   Result,
   RunSQLOptions,
   ModelCache,
@@ -183,7 +183,7 @@ export class TestURLReader extends InMemoryURLReader {
 
 export const testFileSpace = new TestURLReader();
 
-export function rows(qr: Result): QueryDataRow[] {
+export function rows(qr: Result): QueryRecord[] {
   return qr.data.value;
 }
 

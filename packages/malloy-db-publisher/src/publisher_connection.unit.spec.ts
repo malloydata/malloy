@@ -13,7 +13,7 @@ import type {AxiosResponse} from 'axios';
 import type {
   SQLSourceDef,
   MalloyQueryData,
-  QueryDataRow,
+  QueryRecord,
 } from '@malloydata/malloy';
 
 // mocks client code for testing - only for unit tests
@@ -765,7 +765,7 @@ describe('db:Publisher', () => {
         });
 
         const stream = connection.runSQLStream('SELECT * FROM test_table');
-        const results: QueryDataRow[] = [];
+        const results: QueryRecord[] = [];
 
         for await (const row of stream) {
           results.push(row);
@@ -841,7 +841,7 @@ describe('db:Publisher', () => {
           'SELECT * FROM test_table',
           options
         );
-        const results: QueryDataRow[] = [];
+        const results: QueryRecord[] = [];
 
         for await (const row of stream) {
           results.push(row);
@@ -867,7 +867,7 @@ describe('db:Publisher', () => {
           'postQuerydata',
           async connection => {
             const stream = connection.runSQLStream('SELECT * FROM test_table');
-            const results: QueryDataRow[] = [];
+            const results: QueryRecord[] = [];
             for await (const row of stream) {
               results.push(row);
             }
@@ -881,7 +881,7 @@ describe('db:Publisher', () => {
           'postQuerydata',
           async connection => {
             const stream = connection.runSQLStream('SELECT * FROM test_table');
-            const results: QueryDataRow[] = [];
+            const results: QueryRecord[] = [];
             for await (const row of stream) {
               results.push(row);
             }

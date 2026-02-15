@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {QueryData, QueryDataRow, QueryValue} from '../../model';
+import type {QueryData, QueryRecord, QueryValue} from '../../model';
+import {isCompoundArrayData} from '../../model';
 import type {DataRecord} from './result';
 
 // =============================================================================
@@ -67,7 +68,7 @@ export class JSONWriter extends DataWriter {
  * CSV writer class that handles nested data.
  * This writer creates CSV using a DFS traversal of the result dataset.
  * Each trivial column value is converted to a CSV of 1x1 matrix and all the
- * columns are merged together to create a CSV that represents 1 QueryDataRow.
+ * columns are merged together to create a CSV that represents 1 QueryRecord.
  * Since this follows DFS, each non trivial data is rendered into a NxM matrix
  * where N is the number of rows in the nested data and M is the number of
  * columns it has.
@@ -120,7 +121,7 @@ export class CSVWriter extends DataWriter {
   }
 
   // Extra weight to be added becase of nested tables inside the cells.
-  private getColWeight(jsonVal: QueryDataRow | QueryData) {
+  private getColWeight(jsonVal: QueryRecord | QueryData) {
     let firstVal = jsonVal;
     if (Array.isArray(jsonVal)) {
       firstVal = jsonVal[0];
@@ -129,7 +130,7 @@ export class CSVWriter extends DataWriter {
     for (const key in firstVal) {
       numKeys = numKeys + 1;
       const val = firstVal[key];
-      if (Array.isArray(val)) {
+      if (isCompoundArrayData(val)) {
         const weight = this.getColWeight(val) - 1;
         numKeys = numKeys + weight;
       }
@@ -138,14 +139,14 @@ export class CSVWriter extends DataWriter {
   }
 
   // Get header row along with extra empty spaces for nested children.
-  private getHeaderRow(row: QueryDataRow): CellMatrix {
+  private getHeaderRow(row: QueryRecord): CellMatrix {
     const csv: string[] = [];
     let width = 0;
     for (const key in row) {
       csv.push(this.escape(key));
       const val = row[key];
       width++;
-      if (Array.isArray(val)) {
+      if (isCompoundArrayData(val)) {
         const numKeys = this.getColWeight(val) - 1;
         width = width + numKeys;
         for (let i = 0; i < numKeys; i++) {
@@ -215,19 +216,19 @@ export class CSVWriter extends DataWriter {
   }
 
   // Creates CSV content for one row of data.
-  private getRowMatrix(row: QueryDataRow) {
+  private getRowMatrix(row: QueryRecord) {
     const matrices: CellMatrix[] = [];
     for (const key in row) {
       const val = row[key];
-      if (!Array.isArray(val)) {
+      if (isCompoundArrayData(val)) {
+        const cell = this.getChildMatrix(val);
+        matrices.push(cell);
+      } else {
         const cell = {
           rows: [this.stringify(val)],
           length: 1,
           width: 1,
         };
-        matrices.push(cell);
-      } else {
-        const cell = this.getChildMatrix(val);
         matrices.push(cell);
       }
     }

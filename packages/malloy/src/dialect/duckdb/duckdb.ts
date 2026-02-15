@@ -32,6 +32,8 @@ import type {
   TimestampUnit,
 } from '../../model/malloy_types';
 import {
+  isAtomic,
+  isRepeatedRecord,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -379,9 +381,31 @@ export class DuckDBDialect extends PostgresBase {
       }
     } else if (malloyType.type === 'string') {
       return 'varchar';
-    }
-    if (malloyType.type === 'timestamptz') {
+    } else if (malloyType.type === 'timestamptz') {
       return 'timestamp with time zone';
+    } else if (malloyType.type === 'record') {
+      const typeSpec: string[] = [];
+      for (const f of malloyType.fields) {
+        if (isAtomic(f)) {
+          typeSpec.push(
+            `${this.sqlMaybeQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
+          );
+        }
+      }
+      return `STRUCT(${typeSpec.join(', ')})`;
+    } else if (malloyType.type === 'array') {
+      if (isRepeatedRecord(malloyType)) {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(
+              `${this.sqlMaybeQuoteIdentifier(f.name)} ${this.malloyTypeToSQLType(f)}`
+            );
+          }
+        }
+        return `STRUCT(${typeSpec.join(', ')})[]`;
+      }
+      return `${this.malloyTypeToSQLType(malloyType.elementTypeDef)}[]`;
     }
     return malloyType.type;
   }

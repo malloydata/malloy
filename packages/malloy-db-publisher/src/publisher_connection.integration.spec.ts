@@ -6,7 +6,7 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import type {QueryDataRow} from '@malloydata/malloy';
+import type {QueryRecord} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {PublisherConnection} from './publisher_connection';
 import {fileURLToPath} from 'url';
@@ -297,7 +297,7 @@ describe.skip('db:Publisher Integration Tests', () => {
     const stream = conn.runSQLStream(
       'SELECT id, first_name, last_name, state FROM ecommerce_bq.users LIMIT 10'
     );
-    const results: QueryDataRow[] = [];
+    const results: QueryRecord[] = [];
 
     for await (const row of stream) {
       results.push(row);

@@ -48,18 +48,21 @@ import {
   idToStr,
   getPlainString,
 } from './parse-utils';
-import type {CastType} from '../model';
 import type {
   AccessModifierLabel,
+  AtomicTypeDef,
+  BasicAtomicTypeDef,
   DocumentLocation,
   DocumentRange,
   Note,
   ParameterTypeDef,
 } from '../model/malloy_types';
 import {
-  isCastType,
+  isBasicAtomicType,
   isMatrixOperation,
   isParameterType,
+  mkFieldDef,
+  mkArrayTypeDef,
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
 import {parseTag} from '@malloydata/malloy-tag';
@@ -391,7 +394,8 @@ export class MalloyToAST
     let pType: ParameterTypeDef | undefined;
     const typeCx = pcx.legalParamType();
     if (typeCx) {
-      const t = this.getMalloyType(typeCx.malloyType());
+      const typeDef = this.getBasicMalloyType(typeCx.malloyBasicType());
+      const t = typeDef.type;
       if (typeCx.FILTER()) {
         if (isFilterable(t)) {
           pType = {type: 'filter expression', filterType: t};
@@ -402,14 +406,14 @@ export class MalloyToAST
             `Unknown filter type ${t}`
           );
         }
-      } else if (isParameterType(t)) {
-        pType = {type: t};
-      } else {
+      } else if (!isParameterType(t)) {
         this.contextError(
           typeCx,
           'parameter-illegal-default-type',
           `Unknown parameter type ${t}`
         );
+      } else {
+        pType = {type: t};
       }
     }
 
@@ -1549,17 +1553,40 @@ export class MalloyToAST
     return new ast.ExprCast(this.getFieldExpr(pcx.fieldExpr()), type);
   }
 
-  getMalloyType(pcx: parse.MalloyTypeContext) {
+  getBasicMalloyType(pcx: parse.MalloyBasicTypeContext): BasicAtomicTypeDef {
     const type = pcx.text;
-    if (isCastType(type)) {
-      return type;
+    if (isBasicAtomicType(type)) {
+      return {type};
     }
-    throw this.internalError(pcx, `unknown type '${type}'`);
+    this.contextError(pcx, 'unexpected-malloy-type', `Unknown type '${type}'`);
+    return {type: 'error'};
+  }
+
+  getMalloyType(pcx: parse.MalloyTypeContext): AtomicTypeDef {
+    const basicCx = pcx.malloyBasicType();
+    if (basicCx) {
+      return this.getBasicMalloyType(basicCx);
+    }
+    const recordCx = pcx.malloyRecordType();
+    if (recordCx) {
+      const fields = recordCx.malloyRecordField().map(fieldCx => {
+        const name = getId(fieldCx);
+        const fieldType = this.getMalloyType(fieldCx.malloyType());
+        return mkFieldDef(fieldType, name);
+      });
+      return {type: 'record', fields};
+    }
+    const innerCx = pcx.malloyType();
+    if (innerCx) {
+      return mkArrayTypeDef(this.getMalloyType(innerCx));
+    }
+    this.contextError(pcx, 'unexpected-malloy-type', 'Expected a type');
+    return {type: 'error'};
   }
 
   getMalloyOrSQLType(
     pcx: parse.MalloyOrSQLTypeContext
-  ): CastType | {raw: string} {
+  ): AtomicTypeDef | {raw: string} {
     const mtcx = pcx.malloyType();
     if (mtcx) {
       return this.getMalloyType(mtcx);
@@ -1624,20 +1651,10 @@ export class MalloyToAST
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
     const isRaw = pcx.EXCLAM() !== undefined;
-    const rawRawType = pcx.malloyType()?.text;
-    let rawType: CastType | undefined = undefined;
-    if (rawRawType) {
-      if (isCastType(rawRawType)) {
-        rawType = rawRawType;
-      } else {
-        this.contextError(
-          pcx,
-          'unexpected-malloy-type',
-          `'#' assertion for unknown type '${rawRawType}'`
-        );
-        rawType = undefined;
-      }
-    }
+    const malloyTypeCx = pcx.malloyType();
+    const explicitType = malloyTypeCx
+      ? this.getMalloyType(malloyTypeCx)
+      : undefined;
 
     let fn = getOptionalId(pcx) || pcx.timeframe()?.text;
     if (fn === undefined) {
@@ -1652,7 +1669,7 @@ export class MalloyToAST
     if (ast.ExprTimeExtract.extractor(fn)) {
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return this.astAt(new ast.ExprFunc(fn, args, isRaw, rawType), pcx);
+    return this.astAt(new ast.ExprFunc(fn, args, isRaw, explicitType), pcx);
   }
 
   visitExprDuration(pcx: parse.ExprDurationContext): ast.ExprDuration {

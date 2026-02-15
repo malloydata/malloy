@@ -63,9 +63,18 @@ Objects in Malloy (sources, queries, joins, measures, dimensions, `group_by`, `a
 ## Data Model and Type System
 
 ### Malloy Data Types
-In the Malloy language, the data types are: string, boolean, number, timestamp, timestamptz, date, "sql native", array and record.
+In the Malloy language, the data types are: string, boolean, number, timestamp, timestamptz, date, json, "sql native", array and record.
 
 Malloy reads the schema of any table referenced and creates a StructDef with the `fields[]` array filled out with the Malloy type for each column in the database mapped to a Malloy type. Types not supported by Malloy will be "sql native" which allows limited operation in the Malloy language.
+
+### Type System Hierarchy
+
+The type system distinguishes between:
+- **`BasicAtomicType`** — Simple types whose TypeDef is fully described by just the type name: `string | number | boolean | date | timestamp | timestamptz | json | sql native | error`. The corresponding guard function is `isBasicAtomicType()`.
+- **`AtomicTypeDef`** — Union of `BasicAtomicTypeDef | BasicArrayTypeDef | RecordTypeDef | RepeatedRecordTypeDef`. This is the general type for any atomic value including compound types.
+- **Expression-only types** — Types like `null`, `error`, `duration`, `filter expression` that arise during expression evaluation but never appear as column types in a table schema.
+
+In the Malloy language, compound types can be written using the syntax `type[]` for arrays, `{name :: type, ...}` for records, and these nest arbitrarily: `{x :: number, y :: string[]}[]`.
 
 ### Field Types
 

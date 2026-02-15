@@ -22,15 +22,20 @@
  */
 
 import type {
+  AtomicTypeDef,
   Expr,
   TemporalFieldType,
   TimestampUnit,
-  CastType,
   TypecastExpr,
   TimeDeltaExpr,
   ExpressionValueType,
 } from '../../model/malloy_types';
-import {mkTemporal, isCastType, isDateUnit, TD} from '../../model/malloy_types';
+import {
+  mkTemporal,
+  isBasicAtomicType,
+  isDateUnit,
+  TD,
+} from '../../model/malloy_types';
 
 import type {TimeResult} from './types/time-result';
 
@@ -53,29 +58,28 @@ export function timeOffset(
 }
 
 export function castTo(
-  castType: CastType | {raw: string},
+  castType: AtomicTypeDef | {raw: string},
   from: Expr,
   fromType: ExpressionValueType,
   safe = false
 ): TypecastExpr {
   let cast: TypecastExpr;
-  if (typeof castType !== 'string') {
+  if ('type' in castType) {
+    cast = {
+      node: 'cast',
+      dstType: castType,
+      e: from,
+      safe,
+    };
+  } else {
     cast = {
       node: 'cast',
       dstSQLType: castType.raw,
       e: from,
       safe,
     };
-  } else {
-    const dstType = {type: castType};
-    cast = {
-      node: 'cast',
-      dstType,
-      e: from,
-      safe,
-    };
   }
-  if (isCastType(fromType)) {
+  if (isBasicAtomicType(fromType)) {
     cast.srcType = {type: fromType};
   }
   return cast;
