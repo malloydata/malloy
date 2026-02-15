@@ -128,7 +128,7 @@ export class DuckDBConnection extends DuckDBCommon {
       'duckdb',
       this.databasePath,
       this.workingDirectory,
-      this.setupSQL ?? ''
+      this.setupSQL
     );
   }
 

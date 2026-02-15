@@ -289,13 +289,13 @@ export class SnowflakeConnection
       : '';
     return makeDigest(
       'snowflake',
-      this.connOptions.account ?? '',
-      this.connOptions.username ?? '',
-      this.connOptions.warehouse ?? '',
-      this.connOptions.database ?? '',
-      this.connOptions.schema ?? '',
+      this.connOptions.account,
+      this.connOptions.username,
+      this.connOptions.role,
+      this.connOptions.database,
+      this.connOptions.schema,
       scratch,
-      this.setupSQL ?? ''
+      this.setupSQL
     );
   }
 

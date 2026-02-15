@@ -255,12 +255,12 @@ export abstract class TrinoPrestoConnection
     const {server, port, catalog, schema, user} = this.connectionConfig;
     return makeDigest(
       'trino',
-      server ?? '',
-      String(port ?? ''),
-      catalog ?? '',
-      schema ?? '',
-      user ?? '',
-      this.setupSQL ?? ''
+      server,
+      port !== undefined ? String(port) : undefined,
+      catalog,
+      schema,
+      user,
+      this.setupSQL
     );
   }
 
