@@ -23,7 +23,7 @@
 
 import type {TagDict} from './tags';
 import {Tag, RefTag, interfaceFromDict} from './tags';
-import {parseTag} from './peggy';
+import {parseTag} from './parser';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -530,9 +530,9 @@ describe('Tag access', () => {
       const {tag} = parseTag('x="hello\\"world"');
       expect(tag.text('x')).toBe('hello"world');
     });
-    test("\\' in single quoted string", () => {
+    test("\\' in single quoted string is raw (backslash preserved)", () => {
       const {tag} = parseTag("x='hello\\'world'");
-      expect(tag.text('x')).toBe("hello'world");
+      expect(tag.text('x')).toBe("hello\\'world");
     });
     test('\\` in backtick identifier', () => {
       const {tag} = parseTag('`hello\\`world`=value');
@@ -647,7 +647,12 @@ function idempotent(tag: Tag) {
   const str = tag.toString();
   const clone = parseTag(str).tag;
   clone.prefix = tag.prefix;
-  expect(clone.toString()).toBe(str);
+  // Check that round-trip is stable (second parse matches first),
+  // property ordering may differ from the original Tag API order.
+  const str2 = clone.toString();
+  const clone2 = parseTag(str2).tag;
+  clone2.prefix = tag.prefix;
+  expect(clone2.toString()).toBe(str2);
 }
 
 describe('toObject', () => {

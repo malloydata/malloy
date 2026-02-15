@@ -1,5 +1,5 @@
 import type {TagError} from '@malloydata/malloy-tag';
-import {Tag, parseTag} from '@malloydata/malloy-tag';
+import {Tag, TagParser} from '@malloydata/malloy-tag';
 import type {Annotation, Note} from './model';
 import type {LogMessage} from './lang';
 
@@ -59,13 +59,14 @@ export function annotationToTag(
       matchingNotes.push(note);
     }
   }
+  const session = new TagParser(extending);
   for (const note of matchingNotes) {
-    const noteParse = parseTag(note.text, extending);
-    extending = noteParse.tag;
+    const noteParse = session.parse(note.text);
     allErrs.push(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
     );
   }
+  extending = session.finish();
   // Validate references and add any warnings
   const refErrors = extending.validateReferences();
   for (const refError of refErrors) {

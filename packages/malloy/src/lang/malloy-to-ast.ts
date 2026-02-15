@@ -65,7 +65,7 @@ import {
   mkArrayTypeDef,
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
-import {parseTag} from '@malloydata/malloy-tag';
+import {TagParser} from '@malloydata/malloy-tag';
 import {isNotUndefined, rangeFromContext} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -105,10 +105,11 @@ export class MalloyToAST
     super();
     this.timer = new Timer('generate_ast');
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
+    const session = new TagParser(this.compilerFlags);
     for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = parseTag(flag, this.compilerFlags);
-      this.compilerFlags = withNewTag.tag;
+      session.parse(flag);
     }
+    this.compilerFlags = session.finish();
     this.timer.contribute([parseCompilerFlagsTimer.stop()]);
   }
 
