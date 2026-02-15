@@ -30,7 +30,7 @@ import {SnowflakeConnection} from './snowflake_connection';
 
 registerConnectionType('snowflake', {
   factory: (config: ConnectionConfig) => {
-    const {name, setupSQL, ...props} = config;
+    const {name, setupSQL, timeoutMs, ...props} = config;
     // ConnectionConfig values are trusted to match ConnectionOptions fields
     // because the property definitions below declare matching names/types.
     // The double cast bridges Malloy's generic config to snowflake-sdk's
@@ -40,6 +40,12 @@ registerConnectionType('snowflake', {
     return new SnowflakeConnection(name, {
       connOptions,
       setupSQL: typeof setupSQL === 'string' ? setupSQL : undefined,
+      timeoutMs:
+        typeof timeoutMs === 'number'
+          ? timeoutMs
+          : typeof timeoutMs === 'string'
+            ? parseInt(timeoutMs, 10)
+            : undefined,
     });
   },
   properties: [

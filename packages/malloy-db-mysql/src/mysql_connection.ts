@@ -141,11 +141,11 @@ export class MySQLConnection
     const {host, port, user, database} = this.config;
     return makeDigest(
       'mysql',
-      host ?? '',
-      String(port ?? 3306),
-      user ?? '',
-      database ?? '',
-      this.config.setupSQL ?? ''
+      host,
+      port !== undefined ? String(port) : undefined,
+      user,
+      database,
+      this.config.setupSQL
     );
   }
 

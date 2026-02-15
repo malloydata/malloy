@@ -255,13 +255,7 @@ export class BigQueryConnection
   }
 
   public getDigest(): string {
-    return makeDigest(
-      'bigquery',
-      this.billingProjectId,
-      this.projectId,
-      this.location ?? 'US',
-      this.setupSQL ?? ''
-    );
+    return makeDigest('bigquery', this.projectId, this.setupSQL);
   }
 
   public get supportsNesting(): boolean {

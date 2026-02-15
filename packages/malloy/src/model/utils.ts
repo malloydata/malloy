@@ -131,11 +131,14 @@ export function generateHash(input: string): string {
  * Takes variable string arguments and combines them in a collision-resistant
  * way by including the length of each string (similar to pathToKey pattern).
  */
-export function makeDigest(...parts: string[]): string {
+export function makeDigest(...parts: (string | undefined)[]): string {
   // Combine parts with length prefix to avoid collisions
   // e.g., ("ab", "c") vs ("a", "bc") both concat to "abc"
   // but with lengths: "2:ab/1:c" vs "1:a/2:bc"
-  const combined = parts.map(p => `${p.length}:${p}`).join('/');
+  // undefined is distinct from empty string in the hash
+  const combined = parts
+    .map(p => (p === undefined ? '{undefined}' : `${p.length}:${p}`))
+    .join('/');
   return bytesToHex(sha256(combined));
 }
 

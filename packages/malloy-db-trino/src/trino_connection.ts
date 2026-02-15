@@ -139,10 +139,23 @@ class PrestoRunner implements BaseRunner {
 class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
+    let server = config.server;
+    // trino-client has no separate port field — merge into the server URL
+    if (server && config.port) {
+      try {
+        const url = new URL(server);
+        if (!url.port) {
+          url.port = String(config.port);
+          server = url.toString().replace(/\/$/, '');
+        }
+      } catch {
+        // If server isn't a parseable URL, leave it as-is
+      }
+    }
     this.client = Trino.create({
       ...config.extraConfig,
       catalog: config.catalog,
-      server: config.server,
+      server,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password || ''),
     });
@@ -255,12 +268,12 @@ export abstract class TrinoPrestoConnection
     const {server, port, catalog, schema, user} = this.connectionConfig;
     return makeDigest(
       'trino',
-      server ?? '',
-      String(port ?? ''),
-      catalog ?? '',
-      schema ?? '',
-      user ?? '',
-      this.setupSQL ?? ''
+      server,
+      port !== undefined ? String(port) : undefined,
+      catalog,
+      schema,
+      user,
+      this.setupSQL
     );
   }
 

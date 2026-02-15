@@ -175,12 +175,12 @@ export class PostgresConnection
         this.configReader;
       return makeDigest(
         'postgres',
-        host ?? '',
-        String(port ?? ''),
-        username ?? '',
-        databaseName ?? '',
-        connectionString ?? '',
-        this.setupSQL ?? ''
+        host,
+        port !== undefined ? String(port) : undefined,
+        username,
+        databaseName,
+        connectionString,
+        this.setupSQL
       );
     }
     // Fall back to connection name if config is async
