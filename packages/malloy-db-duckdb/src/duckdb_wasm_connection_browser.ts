@@ -42,7 +42,7 @@ import {
   DuckDBTimestampSeconds,
   MDConnection,
 } from '@motherduck/wasm-client';
-import type {QueryDataRow, QueryValue} from '@malloydata/malloy';
+import type {QueryRecord, QueryValue} from '@malloydata/malloy';
 
 function unwrapMotherDuck(value: DuckDBValue) {
   let result: QueryValue = null;
@@ -82,7 +82,7 @@ function unwrapMotherDuck(value: DuckDBValue) {
 }
 
 function unwrapMotherDuckRow(row: DuckDBRow) {
-  const result: QueryDataRow = {};
+  const result: QueryRecord = {};
   for (const entry of Object.entries(row)) {
     const [key, value] = entry;
     result[key] = unwrapMotherDuck(value);
@@ -140,7 +140,7 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   protected override async runDuckDBQuery(
     sql: string,
     abortSignal?: AbortSignal
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+  ): Promise<{rows: QueryRecord[]; totalRows: number}> {
     if (this.isMotherDuck) {
       if (this._mdConnection) {
         const connection = this._mdConnection;

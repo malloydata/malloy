@@ -2,7 +2,7 @@ import type {RunSQLOptions} from '../run_sql_options';
 import type {
   Annotation,
   MalloyQueryData,
-  QueryDataRow,
+  QueryRecord,
   QueryRunStats,
   SQLSourceDef,
   TableSourceDef,
@@ -138,7 +138,7 @@ export interface StreamingConnection extends Connection {
   runSQLStream(
     sqlCommand: string,
     options?: RunSQLOptions
-  ): AsyncIterableIterator<QueryDataRow>;
+  ): AsyncIterableIterator<QueryRecord>;
 }
 
 /**

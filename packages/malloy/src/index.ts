@@ -56,7 +56,7 @@ export type {
 } from './dialect';
 // TODO tighten up exports
 export type {
-  QueryDataRow,
+  QueryRecord,
   // Needed for DB
   StructDef,
   TableSourceDef,
@@ -132,7 +132,9 @@ export type {
 export {
   isSourceDef,
   // Used in Composer Demo
+  isAtomic,
   isBasicAtomic,
+  isCompoundArrayData,
   isJoined,
   isJoinedSource,
   isSamplingEnable,

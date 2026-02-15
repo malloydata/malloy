@@ -25,7 +25,7 @@ import type {
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
-  QueryDataRow,
+  QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
@@ -105,11 +105,11 @@ export abstract class DuckDBCommon
 
   protected abstract runDuckDBQuery(
     sql: string
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}>;
+  ): Promise<{rows: QueryRecord[]; totalRows: number}>;
 
   public async runRawSQL(
     sql: string
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+  ): Promise<{rows: QueryRecord[]; totalRows: number}> {
     await this.setup();
     return this.runDuckDBQuery(sql);
   }
@@ -139,7 +139,7 @@ export abstract class DuckDBCommon
   public abstract runSQLStream(
     sql: string,
     options: RunSQLOptions
-  ): AsyncIterableIterator<QueryDataRow>;
+  ): AsyncIterableIterator<QueryRecord>;
 
   async fetchSelectSchema(
     sqlRef: SQLSourceRequest

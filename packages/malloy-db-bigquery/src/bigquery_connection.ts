@@ -39,7 +39,7 @@ import type {
   MalloyQueryData,
   PersistSQLResults,
   QueryData,
-  QueryDataRow,
+  QueryRecord,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
@@ -720,10 +720,10 @@ export class BigQueryConnection
   public runSQLStream(
     sqlCommand: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     const streamBigQuery = (
       onError: (error: Error) => void,
-      onData: (data: QueryDataRow) => void,
+      onData: (data: QueryRecord) => void,
       onEnd: () => void
     ) => {
       let index = 0;
@@ -746,7 +746,7 @@ export class BigQueryConnection
         .on('data', handleData)
         .on('end', onEnd);
     };
-    return toAsyncGenerator<QueryDataRow>(streamBigQuery);
+    return toAsyncGenerator<QueryRecord>(streamBigQuery);
   }
 
   async fetchTableMetadata(tablePath: string): Promise<TableMetadata> {

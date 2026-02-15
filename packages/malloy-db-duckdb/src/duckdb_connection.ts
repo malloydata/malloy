@@ -26,7 +26,7 @@ import {DuckDBInstance} from '@duckdb/node-api';
 import type {DuckDBConnection as DuckDBNodeConnection} from '@duckdb/node-api';
 import type {
   ConnectionConfig,
-  QueryDataRow,
+  QueryRecord,
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
@@ -216,14 +216,14 @@ export class DuckDBConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+  ): Promise<{rows: QueryRecord[]; totalRows: number}> {
     if (!this.connection) {
       throw new Error('Connection not open');
     }
 
     const result = await this.connection.run(sql);
     // getRowObjectsJson() converts nested types (LIST, STRUCT) to JS arrays/objects
-    const rows = (await result.getRowObjectsJson()) as QueryDataRow[];
+    const rows = (await result.getRowObjectsJson()) as QueryRecord[];
 
     return {
       rows,
@@ -234,7 +234,7 @@ export class DuckDBConnection extends DuckDBCommon {
   public async *runSQLStream(
     sql: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
-  ): AsyncIterableIterator<QueryDataRow> {
+  ): AsyncIterableIterator<QueryRecord> {
     const defaultOptions = this.readQueryOptions();
     rowLimit ??= defaultOptions.rowLimit;
     await this.setup();
@@ -261,7 +261,7 @@ export class DuckDBConnection extends DuckDBCommon {
           return;
         }
         index++;
-        yield row as QueryDataRow;
+        yield row as QueryRecord;
       }
     }
   }

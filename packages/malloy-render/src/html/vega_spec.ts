@@ -551,10 +551,10 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     }
   }
 
-  // formatData(data: QueryDataRow, metadata: StructDef): VegaData {
+  // formatData(data: QueryRecord, metadata: StructDef): VegaData {
   //   const ret: VegaData = [];
 
-  //   for (const row of QueryDataRow) {
+  //   for (const row of QueryRecord) {
   //     forEach){
 
   //     }

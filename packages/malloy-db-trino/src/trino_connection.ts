@@ -25,9 +25,7 @@ import type {
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
-  QueryValue,
   QueryData,
-  QueryDataRow,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
@@ -44,9 +42,7 @@ import type {
 import {
   TrinoDialect,
   mkFieldDef,
-  isBasicArray,
   TinyParser,
-  isRepeatedRecord,
   sqlKey,
   makeDigest,
 } from '@malloydata/malloy';
@@ -57,7 +53,7 @@ import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
 import type {ConnectionOptions} from 'trino-client';
 import {Trino, BasicAuth} from 'trino-client';
-import {DateTime as LuxonDateTime} from 'luxon';
+import {resultRowToQueryRecord} from './result-to-querydata';
 
 export interface TrinoManagerOptions {
   credentials?: {
@@ -242,39 +238,6 @@ export abstract class TrinoPrestoConnection
     return data as unknown[];
   }
 
-  convertRow(fields: FieldDef[], rawRow: unknown) {
-    if (rawRow === null || rawRow === undefined) {
-      return null;
-    }
-    const retRow = {};
-    const row = this.unpackArray(fields, rawRow);
-    for (let i = 0; i < fields.length; i++) {
-      const field = fields[i];
-
-      if (field.type === 'record') {
-        retRow[field.name] = this.convertRow(field.fields, row[i]);
-      } else if (isRepeatedRecord(field)) {
-        retRow[field.name] = this.convertNest(field.fields, row[i]);
-      } else if (isBasicArray(field)) {
-        retRow[field.name] = this.unpackArray([], row[i]);
-      } else {
-        retRow[field.name] = row[i] ?? null;
-      }
-    }
-    //console.log(retRow);
-    return retRow;
-  }
-
-  convertNest(fields: FieldDef[], _data: unknown) {
-    const data = this.unpackArray(fields, _data);
-    const ret: unknown[] = [];
-    const rows = (data === null || data === undefined ? [] : data) as unknown[];
-    for (const row of rows) {
-      ret.push(this.convertRow(fields, row));
-    }
-    return ret;
-  }
-
   public async runSQL(
     sqlCommand: string,
     options: RunSQLOptions = {},
@@ -293,64 +256,13 @@ export abstract class TrinoPrestoConnection
       mkFieldDef(this.malloyTypeFromTrinoType(c.type), c.name)
     );
 
-    const malloyRows: QueryDataRow[] = [];
+    const unpack = (data: unknown) => this.unpackArray([], data);
     const rows = inputRows ?? [];
-    for (const row of rows) {
-      const malloyRow: QueryDataRow = {};
-      for (let i = 0; i < columns.length; i++) {
-        const column = columns[i];
-        const schemaColumn = malloyColumns[i];
-        malloyRow[column.name] = this.resultRow(schemaColumn, row[i]);
-      }
-
-      malloyRows.push(malloyRow);
-    }
+    const malloyRows = rows.map(row =>
+      resultRowToQueryRecord(malloyColumns, row as unknown[], unpack)
+    );
 
     return {rows: malloyRows, totalRows: malloyRows.length, profilingUrl};
-  }
-
-  private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
-    if (colSchema.type === 'record') {
-      return this.convertRow(colSchema.fields, rawRow);
-    } else if (isRepeatedRecord(colSchema)) {
-      return this.convertNest(colSchema.fields, rawRow) as QueryValue;
-    } else if (isBasicArray(colSchema)) {
-      if (rawRow === null || rawRow === undefined) {
-        return null;
-      }
-      const elType = colSchema.elementTypeDef;
-      let theArray = this.unpackArray([], rawRow);
-      if (elType.type === 'array') {
-        theArray = theArray.map(el => this.resultRow(elType, el));
-      }
-      return theArray as QueryData;
-    } else if (colSchema.type === 'number' && typeof rawRow === 'string') {
-      // decimal numbers come back as strings
-      return Number(rawRow);
-    } else if (
-      (colSchema.type === 'timestamp' || colSchema.type === 'timestamptz') &&
-      typeof rawRow === 'string'
-    ) {
-      // timestamps come back as strings
-      if (colSchema.type === 'timestamptz') {
-        // TIMESTAMP WITH TIME ZONE format: "2020-02-20 00:00:00 America/Mexico_City"
-        const trinoTzPattern =
-          /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (.+)$/;
-        const match = (rawRow as string).match(trinoTzPattern);
-        if (match) {
-          const [, dateTimePart, tzName] = match;
-          // Use Luxon to parse with timezone awareness
-          const dt = LuxonDateTime.fromSQL(dateTimePart, {zone: tzName});
-          if (dt.isValid) {
-            return dt.toJSDate();
-          }
-        }
-      }
-      // For plain timestamps, Trino returns UTC values - append 'Z' to parse as UTC
-      return new Date(rawRow + 'Z');
-    } else {
-      return rawRow as QueryValue;
-    }
   }
 
   public async runSQLBlockAndFetchResultSchema(

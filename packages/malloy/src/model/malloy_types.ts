@@ -1858,13 +1858,22 @@ export type QueryScalar =
   | null;
 
 /** One value in one column of returned data. */
-export type QueryValue = QueryScalar | QueryData | QueryDataRow;
+export type QueryValue = QueryScalar | QueryData | QueryRecord | QueryValue[];
 
 /** A row of returned data. */
-export type QueryDataRow = {[columnName: string]: QueryValue};
+export type QueryRecord = {[columnName: string]: QueryValue};
 
 /** Returned query data. */
-export type QueryData = QueryDataRow[];
+export type QueryData = QueryRecord[];
+
+/** Type guard: is this array value compound (array of records) vs basic (array of scalars)? */
+export function isCompoundArrayData(v: QueryValue): v is QueryData {
+  return (
+    Array.isArray(v) &&
+    (v.length === 0 ||
+      (typeof v[0] === 'object' && v[0] !== null && !Array.isArray(v[0])))
+  );
+}
 
 /** Query execution stats. */
 export type QueryRunStats = {
@@ -1873,7 +1882,7 @@ export type QueryRunStats = {
 
 /** Returned Malloy query data */
 export type MalloyQueryData = {
-  rows: QueryDataRow[];
+  rows: QueryRecord[];
   totalRows: number;
   runStats?: QueryRunStats;
   profilingUrl?: string;

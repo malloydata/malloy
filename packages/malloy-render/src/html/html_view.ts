@@ -82,7 +82,7 @@ export class HTMLView {
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
-      //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
+      //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryRecord)`,
       //      and `end(field: StructDef)` methods.
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
