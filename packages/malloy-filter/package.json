@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-filter",
-  "version": "0.0.338",
+  "version": "0.0.339",
   "license": "MIT",
   "description": "Parsers for the Malloy filtering sub-languages",
   "main": "dist/index.js",
