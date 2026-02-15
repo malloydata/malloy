@@ -21,6 +21,7 @@
  */
 
 import {PooledPostgresConnection} from './postgres_connection';
+import crypto from 'crypto';
 import type {SQLSourceDef} from '@malloydata/malloy';
 import * as malloy from '@malloydata/malloy';
 import {wrapTestModel} from '@malloydata/malloy/test';
@@ -228,5 +229,63 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {f: 10.5});
       }
     );
+  });
+});
+
+describe('setupSQL', () => {
+  const uid = crypto.randomBytes(4).toString('hex');
+
+  it('runs a single setup statement', async () => {
+    const table = `setup_single_${uid}`;
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      setupSQL: `CREATE TEMP TABLE IF NOT EXISTS ${table} (v int)`,
+    });
+    try {
+      // Query through the pool directly — the acquire hook runs setupSQL,
+      // creating the temp table on the same client before our query executes.
+      const pool = await connection.getPool();
+      const result = await pool.query(
+        `SELECT count(*)::integer AS n FROM ${table}`
+      );
+      expect(result.rows[0].n).toBe(0);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('runs multiple semicolon-newline-separated statements', async () => {
+    const table = `setup_multi_${uid}`;
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      setupSQL: [
+        `CREATE TEMP TABLE IF NOT EXISTS ${table} (v int)`,
+        `INSERT INTO ${table} VALUES (42)`,
+      ].join(';\n'),
+    });
+    try {
+      const pool = await connection.getPool();
+      const result = await pool.query(`SELECT v FROM ${table} LIMIT 1`);
+      expect(result.rows[0].v).toBe(42);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('handles multi-line statements', async () => {
+    const table = `setup_multiline_${uid}`;
+    const connection = new PooledPostgresConnection({
+      name: 'postgres',
+      setupSQL: `CREATE TEMP TABLE IF NOT EXISTS ${table}\n  (v int)`,
+    });
+    try {
+      const pool = await connection.getPool();
+      const result = await pool.query(
+        `SELECT count(*)::integer AS n FROM ${table}`
+      );
+      expect(result.rows[0].n).toBe(0);
+    } finally {
+      await connection.close();
+    }
   });
 });

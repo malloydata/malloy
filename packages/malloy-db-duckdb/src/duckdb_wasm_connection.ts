@@ -241,6 +241,7 @@ export interface DuckDBWasmOptions extends ConnectionConfig {
   databasePath?: string;
   motherDuckToken: string | undefined;
   workingDirectory?: string;
+  setupSQL?: string;
 }
 export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private additionalExtensions: string[] = [];
@@ -298,6 +299,9 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       if (Array.isArray(arg.additionalExtensions)) {
         this.additionalExtensions = arg.additionalExtensions;
       }
+      if (typeof arg.setupSQL === 'string') {
+        this.setupSQL = arg.setupSQL;
+      }
     }
     this.isMotherDuck =
       this.databasePath?.startsWith('md:') ||
@@ -310,7 +314,8 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     return makeDigest(
       'duckdb-wasm',
       this.databasePath ?? ':memory:',
-      this.workingDirectory
+      this.workingDirectory,
+      this.setupSQL ?? ''
     );
   }
 
@@ -384,6 +389,14 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error(`duckdb setup ${cmd} => ${error}`);
+        }
+      }
+      if (this.setupSQL) {
+        for (const stmt of this.setupSQL.split(';\n')) {
+          const trimmed = stmt.trim();
+          if (trimmed) {
+            await this.runDuckDBQuery(trimmed);
+          }
         }
       }
     };

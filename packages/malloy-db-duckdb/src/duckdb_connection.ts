@@ -39,6 +39,7 @@ export interface DuckDBConnectionOptions extends ConnectionConfig {
   motherDuckToken?: string;
   workingDirectory?: string;
   readOnly?: boolean;
+  setupSQL?: string;
 }
 
 interface ActiveDB {
@@ -109,6 +110,9 @@ export class DuckDBConnection extends DuckDBCommon {
       if (Array.isArray(arg.additionalExtensions)) {
         this.additionalExtensions = arg.additionalExtensions;
       }
+      if (typeof arg.setupSQL === 'string') {
+        this.setupSQL = arg.setupSQL;
+      }
     }
     if (this.databasePath === ':memory:') {
       this.readOnly = false;
@@ -120,8 +124,12 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   public getDigest(): string {
-    const data = `duckdb:${this.databasePath}:${this.workingDirectory}`;
-    return makeDigest(data);
+    return makeDigest(
+      'duckdb',
+      this.databasePath,
+      this.workingDirectory,
+      this.setupSQL ?? ''
+    );
   }
 
   private async init(): Promise<void> {
@@ -204,6 +212,14 @@ export class DuckDBConnection extends DuckDBCommon {
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error(`duckdb setup ${cmd} => ${error}`);
+        }
+      }
+      if (this.setupSQL) {
+        for (const stmt of this.setupSQL.split(';\n')) {
+          const trimmed = stmt.trim();
+          if (trimmed) {
+            await this.runDuckDBQuery(trimmed);
+          }
         }
       }
     };

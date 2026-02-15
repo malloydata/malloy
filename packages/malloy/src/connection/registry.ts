@@ -18,7 +18,8 @@ export type ConnectionPropertyType =
   | 'number'
   | 'boolean'
   | 'password'
-  | 'file';
+  | 'file'
+  | 'text';
 
 /**
  * Describes a single configuration property for a connection type.
