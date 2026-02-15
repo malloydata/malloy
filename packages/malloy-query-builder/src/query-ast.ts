@@ -6,7 +6,7 @@
  */
 import * as Malloy from '@malloydata/malloy-interfaces';
 import type {TagSetValue} from '@malloydata/malloy-tag';
-import {Tag, parseTag} from '@malloydata/malloy-tag';
+import {Tag, TagParser} from '@malloydata/malloy-tag';
 import * as Filter from '@malloydata/malloy-filter';
 
 export type ParsedFilter =
@@ -395,7 +395,11 @@ abstract class ASTNode<T> {
     const lines = a.annotations
       ?.map(a => a.value)
       ?.filter(l => l.startsWith(prefix));
-    return parseTag(lines ?? []).tag ?? new Tag();
+    const session = new TagParser();
+    for (const l of lines ?? []) {
+      session.parse(l);
+    }
+    return session.finish();
   }
 
   static fieldWasCalculation(a: Malloy.FieldInfo) {
@@ -5086,9 +5090,7 @@ export class ASTAnnotationList extends ASTListNode<
   }
 
   getTag(prefix: RegExp | string = '# '): Tag {
-    const extending = parseTag(
-      this.getInheritedAnnotations().map(a => a.value)
-    ).tag;
+    const extending = inheritedTag(this.getInheritedAnnotations());
     return tagFromAnnotations(prefix, this.items, extending);
   }
 
@@ -5176,16 +5178,19 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 
   getIntrinsicTag(): Tag {
-    return parseTag([this.value]).tag ?? new Tag();
+    const session = new TagParser();
+    session.parse(this.value);
+    return session.finish();
   }
 
   getTag(): Tag {
-    const extending =
+    const inherited =
       this.index === 0
-        ? parseTag(this.list.getInheritedAnnotations().map(a => a.value)).tag ??
-          new Tag()
+        ? inheritedTag(this.list.getInheritedAnnotations())
         : this.list.index(this.index - 1).getTag();
-    return parseTag([this.value], extending).tag ?? new Tag();
+    const session = new TagParser(inherited);
+    session.parse(this.value);
+    return session.finish();
   }
 
   hasPrefix(prefix: string) {
@@ -5207,6 +5212,14 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 }
 
+function inheritedTag(annotations: Malloy.Annotation[]): Tag {
+  const session = new TagParser();
+  for (const a of annotations) {
+    session.parse(a.value);
+  }
+  return session.finish();
+}
+
 function tagFromAnnotations(
   prefix: string | RegExp,
   annotations: Malloy.Annotation[] = [],
@@ -5216,7 +5229,11 @@ function tagFromAnnotations(
   const filteredLines = lines.filter(l =>
     typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
   );
-  return parseTag(filteredLines, inherited).tag ?? new Tag();
+  const session = new TagParser(inherited);
+  for (const l of filteredLines) {
+    session.parse(l);
+  }
+  return session.finish();
 }
 
 function serializeFilter(filter: ParsedFilter) {

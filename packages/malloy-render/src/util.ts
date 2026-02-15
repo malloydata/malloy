@@ -6,7 +6,7 @@
  */
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {Tag, parseTag} from '@malloydata/malloy-tag';
+import {TagParser} from '@malloydata/malloy-tag';
 import {isTimestampUnit, isDateUnit as _isDateUnit} from '@malloydata/malloy';
 import {DurationUnit, isDurationUnit} from './html/data_styles';
 import {timeToString as htmlTimeToString} from './html/utils';
@@ -52,7 +52,11 @@ export function tagFromAnnotations(
 ) {
   const tagLines =
     annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ?? [];
-  return parseTag(tagLines).tag ?? new Tag();
+  const session = new TagParser();
+  for (const line of tagLines) {
+    session.parse(line);
+  }
+  return session.finish();
 }
 
 export function renderTagFromAnnotations(
@@ -66,7 +70,11 @@ export function renderTagFromAnnotations(
 
   // Merge both namespaces with #r taking precedence (later in array)
   const allLines = [...defaultTagLines, ...renderTagLines];
-  return parseTag(allLines).tag ?? new Tag();
+  const session = new TagParser();
+  for (const line of allLines) {
+    session.parse(line);
+  }
+  return session.finish();
 }
 
 export function getTextWidthCanvas(
