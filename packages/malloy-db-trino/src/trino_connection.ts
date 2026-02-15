@@ -72,6 +72,7 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
+  setupSQL?: string;
   extraConfig?: Partial<
     Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>
   >;
@@ -190,14 +191,43 @@ export abstract class TrinoPrestoConnection
     rowLimit: 10,
   };
 
+  protected setupSQL: string | undefined;
+  private setupDone: Promise<void> | undefined;
+  protected connectionConfig: TrinoConnectionConfiguration;
+
   constructor(
     public name: string,
     private client: BaseRunner,
-    private queryOptions?: QueryOptionsReader
+    private queryOptions?: QueryOptionsReader,
+    setupSQL?: string,
+    connectionConfig?: TrinoConnectionConfiguration
   ) {
     super();
     this.name = name;
     this.queryOptions = queryOptions;
+    this.setupSQL = setupSQL;
+    this.connectionConfig = connectionConfig ?? {};
+  }
+
+  private async ensureSetup(): Promise<void> {
+    if (!this.setupDone && this.setupSQL) {
+      this.setupDone = this.runSetupStatements();
+    }
+    if (this.setupDone) {
+      await this.setupDone;
+    }
+  }
+
+  private async runSetupStatements(): Promise<void> {
+    for (const stmt of this.setupSQL!.split(';\n')) {
+      const trimmed = stmt.trim();
+      if (trimmed) {
+        const r = await this.client.runSQL(trimmed, {});
+        if (r.error) {
+          throw new Error(r.error);
+        }
+      }
+    }
   }
 
   get dialectName(): string {
@@ -222,8 +252,16 @@ export abstract class TrinoPrestoConnection
   }
 
   public getDigest(): string {
-    const data = `trino:${this.name}`;
-    return makeDigest(data);
+    const {server, port, catalog, schema, user} = this.connectionConfig;
+    return makeDigest(
+      'trino',
+      server ?? '',
+      String(port ?? ''),
+      catalog ?? '',
+      schema ?? '',
+      user ?? '',
+      this.setupSQL ?? ''
+    );
   }
 
   public get supportsNesting(): boolean {
@@ -244,6 +282,7 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
+    await this.ensureSetup();
     const r = await this.client.runSQL(sqlCommand, options);
 
     if (r.error) {
@@ -312,6 +351,7 @@ export abstract class TrinoPrestoConnection
   ): Promise<void>;
 
   protected async executeAndWait(sqlBlock: string): Promise<void> {
+    await this.ensureSetup();
     await this.client.runSQL(sqlBlock, {});
     // TODO: make sure failure is handled correctly.
     //while (!(await result.next()).done);
@@ -337,6 +377,7 @@ export abstract class TrinoPrestoConnection
     element: string
   ): Promise<StructDef> {
     try {
+      await this.ensureSetup();
       const queryResult = await this.client.runSQL(sqlBlock, {});
 
       if (queryResult.error) {
@@ -402,10 +443,18 @@ export class PrestoConnection extends TrinoPrestoConnection {
     queryOptions?: QueryOptionsReader,
     config: TrinoConnectionConfiguration = {}
   ) {
+    const setupSQL =
+      typeof arg === 'string'
+        ? config.setupSQL
+        : typeof arg['setupSQL'] === 'string'
+          ? arg['setupSQL']
+          : undefined;
     super(
       typeof arg === 'string' ? arg : arg.name,
       new PrestoRunner(config),
-      queryOptions
+      queryOptions,
+      setupSQL,
+      config
     );
   }
 
@@ -473,10 +522,18 @@ export class TrinoConnection extends TrinoPrestoConnection {
     queryOptions?: QueryOptionsReader,
     config: TrinoConnectionConfiguration = {}
   ) {
+    const setupSQL =
+      typeof arg === 'string'
+        ? config.setupSQL
+        : typeof arg['setupSQL'] === 'string'
+          ? arg['setupSQL']
+          : undefined;
     super(
       typeof arg === 'string' ? arg : arg.name,
       new TrinoRunner(config),
-      queryOptions
+      queryOptions,
+      setupSQL,
+      config
     );
   }
 

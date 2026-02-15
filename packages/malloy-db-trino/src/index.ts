@@ -54,6 +54,8 @@ function configToTrinoConfig(config: ConnectionConfig): {
       user: typeof config['user'] === 'string' ? config['user'] : undefined,
       password:
         typeof config['password'] === 'string' ? config['password'] : undefined,
+      setupSQL:
+        typeof config['setupSQL'] === 'string' ? config['setupSQL'] : undefined,
     },
   };
 }
@@ -65,6 +67,13 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
   {name: 'schema', displayName: 'Schema', type: 'string', optional: true},
   {name: 'user', displayName: 'User', type: 'string', optional: true},
   {name: 'password', displayName: 'Password', type: 'password', optional: true},
+  {
+    name: 'setupSQL',
+    displayName: 'Setup SQL',
+    type: 'text',
+    optional: true,
+    description: 'SQL statements to run when the connection is established',
+  },
 ];
 
 registerConnectionType('trino', {

@@ -209,6 +209,39 @@ describe('db:BigQuery', () => {
     });
   }
 
+  describe('setupSQL', () => {
+    it('prepends setup SQL to queries', async () => {
+      const conn = new BigQueryConnection({
+        name: 'bq_setup_test',
+        setupSQL:
+          'CREATE TEMP FUNCTION add_one(x INT64) RETURNS INT64 AS (x + 1)',
+      });
+      try {
+        const result = await conn.runSQL('SELECT add_one(41) AS result');
+        expect(result.rows[0]['result']).toBe(42);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('prepends multiple setup SQL statements', async () => {
+      const conn = new BigQueryConnection({
+        name: 'bq_multi_setup_test',
+        setupSQL:
+          'CREATE TEMP FUNCTION add_one(x INT64) RETURNS INT64 AS (x + 1);\nCREATE TEMP FUNCTION double_it(x INT64) RETURNS INT64 AS (x * 2)',
+      });
+      try {
+        const result = await conn.runSQL(
+          'SELECT add_one(41) AS a, double_it(5) AS b'
+        );
+        expect(result.rows[0]['a']).toBe(42);
+        expect(result.rows[0]['b']).toBe(10);
+      } finally {
+        await conn.close();
+      }
+    });
+  });
+
   describe('Caching', () => {
     let getTableFieldSchema: jest.SpyInstance;
     let getSQLBlockSchema: jest.SpyInstance;

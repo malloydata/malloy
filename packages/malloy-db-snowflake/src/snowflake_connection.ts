@@ -70,6 +70,9 @@ export interface SnowflakeConnectionOptions {
 
   // Timeout for the statement
   timeoutMs?: number;
+
+  // SQL statements to run when a connection is acquired from the pool
+  setupSQL?: string;
 }
 
 type PathChain =
@@ -229,11 +232,13 @@ export class SnowflakeConnection
 {
   private readonly dialect = new SnowflakeDialect();
   private executor: SnowflakeExecutor;
+  private connOptions: ConnectionOptions;
 
   // the database & schema where we do temporary operations like creating a temp table
   private scratchSpace?: namespace;
   private queryOptions: RunSQLOptions;
   private timeoutMs: number;
+  private setupSQL: string | undefined;
 
   constructor(
     public readonly name: string,
@@ -245,7 +250,13 @@ export class SnowflakeConnection
       // try to get connection options from ~/.snowflake/connections.toml
       connOptions = SnowflakeExecutor.getConnectionOptionsFromToml();
     }
-    this.executor = new SnowflakeExecutor(connOptions, options?.poolOptions);
+    this.connOptions = connOptions ?? {};
+    this.setupSQL = options?.setupSQL;
+    this.executor = new SnowflakeExecutor(
+      connOptions,
+      options?.poolOptions,
+      this.setupSQL
+    );
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
     this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
@@ -276,8 +287,16 @@ export class SnowflakeConnection
     const scratch = this.scratchSpace
       ? `${this.scratchSpace.database}:${this.scratchSpace.schema}`
       : '';
-    const data = `snowflake:${this.name}:${scratch}`;
-    return makeDigest(data);
+    return makeDigest(
+      'snowflake',
+      this.connOptions.account ?? '',
+      this.connOptions.username ?? '',
+      this.connOptions.warehouse ?? '',
+      this.connOptions.database ?? '',
+      this.connOptions.schema ?? '',
+      scratch,
+      this.setupSQL ?? ''
+    );
   }
 
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {

@@ -63,6 +63,7 @@ interface PostgresConnectionConfiguration {
   password?: string;
   databaseName?: string;
   connectionString?: string;
+  setupSQL?: string;
 }
 
 interface InfoSchemaColumn {
@@ -98,6 +99,7 @@ export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
   public readonly name: string;
+  protected setupSQL: string | undefined;
   private queryOptionsReader: QueryOptionsReader = {};
   private configReader: PostgresConnectionConfigurationReader = {};
 
@@ -124,8 +126,9 @@ export class PostgresConnection
         this.configReader = configReader;
       }
     } else {
-      const {name, ...configReader} = arg;
+      const {name, setupSQL, ...configReader} = arg;
       this.name = name;
+      this.setupSQL = setupSQL;
       this.configReader = configReader;
     }
     if (queryOptionsReader) {
@@ -168,12 +171,20 @@ export class PostgresConnection
   public getDigest(): string {
     // If configReader is an object (not a function), use its properties
     if (typeof this.configReader !== 'function') {
-      const {host, port, databaseName, connectionString} = this.configReader;
-      const data = `postgres:${host ?? ''}:${port ?? ''}:${databaseName ?? ''}:${connectionString ?? ''}`;
-      return makeDigest(data);
+      const {host, port, username, databaseName, connectionString} =
+        this.configReader;
+      return makeDigest(
+        'postgres',
+        host ?? '',
+        String(port ?? ''),
+        username ?? '',
+        databaseName ?? '',
+        connectionString ?? '',
+        this.setupSQL ?? ''
+      );
     }
     // Fall back to connection name if config is async
-    return makeDigest(`postgres:${this.name}`);
+    return makeDigest('postgres', this.name);
   }
 
   public get supportsNesting(): boolean {
@@ -404,6 +415,14 @@ export class PostgresConnection
 
   public async connectionSetup(client: Client): Promise<void> {
     await client.query("SET TIME ZONE 'UTC'");
+    if (this.setupSQL) {
+      for (const stmt of this.setupSQL.split(';\n')) {
+        const trimmed = stmt.trim();
+        if (trimmed) {
+          await client.query(trimmed);
+        }
+      }
+    }
   }
 
   public async runSQL(
@@ -428,6 +447,7 @@ export class PostgresConnection
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
     await client.connect();
+    await this.connectionSetup(client);
     const rowStream = client.query(query);
     let index = 0;
     for await (const row of rowStream) {
@@ -516,7 +536,17 @@ export class PooledPostgresConnection
         host,
         connectionString,
       });
-      this._pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
+      this._pool.on('acquire', client => {
+        client.query("SET TIME ZONE 'UTC'");
+        if (this.setupSQL) {
+          for (const stmt of this.setupSQL.split(';\n')) {
+            const trimmed = stmt.trim();
+            if (trimmed) {
+              client.query(trimmed);
+            }
+          }
+        }
+      });
     }
     return this._pool;
   }

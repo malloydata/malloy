@@ -70,5 +70,12 @@ registerConnectionType('duckdb', {
       type: 'boolean',
       optional: true,
     },
+    {
+      name: 'setupSQL',
+      displayName: 'Setup SQL',
+      type: 'text',
+      optional: true,
+      description: 'SQL statements to run when the connection is established',
+    },
   ],
 });

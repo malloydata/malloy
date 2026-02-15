@@ -86,6 +86,7 @@ interface BigQueryConnectionConfiguration {
   timeoutMs?: string;
   billingProjectId?: string;
   credentials?: CredentialBody;
+  setupSQL?: string;
 }
 
 interface BigQueryConnectionOptions extends ConnectionConfig {
@@ -98,6 +99,7 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   billingProjectId?: string;
   client_email?: string;
   private_key?: string;
+  setupSQL?: string;
 }
 
 interface SchemaInfo {
@@ -171,6 +173,8 @@ export class BigQueryConnection
 
   private location?: string;
 
+  private setupSQL: string | undefined;
+
   constructor(
     option: BigQueryConnectionOptions,
     queryOptions?: QueryOptionsReader
@@ -214,10 +218,19 @@ export class BigQueryConnection
     this.queryOptions = queryOptions;
     this.config = config;
     this.location = config.location;
+    this.setupSQL = config.setupSQL;
   }
 
   get dialectName(): string {
     return 'standardsql';
+  }
+
+  private prependSetupSQL(sql: string): string {
+    if (!this.setupSQL) return sql;
+    const setup = this.setupSQL.trimEnd().endsWith(';')
+      ? this.setupSQL
+      : this.setupSQL + ';';
+    return setup + '\n' + sql;
   }
 
   private readQueryOptions(): RunSQLOptions {
@@ -242,8 +255,13 @@ export class BigQueryConnection
   }
 
   public getDigest(): string {
-    const data = `bigquery:${this.projectId}:${this.location ?? 'US'}`;
-    return makeDigest(data);
+    return makeDigest(
+      'bigquery',
+      this.billingProjectId,
+      this.projectId,
+      this.location ?? 'US',
+      this.setupSQL ?? ''
+    );
   }
 
   public get supportsNesting(): boolean {
@@ -337,7 +355,7 @@ export class BigQueryConnection
     try {
       const [result] = await this.bigQuery.createQueryJob({
         location: this.location,
-        query: sqlCommand,
+        query: this.prependSetupSQL(sqlCommand),
         dryRun: true,
       });
       return result;
@@ -504,7 +522,7 @@ export class BigQueryConnection
     }
 
     const [job] = await this.bigQuery.createQueryJob({
-      query: sqlCommand,
+      query: this.prependSetupSQL(sqlCommand),
       location: this.location,
       destination: table,
     });
@@ -627,7 +645,7 @@ export class BigQueryConnection
       try {
         const [job] = await this.bigQuery.createQueryJob({
           location: this.location,
-          query: sqlRef.selectStr,
+          query: this.prependSetupSQL(sqlRef.selectStr),
           dryRun: true,
         });
 
@@ -695,12 +713,16 @@ export class BigQueryConnection
   }
 
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
+    const options = {...createQueryJobOptions};
+    if (options.query) {
+      options.query = this.prependSetupSQL(options.query);
+    }
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
-      ...createQueryJobOptions,
+      ...options,
     });
     return job;
   }
@@ -741,7 +763,7 @@ export class BigQueryConnection
         }
       }
       this.bigQuery
-        .createQueryStream(sqlCommand)
+        .createQueryStream(this.prependSetupSQL(sqlCommand))
         .on('error', onError)
         .on('data', handleData)
         .on('end', onEnd);

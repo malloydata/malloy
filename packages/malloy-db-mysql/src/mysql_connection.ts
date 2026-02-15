@@ -31,6 +31,7 @@ export interface MySQLConfiguration {
   database?: string;
   user?: string;
   password?: string;
+  setupSQL?: string;
 }
 
 export class MySQLExecutor {
@@ -101,6 +102,14 @@ export class MySQLConnection
           // Need this to make NULL LAST in order by (ISNULL(exp) can't appear in an ORDER BY without it)
           "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
       );
+      if (this.config.setupSQL) {
+        for (const stmt of this.config.setupSQL.split(';\n')) {
+          const trimmed = stmt.trim();
+          if (trimmed) {
+            await this.connection.query(trimmed);
+          }
+        }
+      }
     }
     return this.connection;
   }
@@ -129,9 +138,15 @@ export class MySQLConnection
   }
 
   public getDigest(): string {
-    const {host, port, database} = this.config;
-    const data = `mysql:${host ?? ''}:${port ?? 3306}:${database ?? ''}`;
-    return makeDigest(data);
+    const {host, port, user, database} = this.config;
+    return makeDigest(
+      'mysql',
+      host ?? '',
+      String(port ?? 3306),
+      user ?? '',
+      database ?? '',
+      this.config.setupSQL ?? ''
+    );
   }
 
   canPersist(): this is PersistSQLResults {

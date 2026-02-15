@@ -72,7 +72,13 @@ export class SnowflakeExecutor {
   };
 
   private pool_: Pool<Connection>;
-  constructor(connOptions: ConnectionOptions, poolOptions?: PoolOptions) {
+  private setupSQL: string | undefined;
+  constructor(
+    connOptions: ConnectionOptions,
+    poolOptions?: PoolOptions,
+    setupSQL?: string
+  ) {
+    this.setupSQL = setupSQL;
     this.pool_ = snowflake.createPool(connOptions, {
       ...SnowflakeExecutor.defaultPoolOptions_,
       ...(poolOptions ?? {}),
@@ -203,6 +209,14 @@ export class SnowflakeExecutor {
       "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
       conn
     );
+    if (this.setupSQL) {
+      for (const stmt of this.setupSQL.split(';\n')) {
+        const trimmed = stmt.trim();
+        if (trimmed) {
+          await this._execute(trimmed, conn);
+        }
+      }
+    }
   }
 
   public async batch(
