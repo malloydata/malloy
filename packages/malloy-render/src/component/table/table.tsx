@@ -495,7 +495,7 @@ const MalloyTableRoot = (_props: {
           const maybeSize = tableCtx.store.columnWidths[key];
           if (shouldFillWidth) return maybeSize ? maybeSize + 'px' : 'auto';
           return `minmax(${
-            maybeSize ? maybeSize + 'px' : 'auto'
+            maybeSize ? maybeSize + 'px' : '64px'
           }, max-content)`;
         })
         .join(' ');

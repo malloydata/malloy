@@ -27,7 +27,7 @@ export function applyRenderer(props: RendererProps) {
   const plugin = field.getPlugins().at(0);
   if (plugin) {
     return {
-      renderAs,
+      renderAs: 'chart',
       renderValue: (
         <PluginRenderContainer
           plugin={plugin}

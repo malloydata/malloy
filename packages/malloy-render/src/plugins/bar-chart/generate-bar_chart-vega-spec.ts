@@ -716,7 +716,7 @@ export function generateBarChartVegaSpecV2(
         orient: 'bottom',
         scale: 'xscale',
         title: xField.name,
-        labelOverlap: 'greedy',
+        labelOverlap: xIsDateorTime ? ('greedy' as const) : false,
         labelSeparation: 4,
         ...chartSettings.xAxis,
         encode: {

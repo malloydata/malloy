@@ -24,8 +24,7 @@
 }
 
 .malloy-table.root {
-  width: fit-content;
-  max-width: 100%;
+  width: max-content;
   height: fit-content;
   max-height: 100%;
   position: relative;
@@ -33,7 +32,7 @@
   overflow-anchor: none;
   grid-template-columns: repeat(
     var(--total-header-size),
-    minmax(auto, max-content)
+    minmax(min-content, max-content)
   );
 }
 

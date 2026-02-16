@@ -46,13 +46,6 @@ export function convertLegacyToVizTag(tag: Tag): Tag {
 
   // Copy legacy tags into viz property
   if (legacyChartTag) {
-    const legacyTagObject = tag.tag(legacyChartTag);
-    // First set the legacy tag (clones it with correct parent), then set the value
-    if (legacyTagObject) {
-      return tag
-        .set(['viz'], legacyTagObject)
-        .set(['viz'], legacyTagToVizType(legacyChartTag));
-    }
     return tag.set(['viz'], legacyTagToVizType(legacyChartTag));
   }
 

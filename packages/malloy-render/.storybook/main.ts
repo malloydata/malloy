@@ -66,6 +66,12 @@ const config: StorybookConfig = {
           'IS_STORYBOOK': true,
         },
       },
+      optimizeDeps: {
+        include: [
+          '@malloydata/malloy-tag',
+          '@malloydata/motly-ts-parser',
+        ],
+      },
       assetsInclude: ['/sb-preview/runtime.js'],
       plugins: [viteMalloyStoriesPlugin()],
     };

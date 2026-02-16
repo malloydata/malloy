@@ -179,6 +179,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
               name: 'Year',
               valueSet: yearValues,
               referenceId: '__synthetic_year__',
+              tag: {text: () => undefined, has: () => false},
               // Add minimal Field interface properties that might be used
               isTime: () => false,
               isDate: () => false,
