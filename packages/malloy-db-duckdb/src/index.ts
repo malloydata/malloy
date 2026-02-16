@@ -35,6 +35,13 @@ registerConnectionType('duckdb', {
       options['databasePath'] = options['path'];
       delete options['path'];
     }
+    // Parse comma-separated extensions string into array
+    if (typeof options['additionalExtensions'] === 'string') {
+      options['additionalExtensions'] = options['additionalExtensions']
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    }
     return new DuckDBConnection(options);
   },
   properties: [
@@ -63,12 +70,22 @@ registerConnectionType('duckdb', {
       displayName: 'Additional Extensions',
       type: 'string',
       optional: true,
+      description:
+        'Comma-separated list of DuckDB extensions to load (e.g. "spatial,fts"). ' +
+        'These are loaded in addition to the built-in extensions: json, httpfs, icu.',
     },
     {
       name: 'readOnly',
       displayName: 'Read Only',
       type: 'boolean',
       optional: true,
+    },
+    {
+      name: 'setupSQL',
+      displayName: 'Setup SQL',
+      type: 'text',
+      optional: true,
+      description: 'SQL statements to run when the connection is established',
     },
   ],
 });

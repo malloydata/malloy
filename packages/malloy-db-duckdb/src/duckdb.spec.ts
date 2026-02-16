@@ -127,6 +127,50 @@ describe('DuckDBConnection', () => {
     });
   });
 
+  describe('setupSQL', () => {
+    it('runs a single setup statement', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_single_setup_test',
+        setupSQL: 'CREATE OR REPLACE MACRO add_one(x) AS x + 1',
+      });
+      try {
+        const result = await conn.runSQL('SELECT add_one(41) AS result');
+        expect(result.rows[0]['result']).toBe(42);
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('runs multiple setup SQL statements', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_multi_setup_test',
+        setupSQL:
+          'CREATE OR REPLACE MACRO add_one(x) AS x + 1;\nCREATE OR REPLACE MACRO double_it(x) AS x * 2',
+      });
+      try {
+        const result = await conn.runSQL(
+          'SELECT add_one(41) AS a, double_it(5) AS b'
+        );
+        expect(result).toEqual({rows: [{a: 42, b: 10}], totalRows: 1});
+      } finally {
+        await conn.close();
+      }
+    });
+
+    it('handles multi-line statements', async () => {
+      const conn = new DuckDBConnection({
+        name: 'duckdb_multiline_setup_test',
+        setupSQL: 'CREATE OR REPLACE MACRO add_values(x, y) AS\n  x + y',
+      });
+      try {
+        const result = await conn.runSQL('SELECT add_values(3, 4) AS result');
+        expect(result).toEqual({rows: [{result: 7}], totalRows: 1});
+      } finally {
+        await conn.close();
+      }
+    });
+  });
+
   describe('schema parser', () => {
     it('parses arrays', () => {
       const structDef = makeStructDef();

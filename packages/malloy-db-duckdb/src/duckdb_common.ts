@@ -62,6 +62,7 @@ export abstract class DuckDBCommon
 {
   protected isMotherDuck = false;
   protected motherDuckToken: string | undefined;
+  protected setupSQL: string | undefined;
 
   private readonly dialect = new DuckDBDialect();
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
