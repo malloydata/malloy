@@ -45,6 +45,8 @@ import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {Tag} from '@malloydata/malloy-tag';
 import type {BarChartPluginInstance} from './bar-chart-plugin';
+import {getFieldLabel} from '@/component/field-label-utils';
+import {createStaticReferenceLines} from '@/component/vega/static-reference-line';
 
 type BarDataRecord = {
   x: string | number;
@@ -116,7 +118,8 @@ function getLimitedData({
 export function generateBarChartVegaSpecV2(
   metadata: RenderMetadata,
   plugin: BarChartPluginInstance,
-  vegaConfig?: Config
+  vegaConfig?: Config,
+  themeColors?: {colorScheme?: string; colors?: string[]}
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -166,6 +169,11 @@ export function generateBarChartVegaSpecV2(
   // Map ref ids to y fields
   const yRefsMapInverted = invertObject(yRefsMap);
 
+  // Y2 (dual axis) fields
+  const hasY2 = settings.y2Channel && settings.y2Channel.fields.length > 0;
+  const y2FieldPath = hasY2 ? settings.y2Channel!.fields.at(0) : null;
+  const y2Field = y2FieldPath ? explore.fieldAt(y2FieldPath) : null;
+
   const isDimensionalSeries = Boolean(seriesField);
   const isMeasureSeries = Boolean(settings.yChannel.fields.length > 1);
   const hasSeries = isDimensionalSeries || isMeasureSeries;
@@ -185,6 +193,7 @@ export function generateBarChartVegaSpecV2(
 
   const isGrouping = hasSeries && !settings.isStack;
   const isStacking = hasSeries && settings.isStack;
+  const isHorizontal = settings.layout === 'horizontal';
 
   // Calculate min/max across all y columns
   let yMin = Infinity;
@@ -272,7 +281,7 @@ export function generateBarChartVegaSpecV2(
     ? createMeasureAxis({
         type: 'y',
         title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).name)
+          .map(f => getFieldLabel(explore.fieldAt(f)))
           .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
@@ -338,12 +347,19 @@ export function generateBarChartVegaSpecV2(
     type: 'group',
     interactive: false,
     encode: {
-      enter: {
-        x: {
-          scale: 'xscale',
-          field: 'x',
-        },
-      },
+      enter: isHorizontal
+        ? {
+            y: {
+              scale: 'xscale',
+              field: 'x',
+            },
+          }
+        : {
+            x: {
+              scale: 'xscale',
+              field: 'x',
+            },
+          },
     },
     marks: [],
   };
@@ -358,19 +374,37 @@ export function generateBarChartVegaSpecV2(
     },
     zindex: 2,
     encode: {
-      enter: {
-        x: {
-          offset: xOffset,
-        },
-        width: xWidth,
-        y: {
-          scale: 'yscale',
-          field: settings.isStack ? 'y0' : 'y',
-        },
-        y2: settings.isStack
-          ? {'scale': 'yscale', 'field': 'y1'}
-          : {'scale': 'yscale', 'value': 0},
-      },
+      enter: isHorizontal
+        ? {
+            y: {
+              offset: xOffset,
+            },
+            height: xWidth,
+            x: {
+              scale: 'yscale',
+              field: settings.isStack ? 'y0' : 'y',
+            },
+            x2: settings.isStack
+              ? {'scale': 'yscale', 'field': 'y1'}
+              : {'scale': 'yscale', 'value': 0},
+            cornerRadiusTopRight: {value: isStacking ? 2 : 3},
+            cornerRadiusBottomRight: {value: isStacking ? 2 : 3},
+          }
+        : {
+            x: {
+              offset: xOffset,
+            },
+            width: xWidth,
+            y: {
+              scale: 'yscale',
+              field: settings.isStack ? 'y0' : 'y',
+            },
+            y2: settings.isStack
+              ? {'scale': 'yscale', 'field': 'y1'}
+              : {'scale': 'yscale', 'value': 0},
+            cornerRadiusTopLeft: {value: isStacking ? 2 : 3},
+            cornerRadiusTopRight: {value: isStacking ? 2 : 3},
+          },
       update: {
         fill: {
           scale: 'color',
@@ -409,16 +443,27 @@ export function generateBarChartVegaSpecV2(
     },
     zindex: 1,
     encode: {
-      enter: {
-        x: {
-          value: 0,
-        },
-        width: {scale: 'xscale', band: 1},
-        y: {
-          value: 0,
-        },
-        y2: {signal: 'height'},
-      },
+      enter: isHorizontal
+        ? {
+            y: {
+              value: 0,
+            },
+            height: {scale: 'xscale', band: 1},
+            x: {
+              value: 0,
+            },
+            x2: {signal: 'width'},
+          }
+        : {
+            x: {
+              value: 0,
+            },
+            width: {scale: 'xscale', band: 1},
+            y: {
+              value: 0,
+            },
+            y2: {signal: 'height'},
+          },
       update: {
         fill: {
           value: '#4c72ba',
@@ -464,7 +509,70 @@ export function generateBarChartVegaSpecV2(
     });
   }
 
+  // Y2 data source for dual-axis line overlay - derived from main values
+  const y2ValuesData: Data | null = hasY2
+    ? {
+        name: 'y2_values',
+        source: 'values',
+        transform: [
+          {
+            type: 'aggregate',
+            groupby: ['x'],
+            fields: ['y2'],
+            ops: ['min'],
+            as: ['y2'],
+          },
+        ],
+      }
+    : null;
+
+  // Y2 line marks for dual-axis
+  const y2LineMark: Mark | null =
+    hasY2 && y2Field
+      ? {
+          name: 'y2_lines',
+          type: 'line',
+          from: {data: 'y2_values'},
+          zindex: 3,
+          encode: {
+            enter: {
+              x: {scale: 'xscale', field: 'x', band: 0.5},
+              y: {scale: 'y2scale', field: 'y2'},
+              stroke: {value: '#E42C97'},
+              strokeWidth: {value: 2},
+            },
+          },
+        }
+      : null;
+
+  const y2PointMark: Mark | null =
+    hasY2 && y2Field
+      ? {
+          name: 'y2_points',
+          type: 'symbol',
+          from: {data: 'y2_values'},
+          zindex: 4,
+          encode: {
+            enter: {
+              x: {scale: 'xscale', field: 'x', band: 0.5},
+              y: {scale: 'y2scale', field: 'y2'},
+              fill: {value: '#E42C97'},
+              size: {value: 30},
+            },
+          },
+        }
+      : null;
+
   const marks: Mark[] = [groupMark];
+  if (y2LineMark) marks.push(y2LineMark);
+  if (y2PointMark) marks.push(y2PointMark);
+
+  // Static reference lines
+  if (settings.referenceLines && settings.referenceLines.length > 0) {
+    marks.push(
+      createStaticReferenceLines(settings.referenceLines, {isHorizontal})
+    );
+  }
 
   /**************************************
    *
@@ -662,7 +770,7 @@ export function generateBarChartVegaSpecV2(
       resize: true,
       contains: 'padding',
     },
-    data: [valuesData],
+    data: y2ValuesData ? [valuesData, y2ValuesData] : [valuesData],
     padding: {
       ...chartSettings.padding,
       bottom: xAxisSettings.hidden ? 0 : xAxisSettings.height,
@@ -674,14 +782,19 @@ export function generateBarChartVegaSpecV2(
         domain: shouldShareXDomain
           ? [...dataLimits.barValuesToPlot]
           : {data: 'values', field: 'x'},
-        range: 'width',
+        range: isHorizontal ? 'height' : 'width',
         paddingOuter: 0.05,
         round: true,
       },
       {
         name: 'yscale',
+        ...(settings.yScaleType === 'log'
+          ? {type: 'log' as const}
+          : settings.yScaleType === 'symlog'
+            ? {type: 'symlog' as const}
+            : {}),
         nice: true,
-        range: 'height',
+        range: (isHorizontal ? 'width' : 'height') as 'width' | 'height',
         domain: settings.isStack
           ? {data: 'values', field: 'y1'}
           : chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
@@ -689,7 +802,15 @@ export function generateBarChartVegaSpecV2(
       {
         name: 'color',
         type: 'ordinal',
-        range: 'category',
+        ...(settings.colors
+          ? {range: settings.colors}
+          : settings.colorScheme
+            ? {range: {scheme: settings.colorScheme}}
+            : themeColors?.colors
+              ? {range: themeColors.colors}
+              : themeColors?.colorScheme
+                ? {range: {scheme: themeColors.colorScheme}}
+                : {range: 'category'}),
         domain:
           isDimensionalSeries && shouldShareSeriesDomain && seriesSet
             ? [...seriesSet!]
@@ -709,16 +830,26 @@ export function generateBarChartVegaSpecV2(
           signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
         },
       },
+      ...(hasY2
+        ? [
+            {
+              name: 'y2scale',
+              nice: true,
+              range: (isHorizontal ? 'width' : 'height') as 'width' | 'height',
+              domain: {data: 'y2_values', field: 'y2'},
+            },
+          ]
+        : []),
     ],
 
     axes: [
       {
-        orient: 'bottom',
+        orient: isHorizontal ? 'left' : 'bottom',
         scale: 'xscale',
-        title: xField.name,
-        labelOverlap: 'greedy',
+        title: getFieldLabel(xField),
+        labelOverlap: xIsDateorTime ? ('greedy' as const) : false,
         labelSeparation: 4,
-        ...chartSettings.xAxis,
+        ...(isHorizontal ? {} : chartSettings.xAxis),
         encode: {
           labels: {
             enter: {
@@ -751,7 +882,40 @@ export function generateBarChartVegaSpecV2(
           },
         },
       },
-      ...(yAxis ? [yAxis.axis] : []),
+      ...(yAxis
+        ? [
+            isHorizontal
+              ? {...yAxis.axis, orient: 'bottom' as const}
+              : yAxis.axis,
+          ]
+        : []),
+      ...(hasY2 && y2Field
+        ? [
+            {
+              orient: (isHorizontal ? 'top' : 'right') as 'top' | 'right',
+              scale: 'y2scale',
+              title: settings
+                .y2Channel!.fields.map(f => getFieldLabel(explore.fieldAt(f)))
+                .join(', '),
+              grid: false,
+              tickCount: {signal: 'ceil(height/40)'},
+              encode: {
+                labels: {
+                  enter: {
+                    text: {
+                      signal: `renderMalloyNumber(malloyExplore, '${y2FieldPath}', datum.value, datum, item)`,
+                    },
+                  },
+                  update: {
+                    text: {
+                      signal: `renderMalloyNumber(malloyExplore, '${y2FieldPath}', datum.value, datum, item)`,
+                    },
+                  },
+                },
+              },
+            },
+          ]
+        : []),
     ],
     legends: [],
     marks,
@@ -759,8 +923,10 @@ export function generateBarChartVegaSpecV2(
   };
 
   // Legend
+  const legendHidden = settings.legend?.hide === true;
+  const legendPosition = settings.legend?.position || 'right';
   let maxCharCt = 0;
-  if (hasSeries) {
+  if (hasSeries && !legendHidden) {
     // Get legend dimensions
     if (isDimensionalSeries && seriesSet) {
       // This is for global; how to do across nests for local?
@@ -796,12 +962,20 @@ export function generateBarChartVegaSpecV2(
       offset: 4,
     };
 
-    (spec.padding as VegaPadding).right = legendSize;
+    if (legendPosition === 'bottom') {
+      (spec.padding as VegaPadding).bottom =
+        ((spec.padding as VegaPadding).bottom || 0) + 60;
+    } else {
+      (spec.padding as VegaPadding).right = legendSize;
+    }
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
-      orient: 'right',
+      title: seriesField ? getFieldLabel(seriesField) : '',
+      orient: legendPosition,
+      ...(legendPosition === 'bottom'
+        ? {direction: 'horizontal' as const}
+        : {}),
       ...legendSettings,
       values:
         isDimensionalSeries && shouldShareSeriesDomain && seriesSet
@@ -930,6 +1104,7 @@ export function generateBarChartVegaSpecV2(
       __values: {[name: string]: CellValue};
       x: CellValue;
       y: CellValue;
+      y2?: CellValue;
       series: CellValue;
     }[] = [];
 
@@ -950,13 +1125,20 @@ export function generateBarChartVegaSpecV2(
       if (skipRecord(row)) continue;
 
       // Map data fields to chart properties
-      mappedData.push({
+      const record: (typeof mappedData)[0] = {
         __values: row.allCellValues(),
         __row: row,
         x: xValue ?? NULL_SYMBOL,
         y: row.column(yField.name).value,
         series: seriesVal,
-      });
+      };
+
+      // Include y2 value if dual-axis is configured
+      if (hasY2 && y2Field) {
+        record.y2 = row.column(y2Field.name).value;
+      }
+
+      mappedData.push(record);
     }
 
     return {

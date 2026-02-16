@@ -24,6 +24,19 @@ export interface LineChartSettings extends Record<string, unknown> {
   interactive: boolean;
   disableEmbedded: boolean;
   mode?: 'yoy' | 'normal';
+  colorScheme?: string;
+  colors?: string[];
+  yScaleType?: 'linear' | 'log' | 'symlog';
+  referenceLines?: Array<{
+    y: number;
+    label?: string;
+    color?: string;
+    style?: 'dashed' | 'solid' | 'dotted';
+  }>;
+  legend?: {
+    position?: 'right' | 'bottom';
+    hide?: boolean;
+  };
 }
 
 // Plugin options interface for JavaScript API
@@ -90,6 +103,9 @@ export interface ILineChartSettingsSchema extends JSONSchemaObject {
     interactive: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
     mode: JSONSchemaString;
+    colorScheme: JSONSchemaString;
+    colors: JSONSchemaArray;
+    yScaleType: JSONSchemaString;
   };
 }
 
@@ -239,6 +255,28 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
       type: 'string',
       enum: ['normal', 'yoy'],
       default: 'normal',
+    },
+    colorScheme: {
+      title: 'Color Scheme',
+      description:
+        'Named color scheme from d3-scale-chromatic (e.g., "set1", "set2", "accent", "dark2", "pastel1", "tableau10")',
+      type: 'string',
+    },
+    colors: {
+      title: 'Custom Colors',
+      description: 'Array of custom color hex values to use for series colors',
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+    },
+    yScaleType: {
+      title: 'Y-Axis Scale Type',
+      description:
+        'Scale type for the Y-axis. "linear" (default), "log" for logarithmic, or "symlog" for symmetric log (handles zero and negative values)',
+      type: 'string',
+      enum: ['linear', 'log', 'symlog'],
+      default: 'linear',
     },
   },
   required: [

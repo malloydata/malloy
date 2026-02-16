@@ -18,11 +18,26 @@ import type {
 export interface BarChartSettings extends Record<string, unknown> {
   xChannel: Channel;
   yChannel: YChannel;
+  y2Channel?: YChannel;
   seriesChannel: SeriesChannel;
   isStack: boolean;
   interactive: boolean;
   hideReferences: boolean;
   disableEmbedded: boolean;
+  colorScheme?: string;
+  colors?: string[];
+  yScaleType?: 'linear' | 'log' | 'symlog';
+  layout?: 'vertical' | 'horizontal';
+  referenceLines?: Array<{
+    y: number;
+    label?: string;
+    color?: string;
+    style?: 'dashed' | 'solid' | 'dotted';
+  }>;
+  legend?: {
+    position?: 'right' | 'bottom';
+    hide?: boolean;
+  };
 }
 
 // Default settings object
@@ -84,6 +99,11 @@ export interface IBarChartSettingsSchema extends JSONSchemaObject {
     interactive: JSONSchemaBoolean;
     hideReferences: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
+    colorScheme: JSONSchemaString;
+    colors: JSONSchemaArray;
+    yScaleType: JSONSchemaString;
+    layout: JSONSchemaString;
+    y2Channel: JSONSchemaObject;
   };
 }
 
@@ -231,6 +251,70 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
         'Whether to ignore field-level tags for x, y, and series channel assignment',
       type: 'boolean',
       default: false,
+    },
+    colorScheme: {
+      title: 'Color Scheme',
+      description:
+        'Named color scheme from d3-scale-chromatic (e.g., "set1", "set2", "accent", "dark2", "pastel1", "tableau10")',
+      type: 'string',
+    },
+    colors: {
+      title: 'Custom Colors',
+      description: 'Array of custom color hex values to use for series colors',
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+    },
+    yScaleType: {
+      title: 'Y-Axis Scale Type',
+      description:
+        'Scale type for the Y-axis. "linear" (default), "log" for logarithmic, or "symlog" for symmetric log (handles zero and negative values)',
+      type: 'string',
+      enum: ['linear', 'log', 'symlog'],
+      default: 'linear',
+    },
+    layout: {
+      title: 'Chart Layout',
+      description:
+        'Chart orientation. "vertical" (default) renders bars vertically, "horizontal" renders bars horizontally',
+      type: 'string',
+      enum: ['vertical', 'horizontal'],
+      default: 'vertical',
+    },
+    y2Channel: {
+      title: 'Y2-Axis Channel',
+      description:
+        'Secondary Y-axis channel for dual-axis charts. Fields assigned here are plotted against a right-side Y-axis, rendered as lines',
+      type: 'object',
+      properties: {
+        fields: {
+          title: 'Y2-Axis Fields',
+          description: 'Array of field paths to use for the secondary Y-axis',
+          type: 'array',
+          items: {
+            type: 'string',
+            subtype: 'field',
+            fieldTypes: ['number_type'],
+          },
+          default: [],
+        },
+        type: {
+          title: 'Y2-Axis Scale Type',
+          description: 'Scale type for Y2-axis data encoding',
+          type: 'string',
+          enum: ['quantitative', 'nominal'],
+          default: 'quantitative',
+        },
+        independent: {
+          title: 'Y2-Axis Independence',
+          description:
+            'Whether Y2-axis domains should be independent across chart rows',
+          type: 'boolean',
+          default: false,
+        },
+      },
+      required: ['fields', 'type'],
     },
   },
   required: [

@@ -348,6 +348,53 @@ export function getLineChartSettings(
     }
   }
 
+  // Parse color settings
+  const colorScheme = vizTag.text('colorScheme') ?? undefined;
+  const colors = vizTag.textArray('colors') ?? undefined;
+
+  // Parse y scale type
+  const yScaleTypeRaw = vizTag.text('y', 'scale') as
+    | 'linear'
+    | 'log'
+    | 'symlog'
+    | undefined;
+  const yScaleType =
+    yScaleTypeRaw && ['linear', 'log', 'symlog'].includes(yScaleTypeRaw)
+      ? yScaleTypeRaw
+      : undefined;
+
+  // Parse reference lines
+  const referenceLines: Array<{
+    y: number;
+    label?: string;
+    color?: string;
+    style?: 'dashed' | 'solid' | 'dotted';
+  }> = [];
+  const refLineTag = vizTag.tag('reference_line');
+  if (refLineTag) {
+    const y = refLineTag.numeric('y');
+    if (y !== null && y !== undefined) {
+      referenceLines.push({
+        y,
+        label: refLineTag.text('label') ?? undefined,
+        color: refLineTag.text('color') ?? undefined,
+        style:
+          (refLineTag.text('style') as 'dashed' | 'solid' | 'dotted') ??
+          undefined,
+      });
+    }
+  }
+
+  // Parse legend settings
+  const legendTag = vizTag.tag('legend');
+  const legend = legendTag
+    ? {
+        position:
+          (legendTag.text('position') as 'right' | 'bottom') ?? undefined,
+        hide: legendTag.has('hide') || undefined,
+      }
+    : undefined;
+
   const result = {
     xChannel,
     yChannel,
@@ -356,6 +403,11 @@ export function getLineChartSettings(
     interactive,
     disableEmbedded,
     mode,
+    colorScheme,
+    colors,
+    yScaleType,
+    referenceLines: referenceLines.length > 0 ? referenceLines : undefined,
+    legend,
   };
 
   return result;

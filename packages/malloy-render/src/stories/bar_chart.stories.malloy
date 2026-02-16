@@ -472,7 +472,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
 
   #(story)
-  view: indepenent_axis is {
+  view: independent_axis is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
     # bar_chart
@@ -604,6 +604,120 @@ source: products is duckdb.table("static/data/products.parquet") extend {
         group_by: brand, department
         limit: 10
       }
+  }
+
+  #(story) story="Custom Color Scheme"
+  # bar_chart { colorScheme="set2" }
+  view: custom_color_scheme is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Custom Colors Array"
+  # bar_chart { colors=['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7'] }
+  view: custom_colors is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Horizontal Bar Chart"
+  # bar_chart { layout="horizontal" }
+  view: horizontal_bars is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Horizontal Stacked Bars"
+  # bar_chart { stack layout="horizontal" }
+  view: horizontal_stacked is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Horizontal Grouped Bars"
+  # bar_chart { layout="horizontal" }
+  view: horizontal_grouped is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Symlog Y Scale"
+  # bar_chart { y.scale="symlog" }
+  view: symlog_scale is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Log Y Scale"
+  # bar_chart { y.scale="log" }
+  view: log_scale is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Horizontal with Custom Colors"
+  # bar_chart { layout="horizontal" colorScheme="dark2" }
+  view: horizontal_custom_colors is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Dual Y-Axis (Bar + Line)"
+  # bar_chart { y2=['avg_margin'] }
+  view: dual_axis is {
+    group_by: brand
+    aggregate:
+      total_sales
+      avg_margin
+    limit: 10
+  }
+
+  #(story) story="Reference Line"
+  # bar_chart { reference_line={ y=10000000 label='Target' } }
+  view: reference_line is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Reference Line Styled"
+  # bar_chart { reference_line={ y=8000000 label='Budget' color='#30C8B4' style='dotted' } }
+  view: reference_line_styled is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Legend Bottom"
+  # bar_chart { legend.position=bottom }
+  view: legend_bottom is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Legend Hidden"
+  # bar_chart { legend.hide }
+  view: legend_hidden is {
+    group_by: brand, department
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  #(story) story="Horizontal Reference Line"
+  # bar_chart { layout="horizontal" reference_line={ y=10000000 label='Target' } }
+  view: horizontal_ref_line is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
   }
 }
 

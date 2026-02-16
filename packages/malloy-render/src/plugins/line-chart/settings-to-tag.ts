@@ -94,5 +94,45 @@ export function lineChartSettingsToTag(settings: LineChartSettings): Tag {
     );
   }
 
+  // Add yScaleType if set
+  if (settings.yScaleType && settings.yScaleType !== 'linear') {
+    tag = tag.set(['viz', 'y', 'scale'], settings.yScaleType);
+  }
+
+  // Add colorScheme if set
+  if (settings.colorScheme) {
+    tag = tag.set(['viz', 'colorScheme'], settings.colorScheme);
+  }
+
+  // Add colors if set
+  if (settings.colors && settings.colors.length > 0) {
+    tag = tag.set(['viz', 'colors'], settings.colors);
+  }
+
+  // Add reference lines
+  if (settings.referenceLines && settings.referenceLines.length > 0) {
+    const refLine = settings.referenceLines[0];
+    tag = tag.set(['viz', 'reference_line', 'y'], refLine.y.toString());
+    if (refLine.label) {
+      tag = tag.set(['viz', 'reference_line', 'label'], refLine.label);
+    }
+    if (refLine.color) {
+      tag = tag.set(['viz', 'reference_line', 'color'], refLine.color);
+    }
+    if (refLine.style) {
+      tag = tag.set(['viz', 'reference_line', 'style'], refLine.style);
+    }
+  }
+
+  // Add legend settings
+  if (settings.legend) {
+    if (settings.legend.hide) {
+      tag = tag.set(['viz', 'legend', 'hide'], null);
+    }
+    if (settings.legend.position) {
+      tag = tag.set(['viz', 'legend', 'position'], settings.legend.position);
+    }
+  }
+
   return tag;
 }

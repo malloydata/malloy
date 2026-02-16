@@ -23,7 +23,10 @@ import {type VegaChartProps} from '@/component/types';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
-import {baseVegaConfig} from '@/component/vega/base-vega-config';
+import {
+  baseVegaConfig,
+  type VegaThemeColors,
+} from '@/component/vega/base-vega-config';
 import {NULL_SYMBOL} from '@/util';
 import type {
   GetResultMetadataOptions,
@@ -75,7 +78,11 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
       return hasBarChartTag && isRepeatedRecord;
     },
 
-    create: (field: Field): BarChartPluginInstance => {
+    create: (
+      field: Field,
+      _pluginOptions?: unknown,
+      modelTag?: Tag
+    ): BarChartPluginInstance => {
       if (!field.isNest()) {
         throw new Error('Bar chart: must be a nest field');
       }
@@ -88,6 +95,11 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
 
       const settings = getBarChartSettings(field);
       const hasMultipleSeriesFields = settings.seriesChannel.fields.length > 1;
+
+      // Read theme-level color settings for fallback
+      const modelThemeTag = modelTag?.tag('theme');
+      const themeColorScheme = modelThemeTag?.text('colorScheme') ?? undefined;
+      const themeColors = modelThemeTag?.textArray('colors') ?? undefined;
 
       const pluginInstance: BarChartPluginInstance = {
         name: 'bar',
@@ -202,15 +214,31 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
           const vegaConfigOverride =
             options.getVegaConfigOverride?.('bar_chart') ?? {};
 
+          // Check if dark mode is active via theme tag
+          const isDarkMode =
+            modelTag?.tag('theme')?.text('mode') === 'dark' ||
+            field.tag?.tag('theme')?.text('mode') === 'dark';
+          const vegaTheme: VegaThemeColors | undefined = isDarkMode
+            ? {
+                background: '#1e1e20',
+                axisLabelColor: '#9da1aa',
+                axisTitleColor: '#9da1aa',
+                gridColor: '#3a3d44',
+              }
+            : undefined;
+
           vegaConfig = mergeVegaConfigs(
-            baseVegaConfig(),
+            baseVegaConfig(vegaTheme),
             options.getVegaConfigOverride?.('bar_chart') ?? {}
           );
 
           vegaProps = generateBarChartVegaSpecV2(
             metadata,
             pluginInstance,
-            vegaConfig
+            vegaConfig,
+            themeColorScheme || themeColors
+              ? {colorScheme: themeColorScheme, colors: themeColors}
+              : undefined
           );
 
           const maybeAxisYLabelFont =

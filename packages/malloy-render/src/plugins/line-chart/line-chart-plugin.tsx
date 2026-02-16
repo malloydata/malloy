@@ -24,7 +24,10 @@ import {type VegaChartProps} from '@/component/types';
 import {type Config, parse, type Runtime} from 'vega';
 import 'vega-interpreter';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
-import {baseVegaConfig} from '@/component/vega/base-vega-config';
+import {
+  baseVegaConfig,
+  type VegaThemeColors,
+} from '@/component/vega/base-vega-config';
 import {NULL_SYMBOL} from '@/util';
 import type {
   GetResultMetadataOptions,
@@ -95,6 +98,11 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
       let vegaProps: VegaChartProps | undefined;
       let useVegaInterpreter: boolean | undefined;
       let vegaConfig: Config | undefined;
+
+      // Read theme-level color settings for fallback
+      const modelThemeTag = modelTag?.tag('theme');
+      const themeColorScheme = modelThemeTag?.text('colorScheme') ?? undefined;
+      const themeColors = modelThemeTag?.textArray('colors') ?? undefined;
 
       try {
         settings = getLineChartSettings(
@@ -179,6 +187,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
               name: 'Year',
               valueSet: yearValues,
               referenceId: '__synthetic_year__',
+              tag: {text: () => undefined, has: () => false},
               // Add minimal Field interface properties that might be used
               isTime: () => false,
               isDate: () => false,
@@ -246,15 +255,31 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
           const vegaConfigOverride =
             options.getVegaConfigOverride?.('line_chart') ?? {};
 
+          // Check if dark mode is active via theme tag
+          const isDarkMode =
+            modelTag?.tag('theme')?.text('mode') === 'dark' ||
+            field.tag?.tag('theme')?.text('mode') === 'dark';
+          const vegaTheme: VegaThemeColors | undefined = isDarkMode
+            ? {
+                background: '#1e1e20',
+                axisLabelColor: '#9da1aa',
+                axisTitleColor: '#9da1aa',
+                gridColor: '#3a3d44',
+              }
+            : undefined;
+
           vegaConfig = mergeVegaConfigs(
-            baseVegaConfig(),
+            baseVegaConfig(vegaTheme),
             options.getVegaConfigOverride?.('line_chart') ?? {}
           );
 
           vegaProps = generateLineChartVegaSpecV2(
             metadata,
             pluginInstance,
-            vegaConfig
+            vegaConfig,
+            themeColorScheme || themeColors
+              ? {colorScheme: themeColorScheme, colors: themeColors}
+              : undefined
           );
 
           const maybeAxisYLabelFont =

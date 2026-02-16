@@ -85,6 +85,12 @@ export function getBarChartSettings(
     independent: yIndependent,
   };
 
+  const y2Channel: YChannel = {
+    fields: [],
+    type: defaultBarChartSettings.yChannel.type,
+    independent: false,
+  };
+
   const seriesChannel: SeriesChannel = {
     fields: [],
     type: defaultBarChartSettings.seriesChannel.type,
@@ -128,6 +134,31 @@ export function getBarChartSettings(
       yChannel.fields.push(fieldPath);
     });
   }
+  // Parse y2 channel from viz tag
+  if (vizTag.text('y2')) {
+    const y2FieldRef = vizTag.text('y2')!;
+    const y2FieldPath = getField(y2FieldRef);
+    const y2Field = explore.fieldAt(y2FieldPath);
+    if (!y2Field.isNumber() && !y2Field.wasCalculation()) {
+      throw new Error(
+        `Malloy Bar Chart: Field "${y2Field.name}" is tagged as y2 but is not numeric. Only numeric fields can be used as y2 channel.`
+      );
+    }
+    y2Channel.fields.push(y2FieldPath);
+  } else if (vizTag.textArray('y2')) {
+    const y2FieldRefs = vizTag.textArray('y2')!;
+    y2FieldRefs.forEach(ref => {
+      const fieldPath = getField(ref);
+      const field = explore.fieldAt(fieldPath);
+      if (!field.isNumber() && !field.wasCalculation()) {
+        throw new Error(
+          `Malloy Bar Chart: Field "${field.name}" is tagged as y2 but is not numeric. Only numeric fields can be used as y2 channel.`
+        );
+      }
+      y2Channel.fields.push(fieldPath);
+    });
+  }
+
   if (vizTag.text('series')) {
     seriesChannel.fields.push(getField(vizTag.text('series')!));
   }
@@ -135,6 +166,7 @@ export function getBarChartSettings(
   // Parse embedded tags
   const embeddedX: string[] = [];
   const embeddedY: string[] = [];
+  const embeddedY2: string[] = [];
   const embeddedSeries: string[] = [];
 
   // Only parse embedded tags if disableEmbedded is not set
@@ -154,6 +186,15 @@ export function getBarChartSettings(
         }
         embeddedY.push(pathTo);
       }
+      if (tag.has('y2')) {
+        // Validate y2 field
+        if (!field.isNumber() && !field.wasCalculation()) {
+          throw new Error(
+            `Malloy Bar Chart: Field "${field.name}" is tagged as y2 but is not numeric. Only numeric fields can be used as y2 channel.`
+          );
+        }
+        embeddedY2.push(pathTo);
+      }
       if (tag.has('series')) {
         embeddedSeries.push(pathTo);
       }
@@ -167,6 +208,11 @@ export function getBarChartSettings(
     // Add all y's found
     embeddedY.forEach(path => {
       yChannel.fields.push(path);
+    });
+
+    // Add all y2's found
+    embeddedY2.forEach(path => {
+      y2Channel.fields.push(path);
     });
 
     // Add all series found
@@ -247,13 +293,73 @@ export function getBarChartSettings(
     );
   }
 
+  // Parse color settings
+  const colorScheme = vizTag.text('colorScheme') ?? undefined;
+  const colors = vizTag.textArray('colors') ?? undefined;
+
+  // Parse layout
+  const layout: 'vertical' | 'horizontal' | undefined =
+    vizTag.has('horizontal') || vizTag.text('layout') === 'horizontal'
+      ? 'horizontal'
+      : undefined;
+
+  // Parse y scale type
+  const yScaleTypeRaw = vizTag.text('y', 'scale') as
+    | 'linear'
+    | 'log'
+    | 'symlog'
+    | undefined;
+  const yScaleType =
+    yScaleTypeRaw && ['linear', 'log', 'symlog'].includes(yScaleTypeRaw)
+      ? yScaleTypeRaw
+      : undefined;
+
+  // Parse reference lines
+  const referenceLines: Array<{
+    y: number;
+    label?: string;
+    color?: string;
+    style?: 'dashed' | 'solid' | 'dotted';
+  }> = [];
+  const refLineTag = vizTag.tag('reference_line');
+  if (refLineTag) {
+    const y = refLineTag.numeric('y');
+    if (y !== null && y !== undefined) {
+      referenceLines.push({
+        y,
+        label: refLineTag.text('label') ?? undefined,
+        color: refLineTag.text('color') ?? undefined,
+        style:
+          (refLineTag.text('style') as 'dashed' | 'solid' | 'dotted') ??
+          undefined,
+      });
+    }
+  }
+
+  // Parse legend settings
+  const legendTag = vizTag.tag('legend');
+  const legend = legendTag
+    ? {
+        position:
+          (legendTag.text('position') as 'right' | 'bottom') ?? undefined,
+        hide: legendTag.has('hide') || undefined,
+      }
+    : undefined;
+
   return {
     xChannel,
     yChannel,
+    y2Channel: y2Channel.fields.length > 0 ? y2Channel : undefined,
     seriesChannel,
     isStack,
     interactive,
     hideReferences,
     disableEmbedded,
+    colorScheme,
+    colors,
+    yScaleType,
+    layout,
+    referenceLines: referenceLines.length > 0 ? referenceLines : undefined,
+    legend,
   };
 }

@@ -40,6 +40,8 @@ import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
+import {getFieldLabel} from '@/component/field-label-utils';
+import {createStaticReferenceLines} from '@/component/vega/static-reference-line';
 
 type LineDataRecord = {
   x: string | number;
@@ -91,7 +93,8 @@ export interface LineChartSettings {
 export function generateLineChartVegaSpecV2(
   metadata: RenderMetadata,
   plugin: LineChartPluginInstance,
-  vegaConfig?: Config
+  vegaConfig?: Config,
+  themeColors?: {colorScheme?: string; colors?: string[]}
 ): VegaChartProps {
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
@@ -235,7 +238,7 @@ export function generateLineChartVegaSpecV2(
     ? createMeasureAxis({
         type: 'y',
         title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).name)
+          .map(f => getFieldLabel(explore.fieldAt(f)))
           .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
@@ -464,6 +467,11 @@ export function generateLineChartVegaSpecV2(
     if (yAxis) marks.push(...yAxis.interactiveMarks);
   }
   marks.push(highlightRuleMark, xHitTargets, refLineTargets);
+
+  // Static reference lines
+  if (settings.referenceLines && settings.referenceLines.length > 0) {
+    marks.push(createStaticReferenceLines(settings.referenceLines));
+  }
   // TODO make reactive to data changes instead of hardcoding into spec
   if (hasNullTimeValues) {
     marks.push({
@@ -764,15 +772,27 @@ export function generateLineChartVegaSpecV2(
       },
       {
         name: 'yscale',
+        ...(settings.yScaleType === 'log'
+          ? {type: 'log' as const, zero: false as const}
+          : settings.yScaleType === 'symlog'
+            ? {type: 'symlog' as const, zero: settings.zeroBaseline}
+            : {zero: settings.zeroBaseline}),
         nice: chartSettings.isSpark ? false : true, // Disable nice for sparklines to maximize variation
-        range: 'height',
-        zero: settings.zeroBaseline,
+        range: 'height' as const,
         domain: chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
       },
       {
         name: 'color',
         type: 'ordinal',
-        range: 'category',
+        ...(settings.colors
+          ? {range: settings.colors}
+          : settings.colorScheme
+            ? {range: {scheme: settings.colorScheme}}
+            : themeColors?.colors
+              ? {range: themeColors.colors}
+              : themeColors?.colorScheme
+                ? {range: {scheme: themeColors.colorScheme}}
+                : {range: 'category'}),
         domain:
           isDimensionalSeries && shouldShareSeriesDomain && seriesSet
             ? [...seriesSet]
@@ -786,7 +806,7 @@ export function generateLineChartVegaSpecV2(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xField.name,
+        title: getFieldLabel(xField),
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -796,12 +816,16 @@ export function generateLineChartVegaSpecV2(
                 labels: {
                   enter: {
                     text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`,
+                      signal: extractFormat
+                        ? `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`
+                        : `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
                     },
                   },
                   update: {
                     text: {
-                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`,
+                      signal: extractFormat
+                        ? `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value, '${extractFormat}')`
+                        : `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
                     },
                   },
                 },
@@ -825,9 +849,11 @@ export function generateLineChartVegaSpecV2(
   };
 
   // Legend
+  const legendHidden = settings.legend?.hide === true;
+  const legendPosition = settings.legend?.position || 'right';
   let maxCharCt = 0;
   let legendSize = 0;
-  if (hasSeries) {
+  if (hasSeries && !legendHidden) {
     // Get legend dimensions
     if (isDimensionalSeries) {
       // This is for global; how to do across nests for local?
@@ -861,12 +887,20 @@ export function generateLineChartVegaSpecV2(
       padding: 8,
       offset: 4,
     };
-    (spec.padding as VegaPadding).right = legendSize;
+    if (legendPosition === 'bottom') {
+      (spec.padding as VegaPadding).bottom =
+        ((spec.padding as VegaPadding).bottom || 0) + 60;
+    } else {
+      (spec.padding as VegaPadding).right = legendSize;
+    }
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
-      orient: 'right',
+      title: seriesField ? getFieldLabel(seriesField) : '',
+      orient: legendPosition,
+      ...(legendPosition === 'bottom'
+        ? {direction: 'horizontal' as const}
+        : {}),
       ...legendSettings,
       values:
         isDimensionalSeries && shouldShareSeriesDomain && seriesSet
