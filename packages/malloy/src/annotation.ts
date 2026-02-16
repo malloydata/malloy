@@ -1,51 +1,20 @@
-import type {TagError} from '@malloydata/malloy-tag';
-import {Tag, parseTag} from '@malloydata/malloy-tag';
+import type {Tag, TagError} from '@malloydata/malloy-tag';
+import {TagParser} from '@malloydata/malloy-tag';
 import type {Annotation, Note} from './model';
 import type {LogMessage} from './lang';
 
 export interface TagParseSpec {
   prefix?: RegExp;
-  extending?: Tag;
 }
 
-export function annotationToTaglines(
-  annote: Annotation | undefined,
-  prefix?: RegExp
-): string[] {
-  annote ||= {};
-  const tagLines = annote.inherits
-    ? annotationToTaglines(annote.inherits, prefix)
+/**
+ * Collect all matching Notes from an Annotation, walking the inherits
+ * chain. Returns notes in inheritance order (inherited first).
+ */
+function collectNotes(annote: Annotation, prefix?: RegExp): Note[] {
+  const inherited = annote.inherits
+    ? collectNotes(annote.inherits, prefix)
     : [];
-  function prefixed(na: Note[] | undefined): string[] {
-    const ret: string[] = [];
-    for (const n of na || []) {
-      if (prefix === undefined || n.text.match(prefix)) {
-        ret.push(n.text);
-      }
-    }
-    return ret;
-  }
-  return tagLines.concat(prefixed(annote.blockNotes), prefixed(annote.notes));
-}
-
-export interface MalloyTagParse {
-  tag: Tag;
-  log: LogMessage[];
-}
-
-export function annotationToTag(
-  annote: Annotation | undefined,
-  spec: TagParseSpec = {}
-): MalloyTagParse {
-  let extending = spec.extending || new Tag();
-  const prefix = spec.prefix || /^##? /;
-  annote ||= {};
-  const allErrs: LogMessage[] = [];
-  if (annote.inherits) {
-    const inherits = annotationToTag(annote.inherits, spec);
-    allErrs.push(...inherits.log);
-    extending = inherits.tag;
-  }
   const allNotes: Note[] = [];
   if (annote.blockNotes) {
     allNotes.push(...annote.blockNotes);
@@ -53,21 +22,48 @@ export function annotationToTag(
   if (annote.notes) {
     allNotes.push(...annote.notes);
   }
-  const matchingNotes: Note[] = [];
-  for (const note of allNotes) {
-    if (note.text.match(prefix)) {
-      matchingNotes.push(note);
-    }
+  if (prefix) {
+    const matching = allNotes.filter(note => note.text.match(prefix));
+    return inherited.concat(matching);
   }
-  for (const note of matchingNotes) {
-    const noteParse = parseTag(note.text, extending);
-    extending = noteParse.tag;
+  return inherited.concat(allNotes);
+}
+
+export function annotationToTaglines(
+  annote: Annotation | undefined,
+  prefix?: RegExp
+): string[] {
+  return collectNotes(annote || {}, prefix).map(n => n.text);
+}
+
+export interface MalloyTagParse {
+  tag: Tag;
+  log: LogMessage[];
+}
+
+// TODO: Error location mapping currently works by post-hoc mapping
+// parse errors back to source locations using the Note's `at` field.
+// The proper approach is to pass source location information into the
+// MOTLY parser session so that errors come back with correct locations
+// directly, eliminating the need for this remapping step.
+
+export function annotationToTag(
+  annote: Annotation | undefined,
+  spec: TagParseSpec = {}
+): MalloyTagParse {
+  const prefix = spec.prefix || /^##? /;
+  annote ||= {};
+  const notes = collectNotes(annote, prefix);
+  const allErrs: LogMessage[] = [];
+  const session = new TagParser();
+  for (const note of notes) {
+    const noteParse = session.parse(note.text);
     allErrs.push(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
     );
   }
-  // Validate references and add any warnings
-  const refErrors = extending.validateReferences();
+  const tag = session.finish();
+  const refErrors = tag.validateReferences();
   for (const refError of refErrors) {
     allErrs.push({
       code: 'tag-reference-error',
@@ -75,7 +71,7 @@ export function annotationToTag(
       message: refError,
     });
   }
-  return {tag: extending, log: allErrs};
+  return {tag, log: allErrs};
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {

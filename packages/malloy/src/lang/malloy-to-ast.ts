@@ -97,31 +97,37 @@ export class MalloyToAST
   implements MalloyParserVisitor<ast.MalloyElement>
 {
   readonly timer: Timer;
+  private compilerFlagSrc: string[];
+  private compilerFlagTag?: Tag;
+
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger,
-    public compilerFlags: Tag
+    compilerFlagSrc: string[]
   ) {
     super();
     this.timer = new Timer('generate_ast');
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-    for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = parseTag(flag, this.compilerFlags);
-      this.compilerFlags = withNewTag.tag;
-    }
+    this.compilerFlagSrc = [...DEFAULT_COMPILER_FLAGS, ...compilerFlagSrc];
     this.timer.contribute([parseCompilerFlagsTimer.stop()]);
+  }
+
+  getCompilerFlags(): Tag {
+    if (!this.compilerFlagTag) {
+      this.compilerFlagTag = parseTag(this.compilerFlagSrc).tag;
+    }
+    return this.compilerFlagTag;
   }
 
   public run(): {
     ast: ast.MalloyElement;
-    compilerFlags: Tag;
+    compilerFlagSrc: string[];
     timingInfo: Malloy.TimingInfo;
   } {
     const ast = this.visit(this.parseInfo.root);
-    const compilerFlags = this.compilerFlags;
     return {
       ast,
-      compilerFlags,
+      compilerFlagSrc: this.compilerFlagSrc,
       timingInfo: this.timer.stop(),
     };
   }
@@ -204,7 +210,7 @@ export class MalloyToAST
   }
 
   protected inExperiment(experimentId: string, cx: ParserRuleContext): boolean {
-    const experimental = this.compilerFlags.tag('experimental');
+    const experimental = this.getCompilerFlags().tag('experimental');
     if (
       experimental &&
       (experimental.bare() || experimental.has(experimentId))
@@ -1840,7 +1846,22 @@ export class MalloyToAST
 
   updateCompilerFlags(tags: ast.ModelAnnotation) {
     const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
+    const newLines = tags.getCompilerFlagLines();
+    if (newLines.length > 0) {
+      const oldLength = this.compilerFlagSrc.length;
+      this.compilerFlagSrc.push(...newLines);
+      const {tag, log} = parseTag(this.compilerFlagSrc);
+      this.compilerFlagTag = tag;
+      for (const err of log) {
+        if (err.line >= oldLength) {
+          this.msgLog.log({
+            code: 'tag-parse-error',
+            severity: 'error',
+            message: err.message,
+          });
+        }
+      }
+    }
     this.timer.contribute([parseCompilerFlagsTimer.stop()]);
   }
 

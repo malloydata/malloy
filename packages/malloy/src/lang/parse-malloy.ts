@@ -74,12 +74,13 @@ import {
   locationContainsPosition,
   rangeFromContext,
 } from './utils';
-import {Tag} from '@malloydata/malloy-tag';
+import type {Tag} from '@malloydata/malloy-tag';
+import {parseTag} from '@malloydata/malloy-tag';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import type {EventStream} from '../runtime_types';
-import {annotationToTag} from '../annotation';
+import {annotationToTaglines} from '../annotation';
 import {runMalloyParser} from './run-malloy-parser';
 import type {ParserRuleContext} from 'antlr4ts';
 import {Timer} from '../timing';
@@ -344,11 +345,11 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(
       parse,
       that.root.logger,
-      that.compilerFlags
+      that.compilerFlagSrc
     );
-    const {ast: newAST, compilerFlags, timingInfo} = secondPass.run();
+    const {ast: newAST, compilerFlagSrc, timingInfo} = secondPass.run();
     stepTimer.contribute([timingInfo]);
-    that.compilerFlags = compilerFlags;
+    that.compilerFlagSrc = compilerFlagSrc;
 
     if (newAST.elementType === 'unimplemented') {
       newAST.logError(
@@ -573,11 +574,12 @@ class TranslateStep implements TranslationStep {
     // begin with the compiler flags of the model we are extending
     if (extendingModel && !this.importedAnnotations) {
       const parseCompilerFlagsTimer = new Timer('parse_compiler_flags');
-      const tagParse = annotationToTag(extendingModel.annotation, {
-        prefix: /^##! /,
-      });
+      that.compilerFlagSrc = annotationToTaglines(
+        extendingModel.annotation,
+        /^##! /
+      );
+
       stepTimer.contribute([parseCompilerFlagsTimer.stop()]);
-      that.compilerFlags = tagParse.tag;
       this.importedAnnotations = true;
     }
 
@@ -647,7 +649,11 @@ export abstract class MalloyTranslation {
   modelDef: ModelDef;
   modelWasModified = false;
   imports: ImportLocation[] = [];
-  compilerFlags = new Tag();
+  compilerFlagSrc: string[] = [];
+
+  getCompilerFlags(): Tag {
+    return parseTag(this.compilerFlagSrc).tag;
+  }
 
   readonly parseStep: ParseStep;
   readonly modelAnnotationStep: ModelAnnotationStep;
@@ -968,7 +974,7 @@ export abstract class MalloyTranslation {
     if (this.allDialectsEnabled) {
       return true;
     }
-    const experimental = this.compilerFlags.tag('experimental');
+    const experimental = this.getCompilerFlags().tag('experimental');
     return (
       experimental !== undefined &&
       (experimental.bare() || experimental.has('dialect', dialect))

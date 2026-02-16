@@ -1,6 +1,8 @@
 # Malloy Tag Language (MOTLY)
 
-The Malloy Tag Language (also called MOTLY - Malloy Object Tagging Language) is a concise, readable syntax for adding structured metadata to Malloy objects through annotations. It's designed to work seamlessly with Malloy's annotation system and can also be used as a standalone configuration language.
+Malloy annotations use a configuration language called MOTLY. The MOTLY language specification and parser live in a separate repository (TODO: add link to MOTLY git repository when available).
+
+MOTLY is a concise, readable syntax for adding structured metadata to Malloy objects through annotations. It's designed to work seamlessly with Malloy's annotation system and can also be used as a standalone configuration language.
 
 ## Purpose
 
@@ -131,7 +133,7 @@ The expected workflow for using tag annotations:
 ## Implementation
 
 The `malloy-tag` package provides:
-- **Peggy-based parser** for tag language syntax
+- **MOTLY parser** via the `motly-ts` package
 - **Tag class** with methods for type-safe value access
 - **Type definitions** for parsed tag structures
 
@@ -161,9 +163,7 @@ tag.tag('server');          // Get nested Tag object
 
 ## Documentation
 
-For complete tag language syntax and examples, see:
-- `docs/motly.md` in this package (comprehensive reference)
-- https://docs.malloydata.dev/documentation/language/tags
+For complete MOTLY language syntax and examples, see the MOTLY repository (TODO: add link).
 
 ## Important Notes
 

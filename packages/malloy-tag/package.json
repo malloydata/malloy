@@ -4,6 +4,14 @@
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "!dist/**/*.spec.*",
+    "src",
+    "!src/**/*.spec.*"
+  ],
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
     "node": ">=20"
@@ -14,17 +22,16 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-peggy": "mkdir -p src/peggy/dist && peggy -o src/peggy/dist/peg-tag-parser.js src/peggy/malloy-tag.peggy",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped && rm -rf src/peggy/dist",
-    "build": "npm run build-peggy && tsc --build && npm run generate-flow",
+    "clean": "rm -rf dist && tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf @flowtyped",
+    "build": "tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "assert": "^2.0.0"
+    "assert": "^2.0.0",
+    "@malloydata/motly-ts-parser": "^0.0.1"
   },
   "devDependencies": {
-    "peggy": "^4.2.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2"
   }
