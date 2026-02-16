@@ -7,6 +7,7 @@ import {For, Show, createMemo, createSignal} from 'solid-js';
 import type {Cell, Field, RecordCell, NestCell, NestField} from '@/data_tree';
 import {renderNumberCell} from '@/component/render-numeric-field';
 import {NULL_SYMBOL} from '@/util';
+import {getFieldLabel} from '@/component/field-label-utils';
 import type {
   BigValueSettings,
   BigValueComparisonInfo,
@@ -59,23 +60,7 @@ interface DeltaResult {
   isNeutral: boolean;
 }
 
-/**
- * Convert snake_case to Title Case
- */
-function snakeToTitleCase(str: string): string {
-  return str
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
-/**
- * Get the display label for a field
- * Priority: # label annotation > snake_case conversion of field name
- */
-function getFieldLabel(field: Field): string {
-  return field.tag.text('label') || snakeToTitleCase(field.name);
-}
+// getFieldLabel imported from @/component/field-label-utils
 
 /**
  * Get the description text for a field

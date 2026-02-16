@@ -11,6 +11,7 @@ import {
   onCleanup,
 } from 'solid-js';
 import {getRangeSize} from '../util';
+import {getFieldLabel} from '@/component/field-label-utils';
 import {getTableLayout, adjustLayoutForPivots} from './table-layout';
 import {
   createTableStore,
@@ -141,8 +142,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     (fieldLayout.depth > 0 && isLast) ||
     (fieldLayout.depth === 0 && fieldLayout.field.renderAs() === 'table');
 
-  const customLabel = props.field.tag.text('label');
-  const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
+  const value = getFieldLabel(props.field).replace(/ /g, ' \u200b');
 
   return (
     <div
@@ -797,6 +797,7 @@ const MalloyTableRoot = (_props: {
               {virtualRow => (
                 <div
                   class="table-row"
+                  classList={{'row-even': virtualRow.index % 2 === 0}}
                   data-index={virtualRow.index}
                   data-row={JSON.stringify(getRowPath(virtualRow.index))}
                   ref={el =>
@@ -839,7 +840,11 @@ const MalloyTableRoot = (_props: {
         {/* rows */}
         <For each={data()}>
           {(row, idx) => (
-            <div class="table-row" data-row={JSON.stringify(getRowPath(idx()))}>
+            <div
+              class="table-row"
+              classList={{'row-even': idx() % 2 === 0}}
+              data-row={JSON.stringify(getRowPath(idx()))}
+            >
               <For each={visibleFields()}>
                 {field => (
                   <TableField

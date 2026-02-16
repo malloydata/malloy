@@ -18,6 +18,7 @@ import {
 import {getResultMetadata} from './render-result-metadata';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './render.css?raw';
+import darkModeStyles from './dark-mode.css?raw';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used as a directive in JSX
 import {resize} from './util';
 import {applyRenderer} from '@/component/renderer/apply-renderer';
@@ -70,6 +71,7 @@ export const useConfig = () => {
 
 export function MalloyRender(props: MalloyRenderProps) {
   MalloyViz.addStylesheet(styles);
+  MalloyViz.addStylesheet(darkModeStyles);
   const tableConfig: Accessor<TableConfig> = () =>
     Object.assign(
       {
@@ -209,6 +211,12 @@ export function MalloyRenderInner(props: {
     };
   };
 
+  const isDarkMode = () => {
+    const modelMode = tags().modelTheme?.text('mode');
+    const localMode = tags().localTheme?.text('mode');
+    return localMode === 'dark' || modelMode === 'dark';
+  };
+
   const style = () => {
     const baseStyles = generateThemeStyle(tags().modelTheme, tags().localTheme);
     const overrideStyles = Object.entries(metadata().styleOverrides)
@@ -252,6 +260,7 @@ export function MalloyRenderInner(props: {
   return (
     <div
       class="malloy-render"
+      classList={{'malloy-dark': isDarkMode()}}
       style={style()}
       use:resize={[parentSize, _setParentSize]}
     >
@@ -331,8 +340,78 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     localTheme,
     modelTheme
   );
+  const tableHeaderBackground = getThemeValue(
+    'tableHeaderBackground',
+    localTheme,
+    modelTheme
+  );
+  const tableRowAlternateBackground = getThemeValue(
+    'tableRowAlternateBackground',
+    localTheme,
+    modelTheme
+  );
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
   const background = getThemeValue('background', localTheme, modelTheme);
+
+  // Dashboard theme variables
+  const dashboardBg = getThemeValue('dashboardBg', localTheme, modelTheme);
+  const dashboardCardBg = getThemeValue(
+    'dashboardCardBg',
+    localTheme,
+    modelTheme
+  );
+  const dashboardCardRadius = getThemeValue(
+    'dashboardCardRadius',
+    localTheme,
+    modelTheme
+  );
+  const dashboardCardPadding = getThemeValue(
+    'dashboardCardPadding',
+    localTheme,
+    modelTheme
+  );
+  const dashboardTitleSize = getThemeValue(
+    'dashboardTitleSize',
+    localTheme,
+    modelTheme
+  );
+  const dashboardTitleWeight = getThemeValue(
+    'dashboardTitleWeight',
+    localTheme,
+    modelTheme
+  );
+  const dashboardTitleColor = getThemeValue(
+    'dashboardTitleColor',
+    localTheme,
+    modelTheme
+  );
+  const dashboardValueSize = getThemeValue(
+    'dashboardValueSize',
+    localTheme,
+    modelTheme
+  );
+
+  // Chart theme variables
+  const chartAxisLabelColor = getThemeValue(
+    'chartAxisLabelColor',
+    localTheme,
+    modelTheme
+  );
+  const chartAxisTitleColor = getThemeValue(
+    'chartAxisTitleColor',
+    localTheme,
+    modelTheme
+  );
+  const chartGridColor = getThemeValue(
+    'chartGridColor',
+    localTheme,
+    modelTheme
+  );
+  const chartBackground = getThemeValue(
+    'chartBackground',
+    localTheme,
+    modelTheme
+  );
 
   const css = `
     --malloy-render--table-row-height: ${tableRowHeight};
@@ -347,8 +426,21 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
     --malloy-render--table-gutter-size: ${tableGutterSize};
     --malloy-render--table-pinned-background: ${tablePinnedBackground};
     --malloy-render--table-pinned-border: ${tablePinnedBorder};
+    --malloy-render--table-header-background: ${tableHeaderBackground};
+    --malloy-render--table-row-alternate-background: ${tableRowAlternateBackground};
     --malloy-render--background: ${background};
-
+    --malloy-render--dashboard-bg: ${dashboardBg};
+    --malloy-render--dashboard-card-bg: ${dashboardCardBg};
+    --malloy-render--dashboard-card-radius: ${dashboardCardRadius};
+    --malloy-render--dashboard-card-padding: ${dashboardCardPadding};
+    --malloy-render--dashboard-title-size: ${dashboardTitleSize};
+    --malloy-render--dashboard-title-weight: ${dashboardTitleWeight};
+    --malloy-render--dashboard-title-color: ${dashboardTitleColor};
+    --malloy-render--dashboard-value-size: ${dashboardValueSize};
+    --malloy-render--chart-axis-label-color: ${chartAxisLabelColor};
+    --malloy-render--chart-axis-title-color: ${chartAxisTitleColor};
+    --malloy-render--chart-grid-color: ${chartGridColor};
+    --malloy-render--chart-background: ${chartBackground};
 `;
   return css;
 }

@@ -1,0 +1,78 @@
+/* Dark mode theme for Malloy Renderer */
+/* Apply via: .malloy-dark .malloy-render or .malloy-render.malloy-dark */
+
+.malloy-dark .malloy-render,
+.malloy-render.malloy-dark {
+  /* Table */
+  --malloy-theme--table-background: #1e1e20;
+  --malloy-theme--table-body-color: #d1d5db;
+  --malloy-theme--table-header-color: #b0b5be;
+  --malloy-theme--table-body-weight: 400;
+  --malloy-theme--table-border: 1px solid #2d3038;
+  --malloy-theme--table-pinned-background: #252628;
+  --malloy-theme--table-pinned-border: 1px solid #3a3d44;
+  --malloy-theme--table-header-background: #232427;
+  --malloy-theme--table-row-alternate-background: #232427;
+  --malloy-theme--background: #141416;
+
+  /* Dashboard */
+  --malloy-theme--dashboard-bg: #141416;
+  --malloy-theme--dashboard-card-bg: #1e1e20;
+  --malloy-theme--dashboard-title-color: #9da1aa;
+  --malloy-theme--dashboard-card-radius: 8px;
+  --malloy-theme--dashboard-card-padding: 20px;
+  --malloy-theme--dashboard-title-size: 14px;
+  --malloy-theme--dashboard-title-weight: 500;
+  --malloy-theme--dashboard-value-size: 28px;
+
+  /* Chart */
+  --malloy-theme--chart-background: #1e1e20;
+  --malloy-theme--chart-axis-label-color: #9da1aa;
+  --malloy-theme--chart-axis-title-color: #9da1aa;
+  --malloy-theme--chart-grid-color: #3a3d44;
+}
+
+/* Override dashboard-specific hardcoded values in dark mode */
+.malloy-dark .malloy-dashboard,
+.malloy-render.malloy-dark .malloy-dashboard {
+  background: var(--malloy-render--dashboard-bg, #141416);
+}
+
+.malloy-dark .malloy-dashboard .dashboard-row-header,
+.malloy-render.malloy-dark .malloy-dashboard .dashboard-row-header {
+  background: var(--malloy-render--dashboard-bg, #141416);
+}
+
+.malloy-dark .malloy-dashboard .dashboard-row-header-separator,
+.malloy-render.malloy-dark .malloy-dashboard .dashboard-row-header-separator {
+  background: #3a3d44;
+}
+
+.malloy-dark .malloy-dashboard .dashboard-item,
+.malloy-render.malloy-dark .malloy-dashboard .dashboard-item {
+  box-shadow:
+    rgba(0, 0, 0, 0.3) 0px 0px 0px 0px,
+    rgba(60, 63, 70, 0.5) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.2) 0px 1px 3px 0px,
+    rgba(0, 0, 0, 0.2) 0px 1px 2px -1px;
+}
+
+.malloy-dark .malloy-dashboard .dashboard-item:hover,
+.malloy-render.malloy-dark .malloy-dashboard .dashboard-item:hover {
+  box-shadow:
+    rgba(0, 0, 0, 0.3) 0px 0px 0px 0px,
+    rgba(60, 63, 70, 0.5) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.3) 0px 4px 6px -1px,
+    rgba(0, 0, 0, 0.2) 0px 2px 4px -2px;
+}
+
+/* Dark mode scrollbar */
+.malloy-dark .malloy-table.root::-webkit-scrollbar-thumb,
+.malloy-render.malloy-dark .malloy-table.root::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.malloy-dark .malloy-table.root::-webkit-scrollbar-thumb:hover,
+.malloy-render.malloy-dark .malloy-table.root::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

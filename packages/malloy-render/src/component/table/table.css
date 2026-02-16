@@ -43,20 +43,22 @@
 }
 
 .malloy-table.root::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-  background-color: #f1f1f1; /* This creates a visible track */
+  width: 8px;
+  height: 8px;
+  background-color: transparent;
 }
 
 .malloy-table.root::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 0;
+  background: transparent;
 }
 
 .malloy-table.root::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 6px;
-  border: 1px solid #f1f1f1; /* Creates separation from track */
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.malloy-table.root::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .malloy-table.root.full-width {
@@ -125,6 +127,7 @@
 .malloy-table .th.column-cell {
   font-weight: var(--malloy-render--table-header-weight);
   color: var(--malloy-render--table-header-color);
+  background: var(--malloy-render--table-header-background);
 }
 
 .malloy-table .column-cell.numeric {
@@ -166,6 +169,7 @@
 
 .malloy-table .cell-content.chart {
   padding-block: 0px;
+  overflow: visible;
 }
 
 .malloy-table .cell-content.chart svg {
@@ -211,7 +215,7 @@
 }
 
 .malloy-table .pinned-header.th {
-  background: var(--malloy-render--table-background);
+  background: var(--malloy-render--table-header-background);
   pointer-events: all;
 }
 
@@ -238,6 +242,10 @@
 /* TODO figure out better strategy for tweaking renderers inside table */
 .malloy-table .malloy-list {
   line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+}
+
+.malloy-table .table-row.row-even {
+  background: var(--malloy-render--table-row-alternate-background);
 }
 
 .malloy-table .td.highlight {
@@ -305,13 +313,13 @@
 }
 
 .malloy-table.transpose-table .transpose-column-header {
-  background: var(--malloy-render--table-background);
+  background: var(--malloy-render--table-header-background);
   font-weight: var(--malloy-render--table-header-weight);
   color: var(--malloy-render--table-header-color);
 }
 
 .malloy-table.transpose-table .transpose-row-header {
-  background: var(--malloy-render--table-background);
+  background: var(--malloy-render--table-header-background);
   font-weight: var(--malloy-render--table-header-weight);
   color: var(--malloy-render--table-header-color);
   text-align: right;

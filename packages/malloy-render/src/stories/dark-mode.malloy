@@ -1,0 +1,36 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  # theme.mode=dark
+  view: dark_table is {
+    select: *
+    limit: 1000
+  }
+
+  # theme.mode=dark
+  # dashboard
+  view: dark_dashboard is {
+    group_by: category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+    nest:
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  # theme.mode=dark
+  view: dark_nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest: by_brand is {
+      group_by: brand
+      # currency
+      aggregate: avg_retail is retail_price.avg()
+      limit: 5
+    }
+  }
+}

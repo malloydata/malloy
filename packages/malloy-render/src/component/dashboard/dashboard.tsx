@@ -13,6 +13,7 @@ import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './dashboard.css?raw';
 import {useConfig} from '../render';
+import {getFieldLabel} from '@/component/field-label-utils';
 
 function DashboardItem(props: {
   field: Field;
@@ -62,8 +63,7 @@ function DashboardItem(props: {
   if (rendering.renderAs === 'table' && props.maxTableHeight)
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
-  const customLabel = tag.text('label');
-  const title = customLabel ?? props.field.name;
+  const title = getFieldLabel(props.field);
 
   return (
     <div
@@ -178,7 +178,9 @@ export function Dashboard(props: {
                       <For each={dimensions()}>
                         {d => (
                           <div class="dashboard-dimension-wrapper">
-                            <div class="dashboard-dimension-name">{d.name}</div>
+                            <div class="dashboard-dimension-name">
+                              {getFieldLabel(d)}
+                            </div>
                             <div class="dashboard-dimension-value">
                               {
                                 applyRenderer({
@@ -226,7 +228,9 @@ export function Dashboard(props: {
                   <For each={dimensions()}>
                     {d => (
                       <div class="dashboard-dimension-wrapper">
-                        <div class="dashboard-dimension-name">{d.name}</div>
+                        <div class="dashboard-dimension-name">
+                          {getFieldLabel(d)}
+                        </div>
                         <div class="dashboard-dimension-value">
                           {
                             applyRenderer({

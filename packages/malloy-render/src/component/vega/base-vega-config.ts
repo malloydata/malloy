@@ -1,9 +1,16 @@
 import type {Config} from 'vega';
 
 export const grayMedium = '#727883';
-export const gridGray = '#E5E7EB';
+export const gridGray = '#EBEDF0';
 
-export const baseVegaConfig: () => Config = () => ({
+export interface VegaThemeColors {
+  background?: string;
+  axisLabelColor?: string;
+  axisTitleColor?: string;
+  gridColor?: string;
+}
+
+export const baseVegaConfig: (theme?: VegaThemeColors) => Config = theme => ({
   'range': {
     'category': [
       '#1877F2',
@@ -43,18 +50,20 @@ export const baseVegaConfig: () => Config = () => ({
     'ordinal': ['#05214D', '#083E89', '#1877F2', '#76B6FF', '#A8D1FF'],
     'ramp': ['#05214D', '#083E89', '#1877F2', '#76B6FF', '#A8D1FF'],
   },
+  'background': theme?.background || 'white',
   'axis': {
-    gridColor: gridGray,
-    tickColor: gridGray,
+    gridColor: theme?.gridColor || gridGray,
+    gridOpacity: 0.7,
+    tickColor: theme?.gridColor || gridGray,
     domain: false,
-    labelFont: 'Inter, sans-serif',
-    labelFontSize: 10,
+    labelFont: 'Inter, system-ui, sans-serif',
+    labelFontSize: 11,
     labelFontWeight: 'normal',
     labelPadding: 5,
-    labelColor: grayMedium,
-    titleColor: grayMedium,
-    titleFont: 'Inter, sans-serif',
-    titleFontSize: 10,
+    labelColor: theme?.axisLabelColor || grayMedium,
+    titleColor: theme?.axisTitleColor || grayMedium,
+    titleFont: 'Inter, system-ui, sans-serif',
+    titleFontSize: 11,
     titleFontWeight: 500,
   },
   'axisX': {
@@ -72,7 +81,7 @@ export const baseVegaConfig: () => Config = () => ({
   'signals': [
     {
       name: 'referenceLineFont',
-      value: 'Inter, sans-serif',
+      value: 'Inter, system-ui, sans-serif',
     },
   ],
 });

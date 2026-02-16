@@ -1,17 +1,16 @@
 import type {Meta} from '@storybook/html';
-import script from './themes.malloy?raw';
+import script from './dark-mode.malloy?raw';
 import {createLoader} from './util';
-import './themes.css';
 import {MalloyRenderer} from '../api/malloy-renderer';
+
 const meta: Meta = {
-  title: 'Malloy Next/Themes',
-  render: ({classes}, context) => {
+  title: 'Malloy Next/Dark Mode',
+  render: (_args, context) => {
     const parent = document.createElement('div');
     parent.style.height = 'calc(100vh - 40px)';
     parent.style.position = 'relative';
 
     const targetElement = document.createElement('div');
-    if (classes) targetElement.classList.add(classes);
     targetElement.style.height = '100%';
     targetElement.style.width = '100%';
     parent.appendChild(targetElement);
@@ -23,10 +22,8 @@ const meta: Meta = {
       },
     });
     viz.setResult(context.loaded['result']);
-    console.log('initial state', viz.getMetadata());
     viz.render(targetElement);
 
-    // copy to html test
     const button = document.createElement('button');
     button.innerHTML = 'Copy HTML';
     button.addEventListener('click', () => viz.copyToHTML());
@@ -42,25 +39,23 @@ const meta: Meta = {
 
 export default meta;
 
-export const ModelThemeOverride = {
+export const DarkTable = {
   args: {
     source: 'products',
-    view: 'records',
+    view: 'dark_table',
   },
 };
 
-export const ViewThemeOverride = {
+export const DarkDashboard = {
   args: {
     source: 'products',
-    view: 'records_override',
+    view: 'dark_dashboard',
   },
 };
 
-export const ViewThemeOverrideCSS = {
+export const DarkNested = {
   args: {
     source: 'products',
-    view: 'records_override',
-    classes: 'night',
+    view: 'dark_nested',
   },
 };
-
