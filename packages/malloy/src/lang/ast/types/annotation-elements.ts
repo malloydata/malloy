@@ -22,12 +22,11 @@
  */
 
 import type {Note} from '../../../model/malloy_types';
-import type {Tag} from '@malloydata/malloy-tag';
-import type {MessageLogger} from '../../parse-log';
 import type {Document, DocStatement} from './malloy-element';
 import {MalloyElement} from './malloy-element';
 import type {QueryPropertyInterface} from './query-property-interface';
-import {annotationToTag} from '../../../annotation';
+
+const COMPILER_FLAG_PREFIX = /^##! /;
 
 export class ObjectAnnotation
   extends MalloyElement
@@ -47,16 +46,10 @@ export class ObjectAnnotation
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
-  getCompilerFlags(existing: Tag, logTo: MessageLogger): Tag {
-    const tagParse = annotationToTag(
-      {notes: this.notes},
-      {
-        prefix: /^##! /,
-        extending: existing,
-      }
-    );
-    tagParse.log.forEach(err => logTo.log(err));
-    return tagParse.tag;
+  getCompilerFlagLines(): string[] {
+    return this.notes
+      .filter(note => note.text.match(COMPILER_FLAG_PREFIX))
+      .map(note => note.text);
   }
 
   execute(doc: Document): void {

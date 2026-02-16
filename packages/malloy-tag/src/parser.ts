@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  MOTLYError,
-  MOTLYNode,
-  MOTLYValue,
-} from '@malloydata/motly-ts-parser';
+import type {MOTLYError, MOTLYNode} from '@malloydata/motly-ts-parser';
 import {MOTLYSession} from '@malloydata/motly-ts-parser';
 import {Tag, RefTag} from './tags';
 import type {TagParse, TagError, Path} from './tags';
@@ -156,53 +152,14 @@ function hydrate(node: MOTLYNode, parent?: Tag): Tag {
 }
 
 /**
- * Convert a Tag tree into a MOTLYNode tree.
- */
-function dehydrate(tag: Tag): MOTLYNode {
-  if (tag instanceof RefTag) {
-    return {linkTo: tag.toRefString()};
-  }
-
-  const result: MOTLYValue = {};
-
-  if (tag.eq !== undefined) {
-    if (Array.isArray(tag.eq)) {
-      result.eq = tag.eq.map(el => dehydrate(el));
-    } else if (tag.eq instanceof Date) {
-      result.eq = new Date(tag.eq);
-    } else {
-      result.eq = tag.eq;
-    }
-  }
-
-  if (tag.properties !== undefined) {
-    result.properties = {};
-    for (const [key, val] of Object.entries(tag.properties)) {
-      result.properties[key] = dehydrate(val);
-    }
-  }
-
-  if (tag.deleted) {
-    result.deleted = true;
-  }
-
-  return result;
-}
-
-/**
  * Session-based parser for Malloy tag language. Create an instance,
  * call parse() for each line, then finish() to get the final Tag.
  */
 export class TagParser {
   private session: MOTLYSession;
 
-  constructor(extending?: Tag) {
+  constructor() {
     this.session = new MOTLYSession();
-    if (extending) {
-      (this.session as unknown as {value: MOTLYValue}).value = dehydrate(
-        extending
-      ) as MOTLYValue;
-    }
   }
 
   parse(source: string): TagParse {
@@ -226,12 +183,11 @@ export class TagParser {
  * @param source - A single string or array of strings to parse. If a string
  *   starts with #, all characters up to the first space are skipped.
  *   When an array is provided, strings are parsed sequentially and merged.
- * @param extending - A tag which this parse will extend
  * @returns TagParse with the resulting tag and any errors. For arrays,
  *   error line numbers indicate the index in the array where the error occurred.
  */
-export function parseTag(source: string | string[], extending?: Tag): TagParse {
-  const session = new TagParser(extending);
+export function parseTag(source: string | string[]): TagParse {
+  const session = new TagParser();
   if (typeof source === 'string') {
     return session.parse(source);
   }

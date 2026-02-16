@@ -5090,8 +5090,11 @@ export class ASTAnnotationList extends ASTListNode<
   }
 
   getTag(prefix: RegExp | string = '# '): Tag {
-    const extending = inheritedTag(this.getInheritedAnnotations());
-    return tagFromAnnotations(prefix, this.items, extending);
+    return tagFromAnnotations(
+      prefix,
+      this.items,
+      this.getInheritedAnnotations()
+    );
   }
 
   get annotations() {
@@ -5184,12 +5187,13 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 
   getTag(): Tag {
-    const inherited =
-      this.index === 0
-        ? inheritedTag(this.list.getInheritedAnnotations())
-        : this.list.index(this.index - 1).getTag();
-    const session = new TagParser(inherited);
-    session.parse(this.value);
+    const session = new TagParser();
+    for (const a of this.list.getInheritedAnnotations()) {
+      session.parse(a.value);
+    }
+    for (let i = 0; i <= this.index; i++) {
+      session.parse(this.list.index(i).value);
+    }
     return session.finish();
   }
 
@@ -5212,24 +5216,20 @@ export class ASTAnnotation extends ASTObjectNode<
   }
 }
 
-function inheritedTag(annotations: Malloy.Annotation[]): Tag {
-  const session = new TagParser();
-  for (const a of annotations) {
-    session.parse(a.value);
-  }
-  return session.finish();
-}
-
 function tagFromAnnotations(
   prefix: string | RegExp,
-  annotations: Malloy.Annotation[] = [],
-  inherited?: Tag
+  annotations: {value: string}[] = [],
+  inheritedAnnotations: Malloy.Annotation[] = []
 ) {
-  const lines = annotations.map(a => a.value);
-  const filteredLines = lines.filter(l =>
-    typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
-  );
-  const session = new TagParser(inherited);
+  const session = new TagParser();
+  for (const a of inheritedAnnotations) {
+    session.parse(a.value);
+  }
+  const filteredLines = annotations
+    .map(a => a.value)
+    .filter(l =>
+      typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
+    );
   for (const l of filteredLines) {
     session.parse(l);
   }

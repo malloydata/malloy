@@ -301,7 +301,7 @@ describe('document annotation', () => {
       ##! flagThis
     `;
     expect(m).toTranslate();
-    expect(m.translator.compilerFlags.has('flagThis')).toBeTruthy();
+    expect(m.translator.getCompilerFlags().has('flagThis')).toBeTruthy();
   });
   test('extended models inherit model flags', () => {
     const first = model`## from=1\n`;

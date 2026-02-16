@@ -327,7 +327,9 @@ export abstract class MalloyElement {
   }
 
   inExperiment(experimentId: string, silent = false) {
-    const experimental = this.translator()?.compilerFlags.tag('experimental');
+    const experimental = this.translator()
+      ?.getCompilerFlags()
+      .tag('experimental');
     const enabled =
       experimental && (experimental.bare() || experimental.has(experimentId));
     if (enabled) {

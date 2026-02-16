@@ -369,8 +369,7 @@ describe('Tag access', () => {
     expect(tag.text('s')).toBe('hello');
   });
   test('property access on existing tag (which does not yet have properties)', () => {
-    const parsePlot = parseTag('# plot');
-    const parsed = parseTag('# plot.x=2', parsePlot.tag);
+    const parsed = parseTag(['# plot', '# plot.x=2']);
     const allTags = parsed.tag;
     const plotTag = allTags.tag('plot');
     const xTag = plotTag!.tag('x');
