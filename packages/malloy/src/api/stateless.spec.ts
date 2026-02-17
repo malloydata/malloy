@@ -8,7 +8,6 @@
 import {parseTag} from '@malloydata/malloy-tag';
 import {compileModel, compileQuery, compileSource} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {extractMalloyObjectFromTag} from '../to_stable';
 
 type DeepPartial<T> = T extends object
   ? {
@@ -994,11 +993,11 @@ LIMIT 101
         };
         expect(result).toMatchObject(expected);
         const carrier = result.result?.schema.fields[0];
-        expect(drillExpressionFor(carrier)).toMatchObject({
-          kind: 'field_reference',
-          name: 'carrier',
-          path: ['dashboard'],
-        });
+        const carrierDrillTag = tagFor(carrier)?.tag('drill_expression');
+        expect(carrierDrillTag?.text('kind')).toBe('field_reference');
+        expect(carrierDrillTag?.text('name')).toBe('carrier');
+        const pathArray = carrierDrillTag?.tag('path')?.array();
+        expect(pathArray?.[0]?.text()).toBe('dashboard');
         const expression = result.result?.schema.fields[1];
         const expressionTag = tagFor(expression);
         expect(expressionTag?.text('drill_expression', 'code')).toBe('1');
@@ -1873,8 +1872,3 @@ function tagFor(field: HasAnnotations | undefined) {
   ).tag;
 }
 
-function drillExpressionFor(field: HasAnnotations | undefined) {
-  const tag = tagFor(field)?.tag('drill_expression');
-  if (tag === undefined) return undefined;
-  return extractMalloyObjectFromTag(tag, 'Expression');
-}
