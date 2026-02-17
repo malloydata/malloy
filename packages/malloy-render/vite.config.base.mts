@@ -14,9 +14,7 @@ export default defineConfig({
       insertTypesEntry: true,
     }),
   ],
-  optimizeDeps: {
-    include: ['@malloydata/malloy'],
-  },
+  optimizeDeps: {},
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

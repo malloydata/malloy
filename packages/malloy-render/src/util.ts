@@ -7,7 +7,15 @@
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {TagParser} from '@malloydata/malloy-tag';
-import {isTimestampUnit, isDateUnit as _isDateUnit} from '@malloydata/malloy';
+// Copied from malloy core to avoid depending on it for simple type guards.
+type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
+function isDateUnit(str: string): str is DateUnit {
+  return ['day', 'week', 'month', 'quarter', 'year'].includes(str);
+}
+type TimestampUnit = DateUnit | 'hour' | 'minute' | 'second';
+function isTimestampUnit(s: string): s is TimestampUnit {
+  return isDateUnit(s) || ['hour', 'minute', 'second'].includes(s);
+}
 import {DurationUnit, isDurationUnit} from './html/data_styles';
 import {timeToString as htmlTimeToString} from './html/utils';
 import {format} from 'ssf';

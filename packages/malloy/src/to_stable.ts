@@ -558,8 +558,13 @@ function convertJoinType(type: JoinType): Malloy.Relationship {
  * E.g. `writeMalloyObjectToTag(tag, ['expr'], 'Expression', {kind: 'field_reference', name: 'carrier'})`
  *
  * produces the tag `#(malloy) expr { kind = field_reference name = carrier }`
+ *
+ * Note: The inverse function `extractMalloyObjectFromTag` lives in the
+ * renderer (malloy-render/src/data_tree/utils.ts) since that is its only
+ * consumer. These two functions are kept separate to avoid the renderer
+ * depending on the malloy core package for deserialization.
  */
-export function writeMalloyObjectToTag(
+function writeMalloyObjectToTag(
   tag: Tag,
   path: (string | number)[],
   obj: unknown,
@@ -628,71 +633,7 @@ export function writeMalloyObjectToTag(
   }
 }
 
-/**
- * Extracts a Malloy interface object from a tag at a given path; the inverse of `writeMalloyObjectToTag`.
- */
-export function extractMalloyObjectFromTag(tag: Tag, type: string): unknown {
-  if (type === 'string') {
-    return tag.text();
-  } else if (type === 'number') {
-    return tag.numeric();
-  } else if (type === 'boolean') {
-    return tag.text() === 'true';
-  }
-  const typeDef = Malloy.MALLOY_INTERFACE_TYPES[type];
-  if (typeDef === undefined) {
-    throw new Error(`Unknown Malloy interface type ${type}`);
-  }
-  if (typeDef.type === 'enum') {
-    const value = tag.text();
-    if (value === undefined) {
-      throw new Error(`Missing value for enum ${type}`);
-    }
-    if (value in typeDef.values) {
-      return value;
-    }
-    throw new Error(`Unknown value ${value} for enum ${type}`);
-  } else if (typeDef.type === 'struct') {
-    const result: Record<string, unknown> = {};
-    for (const [key, type] of Object.entries(typeDef.fields)) {
-      const valueTag = tag.tag(key);
-      if (valueTag === undefined) {
-        if (type.optional) continue;
-        else {
-          throw new Error(`Missing value for key ${key} of type ${type}`);
-        }
-      }
-      if (type.array) {
-        const arr: unknown[] = [];
-        const values = valueTag.array();
-        if (values === undefined) {
-          throw new Error(`Missing array value for key ${key} of type ${type}`);
-        }
-        for (const value of values) {
-          arr.push(extractMalloyObjectFromTag(value, type.type));
-        }
-        result[key] = arr;
-      } else {
-        const value = extractMalloyObjectFromTag(valueTag, type.type);
-        if (value !== undefined && value !== null) {
-          result[key] = value;
-        }
-      }
-    }
-    return result;
-  } /* (typeDef.type === 'union') */ else {
-    const kind = tag.text('kind');
-    if (kind === undefined) {
-      throw new Error(`Missing kind for union ${type}`);
-    }
-    const unionType = typeDef.options[kind];
-    if (unionType === undefined) {
-      throw new Error(`Unknown kind ${kind} for union ${type}`);
-    }
-    const value = extractMalloyObjectFromTag(tag, unionType) as Record<
-      string,
-      unknown
-    >;
-    return {kind, ...value};
-  }
-}
+// Note: The inverse function `extractMalloyObjectFromTag` lives in the
+// renderer (malloy-render/src/data_tree/utils.ts) since that is its only
+// consumer. These two functions are kept separate to avoid the renderer
+// depending on the malloy core package for deserialization.
