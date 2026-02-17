@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-tag",
-  "version": "0.0.340",
+  "version": "0.0.341",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,8 +28,8 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "assert": "^2.0.0",
-    "@malloydata/motly-ts-parser": "^0.0.1"
+    "@malloydata/motly-ts-parser": "^0.0.1",
+    "assert": "^2.0.0"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",
