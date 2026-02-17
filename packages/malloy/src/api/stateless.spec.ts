@@ -1871,4 +1871,3 @@ function tagFor(field: HasAnnotations | undefined) {
       .map(a => a.value) ?? []
   ).tag;
 }
-
