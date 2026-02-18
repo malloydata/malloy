@@ -62,7 +62,7 @@ registerConnectionType('duckdb', {
     {
       name: 'motherDuckToken',
       displayName: 'MotherDuck Token',
-      type: 'password',
+      type: 'secret',
       optional: true,
     },
     {

@@ -10,6 +10,7 @@ import {
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
+  resolveSecret,
 } from './registry';
 import type {ConnectionConfig, Connection} from './types';
 
@@ -48,6 +49,25 @@ describe('connection registry', () => {
       factory: (config: ConnectionConfig) =>
         mockConnection(config.name, config),
       properties: [],
+    });
+    registerConnectionType('secretdb', {
+      factory: (config: ConnectionConfig) =>
+        mockConnection(config.name, config),
+      properties: [
+        {name: 'host', displayName: 'Host', type: 'string', optional: true},
+        {
+          name: 'password',
+          displayName: 'Password',
+          type: 'password',
+          optional: true,
+        },
+        {
+          name: 'token',
+          displayName: 'Token',
+          type: 'secret',
+          optional: true,
+        },
+      ],
     });
   });
 
@@ -201,5 +221,123 @@ describe('connection registry', () => {
     const conn1 = await lookup.lookupConnection('mydb');
     const conn2 = await lookup.lookupConnection('mydb');
     expect(conn1).toBe(conn2);
+  });
+
+  describe('resolveSecret', () => {
+    test('passes through plain strings', () => {
+      expect(resolveSecret('my-token')).toBe('my-token');
+    });
+
+    test('resolves env references', () => {
+      process.env['TEST_SECRET_VALUE'] = 'from-env';
+      try {
+        expect(resolveSecret({env: 'TEST_SECRET_VALUE'})).toBe('from-env');
+      } finally {
+        delete process.env['TEST_SECRET_VALUE'];
+      }
+    });
+
+    test('returns undefined for missing env var', () => {
+      delete process.env['NONEXISTENT_SECRET_VAR'];
+      expect(resolveSecret({env: 'NONEXISTENT_SECRET_VAR'})).toBeUndefined();
+    });
+
+    test('returns undefined for non-string/non-object values', () => {
+      expect(resolveSecret(42)).toBeUndefined();
+      expect(resolveSecret(true)).toBeUndefined();
+      expect(resolveSecret(null)).toBeUndefined();
+      expect(resolveSecret(undefined)).toBeUndefined();
+    });
+
+    test('returns undefined for unrecognized object shapes', () => {
+      expect(resolveSecret({vault: 'path/to/secret'})).toBeUndefined();
+    });
+  });
+
+  describe('secret resolution in createConnectionsFromConfig', () => {
+    test('resolves password env reference', async () => {
+      process.env['TEST_DB_PASSWORD'] = 'secret-pw';
+      try {
+        const config = {
+          connections: {
+            mydb: {is: 'secretdb', password: {env: 'TEST_DB_PASSWORD'}},
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        expect(conn._config['password']).toBe('secret-pw');
+      } finally {
+        delete process.env['TEST_DB_PASSWORD'];
+      }
+    });
+
+    test('resolves secret env reference', async () => {
+      process.env['TEST_API_TOKEN'] = 'my-token';
+      try {
+        const config = {
+          connections: {
+            mydb: {is: 'secretdb', token: {env: 'TEST_API_TOKEN'}},
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        expect(conn._config['token']).toBe('my-token');
+      } finally {
+        delete process.env['TEST_API_TOKEN'];
+      }
+    });
+
+    test('passes through plain string for sensitive fields', async () => {
+      const config = {
+        connections: {
+          mydb: {is: 'secretdb', password: 'plain-pw', token: 'plain-tok'},
+        },
+      };
+      const lookup = createConnectionsFromConfig(config);
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      expect(conn._config['password']).toBe('plain-pw');
+      expect(conn._config['token']).toBe('plain-tok');
+    });
+
+    test('omits sensitive field when env var is missing', async () => {
+      delete process.env['MISSING_VAR'];
+      const config = {
+        connections: {
+          mydb: {is: 'secretdb', password: {env: 'MISSING_VAR'}},
+        },
+      };
+      const lookup = createConnectionsFromConfig(config);
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      expect(conn._config['password']).toBeUndefined();
+    });
+
+    test('does not resolve env references on non-sensitive fields', async () => {
+      process.env['TEST_HOST_VAR'] = 'resolved-host';
+      try {
+        const config = {
+          connections: {
+            mydb: {
+              is: 'secretdb' as const,
+              host: {env: 'TEST_HOST_VAR'} as unknown as string,
+            },
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        expect(conn._config['host']).toBeUndefined();
+      } finally {
+        delete process.env['TEST_HOST_VAR'];
+      }
+    });
   });
 });

@@ -18,6 +18,7 @@ export type ConnectionPropertyType =
   | 'number'
   | 'boolean'
   | 'password'
+  | 'secret'
   | 'file'
   | 'text';
 
@@ -44,11 +45,30 @@ export interface ConnectionTypeDef {
 }
 
 /**
+ * A sensitive value in a config file. Either a plain string (already resolved)
+ * or an environment variable reference.
+ */
+export type SecretValue = string | {env: string};
+
+/**
+ * Resolve a sensitive value. Plain strings pass through, {env: "X"} looks up
+ * process.env["X"], anything else returns undefined.
+ */
+export function resolveSecret(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (value !== null && typeof value === 'object' && 'env' in value) {
+    const envName = (value as {env: unknown}).env;
+    if (typeof envName === 'string') return process.env[envName];
+  }
+  return undefined;
+}
+
+/**
  * A single connection entry in a JSON config.
  */
 export interface ConnectionConfigEntry {
   is: string;
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | SecretValue | undefined;
 }
 
 /**
@@ -160,11 +180,24 @@ export function createConnectionsFromConfig(
         );
       }
 
+      const sensitiveProps = new Set(
+        typeDef.properties
+          .filter(p => p.type === 'password' || p.type === 'secret')
+          .map(p => p.name)
+      );
+
       const connConfig: ConnectionConfig = {name: connectionName};
       for (const [key, value] of Object.entries(entry)) {
         if (key === 'is') continue;
         if (value !== undefined) {
-          connConfig[key] = value;
+          if (sensitiveProps.has(key)) {
+            const resolved = resolveSecret(value);
+            if (resolved !== undefined) {
+              connConfig[key] = resolved;
+            }
+          } else if (typeof value !== 'object') {
+            connConfig[key] = value;
+          }
         }
       }
 
