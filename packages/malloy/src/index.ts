@@ -244,6 +244,7 @@ export {
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
+  resolveSecret,
 } from './connection/registry';
 export type {
   ConnectionTypeFactory,
@@ -252,6 +253,7 @@ export type {
   ConnectionTypeDef,
   ConnectionConfigEntry,
   ConnectionsConfig,
+  SecretValue,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
