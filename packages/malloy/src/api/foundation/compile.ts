@@ -19,6 +19,7 @@ import type {
 import {
   registerConnectionType as _registerConnectionType,
   getConnectionProperties as _getConnectionProperties,
+  getConnectionTypeDisplayName as _getConnectionTypeDisplayName,
   getRegisteredConnectionTypes as _getRegisteredConnectionTypes,
   readConnectionsConfig as _readConnectionsConfig,
   writeConnectionsConfig as _writeConnectionsConfig,
@@ -142,6 +143,13 @@ export class Malloy {
     typeName: string
   ): ConnectionPropertyDefinition[] | undefined {
     return _getConnectionProperties(typeName);
+  }
+
+  /**
+   * Get the human-readable display name for a registered connection type.
+   */
+  static getConnectionTypeDisplayName(typeName: string): string | undefined {
+    return _getConnectionTypeDisplayName(typeName);
   }
 
   /**

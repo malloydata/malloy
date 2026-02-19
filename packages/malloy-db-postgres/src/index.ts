@@ -31,7 +31,8 @@ import type {ConnectionConfig} from '@malloydata/malloy';
 import {PostgresConnection} from './postgres_connection';
 
 registerConnectionType('postgres', {
-  factory: (config: ConnectionConfig) => {
+  displayName: 'PostgreSQL',
+  factory: async (config: ConnectionConfig) => {
     return new PostgresConnection(config);
   },
   properties: [
