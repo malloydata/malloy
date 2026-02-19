@@ -92,7 +92,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
         let nextFieldUsage: FieldUsage[] | undefined = undefined;
-        const wild = this.expandedWild[name];
+        const wild = this.expandedWild.get(name);
         if (wild) {
           indexFields.push({type: 'fieldref', path: wild.path, at: wild.at});
           fieldUsage.push({path: wild.path});
@@ -162,7 +162,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         name,
       ]);
       if (this.entry(indexName)) {
-        const conflict = this.expandedWild[indexName].path?.join('.');
+        const conflict = this.expandedWild.get(indexName)?.path?.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
@@ -180,11 +180,11 @@ export class IndexFieldSpace extends QueryOperationSpace {
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           expandEntries.push({name: indexName, entry});
-          this.expandedWild[indexName] = {
+          this.expandedWild.set(indexName, {
             path: joinPath.concat(name),
             entry,
             at: wild.location,
-          };
+          });
         }
       }
     }

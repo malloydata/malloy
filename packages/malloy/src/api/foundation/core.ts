@@ -45,6 +45,7 @@ import {
   isRecordOrRepeatedRecord,
   isPersistableSourceDef,
   getCompiledSQL,
+  safeRecordGet,
 } from '../../model';
 import {mkModelDef} from '../../model/utils';
 import type {Dialect} from '../../dialect';
@@ -997,6 +998,7 @@ export class ExploreField extends Explore {
 export class Model implements Taggable {
   private readonly references: ReferenceList;
   private _queryModel?: QueryModel;
+  private readonly contentsMap: Map<string, NamedModelObject>;
 
   constructor(
     private modelDef: ModelDef,
@@ -1009,6 +1011,12 @@ export class Model implements Taggable {
       modelDef.references ?? []
     );
     this._queryModel = existingQueryModel;
+    this.contentsMap = new Map(Object.entries(modelDef.contents));
+  }
+
+  /** Safe lookup in model contents by name. */
+  getContent(name: string): NamedModelObject | undefined {
+    return this.contentsMap.get(name);
   }
 
   get queryModel(): QueryModel {
@@ -1070,7 +1078,7 @@ export class Model implements Taggable {
    * @return A prepared query.
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
-    const query = this.modelDef.contents[queryName];
+    const query = this.getContent(queryName);
     if (query?.type === 'query') {
       return new PreparedQuery(query, this, this.problems, queryName);
     }
@@ -1129,7 +1137,7 @@ export class Model implements Taggable {
    * @return An `Explore`.
    */
   public getExploreByName(name: string): Explore {
-    const struct = this.modelDef.contents[name];
+    const struct = this.getContent(name);
     if (struct && isSourceDef(struct)) {
       return new Explore(struct);
     }
@@ -1495,9 +1503,9 @@ export class PreparedQuery implements Taggable {
     const sourceRef = this._query.structRef;
     const source =
       typeof sourceRef === 'string'
-        ? this._modelDef.contents[sourceRef]
+        ? this._model.getContent(sourceRef)
         : sourceRef;
-    if (!isSourceDef(source)) {
+    if (source === undefined || !isSourceDef(source)) {
       throw new Error('Invalid source for query');
     }
     return source.dialect;
@@ -1608,7 +1616,7 @@ export class PreparedResult implements Taggable {
 
   public get sourceExplore(): Explore | undefined {
     const name = this.inner.sourceExplore;
-    const explore = this.modelDef.contents[name];
+    const explore = safeRecordGet(this.modelDef.contents, name);
     if (explore && isSourceDef(explore)) {
       return new Explore(explore);
     }

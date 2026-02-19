@@ -13,7 +13,7 @@ import type {
   QueryRunStats,
   PrepareResultOptions,
 } from '../../model';
-import {isSourceDef} from '../../model';
+import {isSourceDef, mkSafeRecord} from '../../model';
 import {getDialect} from '../../dialect';
 import type {Dialect} from '../../dialect';
 import type {RunSQLOptions} from '../../run_sql_options';
@@ -814,7 +814,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         const connectionNames = new Set(
           Object.values(plan.sources).map(s => s.connectionName)
         );
-        connectionDigests = {};
+        connectionDigests = mkSafeRecord();
         for (const connName of connectionNames) {
           const conn =
             await this.runtime.connections.lookupConnection(connName);

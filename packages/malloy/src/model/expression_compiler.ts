@@ -10,6 +10,7 @@ import {
   exprHasE,
   expressionIsAggregate,
   hasExpression,
+  safeRecordGet,
 } from './malloy_types';
 import type {
   Expr,
@@ -326,8 +327,8 @@ function generateAppliedFilter(
   if (filterExpr.node === 'parameter') {
     const name = filterExpr.path[0];
     context.eventStream?.emit('source-argument-compiled', {name});
-    const argument = context.arguments()[name];
-    if (argument.value) {
+    const argument = safeRecordGet(context.arguments(), name);
+    if (argument?.value) {
       filterExpr = argument.value;
     } else {
       throw new Error(
@@ -792,8 +793,8 @@ export function generateParameterFragment(
 ): string {
   const name = expr.path[0];
   context.eventStream?.emit('source-argument-compiled', {name});
-  const argument = context.arguments()[name];
-  if (argument.value) {
+  const argument = safeRecordGet(context.arguments(), name);
+  if (argument?.value) {
     return exprToSQL(resultSet, context, argument.value, state);
   }
   throw new Error(`Can't generate SQL, no value for ${expr.path}`);

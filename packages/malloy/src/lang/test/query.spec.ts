@@ -2858,4 +2858,19 @@ describe('query:', () => {
       );
     });
   });
+  describe('Object.prototype field name collisions', () => {
+    test('constructor as view group_by alias', () => {
+      expect(`
+        source: x is a extend {
+          view: v is {
+            group_by: constructor is astr
+            aggregate: acount is count()
+          }
+        }
+      `).toTranslate();
+    });
+    test('constructor as query name', () => {
+      expect('query: constructor is a -> { select: * }').toTranslate();
+    });
+  });
 });

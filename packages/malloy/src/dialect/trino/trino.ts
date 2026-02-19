@@ -41,6 +41,7 @@ import {
   TD,
   isAtomic,
   isRepeatedRecord,
+  safeRecordGet,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
@@ -755,7 +756,9 @@ ${indent(sql)}
     for (const f of lit.typeDef.fields) {
       if (isAtomic(f)) {
         const name = f.as ?? f.name;
-        rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
+        rowVals.push(
+          safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal'
+        );
         const elType = this.malloyTypeToSQLType(f);
         rowTypes.push(`${this.sqlMaybeQuoteIdentifier(name)} ${elType}`);
       }

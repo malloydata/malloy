@@ -33,6 +33,7 @@ import {
   isSourceDef,
   isPersistableSourceDef,
   isSourceRegistryReference,
+  safeRecordGet,
 } from './malloy_types';
 
 export function mkSourceID(name: string, url: string | undefined): SourceID {
@@ -187,7 +188,7 @@ export function resolveSourceID(
   if (!value) return undefined;
 
   if (isSourceRegistryReference(value.entry)) {
-    const obj = modelDef.contents[value.entry.name];
+    const obj = safeRecordGet(modelDef.contents, value.entry.name);
     return obj && isSourceDef(obj) && isPersistableSourceDef(obj)
       ? obj
       : undefined;

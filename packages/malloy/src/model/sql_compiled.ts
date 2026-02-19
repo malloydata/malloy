@@ -10,7 +10,7 @@ import type {
   PersistableSourceDef,
   Query,
 } from './malloy_types';
-import {isSegmentSQL, isSegmentSource} from './malloy_types';
+import {isSegmentSQL, isSegmentSource, safeRecordGet} from './malloy_types';
 import {mkBuildID} from './source_def_utils';
 
 /**
@@ -90,7 +90,7 @@ function expandPersistableSource(
 
   // Try manifest lookup if we have the required info
   if (buildManifest && connectionDigests) {
-    const connDigest = connectionDigests[source.connection];
+    const connDigest = safeRecordGet(connectionDigests, source.connection);
     if (connDigest) {
       // Get the SQL for this source to compute BuildID (no opts = full SQL)
       const sql = getSourceSQL(source, quoteTablePath, compileQuery);

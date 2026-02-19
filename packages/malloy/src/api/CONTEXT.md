@@ -114,9 +114,11 @@ The fluent object-oriented API. The primary way to work with Malloy programmatic
 | Class | Purpose |
 |-------|---------|
 | `Runtime` | Entry point. Holds connections + URL reader. Creates `ModelMaterializer`s. |
-| `Model` | Wraps `IR.ModelDef`. Provides access to explores, queries, preparedQuery. |
-| `PreparedQuery` | Wraps `IR.Query` + `IR.ModelDef`. Defers SQL generation until needed. |
+| `Model` | Wraps `IR.ModelDef`. Provides access to explores, queries, preparedQuery. Use `getContent(name)` for safe contents lookup (backed by a `Map`, immune to prototype pollution). |
+| `Explore` | Wraps `IR.SourceDef`. Provides field introspection and schema access. |
+| `PreparedQuery` | Wraps `IR.Query` + a `Model` reference. Defers SQL generation until needed. |
 | `PreparedResult` | Holds generated SQL + schema. Ready to execute. |
+| `PersistSource` | Wraps a persistable source definition. Provides SQL compilation for persistent sources. |
 | `Result` | Query result with data + schema + metadata. |
 
 ### Flow: Load Model → Get SQL for Named Query

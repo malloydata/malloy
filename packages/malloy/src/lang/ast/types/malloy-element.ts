@@ -511,7 +511,7 @@ function annotationID(a: Annotation): string {
 export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
   globalNameSpace: NameSpace = new GlobalNameSpace();
-  documentModel: Record<string, ModelEntry> = {};
+  documentModel = new Map<string, ModelEntry>();
   documentSrcRegistry: Record<SourceID, SourceRegistryValue> = {};
   queryList: Query[] = [];
   statements: DocStatementList;
@@ -530,7 +530,7 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.didInitModel) {
       return;
     }
-    this.documentModel = {};
+    this.documentModel = new Map<string, ModelEntry>();
     this.documentSrcRegistry = {};
     this.queryList = [];
     if (extendingModelDef) {
@@ -603,17 +603,17 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }
-    for (const entry in this.documentModel) {
-      const entryDef = this.documentModel[entry].entry;
+    for (const [name, modelEntry] of this.documentModel) {
+      const entryDef = modelEntry.entry;
       if (isSourceDef(entryDef) || entryDef.type === 'query') {
-        if (this.documentModel[entry].exported) {
-          def.exports.push(entry);
+        if (modelEntry.exported) {
+          def.exports.push(name);
         }
         const newEntry = {...entryDef};
         if (newEntry.modelAnnotation === undefined && def.annotation) {
           newEntry.modelAnnotation = def.annotation;
         }
-        def.contents[entry] = newEntry;
+        def.contents[name] = newEntry;
       }
     }
     // Copy the accumulated sourceRegistry
@@ -621,8 +621,8 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  getEntry(str: string): ModelEntry {
-    return this.globalNameSpace.getEntry(str) ?? this.documentModel[str];
+  getEntry(str: string): ModelEntry | undefined {
+    return this.globalNameSpace.getEntry(str) ?? this.documentModel.get(str);
   }
 
   setEntry(str: string, ent: ModelEntry): void {
@@ -642,7 +642,7 @@ export class Document extends MalloyElement implements NameSpace {
       this.modelWasModified = true;
     }
 
-    this.documentModel[str] = ent;
+    this.documentModel.set(str, ent);
 
     // Maintain sourceRegistry for persistable sources with sourceID
     if (

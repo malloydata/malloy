@@ -26,6 +26,7 @@ import type {
   Parameter,
   SourceDef,
 } from '../../../model/malloy_types';
+import {mkSafeRecord} from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import type {HasParameter} from '../parameters/has-parameter';
 import type {ParameterSpace} from '../field-space/parameter-space';
@@ -47,7 +48,7 @@ export abstract class Source extends MalloyElement {
     pList: HasParameter[] | undefined
   ): Record<string, Parameter> | undefined {
     if (pList === undefined) return undefined;
-    const parameters = {};
+    const parameters = mkSafeRecord<Parameter>();
     for (const hasP of pList) {
       const pVal = hasP.parameter();
       parameters[pVal.name] = pVal;

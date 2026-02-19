@@ -46,6 +46,7 @@ import {
   isBaseTable,
   expressionIsAnalytic,
   isTemporalType,
+  safeRecordGet,
 } from './malloy_types';
 import {
   AndChain,
@@ -792,7 +793,10 @@ export class QueryQuery extends QueryField {
 
         // Check manifest for this source
         if (buildManifest && connectionDigests) {
-          const connDigest = connectionDigests[qs.structDef.connection];
+          const connDigest = safeRecordGet(
+            connectionDigests,
+            qs.structDef.connection
+          );
           if (connDigest) {
             // Compile with empty opts to get manifest-ignorant SQL for BuildID
             const fullRet = this.compileQueryToStages(

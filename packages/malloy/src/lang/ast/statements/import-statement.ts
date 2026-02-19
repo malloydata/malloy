@@ -29,6 +29,7 @@ import {
   isSourceDef,
   isPersistableSourceDef,
   isSourceRegistryReference,
+  safeRecordGet,
 } from '../../../model/malloy_types';
 import {registerSource} from '../../../model/source_def_utils';
 import {findPersistentDependencies} from '../../../model/persist_utils';
@@ -120,7 +121,7 @@ export class ImportStatement
           for (const importOne of this.list) {
             const dstName = importOne.text;
             const srcName = importOne.from ? importOne.from.text : dstName;
-            if (importedModel.contents[srcName] === undefined) {
+            if (safeRecordGet(importedModel.contents, srcName) === undefined) {
               importOne.logError(
                 'selective-import-not-found',
                 `Cannot find '${srcName}', not imported`
@@ -139,7 +140,9 @@ export class ImportStatement
             const picked = explicitImport[srcName];
             const dstName = picked || srcName;
             if (importAll || picked) {
-              const importMe = {...importedModel.contents[srcName]};
+              const importMe = {
+                ...safeRecordGet(importedModel.contents, srcName)!,
+              };
               importMe.as = dstName;
               doc.setEntry(dstName, {entry: importMe, exported: false});
 
@@ -163,7 +166,10 @@ export class ImportStatement
                 // (parent can't resolve by name since it's not in namespace)
                 let entry = value.entry;
                 if (isSourceRegistryReference(entry)) {
-                  const resolved = importedModel.contents[entry.name];
+                  const resolved = safeRecordGet(
+                    importedModel.contents,
+                    entry.name
+                  );
                   if (
                     resolved &&
                     isSourceDef(resolved) &&

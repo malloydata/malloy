@@ -1242,4 +1242,40 @@ describe('source:', () => {
       }
     });
   });
+  describe('Object.prototype field name collisions', () => {
+    test('constructor as source name', () => {
+      expect('source: constructor is a').toTranslate();
+    });
+    test('toString as dimension alias', () => {
+      expect(`
+        source: x is a extend {
+          dimension: toString is astr
+        }
+      `).toTranslate();
+    });
+    test('constructor as dimension alias', () => {
+      expect(`
+        source: x is a extend {
+          dimension: constructor is astr
+        }
+      `).toTranslate();
+    });
+    test('constructor as measure alias', () => {
+      expect(`
+        source: x is a extend {
+          measure: constructor is count()
+        }
+      `).toTranslate();
+    });
+    test('constructor as join name', () => {
+      expect(`
+        source: x is a extend {
+          join_one: constructor is a on astr = constructor.astr
+        }
+      `).toTranslate();
+    });
+    test('toString as source name', () => {
+      expect('source: toString is a').toTranslate();
+    });
+  });
 });

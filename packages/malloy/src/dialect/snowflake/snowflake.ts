@@ -43,6 +43,7 @@ import {
   isAtomic,
   isRepeatedRecord,
   isBasicArray,
+  safeRecordGet,
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
@@ -662,7 +663,8 @@ ${indent(sql)}
     for (const f of lit.typeDef.fields) {
       const name = f.as ?? f.name;
       const propName = `'${name}'`;
-      const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
+      const propVal =
+        safeRecordGet(lit.kids, name)?.sql ?? 'internal-error-record-literal';
       rowVals.push(`${propName},${propVal}`);
     }
     return `OBJECT_CONSTRUCT_KEEP_NULL(${rowVals.join(',')})`;
