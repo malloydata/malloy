@@ -68,10 +68,10 @@ export abstract class QueryOperationSpace
 {
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
-  expandedWild: Record<
+  expandedWild = new Map<
     string,
     {path: string[]; entry: SpaceEntry; at: model.DocumentLocation}
-  > = {};
+  >();
   drillDimensions: {
     nestPath: string[];
     firstDrill: MalloyElement;
@@ -182,7 +182,7 @@ export abstract class QueryOperationSpace
         continue;
       }
       if (this.entry(name)) {
-        const conflict = this.expandedWild[name]?.path.join('.');
+        const conflict = this.expandedWild.get(name)?.path.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
@@ -199,11 +199,11 @@ export abstract class QueryOperationSpace
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           expandEntries.push({name, entry});
-          this.expandedWild[name] = {
+          this.expandedWild.set(name, {
             path: joinPath.concat(name),
             entry,
             at: wild.location,
-          };
+          });
         }
       }
     }
@@ -408,7 +408,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         }
       } else {
         const {name, field} = user;
-        const wildPath = this.expandedWild[name];
+        const wildPath = this.expandedWild.get(name);
         if (wildPath) {
           const typeDesc = wildPath.entry.typeDesc();
           fields.push({

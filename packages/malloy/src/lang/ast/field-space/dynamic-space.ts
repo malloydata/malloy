@@ -22,6 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
+import {mkSafeRecord} from '../../../model/malloy_types';
 import {nameFromDef} from '../../field-utils';
 import type {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
@@ -102,7 +103,7 @@ export abstract class DynamicSpace
     if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
-      const parameters = {};
+      const parameters = mkSafeRecord<model.Parameter>();
       for (const [name, entry] of this.entries()) {
         if (entry instanceof SpaceParam) {
           parameters[name] = entry.parameter();

@@ -143,14 +143,41 @@ Information needed to process query results.
 - Annotations and tags
 - Required for proper result interpretation and visualization
 
+## SafeRecord Pattern
+
+IR types use `Record<string, V>` (aliased as `SafeRecord<V>`) as string-keyed maps in several places — notably `ModelDef.contents`, `SourceDef.parameters`, `SourceDef.arguments`, and `CompiledQuery.connectionDigests`.
+
+**The problem:** Direct bracket access (`record[key]`) is **unsafe** because `Object.prototype` property names like `"constructor"`, `"toString"`, `"valueOf"` return inherited functions instead of `undefined`. A user naming a source `constructor` would collide with the prototype.
+
+**The solution:** Three utilities in `malloy_types.ts`:
+
+- **`SafeRecord<V>`** — Type alias for `Record<string, V>`. Documents that the record requires safe access patterns.
+- **`safeRecordGet(record, key)`** — Returns `record[key]` only if it's an own property; otherwise `undefined`. All read sites must use this (or a `Map`-based lookup) instead of raw bracket access.
+- **`mkSafeRecord<V>()`** — Creates a null-prototype object (`Object.create(null)`) typed as `SafeRecord<V>`. All initialization sites that create empty SafeRecords should use this so that even raw bracket reads won't hit prototype properties.
+
 ## File Organization
 
 ```
 src/model/
-├── query_query.ts           # Root compilation orchestrator
-├── expression_compiler.ts   # Expression tree → SQL expressions
-├── malloy_types.ts          # IR type definitions (consumed by compiler)
-└── [other compilation utilities]
+├── malloy_types.ts               # IR type definitions, SafeRecord utilities
+├── query_query.ts                # Root compilation orchestrator (QueryQuery)
+├── query_node.ts                 # Query node types used during compilation
+├── query_model.ts                # QueryModel interface (entry point from API)
+├── query_model_impl.ts           # QueryModel implementation
+├── query_model_contract.ts       # Contract types for QueryModel
+├── expression_compiler.ts        # Expression tree → SQL expressions
+├── constant_expression_compiler.ts # Constant expression evaluation
+├── filter_compilers.ts           # Filter compilation
+├── stage_writer.ts               # SQL stage/CTE writing
+├── sql_block.ts                  # SQL block handling
+├── sql_compiled.ts               # Compiled SQL output types
+├── field_instance.ts             # Field instances during compilation
+├── join_instance.ts              # Join instances during compilation
+├── persist_utils.ts              # Persistence/build-plan utilities
+├── source_def_utils.ts           # SourceDef manipulation utilities
+├── utils.ts                      # General compilation utilities (mkModelDef, etc.)
+├── index.ts                      # Barrel exports
+└── test/                         # Compiler tests
 ```
 
 ## Important Notes

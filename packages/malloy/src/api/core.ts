@@ -18,7 +18,13 @@ import type {
   StructDef,
   TableSourceDef,
 } from '../model';
-import {isSourceDef, mkFieldDef, QueryModel, refIsStructDef} from '../model';
+import {
+  isSourceDef,
+  mkFieldDef,
+  QueryModel,
+  refIsStructDef,
+  safeRecordGet,
+} from '../model';
 import {modelDefToModelInfo, writeLiteralToTag} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import type {SQLSourceRequest} from '../lang/translate-response';
@@ -628,7 +634,11 @@ export function statedCompileQuery(
         if (refIsStructDef(query.structRef)) {
           source = query.structRef;
         } else {
-          source = result.modelDef.contents[query.structRef] as StructDef;
+          // TODO: `as StructDef` cast is pre-existing type-safety issue — contents holds NamedModelObject
+          source = safeRecordGet(
+            result.modelDef.contents,
+            query.structRef
+          ) as StructDef;
         }
       }
 

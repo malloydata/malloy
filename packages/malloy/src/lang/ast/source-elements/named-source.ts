@@ -31,7 +31,9 @@ import type {
 import {
   isBasicAtomicType,
   isSourceDef,
+  mkSafeRecord,
   paramHasValue,
+  safeRecordGet,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
@@ -162,7 +164,10 @@ export class NamedSource extends Source {
     parametersIn: Record<string, Parameter> | undefined,
     parametersOut: HasParameter[] | undefined
   ): Record<string, Parameter> {
-    const outArguments = {...this.sourceArguments};
+    const outArguments = Object.assign(
+      mkSafeRecord<Argument>(),
+      this.sourceArguments
+    );
     const passedNames = new Set();
     for (const argument of this.args ?? []) {
       const id =
@@ -186,7 +191,9 @@ export class NamedSource extends Source {
         continue;
       }
       passedNames.add(name);
-      const parameter = (parametersIn ?? {})[name];
+      const parameter = parametersIn
+        ? safeRecordGet(parametersIn, name)
+        : undefined;
       if (!parameter) {
         id.logError(
           'source-parameter-not-found',
@@ -271,7 +278,7 @@ export class NamedSource extends Source {
       return notFound;
     }
 
-    const outParameters = {};
+    const outParameters = mkSafeRecord<Parameter>();
     for (const parameter of pList ?? []) {
       const compiled = parameter.parameter();
       outParameters[compiled.name] = compiled;
@@ -285,9 +292,11 @@ export class NamedSource extends Source {
     for (const paramName in base.parameters) {
       if (
         !(paramName in outArguments) &&
-        paramHasValue(base.parameters[paramName])
+        paramHasValue(safeRecordGet(base.parameters, paramName)!)
       ) {
-        outArguments[paramName] = {...base.parameters[paramName]};
+        outArguments[paramName] = {
+          ...safeRecordGet(base.parameters, paramName)!,
+        };
       }
     }
 

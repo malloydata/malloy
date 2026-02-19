@@ -28,6 +28,29 @@ import type {EventStream} from '../runtime_types';
 // clang-format off
 
 /**
+ * A Record<string, V> used as a string-keyed map in serializable IR types.
+ * Direct bracket access (record[key]) is UNSAFE because Object.prototype
+ * property names like 'constructor', 'toString', 'valueOf' return inherited
+ * functions instead of undefined. Use safeRecordGet() to read entries.
+ */
+export type SafeRecord<V> = Record<string, V>;
+
+const hasOwn = Object.prototype.hasOwnProperty;
+
+/** Safely read from a SafeRecord. Returns undefined for non-own properties. */
+export function safeRecordGet<V>(
+  record: SafeRecord<V>,
+  key: string
+): V | undefined {
+  return hasOwn.call(record, key) ? record[key] : undefined;
+}
+
+/** Create an empty null-prototype SafeRecord (immune to prototype pollution). */
+export function mkSafeRecord<V>(): SafeRecord<V> {
+  return Object.create(null) as SafeRecord<V>;
+}
+
+/**
  * Field computations are compiled into an expression tree of "Expr"
  * type nodes. Each node is one of these three interfaces. The
  * final type "Expr" is a union type of all known nodes, so
@@ -408,7 +431,7 @@ export interface BooleanLiteralNode extends ExprLeaf {
 
 export interface RecordLiteralNode extends ExprWithKids {
   node: 'recordLiteral';
-  kids: Record<string, Expr>;
+  kids: SafeRecord<Expr>;
   typeDef: RecordTypeDef;
 }
 
@@ -1130,7 +1153,7 @@ export function refIsStructDef(ref: StructRef): ref is SourceDef {
 
 export type InvokedStructRef = {
   structRef: StructRef;
-  sourceArguments?: Record<string, Argument>;
+  sourceArguments?: SafeRecord<Argument>;
 };
 
 export interface Filtered {
@@ -1150,7 +1173,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
-  sourceArguments?: Record<string, Argument>;
+  sourceArguments?: SafeRecord<Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
   compositeResolvedSourceDef?: SourceDef;
@@ -1336,8 +1359,8 @@ export interface PartitionCompositeDesc {
 }
 
 interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
-  arguments?: Record<string, Argument>;
-  parameters?: Record<string, Parameter>;
+  arguments?: SafeRecord<Argument>;
+  parameters?: SafeRecord<Parameter>;
   queryTimezone?: string;
   connection: string;
   primaryKey?: PrimaryKeyRef;
@@ -1814,7 +1837,7 @@ export interface DependencyTree {
 export interface ModelDef {
   name: string;
   exports: string[];
-  contents: Record<string, NamedModelObject>;
+  contents: SafeRecord<NamedModelObject>;
   /**
    * Registry mapping sourceID to source definitions for build graph construction.
    * For sources in namespace: maps to SourceRegistryReference (look up in contents)
@@ -1830,8 +1853,8 @@ export interface ModelDef {
 }
 
 /** Very common record type */
-export type NamedSourceDefs = Record<string, SourceDef>;
-export type NamedModelObjects = Record<string, NamedModelObject>;
+export type NamedSourceDefs = SafeRecord<SourceDef>;
+export type NamedModelObjects = SafeRecord<NamedModelObject>;
 
 /** Malloy source annotations attached to objects */
 export interface Annotation {
@@ -1891,7 +1914,7 @@ export type MalloyQueryData = {
 export interface DrillSource {
   sourceExplore: string;
   sourceFilters?: FilterCondition[];
-  sourceArguments?: Record<string, Argument>;
+  sourceArguments?: SafeRecord<Argument>;
 }
 
 export interface CompiledQuery extends DrillSource {
@@ -1988,7 +2011,7 @@ export interface PrepareResultOptions {
   /** Manifest of built tables (BuildID → entry), the build cache */
   buildManifest?: BuildManifest;
   /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
-  connectionDigests?: Record<string, string>;
+  connectionDigests?: SafeRecord<string>;
   /** If true, throw when a persist query's digest is not in the manifest */
   strictPersist?: boolean;
 }

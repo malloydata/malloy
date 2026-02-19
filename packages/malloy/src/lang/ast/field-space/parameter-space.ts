@@ -20,11 +20,11 @@ import {AbstractParameter} from '../types/space-param';
 export class ParameterSpace implements FieldSpace {
   readonly type = 'fieldSpace';
 
-  private readonly _map: Record<string, SpaceEntry>;
+  private readonly _map: Map<string, SpaceEntry>;
   constructor(parameters: HasParameter[]) {
-    this._map = {};
+    this._map = new Map<string, SpaceEntry>();
     for (const parameter of parameters) {
-      this._map[parameter.name] = new AbstractParameter(parameter);
+      this._map.set(parameter.name, new AbstractParameter(parameter));
     }
   }
 
@@ -37,7 +37,7 @@ export class ParameterSpace implements FieldSpace {
   }
 
   entry(name: string): SpaceEntry | undefined {
-    return this._map[name];
+    return this._map.get(name);
   }
 
   lookup(symbol: FieldName[]): LookupResult {
@@ -81,7 +81,7 @@ export class ParameterSpace implements FieldSpace {
   }
 
   entries(): [string, SpaceEntry][] {
-    return Object.entries(this._map);
+    return [...this._map.entries()];
   }
 
   dialectName() {

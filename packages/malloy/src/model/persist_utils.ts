@@ -17,6 +17,7 @@ import {
   isPersistableSourceDef,
   isJoined,
   isSegmentSource,
+  safeRecordGet,
 } from './malloy_types';
 import {resolveSourceID} from './source_def_utils';
 import {annotationToTag} from '../annotation';
@@ -29,7 +30,7 @@ function resolveSource(
   modelDef: ModelDef,
   name: string
 ): SourceDef | undefined {
-  const obj = modelDef.contents[name];
+  const obj = safeRecordGet(modelDef.contents, name);
   return obj && isSourceDef(obj) ? obj : undefined;
 }
 

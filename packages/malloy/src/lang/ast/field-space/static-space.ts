@@ -30,7 +30,12 @@ import type {
   JoinFieldDef,
   AccessModifierLabel,
 } from '../../../model/malloy_types';
-import {isJoined, isTurtle, isSourceDef} from '../../../model/malloy_types';
+import {
+  isJoined,
+  isTurtle,
+  isSourceDef,
+  mkSafeRecord,
+} from '../../../model/malloy_types';
 
 import type {SpaceEntry} from '../types/space-entry';
 import type {LookupResult} from '../types/lookup-result';
@@ -46,11 +51,9 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ColumnSpaceField} from './column-space-field';
 import {IRViewField} from './ir-view-field';
 
-type FieldMap = Record<string, SpaceEntry>;
-
 export class StaticSpace implements FieldSpace {
   readonly type = 'fieldSpace';
-  private memoMap?: FieldMap;
+  private memoMap?: Map<string, SpaceEntry>;
   protected fromStruct: StructDef;
 
   constructor(
@@ -90,20 +93,20 @@ export class StaticSpace implements FieldSpace {
     return new ColumnSpaceField(from);
   }
 
-  private get map(): FieldMap {
+  private get map(): Map<string, SpaceEntry> {
     if (this.memoMap === undefined) {
-      this.memoMap = {};
+      this.memoMap = new Map<string, SpaceEntry>();
       for (const f of this.fromStruct.fields) {
         const name = f.as || f.name;
-        this.memoMap[name] = this.defToSpaceField(f);
+        this.memoMap.set(name, this.defToSpaceField(f));
       }
       if (isSourceDef(this.fromStruct)) {
         if (this.fromStruct.parameters) {
           for (const [paramName, paramDef] of Object.entries(
             this.fromStruct.parameters
           )) {
-            if (!(paramName in this.memoMap)) {
-              this.memoMap[paramName] = new DefinedParameter(paramDef);
+            if (!this.memoMap.has(paramName)) {
+              this.memoMap.set(paramName, new DefinedParameter(paramDef));
             }
           }
         }
@@ -117,24 +120,24 @@ export class StaticSpace implements FieldSpace {
   }
 
   protected dropEntries(): void {
-    this.memoMap = {};
+    this.memoMap = new Map<string, SpaceEntry>();
   }
 
   protected dropEntry(name: string): void {
-    delete this.map[name];
+    this.map.delete(name);
   }
 
   // TODO this was protected
   entry(name: string): SpaceEntry | undefined {
-    return this.map[name];
+    return this.map.get(name);
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
-    this.map[name] = value;
+    this.map.set(name, value);
   }
 
   entries(): [string, SpaceEntry][] {
-    return Object.entries(this.map);
+    return [...this.map.entries()];
   }
 
   structDef(): StructDef {
@@ -144,7 +147,7 @@ export class StaticSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     const ret = {...this.fromStruct};
     if (isSourceDef(ret)) {
-      ret.parameters = {};
+      ret.parameters = mkSafeRecord();
     }
     ret.fields = [];
     return ret;

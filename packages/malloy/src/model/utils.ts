@@ -36,6 +36,7 @@ import {
   exprHasKids,
   fieldIsIntrinsic,
   getIdentifier,
+  mkSafeRecord,
 } from './malloy_types';
 import type {DialectFieldList} from '../dialect';
 
@@ -314,7 +315,7 @@ export function mkModelDef(name: string): ModelDef {
   return {
     name,
     exports: [],
-    contents: {},
+    contents: mkSafeRecord(),
     sourceRegistry: {},
     queryList: [],
     dependencies: {},

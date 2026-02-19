@@ -52,6 +52,23 @@ describe('misc tests for regressions that have no better home', () => {
       expect(nestedField.queryTimezone).toBeDefined();
     }
   });
+
+  describe('Object.prototype field name collisions', () => {
+    test('source named constructor with a query', async () => {
+      await expect(`
+        source: constructor is duckdb.table('malloytest.flights')
+        run: constructor -> { group_by: carrier; limit: 1 }
+      `).toMatchResult(testModel, {});
+    });
+
+    test('dimension named constructor in group_by', async () => {
+      await expect(`
+        run: duckdb.table('malloytest.flights') extend {
+          dimension: constructor is carrier
+        } -> { group_by: constructor; limit: 1 }
+      `).toMatchResult(testModel, {});
+    });
+  });
 });
 
 afterAll(async () => {
