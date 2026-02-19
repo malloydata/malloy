@@ -245,6 +245,7 @@ Do not include AI attribution (e.g., "Generated with Claude Code", "Co-Authored-
 For deeper context on specific subsystems, see:
 - [packages/malloy/CONTEXT.md](packages/malloy/CONTEXT.md) - Core language package (translator and compiler)
 - [packages/malloy/src/api/CONTEXT.md](packages/malloy/src/api/CONTEXT.md) - API layers (Foundation, Stateless, Sessioned, Async)
+- [packages/malloy/src/connection/CONTEXT.md](packages/malloy/src/connection/CONTEXT.md) - Connection registry, config format, backend properties
 - [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md) - Tag language for annotation parsing
 - [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md) - Data visualization and rendering
 - [test/CONTEXT.md](test/CONTEXT.md) - Test organization and infrastructure

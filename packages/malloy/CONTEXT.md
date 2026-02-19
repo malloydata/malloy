@@ -12,7 +12,7 @@ packages/malloy/
 │   ├── dialect/           # Database-specific SQL generation
 │   ├── api/               # API layers (see src/api/CONTEXT.md)
 │   │   └── foundation/    # Public API classes
-│   └── connection/        # Database connection abstractions
+│   └── connection/        # Connection registry (see src/connection/CONTEXT.md)
 ```
 
 ## Two-Phase Architecture
@@ -54,5 +54,6 @@ For detailed information about the compiler, see [src/model/CONTEXT.md](src/mode
 
 For deeper details on specific subsystems:
 - [src/api/CONTEXT.md](src/api/CONTEXT.md) - API layers and public API classes (Model, PreparedQuery, Runtime, Materializers)
+- [src/connection/CONTEXT.md](src/connection/CONTEXT.md) - Connection registry, config file format, per-backend properties
 - [src/lang/CONTEXT.md](src/lang/CONTEXT.md) - Translator architecture (grammar, AST, IR generation)
 - [src/model/CONTEXT.md](src/model/CONTEXT.md) - Compiler architecture (SQL generation, expression compilation)
