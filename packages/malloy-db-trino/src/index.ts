@@ -77,7 +77,8 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
 ];
 
 registerConnectionType('trino', {
-  factory: (config: ConnectionConfig) => {
+  displayName: 'Trino',
+  factory: async (config: ConnectionConfig) => {
     const {name, trinoConfig} = configToTrinoConfig(config);
     return new TrinoConnection(name, undefined, trinoConfig);
   },
@@ -85,7 +86,8 @@ registerConnectionType('trino', {
 });
 
 registerConnectionType('presto', {
-  factory: (config: ConnectionConfig) => {
+  displayName: 'Presto',
+  factory: async (config: ConnectionConfig) => {
     const {name, trinoConfig} = configToTrinoConfig(config);
     return new PrestoConnection(name, undefined, trinoConfig);
   },

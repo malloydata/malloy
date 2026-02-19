@@ -8,7 +8,9 @@ import type {Connection, ConnectionConfig, LookupConnection} from './types';
 /**
  * A factory function that creates a Connection from a config object.
  */
-export type ConnectionTypeFactory = (config: ConnectionConfig) => Connection;
+export type ConnectionTypeFactory = (
+  config: ConnectionConfig
+) => Promise<Connection>;
 
 /**
  * The type of a connection property value.
@@ -40,27 +42,34 @@ export interface ConnectionPropertyDefinition {
  * A connection type definition: factory plus property metadata.
  */
 export interface ConnectionTypeDef {
+  displayName: string;
   factory: ConnectionTypeFactory;
   properties: ConnectionPropertyDefinition[];
 }
 
 /**
- * A sensitive value in a config file. Either a plain string (already resolved)
- * or an environment variable reference.
+ * An environment variable reference in a config file.
  */
-export type SecretValue = string | {env: string};
+export type ValueRef = {env: string};
 
 /**
- * Resolve a sensitive value. Plain strings pass through, {env: "X"} looks up
- * process.env["X"], anything else returns undefined.
+ * The type of a config property value: a literal, an env reference, or undefined.
  */
-export function resolveSecret(value: unknown): string | undefined {
-  if (typeof value === 'string') return value;
-  if (value !== null && typeof value === 'object' && 'env' in value) {
-    const envName = (value as {env: unknown}).env;
-    if (typeof envName === 'string') return process.env[envName];
-  }
-  return undefined;
+export type ConfigValue = string | number | boolean | ValueRef | undefined;
+
+/**
+ * Type guard for ValueRef.
+ */
+export function isValueRef(value: ConfigValue): value is ValueRef {
+  return typeof value === 'object' && value !== null && 'env' in value;
+}
+
+/**
+ * Resolve a ValueRef to a string by looking up the environment variable.
+ * Returns undefined if the env var is not set.
+ */
+export function resolveValue(vr: ValueRef): string | undefined {
+  return process.env[vr.env];
 }
 
 /**
@@ -68,7 +77,7 @@ export function resolveSecret(value: unknown): string | undefined {
  */
 export interface ConnectionConfigEntry {
   is: string;
-  [key: string]: string | number | boolean | SecretValue | undefined;
+  [key: string]: ConfigValue;
 }
 
 /**
@@ -104,6 +113,18 @@ export function getConnectionProperties(
   typeName: string
 ): ConnectionPropertyDefinition[] | undefined {
   return registry.get(typeName)?.properties;
+}
+
+/**
+ * Get the display name for a registered connection type.
+ *
+ * @param typeName The connection type name.
+ * @returns The human-readable display name, or undefined if the type is not registered.
+ */
+export function getConnectionTypeDisplayName(
+  typeName: string
+): string | undefined {
+  return registry.get(typeName)?.displayName;
 }
 
 /**
@@ -180,28 +201,22 @@ export function createConnectionsFromConfig(
         );
       }
 
-      const sensitiveProps = new Set(
-        typeDef.properties
-          .filter(p => p.type === 'password' || p.type === 'secret')
-          .map(p => p.name)
-      );
-
       const connConfig: ConnectionConfig = {name: connectionName};
       for (const [key, value] of Object.entries(entry)) {
         if (key === 'is') continue;
         if (value !== undefined) {
-          if (sensitiveProps.has(key)) {
-            const resolved = resolveSecret(value);
+          if (isValueRef(value)) {
+            const resolved = resolveValue(value);
             if (resolved !== undefined) {
               connConfig[key] = resolved;
             }
-          } else if (typeof value !== 'object') {
+          } else {
             connConfig[key] = value;
           }
         }
       }
 
-      const connection = typeDef.factory(connConfig);
+      const connection = await typeDef.factory(connConfig);
       cache.set(connectionName, connection);
       return connection;
     },

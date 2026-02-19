@@ -28,7 +28,8 @@ import type {ConnectionConfig} from '@malloydata/malloy';
 import {BigQueryConnection} from './bigquery_connection';
 
 registerConnectionType('bigquery', {
-  factory: (config: ConnectionConfig) => {
+  displayName: 'BigQuery',
+  factory: async (config: ConnectionConfig) => {
     return new BigQueryConnection(config);
   },
   properties: [

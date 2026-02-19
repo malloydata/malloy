@@ -12,7 +12,8 @@ import type {ConnectionConfig} from '@malloydata/malloy';
 import {MySQLConnection} from './mysql_connection';
 
 registerConnectionType('mysql', {
-  factory: (config: ConnectionConfig) => {
+  displayName: 'MySQL',
+  factory: async (config: ConnectionConfig) => {
     return new MySQLConnection(config.name, {
       host: typeof config['host'] === 'string' ? config['host'] : undefined,
       port: typeof config['port'] === 'number' ? config['port'] : undefined,

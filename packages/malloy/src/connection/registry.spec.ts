@@ -6,11 +6,12 @@
 import {
   registerConnectionType,
   getConnectionProperties,
+  getConnectionTypeDisplayName,
   getRegisteredConnectionTypes,
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
-  resolveSecret,
+  resolveValue,
 } from './registry';
 import type {ConnectionConfig, Connection} from './types';
 
@@ -38,7 +39,8 @@ describe('connection registry', () => {
   beforeEach(() => {
     // Register mock types for testing
     registerConnectionType('mockdb', {
-      factory: (config: ConnectionConfig) =>
+      displayName: 'MockDB',
+      factory: async (config: ConnectionConfig) =>
         mockConnection(config.name, config),
       properties: [
         {name: 'host', displayName: 'Host', type: 'string', optional: true},
@@ -46,12 +48,14 @@ describe('connection registry', () => {
       ],
     });
     registerConnectionType('mockdb2', {
-      factory: (config: ConnectionConfig) =>
+      displayName: 'MockDB 2',
+      factory: async (config: ConnectionConfig) =>
         mockConnection(config.name, config),
       properties: [],
     });
     registerConnectionType('secretdb', {
-      factory: (config: ConnectionConfig) =>
+      displayName: 'SecretDB',
+      factory: async (config: ConnectionConfig) =>
         mockConnection(config.name, config),
       properties: [
         {name: 'host', displayName: 'Host', type: 'string', optional: true},
@@ -83,6 +87,15 @@ describe('connection registry', () => {
 
   test('getConnectionProperties returns undefined for unknown type', () => {
     expect(getConnectionProperties('nonexistent')).toBeUndefined();
+  });
+
+  test('getConnectionTypeDisplayName returns display name for registered type', () => {
+    expect(getConnectionTypeDisplayName('mockdb')).toBe('MockDB');
+    expect(getConnectionTypeDisplayName('mockdb2')).toBe('MockDB 2');
+  });
+
+  test('getConnectionTypeDisplayName returns undefined for unknown type', () => {
+    expect(getConnectionTypeDisplayName('nonexistent')).toBeUndefined();
   });
 
   test('getRegisteredConnectionTypes returns registered type names', () => {
@@ -223,15 +236,11 @@ describe('connection registry', () => {
     expect(conn1).toBe(conn2);
   });
 
-  describe('resolveSecret', () => {
-    test('passes through plain strings', () => {
-      expect(resolveSecret('my-token')).toBe('my-token');
-    });
-
+  describe('resolveValue', () => {
     test('resolves env references', () => {
       process.env['TEST_SECRET_VALUE'] = 'from-env';
       try {
-        expect(resolveSecret({env: 'TEST_SECRET_VALUE'})).toBe('from-env');
+        expect(resolveValue({env: 'TEST_SECRET_VALUE'})).toBe('from-env');
       } finally {
         delete process.env['TEST_SECRET_VALUE'];
       }
@@ -239,23 +248,12 @@ describe('connection registry', () => {
 
     test('returns undefined for missing env var', () => {
       delete process.env['NONEXISTENT_SECRET_VAR'];
-      expect(resolveSecret({env: 'NONEXISTENT_SECRET_VAR'})).toBeUndefined();
-    });
-
-    test('returns undefined for non-string/non-object values', () => {
-      expect(resolveSecret(42)).toBeUndefined();
-      expect(resolveSecret(true)).toBeUndefined();
-      expect(resolveSecret(null)).toBeUndefined();
-      expect(resolveSecret(undefined)).toBeUndefined();
-    });
-
-    test('returns undefined for unrecognized object shapes', () => {
-      expect(resolveSecret({vault: 'path/to/secret'})).toBeUndefined();
+      expect(resolveValue({env: 'NONEXISTENT_SECRET_VAR'})).toBeUndefined();
     });
   });
 
-  describe('secret resolution in createConnectionsFromConfig', () => {
-    test('resolves password env reference', async () => {
+  describe('env resolution in createConnectionsFromConfig', () => {
+    test('resolves env reference on password field', async () => {
       process.env['TEST_DB_PASSWORD'] = 'secret-pw';
       try {
         const config = {
@@ -273,7 +271,7 @@ describe('connection registry', () => {
       }
     });
 
-    test('resolves secret env reference', async () => {
+    test('resolves env reference on secret field', async () => {
       process.env['TEST_API_TOKEN'] = 'my-token';
       try {
         const config = {
@@ -291,7 +289,25 @@ describe('connection registry', () => {
       }
     });
 
-    test('passes through plain string for sensitive fields', async () => {
+    test('resolves env reference on string field', async () => {
+      process.env['TEST_HOST_VAR'] = 'resolved-host';
+      try {
+        const config = {
+          connections: {
+            mydb: {is: 'secretdb', host: {env: 'TEST_HOST_VAR'}},
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        expect(conn._config['host']).toBe('resolved-host');
+      } finally {
+        delete process.env['TEST_HOST_VAR'];
+      }
+    });
+
+    test('passes through plain string values', async () => {
       const config = {
         connections: {
           mydb: {is: 'secretdb', password: 'plain-pw', token: 'plain-tok'},
@@ -305,7 +321,7 @@ describe('connection registry', () => {
       expect(conn._config['token']).toBe('plain-tok');
     });
 
-    test('omits sensitive field when env var is missing', async () => {
+    test('omits field when env var is missing', async () => {
       delete process.env['MISSING_VAR'];
       const config = {
         connections: {
@@ -317,27 +333,6 @@ describe('connection registry', () => {
         _config: ConnectionConfig;
       };
       expect(conn._config['password']).toBeUndefined();
-    });
-
-    test('does not resolve env references on non-sensitive fields', async () => {
-      process.env['TEST_HOST_VAR'] = 'resolved-host';
-      try {
-        const config = {
-          connections: {
-            mydb: {
-              is: 'secretdb' as const,
-              host: {env: 'TEST_HOST_VAR'} as unknown as string,
-            },
-          },
-        };
-        const lookup = createConnectionsFromConfig(config);
-        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-          _config: ConnectionConfig;
-        };
-        expect(conn._config['host']).toBeUndefined();
-      } finally {
-        delete process.env['TEST_HOST_VAR'];
-      }
     });
   });
 });

@@ -240,11 +240,13 @@ export type {
 export {
   registerConnectionType,
   getConnectionProperties,
+  getConnectionTypeDisplayName,
   getRegisteredConnectionTypes,
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
-  resolveSecret,
+  isValueRef,
+  resolveValue,
 } from './connection/registry';
 export type {
   ConnectionTypeFactory,
@@ -253,7 +255,8 @@ export type {
   ConnectionTypeDef,
   ConnectionConfigEntry,
   ConnectionsConfig,
-  SecretValue,
+  ConfigValue,
+  ValueRef,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';

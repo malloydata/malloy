@@ -28,7 +28,8 @@ import type {ConnectionConfig} from '@malloydata/malloy';
 import {DuckDBConnection} from './duckdb_connection';
 
 registerConnectionType('duckdb', {
-  factory: (config: ConnectionConfig) => {
+  displayName: 'DuckDB',
+  factory: async (config: ConnectionConfig) => {
     const options = {...config};
     // Map user-friendly "path" to the constructor's "databasePath"
     if ('path' in options && !('databasePath' in options)) {
