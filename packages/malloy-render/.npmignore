@@ -3,3 +3,4 @@ src/
 tsconfig*
 *.spec.*
 storybook-static
+CONTEXT.md
