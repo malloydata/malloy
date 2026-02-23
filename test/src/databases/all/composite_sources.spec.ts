@@ -565,7 +565,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const id = (n: string) => (databaseName === 'snowflake' ? `"${n}"` : n);
     test('partition composite basic', async () => {
       await expect(`
-        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        #! experimental { partition_composite { partition_field=p partitions: {a: {a} b: {b}} } }
         source: comp is ${databaseName}.sql("""
                     SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
           UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
@@ -582,7 +582,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test('sql function contributes to partition composite selection', async () => {
       await expect(`
         ##! experimental.sql_functions
-        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        #! experimental { partition_composite { partition_field=p partitions: {a: {a} b: {b}} } }
         source: comp is ${databaseName}.sql("""
                     SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
           UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
@@ -600,7 +600,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('partition composite with fields different from partition name', async () => {
       await expect(`
-        #! experimental { partition_composite { partition_field=p partitions={x={a} y={b}} } }
+        #! experimental { partition_composite { partition_field=p partitions: {x: {a} y: {b}} } }
         source: comp is ${databaseName}.sql("""
                     SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
           UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'x' AS ${id('p')}
@@ -616,7 +616,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('extended partition composite', async () => {
       await expect(`
-        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        #! experimental { partition_composite { partition_field=p partitions: {a: {a} b: {b}} } }
         source: comp is ${databaseName}.sql("""
                     SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
           UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
@@ -637,7 +637,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test('partition composite nested in composite', async () => {
       await expect(`
         ##! experimental.composite_sources
-        #! experimental { partition_composite { partition_field=p partitions={a={a} b={b}} } }
+        #! experimental { partition_composite { partition_field=p partitions: {a: {a} b: {b}} } }
         source: part_comp is ${databaseName}.sql("""
                     SELECT 10 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}
           UNION ALL SELECT 20 AS ${id('a')}, 0 AS ${id('b')}, 'a' AS ${id('p')}

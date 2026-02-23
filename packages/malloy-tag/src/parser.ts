@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {MOTLYError, MOTLYNode} from '@malloydata/motly-ts-parser';
-import {MOTLYSession} from '@malloydata/motly-ts-parser';
+import type {MOTLYError, MOTLYPropertyValue} from '@malloydata/motly-ts-parser';
+import {MOTLYSession, isRef, isEnvRef} from '@malloydata/motly-ts-parser';
 import {Tag, RefTag} from './tags';
 import type {TagParse, TagError, Path} from './tags';
 
@@ -112,39 +112,41 @@ function parseRefString(linkTo: string): {ups: number; refPath: Path} {
   return {ups, refPath};
 }
 
-function isRef(node: MOTLYNode): node is {linkTo: string} {
-  return 'linkTo' in node;
-}
-
 /**
- * Convert a MOTLYNode tree into a Tag tree with parent links.
+ * Convert a MOTLYPropertyValue (node or ref) into a Tag tree with parent links.
+ * Env references (@env.NAME) are resolved from process.env during hydration.
  */
-function hydrate(node: MOTLYNode, parent?: Tag): Tag {
-  if (isRef(node)) {
-    const {ups, refPath} = parseRefString(node.linkTo);
+function hydrate(pv: MOTLYPropertyValue, parent?: Tag): Tag {
+  if (isRef(pv)) {
+    const {ups, refPath} = parseRefString(pv.linkTo);
     return new RefTag(ups, refPath, parent);
   }
 
   const tag = new Tag({}, parent);
 
-  if (node.eq !== undefined) {
-    if (Array.isArray(node.eq)) {
-      tag.eq = node.eq.map(el => hydrate(el, tag));
-    } else if (node.eq instanceof Date) {
-      tag.eq = new Date(node.eq);
+  if (pv.eq !== undefined) {
+    if (Array.isArray(pv.eq)) {
+      tag.eq = pv.eq.map(el => hydrate(el, tag));
+    } else if (isEnvRef(pv.eq)) {
+      const envVal = process.env[pv.eq.env];
+      if (envVal !== undefined) {
+        tag.eq = envVal;
+      }
+    } else if (pv.eq instanceof Date) {
+      tag.eq = new Date(pv.eq);
     } else {
-      tag.eq = node.eq;
+      tag.eq = pv.eq;
     }
   }
 
-  if (node.properties !== undefined) {
+  if (pv.properties !== undefined) {
     tag.properties = {};
-    for (const [key, val] of Object.entries(node.properties)) {
+    for (const [key, val] of Object.entries(pv.properties)) {
       tag.properties[key] = hydrate(val, tag);
     }
   }
 
-  if (node.deleted) {
+  if (pv.deleted) {
     tag.deleted = true;
   }
 
