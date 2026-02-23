@@ -824,13 +824,13 @@ describe('composite sources', () => {
   describe('partition composites', () => {
     test('basic okay', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        #! experimental { partition_composite { partition_field=astr partitions: {ai: {ai}} } }
         source: a_partition is a
       `).toTranslate();
     });
     test('can use field from extension not mentioned in partition spec', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        #! experimental { partition_composite { partition_field=astr partitions: {ai: {ai}} } }
         source: a_partition is a
 
         source: a_partition_ext is a_partition extend {
@@ -842,7 +842,7 @@ describe('composite sources', () => {
     });
     test('weird field names', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions={"colon::foo"={"colon::foo"} "plus+"={"plus+"} "Weird Name"={"Weird Name"} source={source} dollarbill$={dollarbill$}} } }
+        #! experimental { partition_composite { partition_field=astr partitions: {"colon::foo": {"colon::foo"} "plus+": {"plus+"} "Weird Name": {"Weird Name"} source: {source} dollarbill$: {dollarbill$}} } }
         source: a_partition is a extend {
           dimension: \`Weird Name\` is 1
           dimension: \`source\` is 1
@@ -854,7 +854,7 @@ describe('composite sources', () => {
     });
     test('missing partition field', () => {
       expect(`
-        #! experimental { partition_composite { partitions={ai={ai}} } }
+        #! experimental { partition_composite { partitions: {ai: {ai}} } }
         source: a_partition is a
       `).toLog(
         errorMessage('Partition composite must specify `partition_field`')
@@ -869,7 +869,7 @@ describe('composite sources', () => {
     test('already composite', () => {
       expect(`
         ##! experimental.composite_sources
-        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        #! experimental { partition_composite { partition_field=astr partitions: {ai: {ai}} } }
         source: a_partition is compose(a, a)
       `).toLog(
         errorMessage(
@@ -879,7 +879,7 @@ describe('composite sources', () => {
     });
     test('cannot resolve partition composite', () => {
       expect(`
-        #! experimental { partition_composite { partition_field=astr partitions={ai={ai}} } }
+        #! experimental { partition_composite { partition_field=astr partitions: {ai: {ai}} } }
         source: a_partition is a
 
         run: a_partition -> { group_by: ${'af'} }

@@ -28,7 +28,7 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/motly-ts-parser": "^0.0.2",
+    "@malloydata/motly-ts-parser": "^0.3.0",
     "assert": "^2.0.0"
   },
   "devDependencies": {
