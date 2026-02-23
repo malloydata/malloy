@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {
-  MOTLYError,
-  MOTLYPropertyValue,
-} from '@malloydata/motly-ts-parser';
+import type {MOTLYError, MOTLYPropertyValue} from '@malloydata/motly-ts-parser';
 import {MOTLYSession, isRef, isEnvRef} from '@malloydata/motly-ts-parser';
 import {Tag, RefTag} from './tags';
 import type {TagParse, TagError, Path} from './tags';
