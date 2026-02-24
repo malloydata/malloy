@@ -81,6 +81,19 @@ export interface ConnectionConfigEntry {
 }
 
 /**
+ * Type guard for ConnectionConfigEntry.
+ */
+export function isConnectionConfigEntry(
+  value: unknown
+): value is ConnectionConfigEntry {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as ConnectionConfigEntry).is === 'string'
+  );
+}
+
+/**
  * The editable intermediate representation of a connections config file.
  */
 export interface ConnectionsConfig {
@@ -136,24 +149,16 @@ export function getRegisteredConnectionTypes(): string[] {
 
 /**
  * Parse a JSON config string into a ConnectionsConfig.
- * Validates that each connection entry has an `is` field.
+ * Entries without a valid `is` field are silently dropped.
  */
 export function readConnectionsConfig(jsonText: string): ConnectionsConfig {
   const parsed = JSON.parse(jsonText);
-  const connections = parsed.connections;
-  if (connections === undefined || typeof connections !== 'object') {
-    throw new Error('Invalid connections config: missing "connections" object');
-  }
-  for (const [name, entry] of Object.entries(connections)) {
-    if (
-      typeof entry !== 'object' ||
-      entry === null ||
-      !(entry as ConnectionConfigEntry).is
-    ) {
-      throw new Error(`Connection "${name}" is missing required "is" property`);
-    }
-  }
-  return parsed as ConnectionsConfig;
+  const connections = Object.fromEntries(
+    Object.entries(parsed.connections ?? {}).filter(([, v]) =>
+      isConnectionConfigEntry(v)
+    )
+  );
+  return {...parsed, connections};
 }
 
 /**

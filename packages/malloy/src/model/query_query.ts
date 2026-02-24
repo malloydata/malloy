@@ -806,7 +806,7 @@ export class QueryQuery extends QueryField {
               false
             );
             const buildId = mkBuildID(connDigest, fullRet.sql!);
-            const entry = buildManifest.buildEntries[buildId];
+            const entry = buildManifest[buildId];
 
             if (entry) {
               // Found in manifest - use persisted table

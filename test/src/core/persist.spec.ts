@@ -46,12 +46,7 @@ function findNode(nodes: BuildNode[][], pattern: string) {
 
 // Create empty manifest
 function createManifest(): BuildManifest {
-  return {
-    modelUrl: 'test://test.malloy',
-    buildStartedAt: new Date().toISOString(),
-    buildFinishedAt: new Date().toISOString(),
-    buildEntries: {},
-  };
+  return {};
 }
 
 // Add entry to manifest
@@ -60,12 +55,7 @@ function addManifestEntry(
   buildId: string,
   tableName: string
 ) {
-  manifest.buildEntries[buildId] = {
-    buildId,
-    tableName,
-    buildStartedAt: new Date().toISOString(),
-    buildFinishedAt: new Date().toISOString(),
-  };
+  manifest[buildId] = {tableName};
 }
 
 // Connection digest (cached)
@@ -1231,7 +1221,7 @@ describe('source persistence', () => {
       const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
       addManifestEntry(manifest, wrapperBuildId, 'build_cache.wrapper_v1');
 
-      expect(Object.keys(manifest.buildEntries)).toHaveLength(2);
+      expect(Object.keys(manifest)).toHaveLength(2);
       expect(carrierStatsBuildId).not.toBe(wrapperBuildId);
     });
   });
