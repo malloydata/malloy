@@ -22,7 +22,8 @@ import * as path from 'path';
 import {build} from './build';
 import {gc} from './gc';
 import type {BuilderLog, GCLog, Log} from './log_types';
-import {SingleConnectionRuntime, Manifest} from '@malloydata/malloy';
+import type {Connection} from '@malloydata/malloy';
+import {Runtime, Manifest} from '@malloydata/malloy';
 // eslint-disable-next-line n/no-extraneous-import
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
@@ -256,37 +257,48 @@ test('runtime queries with and without manifest', async () => {
     const urlReader = {
       readURL: async (url: URL) => readFile(url.pathname, 'utf-8'),
     };
-    const runtime = new SingleConnectionRuntime({connection, urlReader});
+    const connections = {
+      lookupConnection: async (name?: string): Promise<Connection> => {
+        if (!name || name === 'duckdb') return connection;
+        throw new Error(`Unknown connection: ${name}`);
+      },
+    };
 
-    // Load the build manifest
+    // Load the build manifest and set it on the runtime
     const manifest = new Manifest();
     manifest.loadText(await readFile(MANIFEST_FILE, 'utf-8'));
+
+    const runtime = new Runtime({
+      connections,
+      urlReader,
+      buildManifest: manifest.buildManifest,
+    });
 
     // Model with a query appended
     const modelWithQuery = MODEL_V1 + '\nrun: by_carrier -> { select: * }\n';
 
-    // Two query materializers: one plain, one with the manifest
-    const queryPlain = runtime.loadQuery(modelWithQuery);
-    const queryWithManifest = runtime.loadQuery(modelWithQuery, {
-      buildManifest: manifest.buildManifest,
-    });
+    // Two query materializers: manifest from runtime, and explicitly empty
+    const queryWithManifest = runtime.loadQuery(modelWithQuery);
+    const queryPlain = runtime.loadQuery(modelWithQuery, {buildManifest: {}});
 
     // ── SQL comparison ─────────────────────────────────────────────
+    // The manifest SQL should reference the persisted table directly
+    // (FROM by_carrier) while the plain SQL inlines the query (FROM (SELECT ...).
     console.log('\n=== Runtime: SQL comparison ===');
-    const sqlPlain = await queryPlain.getSQL();
     const sqlManifest = await queryWithManifest.getSQL();
+    const sqlPlain = await queryPlain.getSQL();
 
-    check(sqlPlain !== sqlManifest, 'SQL differs with and without manifest');
-    check(
-      sqlManifest.includes('by_carrier'),
-      'manifest SQL references the persisted table'
-    );
+    // Manifest SQL reads directly from the persisted table;
+    // plain SQL inlines the query as a CTE.
+    const fromTable = /FROM\s+by_carrier\s/;
+    check(fromTable.test(sqlManifest), 'manifest SQL has FROM by_carrier');
+    check(!fromTable.test(sqlPlain), 'plain SQL does not have FROM by_carrier');
 
     // ── Data comparison ────────────────────────────────────────────
     console.log('\n=== Runtime: data comparison ===');
-    const resultPlain = await runtime.loadQuery(modelWithQuery).run();
-    const resultManifest = await runtime
-      .loadQuery(modelWithQuery, {buildManifest: manifest.buildManifest})
+    const resultManifest = await runtime.loadQuery(modelWithQuery).run();
+    const resultPlain = await runtime
+      .loadQuery(modelWithQuery, {buildManifest: {}})
       .run();
 
     const dataPlain = resultPlain.data.toObject();
