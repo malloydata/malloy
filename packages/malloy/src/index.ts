@@ -126,6 +126,7 @@ export type {
   TimeLiteralExpr,
   TypecastExpr,
   // Build API types
+  BuildID,
   BuildManifest,
   BuildManifestEntry,
 } from './model';
@@ -187,6 +188,7 @@ export {
   Explore,
   InMemoryModelCache,
   CacheManager,
+  Manifest,
 } from './api/foundation';
 export type {
   PreparedQuery,
@@ -242,9 +244,6 @@ export {
   getConnectionProperties,
   getConnectionTypeDisplayName,
   getRegisteredConnectionTypes,
-  readConnectionsConfig,
-  writeConnectionsConfig,
-  createConnectionsFromConfig,
   isValueRef,
   resolveValue,
 } from './connection/registry';

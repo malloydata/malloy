@@ -95,7 +95,7 @@ function expandPersistableSource(
       // Get the SQL for this source to compute BuildID (no opts = full SQL)
       const sql = getSourceSQL(source, quoteTablePath, compileQuery);
       const buildId = mkBuildID(connDigest, sql);
-      const entry = buildManifest.buildEntries[buildId];
+      const entry = buildManifest[buildId];
 
       if (entry) {
         // Found in manifest - substitute with subquery from persisted table

@@ -6,17 +6,17 @@ This document describes the layered API architecture in Malloy, from the interna
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PUBLIC API LAYERS                                  │
+│                           PUBLIC API LAYERS                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐     │
-│  │ Foundation  │   │  Stateless  │   │  Sessioned  │   │ Asynchronous│     │
-│  │    API      │   │    API      │   │    API      │   │    API      │     │
-│  │             │   │             │   │             │   │             │     │
-│  │ Runtime     │   │ compileModel│   │ compileModel│   │ compileModel│     │
-│  │ Model       │   │ compileQuery│   │ compileQuery│   │ compileQuery│     │
-│  │ PreparedQry │   │             │   │ +sessions   │   │ +auto-fetch │     │
-│  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘   └──────┬──────┘     │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐      │
+│  │ Foundation  │   │  Stateless  │   │  Sessioned  │   │ Asynchronous│      │
+│  │    API      │   │    API      │   │    API      │   │    API      │      │
+│  │             │   │             │   │             │   │             │      │
+│  │ Runtime     │   │ compileModel│   │ compileModel│   │ compileModel│      │
+│  │ Model       │   │ compileQuery│   │ compileQuery│   │ compileQuery│      │
+│  │ PreparedQry │   │             │   │ +sessions   │   │ +auto-fetch │      │
+│  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘   └──────┬──────┘      │
 │         │                 │                 │                 │             │
 │         │                 └────────┬────────┴─────────────────┘             │
 │         │                          │                                        │
@@ -34,24 +34,24 @@ This document describes the layered API architecture in Malloy, from the interna
           │    │
           ▼    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         INTERNAL COMPILER (IR)                               │
+│                         INTERNAL COMPILER (IR)                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌──────────────────────┐         ┌──────────────────────┐                 │
-│  │   MalloyTranslator   │         │     QueryModel       │                 │
-│  │   (src/lang/)        │         │   (src/model/)       │                 │
-│  │                      │         │                      │                 │
-│  │ Source text → IR     │         │ IR → SQL             │                 │
-│  │ (ModelDef, Query)    │         │                      │                 │
-│  └──────────────────────┘         │  .compileQuery()     │                 │
-│                                   │       │              │                 │
-│                                   │       ▼              │                 │
-│                                   │  ┌────────────┐      │                 │
-│                                   │  │ QueryQuery │      │                 │
-│                                   │  │            │      │                 │
-│                                   │  │ SQL gen    │      │                 │
-│                                   │  └────────────┘      │                 │
-│                                   └──────────────────────┘                 │
+│  ┌──────────────────────┐         ┌──────────────────────┐                  │
+│  │   MalloyTranslator   │         │     QueryModel       │                  │
+│  │   (src/lang/)        │         │   (src/model/)       │                  │
+│  │                      │         │                      │                  │
+│  │ Source text → IR     │         │ IR → SQL             │                  │
+│  │ (ModelDef, Query)    │         │                      │                  │
+│  └──────────────────────┘         │  .compileQuery()     │                  │
+│                                   │       │              │                  │
+│                                   │       ▼              │                  │
+│                                   │  ┌────────────┐      │                  │
+│                                   │  │ QueryQuery │      │                  │
+│                                   │  │            │      │                  │
+│                                   │  │ SQL gen    │      │                  │
+│                                   │  └────────────┘      │                  │
+│                                   └──────────────────────┘                  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -106,6 +106,7 @@ The fluent object-oriented API. The primary way to work with Malloy programmatic
 | `result.ts` | `Result`, `DataArray`, `DataRecord`, scalar Data classes |
 | `writers.ts` | `WriteStream`, `DataWriter`, `JSONWriter`, `CSVWriter` |
 | `runtime.ts` | `Runtime`, Materializers, `FluentState` |
+| `config.ts` | `MalloyConfig`, `Manifest` |
 | `compile.ts` | `Malloy` static class, `MalloyError` |
 | `index.ts` | Barrel file re-exporting everything |
 
@@ -113,7 +114,7 @@ The fluent object-oriented API. The primary way to work with Malloy programmatic
 
 | Class | Purpose |
 |-------|---------|
-| `Runtime` | Entry point. Holds connections + URL reader. Creates `ModelMaterializer`s. |
+| `Runtime` | Entry point. Holds connections, URL reader, and optional `buildManifest`. Creates `ModelMaterializer`s. |
 | `Model` | Wraps `IR.ModelDef`. Provides access to explores, queries, preparedQuery. Use `getContent(name)` for safe contents lookup (backed by a `Map`, immune to prototype pollution). |
 | `Explore` | Wraps `IR.SourceDef`. Provides field introspection and schema access. |
 | `PreparedQuery` | Wraps `IR.Query` + a `Model` reference. Defers SQL generation until needed. |
@@ -142,6 +143,47 @@ runtime.loadModel(url)
 - Stateful objects that hold compiled state
 - Lazy evaluation via Materializers
 - QueryModel cached at Model level for digest persistence
+
+### Creating a Runtime
+
+**Minimal** — just a connection:
+```typescript
+const runtime = new Runtime({connection: myConnection});
+```
+
+**With config** — load connections + manifest from a project config file:
+```typescript
+import '@malloydata/malloy-connections'; // registers connection factory
+
+const config = new MalloyConfig(urlReader, configURL);
+await config.load(); // reads config JSON + manifest
+
+const runtime = new Runtime({
+  urlReader,
+  connections: config.connections,
+  buildManifest: config.manifest.buildManifest,
+});
+
+// Queries automatically resolve persist sources against the manifest
+const result = await runtime.loadQuery(modelURL).run();
+
+// Pass empty manifest to get unsubstituted SQL
+const rawSQL = await runtime.loadQuery(modelURL, {buildManifest: {}}).getSQL();
+```
+
+**Manifest can also be set after construction:**
+```typescript
+const runtime = new Runtime({urlReader, connections});
+// ... later, after loading manifest data ...
+runtime.buildManifest = manifest.buildManifest;
+```
+
+### Config and Manifest Classes
+
+| Class | Purpose |
+|-------|---------|
+| `MalloyConfig` | Loads `malloy-config.json` (connections + manifest path). Two construction modes: from URL (async `load()`) or from text (sync). |
+| `Manifest` | In-memory manifest store. `load(url)` reads via URLReader, `loadText(json)` parses directly. `update()` and `touch()` for builders, `activeEntries` for writing. The `buildManifest` getter returns a stable reference — mutations are visible to the Runtime without re-assignment. |
 
 ---
 

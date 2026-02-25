@@ -6,7 +6,8 @@
 import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
 import type {BuildNode, BuildManifest} from '@malloydata/malloy';
-import {ConnectionRuntime} from '@malloydata/malloy';
+import {ConnectionRuntime, SingleConnectionRuntime} from '@malloydata/malloy';
+import {DuckDBConnection} from '@malloydata/db-duckdb';
 
 // Helper to extract all sourceIDs from a nested BuildNode array (recursive)
 function getAllSourceIDs(nodes: BuildNode[]): string[] {
@@ -46,12 +47,7 @@ function findNode(nodes: BuildNode[][], pattern: string) {
 
 // Create empty manifest
 function createManifest(): BuildManifest {
-  return {
-    modelUrl: 'test://test.malloy',
-    buildStartedAt: new Date().toISOString(),
-    buildFinishedAt: new Date().toISOString(),
-    buildEntries: {},
-  };
+  return {};
 }
 
 // Add entry to manifest
@@ -60,12 +56,7 @@ function addManifestEntry(
   buildId: string,
   tableName: string
 ) {
-  manifest.buildEntries[buildId] = {
-    buildId,
-    tableName,
-    buildStartedAt: new Date().toISOString(),
-    buildFinishedAt: new Date().toISOString(),
-  };
+  manifest[buildId] = {tableName};
 }
 
 // Connection digest (cached)
@@ -1231,7 +1222,7 @@ describe('source persistence', () => {
       const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
       addManifestEntry(manifest, wrapperBuildId, 'build_cache.wrapper_v1');
 
-      expect(Object.keys(manifest.buildEntries)).toHaveLength(2);
+      expect(Object.keys(manifest)).toHaveLength(2);
       expect(carrierStatsBuildId).not.toBe(wrapperBuildId);
     });
   });
@@ -1456,6 +1447,186 @@ describe('source persistence', () => {
           .loadQueryByName('test_query')
           .run({buildManifest: manifest})
       ).rejects.toThrow('experimental.persistence');
+    });
+  });
+
+  describe('Runtime buildManifest property', () => {
+    it('query uses Runtime manifest by default, empty override suppresses it', async () => {
+      // Build a model with a persist source and a query against it
+      const modelCode = `${PERSIST_ANNOTATION}
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist name=by_carrier
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        run: by_carrier -> { select: * }
+      `;
+
+      // Get the build plan and compute a manifest
+      const {plan} = await getPersistPlan(`
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist name=by_carrier
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      const source = Object.values(plan.sources).find(
+        s => s.name === 'by_carrier'
+      )!;
+      const connectionDigest = await getDigest();
+      const sql = source.getSQL();
+      const buildId = source.makeBuildId(connectionDigest, sql);
+      const manifest = createManifest();
+      addManifestEntry(manifest, buildId, 'by_carrier');
+
+      // Create a runtime with the manifest set
+      const runtimeWithManifest = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+        buildManifest: manifest,
+      });
+
+      // Default: uses Runtime's manifest — SQL should reference the table
+      const sqlWithManifest = await runtimeWithManifest
+        .loadQuery(modelCode)
+        .getSQL();
+      expect(sqlWithManifest).toMatch(/FROM\s+by_carrier\s/);
+
+      // Override with empty manifest — SQL should NOT reference the table
+      const sqlWithoutManifest = await runtimeWithManifest
+        .loadQuery(modelCode, {buildManifest: {}})
+        .getSQL();
+      expect(sqlWithoutManifest).not.toMatch(/FROM\s+by_carrier\s/);
+    });
+
+    it('query results match with and without manifest', async () => {
+      // This test needs a writable DuckDB to CREATE the persisted table.
+      // Use parquet file directly since the in-memory DB has no tables.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+
+      try {
+        // Use parquet path so the in-memory connection can read flights
+        const flightsPath = 'test/data/duckdb/flights.parquet';
+        const modelCode = `${PERSIST_ANNOTATION}
+          source: flights is ${tstDB}.table('${flightsPath}') extend {
+            measure: flight_count is count()
+          }
+
+          #@ persist name=by_carrier
+          source: by_carrier is flights -> {
+            group_by: carrier
+            aggregate: flight_count
+          }
+
+          run: by_carrier -> { select: * }
+        `;
+
+        // Compile with the writable runtime to get consistent digests
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const plan = model.getBuildPlan();
+
+        const source = Object.values(plan.sources).find(
+          s => s.name === 'by_carrier'
+        )!;
+        const connectionDigest = rwConn.getDigest();
+        const buildSQL = source.getSQL();
+        const buildId = source.makeBuildId(connectionDigest, buildSQL);
+
+        // Create the persisted table
+        await rwConn.runSQL(`CREATE TABLE by_carrier AS ${buildSQL}`);
+
+        const manifest = createManifest();
+        addManifestEntry(manifest, buildId, 'by_carrier');
+        rwRuntime.buildManifest = manifest;
+
+        // Run with manifest (reads from persisted table)
+        const resultManifest = await rwRuntime.loadQuery(modelCode).run();
+        // Run without manifest (inlines the query)
+        const resultPlain = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: {}})
+          .run();
+
+        const dataManifest = resultManifest.data.toObject();
+        const dataPlain = resultPlain.data.toObject();
+
+        expect(dataManifest.length).toBeGreaterThan(0);
+        expect(dataManifest.length).toBe(dataPlain.length);
+
+        // Sort and compare
+        type Row = {carrier: string; flight_count: number};
+        const sort = (a: Row, b: Row) => a.carrier.localeCompare(b.carrier);
+        const rowsManifest = (dataManifest as Row[]).sort(sort);
+        const rowsPlain = (dataPlain as Row[]).sort(sort);
+        for (let i = 0; i < rowsPlain.length; i++) {
+          expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
+          expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);
+        }
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('buildManifest setter updates manifest after construction', async () => {
+      const modelCode = `${PERSIST_ANNOTATION}
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist name=by_carrier
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        run: by_carrier -> { select: * }
+      `;
+
+      // Build plan + manifest
+      const {plan} = await getPersistPlan(`
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist name=by_carrier
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      const source = Object.values(plan.sources).find(
+        s => s.name === 'by_carrier'
+      )!;
+      const connectionDigest = await getDigest();
+      const sql = source.getSQL();
+      const buildId = source.makeBuildId(connectionDigest, sql);
+      const manifest = createManifest();
+      addManifestEntry(manifest, buildId, 'by_carrier');
+
+      // Create runtime WITHOUT manifest
+      const runtime = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+      });
+
+      // Without manifest — SQL should NOT reference the table
+      const sqlBefore = await runtime.loadQuery(modelCode).getSQL();
+      expect(sqlBefore).not.toMatch(/FROM\s+by_carrier\s/);
+
+      // Set manifest via setter
+      runtime.buildManifest = manifest;
+
+      // Now SQL SHOULD reference the table
+      const sqlAfter = await runtime.loadQuery(modelCode).getSQL();
+      expect(sqlAfter).toMatch(/FROM\s+by_carrier\s/);
     });
   });
 });

@@ -2119,22 +2119,15 @@ export function mergeUniqueKeyRequirement(
  * Entry in a BuildManifest for a persisted table.
  */
 export interface BuildManifestEntry {
-  /** Hash of (connectionDigest, sql) - also the key in buildEntries */
-  buildId: BuildID;
   tableName: string;
-  buildStartedAt: string;
-  buildFinishedAt: string;
 }
 
 /**
- * Manifest of persisted query results (the build cache).
- * Used by compileQuery to substitute persist queries with table references.
+ * Manifest of persisted build results (the build cache).
+ * Maps BuildID → BuildManifestEntry. Used by compileQuery to substitute
+ * persist sources with table references. Content-addressable: same SQL +
+ * same connection digest = same BuildID regardless of which model produced it.
  */
-export interface BuildManifest {
-  modelUrl: string;
-  buildStartedAt: string;
-  buildFinishedAt: string;
-  buildEntries: Record<BuildID, BuildManifestEntry>;
-}
+export type BuildManifest = Record<BuildID, BuildManifestEntry>;
 
 // clang-format on

@@ -97,6 +97,9 @@ export {
   ExploreMaterializer,
 } from './runtime';
 
+// Config and Manifest
+export {Manifest, MalloyConfig} from './config';
+
 // Compile (Malloy static class)
 export {
   Malloy,

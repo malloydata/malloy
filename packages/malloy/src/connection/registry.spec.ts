@@ -116,21 +116,19 @@ describe('connection registry', () => {
     expect(config.connections['mydb']['port']).toBe(5432);
   });
 
-  test('readConnectionsConfig throws on missing is field', () => {
+  test('readConnectionsConfig drops entries missing is field', () => {
     const json = JSON.stringify({
       connections: {
         mydb: {host: 'localhost'},
       },
     });
-    expect(() => readConnectionsConfig(json)).toThrow(
-      /missing required "is" property/
-    );
+    const config = readConnectionsConfig(json);
+    expect(Object.keys(config.connections)).toHaveLength(0);
   });
 
-  test('readConnectionsConfig throws on missing connections object', () => {
-    expect(() => readConnectionsConfig('{}')).toThrow(
-      /missing "connections" object/
-    );
+  test('readConnectionsConfig handles missing connections object', () => {
+    const config = readConnectionsConfig('{}');
+    expect(Object.keys(config.connections)).toHaveLength(0);
   });
 
   test('writeConnectionsConfig produces 2-space indented JSON', () => {

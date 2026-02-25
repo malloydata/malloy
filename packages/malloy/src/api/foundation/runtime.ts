@@ -12,6 +12,7 @@ import type {
   SearchValueMapResult,
   QueryRunStats,
   PrepareResultOptions,
+  BuildManifest,
 } from '../../model';
 import {isSourceDef, mkSafeRecord} from '../../model';
 import {getDialect} from '../../dialect';
@@ -100,6 +101,7 @@ export class Runtime {
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
   private _cacheManager: CacheManager | undefined;
+  private _buildManifest: BuildManifest | undefined;
 
   constructor({
     urlReader,
@@ -107,10 +109,12 @@ export class Runtime {
     connection,
     eventStream,
     cacheManager,
+    buildManifest,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
+    buildManifest?: BuildManifest;
   } & Connectionable) {
     if (connections === undefined) {
       if (connection === undefined) {
@@ -129,6 +133,7 @@ export class Runtime {
     this._connections = connections;
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
+    this._buildManifest = buildManifest;
   }
 
   /**
@@ -157,6 +162,20 @@ export class Runtime {
    */
   public get eventStream(): EventStream | undefined {
     return this._eventStream;
+  }
+
+  /**
+   * The build manifest for persist source substitution.
+   * When set, compiled queries automatically resolve persist sources
+   * against this manifest. Can be overridden per-query via
+   * CompileQueryOptions.buildManifest.
+   */
+  public get buildManifest(): BuildManifest | undefined {
+    return this._buildManifest;
+  }
+
+  public set buildManifest(manifest: BuildManifest | undefined) {
+    this._buildManifest = manifest;
   }
 
   /**
@@ -333,13 +352,16 @@ export class ConnectionRuntime extends Runtime {
   constructor({
     urlReader,
     connections,
+    buildManifest,
   }: {
     urlReader?: URLReader;
     connections: Connection[];
+    buildManifest?: BuildManifest;
   }) {
     super({
       connections: FixedConnectionMap.fromArray(connections),
       urlReader,
+      buildManifest,
     });
     this.rawConnections = connections;
   }
@@ -355,16 +377,19 @@ export class SingleConnectionRuntime<
     connection,
     eventStream,
     cacheManager,
+    buildManifest,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
+    buildManifest?: BuildManifest;
     connection: T;
   }) {
     super({
       urlReader,
       eventStream,
       cacheManager,
+      buildManifest,
       connection,
     });
     this.connection = connection;
@@ -798,11 +823,16 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         ...options,
       };
 
-      // If buildManifest is provided, compute connectionDigests for manifest lookups
+      // Use manifest from options if provided, otherwise fall back to Runtime's manifest.
+      // Pass an empty {} in options to explicitly suppress manifest substitution.
+      const buildManifest =
+        mergedOptions.buildManifest ?? this.runtime.buildManifest;
+
+      // If we have a manifest, compute connectionDigests for manifest lookups
       // TODO: This is inefficient - we call getBuildPlan just to find connection names.
       // Consider adding a listConnections() method to LookupConnection, or caching this.
       let connectionDigests: Record<string, string> | undefined;
-      if (mergedOptions.buildManifest) {
+      if (buildManifest) {
         // Require experimental.persistence compiler flag to use buildManifest
         const modelTag = preparedQuery.model.tagParse({prefix: /^##! /}).tag;
         if (!modelTag.has('experimental', 'persistence')) {
@@ -825,7 +855,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       // Build PrepareResultOptions from CompileQueryOptions + connectionDigests
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
-        buildManifest: mergedOptions.buildManifest,
+        buildManifest,
         connectionDigests,
         strictPersist: mergedOptions.strictPersist,
       };
