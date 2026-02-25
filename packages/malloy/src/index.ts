@@ -189,6 +189,7 @@ export {
   InMemoryModelCache,
   CacheManager,
   Manifest,
+  MalloyConfig,
 } from './api/foundation';
 export type {
   PreparedQuery,
