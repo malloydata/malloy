@@ -1448,6 +1448,26 @@ describe('source persistence', () => {
           .run({buildManifest: manifest})
       ).rejects.toThrow('experimental.persistence');
     });
+
+    it('Runtime-level manifest is silently ignored for non-persistence models', async () => {
+      const manifest = createManifest();
+
+      // Create a runtime with a manifest (as if loaded from config)
+      const runtimeWithManifest = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+        buildManifest: manifest,
+      });
+
+      // A model without ##! experimental.persistence should run fine
+      const modelCode = `
+        source: flights is ${tstDB}.table('malloytest.flights')
+        run: flights -> { group_by: carrier }
+      `;
+
+      const result = await runtimeWithManifest.loadQuery(modelCode).run();
+      expect(result.data.value.length).toBeGreaterThan(0);
+    });
   });
 
   describe('Runtime buildManifest property', () => {
