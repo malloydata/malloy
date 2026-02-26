@@ -1205,21 +1205,26 @@ export class Model implements Taggable {
     }
 
     const allDeps: BuildNode[] = [];
+    const tagParseLog: LogMessage[] = [];
 
     // Walk all objects in the model to find persistent dependencies
     for (const obj of Object.values(this.modelDef.contents)) {
       if (obj.type === 'query' || isSourceDef(obj)) {
-        allDeps.push(...findPersistentDependencies(obj, this.modelDef));
+        allDeps.push(
+          ...findPersistentDependencies(obj, this.modelDef, tagParseLog)
+        );
       }
     }
 
     // Also walk queryList (unnamed queries)
     for (const query of this.modelDef.queryList) {
-      allDeps.push(...findPersistentDependencies(query, this.modelDef));
+      allDeps.push(
+        ...findPersistentDependencies(query, this.modelDef, tagParseLog)
+      );
     }
 
     if (allDeps.length === 0) {
-      return {graphs: [], sources: {}};
+      return {graphs: [], sources: {}, tagParseLog};
     }
 
     // Find the minimal set of root graphs
@@ -1262,7 +1267,7 @@ export class Model implements Taggable {
       graphs.push({connectionName, nodes: [nodes]});
     }
 
-    return {graphs, sources: sourcesMap};
+    return {graphs, sources: sourcesMap, tagParseLog};
   }
 }
 
@@ -1282,6 +1287,8 @@ export interface BuildPlan {
   graphs: BuildGraph[];
   /** Map from sourceId to PersistSource for accessing source details */
   sources: Record<string, PersistSource>;
+  /** Errors and warnings from parsing #@ annotations on persistable sources */
+  tagParseLog: LogMessage[];
 }
 
 // =============================================================================

@@ -21,6 +21,7 @@ import {
 } from './malloy_types';
 import {resolveSourceID} from './source_def_utils';
 import {annotationToTag} from '../annotation';
+import type {LogMessage} from '../lang';
 import type {BuildNode} from '../api/foundation/types';
 
 /**
@@ -36,24 +37,39 @@ function resolveSource(
 
 /**
  * Check if a source has the #@ persist annotation.
+ * Returns both the persist flag and any tag parse errors.
  */
-function checkPersistAnnotation(source: SourceDef): boolean {
-  if (!source.annotation) return false;
-  const {tag} = annotationToTag(source.annotation, {prefix: /^#@ /});
-  return tag.has('persist');
+function checkPersistAnnotation(source: SourceDef): {
+  persist: boolean;
+  log: LogMessage[];
+} {
+  if (!source.annotation) return {persist: false, log: []};
+  const {tag, log} = annotationToTag(source.annotation, {prefix: /^#@ /});
+  return {persist: tag.has('persist'), log};
 }
 
 /**
  * Check if a sourceID is persistent, using lazy evaluation and caching.
  * Sets the persist flag on the registry entry as a side effect.
+ * Appends any tag parse errors to the provided log array.
  */
-function isPersistent(sourceID: string, modelDef: ModelDef): boolean {
+function isPersistent(
+  sourceID: string,
+  modelDef: ModelDef,
+  tagParseLog: LogMessage[]
+): boolean {
   const value = modelDef.sourceRegistry[sourceID];
   if (!value) return false;
 
   if (value.persist === undefined) {
     const sourceDef = resolveSourceID(modelDef, sourceID);
-    value.persist = sourceDef ? checkPersistAnnotation(sourceDef) : false;
+    if (sourceDef) {
+      const result = checkPersistAnnotation(sourceDef);
+      value.persist = result.persist;
+      tagParseLog.push(...result.log);
+    } else {
+      value.persist = false;
+    }
   }
   return value.persist;
 }
@@ -90,7 +106,8 @@ function isPersistent(sourceID: string, modelDef: ModelDef): boolean {
  */
 export function findPersistentDependencies(
   root: SourceDef | Query,
-  modelDef: ModelDef
+  modelDef: ModelDef,
+  tagParseLog: LogMessage[] = []
 ): BuildNode[] {
   const visited = new Set<string>();
 
@@ -106,7 +123,7 @@ export function findPersistentDependencies(
     }
 
     const childDeps = processSourceDef(sourceDef);
-    const persistent = isPersistent(sourceID, modelDef);
+    const persistent = isPersistent(sourceID, modelDef, tagParseLog);
 
     if (persistent) {
       return [{sourceID, dependsOn: childDeps}];

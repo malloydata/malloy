@@ -74,6 +74,11 @@ export async function build(opts: BuildOptions): Promise<void> {
   // --- Build plan ---
   const plan = model.getBuildPlan();
 
+  for (const msg of plan.tagParseLog) {
+    const loc = msg.at ? ` (${msg.at.url}:${msg.at.range.start.line + 1})` : '';
+    console.warn(`WARNING: ${msg.message}${loc}`);
+  }
+
   if (plan.graphs.length === 0) {
     console.log('No #@ persist sources found in model');
     await connection.close();
