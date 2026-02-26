@@ -219,6 +219,16 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           'test/data/duckdb/duckdb_test.db'
         );
         break;
+      case 'mssql_via_duckdb':
+        connection = new DuckDBTestConnection({
+          name: dbName,
+          additionalExtensions: ['mssql'],
+          setupSQL: [
+            "ATTACH 'Server=localhost;Port=1433;Database=malloytest;User Id=sa;Password=Malloy_Test_123;TrustServerCertificate=true' AS msdb (TYPE mssql)",
+            'USE msdb.malloytest',
+          ].join(';\n'),
+        });
+        break;
       case 'motherduck':
         connection = new DuckDBTestConnection({
           name: dbName,

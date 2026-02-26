@@ -45,6 +45,8 @@ function getSplitFunction(db: string) {
       `string_to_array(${column}, '${splitChar}')`,
     'duckdb': (column: string, splitChar: string) =>
       `string_to_array(${column}, '${splitChar}')`,
+    'mssql_via_duckdb': (column: string, splitChar: string) =>
+      `string_to_array(${column}, '${splitChar}')`,
     'duckdb_wasm': (column: string, splitChar: string) =>
       `string_to_array(${column}, '${splitChar}')`,
     'motherduck': (column: string, splitChar: string) =>
@@ -116,6 +118,10 @@ afterAll(async () => {
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
 
+  const runNestedTests =
+    runtime.supportsNesting &&
+    runtime.dialect.readsNestedData &&
+    !['presto', 'trino', 'mssql_via_duckdb'].includes(databaseName);
   const lotsSQL = lotsOfNumbersSQLTable(databaseName);
   it.when(lotsSQL !== undefined)(
     `big symmetric sum - ${databaseName}`,
@@ -1291,30 +1297,25 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  test.when(
-    runtime.supportsNesting &&
-      runtime.dialect.readsNestedData &&
-      databaseName !== 'presto' &&
-      databaseName !== 'trino'
-  )(`can unnest simply from file - ${databaseName}`, async () => {
-    const testModel = wrapTestModel(runtime, '');
-    await expect(`
+  test.when(runNestedTests)(
+    `can unnest simply from file - ${databaseName}`,
+    async () => {
+      const testModel = wrapTestModel(runtime, '');
+      await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
           aggregate:
             h is hits.count()
         }
       `).toMatchResult(testModel, {h: 13233});
-  });
+    }
+  );
 
-  test.when(
-    runtime.supportsNesting &&
-      runtime.dialect.readsNestedData &&
-      databaseName !== 'presto' &&
-      databaseName !== 'trino'
-  )(`can unnest from file - ${databaseName}`, async () => {
-    const testModel = wrapTestModel(runtime, '');
-    await expect(`
+  test.when(runNestedTests)(
+    `can unnest from file - ${databaseName}`,
+    async () => {
+      const testModel = wrapTestModel(runtime, '');
+      await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
           where: hits.product.productBrand is not null
@@ -1327,14 +1328,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             p is hits.product.count()
         }
       `).toMatchResult(testModel, {h: 1192, c: 681, p: 1192});
-  });
+    }
+  );
 
-  test.when(
-    runtime.supportsNesting &&
-      runtime.dialect.readsNestedData &&
-      databaseName !== 'presto' &&
-      databaseName !== 'trino'
-  )(`can double unnest - ${databaseName}`, async () => {
+  test.when(runNestedTests)(`can double unnest - ${databaseName}`, async () => {
     const testModel = wrapTestModel(runtime, '');
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
