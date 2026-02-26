@@ -1411,6 +1411,39 @@ describe('source persistence', () => {
     });
   });
 
+  describe('tagParseLog', () => {
+    it('reports tag parse errors in build plan', async () => {
+      const {plan} = await getPersistPlan(`
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ x=y.z
+        #@ persist
+        source: bad_tag is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      // Source should still be found (persist tag is valid)
+      expect(plan.graphs).toHaveLength(1);
+      // But the bad tag line should produce parse errors
+      expect(plan.tagParseLog.length).toBeGreaterThan(0);
+    });
+
+    it('tagParseLog is empty when annotations are valid', async () => {
+      const {plan} = await getPersistPlan(`
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: good_tag is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+      expect(plan.graphs).toHaveLength(1);
+      expect(plan.tagParseLog).toHaveLength(0);
+    });
+  });
+
   describe('experimental.persistence annotation requirement', () => {
     it('getBuildPlan throws without experimental.persistence annotation', async () => {
       const testModel = wrapTestModel(
