@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.33.1-dev13.0",
-    "@duckdb/node-api": "1.4.3-r.1",
+    "@duckdb/node-api": "1.4.4-r.1",
     "@malloydata/malloy": "0.0.349",
     "@motherduck/wasm-client": "^0.6.6",
     "apache-arrow": "^17.0.0",

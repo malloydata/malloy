@@ -26,7 +26,7 @@
 
 import * as malloy from '@malloydata/malloy';
 import {EmptyURLReader} from '@malloydata/malloy';
-import {DuckDBTestConnection, PostgresTestConnection} from '../runtimes';
+import {DuckDBROTestConnection, PostgresTestConnection} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
 
 const [, databases] = describeIfDatabaseAvailable(['duckdb', 'postgres']);
@@ -39,7 +39,7 @@ const describe =
     : globalThis.describe.skip;
 
 describe('Multi-connection', () => {
-  const ddbConnection = new DuckDBTestConnection(
+  const ddbConnection = new DuckDBROTestConnection(
     'duckdb',
     'test/data/duckdb/duckdb_test.db'
   );
