@@ -246,7 +246,7 @@ export class SnowflakeConnection
   ) {
     super();
     let connOptions = options?.connOptions;
-    if (connOptions === undefined) {
+    if (!connOptions || Object.keys(connOptions).length === 0) {
       // try to get connection options from ~/.snowflake/connections.toml
       connOptions = SnowflakeExecutor.getConnectionOptionsFromToml();
     }
