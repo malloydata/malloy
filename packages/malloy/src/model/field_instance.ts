@@ -459,7 +459,8 @@ export class FieldInstanceResult implements FieldInstance {
 
   addStructToJoin(
     qs: QueryStruct,
-    uniqueKeyRequirement: UniqueKeyRequirement
+    uniqueKeyRequirement: UniqueKeyRequirement,
+    onReferencesChildren?: boolean
   ): void {
     const name = qs.getIdentifier();
 
@@ -483,6 +484,9 @@ export class FieldInstanceResult implements FieldInstance {
 
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);
+      if (onReferencesChildren) {
+        join.onReferencesChildren = true;
+      }
       this.root().joins.set(name, join);
     }
     join.uniqueKeyRequirement = mergeUniqueKeyRequirement(
