@@ -174,6 +174,21 @@ export function getLineChartSettings(
   const mode: 'yoy' | 'normal' =
     (vizTag.text('mode') as 'yoy' | 'normal') ?? defaultLineChartSettings.mode;
 
+  // Parse size property
+  let size: LineChartSettings['size'] = defaultLineChartSettings.size;
+  if (vizTag.has('size')) {
+    const sizeText = vizTag.text('size');
+    if (sizeText && ['xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(sizeText)) {
+      size = sizeText as 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+    }
+  } else if (vizTag.has('size', 'width') && vizTag.has('size', 'height')) {
+    const width = vizTag.numeric('size', 'width');
+    const height = vizTag.numeric('size', 'height');
+    if (width !== undefined && height !== undefined) {
+      size = {width: width, height: height};
+    }
+  }
+
   const xChannel: Channel = {
     fields: [],
     type: mergedDefaults.xChannel.type,
@@ -356,6 +371,7 @@ export function getLineChartSettings(
     interactive,
     disableEmbedded,
     mode,
+    size,
   };
 
   return result;
