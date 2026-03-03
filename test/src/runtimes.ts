@@ -48,6 +48,7 @@ import {
   MySQLConnection,
   MySQLExecutor,
 } from '@malloydata/db-mysql/src/mysql_connection';
+import {DatabricksConnection} from '@malloydata/db-databricks/src/databricks_connection';
 import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
@@ -262,6 +263,15 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           {},
           TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
         );
+        break;
+      case 'databricks':
+        connection = new DatabricksConnection(dbName, {
+          host: process.env['DATABRICKS_HOST'] || '',
+          path: process.env['DATABRICKS_PATH'] || '',
+          token: process.env['DATABRICKS_TOKEN'],
+          defaultCatalog: process.env['DATABRICKS_CATALOG'],
+          defaultSchema: process.env['DATABRICKS_SCHEMA'],
+        });
         break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);
