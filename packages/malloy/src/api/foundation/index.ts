@@ -13,6 +13,7 @@ export type {
   BuildNode,
   BuildGraph,
 } from './types';
+export {EMPTY_BUILD_MANIFEST} from './types';
 
 // URL readers and connection helpers
 export {
