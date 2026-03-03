@@ -11,16 +11,6 @@ on:
       DATABRICKS_WAREHOUSE_ID:
         required: true
   workflow_dispatch:
-  ##############################################################
-  # TEMPORARY TEMPORARY TEMPORARY TEMPORARY TEMPORARY TEMPORARY
-  # REMOVE THIS PUSH TRIGGER BEFORE MERGING TO MAIN
-  # This exists only to test Databricks CI on the feature branch.
-  # DO NOT MERGE WITH THIS TRIGGER PRESENT.
-  # TEMPORARY TEMPORARY TEMPORARY TEMPORARY TEMPORARY TEMPORARY
-  ##############################################################
-  push:
-    branches:
-      - mtoy/databricks-dialect
 
 jobs:
   test-databricks:

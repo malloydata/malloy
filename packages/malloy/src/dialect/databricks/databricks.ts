@@ -65,7 +65,6 @@ const databricksToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'boolean': {type: 'boolean'},
   'date': {type: 'date'},
   'timestamp': {type: 'timestamp'},
-  'timestamp_ntz': {type: 'timestamp'},
 };
 
 export class DatabricksDialect extends Dialect {

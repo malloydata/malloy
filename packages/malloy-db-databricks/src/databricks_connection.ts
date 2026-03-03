@@ -15,10 +15,109 @@ import type {
   QueryOptionsReader,
   RunSQLOptions,
   StructDef,
+  AtomicTypeDef,
+  FieldDef,
+  RecordTypeDef,
 } from '@malloydata/malloy';
-import {DatabricksDialect, sqlKey, makeDigest} from '@malloydata/malloy';
+import {
+  DatabricksDialect,
+  sqlKey,
+  makeDigest,
+  TinyParser,
+  mkFieldDef,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
-import {DBSQLClient} from '@databricks/sql';
+import {DBSQLClient, DBSQLLogger, LogLevel} from '@databricks/sql';
+
+// Suppress noisy SDK logging by default
+const quietLogger = new DBSQLLogger({level: LogLevel.error});
+
+class DatabricksTypeParser extends TinyParser {
+  constructor(
+    typeStr: string,
+    private readonly dialect: DatabricksDialect
+  ) {
+    super(typeStr, {
+      space: /^\s+/,
+      char: /^[<>:,()]/,
+      id: /^\w+/,
+    });
+  }
+
+  typeDef(): AtomicTypeDef {
+    const typToken = this.next();
+    if (typToken.type === 'eof') {
+      throw this.parseError('Unexpected EOF parsing type');
+    }
+    const typText = typToken.text.toLowerCase();
+
+    if (typText === 'struct' && this.peek().text === '<') {
+      this.next('<');
+      const fields: FieldDef[] = [];
+      for (;;) {
+        const name = this.next('id');
+        this.next(':');
+        const fieldType = this.typeDef();
+        fields.push(mkFieldDef(fieldType, name.text));
+        const sep = this.next();
+        if (sep.text === '>') break;
+        if (sep.text === ',') continue;
+        throw this.parseError(`Expected '>' or ',', got '${sep.text}'`);
+      }
+      return {type: 'record', fields} as RecordTypeDef;
+    }
+
+    if (typText === 'array' && this.peek().text === '<') {
+      this.next('<');
+      const elType = this.typeDef();
+      this.next('>');
+      return elType.type === 'record'
+        ? {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            fields: elType.fields,
+          }
+        : {type: 'array', elementTypeDef: elType};
+    }
+
+    if (typText === 'map' && this.peek().text === '<') {
+      this.next('<');
+      this.typeDef(); // key type
+      this.next(',');
+      this.typeDef(); // value type
+      this.next('>');
+      return {type: 'sql native'};
+    }
+
+    // Atomic type — parse parameters for DECIMAL, skip for others
+    if (typToken.type === 'id') {
+      if (typText === 'decimal' && this.peek().text === '(') {
+        this.next('(');
+        this.next('id'); // precision
+        let numberType: 'integer' | 'float' = 'integer';
+        if (this.peek().text === ',') {
+          this.next(',');
+          const scale = this.next('id');
+          if (scale.text !== '0') numberType = 'float';
+        }
+        this.next(')');
+        return {type: 'number', numberType};
+      }
+      if (this.peek().text === '(') {
+        this.next('(');
+        let depth = 1;
+        while (depth > 0) {
+          const t = this.next();
+          if (t.text === '(') depth++;
+          else if (t.text === ')') depth--;
+        }
+      }
+      return this.dialect.sqlTypeToMalloyType(typText);
+    }
+
+    throw this.parseError(`Unexpected '${typToken.text}' while parsing type`);
+  }
+}
 
 export interface DatabricksConfiguration {
   host: string;
@@ -71,7 +170,7 @@ export class DatabricksConnection
   }
 
   private async doConnect(): Promise<void> {
-    this.client = new DBSQLClient();
+    this.client = new DBSQLClient({logger: quietLogger});
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const connectOptions: any = {
@@ -89,6 +188,9 @@ export class DatabricksConnection
 
     await this.client.connect(connectOptions);
     this.session = await this.client.openSession();
+
+    // Malloy timestamps are UTC wallclock
+    await this.executeRaw("SET TIME ZONE 'UTC'");
 
     // Set catalog and schema if configured
     if (this.config.defaultCatalog) {
@@ -237,8 +339,9 @@ export class DatabricksConnection
         continue;
       }
 
-      const malloyType = this.dialect.sqlTypeToMalloyType(dataType);
-      structDef.fields.push({...malloyType, name: colName});
+      const parser = new DatabricksTypeParser(dataType, this.dialect);
+      const malloyType = parser.typeDef();
+      structDef.fields.push(mkFieldDef(malloyType, colName));
     }
   }
 
