@@ -2008,12 +2008,10 @@ export interface PrepareResultOptions {
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
   eventStream?: EventStream;
-  /** Manifest of built tables (BuildID → entry), the build cache */
+  /** Manifest of built tables for persist source substitution */
   buildManifest?: BuildManifest;
   /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
   connectionDigests?: SafeRecord<string>;
-  /** If true, throw when a persist query's digest is not in the manifest */
-  strictPersist?: boolean;
 }
 
 type UTD =
@@ -2124,10 +2122,16 @@ export interface BuildManifestEntry {
 
 /**
  * Manifest of persisted build results (the build cache).
- * Maps BuildID → BuildManifestEntry. Used by compileQuery to substitute
- * persist sources with table references. Content-addressable: same SQL +
- * same connection digest = same BuildID regardless of which model produced it.
+ * Used by compileQuery to substitute persist sources with table references.
+ * Content-addressable: same SQL + same connection digest = same BuildID
+ * regardless of which model produced it.
+ *
+ * When `strict` is true, a missing entry for a persist source throws an error
+ * instead of falling through to inline SQL.
  */
-export type BuildManifest = Record<BuildID, BuildManifestEntry>;
+export interface BuildManifest {
+  entries: Record<BuildID, BuildManifestEntry>;
+  strict?: boolean;
+}
 
 // clang-format on

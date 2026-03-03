@@ -22,8 +22,8 @@ import * as path from 'path';
 import {build} from './build';
 import {gc} from './gc';
 import type {BuilderLog, GCLog, Log} from './log_types';
-import type {Connection} from '@malloydata/malloy';
-import {Runtime, Manifest} from '@malloydata/malloy';
+import type {Connection, BuildManifest} from '@malloydata/malloy';
+import {Runtime, Manifest, EMPTY_BUILD_MANIFEST} from '@malloydata/malloy';
 // eslint-disable-next-line n/no-extraneous-import
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
@@ -111,12 +111,14 @@ test('build v1 → build v2 → gc → gc', async () => {
       logDir: LOG_DIR,
     });
 
-    const manifest1 =
-      await readJSON<Record<string, {tableName: string}>>(MANIFEST_FILE);
-    const names1 = Object.values(manifest1).map(e => e.tableName);
+    const manifest1 = await readJSON<BuildManifest>(MANIFEST_FILE);
+    const names1 = Object.values(manifest1.entries).map(e => e.tableName);
     check(names1.includes('by_carrier'), 'manifest has by_carrier');
     check(names1.includes('by_origin'), 'manifest has by_origin');
-    check(Object.keys(manifest1).length === 2, 'manifest has 2 entries');
+    check(
+      Object.keys(manifest1.entries).length === 2,
+      'manifest has 2 entries'
+    );
 
     const sql1 = await readFile(SQL_FILE, 'utf-8');
     check(
@@ -148,13 +150,15 @@ test('build v1 → build v2 → gc → gc', async () => {
       logDir: LOG_DIR,
     });
 
-    const manifest2 =
-      await readJSON<Record<string, {tableName: string}>>(MANIFEST_FILE);
-    const names2 = Object.values(manifest2).map(e => e.tableName);
+    const manifest2 = await readJSON<BuildManifest>(MANIFEST_FILE);
+    const names2 = Object.values(manifest2.entries).map(e => e.tableName);
     check(names2.includes('by_carrier'), 'manifest still has by_carrier');
     check(names2.includes('by_destination'), 'manifest has by_destination');
     check(!names2.includes('by_origin'), 'manifest no longer has by_origin');
-    check(Object.keys(manifest2).length === 2, 'manifest has 2 entries');
+    check(
+      Object.keys(manifest2.entries).length === 2,
+      'manifest has 2 entries'
+    );
 
     const sql2 = await readFile(SQL_FILE, 'utf-8');
     check(
@@ -279,7 +283,9 @@ test('runtime queries with and without manifest', async () => {
 
     // Two query materializers: manifest from runtime, and explicitly empty
     const queryWithManifest = runtime.loadQuery(modelWithQuery);
-    const queryPlain = runtime.loadQuery(modelWithQuery, {buildManifest: {}});
+    const queryPlain = runtime.loadQuery(modelWithQuery, {
+      buildManifest: EMPTY_BUILD_MANIFEST,
+    });
 
     // ── SQL comparison ─────────────────────────────────────────────
     // The manifest SQL should reference the persisted table directly
@@ -298,7 +304,7 @@ test('runtime queries with and without manifest', async () => {
     console.log('\n=== Runtime: data comparison ===');
     const resultManifest = await runtime.loadQuery(modelWithQuery).run();
     const resultPlain = await runtime
-      .loadQuery(modelWithQuery, {buildManifest: {}})
+      .loadQuery(modelWithQuery, {buildManifest: EMPTY_BUILD_MANIFEST})
       .run();
 
     const dataPlain = resultPlain.data.toObject();

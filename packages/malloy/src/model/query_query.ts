@@ -788,7 +788,7 @@ export class QueryQuery extends QueryField {
       case 'nest_source':
         return qs.structDef.pipeSQL;
       case 'query_source': {
-        const {buildManifest, connectionDigests, strictPersist} =
+        const {buildManifest, connectionDigests} =
           qs.prepareResultOptions ?? {};
 
         // Check manifest for this source
@@ -806,14 +806,14 @@ export class QueryQuery extends QueryField {
               false
             );
             const buildId = mkBuildID(connDigest, fullRet.sql!);
-            const entry = buildManifest[buildId];
+            const entry = buildManifest.entries[buildId];
 
             if (entry) {
               // Found in manifest - use persisted table
               return this.parent.dialect.quoteTablePath(entry.tableName);
             }
 
-            if (strictPersist) {
+            if (buildManifest.strict) {
               throw new Error(
                 `Persist source '${qs.structDef.sourceID}' not found in manifest (buildId: ${buildId})`
               );

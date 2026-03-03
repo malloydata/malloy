@@ -152,7 +152,7 @@ export async function build(opts: BuildOptions): Promise<void> {
       validateTableName(tableName);
 
       // Already built — just mark it active in the manifest
-      if (manifest.buildManifest[buildId]) {
+      if (manifest.buildManifest.entries[buildId]) {
         manifest.touch(buildId);
         console.log(`  Exists: ${source.name} -> ${tableName}`);
         logEntries.push({action: 'exists', buildId, tableName, nameProvided});

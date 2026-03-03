@@ -824,20 +824,28 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
       };
 
       // Use manifest from options if provided, otherwise fall back to Runtime's manifest.
-      // Pass an empty {} in options to explicitly suppress manifest substitution.
+      // Pass EMPTY_BUILD_MANIFEST in options to explicitly suppress manifest substitution.
       const explicitManifest = mergedOptions.buildManifest !== undefined;
       let buildManifest =
         mergedOptions.buildManifest ?? this.runtime.buildManifest;
 
-      // If we have a manifest, compute connectionDigests for manifest lookups
+      // If we have a manifest with entries, compute connectionDigests for lookups.
       // TODO: This is inefficient - we call getBuildPlan just to find connection names.
       // Consider adding a listConnections() method to LookupConnection, or caching this.
       let connectionDigests: Record<string, string> | undefined;
+      if (
+        buildManifest &&
+        Object.keys(buildManifest.entries).length === 0 &&
+        !buildManifest.strict
+      ) {
+        // Empty non-strict manifest — nothing to substitute, skip persistence checks
+        buildManifest = undefined;
+      }
       if (buildManifest) {
         const modelTag = preparedQuery.model.tagParse({prefix: /^##! /}).tag;
         if (!modelTag.has('experimental', 'persistence')) {
           if (explicitManifest) {
-            // Explicitly passed manifest requires persistence support
+            // Explicitly passed non-empty manifest requires persistence support
             throw new Error(
               'Model must have ##! experimental.persistence to use buildManifest'
             );
@@ -864,7 +872,6 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         defaultRowLimit: mergedOptions.defaultRowLimit,
         buildManifest,
         connectionDigests,
-        strictPersist: mergedOptions.strictPersist,
       };
 
       return preparedQuery.getPreparedResult({

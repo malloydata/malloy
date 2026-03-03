@@ -86,7 +86,7 @@ function expandPersistableSource(
   quoteTablePath: (path: string) => string,
   compileQuery: CompileQueryCallback
 ): string {
-  const {buildManifest, connectionDigests, strictPersist} = opts;
+  const {buildManifest, connectionDigests} = opts;
 
   // Try manifest lookup if we have the required info
   if (buildManifest && connectionDigests) {
@@ -95,7 +95,7 @@ function expandPersistableSource(
       // Get the SQL for this source to compute BuildID (no opts = full SQL)
       const sql = getSourceSQL(source, quoteTablePath, compileQuery);
       const buildId = mkBuildID(connDigest, sql);
-      const entry = buildManifest[buildId];
+      const entry = buildManifest.entries[buildId];
 
       if (entry) {
         // Found in manifest - substitute with subquery from persisted table
@@ -103,7 +103,7 @@ function expandPersistableSource(
       }
 
       // Not in manifest
-      if (strictPersist) {
+      if (buildManifest.strict) {
         throw new Error(
           `Persist source '${source.sourceID}' not found in manifest (buildId: ${buildId})`
         );

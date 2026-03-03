@@ -265,5 +265,5 @@ export type {SQLSourceRequest} from './lang/translate-response';
 export {sqlKey} from './model/sql_block';
 export {annotationToTag, annotationToTaglines} from './annotation';
 export type {BuildGraph, BuildNode, BuildPlan} from './api/foundation';
-export {PersistSource} from './api/foundation';
+export {PersistSource, EMPTY_BUILD_MANIFEST} from './api/foundation';
 export {makeDigest} from './model';

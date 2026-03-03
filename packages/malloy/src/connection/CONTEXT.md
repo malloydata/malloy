@@ -57,7 +57,7 @@ The `is` field identifies the backend. Any property value can be a `{env: "VAR"}
 
 ## API Functions
 
-All exported from `@malloydata/malloy` and available as static methods on the `Malloy` class:
+### Public (exported from `@malloydata/malloy`)
 
 | Function | Purpose |
 |----------|---------|
@@ -65,23 +65,36 @@ All exported from `@malloydata/malloy` and available as static methods on the `M
 | `getRegisteredConnectionTypes()` | Returns all registered backend names |
 | `getConnectionTypeDisplayName(typeName)` | Returns human-readable display name |
 | `getConnectionProperties(typeName)` | Returns `ConnectionPropertyDefinition[]` for a backend |
-| `readConnectionsConfig(jsonText)` | Parse JSON config string, validate `is` fields |
-| `writeConnectionsConfig(config)` | Serialize config to JSON (2-space indent) |
-| `createConnectionsFromConfig(config)` | Returns `LookupConnection<Connection>` with lazy creation + caching |
 | `isValueRef(value)` | Type guard: is this a `{env: string}` reference? |
 | `resolveValue(vr)` | Resolve a `ValueRef` from `process.env` |
 
+### Internal (used by `MalloyConfig`, not re-exported)
+
+| Function | Purpose |
+|----------|---------|
+| `readConnectionsConfig(jsonText)` | Parse JSON config string, validate `is` fields |
+| `writeConnectionsConfig(config)` | Serialize config to JSON (2-space indent) |
+| `createConnectionsFromConfig(config)` | Returns `LookupConnection<Connection>` with lazy creation + caching |
+
 ### Usage Pattern
+
+The standard way to get connections is through `MalloyConfig`, which reads a `malloy-config.json` file and uses the registry internally:
 
 ```typescript
 import '@malloydata/malloy-connections';  // registers all backends
-import {Runtime, readConnectionsConfig, createConnectionsFromConfig} from '@malloydata/malloy';
+import {Runtime, MalloyConfig} from '@malloydata/malloy';
 
-const configText = fs.readFileSync('malloy-config.json', 'utf-8');
-const config = readConnectionsConfig(configText);
-const connections = createConnectionsFromConfig(config);
-const runtime = new Runtime({connections, urlReader});
+const config = new MalloyConfig(urlReader, configURL);
+await config.load();  // reads config JSON + manifest
+
+const runtime = new Runtime({
+  urlReader,
+  connections: config.connections,
+  buildManifest: config.manifest.buildManifest,
+});
 ```
+
+`MalloyConfig.connections` calls `createConnectionsFromConfig()` internally. Each access creates a fresh `LookupConnection` snapshot from the current `connectionMap`.
 
 ## Property Type System
 

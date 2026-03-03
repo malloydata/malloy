@@ -31,12 +31,19 @@ export interface MalloyProjectConfig {
  * In-memory manifest store. Reads, updates, and serializes manifest data.
  *
  * Always valid — starts empty, call load() to populate from a file.
- * The internal BuildManifest object is stable: load() and update() mutate
- * the same object, so any reference obtained via `buildManifest` stays current.
+ * The BuildManifest object returned by `buildManifest` is stable: load()
+ * and update() mutate the same entries object, so any reference obtained
+ * via `buildManifest` stays current without re-assignment.
+ *
+ * The `strict` flag controls what happens when a persist source's BuildID
+ * is not found in the manifest. When strict, the compiler throws an error
+ * instead of falling through to inline SQL. The flag is loaded from the
+ * manifest file and can be overridden by the application before creating
+ * a Runtime.
  */
 export class Manifest {
   private readonly _urlReader?: URLReader;
-  private readonly _data: BuildManifest = {};
+  private readonly _manifest: BuildManifest = {entries: {}, strict: false};
   private readonly _touched = new Set<BuildID>();
 
   constructor(urlReader?: URLReader) {
@@ -50,11 +57,9 @@ export class Manifest {
    * is available, clears to empty.
    */
   async load(manifestRoot: URL): Promise<void> {
-    // Clear existing entries and touched set
-    for (const key of Object.keys(this._data)) {
-      delete this._data[key];
-    }
+    this._clearEntries();
     this._touched.clear();
+    this._manifest.strict = false;
 
     if (!this._urlReader) return;
 
@@ -72,8 +77,7 @@ export class Manifest {
       return;
     }
 
-    const loaded: BuildManifest = JSON.parse(contents);
-    Object.assign(this._data, loaded);
+    this._loadParsed(JSON.parse(contents));
   }
 
   /**
@@ -81,28 +85,38 @@ export class Manifest {
    * Replaces any existing data.
    */
   loadText(jsonText: string): void {
-    for (const key of Object.keys(this._data)) {
-      delete this._data[key];
-    }
+    this._clearEntries();
     this._touched.clear();
-    const loaded: BuildManifest = JSON.parse(jsonText);
-    Object.assign(this._data, loaded);
+    this._manifest.strict = false;
+    this._loadParsed(JSON.parse(jsonText));
   }
 
   /**
    * The live BuildManifest. This is a stable reference — load() and update()
    * mutate the same object, so passing this to a Runtime means the Runtime
-   * always sees current data.
+   * always sees current data including the strict flag.
    */
   get buildManifest(): BuildManifest {
-    return this._data;
+    return this._manifest;
+  }
+
+  /**
+   * Whether missing manifest entries should cause errors.
+   * Loaded from the manifest file; can be overridden by the application.
+   */
+  get strict(): boolean {
+    return this._manifest.strict ?? false;
+  }
+
+  set strict(value: boolean) {
+    this._manifest.strict = value;
   }
 
   /**
    * Add or replace a manifest entry. Also marks it as touched.
    */
   update(buildId: BuildID, entry: BuildManifestEntry): void {
-    this._data[buildId] = entry;
+    this._manifest.entries[buildId] = entry;
     this._touched.add(buildId);
   }
 
@@ -115,18 +129,50 @@ export class Manifest {
   }
 
   /**
-   * Returns only entries that were update()d or touch()ed.
-   * This is the manifest a builder should write — it reflects
-   * exactly what the current build references.
+   * Returns a BuildManifest with only entries that were update()d or touch()ed.
+   * This is the manifest a builder should write — it reflects exactly what the
+   * current build references. Preserves the strict flag.
    */
   get activeEntries(): BuildManifest {
-    const result: BuildManifest = {};
+    const entries: Record<BuildID, BuildManifestEntry> = {};
     for (const id of this._touched) {
-      if (this._data[id]) {
-        result[id] = this._data[id];
+      if (this._manifest.entries[id]) {
+        entries[id] = this._manifest.entries[id];
       }
     }
-    return result;
+    return {entries, strict: this._manifest.strict};
+  }
+
+  private _clearEntries(): void {
+    for (const key of Object.keys(this._manifest.entries)) {
+      delete this._manifest.entries[key];
+    }
+  }
+
+  private _loadParsed(parsed: Record<string, unknown>): void {
+    if (typeof parsed['strict'] === 'boolean') {
+      this._manifest.strict = parsed['strict'];
+    }
+    // New format: {entries: {...}, strict?: boolean}
+    // Old format: {buildId: {tableName}, ...} (flat record, no "entries" key)
+    let entries: Record<string, BuildManifestEntry>;
+    if (parsed['entries'] && typeof parsed['entries'] === 'object') {
+      entries = parsed['entries'] as Record<string, BuildManifestEntry>;
+    } else {
+      // Treat as old flat-record format: every key with a tableName is an entry
+      entries = {};
+      for (const [key, val] of Object.entries(parsed)) {
+        if (
+          key !== 'strict' &&
+          val &&
+          typeof val === 'object' &&
+          'tableName' in val
+        ) {
+          entries[key] = val as BuildManifestEntry;
+        }
+      }
+    }
+    Object.assign(this._manifest.entries, entries);
   }
 }
 

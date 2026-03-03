@@ -6,7 +6,11 @@
 import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
 import type {BuildNode, BuildManifest} from '@malloydata/malloy';
-import {ConnectionRuntime, SingleConnectionRuntime} from '@malloydata/malloy';
+import {
+  ConnectionRuntime,
+  SingleConnectionRuntime,
+  EMPTY_BUILD_MANIFEST,
+} from '@malloydata/malloy';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
 // Helper to extract all sourceIDs from a nested BuildNode array (recursive)
@@ -47,7 +51,7 @@ function findNode(nodes: BuildNode[][], pattern: string) {
 
 // Create empty manifest
 function createManifest(): BuildManifest {
-  return {};
+  return {entries: {}};
 }
 
 // Add entry to manifest
@@ -56,7 +60,7 @@ function addManifestEntry(
   buildId: string,
   tableName: string
 ) {
-  manifest[buildId] = {tableName};
+  manifest.entries[buildId] = {tableName};
 }
 
 // Connection digest (cached)
@@ -304,6 +308,7 @@ describe('source persistence', () => {
 
         const connectionDigest = await getDigest();
         const manifest = createManifest();
+        manifest.strict = true;
 
         const wrapper = Object.values(plan.sources).find(
           s => s.name === 'wrapper'
@@ -314,7 +319,6 @@ describe('source persistence', () => {
           wrapper.getSQL({
             buildManifest: manifest,
             connectionDigests: {[tstDB]: connectionDigest},
-            strictPersist: true,
           })
         ).toThrow(/not found in manifest/);
       });
@@ -1222,7 +1226,7 @@ describe('source persistence', () => {
       const wrapperBuildId = wrapper.makeBuildId(connectionDigest, wrapperSQL);
       addManifestEntry(manifest, wrapperBuildId, 'build_cache.wrapper_v1');
 
-      expect(Object.keys(manifest)).toHaveLength(2);
+      expect(Object.keys(manifest.entries)).toHaveLength(2);
       expect(carrierStatsBuildId).not.toBe(wrapperBuildId);
     });
   });
@@ -1463,7 +1467,7 @@ describe('source persistence', () => {
       expect(() => model.getBuildPlan()).toThrow('experimental.persistence');
     });
 
-    it('running query with buildManifest throws without experimental.persistence annotation', async () => {
+    it('running query with non-empty buildManifest throws without experimental.persistence annotation', async () => {
       const testModel = wrapTestModel(
         tstRuntime,
         `
@@ -1474,6 +1478,7 @@ describe('source persistence', () => {
       );
 
       const manifest = createManifest();
+      addManifestEntry(manifest, 'fake-build-id', 'some_table');
 
       await expect(
         testModel.model
@@ -1552,7 +1557,7 @@ describe('source persistence', () => {
 
       // Override with empty manifest — SQL should NOT reference the table
       const sqlWithoutManifest = await runtimeWithManifest
-        .loadQuery(modelCode, {buildManifest: {}})
+        .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
         .getSQL();
       expect(sqlWithoutManifest).not.toMatch(/FROM\s+by_carrier\s/);
     });
@@ -1609,7 +1614,7 @@ describe('source persistence', () => {
         const resultManifest = await rwRuntime.loadQuery(modelCode).run();
         // Run without manifest (inlines the query)
         const resultPlain = await rwRuntime
-          .loadQuery(modelCode, {buildManifest: {}})
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
           .run();
 
         const dataManifest = resultManifest.data.toObject();
@@ -1680,6 +1685,80 @@ describe('source persistence', () => {
       // Now SQL SHOULD reference the table
       const sqlAfter = await runtime.loadQuery(modelCode).getSQL();
       expect(sqlAfter).toMatch(/FROM\s+by_carrier\s/);
+    });
+  });
+
+  describe('strict manifest', () => {
+    const strictModelCode = `${PERSIST_ANNOTATION}
+      source: flights is ${tstDB}.table('malloytest.flights')
+
+      #@ persist
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    it('strict manifest throws when persist source is missing from manifest', async () => {
+      const manifest = createManifest();
+      manifest.strict = true;
+
+      const runtime = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+        buildManifest: manifest,
+      });
+
+      await expect(runtime.loadQuery(strictModelCode).getSQL()).rejects.toThrow(
+        'not found in manifest'
+      );
+    });
+
+    it('strict manifest succeeds when persist source is in manifest', async () => {
+      const {plan} = await getPersistPlan(`
+        source: flights is ${tstDB}.table('malloytest.flights')
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      const connectionDigest = await getDigest();
+      const source = Object.values(plan.sources)[0];
+      const sql = source.getSQL();
+      const buildId = source.makeBuildId(connectionDigest, sql);
+
+      const manifest = createManifest();
+      manifest.strict = true;
+      addManifestEntry(manifest, buildId, 'cached.by_carrier');
+
+      const runtime = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+        buildManifest: manifest,
+      });
+
+      const resultSQL = await runtime.loadQuery(strictModelCode).getSQL();
+      expect(resultSQL).toContain('cached.by_carrier');
+    });
+
+    it('non-strict manifest falls through when persist source is missing', async () => {
+      const manifest = createManifest();
+      // strict is undefined/false by default
+
+      const runtime = new SingleConnectionRuntime({
+        connection: tstRuntime.connection,
+        urlReader: testFileSpace,
+        buildManifest: manifest,
+      });
+
+      // Should not throw — falls through to inline SQL
+      const sql = await runtime.loadQuery(strictModelCode).getSQL();
+      expect(sql).toContain('COUNT(');
     });
   });
 });

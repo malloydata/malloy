@@ -168,7 +168,8 @@ const runtime = new Runtime({
 const result = await runtime.loadQuery(modelURL).run();
 
 // Pass empty manifest to get unsubstituted SQL
-const rawSQL = await runtime.loadQuery(modelURL, {buildManifest: {}}).getSQL();
+import {EMPTY_BUILD_MANIFEST} from '@malloydata/malloy';
+const rawSQL = await runtime.loadQuery(modelURL, {buildManifest: EMPTY_BUILD_MANIFEST}).getSQL();
 ```
 
 **Manifest can also be set after construction:**
@@ -183,7 +184,15 @@ runtime.buildManifest = manifest.buildManifest;
 | Class | Purpose |
 |-------|---------|
 | `MalloyConfig` | Loads `malloy-config.json` (connections + manifest path). Two construction modes: from URL (async `load()`) or from text (sync). |
-| `Manifest` | In-memory manifest store. `load(url)` reads via URLReader, `loadText(json)` parses directly. `update()` and `touch()` for builders, `activeEntries` for writing. The `buildManifest` getter returns a stable reference — mutations are visible to the Runtime without re-assignment. |
+| `Manifest` | In-memory manifest store. `load(url)` reads via URLReader, `loadText(json)` parses directly. `update()` and `touch()` for builders, `activeEntries` for writing. The `buildManifest` getter returns a stable `BuildManifest` reference (`{entries, strict}`) — mutations are visible to the Runtime without re-assignment. The `strict` flag is loaded from the manifest file and can be overridden via `manifest.strict = value`. |
+
+`MalloyConfig` is the standard entry point for both the CLI (`malloydata/malloy-cli`) and the VS Code extension. The config file determines connections, and the manifest is resolved relative to the config file's location:
+
+```
+<configDir>/<manifestPath>/malloy-manifest.json
+```
+
+`manifestPath` defaults to `"MANIFESTS"`. Calling `config.load()` reads both the config and the manifest in one step. The `Manifest` class can also be used standalone (e.g. in builder sketches), but in practice config and manifest are almost always tied — you read the config to find the manifest.
 
 ---
 

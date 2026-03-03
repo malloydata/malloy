@@ -6,6 +6,19 @@
 import type {EventStream} from '../../runtime_types';
 import type {BuildManifest} from '../../model';
 
+/**
+ * An empty BuildManifest with no entries and strict mode off.
+ * Use this to explicitly suppress manifest substitution in a query:
+ *
+ *   runtime.loadQuery(url, {buildManifest: EMPTY_BUILD_MANIFEST}).getSQL()
+ *
+ * Frozen to prevent accidental mutation of the shared sentinel.
+ */
+export const EMPTY_BUILD_MANIFEST: BuildManifest = Object.freeze({
+  entries: Object.freeze({}),
+  strict: false,
+});
+
 export type {Taggable} from '../../taggable';
 
 export interface Loggable {
@@ -34,12 +47,10 @@ export interface CompileOptions {
 export interface CompileQueryOptions {
   eventStream?: EventStream;
   defaultRowLimit?: number;
-  /** Manifest of built tables (BuildID → entry) for persist substitution */
+  /** Manifest of built tables for persist source substitution */
   buildManifest?: BuildManifest;
   /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
   connectionDigests?: Record<string, string>;
-  /** If true, throw when a persist source's BuildID is not in the manifest */
-  strictPersist?: boolean;
 }
 
 // =============================================================================
