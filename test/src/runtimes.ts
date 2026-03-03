@@ -265,13 +265,19 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         );
         break;
       case 'databricks':
-        connection = new DatabricksConnection(dbName, {
-          host: process.env['DATABRICKS_HOST'] || '',
-          path: process.env['DATABRICKS_PATH'] || '',
-          token: process.env['DATABRICKS_TOKEN'],
-          defaultCatalog: process.env['DATABRICKS_CATALOG'],
-          defaultSchema: process.env['DATABRICKS_SCHEMA'],
-        });
+        {
+          const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'];
+          const dbPath =
+            process.env['DATABRICKS_PATH'] ||
+            (warehouseId ? `/sql/1.0/warehouses/${warehouseId}` : '');
+          connection = new DatabricksConnection(dbName, {
+            host: process.env['DATABRICKS_HOST'] || '',
+            path: dbPath,
+            token: process.env['DATABRICKS_TOKEN'],
+            defaultCatalog: process.env['DATABRICKS_CATALOG'],
+            defaultSchema: process.env['DATABRICKS_SCHEMA'],
+          });
+        }
         break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);

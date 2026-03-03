@@ -6,9 +6,9 @@ on:
     secrets:
       DATABRICKS_HOST:
         required: true
-      DATABRICKS_PATH:
-        required: true
       DATABRICKS_TOKEN:
+        required: true
+      DATABRICKS_WAREHOUSE_ID:
         required: true
   workflow_dispatch:
 
@@ -31,5 +31,5 @@ jobs:
           npm run ci-databricks
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_PATH: ${{ secrets.DATABRICKS_PATH }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          DATABRICKS_PATH: /sql/1.0/warehouses/${{ secrets.DATABRICKS_WAREHOUSE_ID }}
