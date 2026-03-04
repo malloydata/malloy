@@ -218,6 +218,17 @@ export abstract class Dialect {
   // When true, compiler adds ORDER BY on array ordinality columns (__row_id)
   requiresExplicitUnnestOrdering = false;
 
+  // In most SQL dialects, column aliases defined in a SELECT clause are not
+  // visible to other expressions in the same SELECT. However, some dialects
+  // (e.g. Databricks/Spark) support "lateral column aliases", where an alias
+  // can be referenced by later expressions in the same SELECT. This causes
+  // problems when the compiler remaps the `group_set` column in a combine-
+  // turtles stage: the alias shadows the input column, so CASE WHEN
+  // group_set=N checks in aggregate expressions see the remapped value
+  // instead of the original. When true, the compiler splits the group_set
+  // remapping into a separate CTE to avoid shadowing.
+  hasLateralColumnAliasInSelect = false;
+
   supportsCountApprox = false;
 
   supportsHyperLogLog = false;

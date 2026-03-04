@@ -86,6 +86,7 @@ export class DatabricksDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
+  hasLateralColumnAliasInSelect = true;
   experimental = false;
   supportsFullJoin = true;
   supportsPipelinesInViews = false;
@@ -169,7 +170,7 @@ export class DatabricksDialect extends Dialect {
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${fieldName} END)`;
+    return `FIRST(CASE WHEN group_set=${groupSet} THEN ${fieldName} END) IGNORE NULLS`;
   }
 
   private buildStructExpression(fieldList: DialectFieldList): string {
@@ -223,7 +224,7 @@ export class DatabricksDialect extends Dialect {
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const expressions = this.buildStructExpression(fieldList);
     const definitions = this.buildTypeExpression(fieldList);
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) END)`;
+    return `FIRST(CASE WHEN group_set=${groupSet} THEN CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) END) IGNORE NULLS`;
   }
 
   sqlAnyValueLastTurtle(
@@ -231,7 +232,7 @@ export class DatabricksDialect extends Dialect {
     groupSet: number,
     sqlName: string
   ): string {
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${name} END) as ${sqlName}`;
+    return `FIRST(CASE WHEN group_set=${groupSet} THEN ${name} END) IGNORE NULLS as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
@@ -241,7 +242,7 @@ export class DatabricksDialect extends Dialect {
     const expressions = this.buildStructExpression(fieldList);
     const nullValues = fieldList.map(_f => 'NULL').join(', ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) END), CAST(STRUCT(${nullValues}) AS STRUCT<${definitions}>))`;
+    return `COALESCE(FIRST(CASE WHEN group_set=${groupSet} THEN CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) END) IGNORE NULLS, CAST(STRUCT(${nullValues}) AS STRUCT<${definitions}>))`;
   }
 
   sqlUnnestAlias(

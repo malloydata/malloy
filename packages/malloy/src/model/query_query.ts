@@ -1749,11 +1749,19 @@ export class QueryQuery extends QueryField {
       }
     }
     if (output.groupsAggregated.length > 0) {
-      output.sql[0] = 'CASE ';
-      for (const m of output.groupsAggregated) {
-        output.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+      if (!this.parent.dialect.hasLateralColumnAliasInSelect) {
+        // Safe to remap in-place; aggregate expressions won't see the alias.
+        // This runs on every recursive return but sql[0] replacement is
+        // idempotent — last call builds the full CASE from all accumulated
+        // groupsAggregated entries.
+        output.sql[0] = 'CASE ';
+        for (const m of output.groupsAggregated) {
+          output.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+        }
+        output.sql[0] += 'ELSE group_set END as group_set';
       }
-      output.sql[0] += 'ELSE group_set END as group_set';
+      // For hasLateralColumnAliasInSelect, the remap is handled in
+      // generateSQLDepthN to avoid adding it multiple times from recursion.
     }
   }
 
@@ -1772,6 +1780,24 @@ export class QueryQuery extends QueryField {
       outputPipelinedSQL: [],
     };
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
+
+    // When column aliases are visible in the same SELECT (e.g. Databricks),
+    // replace sql[0] with the remap CASE aliased as __remapped_group_set
+    // (not group_set). This avoids shadowing the input group_set column
+    // that aggregate expressions reference. GROUP BY still uses position 1
+    // (the remapped value), so rows with different original group_sets
+    // collapse correctly. A follow-up CTE renames it to group_set.
+    const needsRemapStage =
+      f.groupsAggregated.length > 0 &&
+      this.parent.dialect.hasLateralColumnAliasInSelect;
+    if (needsRemapStage) {
+      f.sql[0] = 'CASE ';
+      for (const m of f.groupsAggregated) {
+        f.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+      }
+      f.sql[0] += 'ELSE group_set END as __remapped_group_set';
+    }
+
     s += indent(f.sql.join(',\n')) + '\n';
     s += `FROM ${stageName}\n`;
     const where = this.rootResult.eliminateComputeGroupsSQL();
@@ -1783,6 +1809,17 @@ export class QueryQuery extends QueryField {
     }
 
     this.resultStage = stageWriter.addStage(s);
+
+    if (needsRemapStage) {
+      const cols = f.sql.slice(1).map(col => {
+        const asMatch = col.match(/as\s+(\S+)\s*$/i);
+        return asMatch ? asMatch[1] : '*';
+      });
+      const remapSQL = `SELECT \n${indent(
+        ['__remapped_group_set as group_set', ...cols].join(',\n')
+      )}\nFROM ${this.resultStage}\n`;
+      this.resultStage = stageWriter.addStage(remapSQL);
+    }
 
     this.resultStage = this.generatePipelinedStages(
       f.outputPipelinedSQL,

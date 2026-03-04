@@ -68,12 +68,14 @@ declare global {
       ): Promise<R>;
 
       /**
-       * Check nested values via dotted paths. Takes first element at each array level.
+       * Run a query and check nested values via dotted paths,
+       * with full diagnostics (SQL, data dump) like toMatchResult.
+       * Supports `# test.debug` tag to force failure and show data.
        *
        * @example
-       * expect(result.data[0]).toHavePath({'by_state.state': 'TX'});
+       * await expect(query).toMatchPaths(tm, {'o.by_state.state': 'TX'});
        */
-      toHavePath(paths: Record<string, unknown>): R;
+      toMatchPaths(tm: TestModel, paths: Record<string, unknown>): Promise<R>;
     }
   }
 }
@@ -999,26 +1001,37 @@ expect.extend({
     );
   },
 
-  /**
-   * Navigate a dotted path through an object, taking the first element of arrays.
-   * For path 'a.b.c', navigates: obj -> obj.a (or obj.a[0] if array) -> .b -> .c
-   */
-  toHavePath(
-    received: Record<string, unknown>,
+  async toMatchPaths(
+    querySrc: string,
+    tm: TestModel,
     paths: Record<string, unknown>
-  ): JestMatcherResult {
+  ): Promise<JestMatcherResult> {
+    querySrc = querySrc.trimEnd().replace(/^\n*/, '');
+    const {fail, dataObjects, queryTestTag, query} = await runQueryInternal(
+      tm,
+      querySrc
+    );
+    if (fail) return fail;
+    if (!dataObjects || dataObjects.length === 0) {
+      return {
+        pass: false,
+        message: () => 'Query returned no data',
+      };
+    }
+
+    const row = dataObjects[0] as Record<string, unknown>;
+    const debug = queryTestTag?.has('debug');
     const fails: string[] = [];
 
     for (const [path, expected] of Object.entries(paths)) {
       const segments = path.split('.');
-      let current: unknown = received;
+      let current: unknown = row;
 
       for (const segment of segments) {
         if (current === null || current === undefined) {
           fails.push(`Path '${path}': cannot navigate through null/undefined`);
           break;
         }
-        // If current is an array, take first element then access property
         if (Array.isArray(current)) {
           if (current.length === 0) {
             fails.push(`Path '${path}': empty array at '${segment}'`);
@@ -1038,7 +1051,6 @@ expect.extend({
         }
       }
 
-      // Final value might be in an array too
       if (Array.isArray(current) && current.length > 0) {
         current = current[0];
       }
@@ -1054,11 +1066,17 @@ expect.extend({
       }
     }
 
-    if (fails.length > 0) {
-      return {
-        pass: false,
-        message: () => fails.join('\n'),
-      };
+    if (debug && fails.length === 0) {
+      fails.push('Test forced failure (# test.debug)');
+    }
+
+    if (fails.length > 0 || debug) {
+      const dataSection = `DATA:\n  ${humanReadable(dataObjects)}`;
+      const fromSQL = query
+        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
+        : 'SQL Missing';
+      const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n\n${dataSection}\n\n${fails.join('\n')}`;
+      return {pass: false, message: () => failMsg};
     }
 
     return {

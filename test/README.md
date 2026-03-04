@@ -126,15 +126,14 @@ await expect(query).toMatchResult(tm, {
 });
 ```
 
-## Nested data with toHavePath
+## Nested data with toMatchPaths
 
-For queries with `nest:`, use `toHavePath` to navigate nested arrays: This is useful when a query returns a long nested array of records and you only care about the value of the first record.
+For queries with `nest:`, use `toMatchPaths` to navigate nested arrays: This is useful when a query returns a long nested array of records and you only care about the value of the first record.
 
 ```typescript
-import {runQuery} from '@malloydata/malloy/test';
-
-const result = await runQuery(tm.model, 'run: src -> { nest: by_state is {...} }');
-expect(result.data[0]).toHavePath({
+await expect(`
+  run: src -> { nest: by_state is {...} }
+`).toMatchPaths(tm, {
   'by_state.state': 'TX',
   'by_state.count': 1845,
 });

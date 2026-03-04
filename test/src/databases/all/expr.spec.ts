@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, runQuery, mkTestModel} from '@malloydata/malloy/test';
+import {wrapTestModel, mkTestModel} from '@malloydata/malloy/test';
 import '../../util/db-jest-matchers'; // For isSqlEq matcher
 import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
@@ -154,9 +154,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // simple turtle expressions
   it('simple turtle', async () => {
-    const result = await runQuery(
-      expressionModel,
-      `
+    await expect(`
       // # test.debug
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         group_by: popular_name
@@ -168,18 +166,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
         limit: 3
       }
-    `
-    );
-    expect(result.data[0]).toHavePath({
+    `).toMatchPaths(testModel, {
       'by_state.state': 'TX',
       'by_state.airport_count': 1845,
     });
   });
 
   it('double turtle', async () => {
-    const result = await runQuery(
-      expressionModel,
-      `
+    await expect(`
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         aggregate: airport_count.sum()
         nest: o is {
@@ -196,9 +190,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         }
       }
-    `
-    );
-    expect(result.data[0]).toHavePath({
+    `).toMatchPaths(testModel, {
       'o.by_state.state': 'TX',
       'o.by_state.airport_count': 1845,
       'o.airport_count': 11146,
@@ -238,15 +230,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // filtered turtle expressions
   test.when(runtime.supportsNesting)('model: filtered turtle', async () => {
-    const result = await runQuery(
-      expressionModel,
-      `
+    await expect(`
       run: aircraft->{
         nest: b is by_manufacturer + { where: aircraft_models.manufacturer ?~'B%'}
       }
-    `
-    );
-    expect(result.data[0]).toHavePath({'b.manufacturer': 'BEECH'});
+    `).toMatchPaths(testModel, {'b.manufacturer': 'BEECH'});
   });
 
   // having.
@@ -263,9 +251,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   test.when(runtime.supportsNesting)('model: having in a nest', async () => {
-    const result = await runQuery(
-      expressionModel,
-      `
+    await expect(`
       run: aircraft->{
         top: 10
         order_by: 1
@@ -279,17 +265,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: aircraft_count
         }
       }
-    `
-    );
-    expect(result.data[0]).toHavePath({'by_state.state': 'VA'});
+    `).toMatchPaths(testModel, {'by_state.state': 'VA'});
   });
 
   test.when(runtime.supportsNesting)(
     'model: turtle having on main',
     async () => {
-      const result = await runQuery(
-        expressionModel,
-        `
+      await expect(`
       run: aircraft->{
         order_by: 2 asc
         having: aircraft_count ? >500
@@ -308,9 +290,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }
         }
       }
-    `
-      );
-      expect(result.data[0]).toHavePath({
+    `).toMatchPaths(testModel, {
         'by_state.by_city.city': 'ALBUQUERQUE',
       });
     }
