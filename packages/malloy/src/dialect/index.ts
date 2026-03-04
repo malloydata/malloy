@@ -45,6 +45,7 @@ export {Dialect, qtz} from './dialect';
 export type {
   DialectFieldList,
   CompiledOrderBy,
+  LateralJoinExpression,
   QueryInfo,
   FieldReferenceType,
 } from './dialect';

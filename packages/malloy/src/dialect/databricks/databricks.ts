@@ -28,7 +28,9 @@ import type {
   CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
+  LateralJoinExpression,
   OrderByClauseType,
+  OrderByRequest,
   QueryInfo,
 } from '../dialect';
 import {Dialect, qtz} from '../dialect';
@@ -96,6 +98,7 @@ export class DatabricksDialect extends Dialect {
   supportsArraysInData = false;
   compoundObjectInSchema = false;
   booleanType: BooleanTypeSupport = 'supported';
+  likeEscape = false;
   orderByClause: OrderByClauseType = 'ordinal';
   hasTimestamptz = false;
   supportsBigIntPrecision = false;
@@ -141,7 +144,7 @@ export class DatabricksDialect extends Dialect {
         return `ARRAY<${this.malloyTypeToSQLType(malloyType.elementTypeDef)}>`;
       }
       case 'timestamp':
-        return 'TIMESTAMP_NTZ';
+        return 'TIMESTAMP';
       case 'sql native':
         return malloyType.rawType || 'STRING';
       default:
@@ -167,11 +170,26 @@ export class DatabricksDialect extends Dialect {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `CROSS JOIN (SELECT EXPLODE(SEQUENCE(0, ${groupSetCount})) AS group_set) AS group_set`;
+    return `LATERAL VIEW EXPLODE(SEQUENCE(0, ${groupSetCount})) group_set AS group_set`;
   }
 
-  sqlLateralJoinBag(expressions: string[]): string {
-    return `LEFT JOIN LATERAL (SELECT ${expressions.join(', ')}) AS __lateral_join_bag ON TRUE\n`;
+  sqlLateralJoinBag(expressions: LateralJoinExpression[]): string {
+    // Use LATERAL VIEW INLINE to produce a single-row lateral join with named
+    // columns. This must be LATERAL VIEW (not LEFT JOIN LATERAL) because
+    // Databricks requires all LATERAL VIEWs to come after regular JOINs,
+    // and group_set uses LATERAL VIEW EXPLODE.
+    const structArgs = expressions
+      .map(e => `'${e.name.replace(/`/g, '')}', ${e.sql}`)
+      .join(', ');
+    const aliases = expressions.map(e => e.name).join(', ');
+    return `LATERAL VIEW INLINE(ARRAY(named_struct(${structArgs}))) __lateral_join_bag AS ${aliases}\n`;
+  }
+
+  sqlOrderBy(orderTerms: string[], obr?: OrderByRequest): string {
+    if (obr === 'analytical' || obr === 'turtle') {
+      return `ORDER BY ${orderTerms.join(',')}`;
+    }
+    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
@@ -407,18 +425,19 @@ export class DatabricksDialect extends Dialect {
     _inCivilTime: boolean,
     _timezone?: string
   ): string {
-    let offsetUnit = unit;
+    // Use TIMESTAMPADD which accepts expressions for magnitude,
+    // unlike INTERVAL which only accepts literals in Databricks.
+    let offsetUnit = unit.toUpperCase();
     let offsetMag = magnitude;
     if (unit === 'quarter') {
       offsetUnit = 'MONTH';
-      offsetMag = `${magnitude}*3`;
+      offsetMag = `(${magnitude})*3`;
     } else if (unit === 'week') {
       offsetUnit = 'DAY';
-      offsetMag = `${magnitude}*7`;
+      offsetMag = `(${magnitude})*7`;
     }
-
-    const interval = `INTERVAL ${offsetMag} ${offsetUnit}`;
-    return `(${expr} ${op} ${interval})`;
+    const n = op === '+' ? offsetMag : `-(${offsetMag})`;
+    return `TIMESTAMPADD(${offsetUnit}, ${n}, ${expr})`;
   }
 
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
@@ -476,7 +495,7 @@ export class DatabricksDialect extends Dialect {
     if (tz) {
       return `TO_UTC_TIMESTAMP(TIMESTAMP_NTZ '${literal}', '${tz}')`;
     }
-    return `TIMESTAMP_NTZ '${literal}'`;
+    return `TIMESTAMP '${literal}'`;
   }
 
   sqlTimestamptzLiteral(

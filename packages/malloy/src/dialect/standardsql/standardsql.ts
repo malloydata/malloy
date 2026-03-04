@@ -52,7 +52,12 @@ import type {
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect, MIN_INT64, MAX_INT64} from '../dialect';
+import {
+  Dialect,
+  MIN_INT64,
+  MAX_INT64,
+  type LateralJoinExpression,
+} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -129,8 +134,9 @@ export class StandardSQLDialect extends Dialect {
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
 
-  sqlLateralJoinBag(expressions: string[]): string {
-    return `LEFT JOIN UNNEST([STRUCT(${expressions.join(',\n')})]) as __lateral_join_bag\n`;
+  sqlLateralJoinBag(expressions: LateralJoinExpression[]): string {
+    const fields = expressions.map(e => `${e.sql} as ${e.name}`);
+    return `LEFT JOIN UNNEST([STRUCT(${fields.join(',\n')})]) as __lateral_join_bag\n`;
   }
   nestedArrays = false; // Can't have an array of arrays for some reason
   supportsHyperLogLog = true;

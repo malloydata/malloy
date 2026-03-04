@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {DialectFieldList, CompiledOrderBy} from '../dialect';
+import type {
+  DialectFieldList,
+  CompiledOrderBy,
+  LateralJoinExpression,
+} from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
   TurtleDef,
@@ -92,7 +96,7 @@ type StageGroupMaping = {fromGroup: number; toGroup: number};
 
 type StageOutputContext = {
   sql: string[]; // sql expressions
-  lateralJoinSQLExpressions: string[];
+  lateralJoinSQLExpressions: LateralJoinExpression[];
   dimensionIndexes: number[]; // which indexes are dimensions
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
@@ -1351,7 +1355,10 @@ export class QueryQuery extends QueryField {
               //  and numbers as strings into a lateral join when the query has ungrouped expressions
               const outputFieldName = `__lateral_join_bag.${outputName}`;
               fi.analyticalSQL = outputFieldName;
-              output.lateralJoinSQLExpressions.push(`${exp} as ${outputName}`);
+              output.lateralJoinSQLExpressions.push({
+                sql: exp,
+                name: outputName,
+              });
               output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
                 const outputNameString =
@@ -1361,9 +1368,10 @@ export class QueryQuery extends QueryField {
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
-                output.lateralJoinSQLExpressions.push(
-                  `CAST(${exp} as STRING) as ${outputNameString}`
-                );
+                output.lateralJoinSQLExpressions.push({
+                  sql: `CAST(${exp} as STRING)`,
+                  name: outputNameString,
+                });
                 fi.partitionSQL = outputFieldNameString;
               }
             } else {

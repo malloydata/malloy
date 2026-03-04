@@ -63,6 +63,15 @@ export interface CompiledOrderBy {
   dir: 'asc' | 'desc';
 }
 
+/**
+ * A named expression for the lateral join bag. The expression will be
+ * available as `__lateral_join_bag.name` in the query.
+ */
+export interface LateralJoinExpression {
+  sql: string;
+  name: string; // already quoted by sqlMaybeQuoteIdentifier
+}
+
 /*
  * Standard integer type limits.
  * Use these in dialect integerTypeMappings definitions.
@@ -181,7 +190,7 @@ export abstract class Dialect {
   // The expressions are dimension fields that need to be referenced by name
   // in PARTITION BY clauses. Must be overridden by any dialect that sets
   // cantPartitionWindowFunctionsOnExpressions = true.
-  sqlLateralJoinBag(_expressions: string[]): string {
+  sqlLateralJoinBag(_expressions: LateralJoinExpression[]): string {
     if (this.cantPartitionWindowFunctionsOnExpressions) {
       throw new Error(
         `Dialect '${this.name}' sets cantPartitionWindowFunctionsOnExpressions but does not implement sqlLateralJoinBag`

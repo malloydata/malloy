@@ -174,9 +174,11 @@ async function runQueryInternal(
 
   if (process.env['MALLOY_LOG_SQL']) {
     try {
+      // eslint-disable-next-line no-console
       console.log(await query.getSQL());
     } catch {
-      console.log('(could not get SQL)');
+      // getSQL can fail if the query didn't compile; ignore since
+      // the real error will be reported when we try to run it.
     }
   }
 

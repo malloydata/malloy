@@ -129,6 +129,7 @@ describe.each(runtimes.runtimeList)(
           'trino': 'CARDINALITY',
           'mysql': 'JSON_LENGTH',
           'snowflake': 'ARRAY_SIZE',
+          'databricks': 'SIZE',
         };
         const dialect = runtime.dialect.name;
         const missing = `Dialect '${dialect}' missing array length function in nameOfArrayLenFunction`;
