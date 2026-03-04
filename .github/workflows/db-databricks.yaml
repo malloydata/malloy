@@ -30,6 +30,7 @@ jobs:
           npm run build
           npm run ci-databricks
         env:
+          CI: true
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           DATABRICKS_PATH: /sql/1.0/warehouses/${{ secrets.DATABRICKS_WAREHOUSE_ID }}
