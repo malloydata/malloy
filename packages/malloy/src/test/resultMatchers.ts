@@ -172,6 +172,14 @@ async function runQueryInternal(
     };
   }
 
+  if (process.env['MALLOY_LOG_SQL']) {
+    try {
+      console.log(await query.getSQL());
+    } catch {
+      console.log('(could not get SQL)');
+    }
+  }
+
   try {
     const result = await query.run();
     // Use wrapResult to normalize data across all databases
@@ -772,7 +780,50 @@ function isOptions(arg: unknown): arg is MatcherOptions {
 }
 
 /**
- * Shared implementation for all result matching.
+ * Run a query and apply a matcher callback, with shared error handling,
+ * debug support, and failure formatting.
+ */
+async function withQueryResult(
+  querySrc: string,
+  tm: TestModel,
+  debug: boolean,
+  successMessage: string,
+  matchFn: (result: QueryRunResult) => string[]
+): Promise<JestMatcherResult> {
+  querySrc = querySrc.trimEnd().replace(/^\n*/, '');
+  const runResult = await runQueryInternal(tm, querySrc);
+  if (runResult.fail) return runResult.fail;
+  const {data, schema, dataObjects, queryTestTag, query} = runResult;
+  if (!data || !schema || !dataObjects) {
+    return {
+      pass: false,
+      message: () => 'runQuery returned no data and no errors',
+    };
+  }
+
+  const isDebug = debug || queryTestTag?.has('debug');
+  const fails = matchFn(runResult as QueryRunResult);
+
+  if (isDebug && fails.length === 0) {
+    fails.push('Test forced failure (# test.debug)');
+  }
+
+  if (fails.length > 0 || isDebug) {
+    if (isDebug) {
+      fails.unshift(`Result Data: ${humanReadable(dataObjects)}`);
+    }
+    const fromSQL = query
+      ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
+      : 'SQL Missing';
+    const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n\n${fails.join('\n')}`;
+    return {pass: false, message: () => failMsg};
+  }
+
+  return {pass: true, message: () => successMessage};
+}
+
+/**
+ * Shared implementation for row-based result matching.
  * @param mode - 'partial' for toMatchResult/toMatchRows, 'exact' for toEqualResult
  * @param strictRowCount - If true, requires exact row count match
  */
@@ -788,152 +839,121 @@ async function matchImpl(
     RECEIVED_COLOR: (s: string) => string;
   }
 ): Promise<JestMatcherResult> {
-  querySrc = querySrc.trimEnd().replace(/^\n*/, '');
-  const {fail, data, schema, dataObjects, queryTestTag, query} =
-    await runQueryInternal(tm, querySrc);
-  if (fail) return fail;
-  if (!data || !schema || !dataObjects) {
-    return {
-      pass: false,
-      message: () => 'runQuery returned no data and no errors',
-    };
-  }
+  return withQueryResult(
+    querySrc,
+    tm,
+    options.debug ?? false,
+    mode === 'exact'
+      ? 'All rows matched expected results exactly'
+      : 'All rows matched expected results',
+    ({data, schema, dataObjects}) => {
+      const fails: string[] = [];
 
-  const fails: string[] = [];
-  const debug = options.debug || queryTestTag?.has('debug');
-
-  // Data is an array_cell containing record_cells
-  if (data.kind !== 'array_cell') {
-    return {
-      pass: false,
-      message: () => `Expected array_cell at root, got ${data.kind}`,
-    };
-  }
-
-  const rows = data.array_value;
-
-  // Create root fieldInfo for schema navigation
-  const rootFieldInfo: Malloy.FieldInfoWithJoin = {
-    kind: 'join',
-    name: 'root',
-    relationship: 'one',
-    schema,
-  };
-
-  // Collect row-level issues for unified output
-  const rowCountMismatch =
-    strictRowCount && rows.length !== expectedRows.length
-      ? `Expected ${expectedRows.length} rows, got ${rows.length}`
-      : !strictRowCount &&
-          expectedRows.length > 0 &&
-          rows.length < expectedRows.length
-        ? `Expected at least ${expectedRows.length} rows, got ${rows.length}`
-        : null;
-
-  // Track per-row mismatches: row index -> list of field issues
-  const rowIssues: Map<number, string[]> = new Map();
-
-  // Check empty match {} means "at least one row"
-  if (
-    mode === 'partial' &&
-    expectedRows.length === 1 &&
-    Object.keys(expectedRows[0]).length === 0
-  ) {
-    if (rows.length === 0) {
-      fails.push('Expected at least one row, got 0');
-    }
-  } else {
-    // Compare each expected row using schema-aware cell matching
-    const rowsToCheck = Math.min(rows.length, expectedRows.length);
-    for (let i = 0; i < rowsToCheck; i++) {
-      const matchResult = matchCell(
-        rows[i],
-        rootFieldInfo,
-        expectedRows[i],
-        `Row ${i}`,
-        tm.dialect,
-        mode
-      );
-      if (!matchResult.pass) {
-        // Extract field name from path like "Row 0.fieldname" or "Row 0.nested.field"
-        const pathMatch = matchResult.path?.match(/^Row \d+\.(.+)$/);
-        const fieldPath = pathMatch ? pathMatch[1] : matchResult.path;
-        const issue = jestUtils.EXPECTED_COLOR(
-          `    Expected ${fieldPath}: ${matchResult.expected}`
-        );
-        if (!rowIssues.has(i)) {
-          rowIssues.set(i, []);
-        }
-        rowIssues.get(i)!.push(issue);
+      // Data is an array_cell containing record_cells
+      if (data.kind !== 'array_cell') {
+        fails.push(`Expected array_cell at root, got ${data.kind}`);
+        return fails;
       }
-    }
-  }
 
-  // Build DATA DIFFERENCES section if there are any issues
-  if (rowCountMismatch || rowIssues.size > 0) {
-    const diffLines: string[] = ['DATA DIFFERENCES'];
-    if (rowCountMismatch) {
-      diffLines.push(`  ${rowCountMismatch}`);
-    }
-    // Show each row with its issues
-    const maxRowToShow = Math.max(rows.length, expectedRows.length);
-    for (let i = 0; i < maxRowToShow; i++) {
-      if (i < rows.length) {
-        const rowData = humanReadable(dataObjects[i]);
-        const issues = rowIssues.get(i);
-        const isExtra = i >= expectedRows.length;
-        if (issues || isExtra) {
-          // Red if there are issues or it's an extra row (use ! for non-colored output)
-          diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}! ${rowData}`));
-          if (issues) {
-            for (const issue of issues) {
-              diffLines.push(issue);
-            }
-          }
-        } else {
-          // Row matched - green
-          diffLines.push(jestUtils.EXPECTED_COLOR(`  ${i}: ${rowData}`));
+      const rows = data.array_value;
+
+      // Create root fieldInfo for schema navigation
+      const rootFieldInfo: Malloy.FieldInfoWithJoin = {
+        kind: 'join',
+        name: 'root',
+        relationship: 'one',
+        schema,
+      };
+
+      // Collect row-level issues for unified output
+      const rowCountMismatch =
+        strictRowCount && rows.length !== expectedRows.length
+          ? `Expected ${expectedRows.length} rows, got ${rows.length}`
+          : !strictRowCount &&
+              expectedRows.length > 0 &&
+              rows.length < expectedRows.length
+            ? `Expected at least ${expectedRows.length} rows, got ${rows.length}`
+            : null;
+
+      // Track per-row mismatches: row index -> list of field issues
+      const rowIssues: Map<number, string[]> = new Map();
+
+      // Check empty match {} means "at least one row"
+      if (
+        mode === 'partial' &&
+        expectedRows.length === 1 &&
+        Object.keys(expectedRows[0]).length === 0
+      ) {
+        if (rows.length === 0) {
+          fails.push('Expected at least one row, got 0');
         }
       } else {
-        // Missing row - show what was expected (use ! for non-colored output)
-        diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}! (missing)`));
-        if (i < expectedRows.length) {
-          diffLines.push(
-            jestUtils.EXPECTED_COLOR(
-              `    Expected: ${humanReadable(expectedRows[i])}`
-            )
+        // Compare each expected row using schema-aware cell matching
+        const rowsToCheck = Math.min(rows.length, expectedRows.length);
+        for (let i = 0; i < rowsToCheck; i++) {
+          const cellResult = matchCell(
+            rows[i],
+            rootFieldInfo,
+            expectedRows[i],
+            `Row ${i}`,
+            tm.dialect,
+            mode
           );
+          if (!cellResult.pass) {
+            // Extract field name from path like "Row 0.fieldname" or "Row 0.nested.field"
+            const pathMatch = cellResult.path?.match(/^Row \d+\.(.+)$/);
+            const fieldPath = pathMatch ? pathMatch[1] : cellResult.path;
+            const issue = jestUtils.EXPECTED_COLOR(
+              `    Expected ${fieldPath}: ${cellResult.expected}`
+            );
+            if (!rowIssues.has(i)) {
+              rowIssues.set(i, []);
+            }
+            rowIssues.get(i)!.push(issue);
+          }
         }
       }
+
+      // Build DATA DIFFERENCES section if there are any issues
+      if (rowCountMismatch || rowIssues.size > 0) {
+        const diffLines: string[] = ['DATA DIFFERENCES'];
+        if (rowCountMismatch) {
+          diffLines.push(`  ${rowCountMismatch}`);
+        }
+        // Show each row with its issues
+        const maxRowToShow = Math.max(rows.length, expectedRows.length);
+        for (let i = 0; i < maxRowToShow; i++) {
+          if (i < rows.length) {
+            const rowData = humanReadable(dataObjects[i]);
+            const issues = rowIssues.get(i);
+            const isExtra = i >= expectedRows.length;
+            if (issues || isExtra) {
+              diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}! ${rowData}`));
+              if (issues) {
+                for (const issue of issues) {
+                  diffLines.push(issue);
+                }
+              }
+            } else {
+              diffLines.push(jestUtils.EXPECTED_COLOR(`  ${i}: ${rowData}`));
+            }
+          } else {
+            diffLines.push(jestUtils.RECEIVED_COLOR(`  ${i}! (missing)`));
+            if (i < expectedRows.length) {
+              diffLines.push(
+                jestUtils.EXPECTED_COLOR(
+                  `    Expected: ${humanReadable(expectedRows[i])}`
+                )
+              );
+            }
+          }
+        }
+        fails.push(diffLines.join('\n'));
+      }
+
+      return fails;
     }
-    fails.push(diffLines.join('\n'));
-  }
-
-  if (debug && fails.length === 0) {
-    fails.push('Test forced failure (# test.debug)');
-    fails.push(
-      jestUtils.RECEIVED_COLOR(`Result: ${humanReadable(dataObjects)}`)
-    );
-  }
-
-  if (fails.length > 0) {
-    if (debug) {
-      fails.unshift(`Result Data: ${humanReadable(dataObjects)}`);
-    }
-    const fromSQL = query
-      ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
-      : 'SQL Missing';
-    const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n\n${fails.join('\n')}`;
-    return {pass: false, message: () => failMsg};
-  }
-
-  return {
-    pass: true,
-    message: () =>
-      mode === 'exact'
-        ? 'All rows matched expected results exactly'
-        : 'All rows matched expected results',
-  };
+  );
 }
 
 expect.extend({
@@ -1006,82 +1026,77 @@ expect.extend({
     tm: TestModel,
     paths: Record<string, unknown>
   ): Promise<JestMatcherResult> {
-    querySrc = querySrc.trimEnd().replace(/^\n*/, '');
-    const {fail, dataObjects, queryTestTag, query} = await runQueryInternal(
+    const jestUtils = this.utils;
+    return withQueryResult(
+      querySrc,
       tm,
-      querySrc
-    );
-    if (fail) return fail;
-    if (!dataObjects || dataObjects.length === 0) {
-      return {
-        pass: false,
-        message: () => 'Query returned no data',
-      };
-    }
-
-    const row = dataObjects[0] as Record<string, unknown>;
-    const debug = queryTestTag?.has('debug');
-    const fails: string[] = [];
-
-    for (const [path, expected] of Object.entries(paths)) {
-      const segments = path.split('.');
-      let current: unknown = row;
-
-      for (const segment of segments) {
-        if (current === null || current === undefined) {
-          fails.push(`Path '${path}': cannot navigate through null/undefined`);
-          break;
+      false,
+      'All paths matched expected values',
+      ({dataObjects}) => {
+        const fails: string[] = [];
+        if (dataObjects.length === 0) {
+          fails.push('Query returned no data');
+          return fails;
         }
-        if (Array.isArray(current)) {
-          if (current.length === 0) {
-            fails.push(`Path '${path}': empty array at '${segment}'`);
-            current = undefined;
-            break;
+
+        const row = dataObjects[0] as Record<string, unknown>;
+
+        for (const [path, expected] of Object.entries(paths)) {
+          const segments = path.split('.');
+          let current: unknown = row;
+
+          for (const segment of segments) {
+            if (current === null || current === undefined) {
+              fails.push(
+                `Path '${path}': cannot navigate through null/undefined`
+              );
+              break;
+            }
+            if (Array.isArray(current)) {
+              if (current.length === 0) {
+                fails.push(`Path '${path}': empty array at '${segment}'`);
+                current = undefined;
+                break;
+              }
+              current = current[0];
+            }
+            if (typeof current === 'object' && current !== null) {
+              current = (current as Record<string, unknown>)[segment];
+            } else {
+              fails.push(
+                `Path '${path}': cannot access '${segment}' on ${typeof current}`
+              );
+              current = undefined;
+              break;
+            }
           }
-          current = current[0];
+
+          if (Array.isArray(current) && current.length > 0) {
+            current = current[0];
+          }
+
+          if (!looseEqual(current, expected)) {
+            fails.push(`Path '${path}':`);
+            fails.push(
+              jestUtils.EXPECTED_COLOR(
+                `  Expected: ${humanReadable(expected)}`
+              )
+            );
+            fails.push(
+              jestUtils.RECEIVED_COLOR(
+                `  Received: ${humanReadable(current)}`
+              )
+            );
+          }
         }
-        if (typeof current === 'object' && current !== null) {
-          current = (current as Record<string, unknown>)[segment];
-        } else {
-          fails.push(
-            `Path '${path}': cannot access '${segment}' on ${typeof current}`
-          );
-          current = undefined;
-          break;
+
+        // Always show data dump for path matching (nested data needs context)
+        if (fails.length > 0) {
+          fails.unshift(`DATA:\n  ${humanReadable(dataObjects)}`);
         }
+
+        return fails;
       }
-
-      if (Array.isArray(current) && current.length > 0) {
-        current = current[0];
-      }
-
-      if (!looseEqual(current, expected)) {
-        fails.push(`Path '${path}':`);
-        fails.push(
-          this.utils.EXPECTED_COLOR(`  Expected: ${humanReadable(expected)}`)
-        );
-        fails.push(
-          this.utils.RECEIVED_COLOR(`  Received: ${humanReadable(current)}`)
-        );
-      }
-    }
-
-    if (debug && fails.length === 0) {
-      fails.push('Test forced failure (# test.debug)');
-    }
-
-    if (fails.length > 0 || debug) {
-      const dataSection = `DATA:\n  ${humanReadable(dataObjects)}`;
-      const fromSQL = query
-        ? 'SQL Generated:\n  ' + (await query.getSQL()).split('\n').join('\n  ')
-        : 'SQL Missing';
-      const failMsg = `QUERY:\n${querySrc}\n\n${fromSQL}\n\n${dataSection}\n\n${fails.join('\n')}`;
-      return {pass: false, message: () => failMsg};
-    }
-
-    return {
-      pass: true,
-      message: () => 'All paths matched expected values',
-    };
+    );
   },
 });

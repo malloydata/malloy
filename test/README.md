@@ -194,3 +194,13 @@ Result: [ { id: 1, name: 'alice' }, { id: 2, name: 'bob' } ]
 ```
 
 This is useful when developing tests to see what data is actually returned.
+
+## Logging SQL with MALLOY_LOG_SQL
+
+Set the `MALLOY_LOG_SQL` environment variable to log the generated SQL to the console before each query run by the test matchers (`toMatchResult`, `toMatchRows`, `toEqualResult`, `toMatchPaths`):
+
+```sh
+MALLOY_LOG_SQL=1 npx jest test/src/databases/all/expr.spec.ts
+```
+
+This is useful for debugging SQL generation issues without modifying test code.
