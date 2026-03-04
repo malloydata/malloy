@@ -34,7 +34,6 @@ const basicTypes: {name: string; typeDef: AtomicTypeDef; skip?: string[]}[] = [
   {
     name: 'timestamptz',
     typeDef: {type: 'timestamptz'},
-    skip: ['bigquery', 'postgres', 'mysql'],
   },
 ];
 
@@ -43,7 +42,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('basic type roundtrip', () => {
     for (const {name, typeDef, skip} of basicTypes) {
-      const shouldRun = !skip?.includes(databaseName);
+      let shouldRun = !skip?.includes(databaseName);
+      if (typeDef.type === 'timestamptz') {
+        shouldRun = dialect.hasTimestamptz;
+      }
       test.when(shouldRun)(name, () => {
         const sql = dialect.malloyTypeToSQLType(typeDef);
         const result = dialect.sqlTypeToMalloyType(sql);

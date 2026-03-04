@@ -510,12 +510,11 @@ export class DatabricksDialect extends Dialect {
     let lVal = df.kids.left.sql;
     let rVal = df.kids.right.sql;
     if (inSeconds[df.units]) {
-      lVal = `UNIX_TIMESTAMP(${lVal})`;
-      rVal = `UNIX_TIMESTAMP(${rVal})`;
-      const duration = `${rVal}-${lVal}`;
-      return df.units === 'second'
-        ? `FLOOR(${duration})`
-        : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
+      lVal = `UNIX_MICROS(${lVal})`;
+      rVal = `UNIX_MICROS(${rVal})`;
+      const duration = `(${rVal}-${lVal})`;
+      const divisor = inSeconds[df.units] * 1000000;
+      return `FLOOR(${duration}/${divisor}.0)`;
     }
     throw new Error(`Unknown or unhandled Databricks time unit: ${df.units}`);
   }
