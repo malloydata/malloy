@@ -2,7 +2,8 @@
 set -e
 
 SCRIPTDIR=$(cd $(dirname $0); pwd)
-DATADIR=$(dirname $SCRIPTDIR)/data/duckdb
+DATADIR=$(dirname $SCRIPTDIR)/data/malloytest-parquet
+DUCKDBDIR=$(dirname $SCRIPTDIR)/data/duckdb
 CONTAINER_NAME="mssql-malloy"
 SA_PASSWORD="Malloy_Test_123"
 DB_NAME="malloytest"
@@ -83,7 +84,7 @@ ATTACH 'Server=localhost;Port=1433;Database=$DB_NAME;User Id=sa;Password=$SA_PAS
 -- Create malloytest schema so table paths (malloytest.flights etc.) match DuckDB tests
 SELECT mssql_exec('msdb', 'CREATE SCHEMA malloytest');
 
--- Create tables: schemas must match the parquet files in test/data/duckdb/.
+-- Create tables: schemas must match the parquet files in test/data/malloytest-parquet/.
 -- If a parquet schema changes, update the corresponding CREATE TABLE below.
 -- All columns explicitly nullable to match parquet semantics.
 SELECT mssql_exec('msdb', 'CREATE TABLE malloytest.aircraft (
@@ -160,8 +161,8 @@ INSERT INTO msdb.malloytest.airports SELECT * FROM read_parquet('$DATADIR/airpor
 INSERT INTO msdb.malloytest.carriers SELECT * FROM read_parquet('$DATADIR/carriers.parquet');
 INSERT INTO msdb.malloytest.flights SELECT * FROM read_parquet('$DATADIR/flights.parquet');
 INSERT INTO msdb.malloytest.state_facts SELECT * FROM read_parquet('$DATADIR/state_facts.parquet');
-INSERT INTO msdb.malloytest.numbers SELECT * FROM read_parquet('$DATADIR/numbers.parquet');
-INSERT INTO msdb.malloytest.words SELECT * FROM read_parquet('$DATADIR/words.parquet');
+INSERT INTO msdb.malloytest.numbers SELECT * FROM read_parquet('$DUCKDBDIR/numbers.parquet');
+INSERT INTO msdb.malloytest.words SELECT * FROM read_parquet('$DUCKDBDIR/words.parquet');
 INSERT INTO msdb.malloytest.alltypes SELECT t_int64, t_float64, t_numeric, t_bignumeric, string, t_bool_true, t_bool_false, t_bool_null, t_date, t_datetime, t_timestamp FROM read_parquet('$DATADIR/alltypes.parquet');
 
 -- Verify row counts

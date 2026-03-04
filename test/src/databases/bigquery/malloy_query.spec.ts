@@ -55,7 +55,6 @@ const [describe] = describeIfDatabaseAvailable([bigquery]);
 
 describe('BigQuery expression tests', () => {
   const faa = runtime.loadModel(testModel);
-  const faaTestModel = wrapTestModel(runtime, testModel);
 
   // EXPLORE flights
   //  ->{
@@ -355,24 +354,6 @@ describe('BigQuery expression tests', () => {
     await bqCompile(sql);
   });
 
-  it('medicare_test.turtle_city_zip', async () => {
-    const sql = await compileQuery(faa, 'run: medicare_test->turtle_city_zip');
-    await bqCompile(sql);
-  });
-
-  it('medicare_test.triple_turtle', async () => {
-    const sql = await compileQuery(faa, 'run: medicare_test->triple_turtle');
-    await bqCompile(sql);
-  });
-
-  it('medicare_test.rollup_by_location', async () => {
-    const sql = await compileQuery(
-      faa,
-      'run: medicare_test->rollup_by_location'
-    );
-    await bqCompile(sql);
-  });
-
   it('flights.flights_routes_sessionized', async () => {
     const sql = await compileQuery(
       faa,
@@ -428,17 +409,6 @@ describe('BigQuery expression tests', () => {
     );
     // console.log(result.sql);
     await bqCompile(sql);
-  });
-
-  it('table_base_on_query', async () => {
-    expect(`
-      run: medicare_state_facts -> {
-        group_by:
-          provider_state
-          num_providers
-        order_by: 2 desc
-      }
-    `).toMatchResult(faaTestModel, {num_providers: 296});
   });
 });
 

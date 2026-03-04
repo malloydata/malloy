@@ -15,7 +15,7 @@ CREATE OR REPLACE FILE FORMAT PARQUET_SCHEMA_DETECTION
   BINARY_AS_TEXT = FALSE
   USE_LOGICAL_TYPE = TRUE;
 
-PUT file://../data/duckdb/aircraft.parquet @~/staged;
+PUT file://../data/malloytest-parquet/aircraft.parquet @~/staged;
 
 CREATE OR REPLACE TABLE aircraft
     USING TEMPLATE (
@@ -33,7 +33,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/aircraft_models.parquet @~/staged;
+PUT file://../data/malloytest-parquet/aircraft_models.parquet @~/staged;
 
 CREATE OR REPLACE TABLE aircraft_models
     USING TEMPLATE (
@@ -51,7 +51,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/airports.parquet @~/staged;
+PUT file://../data/malloytest-parquet/airports.parquet @~/staged;
 
 CREATE OR REPLACE TABLE airports
     USING TEMPLATE (
@@ -69,7 +69,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/alltypes.parquet @~/staged;
+PUT file://../data/malloytest-parquet/alltypes.parquet @~/staged;
 
 CREATE OR REPLACE TABLE alltypes
     USING TEMPLATE (
@@ -87,43 +87,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/alltypes2.parquet @~/staged;
-
-CREATE OR REPLACE TABLE alltypes2
-    USING TEMPLATE (
-        SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))
-        FROM TABLE(
-            INFER_SCHEMA(
-            LOCATION=>'@~/staged/alltypes2.parquet',
-            FILE_FORMAT => 'PARQUET_SCHEMA_DETECTION')
-        )
-    );
-
-COPY INTO malloytest.alltypes2
-FROM '@~/staged/alltypes2.parquet'
-FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
-MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
-ON_ERROR = CONTINUE;
-
-PUT file://../data/duckdb/bq_medicare_test.parquet @~/staged;
-
-CREATE OR REPLACE TABLE bq_medicare_test
-    USING TEMPLATE (
-        SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))
-        FROM TABLE(
-            INFER_SCHEMA(
-            LOCATION=>'@~/staged/bq_medicare_test.parquet',
-            FILE_FORMAT => 'PARQUET_SCHEMA_DETECTION')
-        )
-    );
-
-COPY INTO malloytest.bq_medicare_test
-FROM '@~/staged/bq_medicare_test.parquet'
-FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
-MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
-ON_ERROR = CONTINUE;
-
-PUT file://../data/duckdb/carriers.parquet @~/staged;
+PUT file://../data/malloytest-parquet/carriers.parquet @~/staged;
 
 CREATE OR REPLACE TABLE carriers
     USING TEMPLATE (
@@ -141,7 +105,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/flights.parquet @~/staged;
+PUT file://../data/malloytest-parquet/flights.parquet @~/staged;
 
 CREATE OR REPLACE TABLE flights
     USING TEMPLATE (
@@ -177,7 +141,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/ga_sample.parquet @~/staged;
+PUT file://../data/malloytest-parquet/ga_sample.parquet @~/staged;
 
 CREATE OR REPLACE TABLE ga_sample
     USING TEMPLATE (
@@ -213,7 +177,7 @@ FILE_FORMAT = 'PARQUET_SCHEMA_DETECTION'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = CONTINUE;
 
-PUT file://../data/duckdb/state_facts.parquet @~/staged;
+PUT file://../data/malloytest-parquet/state_facts.parquet @~/staged;
 
 CREATE OR REPLACE TABLE state_facts
     USING TEMPLATE (

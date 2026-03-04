@@ -102,16 +102,59 @@ These commands are optimized for CI and may not work correctly in local developm
 
 ## Test Data
 
-Test data is organized by database and includes:
-- Schema definitions
-- Sample datasets
-- Expected query results
-- Edge cases and error conditions
+### The test corpus
 
-Test data should be:
-- Small enough for fast test execution
-- Comprehensive enough to cover important cases
-- Consistent across databases (where applicable)
+The shared cross-database parquet files live in `test/data/malloytest-parquet/` (~60 MB total, checked into git). These are the source of truth — every dialect loads from or mirrors this data. DuckDB-only files remain in `test/data/duckdb/`.
+
+#### Shared parquets (`test/data/malloytest-parquet/`)
+
+| File | Rows | Description |
+|---|---|---|
+| flights.parquet | 344,827 | FAA flight records |
+| aircraft_models.parquet | 60,461 | Aircraft model reference |
+| airports.parquet | 19,793 | US airports |
+| ga_sample.parquet | 2,556 | Google Analytics sample |
+| aircraft.parquet | 3,599 | FAA aircraft registry |
+| state_facts.parquet | 51 | US state statistics |
+| carriers.parquet | 21 | Airline carriers |
+| alltypes.parquet | 1 | Type testing fixture |
+
+#### DuckDB-only files (`test/data/duckdb/`)
+
+| File | Description |
+|---|---|
+| duckdb_test.db | Built artifact (from `npm run build-duckdb-db`) |
+| test.json | DuckDB-only test fixture |
+| flights/ (part.0-2.parquet) | DuckDB glob/partitioned read test |
+| flights_partitioned.parquet | Snowflake partition test |
+| numbers.parquet | DuckDB-only (numbers 1–1000) |
+| words.parquet | DuckDB-only (word list) |
+| words_bigger.parquet | DuckDB-only (extended word list) |
+
+### Common pattern
+
+All cross-database tests (`test/src/databases/all/`) reference tables as `malloytest.{table}` (schema-qualified). Every dialect must create a `malloytest` schema containing these tables with matching data.
+
+### How each dialect loads test data
+
+| Dialect | Method | Files | Notes |
+|---|---|---|---|
+| DuckDB | TS script: `CREATE TABLE AS SELECT FROM parquet_scan()` | `scripts/build_duckdb_test_database.ts` | Run via `npm run build-duckdb-db`. Creates `test/data/duckdb/duckdb_test.db` |
+| PostgreSQL | Compressed SQL dump loaded via Docker `psql` | `test/data/postgres/malloytest-postgres.sql.gz` | Docker script: `test/postgres/postgres_start.sh` |
+| MySQL | Compressed SQL dump loaded via Docker | `test/data/mysql/malloytest.mysql.gz` | Docker script: `test/mysql/mysql_start.sh` |
+| BigQuery | Pre-loaded manually in `malloydata-org` project | (none) | No loader script in repo. Data assumed to exist. |
+| Snowflake | SQL: `PUT` local parquet → stage, `COPY INTO` table | `test/snowflake/uploaddata.sql` | Run via `snowsql -f uploaddata.sql` from `test/snowflake/` |
+| Trino/Presto | Docker containers with pre-loaded data | `test/trino/trino_start.sh` | Uses Docker volumes |
+| Databricks | TS script: upload to Volume via REST, `CREATE TABLE AS SELECT FROM read_files()` | `test/databricks/upload_data.ts` | Run manually: `source ~/env/databricks && npx tsx test/databricks/upload_data.ts` |
+
+### Cloud warehouse considerations
+
+Cloud SQL warehouses (BigQuery, Snowflake, Databricks) can't read local files via SQL. Each needs a mechanism to get parquet data into the warehouse:
+- **Snowflake**: `PUT` uploads local files to a stage, then `COPY INTO` reads from the stage
+- **BigQuery**: Data pre-loaded (could use `bq load` from local parquets)
+- **Databricks**: Uploads parquets to a Unity Catalog Volume via REST API, then `CREATE TABLE AS SELECT FROM read_files()` to create tables
+
+An ideal future state would be publishing the parquets to a well-known cloud storage location that all warehouses could read from, but the hosting/cost question is still open.
 
 ## Important Notes
 
