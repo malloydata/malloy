@@ -50,6 +50,16 @@ interface DialectField {
 }
 export type DialectFieldList = DialectField[];
 
+/**
+ * Order-by entry with field references resolved to SQL expressions
+ * and direction defaulted. Used by sqlAggregateTurtle so each dialect
+ * can format ordering in its own syntax.
+ */
+export interface CompiledOrderBy {
+  field: string;
+  dir: 'asc' | 'desc';
+}
+
 /*
  * Standard integer type limits.
  * Use these in dialect integerTypeMappings definitions.
@@ -340,8 +350,16 @@ export abstract class Dialect {
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string;
+
+  // Format a CompiledOrderBy[] into an ORDER BY clause string for use
+  // inside an aggregate turtle expression. Dialects which support ORDER BY
+  // inside aggregate functions can call this helper from sqlAggregateTurtle.
+  sqlTurtleOrderByClause(orderBy: CompiledOrderBy[]): string {
+    const terms = orderBy.map(o => ` ${o.field} ${o.dir.toUpperCase()}`);
+    return ' ' + this.sqlOrderBy(terms, 'turtle');
+  }
 
   abstract sqlAnyValueTurtle(
     groupSet: number,

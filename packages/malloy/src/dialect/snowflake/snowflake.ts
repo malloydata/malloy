@@ -48,6 +48,7 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
   IntegerTypeMapping,
@@ -168,10 +169,12 @@ export class SnowflakeDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
-    const orderByClause = orderBy ? ` WITHIN GROUP (${orderBy})` : '';
+    const orderByClause = orderBy
+      ? ` WITHIN GROUP (${this.sqlTurtleOrderByClause(orderBy)})`
+      : '';
     const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
     return `COALESCE(${aggClause}, [])`;
   }

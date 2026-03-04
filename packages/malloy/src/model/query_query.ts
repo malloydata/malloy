@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {DialectFieldList} from '../dialect';
+import type {DialectFieldList, CompiledOrderBy} from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
   TurtleDef,
@@ -1966,11 +1966,8 @@ export class QueryQuery extends QueryField {
     sqlFieldName: string,
     outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
-    // let fieldsSQL: string[] = [];
-    let orderBy = '';
-
     // calculate the ordering.
-    const obSQL: string[] = [];
+    const compiledOrderBy: CompiledOrderBy[] = [];
     let orderingField;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
@@ -1985,23 +1982,20 @@ export class QueryQuery extends QueryField {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
       if (resultStruct.firstSegment.type === 'reduce') {
-        obSQL.push(
-          ' ' +
-            this.parent.dialect.sqlMaybeQuoteIdentifier(
-              `${orderingField.name}__${resultStruct.groupSet}`
-            ) +
-            ` ${ordering.dir || 'ASC'}`
-        );
+        compiledOrderBy.push({
+          field: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${orderingField.name}__${resultStruct.groupSet}`
+          ),
+          dir: ordering.dir || 'asc',
+        });
       } else if (resultStruct.firstSegment.type === 'project') {
-        obSQL.push(
-          ` ${orderingField.fif.generateExpression()} ${ordering.dir || 'ASC'}`
-        );
+        compiledOrderBy.push({
+          field: orderingField.fif.generateExpression(),
+          dir: ordering.dir || 'asc',
+        });
       }
     }
-
-    if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'turtle');
-    }
+    const orderBy = compiledOrderBy.length > 0 ? compiledOrderBy : undefined;
 
     const dialectFieldList = this.buildDialectFieldList(resultStruct);
 

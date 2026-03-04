@@ -45,7 +45,12 @@ import {
 } from '../../model/malloy_types';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
-import type {DialectFieldList, OrderByClauseType, QueryInfo} from '../dialect';
+import type {
+  CompiledOrderBy,
+  DialectFieldList,
+  OrderByClauseType,
+  QueryInfo,
+} from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
 import {
   PRESTO_DIALECT_FUNCTIONS,
@@ -172,11 +177,12 @@ export class TrinoDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
-    return `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    return `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderByClause}) FILTER (WHERE group_set=${groupSet})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

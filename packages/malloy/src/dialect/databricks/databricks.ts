@@ -25,6 +25,7 @@ import {
 import {indent} from '../../model/utils';
 import type {
   BooleanTypeSupport,
+  CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
   OrderByClauseType,
@@ -184,11 +185,38 @@ export class DatabricksDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const expressions = this.buildStructExpression(fieldList);
     const definitions = this.buildTypeExpression(fieldList);
-    return `COLLECT_LIST(CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
+    const collectExpr = `COLLECT_LIST(CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>)) FILTER (WHERE group_set=${groupSet})`;
+    if (!orderBy || orderBy.length === 0) {
+      return collectExpr;
+    }
+    return `ARRAY_SORT(${collectExpr}, (l, r) -> ${this.buildArraySortComparator(orderBy)})`;
+  }
+
+  // Build a lambda comparator for ARRAY_SORT that handles multi-field
+  // mixed-direction ordering. Each field comparison returns -1/0/1;
+  // fields are chained so that ties on earlier fields fall through to
+  // later fields.
+  private buildArraySortComparator(orderBy: CompiledOrderBy[]): string {
+    const result = orderBy.reduceRight((fallthrough, ob) => {
+      const asc = ob.dir === 'asc';
+      const lt = asc ? -1 : 1;
+      const gt = asc ? 1 : -1;
+      return [
+        'CASE',
+        `  WHEN l.${ob.field} IS NULL AND r.${ob.field} IS NULL THEN ${fallthrough}`,
+        `  WHEN l.${ob.field} IS NULL THEN 1`,
+        `  WHEN r.${ob.field} IS NULL THEN -1`,
+        `  WHEN l.${ob.field} < r.${ob.field} THEN ${lt}`,
+        `  WHEN l.${ob.field} > r.${ob.field} THEN ${gt}`,
+        `  ELSE ${fallthrough}`,
+        'END',
+      ].join('\n');
+    }, '0');
+    return result;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

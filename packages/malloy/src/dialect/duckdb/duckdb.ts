@@ -44,6 +44,7 @@ import {indent} from '../../model/utils';
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
   IntegerTypeMapping,
@@ -140,12 +141,13 @@ export class DuckDBDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(', ');
-    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet}),[])`;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    return `COALESCE(LIST({${fields}} ${orderByClause}) FILTER (WHERE group_set=${groupSet}),[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
