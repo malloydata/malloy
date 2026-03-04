@@ -10,6 +10,7 @@ import '@malloydata/malloy/test/matchers';
 const host = process.env['DATABRICKS_HOST'] ?? '';
 const token = process.env['DATABRICKS_TOKEN'] ?? '';
 const warehouseId = process.env['DATABRICKS_WAREHOUSE_ID'] ?? '';
+const defaultCatalog = process.env['DATABRICKS_CATALOG'] ?? '';
 const path =
   process.env['DATABRICKS_PATH'] ||
   (warehouseId ? `/sql/1.0/warehouses/${warehouseId}` : '');
@@ -18,6 +19,7 @@ const dbr_connection = new DatabricksConnection('databricks', {
   host,
   path,
   token,
+  defaultCatalog,
 });
 
 afterAll(async () => {
@@ -39,6 +41,30 @@ describe('basic connectivity', () => {
   it('runs SELECT 1', async () => {
     const res = await dbr_connection.runSQL('SELECT 1 as t');
     expect(res.rows[0]['t']).toBe(1);
+  });
+
+  it('reads schema of a table', async () => {
+    const result = await dbr_connection.fetchTableSchema(
+      'alltypes',
+      'malloytest.alltypes'
+    );
+    expect(typeof result).not.toBe('string');
+    if (typeof result !== 'string') {
+      const fieldNames = result.fields.map(f => f.name);
+      expect(fieldNames).toContain('t_int64');
+      expect(fieldNames).toContain('string');
+      expect(fieldNames).toContain('t_date');
+      expect(fieldNames).toContain('t_timestamp');
+    }
+  });
+
+  it('reads schema of a SQL statement (fetchSchemaForSQLStruct)', async () => {
+    const fields = await schemaFor('SELECT * FROM malloytest.alltypes');
+    const fieldNames = fields.map(f => f.name);
+    expect(fieldNames).toContain('t_int64');
+    expect(fieldNames).toContain('string');
+    expect(fieldNames).toContain('t_date');
+    expect(fieldNames).toContain('t_timestamp');
   });
 });
 

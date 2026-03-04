@@ -15,7 +15,7 @@
  *   DATABRICKS_CATALOG    — Unity Catalog name (e.g. malloy_ci)
  *
  * Run manually:
- *   source ~/env/databricks && npx tsx test/databricks/upload_data.ts
+ *   npx tsx test/databricks/upload_data.ts
  */
 
 import {readFile} from 'fs/promises';
@@ -78,9 +78,7 @@ async function main() {
   await runSQL(`CREATE SCHEMA IF NOT EXISTS ${catalog}.${schema}`);
 
   console.log(`Creating volume ${catalog}.${schema}.${volume}...`);
-  await runSQL(
-    `CREATE VOLUME IF NOT EXISTS ${catalog}.${schema}.${volume}`
-  );
+  await runSQL(`CREATE VOLUME IF NOT EXISTS ${catalog}.${schema}.${volume}`);
 
   // Upload parquet files and create tables
   for (const table of TABLES) {
