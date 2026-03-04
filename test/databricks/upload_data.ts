@@ -67,18 +67,20 @@ async function main() {
 
   console.log(`Connected to ${host}, catalog: ${catalog}`);
 
+  async function runSQL(sql: string): Promise<void> {
+    const op = await session.executeStatement(sql, {runAsync: true});
+    await op.fetchAll();
+    await op.close();
+  }
+
   // Create schema and volume
   console.log(`Creating schema ${catalog}.${schema}...`);
-  const op1 = await session.executeStatement(
-    `CREATE SCHEMA IF NOT EXISTS ${catalog}.${schema}`
-  );
-  await op1.close();
+  await runSQL(`CREATE SCHEMA IF NOT EXISTS ${catalog}.${schema}`);
 
   console.log(`Creating volume ${catalog}.${schema}.${volume}...`);
-  const op2 = await session.executeStatement(
+  await runSQL(
     `CREATE VOLUME IF NOT EXISTS ${catalog}.${schema}.${volume}`
   );
-  await op2.close();
 
   // Upload parquet files and create tables
   for (const table of TABLES) {
@@ -88,7 +90,7 @@ async function main() {
 
     // Upload file via REST API
     console.log(`Uploading ${filename}...`);
-    const fileData = await readFile(localPath);
+    const body = new Uint8Array(await readFile(localPath));
     const uploadUrl = `https://${host}/api/2.0/fs/files${volumePath}`;
     const resp = await fetch(uploadUrl, {
       method: 'PUT',
@@ -96,18 +98,20 @@ async function main() {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/octet-stream',
       },
-      body: fileData,
+      body,
     });
     if (!resp.ok) {
-      const body = await resp.text();
-      throw new Error(`Upload failed for ${filename}: ${resp.status} ${body}`);
+      const errBody = await resp.text();
+      throw new Error(
+        `Upload failed for ${filename}: ${resp.status} ${errBody}`
+      );
     }
 
     // Create table from uploaded parquet
     console.log(`Creating table ${catalog}.${schema}.${table}...`);
-    const sql = `CREATE OR REPLACE TABLE ${catalog}.${schema}.${table} AS SELECT * FROM read_files('${volumePath}')`;
-    const op = await session.executeStatement(sql);
-    await op.close();
+    await runSQL(
+      `CREATE OR REPLACE TABLE ${catalog}.${schema}.${table} AS SELECT * FROM read_files('${volumePath}')`
+    );
   }
 
   await session.close();

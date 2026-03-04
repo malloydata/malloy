@@ -33,3 +33,4 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           DATABRICKS_PATH: /sql/1.0/warehouses/${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+          DATABRICKS_CATALOG: malloy_ci
