@@ -1673,12 +1673,10 @@ export class QueryQuery extends QueryField {
 
     s += indent(f.sql.join(',\n')) + '\n';
 
-    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
-    //  aggregates.
     if (f.lateralJoinSQLExpressions.length > 0) {
-      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
-        ',\n'
-      )})]) as __lateral_join_bag\n`;
+      from += this.parent.dialect.sqlLateralJoinBag(
+        f.lateralJoinSQLExpressions
+      );
     }
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 

@@ -1078,14 +1078,10 @@ expect.extend({
           if (!looseEqual(current, expected)) {
             fails.push(`Path '${path}':`);
             fails.push(
-              jestUtils.EXPECTED_COLOR(
-                `  Expected: ${humanReadable(expected)}`
-              )
+              jestUtils.EXPECTED_COLOR(`  Expected: ${humanReadable(expected)}`)
             );
             fails.push(
-              jestUtils.RECEIVED_COLOR(
-                `  Received: ${humanReadable(current)}`
-              )
+              jestUtils.RECEIVED_COLOR(`  Received: ${humanReadable(current)}`)
             );
           }
         }

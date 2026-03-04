@@ -128,6 +128,10 @@ export class StandardSQLDialect extends Dialect {
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
+
+  sqlLateralJoinBag(expressions: string[]): string {
+    return `LEFT JOIN UNNEST([STRUCT(${expressions.join(',\n')})]) as __lateral_join_bag\n`;
+  }
   nestedArrays = false; // Can't have an array of arrays for some reason
   supportsHyperLogLog = true;
   likeEscape = false; // Uses \ instead of ESCAPE 'X' in like clauses

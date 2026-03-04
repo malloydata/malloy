@@ -87,6 +87,7 @@ export class DatabricksDialect extends Dialect {
   supportsQualify = false;
   supportsNesting = true;
   hasLateralColumnAliasInSelect = true;
+  cantPartitionWindowFunctionsOnExpressions = true;
   experimental = false;
   supportsFullJoin = true;
   supportsPipelinesInViews = false;
@@ -169,18 +170,24 @@ export class DatabricksDialect extends Dialect {
     return `CROSS JOIN (SELECT EXPLODE(SEQUENCE(0, ${groupSetCount})) AS group_set) AS group_set`;
   }
 
+  sqlLateralJoinBag(expressions: string[]): string {
+    return `LEFT JOIN LATERAL (SELECT ${expressions.join(', ')}) AS __lateral_join_bag ON TRUE\n`;
+  }
+
   sqlAnyValue(groupSet: number, fieldName: string): string {
     return `FIRST(CASE WHEN group_set=${groupSet} THEN ${fieldName} END) IGNORE NULLS`;
   }
 
-  private buildStructExpression(fieldList: DialectFieldList): string {
-    return fieldList.map(f => f.sqlExpression).join(', ');
-  }
-
-  private buildTypeExpression(fieldList: DialectFieldList): string {
-    return fieldList
-      .map(f => `${f.sqlOutputName} ${this.malloyTypeToSQLType(f.typeDef)}`)
-      .join(', ');
+  // Build a named_struct expression that creates struct fields with the
+  // correct output names. This avoids CAST(STRUCT(...) AS STRUCT<...>) which
+  // can lose nested complex type information (e.g. inner array-of-struct
+  // field names) in Databricks.
+  private buildNamedStructExpression(fieldList: DialectFieldList): string {
+    return (
+      'named_struct(' +
+      fieldList.map(f => `'${f.rawName}', ${f.sqlExpression}`).join(', ') +
+      ')'
+    );
   }
 
   sqlAggregateTurtle(
@@ -188,9 +195,8 @@ export class DatabricksDialect extends Dialect {
     fieldList: DialectFieldList,
     orderBy: CompiledOrderBy[] | undefined
   ): string {
-    const expressions = this.buildStructExpression(fieldList);
-    const definitions = this.buildTypeExpression(fieldList);
-    const collectExpr = `COLLECT_LIST(CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>)) FILTER (WHERE group_set=${groupSet})`;
+    const namedStruct = this.buildNamedStructExpression(fieldList);
+    const collectExpr = `COLLECT_LIST(${namedStruct}) FILTER (WHERE group_set=${groupSet})`;
     if (!orderBy || orderBy.length === 0) {
       return collectExpr;
     }
@@ -222,9 +228,8 @@ export class DatabricksDialect extends Dialect {
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
-    const expressions = this.buildStructExpression(fieldList);
-    const definitions = this.buildTypeExpression(fieldList);
-    return `FIRST(CASE WHEN group_set=${groupSet} THEN CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) END) IGNORE NULLS`;
+    const namedStruct = this.buildNamedStructExpression(fieldList);
+    return `FIRST(CASE WHEN group_set=${groupSet} THEN ${namedStruct} END) IGNORE NULLS`;
   }
 
   sqlAnyValueLastTurtle(
@@ -239,12 +244,17 @@ export class DatabricksDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList
   ): string {
-    const expressions = this.buildStructExpression(fieldList);
-    const nullValues = fieldList.map(_f => 'NULL').join(', ');
-    const definitions = this.buildTypeExpression(fieldList);
-    return `COALESCE(FIRST(CASE WHEN group_set=${groupSet} THEN CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>) END) IGNORE NULLS, CAST(STRUCT(${nullValues}) AS STRUCT<${definitions}>))`;
+    const namedStruct = this.buildNamedStructExpression(fieldList);
+    const nullStruct =
+      'named_struct(' +
+      fieldList.map(f => `'${f.rawName}', NULL`).join(', ') +
+      ')';
+    return `COALESCE(FIRST(CASE WHEN group_set=${groupSet} THEN ${namedStruct} END) IGNORE NULLS, ${nullStruct})`;
   }
 
+  // Use LATERAL VIEW EXPLODE instead of LEFT JOIN LATERAL EXPLODE.
+  // LEFT JOIN LATERAL EXPLODE has a Databricks bug where struct field
+  // access on the exploded column returns null.
   sqlUnnestAlias(
     source: string,
     alias: string,
@@ -255,14 +265,14 @@ export class DatabricksDialect extends Dialect {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN LATERAL POSEXPLODE(${source}) AS ${alias}(__row_id_from_${alias}, value) ON TRUE`;
+        return `LATERAL VIEW OUTER POSEXPLODE(${source}) ${alias} AS __row_id_from_${alias}, value`;
       }
-      return `LEFT JOIN LATERAL EXPLODE(${source}) AS ${alias}(value) ON TRUE`;
+      return `LATERAL VIEW OUTER EXPLODE(${source}) ${alias} AS value`;
     }
     if (needDistinctKey) {
-      return `LEFT JOIN LATERAL POSEXPLODE(${source}) AS ${alias}_outer(__row_id_from_${alias}, ${alias}) ON TRUE`;
+      return `LATERAL VIEW OUTER POSEXPLODE(${source}) ${alias}_outer AS __row_id_from_${alias}, ${alias}`;
     }
-    return `LEFT JOIN LATERAL EXPLODE(${source}) AS ${alias}_outer(${alias}) ON TRUE`;
+    return `LATERAL VIEW OUTER EXPLODE(${source}) ${alias}_outer AS ${alias}`;
   }
 
   sqlUnnestPipelineHead(
@@ -277,15 +287,23 @@ export class DatabricksDialect extends Dialect {
     return `EXPLODE(${p})`;
   }
 
+  // Two-chunk MD5 hash: upper 15 hex chars * 4294967296 + lower 8 hex chars
+  // gives ~88 bits of entropy, matching the pattern used by Snowflake/Trino.
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     const castKey = `CAST(${sqlDistinctKey} AS STRING)`;
-    return `CAST(CONV(SUBSTRING(MD5(${castKey}), 1, 16), 16, 10) AS DECIMAL(38,0)) * 4294967296 + CAST(CONV(SUBSTRING(MD5(${castKey}), 17, 8), 16, 10) AS DECIMAL(38,0))`;
+    const upper = `CAST(CONV(SUBSTRING(MD5(${castKey}), 1, 15), 16, 10) AS DECIMAL(38,0)) * 4294967296`;
+    const lower = `CAST(CONV(SUBSTRING(MD5(${castKey}), 16, 8), 16, 10) AS DECIMAL(38,0))`;
+    return `(${upper} + ${lower})`;
   }
 
+  // Scale the value to integer before adding to hash, then divide after
+  // subtraction. This keeps all arithmetic in integer space and avoids
+  // DECIMAL precision/overflow issues (Databricks max is DECIMAL(38,x)).
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
-    const v = `CAST(COALESCE(${value},0) as DECIMAL(38,10))`;
-    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))`;
+    const scale = 100000000.0;
+    const v = `CAST(COALESCE(${value},0)*${scale} AS DECIMAL(38,0))`;
+    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
     if (funcName === 'SUM') {
       return sqlSum;
     } else if (funcName === 'AVG') {
@@ -320,9 +338,8 @@ export class DatabricksDialect extends Dialect {
     lastStageName: string,
     fieldList: DialectFieldList
   ): string {
-    const expressions = this.buildStructExpression(fieldList);
-    const definitions = this.buildTypeExpression(fieldList);
-    return `SELECT COLLECT_LIST(CAST(STRUCT(${expressions}) AS STRUCT<${definitions}>)) FROM ${lastStageName}\n`;
+    const namedStruct = this.buildNamedStructExpression(fieldList);
+    return `SELECT COLLECT_LIST(${namedStruct}) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, fieldList: DialectFieldList) {

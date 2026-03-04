@@ -171,8 +171,26 @@ export abstract class Dialect {
   // dialects outside our repository
   //
 
-  // StandardSQL dialects can't partition on expression in window functions
+  // StandardSQL dialects can't partition on expression in window functions.
+  // When true, dimension expressions used in PARTITION BY are moved to a
+  // lateral join bag so the PARTITION BY can reference a column name instead
+  // of a raw expression. See sqlLateralJoinBag for dialect-specific syntax.
   cantPartitionWindowFunctionsOnExpressions = false;
+
+  // Generate the lateral join bag clause for window function partitioning.
+  // The expressions are dimension fields that need to be referenced by name
+  // in PARTITION BY clauses. Must be overridden by any dialect that sets
+  // cantPartitionWindowFunctionsOnExpressions = true.
+  sqlLateralJoinBag(_expressions: string[]): string {
+    if (this.cantPartitionWindowFunctionsOnExpressions) {
+      throw new Error(
+        `Dialect '${this.name}' sets cantPartitionWindowFunctionsOnExpressions but does not implement sqlLateralJoinBag`
+      );
+    }
+    throw new Error(
+      'Internal error: sqlLateralJoinBag called but cantPartitionWindowFunctionsOnExpressions is false'
+    );
+  }
 
   // Snowflake can't yet support pipelines in nested views.
   supportsPipelinesInViews = true;
