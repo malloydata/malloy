@@ -1981,16 +1981,21 @@ export class QueryQuery extends QueryField {
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
+      const structField = this.parent.dialect.sqlMaybeQuoteIdentifier(
+        orderingField.name
+      );
       if (resultStruct.firstSegment.type === 'reduce') {
         compiledOrderBy.push({
           field: this.parent.dialect.sqlMaybeQuoteIdentifier(
             `${orderingField.name}__${resultStruct.groupSet}`
           ),
+          structField,
           dir: ordering.dir || 'asc',
         });
       } else if (resultStruct.firstSegment.type === 'project') {
         compiledOrderBy.push({
           field: orderingField.fif.generateExpression(),
+          structField,
           dir: ordering.dir || 'asc',
         });
       }

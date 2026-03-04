@@ -56,7 +56,10 @@ export type DialectFieldList = DialectField[];
  * can format ordering in its own syntax.
  */
 export interface CompiledOrderBy {
+  /** SQL expression for the ordering column (e.g. the group_set-suffixed CTE column name) */
   field: string;
+  /** The struct output field name, for dialects that sort via struct field reference */
+  structField: string;
   dir: 'asc' | 'desc';
 }
 

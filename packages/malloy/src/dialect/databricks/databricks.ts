@@ -205,13 +205,14 @@ export class DatabricksDialect extends Dialect {
       const asc = ob.dir === 'asc';
       const lt = asc ? -1 : 1;
       const gt = asc ? 1 : -1;
+      const f = ob.structField;
       return [
         'CASE',
-        `  WHEN l.${ob.field} IS NULL AND r.${ob.field} IS NULL THEN ${fallthrough}`,
-        `  WHEN l.${ob.field} IS NULL THEN 1`,
-        `  WHEN r.${ob.field} IS NULL THEN -1`,
-        `  WHEN l.${ob.field} < r.${ob.field} THEN ${lt}`,
-        `  WHEN l.${ob.field} > r.${ob.field} THEN ${gt}`,
+        `  WHEN l.${f} IS NULL AND r.${f} IS NULL THEN ${fallthrough}`,
+        `  WHEN l.${f} IS NULL THEN 1`,
+        `  WHEN r.${f} IS NULL THEN -1`,
+        `  WHEN l.${f} < r.${f} THEN ${lt}`,
+        `  WHEN l.${f} > r.${f} THEN ${gt}`,
         `  ELSE ${fallthrough}`,
         'END',
       ].join('\n');
