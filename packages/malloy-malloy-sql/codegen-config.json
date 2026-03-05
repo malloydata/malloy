@@ -1,0 +1,11 @@
+{
+  "codegen": {
+    "inputs": [
+      "src/grammar/*.pegjs"
+    ],
+    "commands": [
+      "peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
+      "peggy -o src/grammar/malloySQLSQL.js src/grammar/malloySQLSQL.pegjs"
+    ]
+  }
+}

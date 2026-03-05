@@ -37,9 +37,11 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
+    "codegen": "node ../../scripts/femto-build.js codegen",
     "build-parser": "node src/lang/grammar/build_parser.js",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf src/lang/lib dist",
-    "build": "npm run build-parser && tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo .*.digest && rm -rf src/lang/lib dist",
+    "dev": "npm run codegen && tsc --build",
+    "build": "npm run codegen && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"

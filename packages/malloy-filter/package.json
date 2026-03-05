@@ -12,12 +12,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build-parsers && tsc --build && npm run generate-flow",
-    "build-parsers": "mkdir -p src/lib && nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts && nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts && nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rimraf src/lib/* dist @flowtyped",
+    "codegen": "node ../../scripts/femto-build.js codegen",
+    "generate-flow": "node ../../scripts/femto-build.js flow",
+    "dev": "npm run codegen && tsc --build",
+    "build": "npm run codegen && tsc --build && npm run generate-flow",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo .*.digest && rimraf src/lib/* dist @flowtyped",
     "test": "jest",
-    "prepublishOnly": "npm run clean && npm run build",
-    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [],
   "author": "",

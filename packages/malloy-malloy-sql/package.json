@@ -13,14 +13,13 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
-    "build-malloysql-grammar": "peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
-    "build-malloysqlsql-grammar": "peggy -o src/grammar/malloySQLSQL.js src/grammar/malloySQLSQL.pegjs",
-    "build-grammar": "npm run build-malloysql-grammar && npm run build-malloysqlsql-grammar",
+    "codegen": "node ../../scripts/femto-build.js codegen",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "npm run build-grammar && jest --config=../../jest.config.js",
-    "build": "npm run build-grammar && tsc --build",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
+    "test": "npm run codegen && jest --config=../../jest.config.js",
+    "dev": "npm run codegen && tsc --build",
+    "build": "npm run codegen && tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo .*.digest",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

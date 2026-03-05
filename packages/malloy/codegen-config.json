@@ -1,0 +1,13 @@
+{
+  "codegen": {
+    "inputs": [
+      "src/lang/grammar/MalloyLexer.g4",
+      "src/lang/grammar/MalloyParser.g4"
+    ],
+    "commands": [
+      "mkdir -p src/lang/lib/Malloy",
+      "npx antlr4ts -Xexact-output-dir -o src/lang/lib/Malloy src/lang/grammar/MalloyLexer.g4",
+      "npx antlr4ts -Xexact-output-dir -o src/lang/lib/Malloy -visitor src/lang/grammar/MalloyParser.g4"
+    ]
+  }
+}
