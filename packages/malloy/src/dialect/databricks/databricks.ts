@@ -330,6 +330,23 @@ export class DatabricksDialect extends Dialect {
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
+  // Collect distinct (key, val0, val1, ...) structs, explode them, then
+  // apply the aggregate function. Mirrors the DuckDB pattern.
+  sqlAggDistinct(
+    key: string,
+    values: string[],
+    func: (valNames: string[]) => string
+  ): string {
+    const structFields = [`'key', ${key}`, ...values.map((v, i) => `'val${i}', ${v}`)].join(', ');
+    const valRefs = values.map((_v, i) => `a.val${i}`);
+    return `(
+      SELECT ${func(valRefs)} as value
+      FROM (
+        SELECT EXPLODE(COLLECT_SET(named_struct(${structFields}))) AS a
+      )
+    )`;
+  }
+
   sqlGenerateUUID(): string {
     return 'UUID()';
   }
@@ -510,8 +527,8 @@ export class DatabricksDialect extends Dialect {
     let lVal = df.kids.left.sql;
     let rVal = df.kids.right.sql;
     if (inSeconds[df.units]) {
-      lVal = `UNIX_MICROS(${lVal})`;
-      rVal = `UNIX_MICROS(${rVal})`;
+      lVal = `UNIX_MICROS(CAST(${lVal} AS TIMESTAMP))`;
+      rVal = `UNIX_MICROS(CAST(${rVal} AS TIMESTAMP))`;
       const duration = `(${rVal}-${lVal})`;
       const divisor = inSeconds[df.units] * 1000000;
       return `FLOOR(${duration}/${divisor}.0)`;
