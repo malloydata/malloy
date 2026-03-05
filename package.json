@@ -35,6 +35,8 @@
   },
   "scripts": {
     "clean": "npm run -ws clean",
+    "codegen": "npm run -w packages/malloy -w packages/malloy-filter -w packages/malloy-malloy-sql codegen",
+    "dev": "npm run -ws --if-present dev",
     "build": "npm run -ws build",
     "watch": "tsc --watch",
     "lint": "gts lint",

@@ -1,0 +1,17 @@
+{
+  "build": {
+    "inputs": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.css",
+      "vite.config.mts",
+      "tsconfig.json"
+    ],
+    "outputs": [
+      "dist/module/index.mjs"
+    ],
+    "commands": [
+      "npx vite build --outDir 'dist/module' --config vite.config.mts"
+    ]
+  }
+}

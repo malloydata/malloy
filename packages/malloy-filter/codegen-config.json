@@ -1,0 +1,26 @@
+{
+  "codegen": {
+    "inputs": [
+      "src/grammars/*.ne"
+    ],
+    "outputs": [
+      "src/lib/fexpr_string_parser.ts",
+      "src/lib/fexpr_number_parser.ts",
+      "src/lib/ftemporal_parser.ts"
+    ],
+    "commands": [
+      "mkdir -p src/lib",
+      "npx nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts",
+      "npx nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts",
+      "npx nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts"
+    ]
+  },
+  "flow": {
+    "inputs": [
+      "dist/**/*.d.ts"
+    ],
+    "commands": [
+      "npx ts-node ../../scripts/gen-flow.ts"
+    ]
+  }
+}

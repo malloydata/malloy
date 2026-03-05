@@ -144,29 +144,54 @@ When making changes, build order matters: interfaces → core → database adapt
 ### Setup and Building
 ```bash
 npm install                    # Install dependencies for all packages
-npm run build                  # Build all packages
+npm run dev                    # Fast build: codegen + tsc (for iterating)
+npm run build                  # Full build: codegen + tsc + flow types + render
 npm run clean                  # Clean build artifacts from all packages
 npm run watch                  # Watch for TypeScript changes across the repo
 ```
 
-NOTES TOOL RUNNING NUM BUILD: build output is long and | head or | tail and a re-run is a bas choice,
-instead do something like
-
+NOTE FOR TOOLS RUNNING BUILD: build output is long, save it to a file:
 ```
-npm run build 2>&1 >/tmp/build0.log && echo Build OK || (tail -50 /tmp/build0.log; exit 1)
+npm run build > /tmp/build.log 2>&1 && echo Build OK || (tail -50 /tmp/build.log; exit 1)
 ```
 
-When changing only `packages/malloy` and running tests outside of that directory (e.g., in `test/`), use the workspace flag for faster builds:
-```bash
-npm run build -w @malloydata/malloy
-```
+### Dev vs Build
 
-### Parser Generation
+- **`npm run dev`** — Runs codegen (ANTLR, nearley, peggy) then `tsc --build` for each package. This is the fast command you run repeatedly while debugging. It skips the vite render build since tests don't need it.
+- **`npm run build`** — Everything in `dev`, plus the vite render bundle. Run this when you need fully built packages (e.g. for `npm link`).
 
-The Malloy grammar uses ANTLR4. When modifying grammar files in `packages/malloy/src/lang/grammar/`, run:
-```bash
-npm run build-parser  # In the malloy package directory
+### When to rebuild
+
+If you're editing code and running tests **in the same package**, you don't need to rebuild — just run `npx jest` directly on the test file. Changes to `.ts` files are picked up by ts-jest.
+
+If you make changes **in a different package** than the test (or you're running tests from `test/` and change any package), run `npm run dev` at the repo root first. It's fast — codegen is content-hash cached and tsc is incremental.
+
+### Codegen and femto-build
+
+Some packages have codegen steps that generate source files from grammars or configs:
+- **`packages/malloy`** — ANTLR4 parser from `.g4` grammar files
+- **`packages/malloy-filter`** — Nearley parsers from `.ne` grammar files
+- **`packages/malloy-malloy-sql`** — Peggy parsers from `.pegjs` grammar files
+- **`packages/malloy-render`** — Vite bundle from TypeScript/Solid sources
+
+These use `scripts/femto-build.js`, a tiny content-hash-based build caching tool. Each package with codegen has a `codegen-config.json` with named targets specifying input globs and commands. femto-build hashes the inputs and skips the commands if nothing changed. Targets can depend on other targets via `"deps"`. This survives git operations (unlike Make's timestamp-based approach).
+
+To add codegen to a new package: create a `codegen-config.json` in the package directory:
+```json
+{
+  "targetName": {
+    "inputs": ["src/grammar/*.g4"],
+    "commands": ["mkdir -p out", "tool -o out src/grammar/File.g4"]
+  },
+  "dependent-target": {
+    "deps": ["targetName"],
+    "inputs": ["src/other/*.g4"],
+    "commands": ["tool -o out src/other/File.g4"]
+  }
+}
 ```
+Then add to `package.json`: `"codegen": "node ../../scripts/femto-build.js targetName"`
+
 
 ### Testing
 

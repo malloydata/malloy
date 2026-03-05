@@ -1,0 +1,10 @@
+{
+  "flow": {
+    "inputs": [
+      "dist/**/*.d.ts"
+    ],
+    "commands": [
+      "npx ts-node ../../scripts/gen-flow.ts"
+    ]
+  }
+}
