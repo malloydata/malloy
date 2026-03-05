@@ -8,23 +8,25 @@
  * content hashing with no external build tools.
  *
  * Each package that needs caching has a codegen-config.json with named
- * targets. Each target has input globs and a list of commands:
+ * targets. Each target has input globs, a list of commands, and
+ * optional dependencies on other targets:
  *
  *   {
- *     "codegen": {
- *       "inputs": ["src/grammar/*.g4"],
- *       "commands": ["mkdir -p out", "antlr4ts -o out Lexer.g4"]
+ *     "lexer": {
+ *       "inputs": ["src/grammar/Lexer.g4"],
+ *       "commands": ["antlr4ts -o out Lexer.g4"]
  *     },
- *     "flow": {
- *       "inputs": ["dist/*.d.ts"],
- *       "commands": ["ts-node ../../scripts/gen-flow.ts"]
+ *     "parser": {
+ *       "deps": ["lexer"],
+ *       "inputs": ["src/grammar/Parser.g4"],
+ *       "commands": ["antlr4ts -o out -visitor Parser.g4"]
  *     }
  *   }
  *
  * Usage: node femto-build.js <target>
  *
  * Digest is stored as .<target>.digest in the package directory.
- * If inputs haven't changed, commands are skipped entirely.
+ * If inputs (and deps) haven't changed, commands are skipped entirely.
  */
 
 /* eslint-disable n/no-process-exit, n/no-extraneous-require, no-empty */
@@ -40,8 +42,8 @@ const CONFIG_FILE = 'codegen-config.json';
 const repoRoot = path.resolve(__dirname, '..');
 const pkgLabel = path.relative(repoRoot, process.cwd());
 
-const target = process.argv[2];
-if (!target) {
+const requestedTarget = process.argv[2];
+if (!requestedTarget) {
   console.error('Usage: femto-build <target>');
   process.exit(1);
 }
@@ -52,26 +54,36 @@ if (!existsSync(CONFIG_FILE)) {
 }
 
 const allConfig = JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
-const config = allConfig[target];
-if (!config) {
-  const targets = Object.keys(allConfig).join(', ');
-  console.error(
-    `femto-build: no target "${target}" in ${CONFIG_FILE} (have: ${targets})`
-  );
-  process.exit(1);
-}
 
-if (
-  !Array.isArray(config.inputs) ||
-  !Array.isArray(config.commands)
-) {
-  console.error(
-    `femto-build: target "${target}" must have "inputs" (array) and "commands" (array)`
-  );
-  process.exit(1);
+function validateTarget(name) {
+  const config = allConfig[name];
+  if (!config) {
+    const targets = Object.keys(allConfig).join(', ');
+    console.error(
+      `femto-build: no target "${name}" in ${CONFIG_FILE} (have: ${targets})`
+    );
+    process.exit(1);
+  }
+  if (!Array.isArray(config.commands)) {
+    console.error(`femto-build: target "${name}" must have "commands" (array)`);
+    process.exit(1);
+  }
+  if (config.inputs && !Array.isArray(config.inputs)) {
+    console.error(`femto-build: target "${name}" "inputs" must be an array`);
+    process.exit(1);
+  }
+  if (config.deps && !Array.isArray(config.deps)) {
+    console.error(`femto-build: target "${name}" "deps" must be an array`);
+    process.exit(1);
+  }
+  if (!config.inputs && !config.deps) {
+    console.error(
+      `femto-build: target "${name}" must have "inputs" and/or "deps"`
+    );
+    process.exit(1);
+  }
+  return config;
 }
-
-const digestFile = `.${target}.digest`;
 
 function hashFiles(patterns) {
   const hash = createHash('sha256');
@@ -95,42 +107,71 @@ function hashFiles(patterns) {
   return hash.digest('hex');
 }
 
-// Hash both the input files and the config itself, so changing
-// a command (e.g. adding a flag) invalidates the cache.
+// Hash input files, the config itself, and all dep digests.
+// Must be called after deps are built so their digest files exist.
 function computeHash(config) {
-  const hash = hashFiles(config.inputs);
-  const configHash = createHash('sha256')
-    .update(JSON.stringify(config))
-    .digest('hex');
-  return createHash('sha256').update(hash).update(configHash).digest('hex');
-}
-
-const currentHash = computeHash(config);
-
-let storedHash = null;
-try {
-  if (existsSync(digestFile)) {
-    storedHash = readFileSync(digestFile, 'utf-8').trim();
+  const combined = createHash('sha256');
+  if (config.inputs && config.inputs.length > 0) {
+    combined.update(hashFiles(config.inputs));
   }
-} catch (_) {}
-
-if (currentHash === storedHash) {
-  console.log(`${pkgLabel}:${target} up to date`);
-  process.exit(0);
+  combined.update(JSON.stringify(config));
+  for (const dep of config.deps || []) {
+    combined.update(readFileSync(`.${dep}.digest`, 'utf-8').trim());
+  }
+  return combined.digest('hex');
 }
 
-for (const cmd of config.commands) {
-  console.log(`${pkgLabel}:${target} ${cmd}`);
+// Track which targets have been built this invocation
+const built = new Set();
+const building = new Set();
+
+function buildTarget(name) {
+  if (built.has(name)) return;
+  if (building.has(name)) {
+    console.error(`femto-build: circular dependency detected: ${name}`);
+    process.exit(1);
+  }
+  building.add(name);
+
+  const config = validateTarget(name);
+
+  // Build deps first
+  for (const dep of config.deps || []) {
+    buildTarget(dep);
+  }
+
+  const digestFile = `.${name}.digest`;
+  const currentHash = computeHash(config);
+
+  let storedHash = null;
   try {
-    execSync(cmd, {stdio: 'inherit', shell: true});
-  } catch (e) {
-    console.error(`${pkgLabel}:${target} failed: ${cmd}`);
-    try {
-      unlinkSync(digestFile);
-    } catch (_) {}
-    process.exit(e.status || 1);
+    if (existsSync(digestFile)) {
+      storedHash = readFileSync(digestFile, 'utf-8').trim();
+    }
+  } catch (_) {}
+
+  if (currentHash === storedHash) {
+    console.log(`${pkgLabel}:${name} up to date`);
+    built.add(name);
+    return;
   }
+
+  for (const cmd of config.commands) {
+    console.log(`${pkgLabel}:${name} ${cmd}`);
+    try {
+      execSync(cmd, {stdio: 'inherit', shell: true});
+    } catch (e) {
+      console.error(`${pkgLabel}:${name} failed`);
+      try {
+        unlinkSync(digestFile);
+      } catch (_) {}
+      process.exit(e.status || 1);
+    }
+  }
+
+  writeFileSync(digestFile, currentHash + '\n');
+  console.log(`${pkgLabel}:${name} done, digest saved`);
+  built.add(name);
 }
 
-writeFileSync(digestFile, currentHash + '\n');
-console.log(`${pkgLabel}:${target} done, digest saved`);
+buildTarget(requestedTarget);
