@@ -234,20 +234,18 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('replace', () => {
+    // Dialects using Java regex use $N for backreferences, not \N.
+    // TODO: extend function template system to translate \N -> $N
+    const usesVirguleBackreferences = ![
+      'trino',
+      'presto',
+      'mysql',
+      'databricks',
+    ].includes(databaseName);
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["replace('aaaa', 'a', 'c')", 'cccc'],
         ["replace('aaaa', r'.', 'c')", 'cccc'],
-        [
-          "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
-          databaseName === 'postgres'
-            ? '\\0 - a - b - c'
-            : databaseName === 'trino' ||
-                databaseName === 'presto' ||
-                databaseName === 'mysql'
-              ? '0 - 1 - 2 - 3'
-              : 'axbxc - a - b - c',
-        ],
         [
           "replace('aaaa', '', 'c')",
           databaseName === 'trino' || databaseName === 'presto'
@@ -259,6 +257,15 @@ expressionModels.forEach((x, databaseName) => {
         ["replace('aaaa', 'a', null)", null]
       );
     });
+    it.when(usesVirguleBackreferences)(
+      `regex backreferences - ${databaseName}`,
+      async () => {
+        await funcTestMultiple([
+          "replace('axbxc', r'(a).(b).(c)', s'\\0 - \\1 - \\2 - \\3')",
+          databaseName === 'postgres' ? '\\0 - a - b - c' : 'axbxc - a - b - c',
+        ]);
+      }
+    );
   });
 
   describe('substr', () => {
@@ -288,38 +295,41 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('stddev', () => {
-    // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (
-      ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
-        databaseName
-      )
-    )
-      return;
+    const supportsAggDistinct = runtime.dialect.supportsAggDistinct;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
 
-    it(`works with struct - ${databaseName}`, async () => {
-      await funcTestAgg(
-        'round(aircraft_models.stddev(aircraft_models.seats))',
-        41
-      );
-    });
+    it.when(supportsAggDistinct)(
+      `works with struct - ${databaseName}`,
+      async () => {
+        await funcTestAgg(
+          'round(aircraft_models.stddev(aircraft_models.seats))',
+          41
+        );
+      }
+    );
 
-    it(`works with implicit parameter - ${databaseName}`, async () => {
-      await funcTestAgg('round(aircraft_models.seats.stddev())', 41);
-    });
+    it.when(supportsAggDistinct)(
+      `works with implicit parameter - ${databaseName}`,
+      async () => {
+        await funcTestAgg('round(aircraft_models.seats.stddev())', 41);
+      }
+    );
 
-    it(`works with filter - ${databaseName}`, async () => {
-      await funcTestAgg(
-        'round(aircraft_models.seats.stddev() { where: 1 = 1 })',
-        41
-      );
-      await funcTestAgg(
-        'round(aircraft_models.seats.stddev() { where: aircraft_models.seats > 4 })',
-        69
-      );
-    });
+    it.when(supportsAggDistinct)(
+      `works with filter - ${databaseName}`,
+      async () => {
+        await funcTestAgg(
+          'round(aircraft_models.seats.stddev() { where: 1 = 1 })',
+          41
+        );
+        await funcTestAgg(
+          'round(aircraft_models.seats.stddev() { where: aircraft_models.seats > 4 })',
+          69
+        );
+      }
+    );
   });
 
   describe('row_number', () => {
@@ -1412,6 +1422,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const testModel = wrapTestModel(runtime, modelText(databaseName));
 
   describe('string_agg', () => {
+    // Capability matrix: what each dialect supports for string_agg
+    const canOrderBy = !['databricks'].includes(databaseName);
+    const canFanout = !['snowflake', 'mysql'].includes(databaseName);
+    const canFanoutOrderBy = ![
+      'bigquery',
+      'snowflake',
+      'trino',
+      'presto',
+      'mysql',
+      'databricks',
+    ].includes(databaseName);
+
     it(`works no order by - ${databaseName}`, async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
@@ -1426,44 +1448,55 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }`).toMatchResult(testModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
-    it(`works with order by field - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderBy)(
+      `works with order by field - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
           order_by: name
         }
       }`).toMatchResult(testModel, {
-        f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      });
-    });
+          f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+        });
+      }
+    );
 
-    it(`works with order by direction - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderBy)(
+      `works with order by direction - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
           order_by: asc
         }
       }`).toMatchResult(testModel, {
-        f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      });
-    });
+          f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+        });
+      }
+    );
 
-    it(`works with multiple order_bys - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderBy)(
+      `works with multiple order_bys - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
           order_by: city, name
         }
       }`).toMatchResult(testModel, {
-        f: 'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
-      });
-    });
+          f: 'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
+        });
+      }
+    );
 
-    it(`works with order by expression - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderBy)(
+      `works with order by expression - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1474,21 +1507,25 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: length(name)
         }
       }`).toMatchResult(testModel, {
-        f: 'YANKEE FLYING CLUB INC,WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC',
-      });
-    });
+          f: 'YANKEE FLYING CLUB INC,WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC',
+        });
+      }
+    );
 
-    it(`works with order by join expression - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderBy)(
+      `works with order by join expression - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*ADVENTURE.*'
         aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
       }`).toMatchResult(testModel, {
-        f: 'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC',
-      });
-    });
+          f: 'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC',
+        });
+      }
+    );
 
-    it(`works with order asc - ${databaseName}`, async () => {
+    it.when(canOrderBy)(`works with order asc - ${databaseName}`, async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1502,7 +1539,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order desc - ${databaseName}`, async () => {
+    it.when(canOrderBy)(`works with order desc - ${databaseName}`, async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1516,15 +1553,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with fanout and order_by - ${databaseName}`, async () => {
-      // TODO bigquery cannot handle both fanout and order_by today
-      if (
-        ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
-          databaseName
-        )
-      )
-        return;
-      await expect(`##! experimental.aggregate_order_by
+    it.when(canFanoutOrderBy)(
+      `works with fanout and order_by - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1534,14 +1566,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           order_by: popular_name, state
         }
       }`).toMatchResult(testModel, {
-        s: 'IA,LA,MN,AL,AR,IN,ME,MT,NC,AZ,CA,CO,CT,FL,GA,HI,IL,KS,KY,MA,MO,NJ,NM,NV,NY,OH,OK,PA,RI,TN,TX,WV,WY,DC,MS,SC,ID,NE,UT,VA,AK,DE,MD,MI,ND,NH,OR,SD,VT,WA,WI',
-        c: 51,
-      });
-    });
+          s: 'IA,LA,MN,AL,AR,IN,ME,MT,NC,AZ,CA,CO,CT,FL,GA,HI,IL,KS,KY,MA,MO,NJ,NM,NV,NY,OH,OK,PA,RI,TN,TX,WV,WY,DC,MS,SC,ID,NE,UT,VA,AK,DE,MD,MI,ND,NH,OR,SD,VT,WA,WI',
+          c: 51,
+        });
+      }
+    );
 
-    it(`works with fanout - ${databaseName}`, async () => {
-      // Snowflake cannot handle the fanout case today
-      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
+    it.when(canFanout)(`works with fanout - ${databaseName}`, async () => {
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
@@ -1555,10 +1586,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with fanout and separator - ${databaseName}`, async () => {
-      // Snowflake cannot handle the fanout case today
-      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
-      await expect(`##! experimental.aggregate_order_by
+    it.when(canFanout)(
+      `works with fanout and separator - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1566,12 +1597,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: c is state_facts2.count()
         aggregate: s is string_agg('o', '')
       }`).toMatchResult(testModel, {
-        s: 'ooooooooooooooooooooooooooooooooooooooooooooooooooo',
-        c: 51,
-      });
-    });
+          s: 'ooooooooooooooooooooooooooooooooooooooooooooooooooo',
+          c: 51,
+        });
+      }
+    );
 
-    it(`works with limit - ${databaseName}`, async () => {
+    it.when(canOrderBy)(`works with limit - ${databaseName}`, async () => {
       const query = `##! experimental { aggregate_order_by aggregate_limit }
       run: aircraft -> {
           where: name ~ r'.*FLY.*'
@@ -1597,9 +1629,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('string_agg_distinct', () => {
-    it(`actually distincts - ${databaseName}`, async () => {
-      const tm = wrapTestModel(runtime, '');
-      await expect(`##! experimental { aggregate_order_by }
+    // Capability matrix: what each dialect supports for string_agg_distinct
+    const canOrderByDistinct = !['databricks'].includes(databaseName);
+
+    it.when(canOrderByDistinct)(
+      `actually distincts - ${databaseName}`,
+      async () => {
+        const tm = wrapTestModel(runtime, '');
+        await expect(`##! experimental { aggregate_order_by }
         source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
           primary_key: tail_num
         }
@@ -1614,11 +1651,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: asc }
           aggregate: f_all is aircraft.name.string_agg() { order_by: aircraft.name }
       }`).toMatchResult(tm, {
-        f_dist: 'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY',
-        f_all:
-          'FOWLER IRA R DBA,FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY,RAYTHEON AIRCRAFT COMPANY',
-      });
-    });
+          f_dist: 'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY',
+          f_all:
+            'FOWLER IRA R DBA,FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY,RAYTHEON AIRCRAFT COMPANY',
+        });
+      }
+    );
 
     it(`works no order by - ${databaseName}`, async () => {
       await expect(`run: aircraft -> {
@@ -1638,20 +1676,25 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order by direction - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderByDistinct)(
+      `works with order by direction - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg_distinct(name, ',') {
           order_by: asc
         }
       }`).toMatchResult(testModel, {
-        f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      });
-    });
+          f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+        });
+      }
+    );
 
-    it(`works with order asc - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderByDistinct)(
+      `works with order asc - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1660,12 +1703,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: f is string_agg_distinct(name, ',') { order_by: asc }
       }`).toMatchResult(testModel, {
-        f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
-      });
-    });
+          f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
+        });
+      }
+    );
 
-    it(`works with order desc - ${databaseName}`, async () => {
-      await expect(`##! experimental { aggregate_order_by }
+    it.when(canOrderByDistinct)(
+      `works with order desc - ${databaseName}`,
+      async () => {
+        await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1674,12 +1720,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: f is string_agg_distinct(name, ',') { order_by: desc }
       }`).toMatchResult(testModel, {
-        f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
-      });
-    });
+          f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
+        });
+      }
+    );
 
-    it(`works with limit - ${databaseName}`, async () => {
-      const query = `##! experimental { aggregate_order_by aggregate_limit }
+    it.when(canOrderByDistinct)(
+      `works with limit - ${databaseName}`,
+      async () => {
+        const query = `##! experimental { aggregate_order_by aggregate_limit }
         run: aircraft -> {
           where: name ~ r'.*FLY.*'
           group_by: name
@@ -1691,16 +1740,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             limit: 2
           }
         }`;
-      if (databaseName === 'bigquery') {
-        await expect(query).toMatchResult(testModel, {
-          f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC',
-        });
-      } else {
-        await expect(expressionModel.loadQuery(query).run()).rejects.toThrow(
-          'Function string_agg_distinct does not support limit'
-        );
+        if (databaseName === 'bigquery') {
+          await expect(query).toMatchResult(testModel, {
+            f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC',
+          });
+        } else {
+          await expect(expressionModel.loadQuery(query).run()).rejects.toThrow(
+            'Function string_agg_distinct does not support limit'
+          );
+        }
       }
-    });
+    );
   });
 
   describe('partition_by', () => {

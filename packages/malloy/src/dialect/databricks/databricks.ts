@@ -82,7 +82,7 @@ export class DatabricksDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsAggDistinct = true;
+  supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = true;
   dontUnionIndex = false;
@@ -330,21 +330,13 @@ export class DatabricksDialect extends Dialect {
     throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
-  // Collect distinct (key, val0, val1, ...) structs, explode them, then
-  // apply the aggregate function. Mirrors the DuckDB pattern.
-  sqlAggDistinct(
-    key: string,
-    values: string[],
-    func: (valNames: string[]) => string
-  ): string {
-    const structFields = [`'key', ${key}`, ...values.map((v, i) => `'val${i}', ${v}`)].join(', ');
-    const valRefs = values.map((_v, i) => `a.val${i}`);
-    return `(
-      SELECT ${func(valRefs)} as value
-      FROM (
-        SELECT EXPLODE(COLLECT_SET(named_struct(${structFields}))) AS a
-      )
-    )`;
+  sqlStringAggDistinct(
+    distinctKey: string,
+    valueSQL: string,
+    separatorSQL: string
+  ) {
+    const sep = separatorSQL.length > 0 ? separatorSQL : "','";
+    return `ARRAY_JOIN(TRANSFORM(COLLECT_SET(NAMED_STRUCT('k', ${distinctKey}, 'v', ${valueSQL})), x -> x.v), ${sep})`;
   }
 
   sqlGenerateUUID(): string {
