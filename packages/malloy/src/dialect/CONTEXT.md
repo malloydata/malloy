@@ -248,18 +248,7 @@ When creating a new dialect, prefer `def()` and the `T` convention for simple fu
 
 ## Adding a New Dialect
 
-Each dialect needs:
-
-1. **`{dialect}.ts`** — Dialect class extending the abstract `Dialect` base, implementing:
-   - `getDialectFunctionOverrides()` → overrides for standard library functions
-   - `getDialectFunctions()` → dialect-specific functions
-   - Various SQL generation methods (see `dialect.ts` for the full interface)
-
-2. **`function_overrides.ts`** — Export an `OverrideMap` for standard functions that need different SQL in your dialect
-
-3. **`dialect_functions.ts`** — Export a `DefinitionBlueprintMap` for dialect-specific functions
-
-4. Register the dialect in `dialect_map.ts`
+See [adding-a-new-database.md](../doc/adding-a-new-database.md) for a complete step-by-step guide covering both the Dialect and Connection sides, test data setup, and CI configuration.
 
 ## Key Source Files
 
