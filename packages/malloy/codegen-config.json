@@ -16,7 +16,6 @@
     ]
   },
   "codegen": {
-    "deps": ["lexer", "parser"],
-    "commands": []
+    "deps": ["lexer", "parser"]
   }
 }

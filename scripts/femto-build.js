@@ -72,8 +72,8 @@ function validateTarget(name) {
     );
     process.exit(1);
   }
-  if (!Array.isArray(config.commands)) {
-    console.error(`femto-build: target "${name}" must have "commands" (array)`);
+  if (config.commands && !Array.isArray(config.commands)) {
+    console.error(`femto-build: target "${name}" "commands" must be an array`);
     process.exit(1);
   }
   if (config.inputs && !Array.isArray(config.inputs)) {
@@ -183,7 +183,7 @@ function buildTarget(name, depth = 0) {
   }
 
   console.log(`${mark} ${label}`);
-  for (const cmd of config.commands) {
+  for (const cmd of config.commands || []) {
     console.log(`  ${cmd}`);
     try {
       execSync(cmd, {stdio: 'inherit', shell: true});
