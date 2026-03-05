@@ -82,6 +82,7 @@ const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'double precision': {type: 'number', numberType: 'float'},
   'timestamp without time zone': {type: 'timestamp'},
   'timestamp with time zone': {type: 'timestamptz'},
+  'timestamptz': {type: 'timestamptz'},
   'oid': {type: 'string'},
   'boolean': {type: 'boolean'},
   'timestamp': {type: 'timestamp'},
