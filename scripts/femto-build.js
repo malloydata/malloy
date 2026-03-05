@@ -8,8 +8,8 @@
  * content hashing with no external build tools.
  *
  * Each package that needs caching has a codegen-config.json with named
- * targets. Each target has input globs, a list of commands, and
- * optional dependencies on other targets:
+ * targets. Each target has input globs, a list of commands, optional
+ * dependencies on other targets, and optional output globs:
  *
  *   {
  *     "lexer": {
@@ -82,6 +82,10 @@ function validateTarget(name) {
   }
   if (config.deps && !Array.isArray(config.deps)) {
     console.error(`femto-build: target "${name}" "deps" must be an array`);
+    process.exit(1);
+  }
+  if (config.outputs && !Array.isArray(config.outputs)) {
+    console.error(`femto-build: target "${name}" "outputs" must be an array`);
     process.exit(1);
   }
   if (!config.inputs && !config.deps) {
@@ -161,7 +165,18 @@ function buildTarget(name, depth = 0) {
   const label = `${pkgLabel}:${name}`;
   const mark = '>'.repeat(depth + 2);
 
-  if (currentHash === storedHash) {
+  // If outputs are declared, check they exist even if hash matches
+  let outputsMissing = false;
+  if (config.outputs) {
+    for (const pattern of config.outputs) {
+      if (glob.sync(pattern, {nodir: true}).length === 0) {
+        outputsMissing = true;
+        break;
+      }
+    }
+  }
+
+  if (!outputsMissing && currentHash === storedHash) {
     console.log(`${label} up to date`);
     built.add(name);
     return;

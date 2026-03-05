@@ -3,6 +3,10 @@
     "inputs": [
       "src/grammar/*.pegjs"
     ],
+    "outputs": [
+      "src/grammar/malloySQL.js",
+      "src/grammar/malloySQLSQL.js"
+    ],
     "commands": [
       "npx peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
       "npx peggy -o src/grammar/malloySQLSQL.js src/grammar/malloySQLSQL.pegjs"
