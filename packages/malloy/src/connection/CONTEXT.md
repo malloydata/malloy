@@ -161,6 +161,8 @@ interface ConnectionTypeDef {
 
 ## Implementing a Connection Backend
 
+For a complete end-to-end guide to adding a new database (Dialect + Connection + tests + CI), see [adding-a-new-database.md](../doc/adding-a-new-database.md). The sections below document the Connection interface in detail.
+
 ### Interface Hierarchy
 
 ```

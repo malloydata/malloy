@@ -126,15 +126,14 @@ await expect(query).toMatchResult(tm, {
 });
 ```
 
-## Nested data with toHavePath
+## Nested data with toMatchPaths
 
-For queries with `nest:`, use `toHavePath` to navigate nested arrays: This is useful when a query returns a long nested array of records and you only care about the value of the first record.
+For queries with `nest:`, use `toMatchPaths` to navigate nested arrays: This is useful when a query returns a long nested array of records and you only care about the value of the first record.
 
 ```typescript
-import {runQuery} from '@malloydata/malloy/test';
-
-const result = await runQuery(tm.model, 'run: src -> { nest: by_state is {...} }');
-expect(result.data[0]).toHavePath({
+await expect(`
+  run: src -> { nest: by_state is {...} }
+`).toMatchPaths(tm, {
   'by_state.state': 'TX',
   'by_state.count': 1845,
 });
@@ -195,3 +194,13 @@ Result: [ { id: 1, name: 'alice' }, { id: 2, name: 'bob' } ]
 ```
 
 This is useful when developing tests to see what data is actually returned.
+
+## Logging SQL with MALLOY_LOG_SQL
+
+Set the `MALLOY_LOG_SQL` environment variable to log the generated SQL to the console before each query run by the test matchers (`toMatchResult`, `toMatchRows`, `toEqualResult`, `toMatchPaths`):
+
+```sh
+MALLOY_LOG_SQL=1 npx jest test/src/databases/all/expr.spec.ts
+```
+
+This is useful for debugging SQL generation issues without modifying test code.

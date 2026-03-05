@@ -46,7 +46,7 @@ export async function build(opts: BuildOptions): Promise<void> {
     workingDirectory: fileDir,
   });
   await connection.runSQL(
-    "CREATE TABLE flights AS SELECT * FROM parquet_scan('test/data/duckdb/flights.parquet')"
+    "CREATE TABLE flights AS SELECT * FROM parquet_scan('test/data/malloytest-parquet/flights.parquet')"
   );
 
   const readURL = async (url: URL): Promise<string> => {

@@ -49,6 +49,7 @@ import {
 import {indent} from '../../model/utils';
 import type {
   BooleanTypeSupport,
+  CompiledOrderBy,
   DialectFieldList,
   FieldReferenceType,
   OrderByClauseType,
@@ -136,7 +137,7 @@ export class MySQLDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsAggDistinct = true;
+  supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = false;
   dontUnionIndex = false;
@@ -211,15 +212,16 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const separator = ',';
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
     let gc = `GROUP_CONCAT(
       IF(group_set=${groupSet},
         JSON_OBJECT(${this.mapFields(fieldList)})
         , null
         )
-      ${orderBy}
+      ${orderByClause}
       SEPARATOR '${separator}'
     )`;
     gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;

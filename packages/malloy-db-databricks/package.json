@@ -1,0 +1,28 @@
+{
+  "name": "@malloydata/db-databricks",
+  "version": "0.0.351",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../../jest.config.js",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "0.0.351",
+    "@types/node": "^22.7.4",
+    "@databricks/sql": "^1.8.4"
+  }
+}

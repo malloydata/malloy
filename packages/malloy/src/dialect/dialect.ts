@@ -50,6 +50,28 @@ interface DialectField {
 }
 export type DialectFieldList = DialectField[];
 
+/**
+ * Order-by entry with field references resolved to SQL expressions
+ * and direction defaulted. Used by sqlAggregateTurtle so each dialect
+ * can format ordering in its own syntax.
+ */
+export interface CompiledOrderBy {
+  /** SQL expression for the ordering column (e.g. the group_set-suffixed CTE column name) */
+  field: string;
+  /** The struct output field name, for dialects that sort via struct field reference */
+  structField: string;
+  dir: 'asc' | 'desc';
+}
+
+/**
+ * A named expression for the lateral join bag. The expression will be
+ * available as `__lateral_join_bag.name` in the query.
+ */
+export interface LateralJoinExpression {
+  sql: string;
+  name: string; // already quoted by sqlMaybeQuoteIdentifier
+}
+
 /*
  * Standard integer type limits.
  * Use these in dialect integerTypeMappings definitions.
@@ -158,8 +180,26 @@ export abstract class Dialect {
   // dialects outside our repository
   //
 
-  // StandardSQL dialects can't partition on expression in window functions
+  // StandardSQL dialects can't partition on expression in window functions.
+  // When true, dimension expressions used in PARTITION BY are moved to a
+  // lateral join bag so the PARTITION BY can reference a column name instead
+  // of a raw expression. See sqlLateralJoinBag for dialect-specific syntax.
   cantPartitionWindowFunctionsOnExpressions = false;
+
+  // Generate the lateral join bag clause for window function partitioning.
+  // The expressions are dimension fields that need to be referenced by name
+  // in PARTITION BY clauses. Must be overridden by any dialect that sets
+  // cantPartitionWindowFunctionsOnExpressions = true.
+  sqlLateralJoinBag(_expressions: LateralJoinExpression[]): string {
+    if (this.cantPartitionWindowFunctionsOnExpressions) {
+      throw new Error(
+        `Dialect '${this.name}' sets cantPartitionWindowFunctionsOnExpressions but does not implement sqlLateralJoinBag`
+      );
+    }
+    throw new Error(
+      'Internal error: sqlLateralJoinBag called but cantPartitionWindowFunctionsOnExpressions is false'
+    );
+  }
 
   // Snowflake can't yet support pipelines in nested views.
   supportsPipelinesInViews = true;
@@ -204,6 +244,17 @@ export abstract class Dialect {
   // UNNEST in LATERAL JOINs doesn't guarantee array element order.
   // When true, compiler adds ORDER BY on array ordinality columns (__row_id)
   requiresExplicitUnnestOrdering = false;
+
+  // In most SQL dialects, column aliases defined in a SELECT clause are not
+  // visible to other expressions in the same SELECT. However, some dialects
+  // (e.g. Databricks/Spark) support "lateral column aliases", where an alias
+  // can be referenced by later expressions in the same SELECT. This causes
+  // problems when the compiler remaps the `group_set` column in a combine-
+  // turtles stage: the alias shadows the input column, so CASE WHEN
+  // group_set=N checks in aggregate expressions see the remapped value
+  // instead of the original. When true, the compiler splits the group_set
+  // remapping into a separate CTE to avoid shadowing.
+  hasLateralColumnAliasInSelect = false;
 
   supportsCountApprox = false;
 
@@ -340,8 +391,16 @@ export abstract class Dialect {
   abstract sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string;
+
+  // Format a CompiledOrderBy[] into an ORDER BY clause string for use
+  // inside an aggregate turtle expression. Dialects which support ORDER BY
+  // inside aggregate functions can call this helper from sqlAggregateTurtle.
+  sqlTurtleOrderByClause(orderBy: CompiledOrderBy[]): string {
+    const terms = orderBy.map(o => ` ${o.field} ${o.dir.toUpperCase()}`);
+    return ' ' + this.sqlOrderBy(terms, 'turtle');
+  }
 
   abstract sqlAnyValueTurtle(
     groupSet: number,

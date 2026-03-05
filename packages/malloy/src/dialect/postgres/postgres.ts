@@ -44,6 +44,7 @@ import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import {
   qtz,
+  type CompiledOrderBy,
   type DialectFieldList,
   type FieldReferenceType,
   type QueryInfo,
@@ -81,6 +82,7 @@ const postgresToMalloyTypes: {[key: string]: BasicAtomicTypeDef} = {
   'double precision': {type: 'number', numberType: 'float'},
   'timestamp without time zone': {type: 'timestamp'},
   'timestamp with time zone': {type: 'timestamptz'},
+  'timestamptz': {type: 'timestamptz'},
   'oid': {type: 'string'},
   'boolean': {type: 'boolean'},
   'timestamp': {type: 'timestamp'},
@@ -151,10 +153,11 @@ export class PostgresDialect extends PostgresBase {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const fields = this.mapFields(fieldList);
-    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))),'[]'::JSONB)`;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderByClause} ) FILTER (WHERE group_set=${groupSet}))),'[]'::JSONB)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

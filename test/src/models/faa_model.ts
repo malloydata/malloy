@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {medicareModel} from './medicare_model';
-
 const faaModel = `
   source: aircraft_models is bigquery.table('malloytest.aircraft_models') extend {
     primary_key: aircraft_model_code
@@ -296,4 +294,4 @@ const faaModel = `
   source: table_airports is airports
 `;
 
-export const testModel = faaModel + medicareModel;
+export const testModel = faaModel;

@@ -9,6 +9,7 @@
 import '@malloydata/db-bigquery';
 import '@malloydata/db-duckdb';
 import '@malloydata/db-mysql';
+import '@malloydata/db-databricks';
 import '@malloydata/db-postgres';
 import '@malloydata/db-snowflake';
 import '@malloydata/db-trino';

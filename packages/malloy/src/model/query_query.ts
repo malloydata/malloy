@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-import type {DialectFieldList} from '../dialect';
+import type {
+  DialectFieldList,
+  CompiledOrderBy,
+  LateralJoinExpression,
+} from '../dialect';
 import {exprToSQL} from './expression_compiler';
 import type {
   TurtleDef,
@@ -92,7 +96,7 @@ type StageGroupMaping = {fromGroup: number; toGroup: number};
 
 type StageOutputContext = {
   sql: string[]; // sql expressions
-  lateralJoinSQLExpressions: string[];
+  lateralJoinSQLExpressions: LateralJoinExpression[];
   dimensionIndexes: number[]; // which indexes are dimensions
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
@@ -1351,7 +1355,10 @@ export class QueryQuery extends QueryField {
               //  and numbers as strings into a lateral join when the query has ungrouped expressions
               const outputFieldName = `__lateral_join_bag.${outputName}`;
               fi.analyticalSQL = outputFieldName;
-              output.lateralJoinSQLExpressions.push(`${exp} as ${outputName}`);
+              output.lateralJoinSQLExpressions.push({
+                sql: exp,
+                name: outputName,
+              });
               output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
                 const outputNameString =
@@ -1361,9 +1368,10 @@ export class QueryQuery extends QueryField {
                 const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
-                output.lateralJoinSQLExpressions.push(
-                  `CAST(${exp} as STRING) as ${outputNameString}`
-                );
+                output.lateralJoinSQLExpressions.push({
+                  sql: `CAST(${exp} as STRING)`,
+                  name: outputNameString,
+                });
                 fi.partitionSQL = outputFieldNameString;
               }
             } else {
@@ -1673,12 +1681,10 @@ export class QueryQuery extends QueryField {
 
     s += indent(f.sql.join(',\n')) + '\n';
 
-    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
-    //  aggregates.
     if (f.lateralJoinSQLExpressions.length > 0) {
-      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
-        ',\n'
-      )})]) as __lateral_join_bag\n`;
+      from += this.parent.dialect.sqlLateralJoinBag(
+        f.lateralJoinSQLExpressions
+      );
     }
     s += from + wheres + groupBy + this.rootResult.havings.sql('having');
 
@@ -1749,11 +1755,19 @@ export class QueryQuery extends QueryField {
       }
     }
     if (output.groupsAggregated.length > 0) {
-      output.sql[0] = 'CASE ';
-      for (const m of output.groupsAggregated) {
-        output.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+      if (!this.parent.dialect.hasLateralColumnAliasInSelect) {
+        // Safe to remap in-place; aggregate expressions won't see the alias.
+        // This runs on every recursive return but sql[0] replacement is
+        // idempotent — last call builds the full CASE from all accumulated
+        // groupsAggregated entries.
+        output.sql[0] = 'CASE ';
+        for (const m of output.groupsAggregated) {
+          output.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+        }
+        output.sql[0] += 'ELSE group_set END as group_set';
       }
-      output.sql[0] += 'ELSE group_set END as group_set';
+      // For hasLateralColumnAliasInSelect, the remap is handled in
+      // generateSQLDepthN to avoid adding it multiple times from recursion.
     }
   }
 
@@ -1772,6 +1786,24 @@ export class QueryQuery extends QueryField {
       outputPipelinedSQL: [],
     };
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
+
+    // When column aliases are visible in the same SELECT (e.g. Databricks),
+    // replace sql[0] with the remap CASE aliased as __remapped_group_set
+    // (not group_set). This avoids shadowing the input group_set column
+    // that aggregate expressions reference. GROUP BY still uses position 1
+    // (the remapped value), so rows with different original group_sets
+    // collapse correctly. A follow-up CTE renames it to group_set.
+    const needsRemapStage =
+      f.groupsAggregated.length > 0 &&
+      this.parent.dialect.hasLateralColumnAliasInSelect;
+    if (needsRemapStage) {
+      f.sql[0] = 'CASE ';
+      for (const m of f.groupsAggregated) {
+        f.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
+      }
+      f.sql[0] += 'ELSE group_set END as __remapped_group_set';
+    }
+
     s += indent(f.sql.join(',\n')) + '\n';
     s += `FROM ${stageName}\n`;
     const where = this.rootResult.eliminateComputeGroupsSQL();
@@ -1783,6 +1815,17 @@ export class QueryQuery extends QueryField {
     }
 
     this.resultStage = stageWriter.addStage(s);
+
+    if (needsRemapStage) {
+      const cols = f.sql.slice(1).map(col => {
+        const asMatch = col.match(/as\s+(\S+)\s*$/i);
+        return asMatch ? asMatch[1] : '*';
+      });
+      const remapSQL = `SELECT \n${indent(
+        ['__remapped_group_set as group_set', ...cols].join(',\n')
+      )}\nFROM ${this.resultStage}\n`;
+      this.resultStage = stageWriter.addStage(remapSQL);
+    }
 
     this.resultStage = this.generatePipelinedStages(
       f.outputPipelinedSQL,
@@ -1966,11 +2009,8 @@ export class QueryQuery extends QueryField {
     sqlFieldName: string,
     outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
-    // let fieldsSQL: string[] = [];
-    let orderBy = '';
-
     // calculate the ordering.
-    const obSQL: string[] = [];
+    const compiledOrderBy: CompiledOrderBy[] = [];
     let orderingField;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
@@ -1984,24 +2024,26 @@ export class QueryQuery extends QueryField {
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
+      const structField = this.parent.dialect.sqlMaybeQuoteIdentifier(
+        orderingField.name
+      );
       if (resultStruct.firstSegment.type === 'reduce') {
-        obSQL.push(
-          ' ' +
-            this.parent.dialect.sqlMaybeQuoteIdentifier(
-              `${orderingField.name}__${resultStruct.groupSet}`
-            ) +
-            ` ${ordering.dir || 'ASC'}`
-        );
+        compiledOrderBy.push({
+          field: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${orderingField.name}__${resultStruct.groupSet}`
+          ),
+          structField,
+          dir: ordering.dir || 'asc',
+        });
       } else if (resultStruct.firstSegment.type === 'project') {
-        obSQL.push(
-          ` ${orderingField.fif.generateExpression()} ${ordering.dir || 'ASC'}`
-        );
+        compiledOrderBy.push({
+          field: orderingField.fif.generateExpression(),
+          structField,
+          dir: ordering.dir || 'asc',
+        });
       }
     }
-
-    if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL, 'turtle');
-    }
+    const orderBy = compiledOrderBy.length > 0 ? compiledOrderBy : undefined;
 
     const dialectFieldList = this.buildDialectFieldList(resultStruct);
 

@@ -30,7 +30,7 @@ import {DuckDBConnection} from '@malloydata/db-duckdb';
 const ROOT = path.resolve(__dirname, '../../.tmp/simple_builder_test');
 const FLIGHTS_PARQUET = path.resolve(
   __dirname,
-  '../../test/data/duckdb/flights.parquet'
+  '../../test/data/malloytest-parquet/flights.parquet'
 );
 const MODEL_FILE = path.join(ROOT, 'test.malloy');
 const MANIFEST_FILE = path.join(ROOT, 'manifest.json');

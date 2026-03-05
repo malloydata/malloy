@@ -1573,7 +1573,7 @@ describe('source persistence', () => {
 
       try {
         // Use parquet path so the in-memory connection can read flights
-        const flightsPath = 'test/data/duckdb/flights.parquet';
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
         const modelCode = `${PERSIST_ANNOTATION}
           source: flights is ${tstDB}.table('${flightsPath}') extend {
             measure: flight_count is count()

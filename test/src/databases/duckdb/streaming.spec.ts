@@ -43,7 +43,7 @@ const runtimes = ['duckdb'];
 const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 
 function modelText(databaseName: string) {
-  return `source: airports is ${databaseName}.table('test/data/duckdb/airports.parquet') extend {
+  return `source: airports is ${databaseName}.table('test/data/malloytest-parquet/airports.parquet') extend {
   rename: facility_type is fac_type
 
   measure: airport_count is count()

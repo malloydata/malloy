@@ -63,6 +63,13 @@ jobs:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
   db-mysql:
     uses: './.github/workflows/db-mysql.yaml'
+  db-databricks:
+    needs: check-permission
+    uses: './.github/workflows/db-databricks.yaml'
+    secrets:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
   db-duckdb-wasm:
     uses: './.github/workflows/db-duckdb-wasm.yaml'
 
@@ -82,6 +89,7 @@ jobs:
       - db-postgres
       # - db-motherduck
       - db-mysql
+      - db-databricks
     runs-on: ubuntu-latest
     steps:
       - name: Success

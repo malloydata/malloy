@@ -30,6 +30,9 @@
       "path": "../packages/malloy-db-mysql"
     },
     {
+      "path": "../packages/malloy-db-databricks"
+    },
+    {
       "path": "../packages/malloy-db-duckdb"
     },
     {

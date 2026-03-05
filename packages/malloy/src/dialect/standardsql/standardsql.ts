@@ -46,12 +46,18 @@ import {
 import type {DialectFunctionOverloadDef} from '../functions';
 import {expandOverrideMap, expandBlueprintMap} from '../functions';
 import type {
+  CompiledOrderBy,
   DialectFieldList,
   IntegerTypeMapping,
   OrderByRequest,
   QueryInfo,
 } from '../dialect';
-import {Dialect, MIN_INT64, MAX_INT64} from '../dialect';
+import {
+  Dialect,
+  MIN_INT64,
+  MAX_INT64,
+  type LateralJoinExpression,
+} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -127,6 +133,11 @@ export class StandardSQLDialect extends Dialect {
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
+
+  sqlLateralJoinBag(expressions: LateralJoinExpression[]): string {
+    const fields = expressions.map(e => `${e.sql} as ${e.name}`);
+    return `LEFT JOIN UNNEST([STRUCT(${fields.join(',\n')})]) as __lateral_join_bag\n`;
+  }
   nestedArrays = false; // Can't have an array of arrays for some reason
   supportsHyperLogLog = true;
   likeEscape = false; // Uses \ instead of ESCAPE 'X' in like clauses
@@ -184,12 +195,13 @@ export class StandardSQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    orderBy: string | undefined
+    orderBy: CompiledOrderBy[] | undefined
   ): string {
     const fields = fieldList
       .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy})`;
+    const orderByClause = orderBy ? this.sqlTurtleOrderByClause(orderBy) : '';
+    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderByClause})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

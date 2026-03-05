@@ -8,6 +8,7 @@
   "files.trimTrailingWhitespace": true,
   "files.exclude": {
     "**/node_modules": true,
+    "**/.claude": true,
     "**/*.tsbuildinfo": true
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",

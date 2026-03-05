@@ -27,7 +27,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
-import {wrapTestModel, runQuery} from '@malloydata/malloy/test';
+import {wrapTestModel} from '@malloydata/malloy/test';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -679,9 +679,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       // symmetric aggregate are needed on both sides of the join
       // Check the row count and that sums on each side work properly.
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         # test.verbose
         run: ${databaseName}.table('malloytest.state_facts') -> {
           group_by: state
@@ -690,9 +688,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({'ugly.foo': null});
+      `).toMatchPaths(testModel, {'ugly.foo': null});
     }
   );
 
@@ -792,9 +788,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `ungrouped nested with no grouping above - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         // # test.debug
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -805,9 +799,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             group_by: popular_name
             aggregate: births_per_100k
           }
-        }`
-      );
-      expect(result.data[0]).toHavePath({'by_name.births_per_100k': 66703});
+        }`).toMatchPaths(testModel, {'by_name.births_per_100k': 66703});
     }
   );
 
@@ -815,9 +807,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `ungrouped - partial grouping - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.airports') extend {
           measure: c is count()
         } -> {
@@ -839,9 +829,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
               all_top is exclude(c, state, faa_region, fac_type)
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({
+      `).toMatchPaths(testModel, {
         'fac_type.all_': 1845,
         'fac_type.all_state_region': 1845,
         'fac_type.all_of_this_type': 1782,
@@ -854,9 +842,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `ungrouped - all nested - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.airports') extend {
           measure: c is count()
         } -> {
@@ -875,9 +861,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
               all_major is all(c,major)
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({
+      `).toMatchPaths(testModel, {
         'fac_type.all_': 1845,
         'fac_type.all_major': 1819,
       });
@@ -888,9 +872,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `ungrouped nested  - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -901,9 +883,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: births_per_100k
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({'by_state.births_per_100k': 36593});
+      `).toMatchPaths(testModel, {'by_state.births_per_100k': 36593});
     }
   );
 
@@ -911,9 +891,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `ungrouped nested expression  - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -924,9 +902,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: births_per_100k
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({'by_state.births_per_100k': 36593});
+      `).toMatchPaths(testModel, {'by_state.births_per_100k': 36593});
     }
   );
 
@@ -934,9 +910,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `ungrouped nested group by float  - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: ug is all(total_births)
@@ -947,9 +921,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: ug
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({'by_state.ug': 62742230});
+      `).toMatchPaths(testModel, {'by_state.ug': 62742230});
     }
   );
 
@@ -1023,9 +995,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     `all with parameters - nest  - ${databaseName}`,
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           dimension: abc is floor(airport_count/300)
@@ -1040,9 +1010,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
               all_name is exclude(total_births, state)
           }
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({
+      `).toMatchPaths(testModel, {
         'by_stuff.all_births': 119809719,
         'by_stuff.all_name': 61091215,
       });
@@ -1053,17 +1021,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
   )(`single value to udf - ${databaseName}`, async () => {
     const testModel = wrapTestModel(runtime, '');
-    const result = await runQuery(
-      testModel.model,
-      `
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> { nest: fun }
-      `
-    );
-    expect(result.data[0]).toHavePath({'fun.t1': 52});
+      `).toMatchPaths(testModel, {'fun.t1': 52});
   });
 
   test.when(
@@ -1073,9 +1037,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
 
     async () => {
       const testModel = wrapTestModel(runtime, '');
-      const result = await runQuery(
-        testModel.model,
-        `
+      await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -1085,9 +1047,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           group_by: two is 2
           nest: fun
         }
-      `
-      );
-      expect(result.data[0]).toHavePath({'fun.t1': 52});
+      `).toMatchPaths(testModel, {'fun.t1': 52});
     }
   );
 
@@ -1095,9 +1055,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
   )(`Multi value to udf group by - ${databaseName}`, async () => {
     const testModel = wrapTestModel(runtime, '');
-    const result = await runQuery(
-      testModel.model,
-      `
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -1106,9 +1064,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         } -> {
           nest: fun
         }
-      `
-    );
-    expect(result.data[0]).toHavePath({'fun.t1': 52});
+      `).toMatchPaths(testModel, {'fun.t1': 52});
   });
 
   // not sure this works on all dialect.
