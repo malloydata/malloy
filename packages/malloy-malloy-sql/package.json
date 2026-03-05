@@ -19,7 +19,7 @@
     "test": "npm run codegen && jest --config=../../jest.config.js",
     "dev": "npm run codegen && tsc --build",
     "build": "npm run codegen && tsc --build",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo .*.digest",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

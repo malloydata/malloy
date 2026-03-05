@@ -25,7 +25,7 @@
  *
  * Usage: node femto-build.js <target>
  *
- * Digest is stored as .<target>.digest in the package directory.
+ * Digest is stored as .<target>.femto.digest in the package directory.
  * If inputs (and deps) haven't changed, commands are skipped entirely.
  */
 
@@ -44,8 +44,16 @@ const pkgLabel = path.relative(repoRoot, process.cwd());
 
 const requestedTarget = process.argv[2];
 if (!requestedTarget) {
-  console.error('Usage: femto-build <target>');
+  console.error('Usage: femto-build <target | --clean>');
   process.exit(1);
+}
+
+if (requestedTarget === '--clean') {
+  for (const f of glob.sync('.*.femto.digest')) {
+    unlinkSync(f);
+    console.log(`${pkgLabel} removed ${f}`);
+  }
+  process.exit(0);
 }
 
 if (!existsSync(CONFIG_FILE)) {
@@ -116,7 +124,7 @@ function computeHash(config) {
   }
   combined.update(JSON.stringify(config));
   for (const dep of config.deps || []) {
-    combined.update(readFileSync(`.${dep}.digest`, 'utf-8').trim());
+    combined.update(readFileSync(`.${dep}.femto.digest`, 'utf-8').trim());
   }
   return combined.digest('hex');
 }
@@ -125,7 +133,7 @@ function computeHash(config) {
 const built = new Set();
 const building = new Set();
 
-function buildTarget(name) {
+function buildTarget(name, depth = 0) {
   if (built.has(name)) return;
   if (building.has(name)) {
     console.error(`femto-build: circular dependency detected: ${name}`);
@@ -137,10 +145,10 @@ function buildTarget(name) {
 
   // Build deps first
   for (const dep of config.deps || []) {
-    buildTarget(dep);
+    buildTarget(dep, depth + 1);
   }
 
-  const digestFile = `.${name}.digest`;
+  const digestFile = `.${name}.femto.digest`;
   const currentHash = computeHash(config);
 
   let storedHash = null;
@@ -150,18 +158,22 @@ function buildTarget(name) {
     }
   } catch (_) {}
 
+  const label = `${pkgLabel}:${name}`;
+  const mark = '>'.repeat(depth + 2);
+
   if (currentHash === storedHash) {
-    console.log(`${pkgLabel}:${name} up to date`);
+    console.log(`${label} up to date`);
     built.add(name);
     return;
   }
 
+  console.log(`${mark} ${label}`);
   for (const cmd of config.commands) {
-    console.log(`${pkgLabel}:${name} ${cmd}`);
+    console.log(`  ${cmd}`);
     try {
       execSync(cmd, {stdio: 'inherit', shell: true});
     } catch (e) {
-      console.error(`${pkgLabel}:${name} failed`);
+      console.error(`${mark} ${label} failed`);
       try {
         unlinkSync(digestFile);
       } catch (_) {}
@@ -170,7 +182,7 @@ function buildTarget(name) {
   }
 
   writeFileSync(digestFile, currentHash + '\n');
-  console.log(`${pkgLabel}:${name} done, digest saved`);
+  console.log(`${mark} ${label} done`);
   built.add(name);
 }
 

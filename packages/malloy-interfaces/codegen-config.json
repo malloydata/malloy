@@ -4,7 +4,7 @@
       "dist/**/*.d.ts"
     ],
     "commands": [
-      "ts-node ../../scripts/gen-flow.ts"
+      "npx ts-node ../../scripts/gen-flow.ts"
     ]
   }
 }

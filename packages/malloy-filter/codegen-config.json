@@ -5,9 +5,9 @@
     ],
     "commands": [
       "mkdir -p src/lib",
-      "nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts",
-      "nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts",
-      "nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts"
+      "npx nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts",
+      "npx nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts",
+      "npx nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts"
     ]
   },
   "flow": {
@@ -15,7 +15,7 @@
       "dist/**/*.d.ts"
     ],
     "commands": [
-      "ts-node ../../scripts/gen-flow.ts"
+      "npx ts-node ../../scripts/gen-flow.ts"
     ]
   }
 }

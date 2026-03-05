@@ -22,7 +22,7 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "clean": "rm -rf dist && tsc --build --clean && rm -f tsconfig.tsbuildinfo .*.digest && rimraf @flowtyped",
+    "clean": "rm -rf dist && tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean && rimraf @flowtyped",
     "dev": "tsc --build",
     "build": "tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",

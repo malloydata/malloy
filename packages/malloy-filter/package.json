@@ -16,7 +16,7 @@
     "generate-flow": "node ../../scripts/femto-build.js flow",
     "dev": "npm run codegen && tsc --build",
     "build": "npm run codegen && tsc --build && npm run generate-flow",
-    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo .*.digest && rimraf src/lib/* dist @flowtyped",
+    "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && node ../../scripts/femto-build.js --clean && rimraf src/lib/* dist @flowtyped",
     "test": "jest",
     "prepublishOnly": "npm run clean && npm run build"
   },

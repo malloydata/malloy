@@ -6,7 +6,7 @@ packages/**/dist
 packages/**/node_modules
 packages/malloy/src/lang/lib
 *.tsbuildinfo
-.*.digest
+*.femto.digest
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr
