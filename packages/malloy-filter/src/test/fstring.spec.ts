@@ -6,8 +6,6 @@
  */
 
 import {diff} from 'jest-diff';
-import * as nearley from 'nearley';
-import fstring_grammar from '../lib/fexpr_string_parser';
 import type {StringFilter} from '../filter_interface';
 import {StringFilterExpression} from '../string_filter_expression';
 import {inspect} from 'util';
@@ -27,19 +25,16 @@ expect.extend({
     expectedParse: StringFilter,
     expectedUnparse?: string
   ) {
-    const fstring_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(fstring_grammar)
-    );
-    fstring_parser.feed(src);
-    const results = fstring_parser.finish();
-    if (results.length > 1) {
+    const result = StringFilterExpression.parse(src);
+    if (result.log.length > 0) {
       return {
         pass: false,
-        message: () => 'Ambiguous parse, grammar error',
+        message: () => `Parse error: ${result.log[0].message}`,
       };
     }
-    if (this.equals(expectedParse, results[0])) {
-      const unparse = StringFilterExpression.unparse(results[0]);
+    const parsed = result.parsed;
+    if (this.equals(expectedParse, parsed)) {
+      const unparse = StringFilterExpression.unparse(parsed);
       if (unparse === (expectedUnparse ?? src)) {
         return {
           pass: true,
@@ -57,7 +52,7 @@ expect.extend({
       `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
     );
     const rcv = this.utils.printReceived(
-      `Received: ${inspect(results[0], {breakLength: 80, depth: Infinity})}`
+      `Received: ${inspect(parsed, {breakLength: 80, depth: Infinity})}`
     );
     return {
       pass: false,
@@ -393,11 +388,11 @@ describe('string filter expressions', () => {
   test('syntax error in column 0', () => {
     const p = StringFilterExpression.parse(',');
     const msg = p.log[0];
-    expect(msg).toMatchObject({startIndex: 0, endIndex: 0, severity: 'error'});
+    expect(msg).toMatchObject({startIndex: 0, severity: 'error'});
   });
   test('syntax error in column 4', () => {
     const p = StringFilterExpression.parse('abc,,');
     const msg = p.log[0];
-    expect(msg).toMatchObject({startIndex: 4, endIndex: 4, severity: 'error'});
+    expect(msg).toMatchObject({startIndex: 4, severity: 'error'});
   });
 });

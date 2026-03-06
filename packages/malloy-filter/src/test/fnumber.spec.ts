@@ -6,9 +6,7 @@
  */
 
 import {diff} from 'jest-diff';
-import * as nearley from 'nearley';
 import type {NumberFilter} from '../filter_interface';
-import fnumber_grammar from '../lib/fexpr_number_parser';
 import {NumberFilterExpression} from '../number_filter_expression';
 import {inspect} from 'util';
 
@@ -27,19 +25,16 @@ expect.extend({
     expectedParse: NumberFilter,
     expectedUnparse?: string
   ) {
-    const fnumber_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(fnumber_grammar)
-    );
-    fnumber_parser.feed(src);
-    const results = fnumber_parser.finish();
-    if (results.length > 1) {
+    const result = NumberFilterExpression.parse(src);
+    if (result.log.length > 0) {
       return {
         pass: false,
-        message: () => 'Ambiguous parse, grammar error',
+        message: () => `Parse error: ${result.log[0].message}`,
       };
     }
-    if (this.equals(expectedParse, results[0])) {
-      const unparse = NumberFilterExpression.unparse(results[0]);
+    const parsed = result.parsed;
+    if (this.equals(expectedParse, parsed)) {
+      const unparse = NumberFilterExpression.unparse(parsed);
       if (unparse === (expectedUnparse ?? src)) {
         return {
           pass: true,
@@ -57,7 +52,7 @@ expect.extend({
       `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
     );
     const rcv = this.utils.printReceived(
-      `Received: ${inspect(results[0], {breakLength: 80, depth: Infinity})}`
+      `Received: ${inspect(parsed, {breakLength: 80, depth: Infinity})}`
     );
     return {
       pass: false,
@@ -229,5 +224,49 @@ describe('number filter expressions', () => {
       },
       '!= 1, 2, 3'
     );
+  });
+  test('.N (leading decimal)', () => {
+    expect('.5').isNumberFilter({operator: '=', values: ['.5']});
+  });
+  test('-0.5', () => {
+    expect('-0.5').isNumberFilter({operator: '=', values: ['-0.5']});
+  });
+  test('= N, N (explicit equals list)', () => {
+    expect('= 1, 2').isNumberFilter(
+      {operator: '=', values: ['1', '2']},
+      '1, 2'
+    );
+  });
+  test('!= N, N, N', () => {
+    expect('!= 1, 2, 3').isNumberFilter({
+      operator: '!=',
+      values: ['1', '2', '3'],
+    });
+  });
+  test('range with floats', () => {
+    expect('[-1.5 to 2.5]').isNumberFilter({
+      operator: 'range',
+      startOperator: '>=',
+      startValue: '-1.5',
+      endOperator: '<=',
+      endValue: '2.5',
+    });
+  });
+  test('or with non-equal clauses', () => {
+    expect('> 3 or < 1').isNumberFilter({
+      operator: 'or',
+      members: [
+        {operator: '>', values: ['3']},
+        {operator: '<', values: ['1']},
+      ],
+    });
+  });
+  test('case insensitive keywords', () => {
+    expect('NOT NULL').isNumberFilter({operator: 'null', not: true}, 'not null');
+  });
+  test('syntax error', () => {
+    const p = NumberFilterExpression.parse('abc');
+    expect(p.log.length).toBeGreaterThan(0);
+    expect(p.log[0]).toMatchObject({severity: 'error'});
   });
 });

@@ -67,6 +67,7 @@ packages/malloy-query-builder/docs/
 packages/malloy-query-builder/flow/
 .claude
 
+packages/malloy-filter/src/lib
 packages/malloy-tag/src/.antlr
 packages/malloy-tag/src/lib
 

@@ -157,7 +157,7 @@ npm run build > /tmp/build.log 2>&1 && echo Build OK || (tail -50 /tmp/build.log
 
 ### Dev vs Build
 
-- **`npm run dev`** — Runs codegen (ANTLR, nearley, peggy) then `tsc --build` for each package. This is the fast command you run repeatedly while debugging. It skips the vite render build since tests don't need it.
+- **`npm run dev`** — Runs codegen (ANTLR, peggy) then `tsc --build` for each package. This is the fast command you run repeatedly while debugging. It skips the vite render build since tests don't need it.
 - **`npm run build`** — Everything in `dev`, plus the vite render bundle. Run this when you need fully built packages (e.g. for `npm link`).
 
 ### When to rebuild
@@ -170,7 +170,7 @@ If you make changes **in a different package** than the test (or you're running 
 
 Some packages have codegen steps that generate source files from grammars or configs:
 - **`packages/malloy`** — ANTLR4 parser from `.g4` grammar files
-- **`packages/malloy-filter`** — Nearley parsers from `.ne` grammar files
+- **`packages/malloy-filter`** — Peggy parsers from `.peggy` grammar files
 - **`packages/malloy-malloy-sql`** — Peggy parsers from `.pegjs` grammar files
 - **`packages/malloy-render`** — Vite bundle from TypeScript/Solid sources
 

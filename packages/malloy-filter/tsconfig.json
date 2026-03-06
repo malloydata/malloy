@@ -4,7 +4,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "composite": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+    "allowJs": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.js"]
 }

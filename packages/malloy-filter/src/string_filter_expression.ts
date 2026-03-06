@@ -7,25 +7,16 @@
 
 import type {FilterParserResponse, StringFilter} from './filter_interface';
 import {isStringFilter} from './filter_interface';
-import * as nearley from 'nearley';
-import fstring_grammar from './lib/fexpr_string_parser';
+import {parse as peggyParse} from './lib/fexpr_string_parser';
 import {escape} from './clause_utils';
-import {run_parser} from './nearley_parse';
+import {run_parser} from './peggy_parse';
 
-// This could be mistake, I am replacing the hand coded lexer and parsers
-// which previously existed with nearley/moo -- As the language is still
-// in flux, it is much easier for me to maintain the code if the parser
-// is not hand coded. Full apologies to the original author of the hand
-// coded parsers.
 export const StringFilterExpression = {
   parse(src: string): FilterParserResponse<StringFilter> {
     if (src.match(/^\s*$/)) {
       return {parsed: null, log: []};
     }
-    const fstring_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(fstring_grammar)
-    );
-    const parse_result = run_parser(src, fstring_parser);
+    const parse_result = run_parser(src, peggyParse);
     if (parse_result.parsed && isStringFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }

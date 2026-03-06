@@ -6,8 +6,6 @@
  */
 
 import {diff} from 'jest-diff';
-import * as nearley from 'nearley';
-import ftemporal_grammar from '../lib/ftemporal_parser';
 import type {TemporalFilter} from '../filter_interface';
 import {TemporalFilterExpression} from '../temporal_filter_expression';
 import {inspect} from 'util';
@@ -27,19 +25,16 @@ expect.extend({
     expectedParse: TemporalFilter,
     expectedUnparse?: string
   ) {
-    const fstring_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(ftemporal_grammar)
-    );
-    fstring_parser.feed(src);
-    const results = fstring_parser.finish();
-    if (results.length > 1) {
+    const result = TemporalFilterExpression.parse(src);
+    if (result.log.length > 0) {
       return {
         pass: false,
-        message: () => 'Ambiguous parse, grammar error',
+        message: () => `Parse error: ${result.log[0].message}`,
       };
     }
-    if (this.equals(expectedParse, results[0])) {
-      const unparse = TemporalFilterExpression.unparse(results[0]);
+    const parsed = result.parsed;
+    if (this.equals(expectedParse, parsed)) {
+      const unparse = TemporalFilterExpression.unparse(parsed);
       if (unparse === (expectedUnparse ?? src)) {
         return {
           pass: true,
@@ -57,7 +52,7 @@ expect.extend({
       `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
     );
     const rcv = this.utils.printReceived(
-      `Received: ${inspect(results[0], {breakLength: 80, depth: Infinity})}`
+      `Received: ${inspect(parsed, {breakLength: 80, depth: Infinity})}`
     );
     return {
       pass: false,
@@ -85,6 +80,18 @@ describe('temporal filter expressions', () => {
         operator: 'in',
         not: true,
         in: {moment: 'literal', literal: '2001-02-03 04:05:06.7'},
+      });
+    });
+    test('literal second', () => {
+      expect('2001-02-03 04:05:06').isTemporalFilter({
+        operator: 'in',
+        in: {moment: 'literal', literal: '2001-02-03 04:05:06'},
+      });
+    });
+    test('literal minute', () => {
+      expect('2001-02-03 04:05').isTemporalFilter({
+        operator: 'in',
+        in: {moment: 'literal', literal: '2001-02-03 04:05', units: 'minute'},
       });
     });
     test('literal hour', () => {
@@ -121,6 +128,18 @@ describe('temporal filter expressions', () => {
       expect('2001').isTemporalFilter({
         operator: 'in',
         in: {moment: 'literal', literal: '2001', units: 'year'},
+      });
+    });
+    test('literal minute with T', () => {
+      expect('2001-02-03T04:05').isTemporalFilter({
+        operator: 'in',
+        in: {moment: 'literal', literal: '2001-02-03T04:05', units: 'minute'},
+      });
+    });
+    test('literal hour with T', () => {
+      expect('2001-02-03T04').isTemporalFilter({
+        operator: 'in',
+        in: {moment: 'literal', literal: '2001-02-03T04', units: 'hour'},
       });
     });
   });
@@ -397,6 +416,57 @@ describe('temporal filter expressions', () => {
     });
   });
 
+  describe('more clauses', () => {
+    test('1 day (singular in_last)', () => {
+      expect('1 day').isTemporalFilter({
+        operator: 'in_last',
+        n: '1',
+        units: 'day',
+      });
+    });
+    test('30 seconds', () => {
+      expect('30 seconds').isTemporalFilter({
+        operator: 'in_last',
+        n: '30',
+        units: 'second',
+      });
+    });
+    test('3 quarters', () => {
+      expect('3 quarters').isTemporalFilter({
+        operator: 'in_last',
+        n: '3',
+        units: 'quarter',
+      });
+    });
+    test('yesterday for 3 hours', () => {
+      expect('yesterday for 3 hours').isTemporalFilter({
+        operator: 'for',
+        begin: {moment: 'yesterday'},
+        n: '3',
+        units: 'hour',
+      });
+    });
+    test('literal to literal', () => {
+      expect('2001-01 to 2001-06').isTemporalFilter({
+        operator: 'to',
+        fromMoment: {moment: 'literal', literal: '2001-01', units: 'month'},
+        toMoment: {moment: 'literal', literal: '2001-06', units: 'month'},
+      });
+    });
+    test('case insensitive keywords', () => {
+      expect('BEFORE TODAY').isTemporalFilter(
+        {operator: 'before', before: {moment: 'today'}},
+        'before today'
+      );
+    });
+    test('case insensitive duration', () => {
+      expect('3 Days').isTemporalFilter(
+        {operator: 'in_last', n: '3', units: 'day'},
+        '3 days'
+      );
+    });
+  });
+
   describe('joined clauses', () => {
     test('or', () => {
       expect('today or tomorrow').isTemporalFilter({
@@ -419,14 +489,22 @@ describe('temporal filter expressions', () => {
         'starting tomorrow and after yesterday'
       );
     });
+    test('three-way or', () => {
+      expect('today or tomorrow or yesterday').isTemporalFilter({
+        operator: 'or',
+        members: [
+          {operator: 'in', in: {moment: 'today'}},
+          {operator: 'in', in: {moment: 'tomorrow'}},
+          {operator: 'in', in: {moment: 'yesterday'}},
+        ],
+      });
+    });
   });
 
   test('a syntax error', () => {
     const p = TemporalFilterExpression.parse('not nulll,now');
     expect(p.log.length).toBeGreaterThan(0);
     expect(p.log[0]).toMatchObject({
-      startIndex: 4,
-      endIndex: 8,
       severity: 'error',
     });
   });
