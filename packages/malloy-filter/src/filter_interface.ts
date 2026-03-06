@@ -275,10 +275,8 @@ export type FilterExpression =
   | StringFilter
   | TemporalFilter;
 
-export function isFilterExpression(
-  obj: Object | undefined
-): obj is FilterExpression {
-  return !!obj && 'operator' in obj;
+export function isFilterExpression(obj: unknown): obj is FilterExpression {
+  return typeof obj === 'object' && obj !== null && 'operator' in obj;
 }
 
 export type FilterLogSeverity = 'error' | 'warn';

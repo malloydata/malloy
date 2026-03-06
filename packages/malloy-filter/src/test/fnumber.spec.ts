@@ -262,7 +262,10 @@ describe('number filter expressions', () => {
     });
   });
   test('case insensitive keywords', () => {
-    expect('NOT NULL').isNumberFilter({operator: 'null', not: true}, 'not null');
+    expect('NOT NULL').isNumberFilter(
+      {operator: 'null', not: true},
+      'not null'
+    );
   });
   test('syntax error', () => {
     const p = NumberFilterExpression.parse('abc');

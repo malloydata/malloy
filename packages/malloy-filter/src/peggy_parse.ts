@@ -18,10 +18,9 @@ function isPeggySyntaxError(e: unknown): e is PeggySyntaxError {
   return e instanceof Error && 'location' in e;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function run_parser(
   src: string,
-  parse: (input: string) => any
+  parse: (input: string) => unknown
 ): {parsed: FilterExpression | null; log: FilterLog[]} {
   try {
     const expr = parse(src);
