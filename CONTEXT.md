@@ -174,20 +174,19 @@ Some packages have codegen steps that generate source files from grammars or con
 - **`packages/malloy-malloy-sql`** — Peggy parsers from `.pegjs` grammar files
 - **`packages/malloy-render`** — Vite bundle from TypeScript/Solid sources
 
-These use `scripts/femto-build.js`, a tiny content-hash-based build caching tool. Each package with codegen has a `codegen-config.json` with named targets specifying input globs and commands. femto-build hashes the inputs and skips the commands if nothing changed. Targets can depend on other targets via `"deps"`. This survives git operations (unlike Make's timestamp-based approach).
+These use `scripts/femto-build.js`, a tiny content-hash-based build caching tool. Each package with codegen has a `codegen-config.motly` with named targets specifying input globs and commands. femto-build hashes the inputs and skips the commands if nothing changed. Targets can depend on other targets via `deps`. This survives git operations (unlike Make's timestamp-based approach).
 
-To add codegen to a new package: create a `codegen-config.json` in the package directory:
-```json
-{
-  "targetName": {
-    "inputs": ["src/grammar/*.g4"],
-    "commands": ["mkdir -p out", "tool -o out src/grammar/File.g4"]
-  },
-  "dependent-target": {
-    "deps": ["targetName"],
-    "inputs": ["src/other/*.g4"],
-    "commands": ["tool -o out src/other/File.g4"]
-  }
+To add codegen to a new package: create a `codegen-config.motly` in the package directory:
+```motly
+targetName: {
+  inputs = ["src/grammar/*.g4"]
+  commands = ["mkdir -p out", "tool -o out src/grammar/File.g4"]
+}
+
+dependent-target: {
+  deps = [targetName]
+  inputs = ["src/other/*.g4"]
+  commands = ["tool -o out src/other/File.g4"]
 }
 ```
 Then add to `package.json`: `"codegen": "node ../../scripts/femto-build.js targetName"`

@@ -1,0 +1,21 @@
+lexer: {
+  inputs = ["src/lang/grammar/MalloyLexer.g4"]
+  outputs = ["src/lang/lib/Malloy/MalloyLexer.ts"]
+  commands = [
+    "mkdir -p src/lang/lib/Malloy",
+    "npx antlr4ts -Xexact-output-dir -o src/lang/lib/Malloy src/lang/grammar/MalloyLexer.g4"
+  ]
+}
+
+parser: {
+  deps = [lexer]
+  inputs = ["src/lang/grammar/MalloyParser.g4"]
+  outputs = ["src/lang/lib/Malloy/MalloyParser.ts"]
+  commands = [
+    "npx antlr4ts -Xexact-output-dir -o src/lang/lib/Malloy -visitor src/lang/grammar/MalloyParser.g4"
+  ]
+}
+
+codegen: {
+  deps = [lexer, parser]
+}

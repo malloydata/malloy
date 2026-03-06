@@ -6,7 +6,7 @@
 import type {MOTLYError, MOTLYPropertyValue} from '@malloydata/motly-ts-parser';
 import {MOTLYSession, isRef, isEnvRef} from '@malloydata/motly-ts-parser';
 import {Tag, RefTag} from './tags';
-import type {TagParse, TagError, Path} from './tags';
+import type {TagParse, TagError} from './tags';
 
 /**
  * Strip the Malloy tag prefix (e.g., "# " or "#(docs) ") from source.
@@ -35,91 +35,12 @@ function mapMOTLYError(error: MOTLYError): TagError {
 }
 
 /**
- * Parse a reference string like "$^^path.to[0].thing" back into
- * structured form {ups, refPath}.
- */
-function parseRefString(linkTo: string): {ups: number; refPath: Path} {
-  let i = 1;
-  let ups = 0;
-  while (i < linkTo.length && linkTo[i] === '^') {
-    ups++;
-    i++;
-  }
-
-  const refPath: Path = [];
-  const rest = linkTo.slice(i);
-
-  if (rest.length === 0) {
-    return {ups, refPath};
-  }
-
-  let pos = 0;
-  let needDot = false;
-
-  while (pos < rest.length) {
-    if (rest[pos] === '.') {
-      pos++;
-      needDot = false;
-      continue;
-    }
-
-    if (rest[pos] === '[') {
-      const close = rest.indexOf(']', pos);
-      refPath.push(Number(rest.slice(pos + 1, close)));
-      pos = close + 1;
-      needDot = true;
-      continue;
-    }
-
-    if (needDot) {
-      // Expected a dot separator but didn't get one
-    }
-
-    if (rest[pos] === '`') {
-      pos++;
-      let seg = '';
-      while (pos < rest.length && rest[pos] !== '`') {
-        if (rest[pos] === '\\') {
-          pos++;
-          seg += rest[pos];
-        } else {
-          seg += rest[pos];
-        }
-        pos++;
-      }
-      pos++;
-      refPath.push(seg);
-      needDot = true;
-      continue;
-    }
-
-    let seg = '';
-    while (
-      pos < rest.length &&
-      rest[pos] !== '.' &&
-      rest[pos] !== '[' &&
-      rest[pos] !== '`'
-    ) {
-      seg += rest[pos];
-      pos++;
-    }
-    if (seg.length > 0) {
-      refPath.push(seg);
-      needDot = true;
-    }
-  }
-
-  return {ups, refPath};
-}
-
-/**
  * Convert a MOTLYPropertyValue (node or ref) into a Tag tree with parent links.
  * Env references (@env.NAME) are resolved from process.env during hydration.
  */
 function hydrate(pv: MOTLYPropertyValue, parent?: Tag): Tag {
   if (isRef(pv)) {
-    const {ups, refPath} = parseRefString(pv.linkTo);
-    return new RefTag(ups, refPath, parent);
+    return new RefTag(pv.linkUps, pv.linkTo, parent);
   }
 
   const tag = new Tag({}, parent);

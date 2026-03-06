@@ -7,20 +7,19 @@
  * Turborepo (global hash invalidation in monorepos), this uses SHA-256
  * content hashing with no external build tools.
  *
- * Each package that needs caching has a codegen-config.json with named
+ * Each package that needs caching has a codegen-config.motly with named
  * targets. Each target has input globs, a list of commands, optional
  * dependencies on other targets, and optional output globs:
  *
- *   {
- *     "lexer": {
- *       "inputs": ["src/grammar/Lexer.g4"],
- *       "commands": ["antlr4ts -o out Lexer.g4"]
- *     },
- *     "parser": {
- *       "deps": ["lexer"],
- *       "inputs": ["src/grammar/Parser.g4"],
- *       "commands": ["antlr4ts -o out -visitor Parser.g4"]
- *     }
+ *   lexer: {
+ *     inputs = ["src/grammar/Lexer.g4"]
+ *     commands = ["antlr4ts -o out Lexer.g4"]
+ *   }
+ *
+ *   parser: {
+ *     deps = [lexer]
+ *     inputs = ["src/grammar/Parser.g4"]
+ *     commands = ["antlr4ts -o out -visitor Parser.g4"]
  *   }
  *
  * Usage: node femto-build.js <target>
@@ -35,8 +34,9 @@ const {readFileSync, writeFileSync, existsSync, unlinkSync} = require('fs');
 const {execSync} = require('child_process');
 const glob = require('glob');
 const path = require('path');
+const {MOTLYSession} = require('@malloydata/motly-ts-parser');
 
-const CONFIG_FILE = 'codegen-config.json';
+const CONFIG_FILE = 'codegen-config.motly';
 
 // Derive a short package-relative label like "packages/malloy:codegen"
 const repoRoot = path.resolve(__dirname, '..');
@@ -61,7 +61,17 @@ if (!existsSync(CONFIG_FILE)) {
   process.exit(1);
 }
 
-const allConfig = JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+const session = new MOTLYSession();
+const errors = session.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+if (errors.length > 0) {
+  for (const e of errors) {
+    console.error(
+      `femto-build: ${CONFIG_FILE}:${e.begin.line + 1}:${e.begin.column + 1}: ${e.message}`
+    );
+  }
+  process.exit(1);
+}
+const allConfig = session.resolve({env: process.env});
 
 function validateTarget(name) {
   const config = allConfig[name];
