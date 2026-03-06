@@ -7,7 +7,7 @@
 
 import type {FilterParserResponse, NumberFilter} from './filter_interface';
 import {isNumberFilter} from './filter_interface';
-import {parse as peggyParse} from './lib/fexpr_number_parser';
+import {parse as peggyNumberParser} from './lib/fexpr_number_parser';
 import {run_parser} from './peggy_parse';
 
 export const NumberFilterExpression = {
@@ -15,7 +15,7 @@ export const NumberFilterExpression = {
     if (src.match(/^\s*$/)) {
       return {parsed: null, log: []};
     }
-    const parse_result = run_parser(src, peggyParse);
+    const parse_result = run_parser(src, peggyNumberParser);
     if (parse_result.parsed && isNumberFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }

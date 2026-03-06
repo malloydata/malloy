@@ -7,7 +7,7 @@
 
 import type {FilterParserResponse, StringFilter} from './filter_interface';
 import {isStringFilter} from './filter_interface';
-import {parse as peggyParse} from './lib/fexpr_string_parser';
+import {parse as peggyStringParser} from './lib/fexpr_string_parser';
 import {escape} from './clause_utils';
 import {run_parser} from './peggy_parse';
 
@@ -16,7 +16,7 @@ export const StringFilterExpression = {
     if (src.match(/^\s*$/)) {
       return {parsed: null, log: []};
     }
-    const parse_result = run_parser(src, peggyParse);
+    const parse_result = run_parser(src, peggyStringParser);
     if (parse_result.parsed && isStringFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }

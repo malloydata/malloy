@@ -58,8 +58,10 @@ export type StringFilter =
   | ClauseChain<StringFilter>
   | ClauseGroup<StringFilter>;
 
-export function isStringFilter(sc: Object): sc is StringFilter {
+export function isStringFilter(sc: unknown): sc is StringFilter {
   return (
+    typeof sc === 'object' &&
+    sc !== null &&
     'operator' in sc &&
     typeof sc.operator === 'string' &&
     [
@@ -86,8 +88,10 @@ export interface BooleanCondition extends Negatable {
 
 export type BooleanFilter = BooleanCondition | Null;
 
-export function isBooleanFilter(bc: Object): bc is BooleanFilter {
+export function isBooleanFilter(bc: unknown): bc is BooleanFilter {
   return (
+    typeof bc === 'object' &&
+    bc !== null &&
     'operator' in bc &&
     typeof bc.operator === 'string' &&
     ['null', 'true', 'false', '=false', '=true'].includes(bc.operator)
@@ -118,8 +122,10 @@ export type NumberFilter =
   | ClauseGroup<NumberFilter>
   | BooleanChain<NumberFilter>;
 
-export function isNumberFilter(sc: Object): sc is NumberFilter {
+export function isNumberFilter(sc: unknown): sc is NumberFilter {
   return (
+    typeof sc === 'object' &&
+    sc !== null &&
     'operator' in sc &&
     typeof sc.operator === 'string' &&
     [
@@ -246,8 +252,10 @@ export type TemporalFilter =
   | BooleanChain<TemporalFilter>
   | ClauseGroup<TemporalFilter>;
 
-export function isTemporalFilter(sc: Object): sc is TemporalFilter {
+export function isTemporalFilter(sc: unknown): sc is TemporalFilter {
   return (
+    typeof sc === 'object' &&
+    sc !== null &&
     'operator' in sc &&
     typeof sc.operator === 'string' &&
     [

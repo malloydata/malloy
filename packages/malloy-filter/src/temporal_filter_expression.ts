@@ -12,7 +12,7 @@ import type {
   Duration,
 } from './filter_interface';
 import {isTemporalFilter} from './filter_interface';
-import {parse as peggyParse} from './lib/ftemporal_parser';
+import {parse as peggyTemporalParser} from './lib/ftemporal_parser';
 import {run_parser} from './peggy_parse';
 
 export const TemporalFilterExpression = {
@@ -20,7 +20,7 @@ export const TemporalFilterExpression = {
     if (src.match(/^\s*$/)) {
       return {parsed: null, log: []};
     }
-    const parse_result = run_parser(src, peggyParse);
+    const parse_result = run_parser(src, peggyTemporalParser);
     if (parse_result.parsed && isTemporalFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }
