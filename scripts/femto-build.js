@@ -96,40 +96,44 @@ if (errors.length > 0) {
   }
   process.exit(1);
 }
-const allConfig = session.resolve({env: process.env});
+const allConfig = session.getMot({env: process.env});
 
 function validateTarget(name) {
-  const config = allConfig[name];
-  if (!config) {
-    const targets = Object.keys(allConfig).join(', ');
+  const config = allConfig.get(name);
+  if (!config.exists) {
+    const targets = [...allConfig.keys].join(', ');
     console.error(
       `femto-build: no target "${name}" in ${CONFIG_FILE} (have: ${targets})`
     );
     process.exit(1);
   }
-  if (config.commands && !Array.isArray(config.commands)) {
-    console.error(`femto-build: target "${name}" "commands" must be an array`);
+  const commands = config.get('commands').texts;
+  const inputs = config.get('inputs').texts;
+  const deps = config.get('deps').texts;
+  const outputs = config.get('outputs').texts;
+  if (config.has('commands') && !commands) {
+    console.error(`femto-build: target "${name}" "commands" must be an array of strings`);
     process.exit(1);
   }
-  if (config.inputs && !Array.isArray(config.inputs)) {
-    console.error(`femto-build: target "${name}" "inputs" must be an array`);
+  if (config.has('inputs') && !inputs) {
+    console.error(`femto-build: target "${name}" "inputs" must be an array of strings`);
     process.exit(1);
   }
-  if (config.deps && !Array.isArray(config.deps)) {
-    console.error(`femto-build: target "${name}" "deps" must be an array`);
+  if (config.has('deps') && !deps) {
+    console.error(`femto-build: target "${name}" "deps" must be an array of strings`);
     process.exit(1);
   }
-  if (config.outputs && !Array.isArray(config.outputs)) {
-    console.error(`femto-build: target "${name}" "outputs" must be an array`);
+  if (config.has('outputs') && !outputs) {
+    console.error(`femto-build: target "${name}" "outputs" must be an array of strings`);
     process.exit(1);
   }
-  if (!config.inputs && !config.deps) {
+  if (!inputs && !deps) {
     console.error(
       `femto-build: target "${name}" must have "inputs" and/or "deps"`
     );
     process.exit(1);
   }
-  return config;
+  return {commands, inputs, deps, outputs};
 }
 
 function hashFiles(patterns) {
@@ -161,7 +165,13 @@ function computeHash(config) {
   if (config.inputs && config.inputs.length > 0) {
     combined.update(hashFiles(config.inputs));
   }
-  combined.update(JSON.stringify(config));
+  // Include all config arrays in the hash for invalidation
+  combined.update(JSON.stringify({
+    commands: config.commands,
+    inputs: config.inputs,
+    deps: config.deps,
+    outputs: config.outputs,
+  }));
   for (const dep of config.deps || []) {
     combined.update(readFileSync(`.${dep}.femto.digest`, 'utf-8').trim());
   }
