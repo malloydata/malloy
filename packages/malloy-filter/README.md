@@ -4,9 +4,9 @@ There is a unique filter language for each filterable data type. The documentati
 
 # Grammars
 
-`malloy-filter` use [moo](https://github.com/no-context/moo?tab=readme-ov-file) and [nearley](https://nearley.js.org/) to generate parsers for each sub language. The grammars are in `grammars`.
+`malloy-filter` uses [peggy](https://peggyjs.org/) to generate parsers for each sub language. The grammars are in `src/grammars/`.
 
-After changing a `.ne` file use `npm run build` to update the generated parser.
+After changing a `.peggy` file use `npm run build` to update the generated parser.
 
 # API
 

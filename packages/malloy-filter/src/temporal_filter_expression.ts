@@ -12,19 +12,15 @@ import type {
   Duration,
 } from './filter_interface';
 import {isTemporalFilter} from './filter_interface';
-import ftemporal_grammar from './lib/ftemporal_parser';
-import * as nearley from 'nearley';
-import {run_parser} from './nearley_parse';
+import {parse as peggyTemporalParser} from './lib/ftemporal_parser';
+import {run_parser} from './peggy_parse';
 
 export const TemporalFilterExpression = {
   parse(src: string): FilterParserResponse<TemporalFilter> {
     if (src.match(/^\s*$/)) {
       return {parsed: null, log: []};
     }
-    const ftemporal_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(ftemporal_grammar)
-    );
-    const parse_result = run_parser(src, ftemporal_parser);
+    const parse_result = run_parser(src, peggyTemporalParser);
     if (parse_result.parsed && isTemporalFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }

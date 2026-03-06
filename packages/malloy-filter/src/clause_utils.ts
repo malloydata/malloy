@@ -25,7 +25,7 @@ import {
 /**
  * If there is a minus token, add "not:true" to the clause
  */
-export function maybeNot(data: (Object | undefined)[]) {
+export function maybeNot(data: unknown[]) {
   const [isMinus, op] = data;
   if (isMinus && op && isStringFilter(op)) {
     return {...op, not: true};
@@ -150,9 +150,9 @@ function sameAs<T extends FilterExpression>(a: T, b: FilterExpression): b is T {
 }
 
 export function conjoin(
-  left: Object,
+  left: unknown,
   op: string,
-  right: Object
+  right: unknown
 ): StringFilter | null {
   op = op.toLowerCase();
   if (isStringFilter(left) && isStringFilter(right)) {
@@ -180,9 +180,9 @@ export function conjoin(
 }
 
 export function joinNumbers(
-  left: Object,
+  left: unknown,
   op: string,
-  right: Object
+  right: unknown
 ): NumberFilter | null {
   op = op.toLowerCase();
   if (isNumberFilter(left) && isNumberFilter(right)) {
@@ -225,7 +225,7 @@ export function mkValues(n: string, nList: string[]) {
   return {values: [n, ...nList]};
 }
 
-export function numNot(op: Object, notToken: unknown) {
+export function numNot(op: unknown, notToken: unknown) {
   if (isNumberFilter(op) && notToken) {
     if (op.operator === '=') return {operator: '!=', values: op.values};
     if (op.operator === '!=') return {operator: '=', values: op.values};
@@ -234,7 +234,7 @@ export function numNot(op: Object, notToken: unknown) {
   return op;
 }
 
-export function temporalNot(op: Object, notToken: unknown) {
+export function temporalNot(op: unknown, notToken: unknown) {
   if (isTemporalFilter(op) && notToken) {
     // maintain not-ness for ease of testing
     if ('not' in op) {
@@ -252,26 +252,12 @@ export function temporalNot(op: Object, notToken: unknown) {
 }
 
 export function joinTemporal(
-  left: Object,
+  left: unknown,
   op: string,
-  right: Object
+  right: unknown
 ): TemporalFilter | null {
   op = op.toLowerCase();
   if (isTemporalFilter(left) && isTemporalFilter(right)) {
-    // if (
-    //   (op === ',' || op === 'or') &&
-    //   left.operator === '=' &&
-    //   sameAs(left, right)
-    // ) {
-    //   const ret: NumberClause = {
-    //     operator: '=',
-    //     values: [...left.values, ...right.values],
-    //   };
-    //   if (left.not) {
-    //     ret.not = true;
-    //   }
-    //   return ret;
-    // }
     if (op === 'and' || op === 'or') {
       if (left.operator === op) {
         return {...left, members: [...left.members, right]};

@@ -1,18 +1,18 @@
 {
   "codegen": {
     "inputs": [
-      "src/grammars/*.ne"
+      "src/grammars/*.peggy"
     ],
     "outputs": [
-      "src/lib/fexpr_string_parser.ts",
-      "src/lib/fexpr_number_parser.ts",
-      "src/lib/ftemporal_parser.ts"
+      "src/lib/fexpr_string_parser.js",
+      "src/lib/fexpr_number_parser.js",
+      "src/lib/ftemporal_parser.js"
     ],
     "commands": [
       "mkdir -p src/lib",
-      "npx nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts",
-      "npx nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts",
-      "npx nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts"
+      "npx peggy -o src/lib/fexpr_string_parser.js src/grammars/fexpr_string.peggy",
+      "npx peggy -o src/lib/fexpr_number_parser.js src/grammars/fexpr_number.peggy",
+      "npx peggy -o src/lib/ftemporal_parser.js src/grammars/ftemporal.peggy"
     ]
   },
   "flow": {

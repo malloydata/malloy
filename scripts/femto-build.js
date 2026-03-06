@@ -1,7 +1,7 @@
 /*
  * femto-build: A tiny content-hash-based build caching tool.
  *
- * Solves the problem of expensive codegen steps (ANTLR, nearley, peggy,
+ * Solves the problem of expensive codegen steps (ANTLR, peggy,
  * vite, flow types) running on every build even when inputs haven't
  * changed. Unlike Make/ninja (timestamp-based, breaks on git ops) or
  * Turborepo (global hash invalidation in monorepos), this uses SHA-256

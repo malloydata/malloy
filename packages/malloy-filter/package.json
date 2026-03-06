@@ -24,14 +24,11 @@
   "author": "",
   "dependencies": {
     "jest-diff": "^29.6.2",
-    "luxon": "^3.5.0",
-    "moo": "^0.5.2",
-    "nearley": "^2.20.1"
+    "luxon": "^3.5.0"
   },
   "devDependencies": {
     "@types/luxon": "^3.5.0",
-    "@types/moo": "^0.5.10",
-    "@types/nearley": "^2.11.5",
+    "peggy": "^4.2.0",
     "rimraf": "^6.0.1"
   }
 }

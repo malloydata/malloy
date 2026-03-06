@@ -7,19 +7,15 @@
 
 import type {FilterParserResponse, NumberFilter} from './filter_interface';
 import {isNumberFilter} from './filter_interface';
-import * as nearley from 'nearley';
-import fnumber_grammar from './lib/fexpr_number_parser';
-import {run_parser} from './nearley_parse';
+import {parse as peggyNumberParser} from './lib/fexpr_number_parser';
+import {run_parser} from './peggy_parse';
 
 export const NumberFilterExpression = {
   parse(src: string): FilterParserResponse<NumberFilter> {
     if (src.match(/^\s*$/)) {
       return {parsed: null, log: []};
     }
-    const fnumber_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(fnumber_grammar)
-    );
-    const parse_result = run_parser(src, fnumber_parser);
+    const parse_result = run_parser(src, peggyNumberParser);
     if (parse_result.parsed && isNumberFilter(parse_result.parsed)) {
       return {parsed: parse_result.parsed, log: []};
     }
