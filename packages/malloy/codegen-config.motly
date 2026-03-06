@@ -17,5 +17,5 @@ parser: {
 }
 
 codegen: {
-  deps = [lexer, parser]
+  deps = [parser]
 }
