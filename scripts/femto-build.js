@@ -7,7 +7,7 @@
  * Turborepo (global hash invalidation in monorepos), this uses SHA-256
  * content hashing with no external build tools.
  *
- * Each package that needs caching has a codegen-config.motly with named
+ * Each package that needs caching has a femto-config.motly with named
  * targets. Each target has input globs, a list of commands, optional
  * dependencies on other targets, and optional output globs:
  *
@@ -36,7 +36,7 @@ const glob = require('glob');
 const path = require('path');
 const {MOTLYSession} = require('@malloydata/motly-ts-parser');
 
-const CONFIG_FILE = 'codegen-config.motly';
+const CONFIG_FILE = 'femto-config.motly';
 
 // Derive a short package-relative label like "packages/malloy:codegen"
 const repoRoot = path.resolve(__dirname, '..');
@@ -44,8 +44,33 @@ const pkgLabel = path.relative(repoRoot, process.cwd());
 
 const requestedTarget = process.argv[2];
 if (!requestedTarget) {
-  console.error('Usage: femto-build <target | --clean>');
+  console.error('Usage: femto-build <target | --clean | --help>');
   process.exit(1);
+}
+
+if (requestedTarget === '--help' || requestedTarget === '-h') {
+  console.log(`femto-build: content-hash caching for codegen steps
+
+Usage: node femto-build.js <target | --clean | --help>
+
+Arguments:
+  <target>    Build the named target from ${CONFIG_FILE}
+  --clean     Remove all .*.femto.digest files in the current directory
+  --help, -h  Show this help message
+
+Config format (${CONFIG_FILE}):
+  targetName: {
+    inputs = ["src/grammar/*.g4"]        # globs for input files (required unless deps)
+    commands = ["tool -o out File.g4"]    # shell commands to run
+    deps = [otherTarget]                  # targets that must build first
+    outputs = ["out/*.ts"]               # globs to check existence (rebuild if missing)
+  }
+
+Behavior:
+  - Hashes input files + config + dep digests with SHA-256
+  - Skips commands if hash matches stored digest (.{target}.femto.digest)
+  - Rebuilds if declared outputs are missing, even if hash matches`);
+  process.exit(0);
 }
 
 if (requestedTarget === '--clean') {
