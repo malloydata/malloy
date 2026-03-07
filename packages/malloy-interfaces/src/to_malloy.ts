@@ -547,8 +547,54 @@ function limitToFragments(limits: Malloy.Limit[]): Fragment[] {
   return fragments;
 }
 
+function formatFilterBlock(
+  label: string,
+  operations: Malloy.FilterOperation[]
+): Fragment[] {
+  const items = operations.map(filterOperationItemToFragments);
+  const fragments: Fragment[] = [];
+  fragments.push(`${label}:`);
+  const indented =
+    items.length > 1 || items.some(item => item.includes(NEWLINE));
+  if (indented) {
+    fragments.push(NEWLINE, INDENT);
+  } else {
+    fragments.push(' ');
+  }
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const operation = operations[i];
+    // For items after the first, add the separator/conjunction
+    if (i > 0) {
+      // Use the conjunction from the CURRENT operation (how it connects to previous)
+      const conjunction = operation.conjunction;
+      if (conjunction === 'and') {
+        fragments.push('and ');
+      } else if (conjunction === 'or') {
+        fragments.push('or ');
+      } else {
+        // No conjunction specified, this shouldn't happen for items after first
+        // but we handle it gracefully by just adding the item without separator
+      }
+    }
+    fragments.push(...item);
+    if (indented && i < items.length - 1) {
+      // Add comma only if the NEXT item doesn't have a conjunction
+      const nextOperation = operations[i + 1];
+      if (!nextOperation.conjunction) {
+        fragments.push(',');
+      }
+      fragments.push(NEWLINE);
+    }
+  }
+  if (indented) {
+    fragments.push(OUTDENT);
+  }
+  return fragments;
+}
+
 function whereToFragments(where: Malloy.FilterOperation[]): Fragment[] {
-  return formatBlock('where', where.map(filterOperationItemToFragments), ',');
+  return formatFilterBlock('where', where);
 }
 
 function drillToFragments(drill: Malloy.DrillOperation[]): Fragment[] {
@@ -556,7 +602,7 @@ function drillToFragments(drill: Malloy.DrillOperation[]): Fragment[] {
 }
 
 function havingToFragments(having: Malloy.FilterOperation[]): Fragment[] {
-  return formatBlock('having', having.map(filterOperationItemToFragments), ',');
+  return formatFilterBlock('having', having);
 }
 
 const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly

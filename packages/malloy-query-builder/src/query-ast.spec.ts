@@ -648,6 +648,657 @@ describe('query builder', () => {
       }`,
     });
   });
+  describe('addWhere with conjunction', () => {
+    test('add multiple wheres with AND conjunction', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addWhere('carrier', 'WN');
+        segment.addWhere('carrier', 'AA', 'and');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'WN',
+                  },
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'AA',
+                  },
+                  conjunction: 'and',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            where:
+              carrier ~ f\`WN\`
+              and carrier ~ f\`AA\`
+          }`,
+      });
+    });
+    test('add multiple wheres with OR conjunction', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addWhere('carrier', 'WN');
+        segment.addWhere('carrier', 'AA', 'or');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'WN',
+                  },
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'AA',
+                  },
+                  conjunction: 'or',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            where:
+              carrier ~ f\`WN\`
+              or carrier ~ f\`AA\`
+          }`,
+      });
+    });
+    test('add multiple wheres with mixed AND and OR conjunctions', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addWhere('carrier', 'WN');
+        segment.addWhere('carrier', 'AA', 'and');
+        segment.addWhere('carrier', 'DL', 'or');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'WN',
+                  },
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'AA',
+                  },
+                  conjunction: 'and',
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'DL',
+                  },
+                  conjunction: 'or',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            where:
+              carrier ~ f\`WN\`
+              and carrier ~ f\`AA\`
+              or carrier ~ f\`DL\`
+          }`,
+      });
+    });
+    test('add where with path and AND conjunction', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addWhere('state', ['origin'], 'TX');
+        segment.addWhere('state', ['origin'], 'CA', 'and');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'state',
+                      path: ['origin'],
+                    },
+                    filter: 'TX',
+                  },
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'state',
+                      path: ['origin'],
+                    },
+                    filter: 'CA',
+                  },
+                  conjunction: 'and',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            where:
+              origin.state ~ f\`TX\`
+              and origin.state ~ f\`CA\`
+          }`,
+      });
+    });
+    test('add where with ParsedFilter and AND conjunction', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addWhere('carrier', {
+          kind: 'string',
+          parsed: {operator: '=', values: ['WN']},
+        });
+        segment.addWhere(
+          'carrier',
+          {
+            kind: 'string',
+            parsed: {operator: '=', values: ['AA']},
+          },
+          'and'
+        );
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'WN',
+                  },
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'AA',
+                  },
+                  conjunction: 'and',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            where:
+              carrier ~ f\`WN\`
+              and carrier ~ f\`AA\`
+          }`,
+      });
+    });
+    test('first where with conjunction should ignore conjunction (no previous filter)', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment().addWhere('carrier', 'WN', 'and');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'WN',
+                  },
+                  conjunction: 'and',
+                },
+              ],
+            },
+          },
+        },
+        malloy: 'run: flights -> { where: carrier ~ f`WN` }',
+      });
+    });
+    test('default conjunction (no parameter) uses comma separator', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addWhere('carrier', 'WN');
+        segment.addWhere('carrier', 'AA');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'WN',
+                  },
+                },
+                {
+                  kind: 'where',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                    filter: 'AA',
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            where:
+              carrier ~ f\`WN\`,
+              carrier ~ f\`AA\`
+          }`,
+      });
+    });
+  });
+  describe('addHaving with conjunction', () => {
+    test('add multiple havings with AND conjunction', () => {
+      const model: Malloy.ModelInfo = {
+        entries: [
+          {
+            kind: 'source',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'measure',
+                  name: 'flight_count',
+                  type: {kind: 'number_type'},
+                },
+                {
+                  kind: 'measure',
+                  name: 'total_distance',
+                  type: {kind: 'number_type'},
+                },
+              ],
+            },
+          },
+        ],
+        anonymous_queries: [],
+      };
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addHaving('flight_count', '> 100');
+        segment.addHaving('total_distance', '> 1000', 'and');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'having',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'flight_count',
+                    },
+                    filter: '> 100',
+                  },
+                },
+                {
+                  kind: 'having',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'total_distance',
+                    },
+                    filter: '> 1000',
+                  },
+                  conjunction: 'and',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            having:
+              flight_count ~ f\`> 100\`
+              and total_distance ~ f\`> 1000\`
+          }`,
+      });
+    });
+    test('add multiple havings with OR conjunction', () => {
+      const model: Malloy.ModelInfo = {
+        entries: [
+          {
+            kind: 'source',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'measure',
+                  name: 'flight_count',
+                  type: {kind: 'number_type'},
+                },
+                {
+                  kind: 'measure',
+                  name: 'total_distance',
+                  type: {kind: 'number_type'},
+                },
+              ],
+            },
+          },
+        ],
+        anonymous_queries: [],
+      };
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const segment = q.getOrAddDefaultSegment();
+        segment.addHaving('flight_count', '> 100');
+        segment.addHaving('total_distance', '> 1000', 'or');
+      }).toModifyQuery({
+        model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'having',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'flight_count',
+                    },
+                    filter: '> 100',
+                  },
+                },
+                {
+                  kind: 'having',
+                  filter: {
+                    kind: 'filter_string',
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'total_distance',
+                    },
+                    filter: '> 1000',
+                  },
+                  conjunction: 'or',
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            having:
+              flight_count ~ f\`> 100\`
+              or total_distance ~ f\`> 1000\`
+          }`,
+      });
+    });
+  });
   test('add some drills', () => {
     const from: Malloy.Query = {
       definition: {
