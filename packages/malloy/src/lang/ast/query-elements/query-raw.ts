@@ -62,7 +62,7 @@ export class QueryRaw extends MalloyElement implements QueryElement {
     };
   }
 
-  query(): Query {
-    return this.queryComp(true).query;
+  query(isRefOk = true): Query {
+    return this.queryComp(isRefOk).query;
   }
 }

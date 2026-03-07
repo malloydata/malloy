@@ -80,7 +80,7 @@ export class SQLString extends MalloyElement {
         // Not a source - try as a query
         const queryObject = el.getQuery();
         if (queryObject) {
-          ret.push(queryObject.query());
+          ret.push(queryObject.query(false));
         } else {
           el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
           valid = false;

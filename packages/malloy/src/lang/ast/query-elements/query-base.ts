@@ -81,8 +81,8 @@ export abstract class QueryBase extends MalloyElement {
     return undefined;
   }
 
-  query(): Query {
-    const {query} = this.queryComp(true);
+  query(isRefOk = true): Query {
+    const {query} = this.queryComp(isRefOk);
 
     return {
       ...query,

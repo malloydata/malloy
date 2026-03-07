@@ -31,7 +31,7 @@ import type {QueryComp} from './query-comp';
 
 export interface QueryElement extends MalloyElement {
   queryComp(isRefOk: boolean): QueryComp;
-  query(): Query;
+  query(isRefOk?: boolean): Query;
 }
 
 export function isQueryElement(e: MalloyElement): e is QueryElement {
