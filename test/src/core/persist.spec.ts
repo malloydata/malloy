@@ -5,7 +5,7 @@
 
 import {runtimeFor, testFileSpace, DuckDBROTestConnection} from '../runtimes';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import type {BuildNode, BuildManifest} from '@malloydata/malloy';
+import type {BuildNode, BuildManifest, BuildPlan} from '@malloydata/malloy';
 import {
   ConnectionRuntime,
   SingleConnectionRuntime,
@@ -49,6 +49,19 @@ function findNode(nodes: BuildNode[][], pattern: string) {
   return nodes.flat().find(n => n.sourceID.includes(pattern))!;
 }
 
+// Common model fragments
+const FLIGHTS_SOURCE = `source: flights is ${tstDB}.table('malloytest.flights')`;
+
+const CARRIER_STATS_PERSIST_MODEL = `${PERSIST_ANNOTATION}
+  ${FLIGHTS_SOURCE}
+
+  #@ persist
+  source: carrier_stats is flights -> {
+    group_by: carrier
+    aggregate: flight_count is count()
+  }
+`;
+
 // Create empty manifest
 function createManifest(): BuildManifest {
   return {entries: {}};
@@ -73,6 +86,29 @@ async function getDigest() {
   return cachedDigest;
 }
 
+// Build a manifest for a named source from a model's build plan
+async function buildManifestFor(
+  plan: BuildPlan,
+  sourceName: string,
+  tableName: string
+): Promise<{manifest: BuildManifest; buildId: string}> {
+  const source = Object.values(plan.sources).find(s => s.name === sourceName)!;
+  const connectionDigest = await getDigest();
+  const buildId = source.makeBuildId(connectionDigest, source.getSQL());
+  const manifest = createManifest();
+  addManifestEntry(manifest, buildId, tableName);
+  return {manifest, buildId};
+}
+
+// Create a runtime with a manifest and get SQL for a query
+function runtimeWithManifest(manifest: BuildManifest) {
+  return new SingleConnectionRuntime({
+    connection: tstRuntime.connection,
+    urlReader: testFileSpace,
+    buildManifest: manifest,
+  });
+}
+
 afterAll(async () => {
   await tstRuntime.connection.close();
 });
@@ -82,7 +118,7 @@ describe('source persistence', () => {
     describe('makeBuildId', () => {
       it('different sourceID produce different buildIds', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -120,7 +156,7 @@ describe('source persistence', () => {
 
       it('different connection digests produce different buildIds', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -144,7 +180,7 @@ describe('source persistence', () => {
 
       it('different SQL produces different buildIds', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -170,7 +206,7 @@ describe('source persistence', () => {
     describe('getSQL', () => {
       it('returns SQL for query_source', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -207,7 +243,7 @@ describe('source persistence', () => {
 
       it('substitutes manifest tables when buildManifest provided', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -221,44 +257,28 @@ describe('source persistence', () => {
           """)
         `);
 
-        const connectionDigest = await getDigest();
-
-        // Get carrier_stats source and compute its buildId
-        const carrierStats = Object.values(plan.sources).find(
-          s => s.name === 'carrier_stats'
-        )!;
-        const carrierStatsSQL = carrierStats.getSQL();
-        const carrierStatsBuildId = carrierStats.makeBuildId(
-          connectionDigest,
-          carrierStatsSQL
-        );
-
-        // Create a manifest with the carrier_stats entry
-        const manifest = createManifest();
-        addManifestEntry(
-          manifest,
-          carrierStatsBuildId,
+        const {manifest} = await buildManifestFor(
+          plan,
+          'carrier_stats',
           'my_schema.persisted_carrier_stats'
         );
 
-        // Get wrapper source and call getSQL with manifest
         const wrapper = Object.values(plan.sources).find(
           s => s.name === 'wrapper'
         )!;
+        const connectionDigest = await getDigest();
         const sql = wrapper.getSQL({
           buildManifest: manifest,
           connectionDigests: {[tstDB]: connectionDigest},
         });
 
-        // The SQL should reference the persisted table, not expand inline
         expect(sql).toContain('my_schema.persisted_carrier_stats');
-        // Should NOT contain the full expanded query
         expect(sql).not.toContain('COUNT(');
       });
 
       it('expands SQL when manifest entry not found', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -273,18 +293,14 @@ describe('source persistence', () => {
         `);
 
         const connectionDigest = await getDigest();
-        const manifest = createManifest();
-
-        // Get wrapper source and call getSQL with empty manifest
         const wrapper = Object.values(plan.sources).find(
           s => s.name === 'wrapper'
         )!;
         const sql = wrapper.getSQL({
-          buildManifest: manifest,
+          buildManifest: createManifest(),
           connectionDigests: {[tstDB]: connectionDigest},
         });
 
-        // Should expand inline since not in manifest
         expect(sql).toContain('SELECT');
         expect(sql).toContain('carrier');
         expect(sql).toContain('COUNT(');
@@ -292,7 +308,7 @@ describe('source persistence', () => {
 
       it('throws in strict mode when manifest entry not found', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -307,17 +323,13 @@ describe('source persistence', () => {
         `);
 
         const connectionDigest = await getDigest();
-        const manifest = createManifest();
-        manifest.strict = true;
-
         const wrapper = Object.values(plan.sources).find(
           s => s.name === 'wrapper'
         )!;
 
-        // Should throw in strict mode
         expect(() =>
           wrapper.getSQL({
-            buildManifest: manifest,
+            buildManifest: {entries: {}, strict: true},
             connectionDigests: {[tstDB]: connectionDigest},
           })
         ).toThrow(/not found in manifest/);
@@ -325,7 +337,7 @@ describe('source persistence', () => {
 
       it('query_source substitutes manifest tables for its structRef', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: carrier_stats is flights -> {
@@ -337,27 +349,16 @@ describe('source persistence', () => {
           source: derived is carrier_stats -> { select: * }
         `);
 
-        const connectionDigest = await getDigest();
-
-        const carrierStats = Object.values(plan.sources).find(
-          s => s.name === 'carrier_stats'
-        )!;
-        const carrierStatsSQL = carrierStats.getSQL();
-        const carrierStatsBuildId = carrierStats.makeBuildId(
-          connectionDigest,
-          carrierStatsSQL
-        );
-
-        const manifest = createManifest();
-        addManifestEntry(
-          manifest,
-          carrierStatsBuildId,
+        const {manifest} = await buildManifestFor(
+          plan,
+          'carrier_stats',
           'cached.carrier_stats_table'
         );
 
         const derived = Object.values(plan.sources).find(
           s => s.name === 'derived'
         )!;
+        const connectionDigest = await getDigest();
         const sql = derived.getSQL({
           buildManifest: manifest,
           connectionDigests: {[tstDB]: connectionDigest},
@@ -372,7 +373,7 @@ describe('source persistence', () => {
   describe('Model.getBuildPlan', () => {
     it('returns empty plan when no persist sources', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         source: not_persisted is flights -> {
           group_by: carrier
@@ -386,7 +387,7 @@ describe('source persistence', () => {
 
     it('returns single source with no dependencies', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -407,7 +408,7 @@ describe('source persistence', () => {
     describe('dependency ordering', () => {
       it('independent sources in same level', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: by_carrier is flights -> {
@@ -435,7 +436,7 @@ describe('source persistence', () => {
 
       it('dependent sources in different levels', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -461,7 +462,7 @@ describe('source persistence', () => {
 
       it('diamond dependency pattern with extended sources', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -501,7 +502,7 @@ describe('source persistence', () => {
 
       it('diamond dependency pattern with query_source chains', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -539,7 +540,7 @@ describe('source persistence', () => {
     describe('dependency detection', () => {
       it('query_source: detects dependency on structRef source', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -558,7 +559,7 @@ describe('source persistence', () => {
 
       it('query_source: detects dependency through source extend', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -579,7 +580,7 @@ describe('source persistence', () => {
 
       it('query_source: detects dependency through chained extends', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -612,7 +613,7 @@ describe('source persistence', () => {
 
       it('sql_select: detects dependency on interpolated persist source', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -634,7 +635,7 @@ describe('source persistence', () => {
 
       it('sql_select: detects dependency on query in interpolation', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -658,7 +659,7 @@ describe('source persistence', () => {
 
       it('sql_select: detects transitive dependency through non-persistent interpolated source', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -684,7 +685,7 @@ describe('source persistence', () => {
 
       it('detects transitive dependency through non-persistent intermediate source', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -710,7 +711,7 @@ describe('source persistence', () => {
 
       it('does NOT detect dependencies in source fields array (only extends)', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -736,7 +737,7 @@ describe('source persistence', () => {
 
       it('non-persistent source joining persistent source shows dependency', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
           source: carriers is ${tstDB}.table('malloytest.carriers')
 
           #@ persist
@@ -759,7 +760,7 @@ describe('source persistence', () => {
 
       it('query with join in extend block detects persistent dependency', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
           source: carriers is ${tstDB}.table('malloytest.carriers')
 
           #@ persist
@@ -787,7 +788,7 @@ describe('source persistence', () => {
     describe('minimal build set', () => {
       it('returns only leaf sources, not intermediate dependencies', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -819,7 +820,7 @@ describe('source persistence', () => {
 
       it('returns leaves from multiple disjoint chains', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: source_a is flights -> {
@@ -982,7 +983,7 @@ describe('source persistence', () => {
     describe('persist annotation filtering', () => {
       it('only includes sources with #@ persist', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           #@ persist
           source: persisted is flights -> {
@@ -1002,7 +1003,7 @@ describe('source persistence', () => {
 
       it('ignores sources without persist annotation', async () => {
         const {plan} = await getPersistPlan(`
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
 
           # Some other annotation
           source: annotated_not_persist is flights -> {
@@ -1023,7 +1024,7 @@ describe('source persistence', () => {
       it('ignores non-persistable source types (table)', async () => {
         const {plan} = await getPersistPlan(`
           #@ persist
-          source: flights is ${tstDB}.table('malloytest.flights')
+          ${FLIGHTS_SOURCE}
         `);
 
         expect(plan.graphs).toEqual([]);
@@ -1051,7 +1052,7 @@ describe('source persistence', () => {
 
     it('sql_select with interpolated persist source has dependency', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -1076,7 +1077,7 @@ describe('source persistence', () => {
 
     it('getSQL expands interpolated sources to subqueries', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -1102,7 +1103,7 @@ describe('source persistence', () => {
 
     it('getSQL substitutes from manifest', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -1150,7 +1151,7 @@ describe('source persistence', () => {
   describe('build workflow integration', () => {
     it('full build workflow: getBuildPlan -> getSQL -> makeBuildId', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -1181,7 +1182,7 @@ describe('source persistence', () => {
 
     it('manifest round-trip: build then query with manifest', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -1242,7 +1243,7 @@ describe('source persistence', () => {
     it('detects dependency on imported persist source through extend', async () => {
       // Model 1: defines a persist source
       const model1 = `${PERSIST_ANNOTATION}
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: base_stats is flights -> {
@@ -1287,7 +1288,7 @@ describe('source persistence', () => {
     it('detects persistent base through non-persistent imported extend chain', async () => {
       // Model 1: defines persist source A
       const model1 = `${PERSIST_ANNOTATION}
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: source_a is flights -> {
@@ -1358,7 +1359,7 @@ describe('source persistence', () => {
     it('breaks persistence inheritance with #@ -persist', async () => {
       // Model 1: defines persist source A
       const model1 = `${PERSIST_ANNOTATION}
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: source_a is flights -> {
@@ -1415,10 +1416,117 @@ describe('source persistence', () => {
     });
   });
 
+  describe('cross-model manifest substitution', () => {
+    afterEach(() => {
+      testFileSpace.deleteFile(new URL('test://model1.malloy'));
+      testFileSpace.deleteFile(new URL('test://model2.malloy'));
+    });
+
+    // Set model1 to CARRIER_STATS_PERSIST_MODEL and build its manifest
+    async function buildCarrierStatsManifest() {
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        CARRIER_STATS_PERSIST_MODEL
+      );
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const plan = model.getBuildPlan();
+      return (
+        await buildManifestFor(
+          plan,
+          'carrier_stats',
+          'cached.carrier_stats_table'
+        )
+      ).manifest;
+    }
+
+    // Load query from model2 with manifest, return SQL
+    async function getModel2SQL(manifest: BuildManifest) {
+      return runtimeWithManifest(manifest)
+        .loadQuery(new URL('test://model2.malloy'))
+        .getSQL();
+    }
+
+    it('query against imported persist source uses manifest', async () => {
+      const manifest = await buildCarrierStatsManifest();
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: carrier_stats -> { select: * }
+        `
+      );
+
+      const sql = await getModel2SQL(manifest);
+      expect(sql).toContain('cached.carrier_stats_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('query against imported persist source with extend uses manifest', async () => {
+      // Model1 has extend on the persist source itself
+      testFileSpace.setFile(
+        new URL('test://model1.malloy'),
+        `${PERSIST_ANNOTATION}
+          ${FLIGHTS_SOURCE}
+
+          #@ persist
+          source: carrier_stats is flights -> {
+            group_by: carrier
+            aggregate: flight_count is count()
+          } extend {
+            view: all_rows is { select: * }
+          }
+        `
+      );
+
+      const model = await tstRuntime
+        .loadModel(new URL('test://model1.malloy'))
+        .getModel();
+      const {manifest} = await buildManifestFor(
+        model.getBuildPlan(),
+        'carrier_stats',
+        'cached.carrier_stats_table'
+      );
+
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+          run: carrier_stats -> all_rows
+        `
+      );
+
+      const sql = await getModel2SQL(manifest);
+      expect(sql).toContain('cached.carrier_stats_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+
+    it('imported persist source extended in importing file uses manifest', async () => {
+      const manifest = await buildCarrierStatsManifest();
+      testFileSpace.setFile(
+        new URL('test://model2.malloy'),
+        `${PERSIST_ANNOTATION}
+          import "test://model1.malloy"
+
+          source: extended is carrier_stats extend {
+            view: all_rows is { select: * }
+          }
+
+          run: extended -> all_rows
+        `
+      );
+
+      const sql = await getModel2SQL(manifest);
+      expect(sql).toContain('cached.carrier_stats_table');
+      expect(sql).not.toContain('COUNT(');
+    });
+  });
+
   describe('tagParseLog', () => {
     it('reports tag parse errors in build plan', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ x=y.z
         #@ persist
@@ -1435,7 +1543,7 @@ describe('source persistence', () => {
 
     it('tagParseLog is empty when annotations are valid', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: good_tag is flights -> {
@@ -1453,7 +1561,7 @@ describe('source persistence', () => {
       const testModel = wrapTestModel(
         tstRuntime,
         `
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: carrier_stats is flights -> {
@@ -1471,7 +1579,7 @@ describe('source persistence', () => {
       const testModel = wrapTestModel(
         tstRuntime,
         `
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         query: test_query is flights -> { group_by: carrier }
         `
@@ -1488,76 +1596,55 @@ describe('source persistence', () => {
     });
 
     it('Runtime-level manifest is silently ignored for non-persistence models', async () => {
-      const manifest = createManifest();
-
-      // Create a runtime with a manifest (as if loaded from config)
-      const runtimeWithManifest = new SingleConnectionRuntime({
-        connection: tstRuntime.connection,
-        urlReader: testFileSpace,
-        buildManifest: manifest,
-      });
-
-      // A model without ##! experimental.persistence should run fine
       const modelCode = `
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
         run: flights -> { group_by: carrier }
       `;
 
-      const result = await runtimeWithManifest.loadQuery(modelCode).run();
+      const result = await runtimeWithManifest(createManifest())
+        .loadQuery(modelCode)
+        .run();
       expect(result.data.value.length).toBeGreaterThan(0);
     });
   });
 
   describe('Runtime buildManifest property', () => {
+    const BY_CARRIER_QUERY_MODEL = `${PERSIST_ANNOTATION}
+      ${FLIGHTS_SOURCE}
+
+      #@ persist name=by_carrier
+      source: by_carrier is flights -> {
+        group_by: carrier
+        aggregate: flight_count is count()
+      }
+
+      run: by_carrier -> { select: * }
+    `;
+
+    async function buildByCarrierManifest() {
+      const model = await tstRuntime
+        .loadModel(BY_CARRIER_QUERY_MODEL)
+        .getModel();
+      return (
+        await buildManifestFor(model.getBuildPlan(), 'by_carrier', 'by_carrier')
+      ).manifest;
+    }
+
     it('query uses Runtime manifest by default, empty override suppresses it', async () => {
-      // Build a model with a persist source and a query against it
-      const modelCode = `${PERSIST_ANNOTATION}
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist name=by_carrier
-        source: by_carrier is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        run: by_carrier -> { select: * }
-      `;
-
-      // Get the build plan and compute a manifest
-      const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist name=by_carrier
-        source: by_carrier is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-      `);
-      const source = Object.values(plan.sources).find(
-        s => s.name === 'by_carrier'
-      )!;
-      const connectionDigest = await getDigest();
-      const sql = source.getSQL();
-      const buildId = source.makeBuildId(connectionDigest, sql);
-      const manifest = createManifest();
-      addManifestEntry(manifest, buildId, 'by_carrier');
-
-      // Create a runtime with the manifest set
-      const runtimeWithManifest = new SingleConnectionRuntime({
-        connection: tstRuntime.connection,
-        urlReader: testFileSpace,
-        buildManifest: manifest,
-      });
+      const manifest = await buildByCarrierManifest();
+      const rt = runtimeWithManifest(manifest);
 
       // Default: uses Runtime's manifest — SQL should reference the table
-      const sqlWithManifest = await runtimeWithManifest
-        .loadQuery(modelCode)
+      const sqlWithManifest = await rt
+        .loadQuery(BY_CARRIER_QUERY_MODEL)
         .getSQL();
       expect(sqlWithManifest).toMatch(/FROM\s+by_carrier\s/);
 
       // Override with empty manifest — SQL should NOT reference the table
-      const sqlWithoutManifest = await runtimeWithManifest
-        .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+      const sqlWithoutManifest = await rt
+        .loadQuery(BY_CARRIER_QUERY_MODEL, {
+          buildManifest: EMPTY_BUILD_MANIFEST,
+        })
         .getSQL();
       expect(sqlWithoutManifest).not.toMatch(/FROM\s+by_carrier\s/);
     });
@@ -1638,36 +1725,7 @@ describe('source persistence', () => {
     });
 
     it('buildManifest setter updates manifest after construction', async () => {
-      const modelCode = `${PERSIST_ANNOTATION}
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist name=by_carrier
-        source: by_carrier is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-
-        run: by_carrier -> { select: * }
-      `;
-
-      // Build plan + manifest
-      const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
-
-        #@ persist name=by_carrier
-        source: by_carrier is flights -> {
-          group_by: carrier
-          aggregate: flight_count is count()
-        }
-      `);
-      const source = Object.values(plan.sources).find(
-        s => s.name === 'by_carrier'
-      )!;
-      const connectionDigest = await getDigest();
-      const sql = source.getSQL();
-      const buildId = source.makeBuildId(connectionDigest, sql);
-      const manifest = createManifest();
-      addManifestEntry(manifest, buildId, 'by_carrier');
+      const manifest = await buildByCarrierManifest();
 
       // Create runtime WITHOUT manifest
       const runtime = new SingleConnectionRuntime({
@@ -1676,21 +1734,23 @@ describe('source persistence', () => {
       });
 
       // Without manifest — SQL should NOT reference the table
-      const sqlBefore = await runtime.loadQuery(modelCode).getSQL();
+      const sqlBefore = await runtime
+        .loadQuery(BY_CARRIER_QUERY_MODEL)
+        .getSQL();
       expect(sqlBefore).not.toMatch(/FROM\s+by_carrier\s/);
 
       // Set manifest via setter
       runtime.buildManifest = manifest;
 
       // Now SQL SHOULD reference the table
-      const sqlAfter = await runtime.loadQuery(modelCode).getSQL();
+      const sqlAfter = await runtime.loadQuery(BY_CARRIER_QUERY_MODEL).getSQL();
       expect(sqlAfter).toMatch(/FROM\s+by_carrier\s/);
     });
   });
 
   describe('strict manifest', () => {
     const strictModelCode = `${PERSIST_ANNOTATION}
-      source: flights is ${tstDB}.table('malloytest.flights')
+      ${FLIGHTS_SOURCE}
 
       #@ persist
       source: by_carrier is flights -> {
@@ -1705,20 +1765,14 @@ describe('source persistence', () => {
       const manifest = createManifest();
       manifest.strict = true;
 
-      const runtime = new SingleConnectionRuntime({
-        connection: tstRuntime.connection,
-        urlReader: testFileSpace,
-        buildManifest: manifest,
-      });
-
-      await expect(runtime.loadQuery(strictModelCode).getSQL()).rejects.toThrow(
-        'not found in manifest'
-      );
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow('not found in manifest');
     });
 
     it('strict manifest succeeds when persist source is in manifest', async () => {
       const {plan} = await getPersistPlan(`
-        source: flights is ${tstDB}.table('malloytest.flights')
+        ${FLIGHTS_SOURCE}
 
         #@ persist
         source: by_carrier is flights -> {
@@ -1727,37 +1781,24 @@ describe('source persistence', () => {
         }
       `);
 
-      const connectionDigest = await getDigest();
-      const source = Object.values(plan.sources)[0];
-      const sql = source.getSQL();
-      const buildId = source.makeBuildId(connectionDigest, sql);
-
-      const manifest = createManifest();
+      const {manifest} = await buildManifestFor(
+        plan,
+        'by_carrier',
+        'cached.by_carrier'
+      );
       manifest.strict = true;
-      addManifestEntry(manifest, buildId, 'cached.by_carrier');
 
-      const runtime = new SingleConnectionRuntime({
-        connection: tstRuntime.connection,
-        urlReader: testFileSpace,
-        buildManifest: manifest,
-      });
-
-      const resultSQL = await runtime.loadQuery(strictModelCode).getSQL();
+      const resultSQL = await runtimeWithManifest(manifest)
+        .loadQuery(strictModelCode)
+        .getSQL();
       expect(resultSQL).toContain('cached.by_carrier');
     });
 
     it('non-strict manifest falls through when persist source is missing', async () => {
-      const manifest = createManifest();
-      // strict is undefined/false by default
-
-      const runtime = new SingleConnectionRuntime({
-        connection: tstRuntime.connection,
-        urlReader: testFileSpace,
-        buildManifest: manifest,
-      });
-
       // Should not throw — falls through to inline SQL
-      const sql = await runtime.loadQuery(strictModelCode).getSQL();
+      const sql = await runtimeWithManifest(createManifest())
+        .loadQuery(strictModelCode)
+        .getSQL();
       expect(sql).toContain('COUNT(');
     });
   });
