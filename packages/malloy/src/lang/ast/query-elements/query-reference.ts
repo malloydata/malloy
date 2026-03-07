@@ -86,7 +86,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
     return oops();
   }
 
-  query(): Query {
-    return this.queryComp(true).query;
+  query(isRefOk = true): Query {
+    return this.queryComp(isRefOk).query;
   }
 }

@@ -23,7 +23,7 @@
 
 /* eslint-disable no-console */
 
-import {RuntimeList, allDatabases} from '../../runtimes';
+import {RuntimeList, allDatabases, testFileSpace} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
 import {wrapTestModel} from '@malloydata/malloy/test';
@@ -320,4 +320,54 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       `).toMatchResult(testModel, {pick_a1: [1]});
     }
   );
+
+  it('cross-model import with sql interpolation in join', async () => {
+    // When a sql_select source uses %{ source -> view } interpolation,
+    // the Query segment stores the source's structRef as a string name.
+    // After import into another model, that name is not in the importing
+    // model's namespace, causing "Unexpected reference to an undefined source".
+    const baseURL = new URL('test://join-import-base.malloy');
+    const userURL = new URL('test://join-import-user.malloy');
+
+    testFileSpace.setFile(
+      baseURL,
+      `
+      source: base_models is ${databaseName}.table('malloytest.aircraft_models') extend {
+        view: mfr_list is { select: manufacturer }
+      }
+
+      source: sql_mfrs is ${databaseName}.sql("""
+        SELECT
+          ${runtime.dialect.sqlMaybeQuoteIdentifier('manufacturer')}
+          as ${runtime.dialect.sqlMaybeQuoteIdentifier('sql_mfr')}
+          FROM %{ base_models -> mfr_list } as SpOrKlE
+      """)
+
+      source: combined is base_models extend {
+        join_one: sql_mfrs on manufacturer = sql_mfrs.sql_mfr
+      }
+
+      source: result_src is combined -> {
+        select: manufacturer, sql_mfrs.sql_mfr
+      }
+      `
+    );
+
+    testFileSpace.setFile(
+      userURL,
+      `
+      import { result_src } from "test://join-import-base.malloy"
+
+      run: result_src -> { select: * limit: 1 }
+      `
+    );
+
+    try {
+      const sql = await runtime.loadQuery(userURL).getSQL();
+      expect(sql).toContain('SELECT');
+    } finally {
+      testFileSpace.deleteFile(baseURL);
+      testFileSpace.deleteFile(userURL);
+    }
+  });
 });
