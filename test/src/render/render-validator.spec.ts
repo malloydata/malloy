@@ -107,6 +107,28 @@ describe('render tag validation', () => {
       `);
       expectError(logs, "'duration'");
     });
+
+    it('errors when # number has a bare numeric value', async () => {
+      const logs = await getValidationLogs(`
+        query: q is ${NUM_FIELD} -> {
+          select:
+            # number=0.00
+            val
+        }
+      `);
+      expectError(logs, 'bare numeric');
+    });
+
+    it('no error when # number has a quoted format string', async () => {
+      const logs = await getValidationLogs(`
+        query: q is ${NUM_FIELD} -> {
+          select:
+            # number="#,##0.00"
+            val
+        }
+      `);
+      expectNoErrors(logs);
+    });
   });
 
   describe('invalid enum values', () => {
@@ -243,13 +265,48 @@ describe('render tag validation', () => {
   });
 
   describe('big_value', () => {
-    it('no error when big_value view has group_by fields (needed for sparklines)', async () => {
+    it('errors when big_value view has group_by fields', async () => {
       const logs = await getValidationLogs(`
         source: s is duckdb.sql("SELECT 'Acme' as manufacturer, 5 as recall_count") extend {
           # big_value
           view: q is {
             group_by: manufacturer
             aggregate: total_recalls is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'group_by');
+    });
+
+    it('no error when big_value view has only aggregates', async () => {
+      const logs = await getValidationLogs(`
+        source: s is ${NUM_FIELD} extend {
+          # big_value
+          view: q is {
+            aggregate: total is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      const bigValueErrors = logs.filter(
+        l => l.severity === 'error' && l.message.includes('big_value')
+      );
+      expect(bigValueErrors).toHaveLength(0);
+    });
+
+    it('no error when big_value view has nests for sparklines', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
+          # big_value
+          view: q is {
+            aggregate: total is count()
+            # line_chart { size=spark }
+            # hidden
+            nest: trend is {
+              group_by: dt
+              aggregate: total is count()
+            }
           }
         }
         query: q is s -> q

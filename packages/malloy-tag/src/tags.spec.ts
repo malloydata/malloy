@@ -289,6 +289,39 @@ describe('Tag access', () => {
     expect(ext.toString()).toBe('#(docs) a = [] b = foo\n');
     idempotent(ext);
   });
+  describe('scalarType', () => {
+    test('returns string for quoted value', () => {
+      const {tag} = parseTag('x="hello"');
+      expect(tag.scalarType('x')).toBe('string');
+    });
+    test('returns number for numeric value', () => {
+      const {tag} = parseTag('x=42');
+      expect(tag.scalarType('x')).toBe('number');
+    });
+    test('returns boolean for boolean value', () => {
+      const {tag} = parseTag('x=@true');
+      expect(tag.scalarType('x')).toBe('boolean');
+    });
+    test('returns undefined for tag without value', () => {
+      const {tag} = parseTag('x');
+      expect(tag.scalarType('x')).toBeUndefined();
+    });
+    test('returns undefined for missing tag', () => {
+      const {tag} = parseTag('x=1');
+      expect(tag.scalarType('y')).toBeUndefined();
+    });
+    test('works with path', () => {
+      const {tag} = parseTag('x { y="hello" }');
+      expect(tag.scalarType('x', 'y')).toBe('string');
+    });
+    test('distinguishes number=0 from number="0"', () => {
+      const {tag: bare} = parseTag('number=0');
+      expect(bare.scalarType('number')).toBe('number');
+      const {tag: quoted} = parseTag('number="0"');
+      expect(quoted.scalarType('number')).toBe('string');
+    });
+  });
+
   describe('toString escapes and quotes strings if necessary', () => {
     test('in eq value', () => {
       const base = Tag.withPrefix('#(malloy) ');
