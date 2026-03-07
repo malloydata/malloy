@@ -337,7 +337,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
 
       source: sql_mfrs is ${databaseName}.sql("""
-        SELECT manufacturer as sql_mfr FROM %{ base_models -> mfr_list }
+        SELECT manufacturer as sql_mfr FROM %{ base_models -> mfr_list } AS mfr_sub
       """)
 
       source: combined is base_models extend {
