@@ -218,12 +218,19 @@ export function getBarChartSettings(
   // Validate dimensions with series concatenation logic
   const xDimensionsCount = xChannel.fields.length;
   const seriesDimensionsCount = seriesChannel.fields.length;
+  const yDimensionsCount = yChannel.fields.filter(path => {
+    const field = explore.fieldAt(path);
+    return field.wasDimension();
+  }).length;
   const totalDimensions = dimensions.length;
 
   // Validation logic:
   // - If 3+ dimensions exist, multiple series fields must be explicitly tagged
   // - Otherwise, follow the standard 2-dimension limit
-  if (totalDimensions > xDimensionsCount + seriesDimensionsCount) {
+  if (
+    totalDimensions >
+    xDimensionsCount + seriesDimensionsCount + yDimensionsCount
+  ) {
     throw new Error(
       'Malloy Bar Chart: Too many dimensions. A bar chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series. To use 3+ dimensions, explicitly tag multiple fields as series.'
     );
