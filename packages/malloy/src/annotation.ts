@@ -1,4 +1,4 @@
-import type {Tag, TagError} from '@malloydata/malloy-tag';
+import type {Tag, TagError, SourceOrigin} from '@malloydata/malloy-tag';
 import {TagParser} from '@malloydata/malloy-tag';
 import type {Annotation, Note} from './model';
 import type {LogMessage} from './lang';
@@ -41,12 +41,6 @@ export interface MalloyTagParse {
   log: LogMessage[];
 }
 
-// TODO: Error location mapping currently works by post-hoc mapping
-// parse errors back to source locations using the Note's `at` field.
-// The proper approach is to pass source location information into the
-// MOTLY parser session so that errors come back with correct locations
-// directly, eliminating the need for this remapping step.
-
 export function annotationToTag(
   annote: Annotation | undefined,
   spec: TagParseSpec = {}
@@ -57,7 +51,12 @@ export function annotationToTag(
   const allErrs: LogMessage[] = [];
   const session = new TagParser();
   for (const note of notes) {
-    const noteParse = session.parse(note.text);
+    const origin: SourceOrigin = {
+      url: note.at.url,
+      startLine: note.at.range.start.line,
+      startColumn: note.at.range.start.character,
+    };
+    const noteParse = session.parse(note.text, origin);
     allErrs.push(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
     );

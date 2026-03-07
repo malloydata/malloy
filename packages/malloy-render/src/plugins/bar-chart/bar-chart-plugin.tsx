@@ -260,8 +260,37 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
             .slice(0, maxSeries)
             .map(entry => entry[0]);
         },
+
+        getDeclaredTagPaths: () => BAR_CHART_TAG_PATHS,
       };
 
       return pluginInstance;
     },
   };
+
+/**
+ * Tag paths read by the bar chart plugin during render/interaction.
+ * Declared so the framework can mark them as read at registration
+ * time, preventing false-positive unread-tag warnings.
+ */
+const BAR_CHART_TAG_PATHS: string[][] = [
+  // viz sub-properties read by chart.tsx and spec generators
+  ['viz', 'title'],
+  ['viz', 'subtitle'],
+  ['viz', 'mode'],
+  ['viz', 'size'],
+  ['viz', 'stack'],
+  ['viz', 'disable_embedded'],
+  ['viz', 'disableEmbedded'],
+  // Channel settings
+  ['viz', 'x'],
+  ['viz', 'x', 'independent'],
+  ['viz', 'x', 'limit'],
+  ['viz', 'y'],
+  ['viz', 'y', 'independent'],
+  ['viz', 'series'],
+  ['viz', 'series', 'independent'],
+  ['viz', 'series', 'limit'],
+  // Legacy tag equivalents (read by convertLegacyToVizTag)
+  ['bar_chart'],
+];

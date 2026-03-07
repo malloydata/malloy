@@ -32,6 +32,15 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
     options: GetResultMetadataOptions
   ): void;
   getStyleOverrides?(): Record<string, string>;
+
+  /**
+   * Declare tag paths this plugin reads during render or interaction.
+   * Each entry is a path of tag property names, e.g. ['viz', 'title'].
+   * The framework marks these as read at registration time so they
+   * don't produce false-positive "unknown tag" warnings when the
+   * component hasn't rendered yet (e.g. virtualized off-screen).
+   */
+  getDeclaredTagPaths?(): string[][];
 }
 
 export interface SolidJSRenderPluginInstance<TMetadata = unknown>

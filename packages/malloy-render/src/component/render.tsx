@@ -10,6 +10,7 @@ import type {Accessor, Setter} from 'solid-js';
 import {
   Show,
   createContext,
+  createEffect,
   createMemo,
   createSignal,
   useContext,
@@ -48,6 +49,7 @@ export type MalloyRenderProps = {
   dashboardConfig?: Partial<DashboardConfig>;
   renderFieldMetadata: RenderFieldMetadata;
   useVegaInterpreter?: boolean;
+  onReady?: () => void;
 };
 
 const ConfigContext = createContext<{
@@ -115,6 +117,7 @@ export function MalloyRender(props: MalloyRenderProps) {
             vegaConfigOverride={props.vegaConfigOverride}
             renderFieldMetadata={props.renderFieldMetadata}
             useVegaInterpreter={props.useVegaInterpreter}
+            onReady={props.onReady}
           />
         </ConfigContext.Provider>
       </Show>
@@ -127,6 +130,7 @@ export function MalloyRenderInner(props: {
   result: Malloy.Result;
   element: HTMLElement;
   scrollEl?: HTMLElement;
+  onReady?: () => void;
   vegaConfigOverride?: VegaConfigHandler;
   renderFieldMetadata: RenderFieldMetadata;
   useVegaInterpreter?: boolean;
@@ -248,6 +252,16 @@ export function MalloyRenderInner(props: {
     }
     return false;
   };
+
+  let readyFired = false;
+  createEffect(() => {
+    if (showRendering() && !readyFired) {
+      readyFired = true;
+      // Defer so that <Show> children mount and read their tags
+      // before onReady collects unread tag warnings.
+      queueMicrotask(() => props.onReady?.());
+    }
+  });
 
   return (
     <div

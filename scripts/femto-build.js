@@ -88,7 +88,7 @@ if (!existsSync(CONFIG_FILE)) {
 
 const configText = readFileSync(CONFIG_FILE, 'utf-8');
 const session = new MOTLYSession();
-const errors = session.parse(configText);
+const {errors} = session.parse(configText);
 if (errors.length > 0) {
   for (const e of errors) {
     console.error(

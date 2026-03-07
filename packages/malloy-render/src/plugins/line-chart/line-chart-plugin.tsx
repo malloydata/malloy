@@ -304,10 +304,33 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
             .slice(0, maxSeries)
             .map(entry => entry[0]);
         },
+
+        getDeclaredTagPaths: () => LINE_CHART_TAG_PATHS,
       };
 
       return pluginInstance;
     },
   };
+
+/**
+ * Tag paths read by the line chart plugin during render/interaction.
+ */
+const LINE_CHART_TAG_PATHS: string[][] = [
+  ['viz', 'title'],
+  ['viz', 'subtitle'],
+  ['viz', 'mode'],
+  ['viz', 'size'],
+  ['viz', 'zero_baseline'],
+  ['viz', 'disableEmbedded'],
+  ['viz', 'disable_embedded'],
+  ['viz', 'x'],
+  ['viz', 'x', 'independent'],
+  ['viz', 'y'],
+  ['viz', 'y', 'independent'],
+  ['viz', 'series'],
+  ['viz', 'series', 'independent'],
+  ['viz', 'series', 'limit'],
+  ['line_chart'],
+];
 
 export type {LineChartPluginInstance};

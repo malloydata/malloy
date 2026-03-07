@@ -16,6 +16,7 @@ import type {MalloyRenderProps} from '@/component/render';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import {RenderFieldMetadata} from '@/render-field-metadata';
 import {ErrorPlugin} from '@/plugins/error/error-plugin';
+import {RenderLogCollector} from '@/component/render-log-collector';
 
 export class MalloyViz {
   private disposeFn: (() => void) | null = null;
@@ -23,6 +24,9 @@ export class MalloyViz {
   private result: Malloy.Result | null = null;
   private metadata: RenderFieldMetadata | null = null;
   private pluginRegistry: RenderPluginFactory[];
+  private logCollector = new RenderLogCollector();
+  private readyCallbacks: (() => void)[] = [];
+  private isReady = false;
 
   constructor(
     private options: MalloyRendererOptions,
@@ -141,7 +145,8 @@ export class MalloyViz {
         (error, _factory, _field, plugins) => {
           const errorPlugin = ErrorPlugin.create(error.message);
           plugins.push(errorPlugin);
-        }
+        },
+        this.logCollector
       );
     }
   }
@@ -160,6 +165,7 @@ export class MalloyViz {
     this.targetElement = nextTargetElement;
 
     // Prepare the props for DOMRender
+    this.isReady = false;
     const props: MalloyRenderProps = {
       result: this.result,
       element: this.targetElement,
@@ -173,6 +179,7 @@ export class MalloyViz {
       scrollEl: this.options.scrollEl,
       renderFieldMetadata: this.metadata,
       useVegaInterpreter: this.options.useVegaInterpreter,
+      onReady: () => this.handleReady(),
     };
 
     // Render the SolidJS component to the target element
@@ -205,5 +212,49 @@ export class MalloyViz {
 
     const plugins = this.metadata.getPluginsForField(fieldKey);
     return plugins?.at(0) ?? null;
+  }
+
+  /**
+   * Register a callback to be called when the render is complete.
+   * If the render is already complete, the callback is called immediately.
+   * Unread tag warnings are collected once the render is ready,
+   * so `getLogs()` should be called from the onReady callback
+   * to include unread tag warnings.
+   */
+  onReady(callback: () => void): void {
+    if (this.isReady) {
+      callback();
+    } else {
+      this.readyCallbacks.push(callback);
+    }
+  }
+
+  /**
+   * Get log messages from the most recent render pass.
+   * Includes warnings for unread (unknown) tags and semantic errors.
+   * For complete results including unread tag warnings,
+   * call this from an `onReady` callback.
+   */
+  getLogs(): Malloy.LogMessage[] {
+    return this.logCollector.getLogs();
+  }
+
+  private handleReady(): void {
+    this.isReady = true;
+    this.collectUnreadTagWarnings();
+    for (const cb of this.readyCallbacks) {
+      cb();
+    }
+    this.readyCallbacks = [];
+  }
+
+  /**
+   * Walk all field tags and collect warnings for unread properties.
+   */
+  private collectUnreadTagWarnings(): void {
+    if (!this.metadata) return;
+    for (const field of this.metadata.getAllFields()) {
+      this.logCollector.collectUnreadTags(field.tag, field.name);
+    }
   }
 }

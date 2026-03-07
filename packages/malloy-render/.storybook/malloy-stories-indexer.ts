@@ -144,6 +144,9 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           import {MalloyRenderer} from '../api/malloy-renderer';
           import {DummyPluginFactory} from '@/plugins/dummy-plugin';
           import {DummyDOMPluginFactory} from '@/plugins/dummy-dom-plugin';
+          import {addons} from '@storybook/preview-api';
+
+          const RENDERER_LOGS_EVENT = 'malloy/renderer-logs/logs';
 
           const meta = {
             title: "Malloy Next/${modelStoriesMeta.componentName}",
@@ -189,6 +192,12 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               console.log('tag', tag, tag?.toString());
               console.groupEnd();
               viz.render(targetElement);
+
+              viz.onReady(() => {
+                const logs = viz.getLogs();
+                const channel = addons.getChannel();
+                channel.emit(RENDERER_LOGS_EVENT, logs);
+              });
 
               return parent;
             },
