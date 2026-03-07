@@ -86,8 +86,9 @@ if (!existsSync(CONFIG_FILE)) {
   process.exit(1);
 }
 
+const configText = readFileSync(CONFIG_FILE, 'utf-8');
 const session = new MOTLYSession();
-const errors = session.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+const errors = session.parse(configText);
 if (errors.length > 0) {
   for (const e of errors) {
     console.error(
@@ -173,15 +174,7 @@ function computeHash(config) {
   if (config.inputs && config.inputs.length > 0) {
     combined.update(hashFiles(config.inputs));
   }
-  // Include all config arrays in the hash for invalidation
-  combined.update(
-    JSON.stringify({
-      commands: config.commands,
-      inputs: config.inputs,
-      deps: config.deps,
-      outputs: config.outputs,
-    })
-  );
+  combined.update(configText);
   for (const dep of config.deps || []) {
     combined.update(readFileSync(`.${dep}.femto.digest`, 'utf-8').trim());
   }
