@@ -1,5 +1,5 @@
 import {tagFromAnnotations} from '@/util';
-import {type Field, RootField, getFieldType} from '@/data_tree';
+import {type Field, RootField, getFieldType, FieldType} from '@/data_tree';
 import type {
   RenderPluginFactory,
   RenderPluginInstance,
@@ -8,6 +8,7 @@ import type {
   RenderFieldRegistryEntry,
   RenderFieldRegistry,
 } from '@/registry/types';
+import {RenderLogCollector} from '@/component/render-log-collector';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -21,13 +22,16 @@ export type OnPluginCreateError = (
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
+  readonly logCollector: RenderLogCollector;
 
   constructor(
     result: Malloy.Result,
     private pluginRegistry: RenderPluginFactory[] = [],
     private pluginOptions: Record<string, unknown> = {},
-    private onPluginCreateError?: OnPluginCreateError
+    private onPluginCreateError?: OnPluginCreateError,
+    logCollector?: RenderLogCollector
   ) {
+    this.logCollector = logCollector ?? new RenderLogCollector();
     this.registry = new Map();
 
     // Create the root field with all its metadata
@@ -109,6 +113,14 @@ export class RenderFieldMetadata {
       renderFieldEntry.renderProperties.errors = vizProperties.errors;
 
       this.registry.set(fieldKey, renderFieldEntry);
+
+      // Run semantic validation on this field's tags
+      this.validateFieldTags(field);
+
+      // Mark tags declared by plugins + built-in renderers as read
+      // so they don't produce false-positive "unknown tag" warnings
+      // when components haven't rendered yet (e.g. virtualized).
+      this.markDeclaredTags(field, plugins);
     }
     // Recurse for nested fields
     if (field.isNest()) {
@@ -155,4 +167,314 @@ export class RenderFieldMetadata {
   getFieldEntry(fieldKey: string): RenderFieldRegistryEntry | undefined {
     return this.registry.get(fieldKey);
   }
+
+  /**
+   * Validate tag/field type compatibility and tag values.
+   * Called during registerFields for each field.
+   */
+  private validateFieldTags(field: Field): void {
+    const tag = field.tag;
+    const fieldType = getFieldType(field);
+    const log = this.logCollector;
+
+    // --- Renderer tags on wrong field types ---
+
+    const nestOnly = [
+      'viz',
+      'bar_chart',
+      'line_chart',
+      'list',
+      'list_detail',
+      'pivot',
+      'dashboard',
+      'transpose',
+      'table',
+    ];
+    const nestTypes = [FieldType.RepeatedRecord, FieldType.Record];
+    for (const tagName of nestOnly) {
+      if (tag.has(tagName) && !nestTypes.includes(fieldType)) {
+        log.error(
+          `Tag '${tagName}' on field '${field.name}' requires a nested query, but field is ${fieldType}`,
+          tag.tag(tagName)
+        );
+      }
+    }
+
+    if (tag.has('link') && fieldType !== FieldType.String) {
+      log.error(
+        `Tag 'link' on field '${field.name}' requires a string field, but field is ${fieldType}`,
+        tag.tag('link')
+      );
+    }
+
+    if (tag.has('image') && fieldType !== FieldType.String) {
+      log.error(
+        `Tag 'image' on field '${field.name}' requires a string field, but field is ${fieldType}`,
+        tag.tag('image')
+      );
+    }
+
+    const numericOnly = ['number', 'currency', 'percent', 'duration'];
+    for (const tagName of numericOnly) {
+      if (
+        tag.has(tagName) &&
+        fieldType !== FieldType.Number &&
+        fieldType !== FieldType.Array &&
+        // number tag is also valid on date/timestamp for format strings
+        !(
+          tagName === 'number' &&
+          (fieldType === FieldType.Date || fieldType === FieldType.Timestamp)
+        )
+      ) {
+        log.error(
+          `Tag '${tagName}' on field '${field.name}' requires a numeric field, but field is ${fieldType}`,
+          tag.tag(tagName)
+        );
+      }
+    }
+
+    // --- Invalid enum values ---
+
+    const vizType = tag.text('viz');
+    if (vizType !== undefined) {
+      const validVizTypes = ['bar', 'line', 'table', 'dashboard'];
+      if (!validVizTypes.includes(vizType)) {
+        log.error(
+          `Invalid viz type '${vizType}' on field '${field.name}'. Valid types: ${validVizTypes.join(', ')}`,
+          tag.tag('viz')
+        );
+      }
+    }
+
+    const sizeVal = tag.text('size');
+    if (sizeVal !== undefined) {
+      const validSizes = ['fill', 'spark', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'];
+      // Only validate if it's a string preset, not a custom { width, height }
+      if (!validSizes.includes(sizeVal) && !tag.tag('size')?.has('width')) {
+        log.warn(
+          `Unknown size '${sizeVal}' on field '${field.name}'. Valid presets: ${validSizes.join(', ')}`,
+          tag.tag('size')
+        );
+      }
+    }
+
+    if (tag.has('currency')) {
+      const currencyVal = tag.text('currency');
+      if (currencyVal !== undefined) {
+        const validCodes = ['usd', 'eur', 'gbp', 'euro', 'pound'];
+        // Extract the currency code prefix for shorthand like "usd2m"
+        const codeMatch = currencyVal.match(/^(euro|pound|usd|eur|gbp)/i);
+        if (!codeMatch) {
+          log.error(
+            `Unknown currency '${currencyVal}' on field '${field.name}'. Valid codes: ${validCodes.join(', ')}`,
+            tag.tag('currency')
+          );
+        }
+      }
+    }
+
+    if (tag.has('duration')) {
+      const durationVal = tag.text('duration');
+      if (durationVal !== undefined) {
+        const validUnits = [
+          'nanoseconds',
+          'microseconds',
+          'milliseconds',
+          'seconds',
+          'minutes',
+          'hours',
+          'days',
+        ];
+        if (!validUnits.includes(durationVal)) {
+          log.error(
+            `Unknown duration unit '${durationVal}' on field '${field.name}'. Valid units: ${validUnits.join(', ')}`,
+            tag.tag('duration')
+          );
+        }
+      }
+    }
+
+    // --- Chart field references ---
+    if (field.isNest()) {
+      const vizTag = tag.tag('viz');
+      if (vizTag) {
+        const childNames = new Set(field.fields.map(f => f.name));
+        for (const channelName of ['x', 'y', 'series'] as const) {
+          const refArray = vizTag.textArray(channelName);
+          const refs = refArray ?? [];
+          const singleRef = vizTag.text(channelName);
+          if (singleRef && !refArray) refs.push(singleRef);
+          for (const ref of refs) {
+            if (!childNames.has(ref)) {
+              log.error(
+                `Chart field reference '${ref}' for '${channelName}' on '${field.name}' does not match any field. Available fields: ${[...childNames].join(', ')}`,
+                vizTag.tag(channelName)
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // --- Column width named sizes ---
+    const columnTag = tag.tag('column');
+    if (columnTag) {
+      const widthText = columnTag.text('width');
+      if (widthText !== undefined) {
+        const validWidthNames = ['xs', 'sm', 'md', 'lg', 'xl', '2xl'];
+        const numericWidth = columnTag.numeric('width');
+        if (
+          numericWidth === undefined &&
+          !validWidthNames.includes(widthText)
+        ) {
+          log.warn(
+            `Unknown column width '${widthText}' on field '${field.name}'. Valid presets: ${validWidthNames.join(', ')}`,
+            columnTag.tag('width')
+          );
+        }
+      }
+
+      const wordBreakVal = columnTag.text('word_break');
+      if (wordBreakVal !== undefined && wordBreakVal !== 'break_all') {
+        log.error(
+          `Unknown column word_break '${wordBreakVal}' on field '${field.name}'. Valid values: break_all`,
+          columnTag.tag('word_break')
+        );
+      }
+    }
+
+    // --- Chart mode ---
+    if (field.isNest()) {
+      const vizTag = tag.tag('viz');
+      if (vizTag) {
+        const modeVal = vizTag.text('mode');
+        if (modeVal !== undefined) {
+          const validModes = ['normal', 'yoy'];
+          if (!validModes.includes(modeVal)) {
+            log.error(
+              `Invalid chart mode '${modeVal}' on field '${field.name}'. Valid modes: ${validModes.join(', ')}`,
+              vizTag.tag('mode')
+            );
+          }
+        }
+      }
+    }
+
+    // --- Big value enum properties ---
+    const bigValueTag = tag.tag('big_value');
+    if (bigValueTag) {
+      const bvSize = bigValueTag.text('size');
+      if (bvSize !== undefined) {
+        const validBvSizes = ['sm', 'md', 'lg'];
+        if (!validBvSizes.includes(bvSize)) {
+          log.error(
+            `Invalid big_value size '${bvSize}' on field '${field.name}'. Valid sizes: ${validBvSizes.join(', ')}`,
+            bigValueTag.tag('size')
+          );
+        }
+      }
+
+      const compFormat = bigValueTag.text('comparison_format');
+      if (compFormat !== undefined) {
+        const validFormats = ['pct', 'ppt'];
+        if (!validFormats.includes(compFormat)) {
+          log.error(
+            `Invalid big_value comparison_format '${compFormat}' on field '${field.name}'. Valid formats: ${validFormats.join(', ')}`,
+            bigValueTag.tag('comparison_format')
+          );
+        }
+      }
+    }
+
+    // --- Number verbose properties ---
+    const numberTag = tag.tag('number');
+    if (numberTag) {
+      const scaleVal = numberTag.text('scale');
+      if (scaleVal !== undefined) {
+        const validScales = ['k', 'm', 'b', 't', 'q', 'auto'];
+        if (!validScales.includes(scaleVal)) {
+          log.error(
+            `Invalid number scale '${scaleVal}' on field '${field.name}'. Valid scales: ${validScales.join(', ')}`,
+            numberTag.tag('scale')
+          );
+        }
+      }
+
+      const suffixVal = numberTag.text('suffix');
+      if (suffixVal !== undefined) {
+        const validSuffixes = [
+          'letter',
+          'lower',
+          'word',
+          'short',
+          'finance',
+          'scientific',
+          'none',
+        ];
+        if (!validSuffixes.includes(suffixVal)) {
+          log.error(
+            `Invalid number suffix '${suffixVal}' on field '${field.name}'. Valid suffixes: ${validSuffixes.join(', ')}`,
+            numberTag.tag('suffix')
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Mark tag paths declared by plugins and built-in renderers as read.
+   * This prevents false-positive "unknown tag" warnings for tags that
+   * are consumed at render time or interaction time but may not have
+   * been read yet (e.g. virtualized charts, hover tooltips).
+   */
+  private markDeclaredTags(
+    field: Field,
+    plugins: RenderPluginInstance[]
+  ): void {
+    const tag = field.tag;
+
+    // Mark tags declared by plugins
+    for (const plugin of plugins) {
+      if (plugin.getDeclaredTagPaths) {
+        for (const path of plugin.getDeclaredTagPaths()) {
+          tag.find(path);
+        }
+      }
+    }
+
+    // Mark tags for built-in (non-plugin) renderers
+    for (const path of BUILTIN_RENDERER_TAGS) {
+      tag.find(path);
+    }
+  }
 }
+
+/**
+ * Tag paths consumed by built-in renderers that aren't part of the
+ * plugin system. These are read at render time by component code
+ * (render-link, render-image, duration formatter, etc.), by
+ * legacy chart delegation (apply-renderer), or by parent chart
+ * plugins that inspect child field tags.
+ */
+const BUILTIN_RENDERER_TAGS: string[][] = [
+  // render-link.tsx
+  ['link', 'field'],
+  ['link', 'url_template'],
+  // render-image.tsx
+  ['image', 'height'],
+  ['image', 'width'],
+  ['image', 'alt'],
+  ['image', 'alt', 'field'],
+  // duration formatter (util.ts)
+  ['duration', 'terse'],
+  // legacy chart renderers (apply-renderer.tsx)
+  ['scatter_chart'],
+  ['shape_map'],
+  ['segment_map'],
+  // Embedded channel tags on child fields (read by parent chart plugins)
+  ['x'],
+  ['y'],
+  ['series'],
+  // Custom tooltip tag on child fields (read by chart tooltip code)
+  ['tooltip'],
+];

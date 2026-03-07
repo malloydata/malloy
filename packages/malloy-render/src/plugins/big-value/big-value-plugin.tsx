@@ -172,8 +172,25 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
         settingsToTag: (s: Record<string, unknown>) => {
           return bigValueSettingsToTag(s as unknown as BigValueSettings);
         },
+
+        getDeclaredTagPaths: () => BIG_VALUE_TAG_PATHS,
       };
 
       return pluginInstance;
     },
   };
+
+/**
+ * Tag paths read by the big value plugin during render.
+ */
+const BIG_VALUE_TAG_PATHS: string[][] = [
+  ['big_value', 'size'],
+  ['big_value', 'neutral_threshold'],
+  ['big_value', 'comparison_field'],
+  ['big_value', 'comparison_label'],
+  ['big_value', 'comparison_format'],
+  ['big_value', 'down_is_good'],
+  ['big_value', 'sparkline'],
+  ['label'],
+  ['description'],
+];

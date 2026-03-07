@@ -23,7 +23,8 @@
 
 import type {TagDict} from './tags';
 import {Tag, RefTag, interfaceFromDict} from './tags';
-import {parseTag} from './parser';
+import {parseTag, TagParser} from './parser';
+import type {SourceOrigin} from './parser';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -821,5 +822,210 @@ describe('References (RefTag)', () => {
       // After cloning, the reference should still resolve
       expect(cloned.text('target')).toBe('hello');
     });
+  });
+});
+
+describe('Read tracking', () => {
+  test('newly created tags are unread', () => {
+    const tag = new Tag({
+      properties: {
+        hidden: {},
+        label: {eq: 'Name'},
+      },
+    });
+    expect(tag.getUnreadProperties()).toEqual([['hidden'], ['label']]);
+  });
+
+  test('has() marks a tag as read', () => {
+    const tag = new Tag({
+      properties: {
+        hidden: {},
+        label: {eq: 'Name'},
+      },
+    });
+    tag.has('hidden');
+    expect(tag.getUnreadProperties()).toEqual([['label']]);
+  });
+
+  test('text() marks a tag as read', () => {
+    const tag = new Tag({
+      properties: {
+        label: {eq: 'Name'},
+        color: {eq: 'blue'},
+      },
+    });
+    tag.text('label');
+    expect(tag.getUnreadProperties()).toEqual([['color']]);
+  });
+
+  test('nested property tracking', () => {
+    const tag = new Tag({
+      properties: {
+        viz: {
+          eq: 'bar',
+          properties: {
+            x: {eq: 'category'},
+            yy: {eq: 'total'},
+          },
+        },
+      },
+    });
+    // Read viz and x, but not yy
+    tag.text('viz');
+    tag.text('viz', 'x');
+    expect(tag.getUnreadProperties()).toEqual([['viz', 'yy']]);
+  });
+
+  test('unread nested tags under unread parent are reported as parent only', () => {
+    const tag = new Tag({
+      properties: {
+        viz: {
+          properties: {
+            x: {eq: 'category'},
+          },
+        },
+      },
+    });
+    // Don't read anything
+    expect(tag.getUnreadProperties()).toEqual([['viz']]);
+  });
+
+  test('resetReadTracking clears all reads', () => {
+    const tag = new Tag({
+      properties: {
+        hidden: {},
+        label: {eq: 'Name'},
+      },
+    });
+    tag.has('hidden');
+    tag.text('label');
+    expect(tag.getUnreadProperties()).toEqual([]);
+
+    tag.resetReadTracking();
+    expect(tag.getUnreadProperties()).toEqual([['hidden'], ['label']]);
+  });
+
+  test('deleted properties are not reported as unread', () => {
+    const tag = new Tag({
+      properties: {
+        hidden: {},
+        removed: {deleted: true},
+      },
+    });
+    expect(tag.getUnreadProperties()).toEqual([['hidden']]);
+  });
+
+  test('all properties read returns empty array', () => {
+    const tag = new Tag({
+      properties: {
+        hidden: {},
+        label: {eq: 'Name'},
+      },
+    });
+    tag.has('hidden');
+    tag.text('label');
+    expect(tag.getUnreadProperties()).toEqual([]);
+  });
+
+  test('numeric() marks as read', () => {
+    const tag = new Tag({
+      properties: {
+        size: {eq: 42},
+      },
+    });
+    tag.numeric('size');
+    expect(tag.getUnreadProperties()).toEqual([]);
+  });
+
+  test('tag() marks as read', () => {
+    const tag = new Tag({
+      properties: {
+        column: {
+          properties: {
+            width: {eq: 100},
+          },
+        },
+      },
+    });
+    const col = tag.tag('column');
+    expect(col).toBeDefined();
+    // column is read, but width inside it is not
+    expect(tag.getUnreadProperties()).toEqual([['column', 'width']]);
+  });
+});
+
+describe('Location tracking', () => {
+  test('tag has location when parsed with source origin', () => {
+    const origin: SourceOrigin = {
+      url: 'file:///test.malloy',
+      startLine: 10,
+      startColumn: 0,
+    };
+    const session = new TagParser();
+    session.parse('color=blue size=10', origin);
+    const tag = session.finish();
+    const color = tag.tag('color');
+    expect(color).toBeDefined();
+    expect(color!.location).toBeDefined();
+    expect(color!.location!.url).toBe('file:///test.malloy');
+    expect(color!.location!.range.start.line).toBeGreaterThanOrEqual(10);
+  });
+
+  test('tag has no location without source origin', () => {
+    const session = new TagParser();
+    session.parse('color=blue');
+    const tag = session.finish();
+    expect(tag.tag('color')?.location).toBeUndefined();
+  });
+
+  test('prefix is accounted for in column offset', () => {
+    const origin: SourceOrigin = {
+      url: 'file:///test.malloy',
+      startLine: 5,
+      startColumn: 0,
+    };
+    const session = new TagParser();
+    // "# " prefix is 2 chars, stripped by parser
+    session.parse('# color=blue', origin);
+    const tag = session.finish();
+    const color = tag.tag('color');
+    expect(color).toBeDefined();
+    expect(color!.location).toBeDefined();
+    // Column should account for the stripped prefix
+    expect(color!.location!.range.start.character).toBeGreaterThanOrEqual(2);
+  });
+
+  test('location preserved through clone', () => {
+    const origin: SourceOrigin = {
+      url: 'file:///test.malloy',
+      startLine: 0,
+      startColumn: 0,
+    };
+    const session = new TagParser();
+    session.parse('name=test', origin);
+    const tag = session.finish();
+    const cloned = tag.clone();
+    const nameTag = cloned.tag('name');
+    expect(nameTag?.location).toBeDefined();
+    expect(nameTag!.location!.url).toBe('file:///test.malloy');
+  });
+
+  test('multiple parse calls track separate origins', () => {
+    const session = new TagParser();
+    session.parse('color=blue', {
+      url: 'file:///a.malloy',
+      startLine: 1,
+      startColumn: 0,
+    });
+    session.parse('size=10', {
+      url: 'file:///b.malloy',
+      startLine: 5,
+      startColumn: 0,
+    });
+    const tag = session.finish();
+    const color = tag.tag('color');
+    const size = tag.tag('size');
+    expect(color?.location?.url).toBe('file:///a.malloy');
+    expect(size?.location?.url).toBe('file:///b.malloy');
   });
 });

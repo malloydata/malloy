@@ -28,6 +28,18 @@ export interface TagError {
   code: string;
 }
 
+/**
+ * Source location for a Tag node. Structurally compatible with
+ * DocumentLocation from the malloy package.
+ */
+export interface TagLocation {
+  url: string;
+  range: {
+    start: {line: number; character: number};
+    end: {line: number; character: number};
+  };
+}
+
 // TagInterface exists for tests and serialization only.
 // Internally, Tag uses Tag instances for properties and array elements.
 export type TagDict = Record<string, TagInterface>;
@@ -103,7 +115,10 @@ export class Tag {
   properties?: Record<string, Tag>;
   prefix?: string;
   deleted?: boolean;
+  location?: TagLocation;
   private _parent?: Tag;
+  private _read = false;
+  protected _clonedFrom?: Tag;
 
   /**
    * Get the parent tag, if this tag is part of a tree.
@@ -379,6 +394,8 @@ export class Tag {
     const cloned = new Tag({}, newParent);
     cloned.prefix = this.prefix;
     cloned.deleted = this.deleted;
+    cloned.location = this.location;
+    cloned._clonedFrom = this;
 
     if (this.eq !== undefined) {
       if (Array.isArray(this.eq)) {
@@ -660,9 +677,67 @@ export class Tag {
       if (next === undefined) {
         return undefined;
       }
+      next.markRead();
       currentTag = next;
     }
     return currentTag.deleted ? undefined : currentTag;
+  }
+
+  /**
+   * Mark this tag as read, propagating to the original if this is a clone.
+   * Only propagates one level (clone→original). This is sufficient because
+   * set() is the only operation that creates clones, and it doesn't chain.
+   */
+  private markRead(): void {
+    this._read = true;
+    if (this._clonedFrom) {
+      this._clonedFrom._read = true;
+    }
+  }
+
+  /**
+   * Returns true if this tag was accessed via find/has/text/etc.
+   */
+  get wasRead(): boolean {
+    return this._read;
+  }
+
+  /**
+   * Recursively reset read tracking on this tag and all descendants.
+   */
+  resetReadTracking(): void {
+    this._read = false;
+    if (this.properties) {
+      for (const prop of Object.values(this.properties)) {
+        prop.resetReadTracking();
+      }
+    }
+    if (Array.isArray(this.eq)) {
+      for (const el of this.eq) {
+        el.resetReadTracking();
+      }
+    }
+  }
+
+  /**
+   * Collect all unread, non-deleted property names in this tag tree.
+   * Returns paths like ['viz', 'yy'] for nested unread properties.
+   */
+  getUnreadProperties(prefix: string[] = []): string[][] {
+    const unread: string[][] = [];
+    if (this.properties) {
+      for (const [key, prop] of Object.entries(this.properties)) {
+        if (prop.deleted) continue;
+        const path = [...prefix, key];
+        if (!prop._read) {
+          unread.push(path);
+        } else {
+          // Recurse into read tags to find unread sub-properties
+          unread.push(...prop.getUnreadProperties(path));
+        }
+      }
+    }
+    return unread;
   }
 
   has(...path: Path): boolean {
@@ -934,7 +1009,9 @@ export class RefTag extends Tag {
    * Clone this RefTag, preserving the reference information.
    */
   override clone(newParent?: Tag): RefTag {
-    return new RefTag(this.ups, [...this.refPath], newParent);
+    const cloned = new RefTag(this.ups, [...this.refPath], newParent);
+    cloned._clonedFrom = this;
+    return cloned;
   }
 }
 

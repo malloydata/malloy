@@ -84,6 +84,191 @@ The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
 ### Testing
 Use Storybook (`npm run storybook`) to test visual changes. Stories are in `src/stories/*.stories.malloy`.
 
+## Plugin System
+
+Render plugins are the mechanism for adding new visualization types to the renderer. Each plugin is a factory that matches fields based on their tags and data type, then creates an instance that renders the visualization.
+
+### Plugin Architecture
+
+A plugin has two parts:
+
+1. **`RenderPluginFactory`** — Registered globally. Decides whether a field should use this plugin (`matches()`) and creates instances (`create()`).
+2. **`RenderPluginInstance`** — Created per-field. Handles rendering, data processing, and metadata.
+
+```
+RenderPluginFactory.matches(field, tag, fieldType)
+  → true: RenderPluginFactory.create(field) → RenderPluginInstance
+  → false: skip this plugin
+```
+
+### Writing a Plugin
+
+#### 1. Create the Factory
+
+```typescript
+import type {RenderPluginFactory, RenderPluginInstance, RenderProps} from '@/api/plugin-types';
+import type {Field, FieldType} from '@/data_tree';
+import type {Tag} from '@malloydata/malloy-tag';
+
+export const MyPluginFactory: RenderPluginFactory = {
+  name: 'my_plugin',
+
+  matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
+    // Check if the field's tag requests this plugin
+    return fieldTag.has('my_plugin');
+  },
+
+  create: (field: Field): RenderPluginInstance => {
+    // Validate field structure — throw if the data shape is wrong
+    if (!field.isNest()) {
+      throw new Error('My Plugin: field must be a nested query');
+    }
+
+    return {
+      name: 'my_plugin',
+      field,
+      renderMode: 'solidjs',     // or 'dom' for raw DOM rendering
+      sizingStrategy: 'fixed',   // or 'fill' to expand to container
+
+      renderComponent: (props: RenderProps): JSXElement => {
+        // Render the visualization
+        return <div>...</div>;
+      },
+
+      getMetadata: () => ({ /* plugin-specific metadata */ }),
+    };
+  },
+};
+```
+
+#### 2. Register the Plugin
+
+Plugins are registered when creating a `MalloyRenderer`:
+
+```typescript
+import {MalloyRenderer} from '@malloydata/render';
+
+const renderer = new MalloyRenderer({
+  plugins: [MyPluginFactory],
+});
+```
+
+### Plugin Lifecycle
+
+```
+setResult()
+  → RenderFieldMetadata constructed
+    → For each field in schema:
+      → factory.matches(field, tag, fieldType)  — can the plugin handle this?
+      → factory.create(field)                   — create instance (may throw)
+      → validateFieldTags(field)                — semantic tag validation
+render(element)
+  → Solid.js mounts component tree
+    → plugin.beforeRender(metadata, options)    — pre-render setup (e.g. generate Vega spec)
+    → plugin.processData(field, cell)           — process data rows
+    → plugin.renderComponent(props)             — produce UI
+  → onReady fires when rendering is visually complete
+getLogs()
+  → Returns all collected warnings and errors
+```
+
+### Error Handling: Renderable vs Loggable
+
+Plugins produce two kinds of errors. The distinction is simple: **can the component still produce output?**
+
+#### Renderable Errors (throw in `matches()` or `create()`)
+
+The component **cannot render** — the data is fundamentally incompatible. Throw an error and the `ErrorPlugin` will replace the visualization with an error message in its place.
+
+Use for:
+- Missing required fields (e.g. bar chart has no x dimension)
+- Wrong data shape (e.g. chart tag on a scalar field that isn't a nested query)
+- Too many/few dimensions for the chart type
+
+```typescript
+matches: (field, fieldTag, fieldType) => {
+  const hasTag = fieldTag.has('my_chart');
+  if (hasTag && fieldType !== FieldType.RepeatedRecord) {
+    // Can't render — show error where the chart would be
+    throw new Error('My Chart: field must be a nested query');
+  }
+  return hasTag;
+},
+```
+
+#### Loggable Errors (via `logCollector`)
+
+The component **can still render** but a tag was wrong, ignored, or didn't do what the author intended. The visualization degrades gracefully (falls back to defaults). The log tells the author what to fix.
+
+Use for:
+- Invalid enum values (e.g. `# currency=yen` — unknown code, ignored)
+- Tags on wrong field types (e.g. `# link` on a number — ignored)
+- Misspelled tag properties (detected automatically via unread tag tracking)
+- Invalid combinations (e.g. `# big_value` with `group_by` fields)
+
+Loggable validation is centralized in `RenderFieldMetadata.validateFieldTags()` in `render-field-metadata.ts`, not in individual plugins. This keeps validation consistent and runs during `setResult()`, before rendering.
+
+### Tag Validation
+
+Tag validation runs in `validateFieldTags()` during `setResult()`. To add new validations:
+
+```typescript
+// In render-field-metadata.ts, inside validateFieldTags():
+
+// 1. Tag on wrong field type
+if (tag.has('my_tag') && fieldType !== FieldType.String) {
+  log.error(
+    `Tag 'my_tag' on field '${field.name}' requires a string field, but field is ${fieldType}`,
+    tag.tag('my_tag')  // pass the tag for source location
+  );
+}
+
+// 2. Invalid enum value
+const modeVal = tag.text('my_tag', 'mode');
+if (modeVal !== undefined) {
+  const validModes = ['a', 'b', 'c'];
+  if (!validModes.includes(modeVal)) {
+    log.error(
+      `Invalid my_tag mode '${modeVal}' on field '${field.name}'. Valid modes: ${validModes.join(', ')}`,
+      tag.tag('my_tag')
+    );
+  }
+}
+```
+
+Always pass the relevant `Tag` object as the second argument to `log.error()` / `log.warn()` — it carries source location information that helps the author find the problem in their Malloy source.
+
+### Unread Tag Detection
+
+Tags track whether they've been accessed. After rendering completes, any tag property that was never read by any plugin or the renderer is reported as a warning — this catches misspellings and unknown tag names automatically.
+
+The lifecycle:
+1. `setResult()` — validation reads tags (marking them as read)
+2. `render()` — plugins and components read tags during rendering
+3. `onReady` fires — `collectUnreadTagWarnings()` walks all tags and warns about unread ones
+4. `getLogs()` — returns all collected messages
+
+Because chart rendering may be deferred (waiting for container resize), `collectUnreadTagWarnings()` runs in the `onReady` callback, not synchronously after `render()`. Consumers should use `onReady` to get complete logs:
+
+```typescript
+viz.render(element);
+viz.onReady(() => {
+  const logs = viz.getLogs();
+  // logs now includes both semantic errors and unread tag warnings
+});
+```
+
+### Rendering Modes
+
+Plugins can render in two modes:
+
+- **`solidjs`** — Return a `JSXElement` from `renderComponent()`. Used by built-in chart and table plugins.
+- **`dom`** — Implement `renderToDOM(container, props)` for direct DOM manipulation. Useful for third-party libraries that need a DOM node. Optionally implement `cleanup(container)`.
+
+### Core Viz Plugins
+
+Plugins that implement `CoreVizPluginMethods` (settings schema, serialization to/from tags) get additional integration with the settings UI. See `CoreVizPluginInstance` in `plugin-types.ts`.
+
 ## Important Notes
 
 - Rendering is **separate from query execution** - it only processes results
