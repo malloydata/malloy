@@ -112,19 +112,27 @@ function validateTarget(name) {
   const deps = config.get('deps').texts;
   const outputs = config.get('outputs').texts;
   if (config.has('commands') && !commands) {
-    console.error(`femto-build: target "${name}" "commands" must be an array of strings`);
+    console.error(
+      `femto-build: target "${name}" "commands" must be an array of strings`
+    );
     process.exit(1);
   }
   if (config.has('inputs') && !inputs) {
-    console.error(`femto-build: target "${name}" "inputs" must be an array of strings`);
+    console.error(
+      `femto-build: target "${name}" "inputs" must be an array of strings`
+    );
     process.exit(1);
   }
   if (config.has('deps') && !deps) {
-    console.error(`femto-build: target "${name}" "deps" must be an array of strings`);
+    console.error(
+      `femto-build: target "${name}" "deps" must be an array of strings`
+    );
     process.exit(1);
   }
   if (config.has('outputs') && !outputs) {
-    console.error(`femto-build: target "${name}" "outputs" must be an array of strings`);
+    console.error(
+      `femto-build: target "${name}" "outputs" must be an array of strings`
+    );
     process.exit(1);
   }
   if (!inputs && !deps) {
@@ -166,12 +174,14 @@ function computeHash(config) {
     combined.update(hashFiles(config.inputs));
   }
   // Include all config arrays in the hash for invalidation
-  combined.update(JSON.stringify({
-    commands: config.commands,
-    inputs: config.inputs,
-    deps: config.deps,
-    outputs: config.outputs,
-  }));
+  combined.update(
+    JSON.stringify({
+      commands: config.commands,
+      inputs: config.inputs,
+      deps: config.deps,
+      outputs: config.outputs,
+    })
+  );
   for (const dep of config.deps || []) {
     combined.update(readFileSync(`.${dep}.femto.digest`, 'utf-8').trim());
   }
