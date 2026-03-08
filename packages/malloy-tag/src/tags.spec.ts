@@ -985,6 +985,58 @@ describe('Read tracking', () => {
     // column is read, but width inside it is not
     expect(tag.getUnreadProperties()).toEqual([['column', 'width']]);
   });
+
+  test('walk yields all descendant paths', () => {
+    const tag = new Tag({
+      properties: {
+        viz: {
+          eq: 'bar',
+          properties: {
+            stack: {},
+            mode: {eq: 'normal'},
+          },
+        },
+        label: {eq: 'Name'},
+      },
+    });
+    const paths = [...tag.walk()].map(({path}) => path);
+    expect(paths).toEqual([
+      ['viz'],
+      ['viz', 'stack'],
+      ['viz', 'mode'],
+      ['label'],
+    ]);
+  });
+
+  test('walk skips deleted properties', () => {
+    const tag = new Tag({
+      properties: {
+        visible: {},
+        removed: {deleted: true},
+      },
+    });
+    const paths = [...tag.walk()].map(({path}) => path);
+    expect(paths).toEqual([['visible']]);
+  });
+
+  test('clone marks source tree as read', () => {
+    const tag = new Tag({
+      properties: {
+        bar_chart: {
+          properties: {
+            stack: {},
+            mode: {eq: 'normal'},
+          },
+        },
+        label: {eq: 'Name'},
+      },
+    });
+    expect(tag.getUnreadProperties()).toEqual([['bar_chart'], ['label']]);
+    const barChart = tag.tag('bar_chart');
+    barChart!.clone();
+    // bar_chart and its entire subtree should be marked as read
+    expect(tag.getUnreadProperties()).toEqual([['label']]);
+  });
 });
 
 describe('Location tracking', () => {
