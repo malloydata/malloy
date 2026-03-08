@@ -117,7 +117,7 @@ export class Tag {
   deleted?: boolean;
   location?: TagLocation;
   private _parent?: Tag;
-  private _read = false;
+  protected _read = false;
   protected _clonedFrom?: Tag;
 
   /**
@@ -400,6 +400,8 @@ export class Tag {
   }
 
   clone(newParent?: Tag): Tag {
+    // Mark the source as read — cloning consumes the original.
+    this._read = true;
     const cloned = new Tag({}, newParent);
     cloned.prefix = this.prefix;
     cloned.deleted = this.deleted;
@@ -712,19 +714,35 @@ export class Tag {
   }
 
   /**
+   * Walk the tag tree, yielding each descendant tag with its path.
+   * Covers named properties and array element values. Pre-order traversal.
+   * Skips deleted properties.
+   */
+  *walk(prefix: string[] = []): Generator<{path: string[]; tag: Tag}> {
+    if (this.properties) {
+      for (const [key, prop] of Object.entries(this.properties)) {
+        if (prop.deleted) continue;
+        const path = [...prefix, key];
+        yield {path, tag: prop};
+        yield* prop.walk(path);
+      }
+    }
+    if (Array.isArray(this.eq)) {
+      for (let i = 0; i < this.eq.length; i++) {
+        const path = [...prefix, i.toString()];
+        yield {path, tag: this.eq[i]};
+        yield* this.eq[i].walk(path);
+      }
+    }
+  }
+
+  /**
    * Recursively reset read tracking on this tag and all descendants.
    */
   resetReadTracking(): void {
     this._read = false;
-    if (this.properties) {
-      for (const prop of Object.values(this.properties)) {
-        prop.resetReadTracking();
-      }
-    }
-    if (Array.isArray(this.eq)) {
-      for (const el of this.eq) {
-        el.resetReadTracking();
-      }
+    for (const {tag} of this.walk()) {
+      tag._read = false;
     }
   }
 
@@ -1018,6 +1036,7 @@ export class RefTag extends Tag {
    * Clone this RefTag, preserving the reference information.
    */
   override clone(newParent?: Tag): RefTag {
+    this._read = true;
     const cloned = new RefTag(this.ups, [...this.refPath], newParent);
     cloned._clonedFrom = this;
     return cloned;
