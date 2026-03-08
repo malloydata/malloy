@@ -136,6 +136,13 @@ export const MyPluginFactory: RenderPluginFactory = {
       },
 
       getMetadata: () => ({ /* plugin-specific metadata */ }),
+
+      // Optional: declare tag paths this plugin reads at render/interaction time.
+      // Prevents false-positive "unknown tag" warnings for tags not read during setResult().
+      getDeclaredTagPaths: () => [
+        ['my_plugin', 'some_option'],
+        ['my_plugin', 'nested', 'prop'],
+      ],
     };
   },
 };
@@ -234,6 +241,15 @@ if (modeVal !== undefined) {
     );
   }
 }
+
+// 3. Detect original literal type (e.g. bare number vs quoted string)
+const myTag = tag.tag('my_tag');
+if (myTag?.scalarType() === 'number') {
+  log.error(
+    `Tag 'my_tag' expects a quoted string, not a bare number`,
+    myTag
+  );
+}
 ```
 
 Always pass the relevant `Tag` object as the second argument to `log.error()` / `log.warn()` — it carries source location information that helps the author find the problem in their Malloy source.
@@ -243,10 +259,12 @@ Always pass the relevant `Tag` object as the second argument to `log.error()` / 
 Tags track whether they've been accessed. After rendering completes, any tag property that was never read by any plugin or the renderer is reported as a warning — this catches misspellings and unknown tag names automatically.
 
 The lifecycle:
-1. `setResult()` — validation reads tags (marking them as read)
+1. `setResult()` — validation reads tags (marking them as read). Plugin `getDeclaredTagPaths()` and `BUILTIN_RENDERER_TAGS` in `render-field-metadata.ts` are also marked as read to prevent false positives for tags consumed at render or interaction time.
 2. `render()` — plugins and components read tags during rendering
 3. `onReady` fires — `collectUnreadTagWarnings()` walks all tags and warns about unread ones
 4. `getLogs()` — returns all collected messages
+
+To suppress false positives for a new built-in (non-plugin) renderer tag, add its path to `BUILTIN_RENDERER_TAGS`. For plugin tags, implement `getDeclaredTagPaths()` on the plugin instance.
 
 Because chart rendering may be deferred (waiting for container resize), `collectUnreadTagWarnings()` runs in the `onReady` callback, not synchronously after `render()`. Consumers should use `onReady` to get complete logs:
 

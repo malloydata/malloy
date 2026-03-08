@@ -233,6 +233,15 @@ export class RenderFieldMetadata {
       }
     }
 
+    // --- number tag with bare numeric value ---
+    const numberValTag = tag.tag('number');
+    if (numberValTag?.scalarType() === 'number') {
+      log.error(
+        `Tag 'number' on field '${field.name}' has a bare numeric value. Use a quoted format string instead, e.g. # number="#,##0.00"`,
+        numberValTag
+      );
+    }
+
     // --- Invalid enum values ---
 
     const vizType = tag.text('viz');
@@ -383,6 +392,20 @@ export class RenderFieldMetadata {
             bigValueTag.tag('comparison_format')
           );
         }
+      }
+    }
+
+    // --- Big value with group_by fields ---
+    if (tag.has('big_value') && field.isNest()) {
+      const dimensionFields = field.fields.filter(
+        f => f.isBasic() && f.wasDimension()
+      );
+      if (dimensionFields.length > 0) {
+        const dimNames = dimensionFields.map(f => f.name).join(', ');
+        log.error(
+          `Tag 'big_value' on field '${field.name}' does not support group_by fields. Found dimensions: ${dimNames}`,
+          tag.tag('big_value')
+        );
       }
     }
 

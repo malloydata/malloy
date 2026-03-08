@@ -230,6 +230,15 @@ export class Tag {
     return String(val);
   }
 
+  scalarType(
+    ...at: Path
+  ): 'string' | 'number' | 'boolean' | 'date' | undefined {
+    const val = at.length > 0 ? this.find(at)?.getEq() : this.getEq();
+    if (val === undefined || Array.isArray(val)) return undefined;
+    if (val instanceof Date) return 'date';
+    return typeof val as 'string' | 'number' | 'boolean';
+  }
+
   numeric(...at: Path): number | undefined {
     const val = this.find(at)?.getEq();
     if (typeof val === 'number') {
