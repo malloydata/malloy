@@ -490,10 +490,6 @@ const BUILTIN_RENDERER_TAGS: string[][] = [
   ['image', 'alt', 'field'],
   // duration formatter (util.ts)
   ['duration', 'terse'],
-  // legacy chart renderers (apply-renderer.tsx)
-  ['scatter_chart'],
-  ['shape_map'],
-  ['segment_map'],
   // Embedded channel tags on child fields (read by parent chart plugins)
   ['x'],
   ['y'],

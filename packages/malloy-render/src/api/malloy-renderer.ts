@@ -11,6 +11,9 @@ import {MalloyViz} from './malloy-viz';
 import {LineChartPluginFactory} from '@/plugins/line-chart/line-chart-plugin';
 import {BarChartPluginFactory} from '@/plugins/bar-chart/bar-chart-plugin';
 import {BigValuePluginFactory} from '@/plugins/big-value/big-value-plugin';
+import {ScatterChartPluginFactory} from '@/plugins/scatter-chart/scatter-chart-plugin';
+import {ShapeMapPluginFactory} from '@/plugins/shape-map/shape-map-plugin';
+import {SegmentMapPluginFactory} from '@/plugins/segment-map/segment-map-plugin';
 
 export class MalloyRenderer {
   private globalOptions: MalloyRendererOptions;
@@ -22,6 +25,9 @@ export class MalloyRenderer {
       LineChartPluginFactory,
       BarChartPluginFactory,
       BigValuePluginFactory,
+      ScatterChartPluginFactory,
+      ShapeMapPluginFactory,
+      SegmentMapPluginFactory,
       ...(options.plugins || []),
     ];
   }

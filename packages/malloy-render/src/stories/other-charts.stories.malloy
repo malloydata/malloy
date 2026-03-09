@@ -1,0 +1,94 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  #(story)
+  # scatter_chart
+  view: scatter_plot is {
+    group_by:
+      rand is rand()
+    aggregate:
+      avg_cost is retail_price.avg()
+    group_by: brand
+  }
+}
+
+source: us_states is duckdb.sql("""
+  SELECT * FROM (VALUES
+    ('California', 39538223),
+    ('Texas', 29145505),
+    ('Florida', 21538187),
+    ('New York', 20201249),
+    ('Pennsylvania', 13002700),
+    ('Illinois', 12812508),
+    ('Ohio', 11799448),
+    ('Georgia', 10711908),
+    ('North Carolina', 10439388),
+    ('Michigan', 10077331),
+    ('New Jersey', 9288994),
+    ('Virginia', 8631393),
+    ('Washington', 7614893),
+    ('Arizona', 7151502),
+    ('Massachusetts', 7029917),
+    ('Tennessee', 6910840),
+    ('Indiana', 6785528),
+    ('Missouri', 6154913),
+    ('Maryland', 6177224),
+    ('Wisconsin', 5893718),
+    ('Colorado', 5773714),
+    ('Minnesota', 5706494),
+    ('South Carolina', 5118425),
+    ('Alabama', 5024279),
+    ('Louisiana', 4657757),
+    ('Kentucky', 4505836),
+    ('Oregon', 4237256),
+    ('Oklahoma', 3959353),
+    ('Connecticut', 3605944),
+    ('Utah', 3271616),
+    ('Iowa', 3190369),
+    ('Nevada', 3104614),
+    ('Arkansas', 3011524),
+    ('Mississippi', 2961279),
+    ('Kansas', 2937880),
+    ('New Mexico', 2117522),
+    ('Nebraska', 1961504),
+    ('Idaho', 1839106),
+    ('West Virginia', 1793716),
+    ('Hawaii', 1455271),
+    ('Montana', 1084225),
+    ('Delaware', 989948),
+    ('South Dakota', 886667),
+    ('North Dakota', 779094),
+    ('Alaska', 733391),
+    ('Vermont', 643077),
+    ('Wyoming', 576851)
+  ) AS t(state_name, population)
+""") extend {
+
+  #(story)
+  # shape_map
+  view: state_population_map is {
+    group_by: state_name
+    aggregate: total_pop is population.sum()
+  }
+}
+
+source: flights is duckdb.sql("""
+  SELECT * FROM (VALUES
+    (40.6413, -73.7781, 33.9425, -118.4081, 'JFK-LAX'),
+    (41.9742, -87.9073, 33.9425, -118.4081, 'ORD-LAX'),
+    (40.6413, -73.7781, 41.9742, -87.9073, 'JFK-ORD'),
+    (37.6213, -122.3790, 33.9425, -118.4081, 'SFO-LAX'),
+    (33.6407, -84.4277, 40.6413, -73.7781, 'ATL-JFK'),
+    (25.7959, -80.2870, 40.6413, -73.7781, 'MIA-JFK'),
+    (47.4502, -122.3088, 37.6213, -122.3790, 'SEA-SFO'),
+    (29.9902, -95.3368, 40.6413, -73.7781, 'IAH-JFK'),
+    (42.3656, -71.0096, 33.6407, -84.4277, 'BOS-ATL'),
+    (38.8512, -77.0402, 41.9742, -87.9073, 'DCA-ORD')
+  ) AS t(origin_lat, origin_lon, dest_lat, dest_lon, route)
+""") extend {
+
+  #(story)
+  # segment_map
+  view: flight_routes is {
+    group_by: origin_lat, origin_lon, dest_lat, dest_lon, route
+  }
+}

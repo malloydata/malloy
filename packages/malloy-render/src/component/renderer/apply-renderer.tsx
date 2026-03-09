@@ -11,7 +11,6 @@ import MalloyTable from '@/component/table/table';
 import {renderList} from '@/component/render-list';
 import {renderImage} from '@/component/render-image';
 import {Dashboard} from '@/component/dashboard/dashboard';
-import {LegacyChart} from '@/component/legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '@/util';
 import type {RendererProps} from '@/component/types';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
@@ -82,17 +81,6 @@ export function applyRenderer(props: RendererProps) {
         else
           throw new Error(
             `Malloy render: wrong data type passed to the dashboard renderer for field ${field.name}`
-          );
-        break;
-      }
-      case 'scatter_chart':
-      case 'shape_map':
-      case 'segment_map': {
-        if (dataColumn.isRepeatedRecord())
-          renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
-        else
-          throw new Error(
-            `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${field.name}`
           );
         break;
       }
