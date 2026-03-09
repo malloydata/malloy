@@ -108,10 +108,10 @@ function validateTarget(name) {
     );
     process.exit(1);
   }
-  const commands = config.get('commands').texts;
-  const inputs = config.get('inputs').texts;
-  const deps = config.get('deps').texts;
-  const outputs = config.get('outputs').texts;
+  const commands = config.texts('commands');
+  const inputs = config.texts('inputs');
+  const deps = config.texts('deps');
+  const outputs = config.texts('outputs');
   if (config.has('commands') && !commands) {
     console.error(
       `femto-build: target "${name}" "commands" must be an array of strings`

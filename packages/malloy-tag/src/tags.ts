@@ -55,21 +55,13 @@ export interface TagInterface {
   prefix?: string;
 }
 
-// Output format - for toJSON (can contain links)
-// This format is round-trippable: a Tag.fromJSON(TagJSON) could reconstruct
-// the original Tag tree, including RefTags from TagLink.linkTo strings.
-export interface TagLink {
-  linkTo: string;
-}
-
-export interface TagJSONInterface {
+export interface TagJSON {
   eq?: TagScalar | TagJSON[];
   properties?: Record<string, TagJSON>;
   deleted?: boolean;
   prefix?: string;
+  location?: TagLocation;
 }
-
-export type TagJSON = TagJSONInterface | TagLink;
 
 export interface TagParse {
   tag: Tag;
@@ -107,7 +99,6 @@ export type TagSetValue =
  * tag.has(p?)          => boolean "tag contains tag.p"
  * tag.bare(p?)         => tag.p exists and has no properties
  * tag.dict             => Record<string,Tag> of tag properties
- * tag.toObject()       => Plain JS object representation
  * ```
  */
 export class Tag {
@@ -285,17 +276,14 @@ export class Tag {
     return !p.hasProperties();
   }
 
-  /** Virtual accessor for eq - overridden in RefTag to resolve */
   getEq(): TagValue | undefined {
     return this.eq;
   }
 
-  /** Virtual accessor for a property - overridden in RefTag to resolve */
   getProperty(name: string): Tag | undefined {
     return this.properties?.[name];
   }
 
-  /** Virtual accessor for an array element - overridden in RefTag to resolve */
   getArrayElement(index: number): Tag | undefined {
     if (Array.isArray(this.eq) && index < this.eq.length) {
       return this.eq[index];
@@ -427,117 +415,12 @@ export class Tag {
     return cloned;
   }
 
-  private static scalarToObject(
-    val: TagScalar
-  ): string | number | boolean | Date {
-    return val;
-  }
-
-  private static tagToObject(tag: TagInterface): unknown {
-    const hasProps =
-      tag.properties !== undefined && Object.keys(tag.properties).length > 0;
-    const hasValue = tag.eq !== undefined;
-
-    // Bare tag (no value, no properties)
-    if (!hasValue && !hasProps) {
-      return true;
-    }
-
-    // Properties only
-    if (!hasValue && hasProps) {
-      const result: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(tag.properties!)) {
-        if (!val.deleted) {
-          result[key] = Tag.tagToObject(val);
-        }
-      }
-      return result;
-    }
-
-    // Value only
-    if (hasValue && !hasProps) {
-      if (Array.isArray(tag.eq)) {
-        return tag.eq.map(el => Tag.tagToObject(el));
-      }
-      return Tag.scalarToObject(tag.eq!);
-    }
-
-    // Both value and properties
-    const result: Record<string, unknown> = {};
-    if (Array.isArray(tag.eq)) {
-      result['='] = tag.eq.map(el => Tag.tagToObject(el));
-    } else {
-      result['='] = Tag.scalarToObject(tag.eq!);
-    }
-    for (const [key, val] of Object.entries(tag.properties!)) {
-      if (!val.deleted) {
-        result[key] = Tag.tagToObject(val);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Convert to a plain JS object. References are resolved to actual
-   * object pointers (which may be circular in JS - that's fine).
-   * @param resolving - RefTags currently being resolved (for cycle detection)
-   */
-  toObject(resolving: Set<RefTag> = new Set()): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    if (this.properties) {
-      for (const [key, prop] of Object.entries(this.properties)) {
-        if (!prop.deleted) {
-          result[key] = prop.toObjectValue(resolving);
-        }
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Convert this tag's value to a plain JS object.
-   * Override in RefTag to resolve references.
-   * @param resolving - RefTags currently being resolved (for cycle detection)
-   */
-  toObjectValue(resolving: Set<RefTag>): unknown {
-    const hasProps =
-      this.properties !== undefined && Object.keys(this.properties).length > 0;
-    const hasValue = this.eq !== undefined;
-
-    // Bare tag (no value, no properties)
-    if (!hasValue && !hasProps) {
-      return true;
-    }
-
-    // Properties only
-    if (!hasValue && hasProps) {
-      return this.toObject(resolving);
-    }
-
-    // Value only
-    if (hasValue && !hasProps) {
-      if (Array.isArray(this.eq)) {
-        return this.eq.map(el => el.toObjectValue(resolving));
-      }
-      return this.eq;
-    }
-
-    // Both value and properties
-    const result: Record<string, unknown> = this.toObject(resolving);
-    if (Array.isArray(this.eq)) {
-      result['='] = this.eq.map(el => el.toObjectValue(resolving));
-    } else {
-      result['='] = this.eq;
-    }
-    return result;
-  }
-
   /**
    * Custom JSON serialization that excludes _parent to avoid circular references.
    * This is called automatically by JSON.stringify().
    */
   toJSON(): TagJSON {
-    const result: TagJSONInterface = {};
+    const result: TagJSON = {};
     if (this.eq !== undefined) {
       if (Array.isArray(this.eq)) {
         result.eq = this.eq.map(el => el.toJSON());
@@ -556,6 +439,9 @@ export class Tag {
     }
     if (this.prefix) {
       result.prefix = this.prefix;
+    }
+    if (this.location) {
+      result.location = this.location;
     }
     return result;
   }
@@ -893,153 +779,6 @@ export class Tag {
       }
     }
     return this;
-  }
-}
-
-/**
- * A tag that references another location in the tag tree.
- * When accessed, it dereferences to the target tag.
- *
- * Reference syntax:
- *   $path.to.thing     - absolute from root
- *   $^thing            - up one level, then 'thing'
- *   $^^thing           - up two levels, then 'thing'
- *   $items[0].name     - with array indexing
- */
-export class RefTag extends Tag {
-  readonly ups: number;
-  readonly refPath: Path;
-
-  constructor(ups: number, refPath: Path, parent?: Tag) {
-    super({}, parent);
-    this.ups = ups;
-    this.refPath = refPath;
-  }
-
-  /**
-   * Resolve this reference to the target tag.
-   * Returns undefined if the reference cannot be resolved.
-   */
-  resolve(): Tag | undefined {
-    // Start from the appropriate point based on ups
-    let current: Tag | undefined;
-    if (this.ups === 0) {
-      // Absolute reference from root
-      current = this.root;
-    } else {
-      // Relative reference - go up 'ups' levels from parent
-      // $^ means go up 1 level from the containing scope
-      current = this.parent;
-      for (let i = 0; i < this.ups && current !== undefined; i++) {
-        current = current.parent;
-      }
-    }
-
-    if (current === undefined) {
-      return undefined;
-    }
-
-    // Follow the path
-    return current.find(this.refPath);
-  }
-
-  /**
-   * Quote an identifier if it contains special characters.
-   */
-  private quoteSegment(seg: string): string {
-    // Match bareString from peggy grammar: [0-9A-Za-z_\u00C0-\u024F\u1E00-\u1EFF]+
-    if (/^[0-9A-Za-z_\u00C0-\u024F\u1E00-\u1EFF]+$/.test(seg)) {
-      return seg;
-    }
-    // Otherwise, backquote it (escaping backslashes and backquotes)
-    return '`' + seg.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`';
-  }
-
-  /**
-   * Convert this reference to its string representation.
-   */
-  toRefString(): string {
-    const prefix = '$' + '^'.repeat(this.ups);
-    const pathStr = this.refPath
-      .map((seg, i) => {
-        if (typeof seg === 'number') {
-          return `[${seg}]`;
-        }
-        const quoted = this.quoteSegment(seg);
-        return i === 0 ? quoted : `.${quoted}`;
-      })
-      .join('');
-    return prefix + pathStr;
-  }
-
-  // Override virtual accessors to resolve the reference
-  override getEq(): TagValue | undefined {
-    return this.resolve()?.getEq();
-  }
-
-  override getProperty(name: string): Tag | undefined {
-    return this.resolve()?.getProperty(name);
-  }
-
-  override getArrayElement(index: number): Tag | undefined {
-    return this.resolve()?.getArrayElement(index);
-  }
-
-  override hasProperties(): boolean {
-    return this.resolve()?.hasProperties() ?? false;
-  }
-
-  /**
-   * For toObject, resolve the reference and return the target's object value.
-   * This creates actual object pointers (circular references are allowed).
-   * Detects cycles in the reference chain to prevent infinite recursion.
-   */
-  override toObjectValue(resolving: Set<RefTag>): unknown {
-    // Check for cycle in reference chain
-    if (resolving.has(this)) {
-      // We're in a cycle - return undefined to break it
-      // (The cycle will be completed when the outer resolution finishes)
-      return undefined;
-    }
-
-    const resolved = this.resolve();
-    if (resolved === undefined) {
-      return undefined;
-    }
-
-    // Track that we're resolving this RefTag
-    resolving.add(this);
-    const result = resolved.toObjectValue(resolving);
-    resolving.delete(this);
-
-    return result;
-  }
-
-  /**
-   * For JSON serialization, return a marker object instead of resolving.
-   */
-  override toJSON(): TagJSON {
-    return {linkTo: this.toRefString()};
-  }
-
-  /**
-   * Check if this reference resolves, add error if not.
-   */
-  override collectReferenceErrors(errors: string[], path: string[]): void {
-    if (this.resolve() === undefined) {
-      const location = path.length > 0 ? path.join('.') : 'root';
-      errors.push(`Unresolved reference at ${location}: ${this.toRefString()}`);
-    }
-  }
-
-  /**
-   * Clone this RefTag, preserving the reference information.
-   */
-  override clone(newParent?: Tag): RefTag {
-    this._read = true;
-    const cloned = new RefTag(this.ups, [...this.refPath], newParent);
-    cloned._clonedFrom = this;
-    return cloned;
   }
 }
 

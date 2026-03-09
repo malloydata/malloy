@@ -6,10 +6,10 @@
 import type {
   MOTLYError,
   MOTLYLocation,
-  MOTLYPropertyValue,
+  MOTLYNode,
 } from '@malloydata/motly-ts-parser';
 import {MOTLYSession, isRef, isEnvRef} from '@malloydata/motly-ts-parser';
-import {Tag, RefTag} from './tags';
+import {Tag} from './tags';
 import type {TagParse, TagError, TagLocation} from './tags';
 
 /**
@@ -80,16 +80,17 @@ function resolveLocation(
 }
 
 /**
- * Convert a MOTLYPropertyValue (node or ref) into a Tag tree with parent links.
- * Env references (@env.NAME) are resolved from process.env during hydration.
+ * Convert a MOTLYNode (node or ref) into a Tag tree with parent links.
+ * Refs are dropped (skipped). Env references (@env.NAME) are resolved
+ * from process.env during hydration.
  */
 function hydrate(
-  pv: MOTLYPropertyValue,
+  pv: MOTLYNode,
   parent?: Tag,
   origins?: Map<number, SourceOrigin>
 ): Tag {
   if (isRef(pv)) {
-    return new RefTag(pv.linkUps, pv.linkTo, parent);
+    return new Tag({deleted: true}, parent);
   }
 
   const tag = new Tag({}, parent);
