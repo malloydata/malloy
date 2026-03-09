@@ -158,9 +158,7 @@ function resolveCurrencyConfig(tag: Tag): CurrencyConfig {
   const scaleTag = tag.text('currency', 'scale');
   const scale = normalizeScale(scaleTag);
   const decimals = tag.numeric('currency', 'decimals') ?? undefined;
-  const suffixTag = tag.text('currency', 'suffix') as
-    | SuffixFormat
-    | undefined;
+  const suffixTag = tag.text('currency', 'suffix') as SuffixFormat | undefined;
   let suffixFormat: SuffixFormatKey = 'lower';
   if (suffixTag) {
     suffixFormat = suffixTag as SuffixFormatKey;
@@ -192,9 +190,7 @@ function resolveNumberConfig(tag: Tag): NumberConfig {
   const scale = normalizeScale(scaleTag);
   if (scale) {
     const decimals = tag.numeric('number', 'decimals') ?? 2;
-    const suffixTag = tag.text('number', 'suffix') as
-      | SuffixFormat
-      | undefined;
+    const suffixTag = tag.text('number', 'suffix') as SuffixFormat | undefined;
     const suffixFormat: SuffixFormatKey =
       (suffixTag as SuffixFormatKey) ?? 'letter';
     return {scale, decimals, suffixFormat};

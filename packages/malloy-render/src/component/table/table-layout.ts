@@ -118,7 +118,8 @@ export function getTableLayout(rootField: NestField): TableLayout {
     const columnConfig = field.getColumnConfig<ColumnTagConfig>();
     if (columnConfig) {
       if (columnConfig.width !== null) layoutEntry.width = columnConfig.width;
-      if (columnConfig.height !== null) layoutEntry.height = columnConfig.height;
+      if (columnConfig.height !== null)
+        layoutEntry.height = columnConfig.height;
     }
 
     layout.fields[key] = layoutEntry;

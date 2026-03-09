@@ -106,7 +106,12 @@ function resolveChildFieldTags(childField: Field): BigValueFieldConfig {
     const comparisonFormat = (tag.text('big_value', 'comparison_format') ??
       'pct') as ComparisonFormat;
     const downIsGood = tag.text('big_value', 'down_is_good') === 'true';
-    comparison = {comparisonField, comparisonLabel, comparisonFormat, downIsGood};
+    comparison = {
+      comparisonField,
+      comparisonLabel,
+      comparisonFormat,
+      downIsGood,
+    };
   }
 
   // Sparkline reference: # big_value { sparkline=nest_name }

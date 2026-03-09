@@ -66,7 +66,6 @@ interface DeltaResult {
   isNeutral: boolean;
 }
 
-
 /**
  * Calculate the delta between primary and comparison values
  */

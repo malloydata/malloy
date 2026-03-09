@@ -6,8 +6,7 @@ import type {ListTagConfig} from './tag-configs';
 export function renderList(props: RendererProps) {
   if (props.dataColumn.isNull()) return '∅';
   const config = props.dataColumn.field.getTagConfig<ListTagConfig>();
-  if (!config)
-    throw new Error('Missing tag config for List renderer');
+  if (!config) throw new Error('Missing tag config for List renderer');
   if (!props.dataColumn.field.isNest())
     throw new Error('List renderer: Field must be ExploreField');
   // TODO make this work for Arrays as well using `dataColumn.values`

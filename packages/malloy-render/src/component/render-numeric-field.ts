@@ -36,8 +36,6 @@ import type {
   CurrencyConfig,
   NumberConfig,
 } from './tag-configs';
-import {resolveCellFormatTags} from './tag-configs';
-import type {Tag} from '@malloydata/malloy-tag';
 
 /**
  * Get the CellFormatConfig for a field, with optional override.
@@ -48,7 +46,9 @@ function getConfig(
   f: Field,
   configOverride?: CellFormatConfig
 ): CellFormatConfig {
-  return configOverride ?? f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'};
+  return (
+    configOverride ?? f.getTagConfig<CellFormatConfig>() ?? {mode: 'default'}
+  );
 }
 
 /**
