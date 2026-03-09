@@ -169,7 +169,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             layer: [
               {
                 data: {
-                  values: usAtlas as object,
+                  values: usAtlas,
                   format: {type: 'topojson', feature: 'states'},
                 },
                 mark: {type: 'geoshape', fill: '#efefef', stroke: 'white'},
@@ -180,7 +180,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
                     lookup: regionField.name,
                     from: {
                       data: {
-                        values: usAtlas as object,
+                        values: usAtlas,
                         format: {type: 'topojson', feature: 'states'},
                       },
                       key: 'id',

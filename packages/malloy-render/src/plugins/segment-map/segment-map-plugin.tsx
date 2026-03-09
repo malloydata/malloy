@@ -146,7 +146,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             layer: [
               {
                 data: {
-                  values: usAtlas as object,
+                  values: usAtlas,
                   format: {type: 'topojson', feature: 'states'},
                 },
                 mark: {type: 'geoshape', fill: 'lightgray', stroke: 'white'},
