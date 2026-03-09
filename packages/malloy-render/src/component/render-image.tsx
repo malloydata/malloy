@@ -1,30 +1,25 @@
 import type {RendererProps} from './types';
+import type {ImageTagConfig} from './tag-configs';
 
 export function renderImage(props: RendererProps) {
-  const imgTag = props.tag.tag('image');
-  if (!imgTag) throw new Error('Missing tag for Image renderer');
+  const config = props.dataColumn.field.getTagConfig<ImageTagConfig>();
+  if (!config) throw new Error('Missing tag config for Image renderer');
   if (!props.dataColumn.field.isBasic())
     throw new Error('Image renderer: Field must be AtomicField');
   if (!props.dataColumn.isString() && !props.dataColumn.isNull())
     throw new Error('Image renderer: DataColumn must be StringCell');
 
   // Sizing
-  const width = imgTag.text('width');
-  const height = imgTag.text('height');
   const style = {};
-  if (width) style['width'] = width;
-  if (height) style['height'] = height;
+  if (config.width) style['width'] = config.width;
+  if (config.height) style['height'] = config.height;
 
   // Alt text
   let alt: string | undefined;
-  const altTag = imgTag.tag('alt');
-  if (altTag) {
-    const ref = altTag.text('field');
-    if (ref) {
-      alt = String(props.dataColumn.getRelativeCell(ref)?.value);
-    } else {
-      alt = altTag.text();
-    }
+  if (config.altField) {
+    alt = String(props.dataColumn.getRelativeCell(config.altField)?.value);
+  } else if (config.alt) {
+    alt = config.alt;
   }
 
   // src

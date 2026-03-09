@@ -9,6 +9,7 @@ import {renderNumberCell} from '@/component/render-numeric-field';
 import {NULL_SYMBOL} from '@/util';
 import type {
   BigValueSettings,
+  BigValueTagConfig,
   BigValueComparisonInfo,
   ComparisonFormat,
   BigValueSize,
@@ -16,7 +17,11 @@ import type {
 import {applyRenderer} from '@/component/renderer/apply-renderer';
 
 /**
- * Props for the BigValueComponent
+ * Props for the BigValueComponent.
+ *
+ * The component receives pre-resolved tag data and never reads
+ * tags directly. All tag access happens at setup time in the
+ * plugin's create() method.
  */
 export interface BigValueComponentProps {
   /** The data cell containing the row(s) */
@@ -25,6 +30,8 @@ export interface BigValueComponentProps {
   field: Field;
   /** Plugin settings */
   settings: BigValueSettings;
+  /** Pre-resolved tag data for all child fields */
+  tagConfig: BigValueTagConfig;
 }
 
 /**
@@ -59,62 +66,6 @@ interface DeltaResult {
   isNeutral: boolean;
 }
 
-/**
- * Convert snake_case to Title Case
- */
-function snakeToTitleCase(str: string): string {
-  return str
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
-/**
- * Get the display label for a field
- * Priority: # label annotation > snake_case conversion of field name
- */
-function getFieldLabel(field: Field): string {
-  return field.tag.text('label') || snakeToTitleCase(field.name);
-}
-
-/**
- * Get the description text for a field
- * Uses # description="text" render tag
- */
-function getDescription(field: Field): string | null {
-  return field.tag.text('description') || null;
-}
-
-/**
- * Extract comparison info from field tags
- */
-function getComparisonInfo(field: Field): BigValueComparisonInfo | null {
-  const tag = field.tag;
-  const comparisonField = tag.text('big_value', 'comparison_field');
-
-  if (!comparisonField) return null;
-
-  const comparisonLabel =
-    tag.text('big_value', 'comparison_label') ?? undefined;
-  const comparisonFormat = (tag.text('big_value', 'comparison_format') ??
-    'pct') as ComparisonFormat;
-  const downIsGood = tag.text('big_value', 'down_is_good') === 'true';
-
-  return {
-    comparisonField,
-    comparisonLabel,
-    comparisonFormat,
-    downIsGood,
-  };
-}
-
-/**
- * Get sparkline reference from metric field
- * Returns the nest name if # big_value { sparkline=nest_name } is present
- */
-function getSparklineRef(field: Field): string | null {
-  return field.tag.text('big_value', 'sparkline') || null;
-}
 
 /**
  * Calculate the delta between primary and comparison values
@@ -260,7 +211,6 @@ function TooltipIcon(props: {text: string}) {
 function SparklineChart(props: {info: SparklineNestInfo}) {
   const rendering = applyRenderer({
     dataColumn: props.info.nestCell,
-    tag: props.info.nestField.tag,
   });
 
   return <div class="malloy-big-value-sparkline">{rendering.renderValue}</div>;
@@ -384,14 +334,14 @@ export function BigValueComponent(props: BigValueComponentProps) {
     if (!row) return map;
 
     for (const fieldDef of fields()) {
-      const comparisonInfo = getComparisonInfo(fieldDef);
-      if (comparisonInfo) {
+      const config = props.tagConfig.fieldConfigs.get(fieldDef.name);
+      if (config?.comparison) {
         const cell = row.column(fieldDef.name);
         const value = cell?.value;
         if (typeof value === 'number') {
-          map.set(comparisonInfo.comparisonField, {
+          map.set(config.comparison.comparisonField, {
             value,
-            info: comparisonInfo,
+            info: config.comparison,
           });
         }
       }
@@ -406,8 +356,8 @@ export function BigValueComponent(props: BigValueComponentProps) {
   const comparisonFieldNames = createMemo(() => {
     const set = new Set<string>();
     for (const fieldDef of fields()) {
-      const comparisonInfo = getComparisonInfo(fieldDef);
-      if (comparisonInfo) {
+      const config = props.tagConfig.fieldConfigs.get(fieldDef.name);
+      if (config?.comparison) {
         set.add(fieldDef.name);
       }
     }
@@ -415,10 +365,8 @@ export function BigValueComponent(props: BigValueComponentProps) {
   });
 
   // Build sparkline nest map: nestName -> SparklineNestInfo
-  // Finds nests with # line_chart { size=spark } or # bar_chart { size=spark }
-  // Note: Sparkline nests are automatically excluded from rendering as big-value cards.
-  // If big-value is inside a dashboard, use # hidden on sparkline nests to prevent
-  // them from rendering as separate dashboard charts.
+  // Uses pre-resolved sparklineNestNames (detected from tags at setup time)
+  // to find the corresponding data cells at render time.
   const sparklineNestMap = createMemo(() => {
     const map = new Map<string, SparklineNestInfo>();
     const row = firstRow();
@@ -426,20 +374,11 @@ export function BigValueComponent(props: BigValueComponentProps) {
 
     for (const fieldDef of fields()) {
       if (!fieldDef.isNest()) continue;
-
-      // Check if it's a spark chart (line_chart or bar_chart with size=spark)
-      const tag = fieldDef.tag;
-      const isLineSpark =
-        tag.has('line_chart') && tag.text('line_chart', 'size') === 'spark';
-      const isBarSpark =
-        tag.has('bar_chart') && tag.text('bar_chart', 'size') === 'spark';
-
-      if (!isLineSpark && !isBarSpark) continue;
+      if (!props.tagConfig.sparklineNestNames.has(fieldDef.name)) continue;
 
       const nestCell = row.column(fieldDef.name);
       if (!nestCell || !('rows' in nestCell)) continue;
 
-      // Store by nest name - metrics will reference this via sparkline=nest_name
       map.set(fieldDef.name, {
         nestField: fieldDef as NestField,
         nestCell: nestCell as NestCell,
@@ -468,25 +407,25 @@ export function BigValueComponent(props: BigValueComponentProps) {
       // Skip nested fields (sparklines are rendered with their parent metric)
       if (fieldDef.isNest()) continue;
 
+      const config = props.tagConfig.fieldConfigs.get(fieldDef.name);
       const cell = row.column(fieldDef.name);
       const value = cell?.value;
       const comparison = compMap.get(fieldDef.name);
 
-      // Look up sparkline by nest name from the metric's sparkline= tag
-      const sparklineRef = getSparklineRef(fieldDef);
-      const sparklineNest = sparklineRef
-        ? sparkNestMap.get(sparklineRef) ?? null
+      // Look up sparkline by nest name from pre-resolved sparkline ref
+      const sparklineNest = config?.sparklineRef
+        ? sparkNestMap.get(config.sparklineRef) ?? null
         : null;
 
       result.push({
         field: fieldDef,
         cell: cell ?? null,
-        label: getFieldLabel(fieldDef),
+        label: config?.label ?? fieldDef.name,
         value,
         formattedValue: formatValue(cell ?? null),
         comparison: comparison?.info ?? null,
         comparisonValue: comparison?.value ?? null,
-        docText: getDescription(fieldDef),
+        docText: config?.description ?? null,
         sparklineNest,
       });
     }

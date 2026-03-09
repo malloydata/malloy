@@ -15,6 +15,10 @@ import {BigValueComponent} from './big-value-component';
 import {
   type BigValueSettings,
   type BigValueSize,
+  type BigValueTagConfig,
+  type BigValueFieldConfig,
+  type BigValueComparisonInfo,
+  type ComparisonFormat,
   defaultBigValueSettings,
   bigValueSettingsSchema,
 } from './big-value-settings';
@@ -38,6 +42,16 @@ interface BigValuePluginMetadata {
 export interface BigValuePluginInstance
   extends CoreVizPluginInstance<BigValuePluginMetadata> {
   field: NestField;
+}
+
+/**
+ * Convert snake_case to Title Case
+ */
+function snakeToTitleCase(str: string): string {
+  return str
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 
 /**
@@ -67,6 +81,71 @@ function getBigValueSettings(field: Field): BigValueSettings {
       ? defaultBigValueSettings.neutralThreshold
       : neutralThreshold,
   };
+}
+
+/**
+ * Resolve all tag data for a child field at setup time.
+ * This reads every tag the big_value component needs for this field,
+ * so the component never accesses tags directly at render time.
+ */
+function resolveChildFieldTags(childField: Field): BigValueFieldConfig {
+  const tag = childField.tag;
+
+  // Label: # label annotation or snake_case conversion
+  const label = tag.text('label') || snakeToTitleCase(childField.name);
+
+  // Description: # description annotation
+  const description = tag.text('description') || null;
+
+  // Comparison info: # big_value { comparison_field=... }
+  let comparison: BigValueComparisonInfo | null = null;
+  const comparisonField = tag.text('big_value', 'comparison_field');
+  if (comparisonField) {
+    const comparisonLabel =
+      tag.text('big_value', 'comparison_label') ?? undefined;
+    const comparisonFormat = (tag.text('big_value', 'comparison_format') ??
+      'pct') as ComparisonFormat;
+    const downIsGood = tag.text('big_value', 'down_is_good') === 'true';
+    comparison = {comparisonField, comparisonLabel, comparisonFormat, downIsGood};
+  }
+
+  // Sparkline reference: # big_value { sparkline=nest_name }
+  const sparklineRef = tag.text('big_value', 'sparkline') || null;
+
+  return {label, description, comparison, sparklineRef};
+}
+
+/**
+ * Resolve all tag data for the big_value nest at setup time.
+ * Walks child fields and extracts their tag data so the component
+ * never needs to access tags at render time.
+ */
+function resolveBigValueTags(field: Field): BigValueTagConfig {
+  const fieldConfigs = new Map<string, BigValueFieldConfig>();
+  const sparklineNestNames = new Set<string>();
+
+  if (!field.isNest()) return {fieldConfigs, sparklineNestNames};
+
+  for (const childField of field.fields) {
+    // Resolve tag data for every child field
+    fieldConfigs.set(childField.name, resolveChildFieldTags(childField));
+
+    // Detect sparkline nests: child nests with line_chart/bar_chart size=spark
+    if (childField.isNest()) {
+      const childTag = childField.tag;
+      const isLineSpark =
+        childTag.has('line_chart') &&
+        childTag.text('line_chart', 'size') === 'spark';
+      const isBarSpark =
+        childTag.has('bar_chart') &&
+        childTag.text('bar_chart', 'size') === 'spark';
+      if (isLineSpark || isBarSpark) {
+        sparklineNestNames.add(childField.name);
+      }
+    }
+  }
+
+  return {fieldConfigs, sparklineNestNames};
 }
 
 /**
@@ -116,7 +195,11 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
     },
 
     /**
-     * Create a Big Value plugin instance
+     * Create a Big Value plugin instance.
+     *
+     * All tag reads happen here, at setup time (during setResult()),
+     * before the component mounts. The component receives pre-resolved
+     * data and never accesses tags directly.
      */
     create: (field: Field): BigValuePluginInstance => {
       if (!field.isNest()) {
@@ -124,6 +207,7 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
       }
 
       const settings = getBigValueSettings(field);
+      const tagConfig = resolveBigValueTags(field);
 
       const pluginInstance: BigValuePluginInstance = {
         name: 'big_value',
@@ -152,6 +236,7 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
               dataColumn={props.dataColumn}
               field={props.field}
               settings={settings}
+              tagConfig={tagConfig}
             />
           );
         },
@@ -172,25 +257,8 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
         settingsToTag: (s: Record<string, unknown>) => {
           return bigValueSettingsToTag(s as unknown as BigValueSettings);
         },
-
-        getDeclaredTagPaths: () => BIG_VALUE_TAG_PATHS,
       };
 
       return pluginInstance;
     },
   };
-
-/**
- * Tag paths read by the big value plugin during render.
- */
-const BIG_VALUE_TAG_PATHS: string[][] = [
-  ['big_value', 'size'],
-  ['big_value', 'neutral_threshold'],
-  ['big_value', 'comparison_field'],
-  ['big_value', 'comparison_label'],
-  ['big_value', 'comparison_format'],
-  ['big_value', 'down_is_good'],
-  ['big_value', 'sparkline'],
-  ['label'],
-  ['description'],
-];

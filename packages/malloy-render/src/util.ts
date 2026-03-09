@@ -160,15 +160,15 @@ export function getText(
   value: number,
   options: {
     durationUnit?: string;
+    terse?: boolean;
   }
 ): string | null {
   const targetUnit =
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const tag = field.tag;
-  const numFormat = tag.text('number');
-  const terse = tag.has('duration', 'terse');
+  const numFormat = undefined; // Format now resolved at setup time
+  const terse = options.terse ?? false;
 
   let currentDuration = value;
   let currentUnitValue = 0;

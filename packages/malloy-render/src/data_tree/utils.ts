@@ -205,14 +205,13 @@ export function shouldRenderAs({
     // Handle other viz types if needed in the future
   }
 
-  // Fall back to legacy tag detection for non-chart tags
-  const properties = tag.properties ?? {};
-  const tagNamesInOrder = Object.keys(properties).reverse();
-
-  for (const tagName of tagNamesInOrder) {
-    if (RENDER_TAG_LIST.includes(tagName) && !properties[tagName].deleted) {
-      if (['list', 'list_detail'].includes(tagName)) return 'list';
-      if (['bar_chart', 'line_chart'].includes(tagName)) return 'chart';
+  // Fall back to legacy tag detection for non-chart tags.
+  // Iterate in reverse so the last-declared renderer tag wins.
+  for (let i = RENDER_TAG_LIST.length - 1; i >= 0; i--) {
+    if (tag.has(RENDER_TAG_LIST[i])) {
+      const tagName = RENDER_TAG_LIST[i];
+      if (tagName === 'list' || tagName === 'list_detail') return 'list';
+      if (tagName === 'bar_chart' || tagName === 'line_chart') return 'chart';
       return tagName;
     }
   }

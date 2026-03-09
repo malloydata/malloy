@@ -12,6 +12,7 @@ import type {
 import {applyRenderer} from '../renderer/apply-renderer';
 import {useConfig} from '../render';
 import {MalloyViz} from '@/api/malloy-viz';
+import type {TableNestConfig} from '../tag-configs';
 import styles from './table.css?raw';
 
 const DEFAULT_TRANSPOSE_COLUMN_LIMIT = 20;
@@ -28,9 +29,9 @@ const TransposeTable: Component<{
 
   const config = useConfig();
 
+  const tableConfig = props.data.field.getTagConfig<TableNestConfig>();
   const transposeLimit =
-    props.data.field.tag.numeric('transpose', 'limit') ??
-    DEFAULT_TRANSPOSE_COLUMN_LIMIT;
+    tableConfig?.transposeLimit ?? DEFAULT_TRANSPOSE_COLUMN_LIMIT;
 
   const visibleFields = createMemo(() =>
     props.data.field.fields.filter(f => !f.isHidden())
@@ -102,7 +103,7 @@ const TransposeTable: Component<{
               }}
             >
               <div class="cell-content header">
-                {field.tag.text('label') ?? field.name.replace(/_/g, '_\u200b')}
+                {field.getLabel().replace(/_/g, '_\u200b')}
               </div>
             </div>
 
@@ -112,7 +113,6 @@ const TransposeTable: Component<{
                 const cell = row.column(field.name);
                 const {renderValue} = applyRenderer({
                   dataColumn: cell,
-                  tag: field.tag,
                   customProps: {},
                 });
 

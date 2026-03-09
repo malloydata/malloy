@@ -4,9 +4,9 @@
  */
 
 import type {Cell} from '../data_tree';
-import type {Tag} from '@malloydata/malloy-tag';
 import {NULL_SYMBOL} from '../util';
 import {renderNumberCell, renderDateTimeField} from './render-numeric-field';
+import type {CellFormatConfig} from './tag-configs';
 
 export interface RenderCellValueOptions {
   /**
@@ -15,12 +15,13 @@ export interface RenderCellValueOptions {
    */
   nullValue?: string;
   /**
-   * Override tag for formatting.
-   * Use this when rendering array elements - pass the array field's tag
-   * so formatting (currency, percent, etc.) is applied from the array definition.
-   * If not provided, uses the cell's own field tag.
+   * Override format config.
+   * Use this when rendering array elements - pass the array field's
+   * pre-resolved config so formatting (currency, percent, etc.) is
+   * applied from the array definition.
+   * If not provided, uses the cell's own field's tag config.
    */
-  tag?: Tag;
+  config?: CellFormatConfig;
 }
 
 /**
@@ -39,8 +40,8 @@ export interface RenderCellValueOptions {
  * renderCellValue(cell)
  *
  * @example
- * // Array elements - use array field's tag for formatting
- * renderCellValue(elementCell, { tag: arrayField.tag })
+ * // Array elements - use array field's config for formatting
+ * renderCellValue(elementCell, { config: arrayField.getTagConfig() })
  *
  * @example
  * // Custom null display
@@ -50,14 +51,14 @@ export function renderCellValue(
   cell: Cell,
   options: RenderCellValueOptions = {}
 ): string {
-  const {nullValue = NULL_SYMBOL, tag} = options;
+  const {nullValue = NULL_SYMBOL, config} = options;
 
   if (cell.isNull()) {
     return nullValue;
   }
 
   if (cell.isNumber()) {
-    return renderNumberCell(cell, tag);
+    return renderNumberCell(cell, config);
   }
 
   if (cell.isDate()) {
@@ -68,7 +69,7 @@ export function renderCellValue(
         isDate: true,
         timeframe: cell.timeframe,
       },
-      tag
+      config
     );
   }
 
@@ -80,7 +81,7 @@ export function renderCellValue(
         isDate: false,
         timeframe: cell.timeframe,
       },
-      tag
+      config
     );
   }
 

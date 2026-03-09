@@ -229,7 +229,6 @@ export function MalloyRenderInner(props: {
 
     return applyRenderer({
       dataColumn: data,
-      tag: data.field.tag,
       customProps: {
         table: {
           scrollEl: props.scrollEl,

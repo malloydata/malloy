@@ -11,6 +11,7 @@ import type {
   RecordOrRepeatedRecordField,
   SortableField,
 } from '../../data_tree';
+import type {TableNestConfig} from '../tag-configs';
 
 /**
  * Represents a unique combination of dimension values in a pivot.
@@ -398,10 +399,10 @@ export function shouldPivot(field: Field): boolean {
 }
 
 /**
- * Gets user-defined pivot dimensions from the tag.
+ * Gets user-defined pivot dimensions from the pre-resolved tag config.
  * Syntax: # pivot { dimensions=[d1, d2] }
  */
 export function getUserDefinedDimensions(field: Field): string[] | undefined {
-  const dims = field.tag.textArray('pivot', 'dimensions');
-  return dims && dims.length > 0 ? dims : undefined;
+  const tableConfig = field.getTagConfig<TableNestConfig>();
+  return tableConfig?.pivotDimensions;
 }

@@ -75,3 +75,33 @@ export const bigValueSettingsSchema: JSONSchemaObject = {
  * Type for the settings schema
  */
 export type IBigValueSettingsSchema = typeof bigValueSettingsSchema;
+
+/**
+ * Per-field tag data resolved at setup time.
+ *
+ * All tag reads for a field happen during plugin create(), before
+ * the component mounts. This ensures tag validation and unread-tag
+ * detection work without a browser/DOM. See the TagResolver pattern
+ * in CONTEXT.md for the design rationale.
+ */
+export interface BigValueFieldConfig {
+  /** Display label (from # label or snake_case conversion of field name) */
+  label: string;
+  /** Description text (from # description) */
+  description: string | null;
+  /** Comparison info (from # big_value { comparison_field=... }) */
+  comparison: BigValueComparisonInfo | null;
+  /** Sparkline nest reference (from # big_value { sparkline=... }) */
+  sparklineRef: string | null;
+}
+
+/**
+ * Tag data resolved at setup time for the entire big_value nest.
+ * Keyed by child field name.
+ */
+export interface BigValueTagConfig {
+  /** Per-field resolved tag data */
+  fieldConfigs: Map<string, BigValueFieldConfig>;
+  /** Field names of child nests that are sparkline charts */
+  sparklineNestNames: Set<string>;
+}

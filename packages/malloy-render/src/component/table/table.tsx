@@ -41,6 +41,7 @@ import {
 } from './pivot-utils';
 import {PivotFieldCells} from './pivot-cells';
 import {PivotHeaders} from './pivot-header';
+import type {ColumnTagConfig, TableNestConfig} from '../tag-configs';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -59,7 +60,6 @@ const Cell = (props: {
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
-    const columnTag = props.field.tag.tag('column');
     const width = layout.fieldLayout(props.field).width;
     const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
@@ -72,7 +72,8 @@ const Cell = (props: {
       if (height) {
         style.height = `${height}px`;
       }
-      if (columnTag?.text('word_break') === 'break_all') {
+      const columnConfig = props.field.getColumnConfig<ColumnTagConfig>();
+      if (columnConfig?.wordBreak) {
         style['word-break'] = 'break-all';
       }
     }
@@ -141,8 +142,8 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     (fieldLayout.depth > 0 && isLast) ||
     (fieldLayout.depth === 0 && fieldLayout.field.renderAs() === 'table');
 
-  const customLabel = props.field.tag.text('label');
-  const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
+  const label = props.field.getLabel();
+  const value = label.replace(/_/g, '_\u200b');
 
   return (
     <div
@@ -206,7 +207,6 @@ const TableField = (props: {
   let renderAs = '';
   ({renderValue, renderAs} = applyRenderer({
     dataColumn: props.row.column(props.field.name),
-    tag: props.field.tag,
     customProps: {
       table: {
         rowLimit: 100, // Limit nested tables to 100 records
@@ -321,8 +321,8 @@ const MalloyTableRoot = (_props: {
 
   let shouldFillWidth = false;
   if (tableCtx.root) {
-    const sizeTag = props.data.field.tag.tag('table')?.tag('size');
-    if (sizeTag && sizeTag.text() === 'fill') shouldFillWidth = true;
+    const tableConfig = props.data.field.getTagConfig<TableNestConfig>();
+    if (tableConfig?.fillSize) shouldFillWidth = true;
     else if (typeof props.shouldFillWidth === 'boolean')
       shouldFillWidth = props.shouldFillWidth;
   }

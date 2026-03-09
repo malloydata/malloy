@@ -119,8 +119,7 @@ const PivotMeasureHeaderRow = (props: {
         {sibling => {
           const colSpan = sibling.endColumn - sibling.startColumn + 1;
           const isNumeric = sibling.field.isNumber();
-          const customLabel = sibling.field.tag.text('label');
-          const name = customLabel ?? sibling.field.name;
+          const name = sibling.field.getLabel();
 
           return (
             <div
@@ -145,8 +144,7 @@ const PivotMeasureHeaderRow = (props: {
           const isFirst = idx() === 0;
           const isLast = idx() === props.pivotConfig.columnFields.length - 1;
           const isNumeric = col.field.isNumber();
-          const customLabel = col.field.tag.text('label');
-          const measureName = customLabel ?? col.field.name;
+          const measureName = col.field.getLabel();
 
           return (
             <div

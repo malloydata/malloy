@@ -9,6 +9,7 @@ import type {
   RenderFieldRegistry,
 } from '@/registry/types';
 import {RenderLogCollector} from '@/component/render-log-collector';
+import {resolveBuiltInTags} from '@/component/tag-configs';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -113,6 +114,10 @@ export class RenderFieldMetadata {
       renderFieldEntry.renderProperties.errors = vizProperties.errors;
 
       this.registry.set(fieldKey, renderFieldEntry);
+
+      // Resolve tag configs for built-in renderers (image, link, etc.)
+      // at setup time so components never read tags at render time.
+      resolveBuiltInTags(field);
 
       // Run semantic validation on this field's tags
       this.validateFieldTags(field);
@@ -445,10 +450,13 @@ export class RenderFieldMetadata {
   }
 
   /**
-   * Mark tag paths declared by plugins and built-in renderers as read.
+   * Mark tag paths declared by plugins as read.
    * This prevents false-positive "unknown tag" warnings for tags that
    * are consumed at render time or interaction time but may not have
    * been read yet (e.g. virtualized charts, hover tooltips).
+   *
+   * Built-in renderer tags are now handled by resolveBuiltInTags()
+   * which reads all tags at setup time via typed config resolvers.
    */
   private markDeclaredTags(
     field: Field,
@@ -456,7 +464,6 @@ export class RenderFieldMetadata {
   ): void {
     const tag = field.tag;
 
-    // Mark tags declared by plugins
     for (const plugin of plugins) {
       if (plugin.getDeclaredTagPaths) {
         for (const path of plugin.getDeclaredTagPaths()) {
@@ -464,36 +471,9 @@ export class RenderFieldMetadata {
         }
       }
     }
-
-    // Mark tags for built-in (non-plugin) renderers
-    for (const path of BUILTIN_RENDERER_TAGS) {
-      tag.find(path);
-    }
   }
 }
 
-/**
- * Tag paths consumed by built-in renderers that aren't part of the
- * plugin system. These are read at render time by component code
- * (render-link, render-image, duration formatter, etc.), by
- * legacy chart delegation (apply-renderer), or by parent chart
- * plugins that inspect child field tags.
- */
-const BUILTIN_RENDERER_TAGS: string[][] = [
-  // render-link.tsx
-  ['link', 'field'],
-  ['link', 'url_template'],
-  // render-image.tsx
-  ['image', 'height'],
-  ['image', 'width'],
-  ['image', 'alt'],
-  ['image', 'alt', 'field'],
-  // duration formatter (util.ts)
-  ['duration', 'terse'],
-  // Embedded channel tags on child fields (read by parent chart plugins)
-  ['x'],
-  ['y'],
-  ['series'],
-  // Custom tooltip tag on child fields (read by chart tooltip code)
-  ['tooltip'],
-];
+// TODO: The "Transpose column limit exceeded" message in transpose-table.tsx
+// should be logged via logCollector, not just displayed in the UI.
+// It's a render-time-only error that won't be visible headlessly.

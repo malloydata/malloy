@@ -42,14 +42,7 @@ export type TableLayout = {
   maxDepth: number;
 };
 
-const NAMED_COLUMN_WIDTHS = {
-  'xs': 28,
-  'sm': 64,
-  'md': 128,
-  'lg': 256,
-  'xl': 384,
-  '2xl': 512,
-};
+import type {ColumnTagConfig} from '../tag-configs';
 
 function createFieldHeaderRangeMap(
   explore: NestField,
@@ -122,18 +115,11 @@ export function getTableLayout(rootField: NestField): TableLayout {
       depth: fieldHeaderRangeMap[key].depth,
     };
     layout.maxDepth = Math.max(layout.maxDepth, layoutEntry.depth);
-    const tag = field.tag;
-    const columnTag = tag.tag('column');
-
-    // Allow overriding size
-    const textWidth = columnTag?.text('width');
-    const numericWidth = columnTag?.numeric('width');
-    if (textWidth && NAMED_COLUMN_WIDTHS[textWidth])
-      layoutEntry.width = NAMED_COLUMN_WIDTHS[textWidth];
-    else if (numericWidth) layoutEntry.width = numericWidth;
-
-    if (columnTag?.numeric('height'))
-      layoutEntry.height = columnTag.numeric('height')!;
+    const columnConfig = field.getColumnConfig<ColumnTagConfig>();
+    if (columnConfig) {
+      if (columnConfig.width !== null) layoutEntry.width = columnConfig.width;
+      if (columnConfig.height !== null) layoutEntry.height = columnConfig.height;
+    }
 
     layout.fields[key] = layoutEntry;
   }

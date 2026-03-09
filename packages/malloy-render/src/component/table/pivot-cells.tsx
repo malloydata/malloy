@@ -24,7 +24,6 @@ const PivotCell = (props: {
 
   const {renderValue} = applyRenderer({
     dataColumn: props.cell,
-    tag: props.columnField.field.tag,
     customProps: {},
   });
 

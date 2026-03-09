@@ -19,7 +19,6 @@ import type {
 
 export type RendererProps = {
   dataColumn: Cell;
-  tag: Tag;
   customProps?: Record<string, Record<string, unknown>>;
 };
 

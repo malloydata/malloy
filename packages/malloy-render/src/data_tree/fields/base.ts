@@ -37,6 +37,9 @@ export abstract class FieldBase {
   public readonly valueSet = new Set<string | number | boolean>();
   protected plugins: RenderPluginInstance[] = [];
   protected _renderAs = '';
+  private _tagConfig: unknown = undefined;
+  private _resolvedLabel: string | undefined;
+  private _columnConfig: unknown = undefined;
 
   // Get the plugins registered for this field
   getPlugins(): RenderPluginInstance[] {
@@ -47,6 +50,48 @@ export abstract class FieldBase {
     this.plugins = plugins;
     // TODO: legacy until everything is migrated to plugins
     this._renderAs = shouldRenderAs({field: this});
+  }
+
+  /**
+   * Get the pre-resolved tag configuration for this field.
+   * Tag configs are extracted at setup time (during setResult)
+   * so components never need to read tags at render time.
+   */
+  getTagConfig<T>(): T | undefined {
+    return this._tagConfig as T | undefined;
+  }
+
+  /**
+   * Store pre-resolved tag configuration on this field.
+   * Called during registerFields() for built-in renderers.
+   */
+  setTagConfig(config: unknown): void {
+    this._tagConfig = config;
+  }
+
+  /**
+   * Get the resolved display label for this field.
+   * Returns the custom label from # label tag if set, otherwise the field name.
+   * Resolved at setup time so components never read the label tag.
+   */
+  getLabel(): string {
+    return this._resolvedLabel ?? this.name;
+  }
+
+  setResolvedLabel(label: string | undefined): void {
+    this._resolvedLabel = label;
+  }
+
+  /**
+   * Get the pre-resolved column configuration for this field.
+   * Column configs are extracted at setup time (width, height, word_break).
+   */
+  getColumnConfig<T>(): T | undefined {
+    return this._columnConfig as T | undefined;
+  }
+
+  setColumnConfig(config: unknown): void {
+    this._columnConfig = config;
   }
 
   renderAs(): string {

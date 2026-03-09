@@ -15,6 +15,7 @@ import {NULL_SYMBOL} from '@/util';
 import type {RendererProps} from '@/component/types';
 import {PluginRenderContainer} from '@/component/renderer/plugin-render-container';
 import {renderCellValue} from '@/component/cell-utils';
+import type {CellFormatConfig} from '@/component/tag-configs';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;
@@ -50,10 +51,10 @@ export function applyRenderer(props: RendererProps) {
       case 'cell': {
         if (dataColumn.isArray()) {
           // Plain array (e.g., string[], number[]) - render as comma-separated values
-          // Use the array field's tag for formatting (currency, percent, etc.)
-          const arrayTag = field.tag;
+          // Use the array field's pre-resolved config for formatting (currency, percent, etc.)
+          const arrayConfig = field.getTagConfig<CellFormatConfig>();
           const renderedElements = dataColumn.values.map(elementCell =>
-            renderCellValue(elementCell, {tag: arrayTag})
+            renderCellValue(elementCell, {config: arrayConfig})
           );
           renderValue = renderedElements.join(', ');
         } else {

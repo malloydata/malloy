@@ -1,29 +1,27 @@
 import type {Cell, Field} from '../data_tree';
+import type {LinkTagConfig} from './tag-configs';
 
 export function renderLink(f: Field, data: Cell) {
-  const tag = f.tag;
+  const config = f.getTagConfig<LinkTagConfig>();
+  if (!config) throw new Error('Missing tag config for Link renderer');
   if (data.isNull()) return '∅';
   const value = String(data.value);
-  const linkTag = tag.tag('link');
-  if (!linkTag) throw new Error('Missing tag for Link renderer');
-  // Read href component from field value or override with field tag if it exists
-  const dynamicRef = linkTag.text('field');
+
+  // Read href component from field value or override with field ref if it exists
   let hrefCell: Cell | undefined;
-  if (dynamicRef) {
-    hrefCell = data.getRelativeCell(dynamicRef);
+  if (config.linkField) {
+    hrefCell = data.getRelativeCell(config.linkField);
   }
   hrefCell ??= data;
   const hrefComponent = String(hrefCell.value);
 
-  // if a URL template is provided, replace the data were '$$$' appears.
-  const urlTemplate = linkTag.text('url_template');
-
+  // if a URL template is provided, replace the data where '$$' appears.
   let href: string = hrefComponent;
-  if (urlTemplate) {
-    if (urlTemplate.indexOf('$$') > -1) {
-      href = urlTemplate.replace('$$', hrefComponent);
+  if (config.urlTemplate) {
+    if (config.urlTemplate.indexOf('$$') > -1) {
+      href = config.urlTemplate.replace('$$', hrefComponent);
     } else {
-      href = urlTemplate + hrefComponent;
+      href = config.urlTemplate + hrefComponent;
     }
   }
 

@@ -13,6 +13,7 @@ import type {Field, RecordCell, RecordOrRepeatedRecordCell} from '@/data_tree';
 import {MalloyViz} from '@/api/malloy-viz';
 import styles from './dashboard.css?raw';
 import {useConfig} from '../render';
+import type {DashboardNestConfig} from '../tag-configs';
 
 function DashboardItem(props: {
   field: Field;
@@ -31,10 +32,8 @@ function DashboardItem(props: {
     else return false;
   };
   const cell = props.row.column(props.field.name);
-  const tag = props.field.tag;
   const rendering = applyRenderer({
     dataColumn: cell,
-    tag,
     customProps: {
       table: {
         disableVirtualization: !shouldVirtualizeTable(),
@@ -62,8 +61,7 @@ function DashboardItem(props: {
   if (rendering.renderAs === 'table' && props.maxTableHeight)
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
-  const customLabel = tag.text('label');
-  const title = customLabel ?? props.field.name;
+  const title = props.field.getLabel();
 
   return (
     <div
@@ -90,13 +88,10 @@ export function Dashboard(props: {
 }) {
   MalloyViz.addStylesheet(styles);
   const field = props.data.field;
-  const tag = field.tag;
-  const dashboardTag = tag.tag('dashboard');
-  let maxTableHeight: number | null = 361;
-  const maxTableHeightTag = dashboardTag?.tag('table', 'max_height');
-  if (maxTableHeightTag?.text() === 'none') maxTableHeight = null;
-  else if (maxTableHeightTag?.numeric())
-    maxTableHeight = maxTableHeightTag!.numeric()!;
+  const dashboardConfig = field.getTagConfig<DashboardNestConfig>();
+  // Default to 361 only when no config resolved; preserve null (means "no limit")
+  const maxTableHeight =
+    dashboardConfig !== undefined ? dashboardConfig.maxTableHeight : 361;
 
   const dimensions = () =>
     field.fields.filter(f => {
@@ -185,7 +180,6 @@ export function Dashboard(props: {
                                   dataColumn: props.data.rows[
                                     virtualRow.index
                                   ].column(d.name),
-                                  tag: d.tag,
                                 }).renderValue
                               }
                             </div>
@@ -231,7 +225,6 @@ export function Dashboard(props: {
                           {
                             applyRenderer({
                               dataColumn: row.column(d.name),
-                              tag: d.tag,
                             }).renderValue
                           }
                         </div>

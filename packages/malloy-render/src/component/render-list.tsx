@@ -1,13 +1,13 @@
 import {For} from 'solid-js';
 import {applyRenderer} from '@/component/renderer/apply-renderer';
 import type {RendererProps} from './types';
+import type {ListTagConfig} from './tag-configs';
 
 export function renderList(props: RendererProps) {
   if (props.dataColumn.isNull()) return '∅';
-  const listTag = props.tag.tag('list');
-  const listDetailTag = props.tag.tag('list_detail');
-  if (!listTag && !listDetailTag)
-    throw new Error('Missing tag for List renderer');
+  const config = props.dataColumn.field.getTagConfig<ListTagConfig>();
+  if (!config)
+    throw new Error('Missing tag config for List renderer');
   if (!props.dataColumn.field.isNest())
     throw new Error('List renderer: Field must be ExploreField');
   // TODO make this work for Arrays as well using `dataColumn.values`
@@ -18,7 +18,6 @@ export function renderList(props: RendererProps) {
   });
   const valueField = nonHiddenFields[0];
 
-  const isListDetail = !!listDetailTag;
   const descriptionField = nonHiddenFields[1];
   const rows = props.dataColumn.rows;
 
@@ -33,15 +32,13 @@ export function renderList(props: RendererProps) {
             {
               applyRenderer({
                 dataColumn: row.column(valueField.name),
-                tag: valueField.tag,
               }).renderValue
             }
-            {isListDetail &&
+            {config.isListDetail &&
               descriptionField &&
               '(' +
                 applyRenderer({
                   dataColumn: row.column(descriptionField.name),
-                  tag: descriptionField.tag,
                 }).renderValue +
                 ')'}
             {idx() < rows.length - 1 && ', '}

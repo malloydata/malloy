@@ -27,7 +27,6 @@ export function getCustomTooltipEntries({
         value: () =>
           applyRenderer({
             dataColumn: rec.__row.column(f.name),
-            tag: f.tag,
             customProps: {
               table: {
                 shouldFillWidth: true,
