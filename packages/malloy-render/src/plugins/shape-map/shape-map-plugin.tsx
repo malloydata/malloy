@@ -10,7 +10,7 @@ import type {
   RenderProps,
   DOMRenderPluginInstance,
 } from '@/api/plugin-types';
-import {type Field, FieldType} from '@/data_tree';
+import {type Field, type Cell, type RecordCell, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
 import * as lite from 'vega-lite';
 import * as vega from 'vega';
@@ -38,7 +38,7 @@ function getDataType(
 }
 
 function getDataValue(
-  data: import('@/data_tree').Cell,
+  data: Cell,
   regionField: Field
 ): Date | string | number | null | undefined {
   if (data.isNumber()) return data.value;
@@ -54,7 +54,7 @@ function getDataValue(
 }
 
 function mapData(
-  rows: import('@/data_tree').RecordCell[],
+  rows: RecordCell[],
   regionField: Field
 ): Record<string, unknown>[] {
   return rows.map(row => {
@@ -67,9 +67,7 @@ function mapData(
 }
 
 function getSize(field: Field): {height: number; width: number} {
-  return field.isRoot()
-    ? {height: 350, width: 500}
-    : {height: 175, width: 250};
+  return field.isRoot() ? {height: 350, width: 500} : {height: 175, width: 250};
 }
 
 const SHAPE_MAP_VEGA_CONFIG: lite.Config = {
@@ -102,124 +100,120 @@ const SHAPE_MAP_VEGA_CONFIG: lite.Config = {
   },
 };
 
-export const ShapeMapPluginFactory: RenderPluginFactory<
-  DOMRenderPluginInstance
-> = {
-  name: 'shape_map',
+export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance> =
+  {
+    name: 'shape_map',
 
-  matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
-    const hasTag = fieldTag.has('shape_map');
-    const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
+    matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
+      const hasTag = fieldTag.has('shape_map');
+      const isRepeatedRecord = fieldType === FieldType.RepeatedRecord;
 
-    if (hasTag && !isRepeatedRecord) {
-      throw new Error(
-        'Malloy Shape Map: field is a shape map, but is not a repeated record'
-      );
-    }
+      if (hasTag && !isRepeatedRecord) {
+        throw new Error(
+          'Malloy Shape Map: field is a shape map, but is not a repeated record'
+        );
+      }
 
-    return hasTag && isRepeatedRecord;
-  },
+      return hasTag && isRepeatedRecord;
+    },
 
-  create: (field: Field): DOMRenderPluginInstance => {
-    let vegaConfigOverride: Record<string, unknown> = {};
+    create: (field: Field): DOMRenderPluginInstance => {
+      let vegaConfigOverride: Record<string, unknown> = {};
 
-    return {
-      name: 'shape_map',
-      field,
-      renderMode: 'dom',
-      sizingStrategy: 'fixed',
+      return {
+        name: 'shape_map',
+        field,
+        renderMode: 'dom',
+        sizingStrategy: 'fixed',
 
-      beforeRender: (
-        _metadata: RenderMetadata,
-        options: GetResultMetadataOptions
-      ): void => {
-        vegaConfigOverride =
-          options.getVegaConfigOverride?.('shape_map') ?? {};
-      },
+        beforeRender: (
+          _metadata: RenderMetadata,
+          options: GetResultMetadataOptions
+        ): void => {
+          vegaConfigOverride =
+            options.getVegaConfigOverride?.('shape_map') ?? {};
+        },
 
-      renderToDOM: (container: HTMLElement, props: RenderProps): void => {
-        if (!props.dataColumn.isRepeatedRecord()) {
-          throw new Error(
-            'Malloy Shape Map: data column is not a repeated record'
-          );
-        }
+        renderToDOM: (container: HTMLElement, props: RenderProps): void => {
+          if (!props.dataColumn.isRepeatedRecord()) {
+            throw new Error(
+              'Malloy Shape Map: data column is not a repeated record'
+            );
+          }
 
-        const data = props.dataColumn;
-        const regionField = data.field.fields[0];
-        const colorField = data.field.fields[1];
+          const data = props.dataColumn;
+          const regionField = data.field.fields[0];
+          const colorField = data.field.fields[1];
 
-        const colorType = colorField
-          ? getDataType(colorField, regionField)
-          : undefined;
-
-        const colorDef =
-          colorField !== undefined
-            ? {
-                field: colorField.name,
-                type: colorType,
-                scale: getColorScale(colorType, false),
-              }
+          const colorType = colorField
+            ? getDataType(colorField, regionField)
             : undefined;
 
-        const mapped = mapData(data.rows, regionField).filter(
-          row => row[regionField.name] !== undefined
-        );
+          const colorDef =
+            colorField !== undefined
+              ? {
+                  field: colorField.name,
+                  type: colorType,
+                  scale: getColorScale(colorType, false),
+                }
+              : undefined;
 
-        const spec: lite.TopLevelSpec = {
-          ...getSize(field),
-          data: {values: mapped},
-          projection: {type: 'albersUsa'},
-          layer: [
-            {
-              data: {
-                values: usAtlas as object,
-                format: {type: 'topojson', feature: 'states'},
-              },
-              mark: {type: 'geoshape', fill: '#efefef', stroke: 'white'},
-            },
-            {
-              transform: [
-                {
-                  lookup: regionField.name,
-                  from: {
-                    data: {
-                      values: usAtlas as object,
-                      format: {type: 'topojson', feature: 'states'},
-                    },
-                    key: 'id',
-                  },
-                  as: 'geo',
+          const mapped = mapData(data.rows, regionField).filter(
+            row => row[regionField.name] !== undefined
+          );
+
+          const spec: lite.TopLevelSpec = {
+            ...getSize(field),
+            data: {values: mapped},
+            projection: {type: 'albersUsa'},
+            layer: [
+              {
+                data: {
+                  values: usAtlas as object,
+                  format: {type: 'topojson', feature: 'states'},
                 },
-              ],
-              mark: 'geoshape',
-              encoding: {
-                shape: {field: 'geo', type: 'geojson'},
-                color: colorDef,
+                mark: {type: 'geoshape', fill: '#efefef', stroke: 'white'},
               },
-            },
-          ],
-          background: 'transparent',
-          config: SHAPE_MAP_VEGA_CONFIG,
-        };
+              {
+                transform: [
+                  {
+                    lookup: regionField.name,
+                    from: {
+                      data: {
+                        values: usAtlas as object,
+                        format: {type: 'topojson', feature: 'states'},
+                      },
+                      key: 'id',
+                    },
+                    as: 'geo',
+                  },
+                ],
+                mark: 'geoshape',
+                encoding: {
+                  shape: {field: 'geo', type: 'geojson'},
+                  color: colorDef,
+                },
+              },
+            ],
+            background: 'transparent',
+            config: SHAPE_MAP_VEGA_CONFIG,
+          };
 
-        spec.config = mergeVegaConfigs(
-          spec.config ?? {},
-          vegaConfigOverride
-        );
+          spec.config = mergeVegaConfigs(spec.config ?? {}, vegaConfigOverride);
 
-        const vegaSpec = lite.compile(spec).spec;
-        const view = new vega.View(vega.parse(vegaSpec), {
-          renderer: 'none',
-        });
-        view.logger().level(-1);
-        view.toSVG().then(svg => {
-          container.innerHTML = svg;
-        });
-      },
+          const vegaSpec = lite.compile(spec).spec;
+          const view = new vega.View(vega.parse(vegaSpec), {
+            renderer: 'none',
+          });
+          view.logger().level(-1);
+          view.toSVG().then(svg => {
+            container.innerHTML = svg;
+          });
+        },
 
-      getMetadata: () => ({type: 'shape_map', field}),
+        getMetadata: () => ({type: 'shape_map', field}),
 
-      getDeclaredTagPaths: () => [['shape_map']],
-    };
-  },
-};
+        getDeclaredTagPaths: () => [['shape_map']],
+      };
+    },
+  };
