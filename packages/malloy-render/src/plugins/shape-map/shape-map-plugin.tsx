@@ -22,6 +22,7 @@ import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
+import type {RenderLogCollector} from '@/component/render-log-collector';
 
 function getDataType(
   field: Field,
@@ -119,6 +120,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
 
     create: (field: Field): DOMRenderPluginInstance => {
       let vegaConfigOverride: Record<string, unknown> = {};
+      let logCollector: RenderLogCollector | undefined;
 
       return {
         name: 'shape_map',
@@ -132,6 +134,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
         ): void => {
           vegaConfigOverride =
             options.getVegaConfigOverride?.('shape_map') ?? {};
+          logCollector = options.renderFieldMetadata.logCollector;
         },
 
         renderToDOM: (container: HTMLElement, props: RenderProps): void => {
@@ -154,6 +157,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
               ? {
                   field: colorField.name,
                   type: colorType,
+                  axis: {title: colorField.name},
                   scale: getColorScale(colorType, false),
                 }
               : undefined;
@@ -206,9 +210,14 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
             renderer: 'none',
           });
           view.logger().level(-1);
-          view.toSVG().then(svg => {
-            container.innerHTML = svg;
-          });
+          view
+            .toSVG()
+            .then(svg => {
+              container.innerHTML = svg;
+            })
+            .catch(e => {
+              logCollector?.error(`Shape map render error: ${e}`);
+            });
         },
 
         getMetadata: () => ({type: 'shape_map', field}),

@@ -21,6 +21,7 @@ import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
+import type {RenderLogCollector} from '@/component/render-log-collector';
 
 function getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
   if (field.isString()) return 'nominal';
@@ -98,6 +99,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
 
     create: (field: Field): DOMRenderPluginInstance => {
       let vegaConfigOverride: Record<string, unknown> = {};
+      let logCollector: RenderLogCollector | undefined;
 
       return {
         name: 'segment_map',
@@ -111,6 +113,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
         ): void => {
           vegaConfigOverride =
             options.getVegaConfigOverride?.('segment_map') ?? {};
+          logCollector = options.renderFieldMetadata.logCollector;
         },
 
         renderToDOM: (container: HTMLElement, props: RenderProps): void => {
@@ -135,6 +138,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
               ? {
                   field: colorField.name,
                   type: colorType,
+                  axis: {title: colorField.name},
                   scale: getColorScale(colorType, false),
                 }
               : undefined;
@@ -179,9 +183,14 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
             renderer: 'none',
           });
           view.logger().level(-1);
-          view.toSVG().then(svg => {
-            container.innerHTML = svg;
-          });
+          view
+            .toSVG()
+            .then(svg => {
+              container.innerHTML = svg;
+            })
+            .catch(e => {
+              logCollector?.error(`Segment map render error: ${e}`);
+            });
         },
 
         getMetadata: () => ({type: 'segment_map', field}),

@@ -16,11 +16,12 @@ import * as lite from 'vega-lite';
 import * as vega from 'vega';
 import {mergeVegaConfigs} from '@/component/vega/merge-vega-configs';
 import {DEFAULT_SPEC} from '@/html/vega_spec';
-import {getColorScale} from '@/html/utils';
+import {getColorScale, normalizeToTimezone} from '@/html/utils';
 import type {
   GetResultMetadataOptions,
   RenderMetadata,
 } from '@/component/render-result-metadata';
+import type {RenderLogCollector} from '@/component/render-log-collector';
 
 function getDataType(
   field: Field
@@ -38,11 +39,18 @@ function getDataValue(data: Cell): Date | string | number | null {
   throw new Error('Invalid field type for scatter chart.');
 }
 
-function mapData(rows: RecordCell[]): Record<string, unknown>[] {
+function mapData(
+  rows: RecordCell[],
+  timezone: string | undefined
+): Record<string, unknown>[] {
   return rows.map(row => {
     const mapped: Record<string, unknown> = {};
     for (const f of row.field.fields) {
-      mapped[f.name] = getDataValue(row.column(f.name));
+      let value = getDataValue(row.column(f.name));
+      if (value instanceof Date) {
+        value = normalizeToTimezone(value, timezone);
+      }
+      mapped[f.name] = value;
     }
     return mapped;
   });
@@ -71,6 +79,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
 
     create: (field: Field): DOMRenderPluginInstance => {
       let vegaConfigOverride: Record<string, unknown> = {};
+      let logCollector: RenderLogCollector | undefined;
 
       return {
         name: 'scatter_chart',
@@ -84,6 +93,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
         ): void => {
           vegaConfigOverride =
             options.getVegaConfigOverride?.('scatter_chart') ?? {};
+          logCollector = options.renderFieldMetadata.logCollector;
         },
 
         renderToDOM: (container: HTMLElement, props: RenderProps): void => {
@@ -107,21 +117,32 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
           const sizeType = sizeField ? getDataType(sizeField) : undefined;
           const shapeType = shapeField ? getDataType(shapeField) : undefined;
 
+          const timezone = field.root().queryTimezone;
+
           const colorDef =
             colorField !== undefined
               ? {
                   field: colorField.name,
                   type: colorType,
+                  axis: {title: colorField.name},
                   scale: getColorScale(colorType, false),
                 }
               : {value: '#4285F4'};
 
           const sizeDef = sizeField
-            ? {field: sizeField.name, type: sizeType}
+            ? {
+                field: sizeField.name,
+                type: sizeType,
+                axis: {title: sizeField.name},
+              }
             : undefined;
 
           const shapeDef = shapeField
-            ? {field: shapeField.name, type: shapeType}
+            ? {
+                field: shapeField.name,
+                type: shapeType,
+                axis: {title: shapeField.name},
+              }
             : undefined;
 
           const xSort = xType === 'nominal' ? null : undefined;
@@ -130,19 +151,21 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
           const spec: lite.TopLevelSpec = {
             ...DEFAULT_SPEC,
             ...getSize(field),
-            data: {values: mapData(data.rows)},
+            data: {values: mapData(data.rows, timezone)},
             mark: 'point',
             encoding: {
               x: {
                 field: xField.name,
                 type: xType,
                 sort: xSort,
+                axis: {title: xField.name},
                 scale: {zero: false},
               },
               y: {
                 field: yField.name,
                 type: yType,
                 sort: ySort,
+                axis: {title: yField.name},
                 scale: {zero: false},
               },
               size: sizeDef,
@@ -159,9 +182,14 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
             renderer: 'none',
           });
           view.logger().level(-1);
-          view.toSVG().then(svg => {
-            container.innerHTML = svg;
-          });
+          view
+            .toSVG()
+            .then(svg => {
+              container.innerHTML = svg;
+            })
+            .catch(e => {
+              logCollector?.error(`Scatter chart render error: ${e}`);
+            });
         },
 
         getMetadata: () => ({type: 'scatter_chart', field}),
