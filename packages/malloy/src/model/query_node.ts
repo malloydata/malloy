@@ -414,6 +414,8 @@ export class QueryStruct {
       } else if (isAtomic(field) || isJoinedSource(field)) {
         this.addFieldToNameMap(as, this.makeQueryField(field));
       } else {
+        // According to the type system this should be impossible, but we have seen this happen
+        // in the wild, so we are leaving error handling here to help debug if it happens again.
         throw new Error(
           `Unexpected field '${as}' in addFieldsFromFieldList: ${JSON.stringify(field)}`
         );
