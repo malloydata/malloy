@@ -414,7 +414,9 @@ export class QueryStruct {
       } else if (isAtomic(field) || isJoinedSource(field)) {
         this.addFieldToNameMap(as, this.makeQueryField(field));
       } else {
-        throw new Error('mtoy did nit add field');
+        throw new Error(
+          `Unexpected field '${as}' in addFieldsFromFieldList: ${JSON.stringify(field)}`
+        );
       }
     }
     // if we don't have distinct key yet for this struct, add it.
