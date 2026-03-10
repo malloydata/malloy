@@ -49,6 +49,9 @@
     },
     {
       "path": "../packages/malloy-db-publisher"
+    },
+    {
+      "path": "../packages/malloy-render-validator"
     }
   ]
 }

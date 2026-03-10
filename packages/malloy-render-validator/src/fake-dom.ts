@@ -8,7 +8,9 @@
  * Provides just enough surface for the renderer's UMD bundle to load
  * without crashing. Not suitable for actual rendering.
  *
- * Importing this module auto-installs globals if they are absent.
+ * Use `installFakeDom()` before loading the renderer, then
+ * `removeFakeDom()` afterwards so other libraries (e.g. axios)
+ * don't mistakenly believe they are running in a browser.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -87,25 +89,34 @@ class Document extends Node {
   }
 }
 
+// Track which globals we installed so we only remove ours.
+let installed = false;
+let hadDocument = false;
+let hadNavigator = false;
+let hadWindow = false;
+
 /**
- * Install minimal DOM globals if not already present.
- * Called automatically on import; safe to call again.
+ * Install minimal DOM globals. Call before loading the renderer UMD.
  */
-export function ensureFakeDom(): void {
+export function installFakeDom(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = globalThis as any;
 
-  if (typeof g.document === 'undefined') {
+  hadDocument = typeof g.document !== 'undefined';
+  hadNavigator = typeof g.navigator !== 'undefined';
+  hadWindow = typeof g.window !== 'undefined';
+
+  if (!hadDocument) {
     g.document = new Document();
   }
 
-  if (typeof g.navigator === 'undefined') {
+  if (!hadNavigator) {
     g.navigator = {userAgent: ''};
   } else if (typeof g.navigator.userAgent === 'undefined') {
     g.navigator.userAgent = '';
   }
 
-  if (typeof g.window === 'undefined') {
+  if (!hadWindow) {
     g.window = Object.assign(g, {
       addEventListener: noop,
       removeEventListener: noop,
@@ -114,7 +125,36 @@ export function ensureFakeDom(): void {
       cancelAnimationFrame: noop,
     });
   }
+
+  installed = true;
 }
 
-// Auto-install on import
-ensureFakeDom();
+/**
+ * Remove the DOM globals we installed, so libraries loaded later
+ * (e.g. axios via trino-client) don't think they're in a browser.
+ */
+export function removeFakeDom(): void {
+  if (!installed) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g = globalThis as any;
+
+  if (!hadWindow) {
+    delete g.window;
+    // Clean up the properties we merged onto globalThis
+    delete g.addEventListener;
+    delete g.removeEventListener;
+    delete g.getComputedStyle;
+    delete g.requestAnimationFrame;
+    delete g.cancelAnimationFrame;
+  }
+
+  if (!hadDocument) {
+    delete g.document;
+  }
+
+  if (!hadNavigator) {
+    delete g.navigator;
+  }
+
+  installed = false;
+}

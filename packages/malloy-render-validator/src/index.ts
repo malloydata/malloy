@@ -5,11 +5,19 @@
 
 // Fake DOM must be installed before the renderer UMD loads,
 // because Solid.js (bundled inside) touches DOM globals at init time.
-// CJS require() is synchronous, so this is guaranteed to run first.
-import './fake-dom';
+// We use explicit require() so we can install, load, then remove
+// the fake DOM — preventing other libraries (e.g. axios) from
+// mistakenly thinking they're in a browser.
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {installFakeDom, removeFakeDom} = require('./fake-dom');
+installFakeDom();
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {MalloyRenderer} = require('@malloydata/render');
+removeFakeDom();
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
-import {MalloyRenderer} from '@malloydata/render';
 
 /**
  * Validate renderer tags on a Malloy result without executing the query
