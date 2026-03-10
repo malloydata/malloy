@@ -294,9 +294,7 @@ describe('Postgres tests', () => {
       `
       );
       // Mimic MCP server pattern: getPreparedResult() then run()
-      const runnable = model.model.loadQuery(
-        'run: orders -> explore_totals'
-      );
+      const runnable = model.model.loadQuery('run: orders -> explore_totals');
       const preparedResult = await runnable.getPreparedResult();
       expect(preparedResult).toBeDefined();
       const result = await runnable.run();
