@@ -417,7 +417,9 @@ export class QueryStruct {
         // According to the type system this should be impossible, but we have seen this happen
         // in the wild, so we are leaving error handling here to help debug if it happens again.
         throw new Error(
-          `Unexpected field '${as}' in addFieldsFromFieldList: ${JSON.stringify(field)}`
+          `Unexpected field '${as}' in addFieldsFromFieldList`
+          + `\n  field: ${JSON.stringify(field)}`
+          + `\n  structDef: ${JSON.stringify(this.structDef)}`
         );
       }
     }
