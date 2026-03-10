@@ -73,10 +73,9 @@ export class RenderFieldMetadata {
           plugins.push(pluginInstance);
         }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `Plugin ${factory.name} failed to instantiate for field ${field.key}:`,
-          error
+        const msg = error instanceof Error ? error.message : String(error);
+        this.logCollector.error(
+          `Plugin ${factory.name} failed for field '${field.key}': ${msg}`
         );
         if (this.onPluginCreateError) {
           this.onPluginCreateError(error as Error, factory, field, plugins);

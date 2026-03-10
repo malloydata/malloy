@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {annotationToTaglines} from '../annotation';
 import type {
   InfoConnection as LegacyInfoConnection,
   Connection as LegacyConnection,
@@ -14,11 +12,7 @@ import type {
 import type {Result} from './foundation';
 import type {Expr} from '../model';
 import {type QueryData, type QueryRecord, type QueryValue} from '../model';
-import {
-  convertFieldInfos,
-  getResultStructMetadataAnnotation,
-  writeLiteralToTag,
-} from '../to_stable';
+import {convertFieldInfos} from '../to_stable';
 import type {Connection, InfoConnection} from './connection';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 import type {LogMessage} from '../lang';
@@ -199,62 +193,7 @@ export function wrapResult(result: Result): Malloy.Result {
   const structs = result._queryResult.structs;
   const struct = structs[structs.length - 1];
   const schema = {fields: convertFieldInfos(struct, struct.fields)};
-  const annotations = annotationToTaglines(result.annotation).map(l => ({
-    value: l,
-  }));
-  const metadataAnnot = struct.resultMetadata
-    ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
-    : undefined;
-  if (metadataAnnot) {
-    annotations.push(metadataAnnot);
-  }
-  annotations.push(...(struct.resultMetadata ? [] : []));
-
-  const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
-  if (result.sourceExplore) {
-    sourceMetadataTag.set(['source', 'name'], result.sourceExplore.name);
-  }
-  if (result._sourceArguments) {
-    const args = Object.entries(result._sourceArguments);
-    for (let i = 0; i < args.length; i++) {
-      const [name, value] = args[i];
-      const literal: Malloy.LiteralValue | undefined = nodeToLiteralValue(
-        value.value
-      );
-      if (literal !== undefined) {
-        writeLiteralToTag(
-          sourceMetadataTag,
-          ['source', 'parameters', i, 'value'],
-          literal
-        );
-      }
-      sourceMetadataTag.set(['source', 'parameters', i, 'name'], name);
-    }
-  }
-  annotations.push({value: sourceMetadataTag.toString()});
-
-  annotations.push({
-    value: Tag.withPrefix('#(malloy) ')
-      .set(['query_name'], result.resultExplore.name)
-      .toString(),
-  });
-
-  const modelAnnotations = annotationToTaglines(
-    result._modelDef.annotation
-  ).map(l => ({
-    value: l,
-  }));
-
-  return {
-    schema,
-    data: mapData(result.data.rawData, schema),
-    connection_name: result.connectionName,
-    annotations: annotations.length > 0 ? annotations : undefined,
-    model_annotations:
-      modelAnnotations.length > 0 ? modelAnnotations : undefined,
-    query_timezone: result.data.field.queryTimezone,
-    sql: result.sql,
-  };
+  return result.toStableResult(mapData(result.data.rawData, schema));
 }
 
 export function nodeToLiteralValue(

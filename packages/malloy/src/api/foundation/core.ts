@@ -56,9 +56,16 @@ import {
   minimalBuildGraph,
 } from '../../model/persist_utils';
 import {resolveSourceID, mkBuildID} from '../../model/source_def_utils';
-import type {Tag} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
 import type {MalloyTagParse, TagParseSpec} from '../../annotation';
 import {annotationToTag, annotationToTaglines} from '../../annotation';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  convertFieldInfos,
+  getResultStructMetadataAnnotation,
+  writeLiteralToTag,
+} from '../../to_stable';
+import {nodeToLiteralValue} from '../util';
 import {locationContainsPosition} from '../../lang/utils';
 import {ReferenceList} from '../../lang/reference-list';
 import type {Taggable} from '../../taggable';
@@ -1647,5 +1654,72 @@ export class PreparedResult implements Taggable {
    */
   public get hasSchema(): boolean {
     return this.inner.structs.length > 0;
+  }
+
+  /**
+   * Convert to the stable Malloy.Result interface format.
+   * Pass data to include query results, or omit for schema-only
+   * (e.g. headless tag validation).
+   */
+  public toStableResult(data?: Malloy.Data): Malloy.Result {
+    const structs = this.inner.structs;
+    const struct = structs[structs.length - 1];
+    const schema = {fields: convertFieldInfos(struct, struct.fields)};
+    const annotations = annotationToTaglines(this.inner.annotation).map(l => ({
+      value: l,
+    }));
+    const metadataAnnot = struct.resultMetadata
+      ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
+      : undefined;
+    if (metadataAnnot) {
+      annotations.push(metadataAnnot);
+    }
+
+    const sourceMetadataTag = Tag.withPrefix('#(malloy) ');
+    const sourceExplore = this.sourceExplore;
+    if (sourceExplore) {
+      sourceMetadataTag.set(['source', 'name'], sourceExplore.name);
+    }
+    if (this._sourceArguments) {
+      const args = Object.entries(this._sourceArguments);
+      for (let i = 0; i < args.length; i++) {
+        const [name, value] = args[i];
+        const literal: Malloy.LiteralValue | undefined = nodeToLiteralValue(
+          value.value
+        );
+        if (literal !== undefined) {
+          writeLiteralToTag(
+            sourceMetadataTag,
+            ['source', 'parameters', i, 'value'],
+            literal
+          );
+        }
+        sourceMetadataTag.set(['source', 'parameters', i, 'name'], name);
+      }
+    }
+    annotations.push({value: sourceMetadataTag.toString()});
+
+    annotations.push({
+      value: Tag.withPrefix('#(malloy) ')
+        .set(['query_name'], this.inner.queryName || struct.name)
+        .toString(),
+    });
+
+    const modelAnnotations = annotationToTaglines(this.modelDef.annotation).map(
+      l => ({
+        value: l,
+      })
+    );
+
+    return {
+      schema,
+      data,
+      connection_name: this.inner.connectionName,
+      annotations: annotations.length > 0 ? annotations : undefined,
+      model_annotations:
+        modelAnnotations.length > 0 ? modelAnnotations : undefined,
+      query_timezone: struct.queryTimezone,
+      sql: this.inner.sql,
+    };
   }
 }

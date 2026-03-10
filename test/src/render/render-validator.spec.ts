@@ -1,24 +1,9 @@
-import {API} from '@malloydata/malloy';
 import {runtimeFor} from '../runtimes';
+import {validateRenderTags} from '@malloydata/render-validator';
 
 const runtime = runtimeFor('duckdb');
 
-// Dynamic import for malloy-render (has Solid.js transforms, needs window/navigator)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let MalloyRenderer: any;
-
-beforeAll(async () => {
-  // @ts-expect-error malloy-render UMD bundle requires window/navigator globals
-  global.window = global.document.defaultView;
-  global.navigator = global.window.navigator;
-  MalloyRenderer = (await import('@malloydata/render')).MalloyRenderer;
-});
-
 afterAll(async () => {
-  // @ts-expect-error cleaning up browser globals
-  delete global.window;
-  // @ts-expect-error cleaning up browser globals
-  delete global.navigator;
   await runtime.connection.close();
 });
 
@@ -28,18 +13,11 @@ interface LogMessage {
 }
 
 async function getValidationLogs(malloySource: string): Promise<LogMessage[]> {
-  const result = await runtime
+  const pr = await runtime
     .loadModel(malloySource)
     .loadQueryByName('q')
-    .run();
-  const malloyResult = API.util.wrapResult(result);
-  const renderer = new MalloyRenderer();
-  const viz = renderer.createViz();
-  // Silence plugin instantiation warnings during validation tests
-  const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-  viz.setResult(malloyResult);
-  spy.mockRestore();
-  return viz.getLogs();
+    .getPreparedResult();
+  return validateRenderTags(pr.toStableResult());
 }
 
 function expectError(logs: LogMessage[], substring: string) {

@@ -21,6 +21,7 @@
       "packages/malloy-connections",
       "packages/malloy-malloy-sql",
       "packages/malloy-render",
+      "packages/malloy-render-validator",
       "packages/malloy-syntax-highlight",
       "test",
       "profiler"
