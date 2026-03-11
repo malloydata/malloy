@@ -63,10 +63,12 @@ jobs:
               npm publish -w $package --access=public
             fi
           done
-          # Make sure we're current
-          git pull origin $BRANCH_NAME
           # Create GitHub Release with auto-generated notes from PRs
-          gh release create v$VERSION --generate-notes --title "v$VERSION"
+          if gh release view v$VERSION &>/dev/null; then
+            echo "SKIPPED release v$VERSION (already exists)"
+          else
+            gh release create v$VERSION --generate-notes --title "v$VERSION"
+          fi
           # Bump version
           npx lerna version patch --exact --yes --no-push --no-git-tag-version
           # Fix up package-lock.json
@@ -76,6 +78,7 @@ jobs:
           echo Updating to $VERSION
           # Push new version to github
           git commit -sam "Version $VERSION-dev [skip ci]"
+          git pull --rebase origin $BRANCH_NAME
           git push origin $BRANCH_NAME
         env:
           CI: true
