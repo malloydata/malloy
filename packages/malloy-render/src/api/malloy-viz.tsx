@@ -27,6 +27,7 @@ export class MalloyViz {
   private logCollector = new RenderLogCollector();
   private readyCallbacks: (() => void)[] = [];
   private isReady = false;
+  private unreadTagsCollected = false;
 
   constructor(
     private options: MalloyRendererOptions,
@@ -230,12 +231,10 @@ export class MalloyViz {
   }
 
   /**
-   * Get log messages from the most recent render pass.
-   * Includes warnings for unread (unknown) tags and semantic errors.
-   * For complete results including unread tag warnings,
-   * call this from an `onReady` callback.
+   * Get log messages including semantic errors and unread tag warnings.
    */
   getLogs(): Malloy.LogMessage[] {
+    this.collectUnreadTagWarnings();
     return this.logCollector.getLogs();
   }
 
@@ -250,9 +249,11 @@ export class MalloyViz {
 
   /**
    * Walk all field tags and collect warnings for unread properties.
+   * Safe to call multiple times; only collects once.
    */
   private collectUnreadTagWarnings(): void {
-    if (!this.metadata) return;
+    if (this.unreadTagsCollected || !this.metadata) return;
+    this.unreadTagsCollected = true;
     for (const field of this.metadata.getAllFields()) {
       this.logCollector.collectUnreadTags(field.tag, field.name);
     }

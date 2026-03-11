@@ -391,4 +391,19 @@ describe('render tag validation', () => {
       expectNoWarnings(logs);
     });
   });
+
+  describe('unknown tags produce warnings', () => {
+    it('warns on unknown tag # xyzzy', async () => {
+      const logs = await getValidationLogs(`
+        query: q is ${NUM_FIELD} -> {
+          select:
+            # xyzzy
+            val
+        }
+      `);
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings[0].message).toContain('xyzzy');
+    });
+  });
 });
