@@ -87,6 +87,27 @@ describe('misc tests for regressions that have no better home', () => {
       run: model -> ranking
     `).toMatchResult(testModel, {});
   });
+
+  test('index query piped to select compiles', async () => {
+    // Regression: piping an index query into a select stage caused a
+    // __distinct_key error in the compiler.
+    await expect(`
+      run: duckdb.table('malloytest.flights') extend {
+        join_many: carriers is duckdb.table('malloytest.carriers') on carriers.code = carrier
+        measure: total_flights is count()
+      } -> {
+        index:
+          *
+          carriers.*
+        by total_flights
+        sample: 5000
+      } -> {
+        select: *
+        where: fieldValue ~ 'United%'
+        order_by: weight desc
+      }
+    `).toMatchResult(testModel, {});
+  });
 });
 
 afterAll(async () => {

@@ -146,6 +146,14 @@ export class IndexBuilder implements QueryBuilder {
         : emptyFieldUsage();
     indexSegment.fieldUsage = mergeFieldUsage(fromFieldUsage, this.fieldUsage);
 
+    // Index queries always compute an aggregate for weight (at minimum COUNT(*)).
+    // The compiler needs a uniqueKeyRequirement on the base path so that
+    // symmetric aggregation is enabled when joins are present.
+    indexSegment.fieldUsage.push({
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+
     return indexSegment;
   }
 }
