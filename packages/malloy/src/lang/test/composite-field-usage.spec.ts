@@ -1109,6 +1109,59 @@ describe('field usage with compiler extensions', () => {
     });
     expect(found, message).toBeTruthy();
   });
+  test('inline count and calculate preserve uniqueKeyRequirement', () => {
+    // When count() and rank() are both inline in the same query, their
+    // fieldUsage entries both have path []. The expandFieldUsage init loop
+    // must not overwrite one with the other.
+    const mTest = model`
+      run: ab -> {
+        group_by: astr
+        aggregate: c is count()
+        calculate: r is rank()
+      }
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    let [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+    [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      analyticFunctionUse: true,
+    });
+    expect(found, message).toBeTruthy();
+  });
+  test('predefined count in view with calculate preserves uniqueKeyRequirement', () => {
+    // When a predefined measure (count()) is used in a view alongside
+    // calculate (rank()), the uniqueKeyRequirement from the measure's
+    // field def must survive expansion even though analyticFunctionUse
+    // is on the same path.
+    const mTest = model`
+      source: f is ab extend {
+        measure: c is count()
+        view: ranking is {
+          group_by: astr
+          aggregate: c
+          calculate: r is rank()
+        }
+      }
+      run: f -> ranking
+    `;
+    expect(mTest).toTranslate();
+    const mq = mTest.translator.getQuery(0);
+    let [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      uniqueKeyRequirement: {isCount: true},
+    });
+    expect(found, message).toBeTruthy();
+    [found, message] = checkForFieldUsage(mq, {
+      path: [],
+      analyticFunctionUse: true,
+    });
+    expect(found, message).toBeTruthy();
+  });
   it('transitive joins activated, in order', () => {
     const joinModel = model`
         source: root is a extend { dimension: id is 1 }
@@ -1317,5 +1370,24 @@ describe('field usage with compiler extensions', () => {
     expect(found, message).toBeTruthy();
     [found, message] = checkForFieldUsage(mq, {path: ['c', 'af']});
     expect(found, message).toBeTruthy();
+  });
+
+  test('composite with renamed field resolves correctly', () => {
+    // When a composite input renames a field (airport_code is code),
+    // querying the renamed field should resolve to that input without
+    // also requiring the original field name.
+    const m = model`
+      ##! experimental.composite_sources
+      source: ap is _db_.table('malloytest.airports')
+      source: state_facts is ap extend {
+        dimension: state_pop is 1
+      }
+      source: my_airports is ap extend {
+        rename: airport_code is code
+      }
+      source: comp is compose(state_facts, my_airports)
+      run: comp -> { select: airport_code, state }
+    `;
+    expect(m).toTranslate();
   });
 });

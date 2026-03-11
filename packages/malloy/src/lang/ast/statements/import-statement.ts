@@ -117,7 +117,7 @@ export class ImportStatement
         const importedModel = trans.importModelDef(this.fullURL);
         if (importedModel) {
           const importAll = this.empty();
-          const explicitImport: Record<string, string> = {};
+          const explicitImport: Record<string, string[]> = {};
           for (const importOne of this.list) {
             const dstName = importOne.text;
             const srcName = importOne.from ? importOne.from.text : dstName;
@@ -132,14 +132,17 @@ export class ImportStatement
                 `Cannot redefine '${dstName}'`
               );
             } else {
-              explicitImport[srcName] = dstName;
+              if (explicitImport[srcName] === undefined) {
+                explicitImport[srcName] = [];
+              }
+              explicitImport[srcName].push(dstName);
             }
           }
           const neededSourceIDs = new Set<SourceID>();
           for (const srcName of importedModel.exports) {
-            const picked = explicitImport[srcName];
-            const dstName = picked || srcName;
-            if (importAll || picked) {
+            const pickedNames = explicitImport[srcName];
+            const dstNames = pickedNames || (importAll ? [srcName] : []);
+            for (const dstName of dstNames) {
               const importMe = {
                 ...safeRecordGet(importedModel.contents, srcName)!,
               };

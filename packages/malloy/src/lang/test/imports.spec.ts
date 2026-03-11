@@ -287,6 +287,21 @@ source: botProjQSrc is botProjQ
       errorMessage("Cannot find 'bb', not imported")
     );
   });
+  test('selective import with rename of same source', () => {
+    // import { aa, bb is aa } should import aa as itself AND as bb
+    const docParse = new TestTranslator('import { aa, bb is aa } from "child"');
+    const xr = docParse.unresolved();
+    expect(docParse).toParse();
+    expect(xr).toMatchObject({urls: ['internal://test/langtests/child']});
+    docParse.update({
+      urls: {'internal://test/langtests/child': 'source: aa is a'},
+    });
+    expect(docParse).toTranslate();
+    const aa = docParse.getSourceDef('aa');
+    expect(aa).toBeDefined();
+    const bb = docParse.getSourceDef('bb');
+    expect(bb).toBeDefined();
+  });
   test('selective import of source, no-redefinition', () => {
     const doc = model`
       import { cc is ${'bb'} } from "child"

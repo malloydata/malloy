@@ -293,7 +293,6 @@ export class QueryQuery extends QueryField {
           resultRoot.isComplexQuery = true;
           resultRoot.queryUsesPartitioning = true;
         }
-        continue;
       }
       if (usage.uniqueKeyRequirement) {
         if (usage.path.length === 0) {

@@ -486,10 +486,29 @@ function expandFieldUsage(
   const activeJoinGraph: Record<string, JoinDependency> = {};
   const ungroupings: AggregateUngrouping[] = [];
 
+  function mergeIntoSeen(usage: FieldUsage): boolean {
+    const key = pathToKey('field', usage.path);
+    if (!seen[key]) {
+      seen[key] = {...usage};
+      return true;
+    }
+    const existing = seen[key];
+    if (usage.uniqueKeyRequirement) {
+      existing.uniqueKeyRequirement = {
+        isCount:
+          existing.uniqueKeyRequirement?.isCount ||
+          usage.uniqueKeyRequirement.isCount,
+      };
+    }
+    if (usage.analyticFunctionUse) {
+      existing.analyticFunctionUse = true;
+    }
+    return false;
+  }
+
   // Initialize: mark original inputs and add them to processing queue
   for (const usage of fieldUsage) {
-    const seenKey = pathToKey('field', usage.path);
-    seen[seenKey] = usage;
+    mergeIntoSeen(usage);
     toProcess.push(usage);
   }
 
@@ -510,16 +529,8 @@ function expandFieldUsage(
       // Add the atomic field's dependencies to the queue
       const refPath = reference.path.slice(0, -1);
       for (const usage of joinedFieldUsage(refPath, fieldUsage)) {
-        const key = pathToKey('field', usage.path);
-        if (!seen[key]) {
-          seen[key] = usage;
+        if (mergeIntoSeen(usage)) {
           toProcess.push(usage);
-        } else if (usage.uniqueKeyRequirement) {
-          seen[key].uniqueKeyRequirement = {
-            isCount:
-              usage.uniqueKeyRequirement.isCount ??
-              seen[key].uniqueKeyRequirement?.isCount,
-          };
         }
       }
 

@@ -58,6 +58,13 @@ export class RenameSpaceField extends SpaceField {
       ...returnFieldDef,
       as: this.newName,
       location: this.location,
+      fieldUsage: returnFieldDef.fieldUsage?.map(u => ({
+        ...u,
+        path:
+          u.path[0] === (returnFieldDef.as ?? returnFieldDef.name)
+            ? [this.newName, ...u.path.slice(1)]
+            : u.path,
+      })),
     };
   }
 
