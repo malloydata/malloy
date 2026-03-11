@@ -55,8 +55,13 @@ jobs:
           echo Publishing $PACKAGES
           VERSION=$(jq -r .version ./lerna.json)
           for package in $PACKAGES; do
-            echo Publishing $package $VERSION
-            npm publish -w $package --access=public
+            PKG_NAME=$(jq -r .name ./$package/package.json)
+            if npm view "$PKG_NAME@$VERSION" version &>/dev/null; then
+              echo "SKIPPED $PKG_NAME@$VERSION (already published)"
+            else
+              echo Publishing $PKG_NAME $VERSION
+              npm publish -w $package --access=public
+            fi
           done
           # Make sure we're current
           git pull origin $BRANCH_NAME

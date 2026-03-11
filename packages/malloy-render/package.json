@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.356",
+  "version": "0.0.357",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/module/index.d.ts",
@@ -29,8 +29,8 @@
     "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-interfaces": "0.0.356",
-    "@malloydata/malloy-tag": "0.0.356",
+    "@malloydata/malloy-interfaces": "0.0.357",
+    "@malloydata/malloy-tag": "0.0.357",
     "@tanstack/solid-virtual": "^3.10.4",
     "lodash": "^4.17.20",
     "luxon": "^3.5.0",
@@ -42,8 +42,8 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@malloydata/db-duckdb": "0.0.356",
-    "@malloydata/malloy": "0.0.356",
+    "@malloydata/db-duckdb": "0.0.357",
+    "@malloydata/malloy": "0.0.357",
     "@storybook/addon-essentials": "^8.6.15",
     "@storybook/addon-interactions": "^8.6.15",
     "@storybook/addon-links": "^8.6.15",
