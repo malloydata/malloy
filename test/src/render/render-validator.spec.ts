@@ -297,6 +297,42 @@ describe('render tag validation', () => {
       );
       expect(bigValueGroupByErrors).toHaveLength(0);
     });
+
+    it('no error when aggregate has big_value comparison config', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val") extend {
+          # big_value
+          view: q is {
+            aggregate: total is count()
+            aggregate:
+              # big_value { comparison_field=total }
+              prior is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
+
+    it('no error when aggregate has big_value sparkline config', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
+          # big_value
+          view: q is {
+            aggregate: total is count()
+            # big_value { sparkline=trend }
+            aggregate: total2 is count()
+            # hidden # line_chart { size=spark }
+            nest: trend is {
+              group_by: dt
+              aggregate: c is count()
+            }
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
   });
 
   describe('no errors for valid tags', () => {

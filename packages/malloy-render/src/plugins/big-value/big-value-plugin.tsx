@@ -191,6 +191,15 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
         fieldType === FieldType.Record;
 
       if (hasBigValueTag && !isValidType) {
+        // Child config tags (sparkline, comparison_field) are read by the
+        // parent big_value plugin — not a match request for this field.
+        const bigValueTag = fieldTag.tag('big_value');
+        if (
+          bigValueTag?.has('sparkline') ||
+          bigValueTag?.has('comparison_field')
+        ) {
+          return false;
+        }
         throw new Error(
           'Malloy Big Value: field must be a query result (repeated record or record)'
         );
