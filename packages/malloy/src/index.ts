@@ -257,6 +257,7 @@ export type {
   ConnectionConfigEntry,
   ConnectionsConfig,
   ConfigValue,
+  JsonConfigValue,
   ValueRef,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';

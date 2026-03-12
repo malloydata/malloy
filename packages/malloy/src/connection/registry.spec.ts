@@ -73,6 +73,21 @@ describe('connection registry', () => {
         },
       ],
     });
+    registerConnectionType('jsondb', {
+      displayName: 'JsonDB',
+      factory: async (config: ConnectionConfig) =>
+        mockConnection(config.name, config),
+      properties: [
+        {name: 'host', displayName: 'Host', type: 'string', optional: true},
+        {name: 'ssl', displayName: 'SSL', type: 'json', optional: true},
+        {
+          name: 'headers',
+          displayName: 'Headers',
+          type: 'json',
+          optional: true,
+        },
+      ],
+    });
   });
 
   test('getConnectionProperties returns properties for registered type', () => {
@@ -331,6 +346,106 @@ describe('connection registry', () => {
         _config: ConnectionConfig;
       };
       expect(conn._config['password']).toBeUndefined();
+    });
+  });
+
+  describe('JSON config values', () => {
+    test('passes JSON objects through to factory', async () => {
+      const sslConfig = {rejectUnauthorized: false};
+      const headers = {'X-Custom': 'value'};
+      const config = {
+        connections: {
+          mydb: {
+            is: 'jsondb',
+            host: 'localhost',
+            ssl: sslConfig,
+            headers,
+          },
+        },
+      };
+      const lookup = createConnectionsFromConfig(config);
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      expect(conn._config['host']).toBe('localhost');
+      expect(conn._config['ssl']).toEqual({rejectUnauthorized: false});
+      expect(conn._config['headers']).toEqual({'X-Custom': 'value'});
+    });
+
+    test('does not treat JSON objects as env references', async () => {
+      const config = {
+        connections: {
+          mydb: {
+            is: 'jsondb',
+            ssl: {rejectUnauthorized: false, ca: 'cert-data'},
+          },
+        },
+      };
+      const lookup = createConnectionsFromConfig(config);
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      // Should pass through as-is, not attempt env resolution
+      expect(conn._config['ssl']).toEqual({
+        rejectUnauthorized: false,
+        ca: 'cert-data',
+      });
+    });
+
+    test('does not resolve {env: "..."} on json-typed properties', async () => {
+      process.env['production'] = 'should-not-resolve';
+      try {
+        const config = {
+          connections: {
+            mydb: {
+              is: 'jsondb',
+              ssl: {env: 'production'},
+            },
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        // ssl is type:'json', so {env: "production"} is data, not a ValueRef
+        expect(conn._config['ssl']).toEqual({env: 'production'});
+      } finally {
+        delete process.env['production'];
+      }
+    });
+
+    test('still resolves single-key env references', async () => {
+      process.env['TEST_JSON_HOST'] = 'from-env';
+      try {
+        const config = {
+          connections: {
+            mydb: {is: 'jsondb', host: {env: 'TEST_JSON_HOST'}},
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        expect(conn._config['host']).toBe('from-env');
+      } finally {
+        delete process.env['TEST_JSON_HOST'];
+      }
+    });
+
+    test('round-trips JSON values through read/write', () => {
+      const original = {
+        connections: {
+          mydb: {
+            is: 'jsondb',
+            host: 'localhost',
+            ssl: {rejectUnauthorized: false},
+            headers: {'X-Tag': 'test'},
+          },
+        },
+      };
+      const json = writeConnectionsConfig(original);
+      const parsed = readConnectionsConfig(json);
+      expect(parsed).toEqual(original);
     });
   });
 });

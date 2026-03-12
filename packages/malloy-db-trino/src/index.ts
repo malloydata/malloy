@@ -35,32 +35,104 @@ import type {
   ConnectionPropertyDefinition,
 } from '@malloydata/malloy';
 import {TrinoConnection, PrestoConnection} from './trino_connection';
-import type {TrinoConnectionConfiguration} from './trino_connection';
+import type {
+  TrinoConnectionConfiguration,
+  TrinoExtraConfigKey,
+} from './trino_connection';
 
-function configToTrinoConfig(config: ConnectionConfig): {
-  name: string;
-  trinoConfig: TrinoConnectionConfiguration;
-} {
+const trinoPassThroughKeys: TrinoExtraConfigKey[] = [
+  'ssl',
+  'session',
+  'extraCredential',
+  'extraHeaders',
+];
+
+function configToBaseConfig(
+  config: ConnectionConfig
+): TrinoConnectionConfiguration {
   return {
-    name: config.name,
-    trinoConfig: {
-      server:
-        typeof config['server'] === 'string' ? config['server'] : undefined,
-      port: typeof config['port'] === 'number' ? config['port'] : undefined,
-      catalog:
-        typeof config['catalog'] === 'string' ? config['catalog'] : undefined,
-      schema:
-        typeof config['schema'] === 'string' ? config['schema'] : undefined,
-      user: typeof config['user'] === 'string' ? config['user'] : undefined,
-      password:
-        typeof config['password'] === 'string' ? config['password'] : undefined,
-      setupSQL:
-        typeof config['setupSQL'] === 'string' ? config['setupSQL'] : undefined,
-    },
+    server: typeof config['server'] === 'string' ? config['server'] : undefined,
+    port: typeof config['port'] === 'number' ? config['port'] : undefined,
+    catalog:
+      typeof config['catalog'] === 'string' ? config['catalog'] : undefined,
+    schema: typeof config['schema'] === 'string' ? config['schema'] : undefined,
+    user: typeof config['user'] === 'string' ? config['user'] : undefined,
+    password:
+      typeof config['password'] === 'string' ? config['password'] : undefined,
+    setupSQL:
+      typeof config['setupSQL'] === 'string' ? config['setupSQL'] : undefined,
+    source: typeof config['source'] === 'string' ? config['source'] : undefined,
   };
 }
 
+function configToTrinoConfig(
+  config: ConnectionConfig
+): TrinoConnectionConfiguration {
+  const base = configToBaseConfig(config);
+  const extraConfig: Partial<Record<TrinoExtraConfigKey, unknown>> = {};
+  for (const key of trinoPassThroughKeys) {
+    if (config[key] !== undefined) {
+      extraConfig[key] = config[key];
+    }
+  }
+  if (Object.keys(extraConfig).length > 0) {
+    base.extraConfig = extraConfig;
+  }
+  return base;
+}
+
 const trinoProperties: ConnectionPropertyDefinition[] = [
+  {name: 'server', displayName: 'Server', type: 'string', optional: true},
+  {name: 'port', displayName: 'Port', type: 'number', optional: true},
+  {name: 'catalog', displayName: 'Catalog', type: 'string', optional: true},
+  {name: 'schema', displayName: 'Schema', type: 'string', optional: true},
+  {name: 'user', displayName: 'User', type: 'string', optional: true},
+  {name: 'password', displayName: 'Password', type: 'password', optional: true},
+  {
+    name: 'setupSQL',
+    displayName: 'Setup SQL',
+    type: 'text',
+    optional: true,
+    description: 'SQL statements to run when the connection is established',
+  },
+  {
+    name: 'source',
+    displayName: 'Source',
+    type: 'string',
+    optional: true,
+    description: 'Source name for the Trino client',
+  },
+  {
+    name: 'ssl',
+    displayName: 'SSL',
+    type: 'json',
+    optional: true,
+    description: 'TLS/SSL configuration (e.g. {"rejectUnauthorized": false})',
+  },
+  {
+    name: 'session',
+    displayName: 'Session',
+    type: 'json',
+    optional: true,
+    description: 'Session properties as key-value pairs',
+  },
+  {
+    name: 'extraCredential',
+    displayName: 'Extra Credential',
+    type: 'json',
+    optional: true,
+    description: 'Extra credentials as key-value pairs',
+  },
+  {
+    name: 'extraHeaders',
+    displayName: 'Extra Headers',
+    type: 'json',
+    optional: true,
+    description: 'Additional HTTP headers as key-value pairs',
+  },
+];
+
+const prestoProperties: ConnectionPropertyDefinition[] = [
   {name: 'server', displayName: 'Server', type: 'string', optional: true},
   {name: 'port', displayName: 'Port', type: 'number', optional: true},
   {name: 'catalog', displayName: 'Catalog', type: 'string', optional: true},
@@ -79,8 +151,11 @@ const trinoProperties: ConnectionPropertyDefinition[] = [
 registerConnectionType('trino', {
   displayName: 'Trino',
   factory: async (config: ConnectionConfig) => {
-    const {name, trinoConfig} = configToTrinoConfig(config);
-    return new TrinoConnection(name, undefined, trinoConfig);
+    return new TrinoConnection(
+      config.name,
+      undefined,
+      configToTrinoConfig(config)
+    );
   },
   properties: trinoProperties,
 });
@@ -88,8 +163,11 @@ registerConnectionType('trino', {
 registerConnectionType('presto', {
   displayName: 'Presto',
   factory: async (config: ConnectionConfig) => {
-    const {name, trinoConfig} = configToTrinoConfig(config);
-    return new PrestoConnection(name, undefined, trinoConfig);
+    return new PrestoConnection(
+      config.name,
+      undefined,
+      configToBaseConfig(config)
+    );
   },
-  properties: trinoProperties,
+  properties: prestoProperties,
 });

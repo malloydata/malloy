@@ -72,7 +72,9 @@ export type ConnectionParameterValue =
   | string
   | number
   | boolean
-  | Array<ConnectionParameterValue>;
+  | null
+  | Array<ConnectionParameterValue>
+  | {[key: string]: ConnectionParameterValue};
 
 export interface ConnectionConfig {
   name: string;

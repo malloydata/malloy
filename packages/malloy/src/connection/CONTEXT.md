@@ -53,7 +53,7 @@ Each registered backend provides:
 }
 ```
 
-The `is` field identifies the backend. Any property value can be a `{env: "VAR"}` reference — `createConnectionsFromConfig()` resolves all `ValueRef`s before passing config to factories, so connection constructors only see plain resolved values. If an env var is not set, that property is omitted.
+The `is` field identifies the backend. Any property value can be a `{env: "VAR"}` reference — `createConnectionsFromConfig()` resolves all `ValueRef`s before passing config to factories, so connection constructors only see plain resolved values. If an env var is not set, that property is omitted. Properties declared as `type: 'json'` are never treated as env references — `{env: "production"}` on a json property passes through as data.
 
 ## API Functions
 
@@ -108,6 +108,7 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 | `password` | Masked input (credentials/passphrases) |
 | `secret` | Masked input (tokens/API keys) |
 | `file` | File picker with optional `fileFilters` |
+| `json` | JSON object (structured config like SSL options, headers) |
 | `text` | Multi-line text input |
 
 ## Per-Backend Properties
@@ -125,7 +126,11 @@ Each `ConnectionPropertyDefinition` has a `type` field that determines UI render
 `account` (string, required), `username` (string), `password` (password), `role` (string), `warehouse` (string), `database` (string), `schema` (string), `privateKeyPath` (file), `privateKeyPass` (password), `timeoutMs` (number), `setupSQL` (text)
 Factory extracts `name`, `setupSQL`, `timeoutMs`; passes remaining properties as snowflake-sdk `ConnectionOptions`.
 
-**Trino** (`displayName: "Trino"`) / **Presto** (`displayName: "Presto"`):
+**Trino** (`displayName: "Trino"`):
+`server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text), `source` (string), `ssl` (json), `session` (json), `extraCredential` (json), `extraHeaders` (json)
+The json-typed properties pass through to `trino-client`'s `ConnectionOptions` via `extraConfig`.
+
+**Presto** (`displayName: "Presto"`):
 `server` (string), `port` (number), `catalog` (string), `schema` (string), `user` (string), `password` (password), `setupSQL` (text)
 
 **MySQL** (`displayName: "MySQL"`):
@@ -140,12 +145,13 @@ All backends support `setupSQL` (text) — SQL statements run when the connectio
 
 ```typescript
 type ValueRef = {env: string};
-type ConfigValue = string | number | boolean | ValueRef | undefined;
+type JsonConfigValue = string | number | boolean | null | JsonConfigValue[] | {[key: string]: JsonConfigValue};
+type ConfigValue = string | number | boolean | ValueRef | JsonConfigValue | undefined;
 
 interface ConnectionPropertyDefinition {
   name: string;
   displayName: string;
-  type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'text';
+  type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
   optional?: true;
   default?: string;
   description?: string;

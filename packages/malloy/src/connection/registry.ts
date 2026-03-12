@@ -22,6 +22,7 @@ export type ConnectionPropertyType =
   | 'password'
   | 'secret'
   | 'file'
+  | 'json'
   | 'text';
 
 /**
@@ -53,15 +54,39 @@ export interface ConnectionTypeDef {
 export type ValueRef = {env: string};
 
 /**
- * The type of a config property value: a literal, an env reference, or undefined.
+ * A JSON-compatible value for structured config properties (e.g. SSL options).
  */
-export type ConfigValue = string | number | boolean | ValueRef | undefined;
+export type JsonConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonConfigValue[]
+  | {[key: string]: JsonConfigValue};
+
+/**
+ * The type of a config property value: a literal, an env reference, a JSON
+ * object, or undefined.
+ */
+export type ConfigValue =
+  | string
+  | number
+  | boolean
+  | ValueRef
+  | JsonConfigValue
+  | undefined;
 
 /**
  * Type guard for ValueRef.
  */
 export function isValueRef(value: ConfigValue): value is ValueRef {
-  return typeof value === 'object' && value !== null && 'env' in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 1 &&
+    'env' in value
+  );
 }
 
 /**
@@ -206,11 +231,15 @@ export function createConnectionsFromConfig(
         );
       }
 
+      const jsonKeys = new Set(
+        typeDef.properties.filter(p => p.type === 'json').map(p => p.name)
+      );
+
       const connConfig: ConnectionConfig = {name: connectionName};
       for (const [key, value] of Object.entries(entry)) {
         if (key === 'is') continue;
-        if (value !== undefined) {
-          if (isValueRef(value)) {
+        if (value !== undefined && value !== null) {
+          if (!jsonKeys.has(key) && isValueRef(value)) {
             const resolved = resolveValue(value);
             if (resolved !== undefined) {
               connConfig[key] = resolved;

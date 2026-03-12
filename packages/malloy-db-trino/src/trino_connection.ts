@@ -51,7 +51,6 @@ import {BaseConnection} from '@malloydata/malloy/connection';
 import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
 import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
-import type {ConnectionOptions} from 'trino-client';
 import {Trino, BasicAuth} from 'trino-client';
 import {resultRowToQueryRecord} from './result-to-querydata';
 
@@ -65,6 +64,12 @@ export interface TrinoManagerOptions {
   userAgent: string;
 }
 
+export type TrinoExtraConfigKey =
+  | 'ssl'
+  | 'session'
+  | 'extraCredential'
+  | 'extraHeaders';
+
 export interface TrinoConnectionConfiguration {
   server?: string;
   port?: number;
@@ -73,9 +78,8 @@ export interface TrinoConnectionConfiguration {
   user?: string;
   password?: string;
   setupSQL?: string;
-  extraConfig?: Partial<
-    Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>
-  >;
+  source?: string;
+  extraConfig?: Partial<Record<TrinoExtraConfigKey, unknown>>;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
@@ -154,6 +158,7 @@ class TrinoRunner implements BaseRunner {
     }
     this.client = Trino.create({
       ...config.extraConfig,
+      source: config.source,
       catalog: config.catalog,
       server,
       schema: config.schema,
