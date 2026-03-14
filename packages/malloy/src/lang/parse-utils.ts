@@ -213,20 +213,22 @@ function stripBlockIndent(
   const prefix = ' '.repeat(column);
   let warnedLeft = false;
   let warnedTab = false;
-  return lines.map(line => {
-    if (warn && !warnedTab && line.slice(0, column).includes('\t')) {
-      warn(cx, 'Block annotation indentation contains tabs, use spaces');
-      warnedTab = true;
-    }
-    if (line.startsWith(prefix)) {
-      return line.slice(column);
-    }
-    if (warn && !warnedLeft && !warnedTab && line.match(/\S/)) {
-      warn(cx, 'Block annotation content is left of the opening #|');
-      warnedLeft = true;
-    }
-    return line;
-  }).join('');
+  return lines
+    .map(line => {
+      if (warn && !warnedTab && line.slice(0, column).includes('\t')) {
+        warn(cx, 'Block annotation indentation contains tabs, use spaces');
+        warnedTab = true;
+      }
+      if (line.startsWith(prefix)) {
+        return line.slice(column);
+      }
+      if (warn && !warnedLeft && !warnedTab && line.match(/\S/)) {
+        warn(cx, 'Block annotation content is left of the opening #|');
+        warnedLeft = true;
+      }
+      return line;
+    })
+    .join('');
 }
 
 function stripTrailingNewline(s: string): string {
@@ -245,7 +247,12 @@ export function getAnnotationText(
     const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
     return stripTrailingNewline(
       beginToken.text +
-      stripBlockIndent(textLines, beginToken.symbol.charPositionInLine, cx, warn)
+        stripBlockIndent(
+          textLines,
+          beginToken.symbol.charPositionInLine,
+          cx,
+          warn
+        )
     );
   }
   const doc = cx.DOC_ANNOTATION();
@@ -255,6 +262,11 @@ export function getAnnotationText(
   const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
   return stripTrailingNewline(
     beginToken.text +
-    stripBlockIndent(textLines, beginToken.symbol.charPositionInLine, cx, warn)
+      stripBlockIndent(
+        textLines,
+        beginToken.symbol.charPositionInLine,
+        cx,
+        warn
+      )
   );
 }

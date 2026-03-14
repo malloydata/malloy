@@ -358,7 +358,9 @@ export class MalloyToAST
 
   protected getAnnotation(cx: parse.AnnotationContext): Note {
     const text = getAnnotationText(cx, (wcx, msg) => {
-      this.contextError(wcx, 'block-annotation-warning', msg, {severity: 'warn'});
+      this.contextError(wcx, 'block-annotation-warning', msg, {
+        severity: 'warn',
+      });
     });
     return {text: text, at: this.getLocation(cx)};
   }
