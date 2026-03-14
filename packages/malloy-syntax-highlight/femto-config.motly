@@ -1,0 +1,7 @@
+monarch: {
+  inputs = ["grammars/malloy/malloy.tmGrammar.json"]
+  commands = [
+    "npx ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.monarch.ts",
+    "npx prettier grammars/malloy/malloy.monarch.ts --write"
+  ]
+}

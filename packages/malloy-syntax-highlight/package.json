@@ -11,7 +11,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc",
+    "codegen": "node ../../scripts/femto-build.js monarch",
+    "build": "npm run codegen && tsc",
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo && rm -rf dist",
     "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.monarch.ts && prettier grammars/malloy/malloy.monarch.ts --write",
     "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
