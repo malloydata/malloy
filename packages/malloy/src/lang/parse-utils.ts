@@ -22,11 +22,13 @@
  */
 
 import type {ParserRuleContext} from 'antlr4ts';
-import type {
-  StringContext,
-  ShortStringContext,
-  SqlStringContext,
-  IdContext,
+import type {DocAnnotationContext} from './lib/Malloy/MalloyParser';
+import {
+  type StringContext,
+  type ShortStringContext,
+  type SqlStringContext,
+  type IdContext,
+  AnnotationContext,
 } from './lib/Malloy/MalloyParser';
 import {ParseUtil} from '@malloydata/malloy-tag';
 
@@ -195,4 +197,64 @@ export function getPlainString(
   }
   // string: shortString | sqlString; So this will never happen
   return ['', errorList];
+}
+
+type AnnotationWarn = (cx: ParserRuleContext, msg: string) => void;
+
+function stripBlockIndent(
+  lines: string[],
+  column: number,
+  cx: ParserRuleContext,
+  warn?: AnnotationWarn
+): string {
+  if (column === 0) {
+    return lines.join('');
+  }
+  const prefix = ' '.repeat(column);
+  let warnedLeft = false;
+  let warnedTab = false;
+  return lines.map(line => {
+    if (warn && !warnedTab && line.slice(0, column).includes('\t')) {
+      warn(cx, 'Block annotation indentation contains tabs, use spaces');
+      warnedTab = true;
+    }
+    if (line.startsWith(prefix)) {
+      return line.slice(column);
+    }
+    if (warn && !warnedLeft && !warnedTab && line.match(/\S/)) {
+      warn(cx, 'Block annotation content is left of the opening #|');
+      warnedLeft = true;
+    }
+    return line;
+  }).join('');
+}
+
+function stripTrailingNewline(s: string): string {
+  return s.endsWith('\n') ? s.slice(0, -1) : s;
+}
+
+export function getAnnotationText(
+  cx: AnnotationContext | DocAnnotationContext,
+  warn?: AnnotationWarn
+): string {
+  if (cx instanceof AnnotationContext) {
+    const annot = cx.ANNOTATION();
+    if (annot) return annot.text;
+    const block = cx.blockAnnotation()!;
+    const beginToken = block.BLOCK_ANNOTATION_BEGIN();
+    const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
+    return stripTrailingNewline(
+      beginToken.text +
+      stripBlockIndent(textLines, beginToken.symbol.charPositionInLine, cx, warn)
+    );
+  }
+  const doc = cx.DOC_ANNOTATION();
+  if (doc) return doc.text;
+  const block = cx.docBlockAnnotation()!;
+  const beginToken = block.DOC_BLOCK_ANNOTATION_BEGIN();
+  const textLines = block.BLOCK_ANNOTATION_TEXT().map(t => t.text);
+  return stripTrailingNewline(
+    beginToken.text +
+    stripBlockIndent(textLines, beginToken.symbol.charPositionInLine, cx, warn)
+  );
 }

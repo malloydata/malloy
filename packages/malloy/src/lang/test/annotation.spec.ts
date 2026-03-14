@@ -887,3 +887,245 @@ describe('query operation annotations', () => {
     });
   });
 });
+describe('block annotations', () => {
+  test('simple object block annotation', () => {
+    const m = new TestTranslator(`
+      #|
+        content line
+      |#
+      source: na is a
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\n  content line'],
+    });
+  });
+  test('simple model block annotation', () => {
+    const m = new TestTranslator(`
+      ##|
+        model content
+      |##
+    `);
+    expect(m).toTranslate();
+    const md = m.translate()?.modelDef;
+    expect(md).toBeDefined();
+    expect(md!.annotation).matchesAnnotation({
+      notes: ['##|\n  model content'],
+    });
+  });
+  test('empty block annotation', () => {
+    const m = new TestTranslator(`
+      #|
+      |#
+      source: na is a
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|'],
+    });
+  });
+  test('block annotation with routing', () => {
+    const m = new TestTranslator(`
+      #|(markdown)
+        content
+      |#
+      source: na is a
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|(markdown)\n  content'],
+    });
+  });
+  test('block annotation at column 0', () => {
+    const m = new TestTranslator(
+      '#|\nline one\nline two\n|#\nsource: na is a\n'
+    );
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\nline one\nline two'],
+    });
+  });
+  test('indented closer must match opener column', () => {
+    const m = new TestTranslator(`
+      #|
+        content
+          |# not a closer
+        more content
+      |#
+      source: na is a
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\n  content\n    |# not a closer\n  more content'],
+    });
+  });
+  test('|# in middle of line is not a closer', () => {
+    const m = new TestTranslator(`
+      #|
+        some |# text
+      |#
+      source: na is a
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\n  some |# text'],
+    });
+  });
+  test('mixed single-line and block annotations', () => {
+    const m = new TestTranslator(`
+      # single
+      #|
+        block content
+      |#
+      source: na is a
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['# single\n', '#|\n  block content'],
+    });
+  });
+  test('unclosed block annotation', () => {
+    expect(`
+      #|
+        no closer
+      source: na is a
+    `).toLog(
+      errorMessage(
+        'Block annotation is not closed, add correctly indented "|#"'
+      )
+    );
+  });
+  test('unclosed doc block annotation', () => {
+    expect(`
+      ##|
+        no closer
+      source: na is a
+    `).toLog(
+      errorMessage(
+        'Block annotation is not closed, add correctly indented "|##"'
+      )
+    );
+  });
+  test('block annotation on dimension', () => {
+    const m = new TestTranslator(`
+      source: na is a extend {
+        #|
+        noted
+        |#
+        dimension: x is 1
+      }
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: ['#|\nnoted'],
+    });
+  });
+  test('indentation stripping based on opener column', () => {
+    const m = new TestTranslator(`
+      source: na is a extend {
+        #|
+            line one
+            line two
+        |#
+        dimension: x is 1
+      }
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: ['#|\n    line one\n    line two'],
+    });
+  });
+  test('indentation stripping preserves relative indent', () => {
+    const m = new TestTranslator(`
+      source: na is a extend {
+        #|
+          outer
+            inner
+          outer
+        |#
+        dimension: x is 1
+      }
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: ['#|\n  outer\n    inner\n  outer'],
+    });
+  });
+  test('indentation stripping ignores blank lines', () => {
+    const m = new TestTranslator(`
+      source: na is a extend {
+        #|
+          line one
+
+          line two
+        |#
+        dimension: x is 1
+      }
+    `);
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    const x = getFieldDef(na!, 'x');
+    expect(x.annotation).matchesAnnotation({
+      blockNotes: ['#|\n  line one\n\n  line two'],
+    });
+  });
+  test('warns when content is left of opener', () => {
+    expect(`
+      source: na is a extend {
+        #|
+    TOO FAR LEFT
+        |#
+        dimension: x is 1
+      }
+    `).toLog(
+      warningMessage('Block annotation content is left of the opening #|')
+    );
+  });
+  test('warns when indentation contains tabs', () => {
+    expect(`
+      source: na is a extend {
+        #|
+\t\tcontent
+        |#
+        dimension: x is 1
+      }
+    `).toLog(
+      warningMessage('Block annotation indentation contains tabs, use spaces')
+    );
+  });
+  test('no stripping when opener at column 0', () => {
+    const m = new TestTranslator(
+      '#|\n    indented content\n|#\nsource: na is a\n'
+    );
+    expect(m).toTranslate();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    expect(na!.annotation).matchesAnnotation({
+      blockNotes: ['#|\n    indented content'],
+    });
+  });
+});

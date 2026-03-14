@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {parseTag} from '@malloydata/malloy-tag';
+import {parseAnnotation} from '@malloydata/malloy-tag';
 import {compileModel, compileQuery, compileSource} from './stateless';
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -1865,7 +1865,7 @@ interface HasAnnotations {
 }
 
 function tagFor(field: HasAnnotations | undefined) {
-  return parseTag(
+  return parseAnnotation(
     field?.annotations
       ?.filter(a => a.value.startsWith('#(malloy) '))
       .map(a => a.value) ?? []

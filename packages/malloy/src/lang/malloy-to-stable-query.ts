@@ -6,7 +6,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import type {ParseTree} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -18,7 +18,7 @@ import type {
   MessageParameterType,
 } from './parse-log';
 import {BaseMessageLogger, makeLogMessage} from './parse-log';
-import {getId, getPlainString} from './parse-utils';
+import {getAnnotationText, getId, getPlainString} from './parse-utils';
 import type {DocumentLocation} from '../model/malloy_types';
 import {isTimestampUnit, isTimeLiteral} from '../model/malloy_types';
 import {runMalloyParser} from './run-malloy-parser';
@@ -36,7 +36,9 @@ import {
   LiteralYear,
 } from './ast';
 
-type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
+type HasAnnotations = ParserRuleContext & {
+  annotation: () => parse.AnnotationContext[];
+};
 
 type Node =
   | Malloy.Query
@@ -109,14 +111,14 @@ export class MalloyToQuery
 
   /**
    * Get all the possibly missing annotations from this parse rule
-   * @param cx Any parse context which has an ANNOTATION* rules
+   * @param cx Any parse context which has an annotation* rule
    * @returns Array of texts for the annotations
    */
   protected getAnnotations(
     cx: HasAnnotations
   ): Malloy.Annotation[] | undefined {
-    const annotations = cx.ANNOTATION().map(a => {
-      return {value: a.text};
+    const annotations = cx.annotation().map(a => {
+      return {value: getAnnotationText(a)};
     });
     return annotations.length > 0 ? annotations : undefined;
   }

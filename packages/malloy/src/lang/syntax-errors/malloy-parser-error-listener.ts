@@ -30,7 +30,7 @@ import {rangeFromToken} from '../utils';
 export const malloyCustomErrorCases: ErrorCase[] = [
   {
     errorMessage: "'view:' must be followed by '<identifier> is {'",
-    ruleContextOptions: ['exploreQueryDef'],
+    ruleContextOptions: ['exploreQueryDef', 'exploreQueryNameDef', 'id'],
     offendingSymbol: MalloyParser.OCURLY,
     precedingTokenOptions: [[MalloyParser.VIEW], [MalloyParser.COLON]],
   },

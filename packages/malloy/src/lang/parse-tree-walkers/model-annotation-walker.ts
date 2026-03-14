@@ -32,6 +32,7 @@ import type {
   Note,
 } from '../../model/malloy_types';
 import type {MalloyParseInfo} from '../malloy-parse-info';
+import {getAnnotationText} from '../parse-utils';
 
 class ModelAnnotationWalker implements MalloyParserListener {
   private readonly notes: Note[] = [];
@@ -49,12 +50,10 @@ class ModelAnnotationWalker implements MalloyParserListener {
   }
 
   enterDocAnnotations(pcx: parser.DocAnnotationsContext): void {
-    const allNotes = pcx.DOC_ANNOTATION().map(note => {
-      return {
-        text: note.text,
-        at: this.getLocation(pcx),
-      };
-    });
+    const allNotes: Note[] = pcx.docAnnotation().map(a => ({
+      text: getAnnotationText(a),
+      at: this.getLocation(pcx),
+    }));
     this.notes.push(...allNotes);
   }
 

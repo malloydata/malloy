@@ -23,6 +23,30 @@
 
 lexer grammar MalloyLexer;
 
+@members {
+  _blockAnnotationColumn: number = 0;
+  _blockAnnotationCloser: string = '|#';
+
+  isBlockAnnotationCloseLine(): boolean {
+    const col = this._blockAnnotationColumn;
+    const closer = this._blockAnnotationCloser;
+    // Characters before the expected closer must be whitespace only
+    for (let i = 0; i < col; i++) {
+      const c = this._input.LA(i + 1);
+      if (c !== 0x20 && c !== 0x09) return false;
+    }
+    // Check closer string at the expected column
+    for (let j = 0; j < closer.length; j++) {
+      if (this._input.LA(col + j + 1) !== closer.charCodeAt(j)) return false;
+    }
+    // For |# closer, ensure it's not actually |##
+    if (closer === '|#') {
+      if (this._input.LA(col + closer.length + 1) === 0x23) return false;
+    }
+    return true;
+  }
+}
+
 fragment SPACE_CHAR: [ \u000B\t\r\n\u00A0];
 
 // colon keywords ...
@@ -168,6 +192,20 @@ DQ_STRING: DQ (STR_CHAR | ['`])* DQ;
 BQ_STRING: BQ (STR_CHAR | ['"])* BQ;
 
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
+
+// Block annotation openers — must precede single-line rules so #| and ##| match first
+DOC_BLOCK_ANNOTATION_BEGIN
+  : '##|' ~[\r\n]* (('\r'? '\n') | EOF)
+    {this._blockAnnotationColumn = this._tokenStartCharPositionInLine; this._blockAnnotationCloser = '|##';}
+  -> pushMode(BLOCK_ANNOTATION_MODE)
+  ;
+
+BLOCK_ANNOTATION_BEGIN
+  : '#|' ~[\r\n]* (('\r'? '\n') | EOF)
+    {this._blockAnnotationColumn = this._tokenStartCharPositionInLine; this._blockAnnotationCloser = '|#';}
+  -> pushMode(BLOCK_ANNOTATION_MODE)
+  ;
+
 DOC_ANNOTATION: '##' F_TO_EOL;
 ANNOTATION: '#' F_TO_EOL;
 
@@ -264,3 +302,13 @@ fragment SQL_CHAR
 
 OPEN_CODE: SQL_CHAR*? '%{' -> pushMode(DEFAULT_MODE);
 SQL_END: SQL_CHAR*? '"""' -> popMode;
+
+mode BLOCK_ANNOTATION_MODE;
+
+BLOCK_ANNOTATION_END
+  : {this.isBlockAnnotationCloseLine()}? ~[\r\n]* (('\r'? '\n') | EOF) -> popMode
+  ;
+
+BLOCK_ANNOTATION_TEXT
+  : ~[\r\n]* (('\r'? '\n') | EOF)
+  ;

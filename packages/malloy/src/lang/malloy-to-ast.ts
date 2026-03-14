@@ -23,7 +23,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import type {ParseTree} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import type * as parse from './lib/Malloy/MalloyParser';
@@ -47,6 +47,7 @@ import {
   getShortString,
   idToStr,
   getPlainString,
+  getAnnotationText,
 } from './parse-utils';
 import type {
   AccessModifierLabel,
@@ -65,7 +66,7 @@ import {
   mkArrayTypeDef,
 } from '../model/malloy_types';
 import type {Tag} from '@malloydata/malloy-tag';
-import {parseTag} from '@malloydata/malloy-tag';
+import {parseAnnotation} from '@malloydata/malloy-tag';
 import {isNotUndefined, rangeFromContext} from './utils';
 import {isFilterable} from '@malloydata/malloy-filter';
 import type * as Malloy from '@malloydata/malloy-interfaces';
@@ -86,7 +87,9 @@ class IgnoredElement extends ast.MalloyElement {
 
 const DEFAULT_COMPILER_FLAGS = [];
 
-type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
+type HasAnnotations = ParserRuleContext & {
+  annotation: () => parse.AnnotationContext[];
+};
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -114,7 +117,7 @@ export class MalloyToAST
 
   getCompilerFlags(): Tag {
     if (!this.compilerFlagTag) {
-      this.compilerFlagTag = parseTag(this.compilerFlagSrc).tag;
+      this.compilerFlagTag = parseAnnotation(this.compilerFlagSrc).tag;
     }
     return this.compilerFlagTag;
   }
@@ -353,18 +356,15 @@ export class MalloyToAST
     return this.astAt(def, pcx);
   }
 
-  /**
-   * Get all the possibly missing annotations from this parse rule
-   * @param cx Any parse context which has an ANNOTATION* rules
-   * @returns Array of texts for the annotations
-   */
-  protected getNotes(cx: HasAnnotations): Note[] {
-    return cx.ANNOTATION().map(a => {
-      return {
-        text: a.text,
-        at: this.getLocation(cx),
-      };
+  protected getAnnotation(cx: parse.AnnotationContext): Note {
+    const text = getAnnotationText(cx, (wcx, msg) => {
+      this.contextError(wcx, 'block-annotation-warning', msg, {severity: 'warn'});
     });
+    return {text: text, at: this.getLocation(cx)};
+  }
+
+  protected getNotes(cx: HasAnnotations): Note[] {
+    return cx.annotation().map(a => this.getAnnotation(a));
   }
 
   protected getIsNotes(cx: parse.IsDefineContext): Note[] {
@@ -635,7 +635,7 @@ export class MalloyToAST
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }
-    join.extendNote({notes: this.getNotes(pcx).concat(notes)});
+    join.extendNote({notes: this.getNotes(pcx.tags()).concat(notes)});
     return this.astAt(join, pcx);
   }
 
@@ -643,7 +643,7 @@ export class MalloyToAST
     const {joinAs, joinFrom, notes} = this.getJoinFrom(pcx.joinFrom());
     const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
-    join.extendNote({notes: this.getNotes(pcx).concat(notes)});
+    join.extendNote({notes: this.getNotes(pcx.tags()).concat(notes)});
     return this.astAt(join, pcx);
   }
 
@@ -1226,7 +1226,9 @@ export class MalloyToAST
       name,
       this.getVExpr(pcx.vExpr())
     );
-    const notes = this.getNotes(pcx).concat(this.getIsNotes(pcx.isDefine()));
+    const notes = this.getNotes(pcx.tags()).concat(
+      this.getIsNotes(pcx.isDefine())
+    );
     queryDef.extendNote({notes});
     return this.astAt(queryDef, pcx);
   }
@@ -1850,7 +1852,7 @@ export class MalloyToAST
     if (newLines.length > 0) {
       const oldLength = this.compilerFlagSrc.length;
       this.compilerFlagSrc.push(...newLines);
-      const {tag, log} = parseTag(this.compilerFlagSrc);
+      const {tag, log} = parseAnnotation(this.compilerFlagSrc);
       this.compilerFlagTag = tag;
       for (const err of log) {
         if (err.line >= oldLength) {
@@ -1866,12 +1868,20 @@ export class MalloyToAST
   }
 
   visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
-    const allNotes = pcx.DOC_ANNOTATION().map(note => {
-      return {
-        text: note.text,
-        at: this.getLocation(pcx),
-      };
-    });
+    for (const a of pcx.docAnnotation()) {
+      const block = a.docBlockAnnotation();
+      if (block && !block.BLOCK_ANNOTATION_END()) {
+        this.contextError(
+          pcx,
+          'unclosed-block-annotation',
+          'Block annotation is not closed, add correctly indented "|##"'
+        );
+      }
+    }
+    const allNotes = pcx.docAnnotation().map(a => ({
+      text: getAnnotationText(a),
+      at: this.getLocation(pcx),
+    }));
     const tags = new ast.ModelAnnotation(allNotes);
     this.updateCompilerFlags(tags);
     return tags;
@@ -1880,22 +1890,46 @@ export class MalloyToAST
   visitIgnoredObjectAnnotations(
     pcx: parse.IgnoredObjectAnnotationsContext
   ): IgnoredElement {
-    this.contextError(
-      pcx,
-      'orphaned-object-annotation',
-      'Object annotation not connected to any object'
-    );
+    const hasUnclosedBlock = pcx.annotation().some(a => {
+      const block = a.blockAnnotation();
+      return block && !block.BLOCK_ANNOTATION_END();
+    });
+    if (hasUnclosedBlock) {
+      this.contextError(
+        pcx,
+        'unclosed-block-annotation',
+        'Block annotation is not closed, add correctly indented "|#"'
+      );
+    } else {
+      this.contextError(
+        pcx,
+        'orphaned-object-annotation',
+        'Object annotation not connected to any object'
+      );
+    }
     return new IgnoredElement(pcx.text);
   }
 
   visitIgnoredModelAnnotations(
     pcx: parse.IgnoredModelAnnotationsContext
   ): IgnoredElement {
-    this.contextError(
-      pcx,
-      'misplaced-model-annotation',
-      'Model annotations not allowed at this scope'
-    );
+    const hasUnclosedBlock = pcx.docAnnotation().some(a => {
+      const block = a.docBlockAnnotation();
+      return block && !block.BLOCK_ANNOTATION_END();
+    });
+    if (hasUnclosedBlock) {
+      this.contextError(
+        pcx,
+        'unclosed-block-annotation',
+        'Block annotation is not closed, add correctly indented "|##"'
+      );
+    } else {
+      this.contextError(
+        pcx,
+        'misplaced-model-annotation',
+        'Model annotations not allowed at this scope'
+      );
+    }
     return new IgnoredElement(pcx.text);
   }
 
@@ -2020,7 +2054,7 @@ export class MalloyToAST
     pcx: parse.IncludeExceptListContext
   ): (ast.AccessModifierFieldReference | ast.WildcardFieldReference)[] {
     return pcx.includeExceptListItem().map(fcx => {
-      if (fcx.tags().ANNOTATION().length > 0) {
+      if (fcx.tags().annotation().length > 0) {
         this.contextError(
           fcx.tags(),
           'cannot-tag-include-except',

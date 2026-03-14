@@ -75,7 +75,7 @@ import {
   rangeFromContext,
 } from './utils';
 import type {Tag} from '@malloydata/malloy-tag';
-import {parseTag} from '@malloydata/malloy-tag';
+import {parseAnnotation} from '@malloydata/malloy-tag';
 import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
@@ -652,7 +652,7 @@ export abstract class MalloyTranslation {
   compilerFlagSrc: string[] = [];
 
   getCompilerFlags(): Tag {
-    return parseTag(this.compilerFlagSrc).tag;
+    return parseAnnotation(this.compilerFlagSrc).tag;
   }
 
   readonly parseStep: ParseStep;

@@ -397,7 +397,7 @@ abstract class ASTNode<T> {
       ?.filter(l => l.startsWith(prefix));
     const session = new TagParser();
     for (const l of lines ?? []) {
-      session.parse(l);
+      session.parseAnnotation(l);
     }
     return session.finish();
   }
@@ -5182,17 +5182,17 @@ export class ASTAnnotation extends ASTObjectNode<
 
   getIntrinsicTag(): Tag {
     const session = new TagParser();
-    session.parse(this.value);
+    session.parseAnnotation(this.value);
     return session.finish();
   }
 
   getTag(): Tag {
     const session = new TagParser();
     for (const a of this.list.getInheritedAnnotations()) {
-      session.parse(a.value);
+      session.parseAnnotation(a.value);
     }
     for (let i = 0; i <= this.index; i++) {
-      session.parse(this.list.index(i).value);
+      session.parseAnnotation(this.list.index(i).value);
     }
     return session.finish();
   }
@@ -5223,7 +5223,7 @@ function tagFromAnnotations(
 ) {
   const session = new TagParser();
   for (const a of inheritedAnnotations) {
-    session.parse(a.value);
+    session.parseAnnotation(a.value);
   }
   const filteredLines = annotations
     .map(a => a.value)
@@ -5231,7 +5231,7 @@ function tagFromAnnotations(
       typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
     );
   for (const l of filteredLines) {
-    session.parse(l);
+    session.parseAnnotation(l);
   }
   return session.finish();
 }

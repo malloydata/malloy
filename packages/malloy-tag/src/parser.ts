@@ -23,17 +23,17 @@ export interface SourceOrigin {
 }
 
 /**
- * Strip the Malloy tag prefix (e.g., "# " or "#(docs) ") from source.
+ * Strip the Malloy annotation prefix (e.g., "# " or "#(docs) ") from source.
+ * Annotation text starts with # followed by routing characters and a
+ * space or newline delimiter. Everything up to and including that delimiter
+ * is stripped, leaving just the MOTLY content.
  */
 function stripPrefix(source: string): string {
-  if (source[0] === '#') {
-    const skipTo = source.indexOf(' ');
-    if (skipTo > 0) {
-      return source.slice(skipTo);
-    }
-    return '';
+  const skipTo = source.search(/[ \n]/);
+  if (skipTo > 0) {
+    return source.slice(skipTo);
   }
-  return source;
+  return '';
 }
 
 /**
@@ -130,7 +130,8 @@ function hydrate(
 
 /**
  * Session-based parser for Malloy tag language. Create an instance,
- * call parse() for each line, then finish() to get the final Tag.
+ * call parse() or parseAnnotation() for each line, then finish() to
+ * get the final Tag.
  */
 export class TagParser {
   private session: MOTLYSession;
@@ -140,12 +141,30 @@ export class TagParser {
     this.session = new MOTLYSession();
   }
 
+  /**
+   * Parse raw MOTLY text. No prefix stripping is performed.
+   */
   parse(source: string, origin?: SourceOrigin): TagParse {
+    return this.parseSource(source, 0, origin);
+  }
+
+  /**
+   * Parse annotation text (starting with #). The annotation prefix
+   * is unconditionally stripped before parsing the MOTLY content.
+   */
+  parseAnnotation(source: string, origin?: SourceOrigin): TagParse {
     const stripped = stripPrefix(source);
-    const {parseId, errors} = this.session.parse(stripped);
+    const prefixLen = source.length - stripped.length;
+    return this.parseSource(stripped, prefixLen, origin);
+  }
+
+  private parseSource(
+    source: string,
+    prefixLen: number,
+    origin?: SourceOrigin
+  ): TagParse {
+    const {parseId, errors} = this.session.parse(source);
     if (origin) {
-      // Adjust column for the stripped prefix
-      const prefixLen = source.length - stripped.length;
       this.origins.set(parseId, {
         url: origin.url,
         startLine: origin.startLine,
@@ -165,10 +184,9 @@ export class TagParser {
 }
 
 /**
- * Parse Malloy tag language into a Tag which can be queried.
+ * Parse raw MOTLY text into a Tag. No prefix stripping is performed.
  *
- * @param source - A single string or array of strings to parse. If a string
- *   starts with #, all characters up to the first space are skipped.
+ * @param source - A single string or array of strings to parse.
  *   When an array is provided, strings are parsed sequentially and merged.
  * @returns TagParse with the resulting tag and any errors. For arrays,
  *   error line numbers indicate the index in the array where the error occurred.
@@ -182,6 +200,32 @@ export function parseTag(source: string | string[]): TagParse {
   const allErrs: TagError[] = [];
   for (let i = 0; i < source.length; i++) {
     const result = session.parse(source[i]);
+    for (const err of result.log) {
+      allErrs.push({...err, line: i + err.line});
+    }
+  }
+  return {tag: session.finish(), log: allErrs};
+}
+
+/**
+ * Parse Malloy annotation text into a Tag. The annotation prefix
+ * (e.g., "# ", "#@ ", "#(docs) ") is unconditionally stripped before
+ * parsing the MOTLY content.
+ *
+ * @param source - A single string or array of annotation strings to parse.
+ *   When an array is provided, strings are parsed sequentially and merged.
+ * @returns TagParse with the resulting tag and any errors. For arrays,
+ *   error line numbers indicate the index in the array where the error occurred.
+ */
+export function parseAnnotation(source: string | string[]): TagParse {
+  const session = new TagParser();
+  if (typeof source === 'string') {
+    return session.parseAnnotation(source);
+  }
+
+  const allErrs: TagError[] = [];
+  for (let i = 0; i < source.length; i++) {
+    const result = session.parseAnnotation(source[i]);
     for (const err of result.log) {
       allErrs.push({...err, line: i + err.line});
     }

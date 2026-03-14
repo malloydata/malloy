@@ -5,6 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 export * from './tags';
-export {parseTag, TagParser} from './parser';
+export {parseTag, parseAnnotation, TagParser} from './parser';
 export type {SourceOrigin} from './parser';
 export * as ParseUtil from './util';

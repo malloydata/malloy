@@ -23,7 +23,7 @@
 
 import type {TagDict} from './tags';
 import {Tag, interfaceFromDict} from './tags';
-import {parseTag, TagParser} from './parser';
+import {parseTag, parseAnnotation, TagParser} from './parser';
 import type {SourceOrigin} from './parser';
 
 declare global {
@@ -224,7 +224,7 @@ describe('Tag access', () => {
     expect(tag.text('s')).toBe('hello');
   });
   test('property access on existing tag (which does not yet have properties)', () => {
-    const parsed = parseTag(['# plot', '# plot.x=2']);
+    const parsed = parseAnnotation(['# plot', '# plot.x=2']);
     const allTags = parsed.tag;
     const plotTag = allTags.tag('plot');
     const xTag = plotTag!.tag('x');
@@ -254,7 +254,7 @@ describe('Tag access', () => {
     expect(ext.toString()).toBe('# a.b = [{ a = 3 }] c = [foo { a = 4 }]\n');
   });
   test('soft remove', () => {
-    const base = parseTag('# a.b.c = [{ d = 1 }]').tag;
+    const base = parseAnnotation('# a.b.c = [{ d = 1 }]').tag;
     const ext = base.delete('a', 'b', 'c', 0, 'd').delete('a', 'b', 'c', 0);
     expect(ext).tagsAre({
       a: {properties: {b: {properties: {c: {eq: []}}}}},
@@ -262,7 +262,7 @@ describe('Tag access', () => {
     expect(ext.toString()).toBe('# a.b.c = []\n');
   });
   test('hard remove', () => {
-    const base = parseTag('# hello').tag;
+    const base = parseAnnotation('# hello').tag;
     const ext = base.unset('goodbye').unset('a', 'dieu');
     expect(ext).tagsAre({
       hello: {},
@@ -428,33 +428,30 @@ describe('Tag access', () => {
   });
 });
 
-describe('Tag prefix handling', () => {
+describe('Annotation prefix handling', () => {
   test('# prefix skips to first space', () => {
-    const {tag, log} = parseTag('# name=value');
+    const {tag, log} = parseAnnotation('# name=value');
     expect(log).toEqual([]);
     expect(tag.text('name')).toEqual('value');
   });
 
   test('#(docs) prefix skips to first space', () => {
-    const {tag, log} = parseTag('#(docs) name=value');
+    const {tag, log} = parseAnnotation('#(docs) name=value');
     expect(log).toEqual([]);
     expect(tag.text('name')).toEqual('value');
   });
 
   test('# with no space returns empty tag', () => {
-    const {tag, log} = parseTag('#noSpace');
+    const {tag, log} = parseAnnotation('#noSpace');
     expect(log).toEqual([]);
     expect(tag.properties).toBeUndefined();
   });
 
-  test('everything after # on same line is ignored (comment behavior)', () => {
-    // When parsing a single tag line, # at start means "skip prefix"
-    // The rest of the line after the space is the tag content
-    const {tag, log} = parseTag('# name=value # this is not a comment');
+  test('parseTag does not strip # prefix', () => {
+    // # starts a MOTLY comment, so parseTag should treat it as a comment
+    const {tag, log} = parseTag('# name=value');
     expect(log).toEqual([]);
-    // The "# this is not a comment" is parsed as tag content, not ignored
-    // because single-line parsing doesn't have comment support
-    expect(tag.has('name')).toBe(true);
+    expect(tag.has('name')).toBe(false);
   });
 });
 
@@ -498,7 +495,7 @@ describe('Error handling', () => {
 
   test('error offset after prefix stripping', () => {
     // "# " is stripped, so input becomes " a = ["
-    const {log} = parseTag('# a = [');
+    const {log} = parseAnnotation('# a = [');
     expect(log.length).toBe(1);
     expect(log[0].line).toBe(0);
     // Offset is relative to stripped input (after "#")
@@ -507,7 +504,7 @@ describe('Error handling', () => {
 
   test('longer prefix is stripped correctly', () => {
     // "#(docs) " is stripped
-    const {log} = parseTag('#(docs) a = [');
+    const {log} = parseAnnotation('#(docs) a = [');
     expect(log.length).toBe(1);
     expect(log[0].line).toBe(0);
     // Offset is relative to stripped input (after "#(docs)")
@@ -556,12 +553,12 @@ describe('References are dropped', () => {
 
 function idempotent(tag: Tag) {
   const str = tag.toString();
-  const clone = parseTag(str).tag;
+  const clone = parseAnnotation(str).tag;
   clone.prefix = tag.prefix;
   // Check that round-trip is stable (second parse matches first),
   // property ordering may differ from the original Tag API order.
   const str2 = clone.toString();
-  const clone2 = parseTag(str2).tag;
+  const clone2 = parseAnnotation(str2).tag;
   clone2.prefix = tag.prefix;
   expect(clone2.toString()).toBe(str2);
 }
@@ -847,8 +844,8 @@ describe('Location tracking', () => {
       startColumn: 0,
     };
     const session = new TagParser();
-    // "# " prefix is 2 chars, stripped by parser
-    session.parse('# color=blue', origin);
+    // "# " prefix is 2 chars, stripped by parseAnnotation
+    session.parseAnnotation('# color=blue', origin);
     const tag = session.finish();
     const color = tag.tag('color');
     expect(color).toBeDefined();

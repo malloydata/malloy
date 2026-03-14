@@ -56,7 +56,7 @@ export function annotationToTag(
       startLine: note.at.range.start.line,
       startColumn: note.at.range.start.character,
     };
-    const noteParse = session.parse(note.text, origin);
+    const noteParse = session.parseAnnotation(note.text, origin);
     allErrs.push(
       ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
     );
@@ -74,10 +74,10 @@ export function annotationToTag(
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {
-  // Calculate prefix length (same logic as parseTagLine)
+  // Calculate prefix length (same logic as stripPrefix in malloy-tag)
   let prefixLen = 0;
   if (note.text[0] === '#') {
-    const skipTo = note.text.indexOf(' ');
+    const skipTo = note.text.search(/[ \n]/);
     if (skipTo > 0) {
       prefixLen = skipTo;
     }
@@ -86,6 +86,9 @@ function mapMalloyError(e: TagError, note: Note): LogMessage {
   // Map error position to source location
   // e.line is 0-based line within the (stripped) input
   // e.offset is 0-based column within that line
+  // TODO: For block annotations, lines > 0 have indentation stripped by
+  // stripBlockIndent, so e.offset doesn't account for the removed columns.
+  // This makes error squigglies misaligned on block annotation body lines.
   const line = note.at.range.start.line + e.line;
   const character =
     e.line === 0

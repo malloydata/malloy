@@ -353,6 +353,8 @@ type MessageParameterTypes = {
   'unexpected-malloy-type': string;
   'failed-to-parse-function-name': string;
   'orphaned-object-annotation': string;
+  'unclosed-block-annotation': string;
+  'block-annotation-warning': string;
   'misplaced-model-annotation': string;
   'unexpected-non-source-query-expression-node': string;
   'sql-not-like': string;

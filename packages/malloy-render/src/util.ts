@@ -62,7 +62,7 @@ export function tagFromAnnotations(
     annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ?? [];
   const session = new TagParser();
   for (const line of tagLines) {
-    session.parse(line);
+    session.parseAnnotation(line);
   }
   return session.finish();
 }
@@ -80,7 +80,7 @@ export function renderTagFromAnnotations(
   const allLines = [...defaultTagLines, ...renderTagLines];
   const session = new TagParser();
   for (const line of allLines) {
-    session.parse(line);
+    session.parseAnnotation(line);
   }
   return session.finish();
 }

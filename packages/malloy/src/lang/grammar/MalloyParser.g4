@@ -49,8 +49,26 @@ topLevelAnonQueryDef
   : tags sqExpr
   ;
 
+annotation
+  : ANNOTATION
+  | blockAnnotation
+  ;
+
 tags
-  : ANNOTATION*
+  : annotation*
+  ;
+
+blockAnnotation
+  : BLOCK_ANNOTATION_BEGIN BLOCK_ANNOTATION_TEXT* (BLOCK_ANNOTATION_END | EOF)
+  ;
+
+docAnnotation
+  : DOC_ANNOTATION
+  | docBlockAnnotation
+  ;
+
+docBlockAnnotation
+  : DOC_BLOCK_ANNOTATION_BEGIN BLOCK_ANNOTATION_TEXT* (BLOCK_ANNOTATION_END | EOF)
   ;
 
 isDefine
@@ -88,15 +106,15 @@ importURL
   ;
 
 docAnnotations
-  : DOC_ANNOTATION+
+  : docAnnotation+
   ;
 
 ignoredObjectAnnotations
-  : ANNOTATION+
+  : annotation+
   ;
 
 ignoredModelAnnotations
-  : DOC_ANNOTATION+
+  : docAnnotation+
   ;
 
 topLevelQueryDefs
@@ -171,7 +189,7 @@ exploreStatement
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
   | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
-  | ANNOTATION+                              # defExploreAnnotation
+  | annotation+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
   ;
 
@@ -271,7 +289,7 @@ includeItem
   ;
 
 orphanedAnnotation
-  : ANNOTATION
+  : annotation
   ;
 
 accessLabelProp
@@ -338,8 +356,8 @@ joinFrom
   ;
 
 joinDef
-  : ANNOTATION* joinFrom matrixOperation? WITH fieldExpr        # joinWith
-  | ANNOTATION* joinFrom (matrixOperation? ON joinExpression)?  # joinOn
+  : tags joinFrom matrixOperation? WITH fieldExpr        # joinWith
+  | tags joinFrom (matrixOperation? ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -398,7 +416,7 @@ subQueryDefList
 exploreQueryNameDef: id;
 
 exploreQueryDef
-  : ANNOTATION* exploreQueryNameDef isDefine vExpr
+  : tags exploreQueryNameDef isDefine vExpr
   ;
 
 drillStatement
@@ -528,7 +546,7 @@ timezoneStatement
   ;
 
 queryAnnotation
-  : ANNOTATION
+  : annotation
   ;
 
 sampleSpec
