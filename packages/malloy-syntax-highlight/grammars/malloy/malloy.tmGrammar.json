@@ -162,6 +162,30 @@
     "tags": {
       "patterns": [
         {
+          "begin": "^([ \\t]*)##\\|",
+          "end": "^\\1\\|##",
+          "beginCaptures": {
+            "0": { "name": "support.type.property-name.json" }
+          },
+          "endCaptures": {
+            "0": { "name": "support.type.property-name.json" }
+          },
+          "name": "comment.line.double-slash",
+          "patterns": [{ "include": "#tag-values" }]
+        },
+        {
+          "begin": "^([ \\t]*)#\\|",
+          "end": "^\\1\\|#(?!#)",
+          "beginCaptures": {
+            "0": { "name": "support.type.property-name.json" }
+          },
+          "endCaptures": {
+            "0": { "name": "support.type.property-name.json" }
+          },
+          "name": "comment.line.double-slash",
+          "patterns": [{ "include": "#tag-values" }]
+        },
+        {
           "match": "##\\n",
           "name": "string.quoted",
           "captures": {

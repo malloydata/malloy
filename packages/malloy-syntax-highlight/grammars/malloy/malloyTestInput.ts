@@ -61,6 +61,8 @@ export default [
   ['"/* -- \\e\\uFFFF \\\'\\'],
   ["state ~ 'CA' | r'M.' | \"CO\" | /'O.'  -- end"],
   ['run: duckdb.sql("""', '  SELECT 1', '""")'],
+  ['#|', '  renderer=sparkline size=large', '|#', 'dimension: x is 1'],
+  ['##|', '  model_tag=value', '|##'],
   // [
   //   'select: """',
   //   '-- SQL CONTEXT',

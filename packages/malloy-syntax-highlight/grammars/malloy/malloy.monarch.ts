@@ -94,6 +94,20 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/[\n]/, 'comment.line.double.hyphen'],
     ],
     tags: [
+      [
+        /^([ \t]*)##\|/,
+        {
+          next: '@comment_line_double_slash_end',
+          token: 'support.type.property.name.json',
+        },
+      ],
+      [
+        /^([ \t]*)#\|/,
+        {
+          next: '@comment_line_double_slash_end',
+          token: 'support.type.property.name.json',
+        },
+      ],
       [/##\n/, 'string.quoted'],
       [/#"/, {next: '@comment_line_double_slash_end', token: 'comment.line'}],
       [/#\n/, 'string.quoted'],

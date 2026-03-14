@@ -122,7 +122,7 @@ Each database has its own package with connection handling and dialect-specific 
 ### Supporting Libraries
 - `malloy-interfaces/` - TypeScript interfaces and Thrift-generated types
 - `malloy-render/` - Data visualization and rendering (see [packages/malloy-render/CONTEXT.md](packages/malloy-render/CONTEXT.md))
-- `malloy-syntax-highlight/` - Language syntax highlighting
+- `malloy-syntax-highlight/` - Language syntax highlighting (see [packages/malloy-syntax-highlight/CONTEXT.md](packages/malloy-syntax-highlight/CONTEXT.md))
 - `malloy-filter/` - Query filtering utilities
 - `malloy-tag/` - Tagged template literal support (see [packages/malloy-tag/CONTEXT.md](packages/malloy-tag/CONTEXT.md))
 - `malloy-query-builder/` - Programmatic query building
