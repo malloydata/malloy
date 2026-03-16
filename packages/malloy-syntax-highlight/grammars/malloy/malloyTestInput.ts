@@ -63,6 +63,16 @@ export default [
   ['run: duckdb.sql("""', '  SELECT 1', '""")'],
   ['#|', '  renderer=sparkline size=large', '|#', 'dimension: x is 1'],
   ['##|', '  model_tag=value', '|##'],
+  [
+    '#|',
+    '  This stuff is a comment, seee',
+    '  source: jst a comment',
+    '  and i can indeent',
+    '  #| more comments',
+    '    |#',
+    '|#',
+    "source: flights is trino_test.table('malloytest.flights')",
+  ],
   // [
   //   'select: """',
   //   '-- SQL CONTEXT',
