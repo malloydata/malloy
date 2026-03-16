@@ -68,7 +68,7 @@ export const BarChartPluginFactory: RenderPluginFactory<BarChartPluginInstance> 
 
       if (hasBarChartTag && !isRepeatedRecord) {
         throw new Error(
-          'Malloy Bar Chart: field is a bar chart, but is not a repeated record'
+          'Malloy Bar Chart: field is a bar chart, but is not a repeated record. Try moving the tag to the line above the query, run, nest, or view declaration.'
         );
       }
 

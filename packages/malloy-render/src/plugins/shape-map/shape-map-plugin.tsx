@@ -111,7 +111,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
 
       if (hasTag && !isRepeatedRecord) {
         throw new Error(
-          'Malloy Shape Map: field is a shape map, but is not a repeated record'
+          'Malloy Shape Map: field is a shape map, but is not a repeated record. Try moving the tag to the line above the query, run, nest, or view declaration.'
         );
       }
 

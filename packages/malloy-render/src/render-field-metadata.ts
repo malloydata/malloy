@@ -196,7 +196,7 @@ export class RenderFieldMetadata {
     for (const tagName of nestOnly) {
       if (tag.has(tagName) && !nestTypes.includes(fieldType)) {
         log.error(
-          `Tag '${tagName}' on field '${field.name}' requires a nested query, but field is ${fieldType}`,
+          `Tag '${tagName}' on field '${field.name}' requires a nested query, but field is ${fieldType}. Try moving the tag to the line above the query, run, nest, or view declaration.`,
           tag.tag(tagName)
         );
       }

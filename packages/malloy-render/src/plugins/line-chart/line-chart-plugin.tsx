@@ -70,7 +70,7 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
 
       if (hasLineChartTag && !isRepeatedRecord) {
         throw new Error(
-          'Malloy Line Chart: field is a line chart, but is not a repeated record'
+          'Malloy Line Chart: field is a line chart, but is not a repeated record. Try moving the tag to the line above the query, run, nest, or view declaration.'
         );
       }
 

@@ -201,7 +201,7 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
           return false;
         }
         throw new Error(
-          'Malloy Big Value: field must be a query result (repeated record or record)'
+          'Malloy Big Value: field must be a query result (repeated record or record). Try moving the tag to the line above the query, run, nest, or view declaration.'
         );
       }
 

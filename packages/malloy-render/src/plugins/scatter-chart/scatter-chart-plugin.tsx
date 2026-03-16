@@ -70,7 +70,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
 
       if (hasTag && !isRepeatedRecord) {
         throw new Error(
-          'Malloy Scatter Chart: field is a scatter chart, but is not a repeated record'
+          'Malloy Scatter Chart: field is a scatter chart, but is not a repeated record. Try moving the tag to the line above the query, run, nest, or view declaration.'
         );
       }
 

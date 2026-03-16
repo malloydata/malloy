@@ -90,7 +90,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
 
       if (hasTag && !isRepeatedRecord) {
         throw new Error(
-          'Malloy Segment Map: field is a segment map, but is not a repeated record'
+          'Malloy Segment Map: field is a segment map, but is not a repeated record. Try moving the tag to the line above the query, run, nest, or view declaration.'
         );
       }
 
