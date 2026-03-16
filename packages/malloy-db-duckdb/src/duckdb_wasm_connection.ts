@@ -239,7 +239,7 @@ type RemoteFileCallback = (
 export interface DuckDBWasmOptions extends ConnectionConfig {
   additionalExtensions?: string[];
   databasePath?: string;
-  motherDuckToken: string | undefined;
+  motherDuckToken?: string;
   workingDirectory?: string;
   setupSQL?: string;
 }

@@ -13,6 +13,14 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./native": {
+      "types": "./dist/native.d.ts",
+      "default": "./dist/native.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
     "./wasm": {
       "browser": "./dist/duckdb_wasm_connection_browser.js",
       "node": "./dist/duckdb_wasm_connection_node.js",
@@ -23,6 +31,12 @@
     "*": {
       "index": [
         "./dist/index.d.ts"
+      ],
+      "native": [
+        "./dist/native.d.ts"
+      ],
+      "browser": [
+        "./dist/browser.d.ts"
       ],
       "wasm": [
         "./dist/duckdb_wasm_connection_browser.d.ts"
