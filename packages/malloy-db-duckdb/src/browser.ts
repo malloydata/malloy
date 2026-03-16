@@ -9,8 +9,7 @@ import {DuckDBWASMConnection} from './duckdb_wasm_connection_browser';
 
 registerConnectionType('duckdb_wasm', {
   displayName: 'DuckDB',
-  factory: async (config: ConnectionConfig) =>
-    new DuckDBWASMConnection(config),
+  factory: async (config: ConnectionConfig) => new DuckDBWASMConnection(config),
   properties: [
     {
       name: 'databasePath',
