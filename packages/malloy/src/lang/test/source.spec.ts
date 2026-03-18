@@ -1281,7 +1281,7 @@ describe('source:', () => {
   describe('schema statement', () => {
     test('basic schema declaration', () => {
       const m = new TestTranslator(
-        'source: c is a extend { schema: { astr :: string, ai :: number } }'
+        '##! experimental.schema_statement\nsource: c is a extend { schema: { astr :: string, ai :: number } }'
       );
       expect(m).toTranslate();
       const c = m.getSourceDef('c');
@@ -1298,6 +1298,7 @@ describe('source:', () => {
     });
     test('schema type mismatch errors', () => {
       expect(markSource`
+        ##! experimental.schema_statement
         source: c is a extend { schema: { ${'astr :: number'} } }
       `).toLog(
         errorMessage(
@@ -1307,6 +1308,7 @@ describe('source:', () => {
     });
     test('schema nonexistent field errors', () => {
       expect(markSource`
+        ##! experimental.schema_statement
         source: c is a extend { schema: { ${'nosuch :: string'} } }
       `).toLog(
         errorMessage(
@@ -1316,7 +1318,7 @@ describe('source:', () => {
     });
     test('schema with record type', () => {
       const m = new TestTranslator(
-        'source: c is a extend { schema: { aninline :: {column :: number} } }'
+        '##! experimental.schema_statement\nsource: c is a extend { schema: { aninline :: {column :: number} } }'
       );
       expect(m).toTranslate();
       const c = m.getSourceDef('c');
@@ -1329,6 +1331,7 @@ describe('source:', () => {
     test('schema does not affect dimensions', () => {
       expect(`
         ##! experimental.access_modifiers
+        ##! experimental.schema_statement
         source: c is a extend {
           dimension: x is ai + 1
           schema: { astr :: string }
@@ -1338,7 +1341,7 @@ describe('source:', () => {
     });
     test('schema with sql native type', () => {
       const m = new TestTranslator(
-        'source: c is a extend { schema: { aweird :: "weird" } }'
+        '##! experimental.schema_statement\nsource: c is a extend { schema: { aweird :: "weird" } }'
       );
       expect(m).toTranslate();
       const c = m.getSourceDef('c');
@@ -1350,6 +1353,7 @@ describe('source:', () => {
     });
     test('schema sql native type mismatch', () => {
       expect(markSource`
+        ##! experimental.schema_statement
         source: c is a extend { schema: { ${'aweird :: "other"'} } }
       `).toLog(
         errorMessage(
@@ -1366,6 +1370,7 @@ describe('source:', () => {
     });
     test('multiple schema statements error', () => {
       expect(markSource`
+        ##! experimental.schema_statement
         source: c is a extend {
           schema: { astr :: string }
           ${'schema: { ai :: number }'}

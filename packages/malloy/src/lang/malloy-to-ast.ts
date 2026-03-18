@@ -831,6 +831,7 @@ export class MalloyToAST
   visitDefExploreSchema(
     pcx: parse.DefExploreSchemaContext
   ): ast.SchemaStatement {
+    this.inExperiment('schema_statement', pcx);
     const recordCx = pcx.malloyRecordType();
     const fields = recordCx.malloyRecordField().map(fieldCx => {
       const name = getId(fieldCx);
