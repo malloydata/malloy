@@ -19,10 +19,8 @@ export class SchemaStatement extends ListOf<SchemaElement> {
   constructor(fields: SchemaElement[]) {
     super(fields);
     this.declaredFields = new Map<string, SchemaElement>();
-    for (const fel of this.list) {
-      const f = fel.elementDef;
-      const name = f.as ?? f.name;
-      this.declaredFields.set(name, fel);
+    for (const fel of fields) {
+      this.declaredFields.set(fel.elementDef.name, fel);
     }
   }
 }
