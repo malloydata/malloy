@@ -828,6 +828,19 @@ export class MalloyToAST
     return this.astAt(src, pcx);
   }
 
+  visitDefExploreSchema(
+    pcx: parse.DefExploreSchemaContext
+  ): ast.SchemaStatement {
+    const recordCx = pcx.malloyRecordType();
+    const fields = recordCx.malloyRecordField().map(fieldCx => {
+      const name = getId(fieldCx);
+      const fieldType = this.getRecordFieldType(fieldCx.malloyOrSQLType());
+      return mkFieldDef(fieldType, name);
+    });
+    const node = new ast.SchemaStatement(fields);
+    return this.astAt(node, pcx);
+  }
+
   visitDefExploreTimezone(
     cx: parse.DefExploreTimezoneContext
   ): ast.TimezoneStatement {
@@ -1581,7 +1594,7 @@ export class MalloyToAST
     if (recordCx) {
       const fields = recordCx.malloyRecordField().map(fieldCx => {
         const name = getId(fieldCx);
-        const fieldType = this.getMalloyType(fieldCx.malloyType());
+        const fieldType = this.getRecordFieldType(fieldCx.malloyOrSQLType());
         return mkFieldDef(fieldType, name);
       });
       return {type: 'record', fields};
@@ -1589,6 +1602,22 @@ export class MalloyToAST
     const innerCx = pcx.malloyType();
     if (innerCx) {
       return mkArrayTypeDef(this.getMalloyType(innerCx));
+    }
+    this.contextError(pcx, 'unexpected-malloy-type', 'Expected a type');
+    return {type: 'error'};
+  }
+
+  getRecordFieldType(pcx: parse.MalloyOrSQLTypeContext): AtomicTypeDef {
+    const mtcx = pcx.malloyType();
+    if (mtcx) {
+      return this.getMalloyType(mtcx);
+    }
+    const rtcx = pcx.string();
+    if (rtcx) {
+      return {
+        type: 'sql native',
+        rawType: this.getPlainStringFrom({string: () => rtcx}),
+      };
     }
     this.contextError(pcx, 'unexpected-malloy-type', 'Expected a type');
     return {type: 'error'};

@@ -188,6 +188,7 @@ exploreStatement
   | tags accessLabel? RENAME renameList      # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
   | tags accessLabel? VIEW subQueryDefList   # defExploreQuery
+  | SCHEMA malloyRecordType                  # defExploreSchema
   | timezoneStatement                        # defExploreTimezone
   | annotation+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
@@ -572,7 +573,7 @@ malloyRecordType
   ;
 
 malloyRecordField
-  : id DOUBLECOLON malloyType
+  : id DOUBLECOLON malloyOrSQLType
   ;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 

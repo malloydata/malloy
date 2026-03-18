@@ -2054,14 +2054,19 @@ export const TD = {
     }
     function checkFields(a: AtomicTypeDef, b: AtomicTypeDef): boolean {
       const aSchema: Record<string, AtomicTypeDef> = {};
-      for (const aEnt of a['fields'] || []) {
+      const aFields = a['fields'] || [];
+      const bFields = b['fields'] || [];
+      if (aFields.length !== bFields.length) {
+        return false;
+      }
+      for (const aEnt of aFields) {
         if (aEnt.name) {
           aSchema[aEnt.name] = aEnt;
         } else {
           return false;
         }
       }
-      for (const bEnt of b['fields'] || []) {
+      for (const bEnt of bFields) {
         if (!TD.eq(aSchema[bEnt.name], bEnt)) {
           return false;
         }

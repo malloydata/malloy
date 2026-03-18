@@ -268,6 +268,9 @@ type MessageParameterTypes = {
   'missing-source-argument': string;
   'multiple-field-list-edits': string;
   'multiple-primary-keys': string;
+  'multiple-schema-statements': string;
+  'schema-type-mismatch': string;
+  'schema-field-not-found': string;
   'unexpected-source-property': string;
   'aggregate-in-source-filter': string;
   'invalid-connection-for-sql-source': string;

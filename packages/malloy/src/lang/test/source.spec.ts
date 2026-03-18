@@ -1278,4 +1278,99 @@ describe('source:', () => {
       expect('source: toString is a').toTranslate();
     });
   });
+  describe('schema statement', () => {
+    test('basic schema declaration', () => {
+      const m = new TestTranslator(
+        'source: c is a extend { schema: { astr :: string, ai :: number } }'
+      );
+      expect(m).toTranslate();
+      const c = m.getSourceDef('c');
+      expect(c).toBeDefined();
+      if (c) {
+        // Declared fields should not be private
+        expect(getFieldDef(c, 'astr').accessModifier).toBeUndefined();
+        expect(getFieldDef(c, 'ai').accessModifier).toBeUndefined();
+        // Undeclared intrinsic fields should be private
+        expect(getFieldDef(c, 'af').accessModifier).toBe('private');
+        expect(getFieldDef(c, 'ad').accessModifier).toBe('private');
+        expect(getFieldDef(c, 'abool').accessModifier).toBe('private');
+      }
+    });
+    test('schema type mismatch errors', () => {
+      expect(markSource`
+        source: c is a extend { ${'schema: { astr :: number }'} }
+      `).toLog(
+        errorMessage(
+          "Schema type mismatch for 'astr': expected number, got string"
+        )
+      );
+    });
+    test('schema nonexistent field errors', () => {
+      expect(markSource`
+        source: c is a extend { ${'schema: { nosuch :: string }'} }
+      `).toLog(
+        errorMessage(
+          "Field 'nosuch' declared in schema does not exist in source"
+        )
+      );
+    });
+    test('schema with record type', () => {
+      const m = new TestTranslator(
+        'source: c is a extend { schema: { aninline :: {column :: number} } }'
+      );
+      expect(m).toTranslate();
+      const c = m.getSourceDef('c');
+      expect(c).toBeDefined();
+      if (c) {
+        expect(getFieldDef(c, 'aninline').accessModifier).toBeUndefined();
+        expect(getFieldDef(c, 'astr').accessModifier).toBe('private');
+      }
+    });
+    test('schema does not affect dimensions', () => {
+      expect(`
+        ##! experimental.access_modifiers
+        source: c is a extend {
+          dimension: x is ai + 1
+          schema: { astr :: string }
+        }
+        run: c -> { select: x }
+      `).toTranslate();
+    });
+    test('schema with sql native type', () => {
+      const m = new TestTranslator(
+        'source: c is a extend { schema: { aweird :: "weird" } }'
+      );
+      expect(m).toTranslate();
+      const c = m.getSourceDef('c');
+      expect(c).toBeDefined();
+      if (c) {
+        expect(getFieldDef(c, 'aweird').accessModifier).toBeUndefined();
+        expect(getFieldDef(c, 'astr').accessModifier).toBe('private');
+      }
+    });
+    test('schema sql native type mismatch', () => {
+      expect(markSource`
+        source: c is a extend { ${'schema: { aweird :: "other" }'} }
+      `).toLog(
+        errorMessage(
+          'Schema type mismatch for \'aweird\': expected "other", got "weird"'
+        )
+      );
+    });
+    test('record field with sql native type', () => {
+      expect(`
+        source: c is a extend {
+          dimension: x is astr :: "TEXT"
+        }
+      `).toTranslate();
+    });
+    test('multiple schema statements error', () => {
+      expect(markSource`
+        source: c is a extend {
+          schema: { astr :: string }
+          ${'schema: { ai :: number }'}
+        }
+      `).toLog(errorMessage('Schema already defined'));
+    });
+  });
 });

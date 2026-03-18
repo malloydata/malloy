@@ -24,11 +24,14 @@
 import type {
   AccessModifierLabel,
   Annotation,
+  FieldDef,
   SourceDef,
 } from '../../../model/malloy_types';
 import {
   expressionIsCalculation,
+  fieldIsIntrinsic,
   isPersistableSourceDef,
+  TD,
 } from '../../../model/malloy_types';
 
 import {RefinedSpace} from '../field-space/refined-space';
@@ -46,6 +49,7 @@ import {Renames} from '../source-properties/renames';
 import type {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {JoinStatement} from '../source-properties/join';
+import {SchemaStatement} from '../source-properties/schema-statement';
 import type {IncludeItem} from '../source-query-elements/include-item';
 import {
   getIncludeStateForJoin,
@@ -80,6 +84,7 @@ export class RefinedSource extends Source {
   ): SourceDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
+    let schemaStatement: SchemaStatement | undefined;
     const fields: MakeEntry[] = [];
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
@@ -125,6 +130,11 @@ export class RefinedSource extends Source {
         filters.push(el);
       } else if (el instanceof TimezoneStatement) {
         newTimezone = el.tz;
+      } else if (el instanceof SchemaStatement) {
+        if (schemaStatement) {
+          el.logError('multiple-schema-statements', 'Schema already defined');
+        }
+        schemaStatement = el;
       } else {
         errTo.logError(
           'unexpected-source-property',
@@ -146,6 +156,9 @@ export class RefinedSource extends Source {
       for (const field of modifier.fields) {
         thisIncludeState.modifiers.set(field, modifier.access);
       }
+    }
+    if (schemaStatement) {
+      applySchemaStatement(schemaStatement, from.fields, thisIncludeState);
     }
     // Note that this is explicitly not:
     // const from = this.source.withParameters(parameterSpace, pList);
@@ -207,5 +220,71 @@ export class RefinedSource extends Source {
     }
     this.document()?.rememberToAddModelAnnotations(retStruct);
     return retStruct;
+  }
+}
+
+function malloyTypeName(f: FieldDef): string {
+  if (f.type === 'record') {
+    const inner = f.fields
+      .map(ff => `${ff.name} :: ${malloyTypeName(ff)}`)
+      .join(', ');
+    return `{${inner}}`;
+  }
+  if (f.type === 'array') {
+    if (f.elementTypeDef.type === 'record_element') {
+      const inner = f.fields
+        .map(ff => `${ff.name} :: ${malloyTypeName(ff)}`)
+        .join(', ');
+      return `{${inner}}[]`;
+    }
+    return `${f.elementTypeDef.type}[]`;
+  }
+  if (f.type === 'sql native' && f.rawType) {
+    return `"${f.rawType}"`;
+  }
+  return f.type;
+}
+
+/**
+ * Process a schema: {} declaration against the source's fields.
+ * - Validates declared fields exist and types match
+ * - Marks undeclared intrinsic fields as private
+ */
+function applySchemaStatement(
+  schema: SchemaStatement,
+  sourceFields: FieldDef[],
+  includeState: {modifiers: Map<string, AccessModifierLabel>}
+): void {
+  const declaredFields = schema.declaredFields;
+  const matched = new Set<string>();
+
+  for (const field of sourceFields) {
+    if (!fieldIsIntrinsic(field)) {
+      continue;
+    }
+    const effectiveName = field.as ?? field.name;
+    const declaredType = declaredFields.get(effectiveName);
+    if (declaredType) {
+      matched.add(effectiveName);
+      if (!TD.eq(declaredType, field)) {
+        schema.logError(
+          'schema-type-mismatch',
+          `Schema type mismatch for '${effectiveName}': ` +
+            `expected ${malloyTypeName(declaredType)}, ` +
+            `got ${malloyTypeName(field)}`
+        );
+      }
+    } else {
+      includeState.modifiers.set(effectiveName, 'private');
+    }
+  }
+
+  for (const [name] of declaredFields) {
+    if (!matched.has(name)) {
+      schema.logError(
+        'schema-field-not-found',
+        `Field '${name}' declared in schema does not exist in source`
+      );
+    }
   }
 }
