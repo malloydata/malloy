@@ -1298,7 +1298,7 @@ describe('source:', () => {
     });
     test('schema type mismatch errors', () => {
       expect(markSource`
-        source: c is a extend { ${'schema: { astr :: number }'} }
+        source: c is a extend { schema: { ${'astr :: number'} } }
       `).toLog(
         errorMessage(
           "Schema type mismatch for 'astr': expected number, got string"
@@ -1307,7 +1307,7 @@ describe('source:', () => {
     });
     test('schema nonexistent field errors', () => {
       expect(markSource`
-        source: c is a extend { ${'schema: { nosuch :: string }'} }
+        source: c is a extend { schema: { ${'nosuch :: string'} } }
       `).toLog(
         errorMessage(
           "Field 'nosuch' declared in schema does not exist in source"
@@ -1350,7 +1350,7 @@ describe('source:', () => {
     });
     test('schema sql native type mismatch', () => {
       expect(markSource`
-        source: c is a extend { ${'schema: { aweird :: "other" }'} }
+        source: c is a extend { schema: { ${'aweird :: "other"'} } }
       `).toLog(
         errorMessage(
           'Schema type mismatch for \'aweird\': expected "other", got "weird"'

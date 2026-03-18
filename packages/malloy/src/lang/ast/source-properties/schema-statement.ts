@@ -4,20 +4,25 @@
  */
 
 import type {AtomicFieldDef} from '../../../model/malloy_types';
-import {MalloyElement} from '../types/malloy-element';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
-export class SchemaStatement extends MalloyElement {
-  elementType = 'schemaStatement';
-  constructor(readonly fields: AtomicFieldDef[]) {
+export class SchemaElement extends MalloyElement {
+  elementType = 'schemaElement';
+  constructor(readonly elementDef: AtomicFieldDef) {
     super();
   }
+}
 
-  get declaredFields(): Map<string, AtomicFieldDef> {
-    const map = new Map<string, AtomicFieldDef>();
-    for (const f of this.fields) {
+export class SchemaStatement extends ListOf<SchemaElement> {
+  elementType = 'schemaStatement';
+  declaredFields: Map<string, SchemaElement>;
+  constructor(fields: SchemaElement[]) {
+    super(fields);
+    this.declaredFields = new Map<string, SchemaElement>();
+    for (const fel of this.list) {
+      const f = fel.elementDef;
       const name = f.as ?? f.name;
-      map.set(name, f);
+      this.declaredFields.set(name, fel);
     }
-    return map;
   }
 }

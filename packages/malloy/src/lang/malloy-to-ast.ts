@@ -835,7 +835,10 @@ export class MalloyToAST
     const fields = recordCx.malloyRecordField().map(fieldCx => {
       const name = getId(fieldCx);
       const fieldType = this.getRecordFieldType(fieldCx.malloyOrSQLType());
-      return mkFieldDef(fieldType, name);
+      const def = mkFieldDef(fieldType, name);
+      const el = new ast.SchemaElement(def);
+      this.astAt(el, fieldCx);
+      return el;
     });
     const node = new ast.SchemaStatement(fields);
     return this.astAt(node, pcx);

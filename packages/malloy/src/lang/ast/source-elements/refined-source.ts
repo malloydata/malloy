@@ -226,14 +226,14 @@ export class RefinedSource extends Source {
 function malloyTypeName(f: FieldDef): string {
   if (f.type === 'record') {
     const inner = f.fields
-      .map(ff => `${ff.name} :: ${malloyTypeName(ff)}`)
+      .map(ff => `${ff.name}::${malloyTypeName(ff)}`)
       .join(', ');
     return `{${inner}}`;
   }
   if (f.type === 'array') {
     if (f.elementTypeDef.type === 'record_element') {
       const inner = f.fields
-        .map(ff => `${ff.name} :: ${malloyTypeName(ff)}`)
+        .map(ff => `${ff.name}::${malloyTypeName(ff)}`)
         .join(', ');
       return `{${inner}}[]`;
     }
@@ -266,11 +266,11 @@ function applySchemaStatement(
     const declaredType = declaredFields.get(effectiveName);
     if (declaredType) {
       matched.add(effectiveName);
-      if (!TD.eq(declaredType, field)) {
-        schema.logError(
+      if (!TD.eq(declaredType.elementDef, field)) {
+        declaredType.logError(
           'schema-type-mismatch',
           `Schema type mismatch for '${effectiveName}': ` +
-            `expected ${malloyTypeName(declaredType)}, ` +
+            `expected ${malloyTypeName(declaredType.elementDef)}, ` +
             `got ${malloyTypeName(field)}`
         );
       }
@@ -279,9 +279,9 @@ function applySchemaStatement(
     }
   }
 
-  for (const [name] of declaredFields) {
+  for (const [name, el] of declaredFields) {
     if (!matched.has(name)) {
-      schema.logError(
+      el.logError(
         'schema-field-not-found',
         `Field '${name}' declared in schema does not exist in source`
       );
