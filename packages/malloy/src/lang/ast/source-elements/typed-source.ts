@@ -103,9 +103,9 @@ export class TypedSource extends Source {
       }
     }
 
-    // Source fields not in any shape: mark as hidden
+    // Intrinsic fields not in any shape: mark as hidden
     const resultFields = sourceDef.fields.map(f =>
-      outputShape.has(f.as ?? f.name)
+      outputShape.has(f.as ?? f.name) || !fieldIsIntrinsic(f)
         ? f
         : {...f, accessModifier: STRUCT_SHAPE_HIDDEN_ACCESS}
     );

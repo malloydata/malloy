@@ -1459,4 +1459,15 @@ describe('typed source (::)', () => {
     `);
     expect(m).toTranslate();
   });
+
+  test(':: does not hide non-intrinsic fields', () => {
+    const m = tsModel(`
+      struct: S is { astr :: string }
+      source: typed is ab::S
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('typed')!;
+    // measure acount and view aturtle from ab should not be hidden
+    expect(getFieldDef(src, 'acount').accessModifier).toBeUndefined();
+  });
 });
