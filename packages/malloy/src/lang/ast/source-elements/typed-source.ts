@@ -4,6 +4,7 @@
  */
 
 import type {
+  Annotation,
   AtomicFieldDef,
   FieldDef,
   NonDefaultAccessModifierLabel,
@@ -103,12 +104,22 @@ export class TypedSource extends Source {
       }
     }
 
-    // Intrinsic fields not in any shape: mark as hidden
-    const resultFields = sourceDef.fields.map(f =>
-      outputShape.has(f.as ?? f.name) || !fieldIsIntrinsic(f)
-        ? f
-        : {...f, accessModifier: STRUCT_SHAPE_HIDDEN_ACCESS}
-    );
+    // Intrinsic fields not in any shape: mark as hidden.
+    // Matching fields inherit annotations from the shape.
+    const resultFields = sourceDef.fields.map(f => {
+      const name = f.as ?? f.name;
+      const shapeEntry = outputShape.get(name);
+      if (!shapeEntry || !fieldIsIntrinsic(f)) {
+        return fieldIsIntrinsic(f) && !shapeEntry
+          ? {...f, accessModifier: STRUCT_SHAPE_HIDDEN_ACCESS}
+          : f;
+      }
+      const shapeAnnotation = shapeEntry.field.annotation;
+      if (!shapeAnnotation) {
+        return f;
+      }
+      return {...f, annotation: mergeAnnotation(f.annotation, shapeAnnotation)};
+    });
 
     return {
       ...sourceDef,
@@ -130,12 +141,32 @@ export class TypedSource extends Source {
       }
 
       for (const sf of entry.entry.fields) {
-        next.set(sf.name, {
-          field: mkFieldDef(sf.typeDef, sf.name),
-          fromShape: ref,
-        });
+        const field = mkFieldDef(sf.typeDef, sf.name);
+        if (sf.annotation) {
+          field.annotation = sf.annotation;
+        }
+        next.set(sf.name, {field, fromShape: ref});
       }
       yield next;
     }
   }
+}
+
+/**
+ * Insert shapeAnnotation behind fieldAnnotation in the inherits chain.
+ * Chain: field → shape → (whatever field previously inherited from)
+ */
+function mergeAnnotation(
+  fieldAnnotation: Annotation | undefined,
+  shapeAnnotation: Annotation
+): Annotation {
+  if (!fieldAnnotation) {
+    return shapeAnnotation;
+  }
+  return {
+    ...fieldAnnotation,
+    inherits: fieldAnnotation.inherits
+      ? {...shapeAnnotation, inherits: fieldAnnotation.inherits}
+      : shapeAnnotation,
+  };
 }

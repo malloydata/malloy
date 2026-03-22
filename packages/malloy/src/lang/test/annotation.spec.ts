@@ -1195,4 +1195,60 @@ describe('struct annotation', () => {
       },
     });
   });
+
+  test('field annotations preserved when :: applies struct to virtual source', () => {
+    const m = structModel(`
+      struct: S is {
+        # noted field
+        astr :: string
+      }
+      source: v is _db_.virtual('t')::S
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('v')!;
+    const field = src.fields.find(f => f.name === 'astr')!;
+    expect(field.annotation).matchesAnnotation({
+      notes: ['# noted field\n'],
+    });
+  });
+
+  test('struct field annotations applied to table source fields', () => {
+    const m = structModel(`
+      struct: S is {
+        # currency
+        astr :: string
+      }
+      source: typed is a::S
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('typed')!;
+    const field = src.fields.find(f => f.name === 'astr')!;
+    expect(field.annotation).matchesAnnotation({
+      notes: ['# currency\n'],
+    });
+  });
+
+  test('struct annotation merges with existing field annotation', () => {
+    const m = structModel(`
+      struct: S1 is {
+        # from s1
+        astr :: string
+      }
+      struct: S2 is {
+        # from s2
+        astr :: string
+      }
+      source: src1 is _db_.virtual('t')::S1
+      source: src2 is src1::S2
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('src2')!;
+    const field = src.fields.find(f => f.name === 'astr')!;
+    expect(field.annotation).matchesAnnotation({
+      notes: ['# from s1\n'],
+      inherits: {
+        notes: ['# from s2\n'],
+      },
+    });
+  });
 });

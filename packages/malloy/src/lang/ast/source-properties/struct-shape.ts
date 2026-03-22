@@ -77,9 +77,13 @@ export class StructMemberIndirect extends StructMember {
       this.logError('not-a-struct', `'${this.shapeName}' is not a struct`);
       return error;
     }
-    const fieldsFromReferencedType = modelEntry.entry.fields.map(f =>
-      mkFieldDef(f.typeDef, f.name)
-    );
+    const fieldsFromReferencedType = modelEntry.entry.fields.map(f => {
+      const field = mkFieldDef(f.typeDef, f.name);
+      if (f.annotation) {
+        field.annotation = f.annotation;
+      }
+      return field;
+    });
     let typeDef: AtomicTypeDef = {
       type: 'record',
       fields: fieldsFromReferencedType,
