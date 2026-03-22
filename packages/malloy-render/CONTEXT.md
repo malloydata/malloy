@@ -68,12 +68,16 @@ The render package integrates with:
 
 ### Tag System
 Render annotations use the Malloy Tag API to check for rendering hints. For tag language syntax, see [packages/malloy-tag/CONTEXT.md](../malloy-tag/CONTEXT.md).
-
-Common API patterns in the renderer:
+Low-level Tag API patterns (primarily for setup-time resolution/validation code):
 - `field.tag.has('pivot')` - Check if a tag exists
 - `field.tag.text('label')` - Get a text property
 - `field.tag.textArray('pivot', 'dimensions')` - Get array property with path
 - `field.tag.tag('table', 'size')` - Navigate nested tag properties
+
+Component code should prefer resolved values from field metadata when available:
+- `field.getTagConfig<T>()`
+- `field.getLabel()`
+- `field.getColumnConfig<T>()`
 
 ### Table Layout
 The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
@@ -83,6 +87,7 @@ The table uses CSS Grid with subgrid. Layout is calculated in `table-layout.ts`:
 
 ### Testing
 Use Storybook (`npm run storybook`) to test visual changes. Stories are in `src/stories/*.stories.malloy`.
+For non-visual logic (settings serialization, tag parsing, drill query behavior, utility formatting), add targeted Jest tests under `src/**/*.spec.ts` where possible.
 
 ## Plugin System
 
@@ -179,6 +184,8 @@ getLogs()
   → Returns all collected warnings and errors
 ```
 
+For headless validation workflows, `setResult()` + `getLogs()` can be used without rendering.
+
 ### Error Handling: Renderable vs Loggable
 
 Plugins produce two kinds of errors. The distinction is simple: **can the component still produce output?**
@@ -254,27 +261,40 @@ if (myTag?.scalarType() === 'number') {
 
 Always pass the relevant `Tag` object as the second argument to `log.error()` / `log.warn()` — it carries source location information that helps the author find the problem in their Malloy source.
 
+### Tag Read Pattern for Components (Important)
+
+Unread-tag warnings are part of typo/unknown-tag detection, so tag access patterns matter.
+
+Preferred pattern:
+1. Read/resolve tags during `setResult()` setup (for built-ins, use `resolveBuiltInTags()` in `tag-configs.ts` and/or `validateFieldTags()` in `render-field-metadata.ts`).
+2. Store resolved values on fields (`setTagConfig`, `setResolvedLabel`, `setColumnConfig`).
+3. In components, read resolved values (`getTagConfig`, `getLabel`, `getColumnConfig`) instead of reading `field.tag.*` directly at render time.
+
+If a plugin intentionally reads tags during render/interaction, declare those paths via `getDeclaredTagPaths()` so they are marked as consumed.
+
 ### Unread Tag Detection
 
-Tags track whether they've been accessed. After rendering completes, any tag property that was never read by any plugin or the renderer is reported as a warning — this catches misspellings and unknown tag names automatically.
+Tags track whether they've been accessed. Unread properties are logged as warnings to catch misspellings and unknown tags.
 
-The lifecycle:
-1. `setResult()` — validation reads tags (marking them as read). Plugin `getDeclaredTagPaths()` and `BUILTIN_RENDERER_TAGS` in `render-field-metadata.ts` are also marked as read to prevent false positives for tags consumed at render or interaction time.
-2. `render()` — plugins and components read tags during rendering
-3. `onReady` fires — `collectUnreadTagWarnings()` walks all tags and warns about unread ones
-4. `getLogs()` — returns all collected messages
+Current lifecycle:
+1. `setResult()` builds `RenderFieldMetadata`, which runs setup-time resolution/validation and marks declared plugin paths (`getDeclaredTagPaths()` via `markDeclaredTags()`).
+2. `getLogs()` and `onReady` both trigger unread-tag collection in `MalloyViz` (collection is one-time and idempotent).
+3. Logs include semantic validation messages plus unread-tag warnings.
 
-To suppress false positives for a new built-in (non-plugin) renderer tag, add its path to `BUILTIN_RENDERER_TAGS`. For plugin tags, implement `getDeclaredTagPaths()` on the plugin instance.
+Notes:
+- For built-in renderer tags, prefer setup-time reads in `resolveBuiltInTags()` over component-time reads.
+- `onReady` is useful for UI flow completeness, but it is not strictly required to include unread-tag warnings in logs.
 
-Because chart rendering may be deferred (waiting for container resize), `collectUnreadTagWarnings()` runs in the `onReady` callback, not synchronously after `render()`. Consumers should use `onReady` to get complete logs:
+### Error Message Pattern (LLM-Friendly Guideline)
 
-```typescript
-viz.render(element);
-viz.onReady(() => {
-  const logs = viz.getLogs();
-  // logs now includes both semantic errors and unread tag warnings
-});
-```
+For validation errors, include explicit fix hints when possible. A useful guideline:
+
+`Invalid <tag-path> on '<field>': expected <constraint>, got <value>. Fix: <example> (or <fallback>).`
+
+Example:
+- `Invalid # dashboard.gap on 'sales_dashboard': expected number >= 0, got -2. Fix: use '# dashboard { gap = 0 }' (or remove 'gap').`
+
+Keep using `log.error(..., tagRef)` / `log.warn(..., tagRef)` with the relevant `Tag` object so source locations are preserved.
 
 ### Rendering Modes
 
