@@ -4,7 +4,7 @@
  */
 
 import type {EventStream} from '../../runtime_types';
-import type {BuildManifest} from '../../model';
+import type {BuildManifest, VirtualMap} from '../../model';
 
 /**
  * An empty BuildManifest with no entries and strict mode off.
@@ -51,6 +51,8 @@ export interface CompileQueryOptions {
   buildManifest?: BuildManifest;
   /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
   connectionDigests?: Record<string, string>;
+  /** Map from connectionName → virtualName → tablePath for virtual source resolution */
+  virtualMap?: VirtualMap;
 }
 
 // =============================================================================

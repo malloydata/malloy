@@ -28,6 +28,7 @@ import {
   markSource,
   errorMessage,
   warningMessage,
+  error,
   getFieldDef,
 } from './test-translator';
 import './parse-expects';
@@ -1277,5 +1278,168 @@ describe('source:', () => {
     test('toString as source name', () => {
       expect('source: toString is a').toTranslate();
     });
+  });
+});
+
+describe('virtual sources', () => {
+  const experimental = '##! experimental.virtual_source\n';
+
+  function vsModel(src: string) {
+    return new TestTranslator(experimental + src);
+  }
+
+  test('basic virtual source', () => {
+    const m = vsModel(`
+      source: v is _db_.virtual('my_table')
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('v');
+    expect(src).toBeDefined();
+    expect(src!.type).toBe('virtual');
+    expect(src!.name).toBe('my_table');
+    expect(src!.connection).toBe('_db_');
+    expect(src!.fields).toEqual([]);
+  });
+
+  test('virtual source with single struct shape', () => {
+    const m = vsModel(`
+      struct: Schema is { name :: string, age :: number }
+      source: v is _db_.virtual('t')::Schema
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('v');
+    expect(src).toBeDefined();
+    expect(src!.type).toBe('virtual');
+    expect(src!.fields.map(f => f.name)).toEqual(['name', 'age']);
+  });
+
+  test('virtual source with multiple struct shapes', () => {
+    const m = vsModel(`
+      struct: Names is { name :: string }
+      struct: Ages is { age :: number }
+      source: v is _db_.virtual('t')::<Names, Ages>
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('v');
+    expect(src).toBeDefined();
+    expect(src!.fields.map(f => f.name)).toEqual(['name', 'age']);
+  });
+
+  test('virtual source gets fields from struct shapes', () => {
+    const m = vsModel(`
+      struct: Schema is { name :: string, score :: number }
+      source: v is _db_.virtual('t')::Schema
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('v');
+    expect(src!.fields[0]).toEqual(
+      expect.objectContaining({name: 'name', type: 'string'})
+    );
+    expect(src!.fields[1]).toEqual(
+      expect.objectContaining({name: 'score', type: 'number'})
+    );
+  });
+
+  test('virtual source with unknown dialect', () => {
+    const m = vsModel(`
+      source: v is unknown_conn.virtual('t')
+    `);
+    m.update({
+      errors: {connectionDialects: {unknown_conn: 'connection not found'}},
+    });
+    expect(m).toLog(error('virtual-source-unknown-dialect'));
+  });
+
+  test('non-connection name for virtual source', () => {
+    const m = vsModel(`
+      source: v is a.virtual('t')
+    `);
+    m.update({
+      errors: {connectionDialects: {a: 'a is not a connection'}},
+    });
+    expect(m).toLog(error('invalid-connection-for-table-source'));
+  });
+});
+
+describe('typed source (::)', () => {
+  const experimental = '##! experimental.virtual_source\n';
+
+  function tsModel(src: string) {
+    return new TestTranslator(experimental + src);
+  }
+
+  test('source :: struct hides fields not in shape', () => {
+    const m = tsModel(`
+      struct: Narrow is { astr :: string }
+      source: typed is a::Narrow
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('typed')!;
+    expect(getFieldDef(src, 'astr').accessModifier).toBeUndefined();
+    expect(getFieldDef(src, 'ai').accessModifier).toBe('internal');
+  });
+
+  test('source :: struct with all fields present', () => {
+    const m = tsModel(`
+      struct: HasStr is { astr :: string }
+      source: typed is a::HasStr
+    `);
+    expect(m).toTranslate();
+  });
+
+  test('source :: with multiple compatible shapes', () => {
+    const m = tsModel(`
+      struct: S1 is { astr :: string }
+      struct: S2 is { ai :: number }
+      source: typed is a::<S1, S2>
+    `);
+    expect(m).toTranslate();
+    const src = m.getSourceDef('typed')!;
+    expect(getFieldDef(src, 'astr').accessModifier).toBeUndefined();
+    expect(getFieldDef(src, 'ai').accessModifier).toBeUndefined();
+    expect(getFieldDef(src, 'af').accessModifier).toBe('internal');
+  });
+
+  test('typed source used in a query', () => {
+    const m = tsModel(`
+      struct: S is { astr :: string }
+      run: a::S -> { select: astr }
+    `);
+    expect(m).toTranslate();
+  });
+
+  test(':: references undefined struct', () => {
+    expect(
+      tsModel(`
+      source: typed is a::NoSuch
+    `)
+    ).toLog(error('struct-not-found'));
+  });
+
+  test(':: references non-struct name', () => {
+    expect(
+      tsModel(`
+      source: typed is a::b
+    `)
+    ).toLog(error('not-a-struct'));
+  });
+
+  test(':: on non-virtual source missing required field', () => {
+    expect(
+      tsModel(`
+      struct: S is { not_a_real_field :: string }
+      source: typed is a::S
+    `)
+    ).toLog(error('struct-shape-field-missing'));
+  });
+
+  test(':: with conflicting field types across shapes', () => {
+    expect(
+      tsModel(`
+      struct: S1 is { astr :: string }
+      struct: S2 is { astr :: number }
+      source: typed is a::<S1, S2>
+    `)
+    ).toLog(error('struct-shape-field-conflict'));
   });
 });

@@ -135,6 +135,12 @@ export class NamedSource extends Source {
         `Cannot construct a source from a connection '${this.refName}'`
       );
       return;
+    } else if (entry.type === 'structShape') {
+      this.logError(
+        'invalid-source-from-struct-shape',
+        `Cannot construct a source from a struct '${this.refName}'`
+      );
+      return;
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
       if (isSourceDef(entry)) {

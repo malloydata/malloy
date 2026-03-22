@@ -23,6 +23,7 @@
 
 export * from './query-properties/nest';
 export * from './statements/define-source';
+export * from './statements/define-struct';
 export * from './statements/define-query';
 export * from './source-elements/source';
 export * from './source-elements/refined-source';
@@ -32,6 +33,7 @@ export * from './source-query-elements/sq-refine';
 export * from './source-query-elements/sq-source';
 export * from './source-query-elements/sq-reference';
 export * from './source-query-elements/sq-extend';
+export * from './source-query-elements/sq-typed-source';
 export * from './source-query-elements/sq-compose';
 export * from './source-query-elements/include-item';
 
@@ -40,6 +42,7 @@ export * from './source-properties/primary-key';
 export * from './source-properties/renames';
 export * from './source-properties/views';
 export * from './source-properties/timezone-statement';
+export * from './source-properties/struct-shape';
 export * from './expressions/apply';
 export * from './expressions/binary-numeric';
 export * from './expressions/boolean';
@@ -124,6 +127,8 @@ export * from './source-elements/named-source';
 export * from './source-elements/query-source';
 export * from './source-elements/sql-source';
 export * from './source-elements/table-source';
+export * from './source-elements/typed-source';
+export * from './source-elements/virtual-source';
 export * from './sql-elements/sql-string';
 export * from './types/annotation-elements';
 export * from './types/binary_operators';

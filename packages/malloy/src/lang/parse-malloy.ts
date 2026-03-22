@@ -233,6 +233,14 @@ class ImportsAndTablesStep implements TranslationStep {
         });
       }
 
+      for (const connName in this.parseReferences.connectionDialects) {
+        that.root.connectionDialectZone.reference(connName, {
+          url: that.sourceURL,
+          range:
+            this.parseReferences.connectionDialects[connName].firstReference,
+        });
+      }
+
       for (const relativeRef in this.parseReferences.urls) {
         const firstRef = this.parseReferences.urls[relativeRef];
         try {
@@ -282,6 +290,15 @@ class ImportsAndTablesStep implements TranslationStep {
         };
       }
       allMissing = {tables};
+    }
+
+    const missingDialects = that.root.connectionDialectZone.getUndefined();
+    if (missingDialects) {
+      const connectionDialects = {};
+      for (const connName of missingDialects) {
+        connectionDialects[connName] = {connectionName: connName};
+      }
+      allMissing = {...allMissing, connectionDialects};
     }
 
     const missingImports = (that.root.importZone.getUndefined() ?? []).filter(
@@ -1006,6 +1023,7 @@ export class MalloyTranslator extends MalloyTranslation {
   importZone = new Zone<string>();
   pretranslatedModels = new Map<string, ModelDef>();
   sqlQueryZone = new Zone<SQLSourceDef>();
+  connectionDialectZone = new Zone<string>();
   logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
   constructor(
@@ -1026,6 +1044,10 @@ export class MalloyTranslator extends MalloyTranslation {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
+    this.connectionDialectZone.updateFrom(
+      dd.connectionDialects,
+      dd.errors?.connectionDialects
+    );
     for (const url in dd.translations) {
       this.pretranslatedModels.set(url, dd.translations[url]);
     }
@@ -1048,6 +1070,7 @@ interface ErrorData {
   urls: Record<string, string>;
   compileSQL: Record<string, string>;
   translations: Record<string, string>;
+  connectionDialects: Record<string, string>;
 }
 
 export interface URLData {
@@ -1062,7 +1085,15 @@ export interface SchemaData {
 export interface SQLSources {
   compileSQL: ZoneData<SQLSourceDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLSources, ModelData {
+export interface ConnectionDialects {
+  connectionDialects: ZoneData<string>;
+}
+export interface UpdateData
+  extends URLData,
+    SchemaData,
+    SQLSources,
+    ModelData,
+    ConnectionDialects {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;

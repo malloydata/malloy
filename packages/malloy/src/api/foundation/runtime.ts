@@ -13,6 +13,7 @@ import type {
   QueryRunStats,
   PrepareResultOptions,
   BuildManifest,
+  VirtualMap,
 } from '../../model';
 import {isSourceDef, mkSafeRecord} from '../../model';
 import {getDialect} from '../../dialect';
@@ -102,6 +103,7 @@ export class Runtime {
   private _eventStream: EventStream | undefined;
   private _cacheManager: CacheManager | undefined;
   private _buildManifest: BuildManifest | undefined;
+  private _virtualMap: VirtualMap | undefined;
 
   constructor({
     urlReader,
@@ -110,11 +112,13 @@ export class Runtime {
     eventStream,
     cacheManager,
     buildManifest,
+    virtualMap,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
     buildManifest?: BuildManifest;
+    virtualMap?: VirtualMap;
   } & Connectionable) {
     if (connections === undefined) {
       if (connection === undefined) {
@@ -134,6 +138,7 @@ export class Runtime {
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
     this._buildManifest = buildManifest;
+    this._virtualMap = virtualMap;
   }
 
   /**
@@ -176,6 +181,20 @@ export class Runtime {
 
   public set buildManifest(manifest: BuildManifest | undefined) {
     this._buildManifest = manifest;
+  }
+
+  /**
+   * The virtual map for virtual source resolution.
+   * When set, compiled queries automatically resolve virtual sources
+   * against this map. Can be overridden per-query via
+   * CompileQueryOptions.virtualMap.
+   */
+  public get virtualMap(): VirtualMap | undefined {
+    return this._virtualMap;
+  }
+
+  public set virtualMap(map: VirtualMap | undefined) {
+    this._virtualMap = map;
   }
 
   /**
@@ -353,15 +372,18 @@ export class ConnectionRuntime extends Runtime {
     urlReader,
     connections,
     buildManifest,
+    virtualMap,
   }: {
     urlReader?: URLReader;
     connections: Connection[];
     buildManifest?: BuildManifest;
+    virtualMap?: VirtualMap;
   }) {
     super({
       connections: FixedConnectionMap.fromArray(connections),
       urlReader,
       buildManifest,
+      virtualMap,
     });
     this.rawConnections = connections;
   }
@@ -378,11 +400,13 @@ export class SingleConnectionRuntime<
     eventStream,
     cacheManager,
     buildManifest,
+    virtualMap,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
     buildManifest?: BuildManifest;
+    virtualMap?: VirtualMap;
     connection: T;
   }) {
     super({
@@ -390,6 +414,7 @@ export class SingleConnectionRuntime<
       eventStream,
       cacheManager,
       buildManifest,
+      virtualMap,
       connection,
     });
     this.connection = connection;
@@ -867,11 +892,15 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
         }
       }
 
+      // Use virtualMap from options if provided, otherwise fall back to Runtime's.
+      const virtualMap = mergedOptions.virtualMap ?? this.runtime.virtualMap;
+
       // Build PrepareResultOptions from CompileQueryOptions + connectionDigests
       const prepareResultOptions: PrepareResultOptions = {
         defaultRowLimit: mergedOptions.defaultRowLimit,
         buildManifest,
         connectionDigests,
+        virtualMap,
       };
 
       return preparedQuery.getPreparedResult({

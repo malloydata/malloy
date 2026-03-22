@@ -64,6 +64,8 @@ export class QueryModelImpl implements QueryModel, ModelRootInterface {
         );
       } else if (s.type === 'query') {
         /* TODO */
+      } else if (s.type === 'structShape') {
+        // Struct shape definitions are metadata only, not queryable
       } else {
         throw new Error('Internal Error: Unknown structure type');
       }

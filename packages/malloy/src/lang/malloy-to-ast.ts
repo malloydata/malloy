@@ -394,6 +394,121 @@ export class MalloyToAST
     return defList;
   }
 
+  visitDefineStructStatement(
+    pcx: parse.DefineStructStatementContext
+  ): ast.DefineStructList {
+    this.inExperiment('virtual_source', pcx);
+    const defsCx = pcx.structPropertyList().structDefinition();
+    const defs = defsCx.map(dcx => this.visitStructDefinition(dcx));
+    const blockNotes = this.getNotes(pcx.tags());
+    const defList = new ast.DefineStructList(defs);
+    defList.extendNote({blockNotes});
+    return defList;
+  }
+
+  visitStructDefinition(pcx: parse.StructDefinitionContext): ast.DefineStruct {
+    const shape = this.getStructShape(pcx.structExpr());
+    const def = new ast.DefineStruct(getId(pcx.structNameDef()), shape, true);
+    const notes = this.getNotes(pcx.tags()).concat(
+      this.getIsNotes(pcx.isDefine())
+    );
+    def.extendNote({notes});
+    return this.astAt(def, pcx);
+  }
+
+  getStructShape(cx: parse.StructExprContext): ast.StructShape {
+    const result = this.visit(cx);
+    if (result instanceof ast.StructShape) {
+      return result;
+    }
+    throw this.internalError(cx, 'Expected a struct shape');
+  }
+
+  visitStructRef(pcx: parse.StructRefContext): ast.ExtendedStructShape {
+    const name = idToStr(pcx.id());
+    return this.astAt(new ast.ExtendedStructShape([], name), pcx);
+  }
+
+  visitStructInline(pcx: parse.StructInlineContext): ast.StructShape {
+    return this.getStructBody(pcx.structBody());
+  }
+
+  visitStructExtend(pcx: parse.StructExtendContext): ast.ExtendedStructShape {
+    const baseName = idToStr(pcx.id());
+    const members = pcx
+      .structBody()
+      .structField()
+      .map(f => this.getStructField(f));
+    return this.astAt(new ast.ExtendedStructShape(members, baseName), pcx);
+  }
+
+  getStructBody(pcx: parse.StructBodyContext): ast.StructShape {
+    const members = pcx.structField().map(f => this.getStructField(f));
+    return this.astAt(new ast.StructShape(members), pcx);
+  }
+
+  getStructField(pcx: parse.StructFieldContext): ast.StructMember {
+    const name = getId(pcx);
+    const typeResult = this.getStructType(pcx.structType());
+    let member: ast.StructMember;
+    if (typeof typeResult === 'string') {
+      member = new ast.StructMemberIndirect(name, typeResult);
+    } else {
+      member = new ast.StructMemberDef(name, typeResult);
+    }
+    const notes = this.getNotes(pcx.tags());
+    member.extendNote({notes});
+    return this.astAt(member, pcx);
+  }
+
+  getStructType(pcx: parse.StructTypeContext): AtomicTypeDef | string {
+    const basicCx = pcx.malloyBasicType();
+    if (basicCx) {
+      return this.getBasicMalloyType(basicCx);
+    }
+    const bodyCx = pcx.structBody();
+    if (bodyCx) {
+      const fields = bodyCx.structField().map(fieldCx => {
+        const name = getId(fieldCx);
+        const fieldType = this.getStructType(fieldCx.structType());
+        if (typeof fieldType === 'string') {
+          this.contextError(
+            fieldCx,
+            'unexpected-malloy-type',
+            `Named struct reference '${fieldType}' cannot be used as an inline record field type`
+          );
+          return mkFieldDef({type: 'error'}, name);
+        }
+        return mkFieldDef(fieldType, name);
+      });
+      return {type: 'record', fields};
+    }
+    const innerCx = pcx.structType();
+    if (innerCx) {
+      const inner = this.getStructType(innerCx);
+      if (typeof inner === 'string') {
+        this.contextError(
+          pcx,
+          'unexpected-malloy-type',
+          `Cannot make array of named struct reference '${inner}'`
+        );
+        return {type: 'error'};
+      }
+      return mkArrayTypeDef(inner);
+    }
+    const strCx = pcx.shortString();
+    if (strCx) {
+      const rawType = getShortString(strCx);
+      return {type: 'sql native', rawType};
+    }
+    const idCx = pcx.id();
+    if (idCx) {
+      return idToStr(idCx);
+    }
+    this.contextError(pcx, 'unexpected-malloy-type', 'Expected a struct type');
+    return {type: 'error'};
+  }
+
   getSourceParameter(
     pcx: parse.SourceParameterContext
   ): ast.HasParameter | null {
@@ -492,6 +607,17 @@ export class MalloyToAST
     const tablePath = this.getPlainStringFrom(pcx.tablePath());
     return this.astAt(
       new ast.TableMethodSource(connectionName, tablePath),
+      pcx
+    );
+  }
+
+  visitVirtualSource(pcx: parse.VirtualSourceContext): ast.VirtualTableSource {
+    this.inExperiment('virtual_source', pcx);
+    const connId = pcx.connectionId();
+    const connectionName = this.astAt(this.getModelEntryName(connId), connId);
+    const virtualName = getShortString(pcx.shortString());
+    return this.astAt(
+      new ast.VirtualTableSource(connectionName, virtualName),
       pcx
     );
   }
@@ -2002,6 +2128,16 @@ export class MalloyToAST
     return this.astAt(src, pcx);
   }
 
+  visitSQTypedSource(pcx: parse.SQTypedSourceContext) {
+    this.inExperiment('virtual_source', pcx);
+    const sqSrc = this.getSqExpr(pcx.sqExpr());
+    const structShapes = pcx
+      .sourceType()
+      .structName()
+      .map(nameCx => this.astAt(this.getModelEntryName(nameCx), nameCx));
+    return this.astAt(new ast.SQTypedSource(sqSrc, structShapes), pcx);
+  }
+
   getIncludeItems(pcx: parse.IncludeBlockContext): ast.IncludeItem[] {
     this.inExperiment('access_modifiers', pcx);
     return pcx
@@ -2178,6 +2314,12 @@ export class MalloyToAST
       return this.astAt(sqTable, pcx);
     }
     return new ErrorNode();
+  }
+
+  visitSQVirtual(pcx: parse.SQVirtualContext) {
+    const theVirtual = this.visitVirtualSource(pcx.virtualSource());
+    const sqVirtual = new ast.SQSource(theVirtual);
+    return this.astAt(sqVirtual, pcx);
   }
 
   visitSQSQL(pcx: parse.SQSQLContext) {

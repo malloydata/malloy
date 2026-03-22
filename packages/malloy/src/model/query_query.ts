@@ -766,6 +766,18 @@ export class QueryQuery extends QueryField {
     switch (qs.structDef.type) {
       case 'table':
         return this.parent.dialect.quoteTablePath(qs.structDef.tablePath);
+      case 'virtual': {
+        const virtualMap = qs.prepareResultOptions?.virtualMap;
+        const tablePath = virtualMap
+          ?.get(qs.structDef.connection)
+          ?.get(qs.structDef.name);
+        if (!tablePath) {
+          throw new Error(
+            `No virtual map entry for '${qs.structDef.name}' on connection '${qs.structDef.connection}'`
+          );
+        }
+        return this.parent.dialect.quoteTablePath(tablePath);
+      }
       case 'composite':
         // TODO: throw an error here; not simple because we call into this
         // code currently before the composite source is resolved in some cases

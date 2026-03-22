@@ -187,6 +187,17 @@ function compilerNeedsToUpdate(
         update.translations![translation.url] = modelDef;
       }
     }
+    for (const connection of compilerNeeds.connections ?? []) {
+      if (connection.dialect) {
+        update.connectionDialects ??= {};
+        update.connectionDialects[connection.name] = connection.dialect;
+      } else {
+        update.errors ??= {};
+        update.errors.connectionDialects ??= {};
+        update.errors.connectionDialects[connection.name] =
+          `Connection '${connection.name}' not found`;
+      }
+    }
   }
   return update;
 }
@@ -202,7 +213,8 @@ function convertCompilerNeeds(
           tablePath: string;
         }
       >
-    | undefined
+    | undefined,
+  connectionDialects?: Record<string, {connectionName: string}> | undefined
 ): Malloy.CompilerNeeds {
   const compilerNeeds: Malloy.CompilerNeeds = {};
   const neededConnections = new Set<string>();
@@ -232,6 +244,11 @@ function convertCompilerNeeds(
         connection_name: connectionName,
       });
       neededConnections.add(connectionName);
+    }
+  }
+  if (connectionDialects !== undefined) {
+    for (const connName in connectionDialects) {
+      neededConnections.add(connectionDialects[connName].connectionName);
     }
   }
   if (neededConnections.size > 0) {
@@ -441,7 +458,8 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
     const compilerNeeds = convertCompilerNeeds(
       result.compileSQL,
       result.urls,
-      result.tables
+      result.tables,
+      result.connectionDialects
     );
     const timingInfo = timer.stop();
     return {compilerNeeds, logs: result.problems, timingInfo};

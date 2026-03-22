@@ -477,6 +477,26 @@ export class Malloy {
             }
           }
         }
+        if (result.connectionDialects) {
+          for (const connName in result.connectionDialects) {
+            const {connectionName} = result.connectionDialects[connName];
+            try {
+              const connection =
+                await connections.lookupConnection(connectionName);
+              translator.update({
+                connectionDialects: {[connName]: connection.dialectName},
+              });
+            } catch (error) {
+              translator.update({
+                errors: {
+                  connectionDialects: {
+                    [connName]: (error as Error).toString(),
+                  },
+                },
+              });
+            }
+          }
+        }
         if (result.compileSQL) {
           // Unlike other requests, these do not come in batches
           const toCompile = result.compileSQL;

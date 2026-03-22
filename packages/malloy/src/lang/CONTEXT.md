@@ -43,6 +43,11 @@ The AST is a tree of `MalloyElement` objects that represents the semantic struct
 - Base class hierarchy in `src/lang/ast/`
 - Each node type represents a language construct (sources, queries, fields, expressions, etc.)
 
+**Method naming for IR generation:**
+- If a method returns an IR data structure and takes no arguments, name it after the return type: `structShapeFieldDef()`
+- If it needs arguments, prefix with `get`: `getSourceDef(parameterSpace)`
+- AST elements can find their containing document via `this.document()`, so document should not be passed as an argument.
+
 **Parent Linking:**
 - A `MalloyElement` does NOT get a parent pointer at construction
 - A parent links children into the AST tree in one of two ways:

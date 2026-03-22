@@ -83,6 +83,7 @@ RUN: R U N SPACE_CHAR* ':';
 SAMPLE: S A M P L E SPACE_CHAR* ':';
 SELECT: S E L E C T SPACE_CHAR* ':';
 SOURCE: S O U R C E SPACE_CHAR* ':';
+STRUCT: S T R U C T SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
 VIEW: V I E W SPACE_CHAR* ':' ;
@@ -159,6 +160,7 @@ WHEN: W H E N ;
 WITH: W I T H ;
 YEAR: Y E A R S?;
 UNGROUPED: U N G R O U P E D;
+VIRTUAL: V I R T U A L;
 
 fragment SQ: '\'';
 fragment BQ: '`';

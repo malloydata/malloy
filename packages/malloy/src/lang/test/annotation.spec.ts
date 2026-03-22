@@ -1129,3 +1129,70 @@ describe('block annotations', () => {
     });
   });
 });
+
+describe('struct annotation', () => {
+  const experimental = '##! experimental.virtual_source\n';
+
+  function structModel(src: string) {
+    return new TestTranslator(experimental + src);
+  }
+
+  test('annotation on struct and fields', () => {
+    const m = structModel(`
+      # struct note
+      struct:
+      # def note
+      Noted is {
+        # field note
+        name :: string,
+        age :: number
+      }
+    `);
+    expect(m).toTranslate();
+    const shape = m.getStructShapeDef('Noted');
+    expect(shape!.annotation).matchesAnnotation({
+      blockNotes: ['# struct note\n'],
+      notes: ['# def note\n'],
+    });
+    expect(shape!.fields[0].annotation).matchesAnnotation({
+      notes: ['# field note\n'],
+    });
+    expect(shape!.fields[1].annotation).toBeUndefined();
+  });
+
+  test('annotation inherited from referenced struct', () => {
+    const m = structModel(`
+      # base note
+      struct: Base is { x :: string }
+      struct: Wrapper is {
+        data :: Base
+      }
+    `);
+    expect(m).toTranslate();
+    const wrapper = m.getStructShapeDef('Wrapper');
+    expect(wrapper!.fields[0].annotation).matchesAnnotation({
+      inherits: {
+        blockNotes: ['# base note\n'],
+      },
+    });
+  });
+
+  test('field annotation merged with inherited struct annotation', () => {
+    const m = structModel(`
+      # base note
+      struct: Base is { x :: string }
+      struct: Wrapper is {
+        # field note
+        data :: Base
+      }
+    `);
+    expect(m).toTranslate();
+    const wrapper = m.getStructShapeDef('Wrapper');
+    expect(wrapper!.fields[0].annotation).matchesAnnotation({
+      notes: ['# field note\n'],
+      inherits: {
+        blockNotes: ['# base note\n'],
+      },
+    });
+  });
+});

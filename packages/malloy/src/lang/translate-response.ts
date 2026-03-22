@@ -68,10 +68,23 @@ export interface SQLSourceRequest {
 export interface NeedCompileSQL {
   compileSQL: SQLSourceRequest;
 }
-interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
+
+export interface NeedConnectionDialects {
+  connectionDialects: Record<string, {connectionName: string}>;
+}
+
+interface NeededData
+  extends NeedURLData,
+    NeedSchemaData,
+    NeedCompileSQL,
+    NeedConnectionDialects {}
 export type DataRequestResponse = Partial<NeededData> & ResponseBase;
 export function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!dr && (dr.tables || dr.urls || dr.compileSQL) !== undefined;
+  return (
+    !!dr &&
+    (dr.tables || dr.urls || dr.compileSQL || dr.connectionDialects) !==
+      undefined
+  );
 }
 export type ModelDataRequest = NeedCompileSQL | undefined;
 interface ASTData

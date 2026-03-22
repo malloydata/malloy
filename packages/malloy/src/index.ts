@@ -130,6 +130,7 @@ export type {
   BuildID,
   BuildManifest,
   BuildManifestEntry,
+  VirtualMap,
 } from './model';
 export {
   isSourceDef,

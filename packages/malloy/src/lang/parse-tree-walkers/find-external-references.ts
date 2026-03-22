@@ -40,6 +40,12 @@ type NeedTables = Record<
     firstReference: DocumentRange;
   }
 >;
+type NeedConnectionDialects = Record<
+  string,
+  {
+    firstReference: DocumentRange;
+  }
+>;
 
 // Copy of the version in the parser which also errors on each non-string in a
 // multi-line string collection. No need to error here, which is well, because
@@ -65,6 +71,7 @@ function getPlainString(cx: HasString): string {
 class FindExternalReferences implements MalloyParserListener {
   needTables: NeedTables = {};
   needImports: NeedImports = {};
+  needConnectionDialects: NeedConnectionDialects = {};
 
   constructor(
     readonly trans: MalloyTranslation,
@@ -91,6 +98,15 @@ class FindExternalReferences implements MalloyParserListener {
     const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connId, tablePath, reference);
+  }
+
+  enterVirtualSource(pcx: parser.VirtualSourceContext) {
+    const connId = getId(pcx.connectionId());
+    if (connId && !this.needConnectionDialects[connId]) {
+      this.needConnectionDialects[connId] = {
+        firstReference: this.trans.rangeFromContext(pcx),
+      };
+    }
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
@@ -135,6 +151,7 @@ export function deprecatedParseTableURI(tableURI: string): {
 export interface FindReferencesData {
   tables: NeedTables;
   urls: NeedImports;
+  connectionDialects: NeedConnectionDialects;
 }
 export function findReferences(
   trans: MalloyTranslation,
@@ -148,5 +165,6 @@ export function findReferences(
   return {
     tables: finder.needTables,
     urls: finder.needImports,
+    connectionDialects: finder.needConnectionDialects,
   };
 }

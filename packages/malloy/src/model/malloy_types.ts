@@ -1381,6 +1381,11 @@ export interface CompositeSourceDef extends SourceDefBase {
   sources: SourceDef[];
 }
 
+// the name: of a virtual source def is the key to the virtualMap
+export interface VirtualSourceDef extends SourceDefBase {
+  type: 'virtual';
+}
+
 /*
  * Malloy has a kind of "strings" which is a list of segments. Each segment
  * is either a string, or a query, which is meant to be replaced
@@ -1489,6 +1494,7 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
     sd.type === 'query_result' ||
     sd.type === 'finalize' ||
     sd.type === 'nest_source' ||
+    sd.type === 'virtual' ||
     sd.type === 'composite'
   );
 }
@@ -1511,6 +1517,7 @@ export type SourceDef =
   | QueryResultDef
   | FinalizeSourceDef
   | NestSourceDef
+  | VirtualSourceDef
   | CompositeSourceDef;
 
 /** Sources that can be persisted (materialized to tables) */
@@ -1823,11 +1830,28 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
+export interface StructShapeFieldDef {
+  name: string;
+  typeDef: AtomicTypeDef;
+  annotation?: Annotation;
+}
+
+export interface StructShapeDef extends NamedObject {
+  type: 'structShape';
+  fields: StructShapeFieldDef[];
+  annotation?: Annotation;
+}
+
+export function isStructShapeDef(sd: NamedModelObject): sd is StructShapeDef {
+  return sd.type === 'structShape';
+}
+
 export type NamedModelObject =
   | SourceDef
   | NamedQueryDef
   | FunctionDef
-  | ConnectionDef;
+  | ConnectionDef
+  | StructShapeDef;
 
 export interface DependencyTree {
   [url: string]: DependencyTree;
@@ -2004,6 +2028,12 @@ export interface SearchValueMapResult {
   values: {fieldValue: string; weight: number}[];
 }
 
+/**
+ * Maps virtual source names to actual table paths, keyed by connection name.
+ * Uses Map instead of Record because both keys are user-provided strings.
+ */
+export type VirtualMap = Map<string, Map<string, string>>;
+
 export interface PrepareResultOptions {
   defaultRowLimit?: number;
   isPartialQuery?: boolean; // Query is being used as a sql_block
@@ -2012,6 +2042,8 @@ export interface PrepareResultOptions {
   buildManifest?: BuildManifest;
   /** Map from connectionName to connectionDigest (from Connection.getDigest()) */
   connectionDigests?: SafeRecord<string>;
+  /** Map from connectionName → virtualName → tablePath for virtual source resolution */
+  virtualMap?: VirtualMap;
 }
 
 type UTD =
@@ -2054,14 +2086,19 @@ export const TD = {
     }
     function checkFields(a: AtomicTypeDef, b: AtomicTypeDef): boolean {
       const aSchema: Record<string, AtomicTypeDef> = {};
-      for (const aEnt of a['fields'] || []) {
+      const aFields = a['fields'] || [];
+      const bFields = b['fields'] || [];
+      if (aFields.length !== bFields.length) {
+        return false;
+      }
+      for (const aEnt of aFields) {
         if (aEnt.name) {
           aSchema[aEnt.name] = aEnt;
         } else {
           return false;
         }
       }
-      for (const bEnt of b['fields'] || []) {
+      for (const bEnt of bFields) {
         if (!TD.eq(aSchema[bEnt.name], bEnt)) {
           return false;
         }

@@ -29,6 +29,7 @@ malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineSourceStatement
+  | defineStructStatement
   | defineQuery
   | importStatement
   | runStatement
@@ -39,6 +40,42 @@ malloyStatement
 
 defineSourceStatement
   : tags SOURCE sourcePropertyList
+  ;
+
+defineStructStatement
+  : tags STRUCT structPropertyList
+  ;
+
+structPropertyList
+  : structDefinition (COMMA? structDefinition)* COMMA?
+  ;
+
+structDefinition
+  : tags structNameDef isDefine structExpr
+  ;
+
+structNameDef: id;
+
+structExpr
+  : id                                    # structRef
+  | structBody                            # structInline
+  | id EXTEND structBody                  # structExtend
+  ;
+
+structBody
+  : OCURLY structField (COMMA structField)* COMMA? CCURLY
+  ;
+
+structField
+  : tags id DOUBLECOLON structType
+  ;
+
+structType
+  : malloyBasicType
+  | structBody
+  | structType OBRACK CBRACK
+  | shortString
+  | id
   ;
 
 defineQuery
@@ -136,6 +173,10 @@ sqlSource
 
 exploreTable
   : connectionId DOT TABLE OPAREN tablePath CPAREN
+  ;
+
+virtualSource
+  : connectionId DOT VIRTUAL OPAREN shortString CPAREN
   ;
 
 connectionId
@@ -273,9 +314,18 @@ sqExpr
   | sqExpr ARROW segExpr                                     # SQArrow
   | sqExpr (INCLUDE includeBlock)? EXTEND exploreProperties  # SQExtendedSource
   | sqExpr INCLUDE includeBlock                              # SQInclude
+  | sqExpr DOUBLECOLON sourceType                            # SQTypedSource
   | exploreTable                                             # SQTable
+  | virtualSource                                            # SQVirtual
   | sqlSource                                                # SQSQL
   ;
+
+sourceType
+  : structName
+  | LT structName (COMMA structName)* GT
+  ;
+
+structName: id;
 
 includeBlock
   : OCURLY (includeItem | SEMI)* CCURLY
