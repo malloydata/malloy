@@ -1039,6 +1039,7 @@ export type JoinElementType =
   | 'table'
   | 'sql_select'
   | 'query_source'
+  | 'virtual'
   | 'array'
   | 'record';
 
@@ -1056,6 +1057,7 @@ export type Joinable =
   | TableSourceDef
   | SQLSourceDef
   | QuerySourceDef
+  | VirtualSourceDef
   | RepeatedRecordDef
   | RecordDef
   | ArrayDef;
@@ -1067,6 +1069,7 @@ export function isJoinable(sd: StructDef): sd is Joinable {
     'table',
     'sql_select',
     'query_source',
+    'virtual',
     'array',
     'record',
   ].includes(sd.type);

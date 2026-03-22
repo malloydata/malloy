@@ -641,6 +641,7 @@ export class QueryStruct {
       case 'table':
       case 'sql_select':
       case 'composite':
+      case 'virtual':
         return new QueryFieldStruct(
           field,
           undefined,
