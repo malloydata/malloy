@@ -307,6 +307,7 @@ type MessageParameterTypes = {
   'virtual-source-missing-struct-refs': string;
   'virtual-source-unknown-dialect': string;
   'struct-shape-field-missing': string;
+  'struct-shape-type-mismatch': string;
   'struct-shape-field-conflict': string;
   'parameter-name-conflict': string;
   'parameter-shadowing-field': string;

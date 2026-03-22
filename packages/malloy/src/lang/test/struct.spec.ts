@@ -303,12 +303,22 @@ describe('struct shape errors', () => {
   });
 
   test('array of named struct reference', () => {
-    expect(
-      structModel(`
+    const m = structModel(`
       struct: Base is { x :: string }
-      struct: Bad is { items :: Base[] }
-    `)
-    ).toLog(errorMessage(/Cannot make array of named struct reference/));
+      struct: WithArray is { items :: Base[] }
+    `);
+    expect(m).toTranslate();
+    const shape = m.getStructShapeDef('WithArray');
+    expect(shape!.fields).toEqual([
+      {
+        name: 'items',
+        typeDef: {
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          fields: [{name: 'x', type: 'string'}],
+        },
+      },
+    ]);
   });
 
   test('named struct reference as inline record field type', () => {

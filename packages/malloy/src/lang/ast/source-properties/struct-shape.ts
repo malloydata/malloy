@@ -8,7 +8,11 @@ import type {
   AtomicTypeDef,
   StructShapeFieldDef,
 } from '../../../model/malloy_types';
-import {isStructShapeDef, mkFieldDef} from '../../../model/malloy_types';
+import {
+  isStructShapeDef,
+  mkArrayTypeDef,
+  mkFieldDef,
+} from '../../../model/malloy_types';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
@@ -47,7 +51,8 @@ export class StructMemberIndirect extends StructMember {
   elementType = 'structMemberIndirect';
   constructor(
     name: string,
-    readonly shapeName: string
+    readonly shapeName: string,
+    readonly arrayDepth: number = 0
   ) {
     super(name);
   }
@@ -75,10 +80,14 @@ export class StructMemberIndirect extends StructMember {
     const fieldsFromReferencedType = modelEntry.entry.fields.map(f =>
       mkFieldDef(f.typeDef, f.name)
     );
-    const field: StructShapeFieldDef = {
-      name: this.name,
-      typeDef: {type: 'record', fields: fieldsFromReferencedType},
+    let typeDef: AtomicTypeDef = {
+      type: 'record',
+      fields: fieldsFromReferencedType,
     };
+    for (let i = 0; i < this.arrayDepth; i++) {
+      typeDef = mkArrayTypeDef(typeDef);
+    }
+    const field: StructShapeFieldDef = {name: this.name, typeDef};
     if (this.note) {
       field.annotation = modelEntry.entry.annotation
         ? {...this.note, inherits: modelEntry.entry.annotation}

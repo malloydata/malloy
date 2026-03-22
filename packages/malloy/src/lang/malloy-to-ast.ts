@@ -85,6 +85,15 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
+interface IndirectStructType {
+  namedStruct: string;
+  arrayDepth: number;
+}
+type StructTypeResult = AtomicTypeDef | IndirectStructType;
+function isIndirectStructType(t: StructTypeResult): t is IndirectStructType {
+  return 'namedStruct' in t;
+}
+
 const DEFAULT_COMPILER_FLAGS = [];
 
 type HasAnnotations = ParserRuleContext & {
@@ -425,7 +434,7 @@ export class MalloyToAST
   }
 
   visitStructRef(pcx: parse.StructRefContext): ast.ExtendedStructShape {
-    const name = idToStr(pcx.id());
+    const name = idToStr(pcx.structName().id());
     return this.astAt(new ast.ExtendedStructShape([], name), pcx);
   }
 
@@ -434,7 +443,7 @@ export class MalloyToAST
   }
 
   visitStructExtend(pcx: parse.StructExtendContext): ast.ExtendedStructShape {
-    const baseName = idToStr(pcx.id());
+    const baseName = idToStr(pcx.structName().id());
     const members = pcx
       .structBody()
       .structField()
@@ -451,8 +460,12 @@ export class MalloyToAST
     const name = getId(pcx);
     const typeResult = this.getStructType(pcx.structType());
     let member: ast.StructMember;
-    if (typeof typeResult === 'string') {
-      member = new ast.StructMemberIndirect(name, typeResult);
+    if (isIndirectStructType(typeResult)) {
+      member = new ast.StructMemberIndirect(
+        name,
+        typeResult.namedStruct,
+        typeResult.arrayDepth
+      );
     } else {
       member = new ast.StructMemberDef(name, typeResult);
     }
@@ -461,7 +474,7 @@ export class MalloyToAST
     return this.astAt(member, pcx);
   }
 
-  getStructType(pcx: parse.StructTypeContext): AtomicTypeDef | string {
+  getStructType(pcx: parse.StructTypeContext): StructTypeResult {
     const basicCx = pcx.malloyBasicType();
     if (basicCx) {
       return this.getBasicMalloyType(basicCx);
@@ -471,11 +484,11 @@ export class MalloyToAST
       const fields = bodyCx.structField().map(fieldCx => {
         const name = getId(fieldCx);
         const fieldType = this.getStructType(fieldCx.structType());
-        if (typeof fieldType === 'string') {
+        if (isIndirectStructType(fieldType)) {
           this.contextError(
             fieldCx,
             'unexpected-malloy-type',
-            `Named struct reference '${fieldType}' cannot be used as an inline record field type`
+            `Named struct reference '${fieldType.namedStruct}' cannot be used as an inline record field type`
           );
           return mkFieldDef({type: 'error'}, name);
         }
@@ -486,13 +499,8 @@ export class MalloyToAST
     const innerCx = pcx.structType();
     if (innerCx) {
       const inner = this.getStructType(innerCx);
-      if (typeof inner === 'string') {
-        this.contextError(
-          pcx,
-          'unexpected-malloy-type',
-          `Cannot make array of named struct reference '${inner}'`
-        );
-        return {type: 'error'};
+      if (isIndirectStructType(inner)) {
+        return {...inner, arrayDepth: inner.arrayDepth + 1};
       }
       return mkArrayTypeDef(inner);
     }
@@ -501,9 +509,9 @@ export class MalloyToAST
       const rawType = getShortString(strCx);
       return {type: 'sql native', rawType};
     }
-    const idCx = pcx.id();
-    if (idCx) {
-      return idToStr(idCx);
+    const nameCx = pcx.structName();
+    if (nameCx) {
+      return {namedStruct: idToStr(nameCx.id()), arrayDepth: 0};
     }
     this.contextError(pcx, 'unexpected-malloy-type', 'Expected a struct type');
     return {type: 'error'};

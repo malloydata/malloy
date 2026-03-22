@@ -9,7 +9,12 @@ import type {
   NonDefaultAccessModifierLabel,
   SourceDef,
 } from '../../../model/malloy_types';
-import {TD, isStructShapeDef, mkFieldDef} from '../../../model/malloy_types';
+import {
+  TD,
+  fieldIsIntrinsic,
+  isStructShapeDef,
+  mkFieldDef,
+} from '../../../model/malloy_types';
 import {Source} from './source';
 import type {ParameterSpace} from '../field-space/parameter-space';
 import type {ModelEntryReference} from '../types/malloy-element';
@@ -69,12 +74,15 @@ export class TypedSource extends Source {
     }
 
     const isVirtual = sourceDef.type === 'virtual';
-    const sourceFieldNames = new Set(sourceDef.fields.map(f => f.as ?? f.name));
+    const sourceFields = new Map(
+      sourceDef.fields.map(f => [f.as ?? f.name, f])
+    );
     const fieldsToAdd: FieldDef[] = [];
 
     // Validate/Enforce that this source matches the shape
     for (const [name, {field, fromShape}] of outputShape) {
-      if (!sourceFieldNames.has(name)) {
+      const sourceField = sourceFields.get(name);
+      if (sourceField === undefined) {
         if (isVirtual) {
           fieldsToAdd.push(field);
         } else {
@@ -83,17 +91,24 @@ export class TypedSource extends Source {
             `Source is missing field '${field.name}' required by struct '${fromShape.name}'`
           );
         }
+      } else if (
+        !isVirtual &&
+        fieldIsIntrinsic(sourceField) &&
+        !TD.eq(field, sourceField)
+      ) {
+        fromShape.logError(
+          'struct-shape-type-mismatch',
+          `Type mismatch for '${name}': struct '${fromShape.name}' declares ${field.type} but source has ${sourceField.type}`
+        );
       }
     }
 
     // Source fields not in any shape: mark as hidden
-    const resultFields = sourceDef.fields.map(f => {
-      const name = f.as ?? f.name;
-      if (outputShape.has(name)) {
-        return f;
-      }
-      return {...f, accessModifier: STRUCT_SHAPE_HIDDEN_ACCESS};
-    });
+    const resultFields = sourceDef.fields.map(f =>
+      outputShape.has(f.as ?? f.name)
+        ? f
+        : {...f, accessModifier: STRUCT_SHAPE_HIDDEN_ACCESS}
+    );
 
     return {
       ...sourceDef,

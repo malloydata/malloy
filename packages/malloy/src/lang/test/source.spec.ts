@@ -1442,4 +1442,21 @@ describe('typed source (::)', () => {
     `)
     ).toLog(error('struct-shape-field-conflict'));
   });
+
+  test(':: type mismatch is an error', () => {
+    expect(
+      tsModel(`
+      struct: S is { astr :: number }
+      source: typed is a::S
+    `)
+    ).toLog(error('struct-shape-type-mismatch'));
+  });
+
+  test(':: does not validate types on virtual sources', () => {
+    const m = tsModel(`
+      struct: S is { x :: string }
+      source: v is _db_.virtual('t')::S
+    `);
+    expect(m).toTranslate();
+  });
 });

@@ -57,9 +57,9 @@ structDefinition
 structNameDef: id;
 
 structExpr
-  : id                                    # structRef
+  : structName                            # structRef
   | structBody                            # structInline
-  | id EXTEND structBody                  # structExtend
+  | structName EXTEND structBody          # structExtend
   ;
 
 structBody
@@ -75,7 +75,7 @@ structType
   | structBody
   | structType OBRACK CBRACK
   | shortString
-  | id
+  | structName
   ;
 
 defineQuery
