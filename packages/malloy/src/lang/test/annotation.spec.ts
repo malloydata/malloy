@@ -1130,17 +1130,17 @@ describe('block annotations', () => {
   });
 });
 
-describe('struct annotation', () => {
+describe('user type annotation', () => {
   const experimental = '##! experimental.virtual_source\n';
 
-  function structModel(src: string) {
+  function userTypeModel(src: string) {
     return new TestTranslator(experimental + src);
   }
 
-  test('annotation on struct and fields', () => {
-    const m = structModel(`
+  test('annotation on user type and fields', () => {
+    const m = userTypeModel(`
       # struct note
-      struct:
+      type:
       # def note
       Noted is {
         # field note
@@ -1149,7 +1149,7 @@ describe('struct annotation', () => {
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('Noted');
+    const shape = m.getUserTypeDef('Noted');
     expect(shape!.annotation).matchesAnnotation({
       blockNotes: ['# struct note\n'],
       notes: ['# def note\n'],
@@ -1160,16 +1160,16 @@ describe('struct annotation', () => {
     expect(shape!.fields[1].annotation).toBeUndefined();
   });
 
-  test('annotation inherited from referenced struct', () => {
-    const m = structModel(`
+  test('annotation inherited from referenced user type', () => {
+    const m = userTypeModel(`
       # base note
-      struct: Base is { x :: string }
-      struct: Wrapper is {
+      type: Base is { x :: string }
+      type: Wrapper is {
         data :: Base
       }
     `);
     expect(m).toTranslate();
-    const wrapper = m.getStructShapeDef('Wrapper');
+    const wrapper = m.getUserTypeDef('Wrapper');
     expect(wrapper!.fields[0].annotation).matchesAnnotation({
       inherits: {
         blockNotes: ['# base note\n'],
@@ -1177,17 +1177,17 @@ describe('struct annotation', () => {
     });
   });
 
-  test('field annotation merged with inherited struct annotation', () => {
-    const m = structModel(`
+  test('field annotation merged with inherited user type annotation', () => {
+    const m = userTypeModel(`
       # base note
-      struct: Base is { x :: string }
-      struct: Wrapper is {
+      type: Base is { x :: string }
+      type: Wrapper is {
         # field note
         data :: Base
       }
     `);
     expect(m).toTranslate();
-    const wrapper = m.getStructShapeDef('Wrapper');
+    const wrapper = m.getUserTypeDef('Wrapper');
     expect(wrapper!.fields[0].annotation).matchesAnnotation({
       notes: ['# field note\n'],
       inherits: {
@@ -1196,14 +1196,14 @@ describe('struct annotation', () => {
     });
   });
 
-  test('field annotations preserved when :: applies struct to virtual source', () => {
-    const m = structModel(`
-      struct: S is {
-        # noted field
-        astr :: string
-      }
-      source: v is _db_.virtual('t')::S
-    `);
+  test('field annotations preserved when :: applies user type to virtual source', () => {
+    const m = userTypeModel(`
+        type: S is {
+          # noted field
+          astr :: string
+        }
+        source: v is _db_.virtual('t')::S
+      `);
     expect(m).toTranslate();
     const src = m.getSourceDef('v')!;
     const field = src.fields.find(f => f.name === 'astr')!;
@@ -1212,9 +1212,9 @@ describe('struct annotation', () => {
     });
   });
 
-  test('struct field annotations applied to table source fields', () => {
-    const m = structModel(`
-      struct: S is {
+  test('user type field annotations applied to table source fields', () => {
+    const m = userTypeModel(`
+      type: S is {
         # currency
         astr :: string
       }
@@ -1228,13 +1228,13 @@ describe('struct annotation', () => {
     });
   });
 
-  test('struct annotation merges with existing field annotation', () => {
-    const m = structModel(`
-      struct: S1 is {
+  test('user type annotation merges with existing field annotation', () => {
+    const m = userTypeModel(`
+      type: S1 is {
         # from s1
         astr :: string
       }
-      struct: S2 is {
+      type: S2 is {
         # from s2
         astr :: string
       }

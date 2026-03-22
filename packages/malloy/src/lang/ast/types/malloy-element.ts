@@ -543,7 +543,7 @@ export class Document extends MalloyElement implements NameSpace {
           isSourceDef(entry) ||
           entry.type === 'query' ||
           entry.type === 'function' ||
-          entry.type === 'structShape'
+          entry.type === 'userType'
         ) {
           const exported = extendingModelDef.exports.includes(nm);
           this.setEntry(nm, {entry, exported});
@@ -609,12 +609,12 @@ export class Document extends MalloyElement implements NameSpace {
       if (
         isSourceDef(entryDef) ||
         entryDef.type === 'query' ||
-        entryDef.type === 'structShape'
+        entryDef.type === 'userType'
       ) {
         if (modelEntry.exported) {
           def.exports.push(name);
         }
-        if (entryDef.type === 'structShape') {
+        if (entryDef.type === 'userType') {
           def.contents[name] = {...entryDef};
         } else {
           const newEntry = {...entryDef};

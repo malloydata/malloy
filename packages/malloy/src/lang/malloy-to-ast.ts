@@ -85,13 +85,13 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
-interface IndirectStructType {
-  namedStruct: string;
+interface IndirectUserType {
+  namedUserType: string;
   arrayDepth: number;
 }
-type StructTypeResult = AtomicTypeDef | IndirectStructType;
-function isIndirectStructType(t: StructTypeResult): t is IndirectStructType {
-  return 'namedStruct' in t;
+type UserTypeFieldTypeResult = AtomicTypeDef | IndirectUserType;
+function isIndirectUserType(t: UserTypeFieldTypeResult): t is IndirectUserType {
+  return 'namedUserType' in t;
 }
 
 const DEFAULT_COMPILER_FLAGS = [];
@@ -403,21 +403,27 @@ export class MalloyToAST
     return defList;
   }
 
-  visitDefineStructStatement(
-    pcx: parse.DefineStructStatementContext
-  ): ast.DefineStructList {
+  visitDefineUserTypeStatement(
+    pcx: parse.DefineUserTypeStatementContext
+  ): ast.DefineUserTypeList {
     this.inExperiment('virtual_source', pcx);
-    const defsCx = pcx.structPropertyList().structDefinition();
-    const defs = defsCx.map(dcx => this.visitStructDefinition(dcx));
+    const defsCx = pcx.userTypePropertyList().userTypeDefinition();
+    const defs = defsCx.map(dcx => this.visitUserTypeDefinition(dcx));
     const blockNotes = this.getNotes(pcx.tags());
-    const defList = new ast.DefineStructList(defs);
+    const defList = new ast.DefineUserTypeList(defs);
     defList.extendNote({blockNotes});
     return defList;
   }
 
-  visitStructDefinition(pcx: parse.StructDefinitionContext): ast.DefineStruct {
-    const shape = this.getStructShape(pcx.structExpr());
-    const def = new ast.DefineStruct(getId(pcx.structNameDef()), shape, true);
+  visitUserTypeDefinition(
+    pcx: parse.UserTypeDefinitionContext
+  ): ast.DefineUserType {
+    const shape = this.getUserTypeShapeExpr(pcx.userTypeExpr());
+    const def = new ast.DefineUserType(
+      getId(pcx.userTypeNameDef()),
+      shape,
+      true
+    );
     const notes = this.getNotes(pcx.tags()).concat(
       this.getIsNotes(pcx.isDefine())
     );
@@ -425,70 +431,76 @@ export class MalloyToAST
     return this.astAt(def, pcx);
   }
 
-  getStructShape(cx: parse.StructExprContext): ast.StructShape {
+  getUserTypeShapeExpr(cx: parse.UserTypeExprContext): ast.UserTypeShape {
     const result = this.visit(cx);
-    if (result instanceof ast.StructShape) {
+    if (result instanceof ast.UserTypeShape) {
       return result;
     }
-    throw this.internalError(cx, 'Expected a struct shape');
+    throw this.internalError(cx, 'Expected a user type shape');
   }
 
-  visitStructRef(pcx: parse.StructRefContext): ast.ExtendedStructShape {
-    const name = idToStr(pcx.structName().id());
-    return this.astAt(new ast.ExtendedStructShape([], name), pcx);
+  visitUserTypeRef(pcx: parse.UserTypeRefContext): ast.ExtendedUserTypeShape {
+    const name = idToStr(pcx.userTypeName().id());
+    return this.astAt(new ast.ExtendedUserTypeShape([], name), pcx);
   }
 
-  visitStructInline(pcx: parse.StructInlineContext): ast.StructShape {
-    return this.getStructBody(pcx.structBody());
+  visitUserTypeInline(pcx: parse.UserTypeInlineContext): ast.UserTypeShape {
+    return this.getUserTypeShape(pcx.userTypeShape());
   }
 
-  visitStructExtend(pcx: parse.StructExtendContext): ast.ExtendedStructShape {
-    const baseName = idToStr(pcx.structName().id());
+  visitUserTypeExtend(
+    pcx: parse.UserTypeExtendContext
+  ): ast.ExtendedUserTypeShape {
+    const baseName = idToStr(pcx.userTypeName().id());
     const members = pcx
-      .structBody()
-      .structField()
-      .map(f => this.getStructField(f));
-    return this.astAt(new ast.ExtendedStructShape(members, baseName), pcx);
+      .userTypeShape()
+      .userTypeField()
+      .map(f => this.getUserTypeField(f));
+    return this.astAt(new ast.ExtendedUserTypeShape(members, baseName), pcx);
   }
 
-  getStructBody(pcx: parse.StructBodyContext): ast.StructShape {
-    const members = pcx.structField().map(f => this.getStructField(f));
-    return this.astAt(new ast.StructShape(members), pcx);
+  getUserTypeShape(pcx: parse.UserTypeShapeContext): ast.UserTypeShape {
+    const members = pcx.userTypeField().map(f => this.getUserTypeField(f));
+    return this.astAt(new ast.UserTypeShape(members), pcx);
   }
 
-  getStructField(pcx: parse.StructFieldContext): ast.StructMember {
+  getUserTypeField(pcx: parse.UserTypeFieldContext): ast.UserTypeMember {
     const name = getId(pcx);
-    const typeResult = this.getStructType(pcx.structType());
-    let member: ast.StructMember;
-    if (isIndirectStructType(typeResult)) {
-      member = new ast.StructMemberIndirect(
+    const typeResult = this.getUserTypeFieldType(pcx.userTypeFieldType());
+    let member: ast.UserTypeMember;
+    if (isIndirectUserType(typeResult)) {
+      member = new ast.UserTypeMemberIndirect(
         name,
-        typeResult.namedStruct,
+        typeResult.namedUserType,
         typeResult.arrayDepth
       );
     } else {
-      member = new ast.StructMemberDef(name, typeResult);
+      member = new ast.UserTypeMemberDef(name, typeResult);
     }
     const notes = this.getNotes(pcx.tags());
     member.extendNote({notes});
     return this.astAt(member, pcx);
   }
 
-  getStructType(pcx: parse.StructTypeContext): StructTypeResult {
+  getUserTypeFieldType(
+    pcx: parse.UserTypeFieldTypeContext
+  ): UserTypeFieldTypeResult {
     const basicCx = pcx.malloyBasicType();
     if (basicCx) {
       return this.getBasicMalloyType(basicCx);
     }
-    const bodyCx = pcx.structBody();
+    const bodyCx = pcx.userTypeShape();
     if (bodyCx) {
-      const fields = bodyCx.structField().map(fieldCx => {
+      const fields = bodyCx.userTypeField().map(fieldCx => {
         const name = getId(fieldCx);
-        const fieldType = this.getStructType(fieldCx.structType());
-        if (isIndirectStructType(fieldType)) {
+        const fieldType = this.getUserTypeFieldType(
+          fieldCx.userTypeFieldType()
+        );
+        if (isIndirectUserType(fieldType)) {
           this.contextError(
             fieldCx,
             'unexpected-malloy-type',
-            `Named struct reference '${fieldType.namedStruct}' cannot be used as an inline record field type`
+            `Named user type reference '${fieldType.namedUserType}' cannot be used as an inline record field type`
           );
           return mkFieldDef({type: 'error'}, name);
         }
@@ -496,10 +508,10 @@ export class MalloyToAST
       });
       return {type: 'record', fields};
     }
-    const innerCx = pcx.structType();
+    const innerCx = pcx.userTypeFieldType();
     if (innerCx) {
-      const inner = this.getStructType(innerCx);
-      if (isIndirectStructType(inner)) {
+      const inner = this.getUserTypeFieldType(innerCx);
+      if (isIndirectUserType(inner)) {
         return {...inner, arrayDepth: inner.arrayDepth + 1};
       }
       return mkArrayTypeDef(inner);
@@ -509,11 +521,15 @@ export class MalloyToAST
       const rawType = getShortString(strCx);
       return {type: 'sql native', rawType};
     }
-    const nameCx = pcx.structName();
+    const nameCx = pcx.userTypeName();
     if (nameCx) {
-      return {namedStruct: idToStr(nameCx.id()), arrayDepth: 0};
+      return {namedUserType: idToStr(nameCx.id()), arrayDepth: 0};
     }
-    this.contextError(pcx, 'unexpected-malloy-type', 'Expected a struct type');
+    this.contextError(
+      pcx,
+      'unexpected-malloy-type',
+      'Expected a user type field type'
+    );
     return {type: 'error'};
   }
 
@@ -2139,11 +2155,11 @@ export class MalloyToAST
   visitSQTypedSource(pcx: parse.SQTypedSourceContext) {
     this.inExperiment('virtual_source', pcx);
     const sqSrc = this.getSqExpr(pcx.sqExpr());
-    const structShapes = pcx
-      .sourceType()
-      .structName()
+    const userTypes = pcx
+      .sourceTypeConstraints()
+      .userTypeName()
       .map(nameCx => this.astAt(this.getModelEntryName(nameCx), nameCx));
-    return this.astAt(new ast.SQTypedSource(sqSrc, structShapes), pcx);
+    return this.astAt(new ast.SQTypedSource(sqSrc, userTypes), pcx);
   }
 
   getIncludeItems(pcx: parse.IncludeBlockContext): ast.IncludeItem[] {

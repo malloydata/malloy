@@ -6,10 +6,10 @@
 import type {
   Annotation,
   AtomicTypeDef,
-  StructShapeFieldDef,
+  UserTypeFieldDef,
 } from '../../../model/malloy_types';
 import {
-  isStructShapeDef,
+  isUserTypeDef,
   mkArrayTypeDef,
   mkFieldDef,
 } from '../../../model/malloy_types';
@@ -17,26 +17,26 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 
-export abstract class StructMember extends MalloyElement implements Noteable {
+export abstract class UserTypeMember extends MalloyElement implements Noteable {
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: Annotation;
   constructor(readonly name: string) {
     super();
   }
-  abstract structShapeFieldDef(): StructShapeFieldDef;
+  abstract userTypeFieldDef(): UserTypeFieldDef;
 }
 
-export class StructMemberDef extends StructMember {
-  elementType = 'structMemberDef';
+export class UserTypeMemberDef extends UserTypeMember {
+  elementType = 'userTypeMemberDef';
   constructor(
     name: string,
     readonly typeDef: AtomicTypeDef
   ) {
     super(name);
   }
-  structShapeFieldDef(): StructShapeFieldDef {
-    const field: StructShapeFieldDef = {
+  userTypeFieldDef(): UserTypeFieldDef {
+    const field: UserTypeFieldDef = {
       name: this.name,
       typeDef: this.typeDef,
     };
@@ -47,8 +47,8 @@ export class StructMemberDef extends StructMember {
   }
 }
 
-export class StructMemberIndirect extends StructMember {
-  elementType = 'structMemberIndirect';
+export class UserTypeMemberIndirect extends UserTypeMember {
+  elementType = 'userTypeMemberIndirect';
   constructor(
     name: string,
     readonly shapeName: string,
@@ -56,8 +56,8 @@ export class StructMemberIndirect extends StructMember {
   ) {
     super(name);
   }
-  structShapeFieldDef(): StructShapeFieldDef {
-    const error: StructShapeFieldDef = {
+  userTypeFieldDef(): UserTypeFieldDef {
+    const error: UserTypeFieldDef = {
       name: this.name,
       typeDef: {type: 'error'},
     };
@@ -68,13 +68,16 @@ export class StructMemberIndirect extends StructMember {
     const modelEntry = doc.modelEntry(this.shapeName);
     if (modelEntry === undefined) {
       this.logError(
-        'struct-not-found',
-        `Struct '${this.shapeName}' is not defined`
+        'user-type-not-found',
+        `User type '${this.shapeName}' is not defined`
       );
       return error;
     }
-    if (!isStructShapeDef(modelEntry.entry)) {
-      this.logError('not-a-struct', `'${this.shapeName}' is not a struct`);
+    if (!isUserTypeDef(modelEntry.entry)) {
+      this.logError(
+        'not-a-user-type',
+        `'${this.shapeName}' is not a user type`
+      );
       return error;
     }
     const fieldsFromReferencedType = modelEntry.entry.fields.map(f => {
@@ -91,7 +94,7 @@ export class StructMemberIndirect extends StructMember {
     for (let i = 0; i < this.arrayDepth; i++) {
       typeDef = mkArrayTypeDef(typeDef);
     }
-    const field: StructShapeFieldDef = {name: this.name, typeDef};
+    const field: UserTypeFieldDef = {name: this.name, typeDef};
     if (this.note) {
       field.annotation = modelEntry.entry.annotation
         ? {...this.note, inherits: modelEntry.entry.annotation}
@@ -103,9 +106,9 @@ export class StructMemberIndirect extends StructMember {
   }
 }
 
-export class StructShape extends ListOf<StructMember> {
-  elementType = 'structShape';
-  structShapeFieldDefs(): StructShapeFieldDef[] {
-    return this.elements.map(member => member.structShapeFieldDef());
+export class UserTypeShape extends ListOf<UserTypeMember> {
+  elementType = 'userTypeShape';
+  userTypeFieldDefs(): UserTypeFieldDef[] {
+    return this.elements.map(member => member.userTypeFieldDef());
   }
 }

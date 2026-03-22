@@ -23,7 +23,7 @@
 
 export * from './query-properties/nest';
 export * from './statements/define-source';
-export * from './statements/define-struct';
+export * from './statements/define-user-type';
 export * from './statements/define-query';
 export * from './source-elements/source';
 export * from './source-elements/refined-source';
@@ -42,7 +42,7 @@ export * from './source-properties/primary-key';
 export * from './source-properties/renames';
 export * from './source-properties/views';
 export * from './source-properties/timezone-statement';
-export * from './source-properties/struct-shape';
+export * from './source-properties/user-type-shape';
 export * from './expressions/apply';
 export * from './expressions/binary-numeric';
 export * from './expressions/boolean';

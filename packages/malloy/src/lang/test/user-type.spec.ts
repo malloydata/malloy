@@ -1,8 +1,6 @@
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * Copyright Contributors to the Malloy project
+ * SPDX-License-Identifier: MIT
  */
 
 import {TestTranslator, error, errorMessage} from './test-translator';
@@ -10,14 +8,14 @@ import './parse-expects';
 
 const experimental = '##! experimental.virtual_source\n';
 
-function structModel(src: string) {
+function userTypeModel(src: string) {
   return new TestTranslator(experimental + src);
 }
 
-describe('struct shapes', () => {
-  test('simple struct with basic type fields', () => {
-    const m = structModel(`
-      struct: MyStruct is {
+describe('user type shapes', () => {
+  test('simple user type with basic type fields', () => {
+    const m = userTypeModel(`
+      type: MyStruct is {
         name :: string,
         age :: number,
         active :: boolean,
@@ -25,7 +23,7 @@ describe('struct shapes', () => {
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('MyStruct');
+    const shape = m.getUserTypeDef('MyStruct');
     expect(shape).toBeDefined();
     expect(shape!.fields).toEqual([
       {name: 'name', typeDef: {type: 'string'}},
@@ -36,42 +34,42 @@ describe('struct shapes', () => {
   });
 
   test('timestamp and timestamptz fields', () => {
-    const m = structModel(`
-      struct: Times is {
+    const m = userTypeModel(`
+      type: Times is {
         created :: timestamp,
         modified :: timestamptz
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('Times');
+    const shape = m.getUserTypeDef('Times');
     expect(shape!.fields).toEqual([
       {name: 'created', typeDef: {type: 'timestamp'}},
       {name: 'modified', typeDef: {type: 'timestamptz'}},
     ]);
   });
 
-  test('multiple structs in one statement', () => {
-    const m = structModel(`
-      struct:
+  test('multiple user types in one statement', () => {
+    const m = userTypeModel(`
+      type:
         A is { x :: string },
         B is { y :: number }
     `);
     expect(m).toTranslate();
-    expect(m.getStructShapeDef('A')!.fields).toEqual([
+    expect(m.getUserTypeDef('A')!.fields).toEqual([
       {name: 'x', typeDef: {type: 'string'}},
     ]);
-    expect(m.getStructShapeDef('B')!.fields).toEqual([
+    expect(m.getUserTypeDef('B')!.fields).toEqual([
       {name: 'y', typeDef: {type: 'number'}},
     ]);
   });
 
-  test('struct extends another struct', () => {
-    const m = structModel(`
-      struct: Base is { name :: string, age :: number }
-      struct: Extended is Base extend { email :: string }
+  test('user type extends another user type', () => {
+    const m = userTypeModel(`
+      type: Base is { name :: string, age :: number }
+      type: Extended is Base extend { email :: string }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('Extended');
+    const shape = m.getUserTypeDef('Extended');
     expect(shape!.fields).toEqual([
       {name: 'name', typeDef: {type: 'string'}},
       {name: 'age', typeDef: {type: 'number'}},
@@ -79,13 +77,13 @@ describe('struct shapes', () => {
     ]);
   });
 
-  test('struct extension overrides field from base', () => {
-    const m = structModel(`
-      struct: Base is { name :: string, value :: string }
-      struct: Override is Base extend { value :: number }
+  test('user type extension overrides field from base', () => {
+    const m = userTypeModel(`
+      type: Base is { name :: string, value :: string }
+      type: Override is Base extend { value :: number }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('Override');
+    const shape = m.getUserTypeDef('Override');
     expect(shape!.fields).toEqual([
       {name: 'name', typeDef: {type: 'string'}},
       {name: 'value', typeDef: {type: 'number'}},
@@ -93,14 +91,14 @@ describe('struct shapes', () => {
   });
 
   test('array type field', () => {
-    const m = structModel(`
-      struct: WithArrays is {
+    const m = userTypeModel(`
+      type: WithArrays is {
         tags :: string[],
         scores :: number[]
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('WithArrays');
+    const shape = m.getUserTypeDef('WithArrays');
     expect(shape!.fields).toEqual([
       {
         name: 'tags',
@@ -114,13 +112,13 @@ describe('struct shapes', () => {
   });
 
   test('nested array type field', () => {
-    const m = structModel(`
-      struct: Matrix is {
+    const m = userTypeModel(`
+      type: Matrix is {
         grid :: number[][]
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('Matrix');
+    const shape = m.getUserTypeDef('Matrix');
     expect(shape!.fields).toEqual([
       {
         name: 'grid',
@@ -133,21 +131,21 @@ describe('struct shapes', () => {
   });
 
   test('sql native type field', () => {
-    const m = structModel(`
-      struct: WithSQL is {
+    const m = userTypeModel(`
+      type: WithSQL is {
         val :: 'integer'
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('WithSQL');
+    const shape = m.getUserTypeDef('WithSQL');
     expect(shape!.fields).toEqual([
       {name: 'val', typeDef: {type: 'sql native', rawType: 'integer'}},
     ]);
   });
 
   test('inline record type field', () => {
-    const m = structModel(`
-      struct: WithRecord is {
+    const m = userTypeModel(`
+      type: WithRecord is {
         address :: {
           street :: string,
           city :: string
@@ -155,7 +153,7 @@ describe('struct shapes', () => {
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('WithRecord');
+    const shape = m.getUserTypeDef('WithRecord');
     expect(shape!.fields).toEqual([
       {
         name: 'address',
@@ -170,16 +168,16 @@ describe('struct shapes', () => {
     ]);
   });
 
-  test('field referencing another struct becomes record', () => {
-    const m = structModel(`
-      struct: Address is { street :: string, city :: string }
-      struct: Person is {
+  test('field referencing another user type becomes record', () => {
+    const m = userTypeModel(`
+      type: Address is { street :: string, city :: string }
+      type: Person is {
         name :: string,
         home :: Address
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('Person');
+    const shape = m.getUserTypeDef('Person');
     expect(shape!.fields).toEqual([
       {name: 'name', typeDef: {type: 'string'}},
       {
@@ -196,13 +194,13 @@ describe('struct shapes', () => {
   });
 
   test('nested array of records', () => {
-    const m = structModel(`
-      struct: WithNestedRecords is {
+    const m = userTypeModel(`
+      type: WithNestedRecords is {
         matrix :: { x :: number, y :: number }[][]
       }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('WithNestedRecords');
+    const shape = m.getUserTypeDef('WithNestedRecords');
     expect(shape!.fields).toEqual([
       {
         name: 'matrix',
@@ -221,14 +219,14 @@ describe('struct shapes', () => {
     ]);
   });
 
-  test('struct used as type in another struct', () => {
-    const m = structModel(`
-      struct: Leaf is { value :: number }
-      struct: Branch is { data :: Leaf }
-      struct: Root is { item :: Branch }
+  test('user type used as type in another user type', () => {
+    const m = userTypeModel(`
+      type: Leaf is { value :: number }
+      type: Branch is { data :: Leaf }
+      type: Root is { item :: Branch }
     `);
     expect(m).toTranslate();
-    const branch = m.getStructShapeDef('Branch');
+    const branch = m.getUserTypeDef('Branch');
     expect(branch!.fields).toEqual([
       {
         name: 'data',
@@ -238,7 +236,7 @@ describe('struct shapes', () => {
         },
       },
     ]);
-    const root = m.getStructShapeDef('Root');
+    const root = m.getUserTypeDef('Root');
     expect(root!.fields).toEqual([
       {
         name: 'item',
@@ -258,57 +256,57 @@ describe('struct shapes', () => {
   });
 });
 
-describe('struct shape errors', () => {
-  test('duplicate struct name', () => {
+describe('user type shape errors', () => {
+  test('duplicate user type name', () => {
     expect(
-      structModel(`
-      struct: Dupe is { x :: string }
-      struct: Dupe is { y :: number }
+      userTypeModel(`
+      type: Dupe is { x :: string }
+      type: Dupe is { y :: number }
     `)
-    ).toLog(error('struct-definition-name-conflict'));
+    ).toLog(error('user-type-definition-name-conflict'));
   });
 
-  test('extend undefined struct', () => {
+  test('extend undefined user type', () => {
     expect(
-      structModel(`
-      struct: Bad is NoSuch extend { x :: string }
+      userTypeModel(`
+      type: Bad is NoSuch extend { x :: string }
     `)
-    ).toLog(error('struct-not-found'));
+    ).toLog(error('user-type-not-found'));
   });
 
-  test('extend non-struct name', () => {
+  test('extend non-user-type name', () => {
     expect(
-      structModel(`
+      userTypeModel(`
       source: s is _db_.table('aTable')
-      struct: Bad is s extend { x :: string }
+      type: Bad is s extend { x :: string }
     `)
-    ).toLog(error('not-a-struct'));
+    ).toLog(error('not-a-user-type'));
   });
 
-  test('field references undefined struct', () => {
+  test('field references undefined user type', () => {
     expect(
-      structModel(`
-      struct: Bad is { data :: NoSuch }
+      userTypeModel(`
+      type: Bad is { data :: NoSuch }
     `)
-    ).toLog(error('struct-not-found'));
+    ).toLog(error('user-type-not-found'));
   });
 
-  test('field references non-struct name', () => {
+  test('field references non-user-type name', () => {
     expect(
-      structModel(`
+      userTypeModel(`
       source: s is _db_.table('aTable')
-      struct: Bad is { data :: s }
+      type: Bad is { data :: s }
     `)
-    ).toLog(error('not-a-struct'));
+    ).toLog(error('not-a-user-type'));
   });
 
-  test('array of named struct reference', () => {
-    const m = structModel(`
-      struct: Base is { x :: string }
-      struct: WithArray is { items :: Base[] }
+  test('array of named user type reference', () => {
+    const m = userTypeModel(`
+      type: Base is { x :: string }
+      type: WithArray is { items :: Base[] }
     `);
     expect(m).toTranslate();
-    const shape = m.getStructShapeDef('WithArray');
+    const shape = m.getUserTypeDef('WithArray');
     expect(shape!.fields).toEqual([
       {
         name: 'items',
@@ -321,26 +319,26 @@ describe('struct shape errors', () => {
     ]);
   });
 
-  test('named struct reference as inline record field type', () => {
+  test('named user type reference as inline record field type', () => {
     expect(
-      structModel(`
-      struct: Base is { x :: string }
-      struct: Bad is {
+      userTypeModel(`
+      type: Base is { x :: string }
+      type: Bad is {
         rec :: { nested :: Base }
       }
     `)
     ).toLog(
       errorMessage(
-        /Named struct reference.*cannot be used as an inline record field type/
+        /Named user type reference.*cannot be used as an inline record field type/
       )
     );
   });
 });
 
 describe('experimental gate', () => {
-  test('struct without experimental flag', () => {
+  test('user type without experimental flag', () => {
     expect(`
-      struct: S is { x :: string }
+      type: S is { x :: string }
     `).toLog(error('experiment-not-enabled', {experimentId: 'virtual_source'}));
   });
 

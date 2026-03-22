@@ -29,7 +29,7 @@ malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineSourceStatement
-  | defineStructStatement
+  | defineUserTypeStatement
   | defineQuery
   | importStatement
   | runStatement
@@ -42,40 +42,40 @@ defineSourceStatement
   : tags SOURCE sourcePropertyList
   ;
 
-defineStructStatement
-  : tags STRUCT structPropertyList
+defineUserTypeStatement
+  : tags TYPE userTypePropertyList
   ;
 
-structPropertyList
-  : structDefinition (COMMA? structDefinition)* COMMA?
+userTypePropertyList
+  : userTypeDefinition (COMMA? userTypeDefinition)* COMMA?
   ;
 
-structDefinition
-  : tags structNameDef isDefine structExpr
+userTypeDefinition
+  : tags userTypeNameDef isDefine userTypeExpr
   ;
 
-structNameDef: id;
+userTypeNameDef: id;
 
-structExpr
-  : structName                            # structRef
-  | structBody                            # structInline
-  | structName EXTEND structBody          # structExtend
+userTypeExpr
+  : userTypeName                            # userTypeRef
+  | userTypeShape                            # userTypeInline
+  | userTypeName EXTEND userTypeShape          # userTypeExtend
   ;
 
-structBody
-  : OCURLY structField (COMMA structField)* COMMA? CCURLY
+userTypeShape
+  : OCURLY userTypeField (COMMA userTypeField)* COMMA? CCURLY
   ;
 
-structField
-  : tags id DOUBLECOLON structType
+userTypeField
+  : tags id DOUBLECOLON userTypeFieldType
   ;
 
-structType
+userTypeFieldType
   : malloyBasicType
-  | structBody
-  | structType OBRACK CBRACK
+  | userTypeShape
+  | userTypeFieldType OBRACK CBRACK
   | shortString
-  | structName
+  | userTypeName
   ;
 
 defineQuery
@@ -314,18 +314,18 @@ sqExpr
   | sqExpr ARROW segExpr                                     # SQArrow
   | sqExpr (INCLUDE includeBlock)? EXTEND exploreProperties  # SQExtendedSource
   | sqExpr INCLUDE includeBlock                              # SQInclude
-  | sqExpr DOUBLECOLON sourceType                            # SQTypedSource
+  | sqExpr DOUBLECOLON sourceTypeConstraints                            # SQTypedSource
   | exploreTable                                             # SQTable
   | virtualSource                                            # SQVirtual
   | sqlSource                                                # SQSQL
   ;
 
-sourceType
-  : structName
-  | LT structName (COMMA structName)* GT
+sourceTypeConstraints
+  : userTypeName
+  | OPAREN userTypeName (COMMA userTypeName)* CPAREN
   ;
 
-structName: id;
+userTypeName: id;
 
 includeBlock
   : OCURLY (includeItem | SEMI)* CCURLY

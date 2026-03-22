@@ -104,8 +104,8 @@ export class SQReference extends SourceQueryElement {
       this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
-        'cannot-use-struct-as-source',
-        `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
+        'cannot-use-user-type-as-source',
+        `Expected '${this.ref.refString}' to be a query or source, not a user type`
       );
       return;
     }

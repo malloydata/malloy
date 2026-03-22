@@ -13,14 +13,14 @@ import type {
 import {
   TD,
   fieldIsIntrinsic,
-  isStructShapeDef,
+  isUserTypeDef,
   mkFieldDef,
 } from '../../../model/malloy_types';
 import {Source} from './source';
 import type {ParameterSpace} from '../field-space/parameter-space';
 import type {ModelEntryReference} from '../types/malloy-element';
 
-export const STRUCT_SHAPE_HIDDEN_ACCESS: NonDefaultAccessModifierLabel =
+export const USER_TYPE_HIDDEN_ACCESS: NonDefaultAccessModifierLabel =
   'internal';
 
 /**
@@ -32,30 +32,30 @@ class Shape extends Map<
 > {}
 
 /**
- * A Source wrapped with struct shape type constraints via the `::` operator.
- * Resolves and merges shapes (validating no conflicts), then:
- * - virtual sources: shape fields not in the source are added
- * - all other sources: shape fields not in the source are an error
- * - in both cases: source fields not in any shape are marked
- *   with STRUCT_SHAPE_HIDDEN_ACCESS
+ * A Source wrapped with user type constraints via the `::` operator.
+ * Resolves and merges user types (validating no conflicts), then:
+ * - virtual sources: user-type fields not in the source are added
+ * - all other sources: user-type fields not in the source are an error
+ * - in both cases: source fields not in any user type are marked
+ *   with USER_TYPE_HIDDEN_ACCESS
  *
- * e.g. `source::MyStruct` or `source::<A, B>`
+ * e.g. `source::MyType` or `source::(A, B)`
  */
 export class TypedSource extends Source {
   elementType = 'typedSource';
 
   constructor(
     readonly innerSource: Source,
-    readonly structShapes: ModelEntryReference[]
+    readonly userTypes: ModelEntryReference[]
   ) {
     super({innerSource});
-    this.has({structShapes});
+    this.has({userTypes});
   }
 
   getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     const sourceDef = this.innerSource.getSourceDef(parameterSpace);
 
-    // Merge structs, while validating no field conflicts
+    // Merge user types, while validating no field conflicts
     const [outputShape, ...remainingShapes] = this.nextShape();
     if (outputShape === undefined) {
       return sourceDef;
@@ -65,8 +65,8 @@ export class TypedSource extends Source {
         const existing = outputShape.get(name);
         if (existing && !TD.eq(field, existing.field)) {
           fromShape.logError(
-            'struct-shape-field-conflict',
-            `Field '${name}' has conflicting types in structs '${existing.fromShape.name}' and '${fromShape.name}'`
+            'user-type-field-conflict',
+            `Field '${name}' has conflicting types in user types '${existing.fromShape.name}' and '${fromShape.name}'`
           );
         } else {
           outputShape.set(name, {field, fromShape});
@@ -88,8 +88,8 @@ export class TypedSource extends Source {
           fieldsToAdd.push(field);
         } else {
           fromShape.logError(
-            'struct-shape-field-missing',
-            `Source is missing field '${field.name}' required by struct '${fromShape.name}'`
+            'user-type-field-missing',
+            `Source is missing field '${field.name}' required by user type '${fromShape.name}'`
           );
         }
       } else if (
@@ -98,8 +98,8 @@ export class TypedSource extends Source {
         !TD.eq(field, sourceField)
       ) {
         fromShape.logError(
-          'struct-shape-type-mismatch',
-          `Type mismatch for '${name}': struct '${fromShape.name}' declares ${field.type} but source has ${sourceField.type}`
+          'user-type-type-mismatch',
+          `Type mismatch for '${name}': user type '${fromShape.name}' declares ${field.type} but source has ${sourceField.type}`
         );
       }
     }
@@ -111,7 +111,7 @@ export class TypedSource extends Source {
       const shapeEntry = outputShape.get(name);
       if (!shapeEntry || !fieldIsIntrinsic(f)) {
         return fieldIsIntrinsic(f) && !shapeEntry
-          ? {...f, accessModifier: STRUCT_SHAPE_HIDDEN_ACCESS}
+          ? {...f, accessModifier: USER_TYPE_HIDDEN_ACCESS}
           : f;
       }
       const shapeAnnotation = shapeEntry.field.annotation;
@@ -128,15 +128,18 @@ export class TypedSource extends Source {
   }
 
   private *nextShape(): Generator<Shape> {
-    for (const ref of this.structShapes) {
+    for (const ref of this.userTypes) {
       const next = new Shape();
       const entry = this.modelEntry(ref);
       if (entry === undefined) {
-        ref.logError('struct-not-found', `Struct '${ref.name}' is not defined`);
+        ref.logError(
+          'user-type-not-found',
+          `User type '${ref.name}' is not defined`
+        );
         continue;
       }
-      if (!isStructShapeDef(entry.entry)) {
-        ref.logError('not-a-struct', `'${ref.name}' is not a struct`);
+      if (!isUserTypeDef(entry.entry)) {
+        ref.logError('not-a-user-type', `'${ref.name}' is not a user type`);
         continue;
       }
 

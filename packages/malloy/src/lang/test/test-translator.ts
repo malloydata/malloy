@@ -38,12 +38,12 @@ import type {
   TableSourceDef,
   SQLSourceDef,
   NumberTypeDef,
-  StructShapeDef,
+  UserTypeDef,
 } from '../../model/malloy_types';
 import {
   isQuerySegment,
   isSourceDef,
-  isStructShapeDef,
+  isUserTypeDef,
   mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
@@ -579,10 +579,10 @@ export class TestTranslator extends MalloyTranslator {
     return undefined;
   }
 
-  getStructShapeDef(name: string): StructShapeDef | undefined {
+  getUserTypeDef(name: string): UserTypeDef | undefined {
     const t = this.translate().modelDef;
     const s = t?.contents[name];
-    if (s && isStructShapeDef(s)) {
+    if (s && isUserTypeDef(s)) {
       return s;
     }
     return undefined;

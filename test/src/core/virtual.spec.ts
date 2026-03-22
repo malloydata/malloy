@@ -24,7 +24,7 @@ function mkVirtualMap(
 describe('virtual source resolution', () => {
   it('virtual source resolves to real table', async () => {
     const code = `${VIRTUAL_ANNOTATION}
-      struct: flight_fields is {
+      type: flight_fields is {
         carrier :: string,
         flight_count :: number
       }
@@ -42,7 +42,7 @@ describe('virtual source resolution', () => {
 
   it('virtual source with dimensions and measures', async () => {
     const code = `${VIRTUAL_ANNOTATION}
-      struct: flight_fields is {
+      type: flight_fields is {
         carrier :: string,
         dep_time :: timestamp
       }
@@ -70,7 +70,7 @@ describe('virtual source resolution', () => {
 
   it('missing virtualMap entry throws', async () => {
     const code = `${VIRTUAL_ANNOTATION}
-      struct: s is { x :: string }
+      type: s is { x :: string }
       source: v is ${tstDB}.virtual('no_such_table')::s
       run: v -> { select: x; limit: 1 }
     `;
@@ -82,7 +82,7 @@ describe('virtual source resolution', () => {
 
   it('per-query virtualMap overrides runtime virtualMap', async () => {
     const code = `${VIRTUAL_ANNOTATION}
-      struct: carrier_fields is { code :: string, nickname :: string }
+      type: carrier_fields is { code :: string, nickname :: string }
       source: carriers is ${tstDB}.virtual('vcarriers')::carrier_fields
       run: carriers -> { select: code; limit: 5 }
     `;
@@ -107,7 +107,7 @@ describe('virtual source resolution', () => {
 
   it('virtualMap on runtime constructor is used', async () => {
     const code = `${VIRTUAL_ANNOTATION}
-      struct: flight_fields is { carrier :: string }
+      type: flight_fields is { carrier :: string }
       source: flights is ${tstDB}.virtual('vflights')::flight_fields
       run: flights -> { select: carrier; limit: 5 }
     `;

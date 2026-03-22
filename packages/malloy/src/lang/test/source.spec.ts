@@ -1301,9 +1301,9 @@ describe('virtual sources', () => {
     expect(src!.fields).toEqual([]);
   });
 
-  test('virtual source with single struct shape', () => {
+  test('virtual source with single user type shape', () => {
     const m = vsModel(`
-      struct: Schema is { name :: string, age :: number }
+      type: Schema is { name :: string, age :: number }
       source: v is _db_.virtual('t')::Schema
     `);
     expect(m).toTranslate();
@@ -1313,11 +1313,11 @@ describe('virtual sources', () => {
     expect(src!.fields.map(f => f.name)).toEqual(['name', 'age']);
   });
 
-  test('virtual source with multiple struct shapes', () => {
+  test('virtual source with multiple user type shapes', () => {
     const m = vsModel(`
-      struct: Names is { name :: string }
-      struct: Ages is { age :: number }
-      source: v is _db_.virtual('t')::<Names, Ages>
+      type: Names is { name :: string }
+      type: Ages is { age :: number }
+      source: v is _db_.virtual('t')::(Names, Ages)
     `);
     expect(m).toTranslate();
     const src = m.getSourceDef('v');
@@ -1325,9 +1325,9 @@ describe('virtual sources', () => {
     expect(src!.fields.map(f => f.name)).toEqual(['name', 'age']);
   });
 
-  test('virtual source gets fields from struct shapes', () => {
+  test('virtual source gets fields from user type shapes', () => {
     const m = vsModel(`
-      struct: Schema is { name :: string, score :: number }
+      type: Schema is { name :: string, score :: number }
       source: v is _db_.virtual('t')::Schema
     `);
     expect(m).toTranslate();
@@ -1368,9 +1368,9 @@ describe('typed source (::)', () => {
     return new TestTranslator(experimental + src);
   }
 
-  test('source :: struct hides fields not in shape', () => {
+  test('source :: user type hides fields not in shape', () => {
     const m = tsModel(`
-      struct: Narrow is { astr :: string }
+      type: Narrow is { astr :: string }
       source: typed is a::Narrow
     `);
     expect(m).toTranslate();
@@ -1379,9 +1379,9 @@ describe('typed source (::)', () => {
     expect(getFieldDef(src, 'ai').accessModifier).toBe('internal');
   });
 
-  test('source :: struct with all fields present', () => {
+  test('source :: user type with all fields present', () => {
     const m = tsModel(`
-      struct: HasStr is { astr :: string }
+      type: HasStr is { astr :: string }
       source: typed is a::HasStr
     `);
     expect(m).toTranslate();
@@ -1389,9 +1389,9 @@ describe('typed source (::)', () => {
 
   test('source :: with multiple compatible shapes', () => {
     const m = tsModel(`
-      struct: S1 is { astr :: string }
-      struct: S2 is { ai :: number }
-      source: typed is a::<S1, S2>
+      type: S1 is { astr :: string }
+      type: S2 is { ai :: number }
+      source: typed is a::(S1, S2)
     `);
     expect(m).toTranslate();
     const src = m.getSourceDef('typed')!;
@@ -1402,59 +1402,59 @@ describe('typed source (::)', () => {
 
   test('typed source used in a query', () => {
     const m = tsModel(`
-      struct: S is { astr :: string }
+      type: S is { astr :: string }
       run: a::S -> { select: astr }
     `);
     expect(m).toTranslate();
   });
 
-  test(':: references undefined struct', () => {
+  test(':: references undefined user type', () => {
     expect(
       tsModel(`
       source: typed is a::NoSuch
     `)
-    ).toLog(error('struct-not-found'));
+    ).toLog(error('user-type-not-found'));
   });
 
-  test(':: references non-struct name', () => {
+  test(':: references non-user-type name', () => {
     expect(
       tsModel(`
       source: typed is a::b
     `)
-    ).toLog(error('not-a-struct'));
+    ).toLog(error('not-a-user-type'));
   });
 
   test(':: on non-virtual source missing required field', () => {
     expect(
       tsModel(`
-      struct: S is { not_a_real_field :: string }
+      type: S is { not_a_real_field :: string }
       source: typed is a::S
     `)
-    ).toLog(error('struct-shape-field-missing'));
+    ).toLog(error('user-type-field-missing'));
   });
 
   test(':: with conflicting field types across shapes', () => {
     expect(
       tsModel(`
-      struct: S1 is { astr :: string }
-      struct: S2 is { astr :: number }
-      source: typed is a::<S1, S2>
+      type: S1 is { astr :: string }
+      type: S2 is { astr :: number }
+      source: typed is a::(S1, S2)
     `)
-    ).toLog(error('struct-shape-field-conflict'));
+    ).toLog(error('user-type-field-conflict'));
   });
 
   test(':: type mismatch is an error', () => {
     expect(
       tsModel(`
-      struct: S is { astr :: number }
+      type: S is { astr :: number }
       source: typed is a::S
     `)
-    ).toLog(error('struct-shape-type-mismatch'));
+    ).toLog(error('user-type-type-mismatch'));
   });
 
   test(':: does not validate types on virtual sources', () => {
     const m = tsModel(`
-      struct: S is { x :: string }
+      type: S is { x :: string }
       source: v is _db_.virtual('t')::S
     `);
     expect(m).toTranslate();
@@ -1462,7 +1462,7 @@ describe('typed source (::)', () => {
 
   test(':: does not hide non-intrinsic fields', () => {
     const m = tsModel(`
-      struct: S is { astr :: string }
+      type: S is { astr :: string }
       source: typed is ab::S
     `);
     expect(m).toTranslate();

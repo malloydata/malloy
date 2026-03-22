@@ -9,55 +9,58 @@ import type {Noteable} from '../types/noteable';
 import {extendNoteMethod} from '../types/noteable';
 import type {
   Annotation,
-  StructShapeDef,
-  StructShapeFieldDef,
+  UserTypeDef,
+  UserTypeFieldDef,
 } from '../../../model/malloy_types';
-import {isStructShapeDef} from '../../../model/malloy_types';
-import type {StructMember} from '../source-properties/struct-shape';
-import {StructShape} from '../source-properties/struct-shape';
+import {isUserTypeDef} from '../../../model/malloy_types';
+import type {UserTypeMember} from '../source-properties/user-type-shape';
+import {UserTypeShape} from '../source-properties/user-type-shape';
 
-export class ExtendedStructShape extends StructShape {
-  type = 'extendedStructShape';
+export class ExtendedUserTypeShape extends UserTypeShape {
+  type = 'extendedUserTypeShape';
   constructor(
-    parts: StructMember[],
+    parts: UserTypeMember[],
     readonly extendName: string
   ) {
     super(parts);
   }
 
-  structShapeFieldDefs(): StructShapeFieldDef[] {
+  userTypeFieldDefs(): UserTypeFieldDef[] {
     const doc = this.document();
-    const baseFields = new Map<string, StructShapeFieldDef>();
+    const baseFields = new Map<string, UserTypeFieldDef>();
     if (doc) {
       const modelEntry = doc.modelEntry(this.extendName);
       if (modelEntry === undefined) {
         this.logError(
-          'struct-not-found',
-          `Struct '${this.extendName}' is not defined`
+          'user-type-not-found',
+          `User type '${this.extendName}' is not defined`
         );
-      } else if (!isStructShapeDef(modelEntry.entry)) {
-        this.logError('not-a-struct', `'${this.extendName}' is not a struct`);
+      } else if (!isUserTypeDef(modelEntry.entry)) {
+        this.logError(
+          'not-a-user-type',
+          `'${this.extendName}' is not a user type`
+        );
       } else {
         for (const f of modelEntry.entry.fields) {
           baseFields.set(f.name, f);
         }
       }
     }
-    for (const f of super.structShapeFieldDefs()) {
+    for (const f of super.userTypeFieldDefs()) {
       baseFields.set(f.name, f);
     }
     return [...baseFields.values()];
   }
 }
 
-export class DefineStruct
+export class DefineUserType
   extends MalloyElement
   implements DocStatement, Noteable
 {
-  elementType = 'defineStruct';
+  elementType = 'defineUserType';
   constructor(
     readonly name: string,
-    readonly shapeDef: StructShape,
+    readonly shapeDef: UserTypeShape,
     readonly exported: boolean
   ) {
     super();
@@ -70,17 +73,17 @@ export class DefineStruct
   execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
       this.logError(
-        'struct-definition-name-conflict',
+        'user-type-definition-name-conflict',
         `Cannot redefine '${this.name}'`
       );
       return;
     }
-    const fields = this.shapeDef.structShapeFieldDefs();
+    const fields = this.shapeDef.userTypeFieldDefs();
     if (fields === undefined) {
       return;
     }
-    const entry: StructShapeDef = {
-      type: 'structShape',
+    const entry: UserTypeDef = {
+      type: 'userType',
       name: this.name,
       fields,
       location: this.location,
@@ -92,9 +95,9 @@ export class DefineStruct
   }
 }
 
-export class DefineStructList extends DocStatementList {
-  elementType = 'defineStructs';
-  constructor(structList: DefineStruct[]) {
-    super(structList);
+export class DefineUserTypeList extends DocStatementList {
+  elementType = 'defineUserTypes';
+  constructor(userTypeList: DefineUserType[]) {
+    super(userTypeList);
   }
 }

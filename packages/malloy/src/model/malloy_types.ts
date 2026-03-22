@@ -1830,20 +1830,20 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export interface StructShapeFieldDef {
+export interface UserTypeFieldDef {
   name: string;
   typeDef: AtomicTypeDef;
   annotation?: Annotation;
 }
 
-export interface StructShapeDef extends NamedObject {
-  type: 'structShape';
-  fields: StructShapeFieldDef[];
+export interface UserTypeDef extends NamedObject {
+  type: 'userType';
+  fields: UserTypeFieldDef[];
   annotation?: Annotation;
 }
 
-export function isStructShapeDef(sd: NamedModelObject): sd is StructShapeDef {
-  return sd.type === 'structShape';
+export function isUserTypeDef(sd: NamedModelObject): sd is UserTypeDef {
+  return sd.type === 'userType';
 }
 
 export type NamedModelObject =
@@ -1851,7 +1851,7 @@ export type NamedModelObject =
   | NamedQueryDef
   | FunctionDef
   | ConnectionDef
-  | StructShapeDef;
+  | UserTypeDef;
 
 export interface DependencyTree {
   [url: string]: DependencyTree;
