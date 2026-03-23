@@ -105,6 +105,46 @@ describe('virtual source resolution', () => {
     expect(result.data.value.length).toBe(5);
   });
 
+  it('join between virtual sources', async () => {
+    const code = `${VIRTUAL_ANNOTATION}
+      type: model_fields is {
+        aircraft_model_code :: string,
+        manufacturer :: string,
+        seats :: number
+      }
+      type: aircraft_fields is {
+        tail_num :: string,
+        aircraft_model_code :: string
+      }
+      source: vmodels is ${tstDB}.virtual('vmodels')::model_fields extend {
+        primary_key: aircraft_model_code
+        measure: model_count is count()
+      }
+      source: vaircraft is ${tstDB}.virtual('vaircraft')::aircraft_fields extend {
+        primary_key: tail_num
+        join_one: vmodels with aircraft_model_code
+        measure: aircraft_count is count()
+      }
+      run: vaircraft -> {
+        aggregate:
+          aircraft_count
+          vmodels.model_count
+      }
+    `;
+
+    const virtualMap = mkVirtualMap({
+      [tstDB]: {
+        vmodels: 'malloytest.aircraft_models',
+        vaircraft: 'malloytest.aircraft',
+      },
+    });
+
+    const result = await tstRuntime.loadQuery(code).run({virtualMap});
+    const row = result.data.value[0];
+    expect(row['aircraft_count']).toBeDefined();
+    expect(row['model_count']).toBeDefined();
+  });
+
   it('virtualMap on runtime constructor is used', async () => {
     const code = `${VIRTUAL_ANNOTATION}
       type: flight_fields is { carrier :: string }

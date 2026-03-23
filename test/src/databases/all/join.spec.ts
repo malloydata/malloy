@@ -27,7 +27,6 @@ import {RuntimeList, allDatabases, testFileSpace} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '@malloydata/malloy/test/matchers';
 import {wrapTestModel} from '@malloydata/malloy/test';
-import type {VirtualMap} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -321,48 +320,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       `).toMatchResult(testModel, {pick_a1: [1]});
     }
   );
-
-  it('join between virtual sources', async () => {
-    const virtualMap: VirtualMap = new Map([
-      [
-        databaseName,
-        new Map([
-          ['vmodels', 'malloytest.aircraft_models'],
-          ['vaircraft', 'malloytest.aircraft'],
-        ]),
-      ],
-    ]);
-    const code = `
-      ##! experimental.virtual_source
-      type: model_fields is {
-        aircraft_model_code :: string,
-        manufacturer :: string,
-        seats :: number
-      }
-      type: aircraft_fields is {
-        tail_num :: string,
-        aircraft_model_code :: string
-      }
-      source: vmodels is ${databaseName}.virtual('vmodels')::model_fields extend {
-        primary_key: aircraft_model_code
-        measure: model_count is count()
-      }
-      source: vaircraft is ${databaseName}.virtual('vaircraft')::aircraft_fields extend {
-        primary_key: tail_num
-        join_one: vmodels with aircraft_model_code
-        measure: aircraft_count is count()
-      }
-      run: vaircraft -> {
-        aggregate:
-          aircraft_count
-          vmodels.model_count
-      }
-    `;
-    const result = await runtime.loadQuery(code).run({virtualMap});
-    const row = result.data.value[0];
-    expect(row['aircraft_count']).toBeDefined();
-    expect(row['model_count']).toBeDefined();
-  });
 
   it('cross-model import with sql interpolation in join', async () => {
     // When a sql_select source uses %{ source -> view } interpolation,
