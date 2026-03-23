@@ -24,7 +24,7 @@
 export default [
   [
     {
-      line: `// / ' " """ // unable to break out of /* line comments`,
+      line: '// / \' " """ // unable to break out of /* line comments',
       tokens: [
         {
           startIndex: 0,
@@ -67,7 +67,7 @@ export default [
   ],
   [
     {
-      line: `    /* *** / * // " " ' \\'`,
+      line: '    /* *** / * // " " \' \\\'',
       tokens: [
         {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
@@ -614,7 +614,7 @@ export default [
   ],
   [
     {
-      line: `state ? """ multiple " " \\u "" \\u2001 ' /* -- // " \\`,
+      line: 'state ? """ multiple " " \\u "" \\u2001 \' /* -- // " \\',
       tokens: [
         {
           startIndex: 0,
@@ -858,7 +858,7 @@ export default [
   ],
   [
     {
-      line: `"/* -- \\e\\uFFFF \\'\\`,
+      line: '"/* -- \\e\\uFFFF \\\'\\',
       tokens: [
         {
           startIndex: 0,
@@ -919,7 +919,7 @@ export default [
   ],
   [
     {
-      line: `state ~ 'CA' | r'M.' | "CO" | /'O.'  -- end`,
+      line: "state ~ 'CA' | r'M.' | \"CO\" | /'O.'  -- end",
       tokens: [
         {
           startIndex: 0,
