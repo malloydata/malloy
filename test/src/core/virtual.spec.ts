@@ -4,8 +4,15 @@
  */
 
 import {runtimeFor} from '../runtimes';
-import type {VirtualMap} from '@malloydata/malloy';
-import {SingleConnectionRuntime} from '@malloydata/malloy';
+import type {VirtualMap, ManagedConnectionLookup} from '@malloydata/malloy';
+import {
+  Runtime,
+  SingleConnectionRuntime,
+  MalloyConfig,
+  createConnectionsFromConfig,
+} from '@malloydata/malloy';
+// Register duckdb type in the global registry so config-driven tests work
+import '@malloydata/db-duckdb/native';
 
 const tstDB = 'duckdb';
 const tstRuntime = runtimeFor(tstDB);
@@ -97,8 +104,8 @@ describe('virtual source resolution', () => {
 
     const runtime = new SingleConnectionRuntime({
       connection: tstRuntime.connection,
-      virtualMap: runtimeMap,
     });
+    runtime.virtualMap = runtimeMap;
 
     // Query-level map should win over runtime-level map
     const result = await runtime.loadQuery(code).run({virtualMap: queryMap});
@@ -145,7 +152,75 @@ describe('virtual source resolution', () => {
     expect(row['model_count']).toBeDefined();
   });
 
-  it('virtualMap on runtime constructor is used', async () => {
+  it('virtualMap from MalloyConfig is available', () => {
+    const configJSON = JSON.stringify({
+      connections: {
+        duckdb: {is: 'duckdb'},
+      },
+      virtualMap: {
+        duckdb: {
+          flights: 'malloytest.flights',
+          carriers: 'malloytest.carriers',
+        },
+      },
+    });
+
+    const config = new MalloyConfig(configJSON);
+    const virtualMap = config.virtualMap;
+    expect(virtualMap).toBeDefined();
+    expect(virtualMap!.get('duckdb')?.get('flights')).toBe(
+      'malloytest.flights'
+    );
+    expect(virtualMap!.get('duckdb')?.get('carriers')).toBe(
+      'malloytest.carriers'
+    );
+  });
+
+  it('config-driven Runtime gets virtualMap from config', () => {
+    const configJSON = JSON.stringify({
+      connections: {
+        [tstDB]: {is: 'duckdb'},
+      },
+      virtualMap: {
+        [tstDB]: {vflights: 'malloytest.flights'},
+      },
+    });
+
+    const config = new MalloyConfig(configJSON);
+    const runtime = new Runtime({config});
+    expect(runtime.virtualMap?.get(tstDB)?.get('vflights')).toBe(
+      'malloytest.flights'
+    );
+  });
+
+  it('config-driven Runtime resolves virtual sources', async () => {
+    const code = `${VIRTUAL_ANNOTATION}
+      type: flight_fields is { carrier :: string }
+      source: flights is ${tstDB}.virtual('vflights')::flight_fields
+      run: flights -> { select: carrier; limit: 5 }
+    `;
+
+    const configJSON = JSON.stringify({
+      connections: {
+        [tstDB]: {is: 'duckdb'},
+      },
+      virtualMap: {
+        [tstDB]: {vflights: 'malloytest.flights'},
+      },
+    });
+
+    // Use config for virtualMap, but app-driven connection for test database access
+    const config = new MalloyConfig(configJSON);
+    const runtime = new SingleConnectionRuntime({
+      connection: tstRuntime.connection,
+    });
+    runtime.virtualMap = config.virtualMap;
+
+    const result = await runtime.loadQuery(code).run();
+    expect(result.data.value.length).toBe(5);
+  });
+
+  it('virtualMap set via setter is used', async () => {
     const code = `${VIRTUAL_ANNOTATION}
       type: flight_fields is { carrier :: string }
       source: flights is ${tstDB}.virtual('vflights')::flight_fields
@@ -158,9 +233,118 @@ describe('virtual source resolution', () => {
 
     const runtime = new SingleConnectionRuntime({
       connection: tstRuntime.connection,
-      virtualMap,
+    });
+    runtime.virtualMap = virtualMap;
+
+    const result = await runtime.loadQuery(code).run();
+    expect(result.data.value.length).toBe(5);
+  });
+});
+
+describe('ManagedConnectionLookup', () => {
+  it('createConnectionsFromConfig returns ManagedConnectionLookup with close()', () => {
+    const lookup: ManagedConnectionLookup = createConnectionsFromConfig({
+      connections: {[tstDB]: {is: 'duckdb'}},
+    });
+    expect(typeof lookup.lookupConnection).toBe('function');
+    expect(typeof lookup.close).toBe('function');
+  });
+
+  it('onConnectionCreated callback fires on first lookup', async () => {
+    const created: string[] = [];
+    const lookup = createConnectionsFromConfig(
+      {connections: {[tstDB]: {is: 'duckdb'}}},
+      (name, _conn) => created.push(name)
+    );
+    await lookup.lookupConnection(tstDB);
+    expect(created).toEqual([tstDB]);
+
+    // Second lookup should NOT fire callback (connection is cached)
+    await lookup.lookupConnection(tstDB);
+    expect(created).toEqual([tstDB]);
+  });
+});
+
+describe('MalloyConfig connection caching', () => {
+  it('connections getter returns same object on repeated access', () => {
+    const config = new MalloyConfig(
+      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
+    );
+    const a = config.connections;
+    const b = config.connections;
+    expect(a).toBe(b);
+  });
+
+  it('connectionMap setter invalidates cached connections', () => {
+    const config = new MalloyConfig(
+      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
+    );
+    const a = config.connections;
+    config.connectionMap = {[tstDB]: {is: 'duckdb'}};
+    const b = config.connections;
+    expect(a).not.toBe(b);
+  });
+
+  it('connectionLookup override is returned by connections getter', () => {
+    const config = new MalloyConfig(
+      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
+    );
+    const override = {
+      lookupConnection: () => Promise.resolve(tstRuntime.connection),
+    };
+    config.connectionLookup = override;
+    expect(config.connections).toBe(override);
+  });
+
+  it('onConnectionCreated fires through MalloyConfig', async () => {
+    const created: string[] = [];
+    const config = new MalloyConfig(
+      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
+    );
+    config.onConnectionCreated = (name, _conn) => created.push(name);
+    await config.connections.lookupConnection(tstDB);
+    expect(created).toEqual([tstDB]);
+  });
+
+  it('close() shuts down managed connections', async () => {
+    const config = new MalloyConfig(
+      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
+    );
+    // Force connection creation
+    await config.connections.lookupConnection(tstDB);
+    // close() should not throw
+    await config.close();
+    // After close, next access creates a fresh lookup
+    const fresh = config.connections;
+    expect(fresh).toBeDefined();
+  });
+});
+
+describe('Runtime with config + connections override', () => {
+  it('config provides virtualMap while connections override provides connection', async () => {
+    const code = `${VIRTUAL_ANNOTATION}
+      type: flight_fields is { carrier :: string }
+      source: flights is ${tstDB}.virtual('vflights')::flight_fields
+      run: flights -> { select: carrier; limit: 5 }
+    `;
+
+    const configJSON = JSON.stringify({
+      connections: {[tstDB]: {is: 'duckdb'}},
+      virtualMap: {[tstDB]: {vflights: 'malloytest.flights'}},
     });
 
+    const config = new MalloyConfig(configJSON);
+    // Pass config for virtualMap, but override connections with test connection
+    const runtime = new Runtime({
+      config,
+      connections: {
+        lookupConnection: () => Promise.resolve(tstRuntime.connection),
+      },
+    });
+
+    expect(runtime.virtualMap?.get(tstDB)?.get('vflights')).toBe(
+      'malloytest.flights'
+    );
     const result = await runtime.loadQuery(code).run();
     expect(result.data.value.length).toBe(5);
   });

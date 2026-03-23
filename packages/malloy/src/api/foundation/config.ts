@@ -5,7 +5,10 @@
 
 import type {URLReader} from '../../runtime_types';
 import type {Connection, LookupConnection} from '../../connection/types';
-import type {ConnectionConfigEntry} from '../../connection/registry';
+import type {
+  ConnectionConfigEntry,
+  ManagedConnectionLookup,
+} from '../../connection/registry';
 import {
   createConnectionsFromConfig,
   isConnectionConfigEntry,
@@ -14,6 +17,7 @@ import type {
   BuildID,
   BuildManifest,
   BuildManifestEntry,
+  VirtualMap,
 } from '../../model/malloy_types';
 
 const DEFAULT_MANIFEST_PATH = 'MANIFESTS';
@@ -25,6 +29,7 @@ const MANIFEST_FILENAME = 'malloy-manifest.json';
 export interface MalloyProjectConfig {
   connections?: Record<string, ConnectionConfigEntry>;
   manifestPath?: string;
+  virtualMap?: VirtualMap;
 }
 
 /**
@@ -177,9 +182,8 @@ export class Manifest {
 }
 
 /**
- * Loads and holds a Malloy project configuration (connections + manifest).
- *
- * Two construction modes:
+ * Loads and holds a Malloy project configuration (connections + manifest +
+ * virtualMap). Pass directly to Runtime — everything flows automatically.
  *
  *   // From a URL — reads config + manifest via URLReader
  *   const config = new MalloyConfig(urlReader, configURL);
@@ -188,12 +192,12 @@ export class Manifest {
  *   // From text you already have
  *   const config = new MalloyConfig(configText);
  *
- *   // Either way, construct Runtime the same way
- *   const runtime = new Runtime({
- *     urlReader,
- *     connections: config.connections,
- *     buildManifest: config.manifest.buildManifest,
- *   });
+ *   // Either way, pass to Runtime — connections, buildManifest, virtualMap
+ *   // all come from the config. No manual wiring needed.
+ *   const runtime = new Runtime({config, urlReader});
+ *
+ * To override specific fields, mutate the config before passing:
+ *   config.connectionMap = myCustomConnections;
  */
 export class MalloyConfig {
   private readonly _urlReader?: URLReader;
@@ -201,6 +205,11 @@ export class MalloyConfig {
   private _data: MalloyProjectConfig | undefined;
   private _connectionMap: Record<string, ConnectionConfigEntry> | undefined;
   private readonly _manifest: Manifest;
+  private _managedLookup: ManagedConnectionLookup | undefined;
+  private _connectionLookupOverride: LookupConnection<Connection> | undefined;
+  private _onConnectionCreated:
+    | ((name: string, connection: Connection) => void)
+    | undefined;
 
   constructor(configText: string);
   constructor(urlReader: URLReader, configURL: string);
@@ -262,19 +271,69 @@ export class MalloyConfig {
 
   set connectionMap(map: Record<string, ConnectionConfigEntry>) {
     this._connectionMap = map;
+    // Invalidate cached managed lookup — new map means new connections
+    this._managedLookup = undefined;
   }
 
   /**
    * A LookupConnection built from the current connectionMap via the
-   * connection type registry. Each access creates a fresh snapshot —
-   * changing connectionMap after this does not affect previously-returned
-   * LookupConnections.
+   * connection type registry. The result is cached — repeated access
+   * returns the same object (and the same underlying connections).
+   *
+   * If `connectionLookup` has been set, returns the override instead.
+   *
+   * Changing `connectionMap` invalidates the cache; the next access
+   * creates a fresh ManagedConnectionLookup.
    */
   get connections(): LookupConnection<Connection> {
+    if (this._connectionLookupOverride) {
+      return this._connectionLookupOverride;
+    }
     if (!this._connectionMap) {
       throw new Error('Config not loaded. Call load() or loadConfig() first.');
     }
-    return createConnectionsFromConfig({connections: this._connectionMap});
+    if (!this._managedLookup) {
+      this._managedLookup = createConnectionsFromConfig(
+        {connections: this._connectionMap},
+        this._onConnectionCreated
+      );
+    }
+    return this._managedLookup;
+  }
+
+  /**
+   * Override the connection lookup entirely. When set, the `connections`
+   * getter returns this instead of building from `connectionMap`.
+   * Use this when you need to merge config connections with other sources.
+   */
+  get connectionLookup(): LookupConnection<Connection> | undefined {
+    return this._connectionLookupOverride;
+  }
+
+  set connectionLookup(lookup: LookupConnection<Connection> | undefined) {
+    this._connectionLookupOverride = lookup;
+  }
+
+  /**
+   * Callback invoked once per connection immediately after factory creation.
+   * Use for post-creation setup (e.g., registering WASM file handlers).
+   * Must be set before the first connection is looked up.
+   */
+  set onConnectionCreated(
+    cb: ((name: string, connection: Connection) => void) | undefined
+  ) {
+    this._onConnectionCreated = cb;
+  }
+
+  /**
+   * Close all connections created by this config's internal managed lookup.
+   * Does nothing if connections were overridden via `connectionLookup`.
+   */
+  async close(): Promise<void> {
+    if (this._managedLookup) {
+      await this._managedLookup.close();
+      this._managedLookup = undefined;
+    }
   }
 
   /**
@@ -282,6 +341,13 @@ export class MalloyConfig {
    */
   get manifest(): Manifest {
     return this._manifest;
+  }
+
+  /**
+   * The VirtualMap parsed from config, if present.
+   */
+  get virtualMap(): VirtualMap | undefined {
+    return this._data?.virtualMap;
   }
 }
 
@@ -296,5 +362,27 @@ function parseConfigText(jsonText: string): MalloyProjectConfig {
       isConnectionConfigEntry(v)
     )
   );
-  return {...parsed, connections};
+  const result: MalloyProjectConfig = {...parsed, connections};
+  if (
+    parsed.virtualMap &&
+    typeof parsed.virtualMap === 'object' &&
+    !Array.isArray(parsed.virtualMap)
+  ) {
+    const outer = new Map<string, Map<string, string>>();
+    for (const [connName, inner] of Object.entries(parsed.virtualMap)) {
+      if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+        const innerMap = new Map<string, string>();
+        for (const [virtualName, tablePath] of Object.entries(
+          inner as Record<string, unknown>
+        )) {
+          if (typeof tablePath === 'string') {
+            innerMap.set(virtualName, tablePath);
+          }
+        }
+        outer.set(connName, innerMap);
+      }
+    }
+    result.virtualMap = outer;
+  }
+  return result;
 }

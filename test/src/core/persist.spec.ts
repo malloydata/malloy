@@ -102,11 +102,12 @@ async function buildManifestFor(
 
 // Create a runtime with a manifest and get SQL for a query
 function runtimeWithManifest(manifest: BuildManifest) {
-  return new SingleConnectionRuntime({
+  const rt = new SingleConnectionRuntime({
     connection: tstRuntime.connection,
     urlReader: testFileSpace,
-    buildManifest: manifest,
   });
+  rt.buildManifest = manifest;
+  return rt;
 }
 
 afterAll(async () => {

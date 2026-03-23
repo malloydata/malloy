@@ -275,8 +275,8 @@ test('runtime queries with and without manifest', async () => {
     const runtime = new Runtime({
       connections,
       urlReader,
-      buildManifest: manifest.buildManifest,
     });
+    runtime.buildManifest = manifest.buildManifest;
 
     // Model with a query appended
     const modelWithQuery = MODEL_V1 + '\nrun: by_carrier -> { select: * }\n';

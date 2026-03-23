@@ -194,11 +194,27 @@ export function writeConnectionsConfig(config: ConnectionsConfig): string {
 }
 
 /**
- * Create a LookupConnection from a ConnectionsConfig using registered factories.
+ * A LookupConnection with lifecycle management: close() shuts down all
+ * cached connections, and an optional onConnectionCreated callback fires
+ * once per connection after factory creation (before caching).
+ */
+export interface ManagedConnectionLookup extends LookupConnection<Connection> {
+  close(): Promise<void>;
+}
+
+/**
+ * Create a ManagedConnectionLookup from a ConnectionsConfig using registered
+ * factories. Connections are cached per name for the lifetime of the returned
+ * object. Call close() to shut down all cached connections.
+ *
+ * @param onConnectionCreated Optional callback invoked once per connection
+ *   immediately after factory creation. Use this for post-creation setup
+ *   (e.g., registering WASM file handlers).
  */
 export function createConnectionsFromConfig(
-  config: ConnectionsConfig
-): LookupConnection<Connection> {
+  config: ConnectionsConfig,
+  onConnectionCreated?: (name: string, connection: Connection) => void
+): ManagedConnectionLookup {
   const entries = Object.entries(config.connections);
   const firstConnectionName = entries.length > 0 ? entries[0][0] : undefined;
 
@@ -251,8 +267,19 @@ export function createConnectionsFromConfig(
       }
 
       const connection = await typeDef.factory(connConfig);
+      if (onConnectionCreated) {
+        onConnectionCreated(connectionName, connection);
+      }
       cache.set(connectionName, connection);
       return connection;
+    },
+
+    async close(): Promise<void> {
+      const connections = [...cache.values()];
+      cache.clear();
+      for (const conn of connections) {
+        await conn.close();
+      }
     },
   };
 }

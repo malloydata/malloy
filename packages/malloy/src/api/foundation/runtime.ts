@@ -21,6 +21,7 @@ import type {Dialect} from '../../dialect';
 import type {RunSQLOptions} from '../../run_sql_options';
 import {rowDataToNumber} from '../../api/row_data_utils';
 import type {CacheManager} from './cache';
+import type {MalloyConfig} from './config';
 import {EmptyURLReader, FixedConnectionMap} from './readers';
 import type {ParseOptions, CompileOptions, CompileQueryOptions} from './types';
 import type {PreparedResult, Explore} from './core';
@@ -38,8 +39,17 @@ type QueryURL = URL;
 type QueryString = string;
 
 type Connectionable =
-  | {connection: Connection; connections?: undefined}
-  | {connections: LookupConnection<Connection>; connection?: undefined};
+  | {
+      config: MalloyConfig;
+      connection?: undefined;
+      connections?: LookupConnection<Connection>;
+    }
+  | {connection: Connection; connections?: undefined; config?: undefined}
+  | {
+      connections: LookupConnection<Connection>;
+      connection?: undefined;
+      config?: undefined;
+    };
 
 // =============================================================================
 // FluentState Base Class
@@ -102,6 +112,7 @@ export class Runtime {
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
   private _cacheManager: CacheManager | undefined;
+  private _config: MalloyConfig | undefined;
   private _buildManifest: BuildManifest | undefined;
   private _virtualMap: VirtualMap | undefined;
 
@@ -109,21 +120,21 @@ export class Runtime {
     urlReader,
     connections,
     connection,
+    config,
     eventStream,
     cacheManager,
-    buildManifest,
-    virtualMap,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
-    buildManifest?: BuildManifest;
-    virtualMap?: VirtualMap;
   } & Connectionable) {
-    if (connections === undefined) {
+    if (config !== undefined) {
+      this._config = config;
+      connections = connections ?? config.connections;
+    } else if (connections === undefined) {
       if (connection === undefined) {
         throw new Error(
-          'A LookupConnection<Connection> or Connection is required.'
+          'A MalloyConfig, LookupConnection<Connection>, or Connection is required.'
         );
       }
       connections = {
@@ -137,8 +148,6 @@ export class Runtime {
     this._connections = connections;
     this._eventStream = eventStream;
     this._cacheManager = cacheManager;
-    this._buildManifest = buildManifest;
-    this._virtualMap = virtualMap;
   }
 
   /**
@@ -174,9 +183,13 @@ export class Runtime {
    * When set, compiled queries automatically resolve persist sources
    * against this manifest. Can be overridden per-query via
    * CompileQueryOptions.buildManifest.
+   *
+   * When constructed with a MalloyConfig, falls through to
+   * config.manifest.buildManifest (a live reference — builder
+   * mutations are visible automatically).
    */
   public get buildManifest(): BuildManifest | undefined {
-    return this._buildManifest;
+    return this._buildManifest ?? this._config?.manifest.buildManifest;
   }
 
   public set buildManifest(manifest: BuildManifest | undefined) {
@@ -188,9 +201,12 @@ export class Runtime {
    * When set, compiled queries automatically resolve virtual sources
    * against this map. Can be overridden per-query via
    * CompileQueryOptions.virtualMap.
+   *
+   * When constructed with a MalloyConfig, falls through to
+   * config.virtualMap.
    */
   public get virtualMap(): VirtualMap | undefined {
-    return this._virtualMap;
+    return this._virtualMap ?? this._config?.virtualMap;
   }
 
   public set virtualMap(map: VirtualMap | undefined) {
@@ -371,19 +387,13 @@ export class ConnectionRuntime extends Runtime {
   constructor({
     urlReader,
     connections,
-    buildManifest,
-    virtualMap,
   }: {
     urlReader?: URLReader;
     connections: Connection[];
-    buildManifest?: BuildManifest;
-    virtualMap?: VirtualMap;
   }) {
     super({
       connections: FixedConnectionMap.fromArray(connections),
       urlReader,
-      buildManifest,
-      virtualMap,
     });
     this.rawConnections = connections;
   }
@@ -399,22 +409,16 @@ export class SingleConnectionRuntime<
     connection,
     eventStream,
     cacheManager,
-    buildManifest,
-    virtualMap,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
     cacheManager?: CacheManager;
-    buildManifest?: BuildManifest;
-    virtualMap?: VirtualMap;
     connection: T;
   }) {
     super({
       urlReader,
       eventStream,
       cacheManager,
-      buildManifest,
-      virtualMap,
       connection,
     });
     this.connection = connection;

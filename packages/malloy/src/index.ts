@@ -247,6 +247,7 @@ export {
   getConnectionProperties,
   getConnectionTypeDisplayName,
   getRegisteredConnectionTypes,
+  createConnectionsFromConfig,
   isValueRef,
   resolveValue,
 } from './connection/registry';
@@ -260,6 +261,7 @@ export type {
   ConfigValue,
   JsonConfigValue,
   ValueRef,
+  ManagedConnectionLookup,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo, sourceDefToSourceInfo} from './to_stable';
