@@ -11,8 +11,12 @@ import type {
 } from '../../connection/registry';
 import {
   createConnectionsFromConfig,
+  getConnectionProperties,
+  getRegisteredConnectionTypes,
   isConnectionConfigEntry,
+  isValueRef,
 } from '../../connection/registry';
+import type {LogMessage} from '../../lang/parse-log';
 import type {
   BuildID,
   BuildManifest,
@@ -160,24 +164,12 @@ export class Manifest {
     }
     // New format: {entries: {...}, strict?: boolean}
     // Old format: {buildId: {tableName}, ...} (flat record, no "entries" key)
-    let entries: Record<string, BuildManifestEntry>;
-    if (parsed['entries'] && typeof parsed['entries'] === 'object') {
-      entries = parsed['entries'] as Record<string, BuildManifestEntry>;
-    } else {
-      // Treat as old flat-record format: every key with a tableName is an entry
-      entries = {};
-      for (const [key, val] of Object.entries(parsed)) {
-        if (
-          key !== 'strict' &&
-          val &&
-          typeof val === 'object' &&
-          'tableName' in val
-        ) {
-          entries[key] = val as BuildManifestEntry;
-        }
+    const rawEntries = isRecord(parsed['entries']) ? parsed['entries'] : parsed;
+    for (const [key, val] of Object.entries(rawEntries)) {
+      if (key !== 'strict' && isBuildManifestEntry(val)) {
+        this._manifest.entries[key] = val;
       }
     }
-    Object.assign(this._manifest.entries, entries);
   }
 }
 
@@ -203,6 +195,7 @@ export class MalloyConfig {
   private readonly _urlReader?: URLReader;
   private readonly _configURL?: string;
   private _data: MalloyProjectConfig | undefined;
+  private _log: LogMessage[] = [];
   private _connectionMap: Record<string, ConnectionConfigEntry> | undefined;
   private readonly _manifest: Manifest;
   private _managedLookup: ManagedConnectionLookup | undefined;
@@ -215,7 +208,9 @@ export class MalloyConfig {
   constructor(urlReader: URLReader, configURL: string);
   constructor(urlReaderOrText: URLReader | string, configURL?: string) {
     if (typeof urlReaderOrText === 'string') {
-      this._data = parseConfigText(urlReaderOrText);
+      const {config, log} = parseConfigText(urlReaderOrText);
+      this._data = config;
+      this._log = log;
       this._connectionMap = this._data.connections
         ? {...this._data.connections}
         : undefined;
@@ -248,7 +243,9 @@ export class MalloyConfig {
     if (!this._urlReader || !this._configURL) return;
     const result = await this._urlReader.readURL(new URL(this._configURL));
     const contents = typeof result === 'string' ? result : result.contents;
-    this._data = parseConfigText(contents);
+    const parsed = parseConfigText(contents);
+    this._data = parsed.config;
+    this._log = parsed.log;
     this._connectionMap = this._data.connections
       ? {...this._data.connections}
       : undefined;
@@ -349,27 +346,75 @@ export class MalloyConfig {
   get virtualMap(): VirtualMap | undefined {
     return this._data?.virtualMap;
   }
+
+  /**
+   * Errors and warnings from parsing and validating the config.
+   * Includes JSON parse errors (severity 'error') and schema validation
+   * warnings (severity 'warn') such as unknown keys, unknown connection
+   * types, wrong value types, and missing environment variables.
+   */
+  get log(): LogMessage[] {
+    return this._log;
+  }
+}
+
+interface ParseResult {
+  config: MalloyProjectConfig;
+  log: LogMessage[];
 }
 
 /**
  * Parse a config JSON string into a MalloyProjectConfig.
  * Invalid connection entries (missing `is`) are silently dropped.
+ * Returns the processed config and validation log.
  */
-function parseConfigText(jsonText: string): MalloyProjectConfig {
-  const parsed = JSON.parse(jsonText);
-  const connections = Object.fromEntries(
-    Object.entries(parsed.connections ?? {}).filter(([, v]) =>
-      isConnectionConfigEntry(v)
-    )
+function parseConfigText(jsonText: string): ParseResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (e) {
+    return {
+      config: {},
+      log: [
+        {
+          message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+          severity: 'error',
+          code: 'config-validation',
+        },
+      ],
+    };
+  }
+
+  if (!isRecord(parsed)) {
+    return {
+      config: {},
+      log: [
+        {
+          message: 'config is not a JSON object',
+          severity: 'error',
+          code: 'config-validation',
+        },
+      ],
+    };
+  }
+
+  const rawConnections = parsed['connections'];
+  const connectionEntries = Object.entries(
+    isRecord(rawConnections) ? rawConnections : {}
+  ).filter((entry): entry is [string, ConnectionConfigEntry] =>
+    isConnectionConfigEntry(entry[1])
   );
+  const connections: Record<string, ConnectionConfigEntry> =
+    Object.fromEntries(connectionEntries);
   const result: MalloyProjectConfig = {...parsed, connections};
+  const virtualMap = parsed['virtualMap'];
   if (
-    parsed.virtualMap &&
-    typeof parsed.virtualMap === 'object' &&
-    !Array.isArray(parsed.virtualMap)
+    virtualMap &&
+    typeof virtualMap === 'object' &&
+    !Array.isArray(virtualMap)
   ) {
     const outer = new Map<string, Map<string, string>>();
-    for (const [connName, inner] of Object.entries(parsed.virtualMap)) {
+    for (const [connName, inner] of Object.entries(virtualMap)) {
       if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
         const innerMap = new Map<string, string>();
         for (const [virtualName, tablePath] of Object.entries(
@@ -384,5 +429,212 @@ function parseConfigText(jsonText: string): MalloyProjectConfig {
     }
     result.virtualMap = outer;
   }
-  return result;
+  return {config: result, log: validateConfig(parsed)};
+}
+
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'connections',
+  'manifestPath',
+  'virtualMap',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isBuildManifestEntry(value: unknown): value is BuildManifestEntry {
+  return isRecord(value) && typeof value['tableName'] === 'string';
+}
+
+function makeWarning(path: string, message: string): LogMessage {
+  return {
+    message: `${path}: ${message}`,
+    severity: 'warn',
+    code: 'config-validation',
+  };
+}
+
+/**
+ * Validate a parsed config object against the connection type registry.
+ * Returns LogMessage[] — does not throw.
+ */
+function validateConfig(data: Record<string, unknown>): LogMessage[] {
+  const log: LogMessage[] = [];
+
+  for (const key of Object.keys(data)) {
+    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
+      const suggestion = closestMatch(key, [...KNOWN_TOP_LEVEL_KEYS]);
+      const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
+      log.push(makeWarning(key, `unknown config key "${key}"${hint}`));
+    }
+  }
+
+  if (
+    data['manifestPath'] !== undefined &&
+    typeof data['manifestPath'] !== 'string'
+  ) {
+    log.push(makeWarning('manifestPath', '"manifestPath" should be a string'));
+  }
+
+  const connections = data['connections'];
+  if (connections === undefined) return log;
+
+  if (!isRecord(connections)) {
+    log.push(makeWarning('connections', '"connections" should be an object'));
+    return log;
+  }
+
+  const registeredTypes = new Set(getRegisteredConnectionTypes());
+
+  for (const [name, rawEntry] of Object.entries(connections)) {
+    const prefix = `connections.${name}`;
+
+    if (!isRecord(rawEntry)) {
+      log.push(makeWarning(prefix, 'should be an object'));
+      continue;
+    }
+
+    if (!rawEntry['is']) {
+      log.push(
+        makeWarning(prefix, 'missing required "is" field (connection type)')
+      );
+      continue;
+    }
+
+    if (typeof rawEntry['is'] !== 'string') {
+      log.push(makeWarning(`${prefix}.is`, '"is" should be a string'));
+      continue;
+    }
+
+    const typeName = rawEntry['is'];
+
+    if (!registeredTypes.has(typeName)) {
+      const suggestion = closestMatch(typeName, [...registeredTypes]);
+      const hint = suggestion ? ` Did you mean "${suggestion}"?` : '';
+      log.push(
+        makeWarning(
+          `${prefix}.is`,
+          `unknown connection type "${typeName}".${hint} Available types: ${[...registeredTypes].join(', ')}`
+        )
+      );
+      continue;
+    }
+
+    const props = getConnectionProperties(typeName);
+    if (!props) continue;
+
+    const knownProps = new Map(props.map(p => [p.name, p]));
+
+    for (const [key, value] of Object.entries(rawEntry)) {
+      if (key === 'is') continue;
+
+      const propDef = knownProps.get(key);
+      if (!propDef) {
+        const suggestion = closestMatch(key, [...knownProps.keys()]);
+        const hint = suggestion ? `. Did you mean "${suggestion}"?` : '';
+        log.push(
+          makeWarning(
+            `${prefix}.${key}`,
+            `unknown property "${key}" for connection type "${typeName}"${hint}`
+          )
+        );
+        continue;
+      }
+
+      // For env var references on non-json props, check the variable exists.
+      if (propDef.type !== 'json' && isValueRef(value)) {
+        const env = value.env;
+        if (process.env[env] === undefined) {
+          log.push(
+            makeWarning(
+              `${prefix}.${key}`,
+              `environment variable "${env}" is not set`
+            )
+          );
+        }
+        continue;
+      }
+
+      const typeError = checkValueType(value, propDef.type);
+      if (typeError) {
+        log.push(
+          makeWarning(
+            `${prefix}.${key}`,
+            `${typeError} (expected ${propDef.type})`
+          )
+        );
+      }
+    }
+  }
+
+  return log;
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({length: m + 1}, () =>
+    Array(n + 1).fill(0)
+  );
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function closestMatch(input: string, candidates: string[]): string | undefined {
+  if (candidates.length === 0) return undefined;
+  let best = candidates[0];
+  let bestDist = Infinity;
+  for (const c of candidates) {
+    const dist = levenshtein(input.toLowerCase(), c.toLowerCase());
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = c;
+    }
+  }
+  const maxDist = Math.max(
+    1,
+    Math.floor(Math.max(input.length, best.length) / 3)
+  );
+  return bestDist <= maxDist ? best : undefined;
+}
+
+function checkValueType(
+  value: unknown,
+  expectedType: string
+): string | undefined {
+  if (value === undefined || value === null) return undefined;
+
+  switch (expectedType) {
+    case 'number':
+      if (typeof value !== 'number')
+        return `should be a number, got ${typeof value}`;
+      break;
+    case 'boolean':
+      if (typeof value !== 'boolean')
+        return `should be a boolean, got ${typeof value}`;
+      break;
+    case 'string':
+    case 'password':
+    case 'secret':
+    case 'file':
+    case 'text':
+      if (typeof value !== 'string')
+        return `should be a string, got ${typeof value}`;
+      break;
+    case 'json':
+      break;
+  }
+
+  return undefined;
 }

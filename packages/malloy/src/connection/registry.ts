@@ -79,13 +79,14 @@ export type ConfigValue =
 /**
  * Type guard for ValueRef.
  */
-export function isValueRef(value: ConfigValue): value is ValueRef {
+export function isValueRef(value: unknown): value is ValueRef {
   return (
     typeof value === 'object' &&
     value !== null &&
     !Array.isArray(value) &&
     Object.keys(value).length === 1 &&
-    'env' in value
+    'env' in value &&
+    typeof value.env === 'string'
   );
 }
 
