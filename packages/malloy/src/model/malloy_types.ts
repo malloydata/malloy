@@ -1449,6 +1449,7 @@ export function isSourceRegistryReference(
 export interface PersistableSourceProperties {
   sourceID?: SourceID;
   extends?: SourceID;
+  persistent?: boolean;
 }
 
 export interface SQLSourceDef

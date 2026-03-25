@@ -1631,9 +1631,7 @@ describe('source persistence', () => {
         for (const source of Object.values(plan.sources)) {
           const buildSQL = source.getSQL();
           const buildId = source.makeBuildId(connectionDigest, buildSQL);
-          await rwConn.runSQL(
-            `CREATE TABLE ${source.name} AS ${buildSQL}`
-          );
+          await rwConn.runSQL(`CREATE TABLE ${source.name} AS ${buildSQL}`);
           addManifestEntry(manifest, buildId, source.name);
         }
         manifest.strict = true;
@@ -1657,13 +1655,11 @@ describe('source persistence', () => {
         expect(dataManifest.length).toBe(dataPlain.length);
 
         type Row = {carrier: string; flight_count: number};
-        const rowsManifest = (dataManifest as Row[]);
-        const rowsPlain = (dataPlain as Row[]);
+        const rowsManifest = dataManifest as Row[];
+        const rowsPlain = dataPlain as Row[];
         for (let i = 0; i < rowsPlain.length; i++) {
           expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
-          expect(rowsManifest[i].flight_count).toBe(
-            rowsPlain[i].flight_count
-          );
+          expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);
         }
       } finally {
         testFileSpace.deleteFile(new URL('test://model1.malloy'));
@@ -1948,9 +1944,7 @@ describe('source persistence', () => {
         for (const source of Object.values(plan.sources)) {
           const buildSQL = source.getSQL();
           const buildId = source.makeBuildId(connectionDigest, buildSQL);
-          await rwConn.runSQL(
-            `CREATE TABLE ${source.name} AS ${buildSQL}`
-          );
+          await rwConn.runSQL(`CREATE TABLE ${source.name} AS ${buildSQL}`);
           addManifestEntry(manifest, buildId, source.name);
         }
         manifest.strict = true;
@@ -2057,6 +2051,98 @@ describe('source persistence', () => {
         .loadQuery(strictModelCode)
         .getSQL();
       expect(sql).toContain('COUNT(');
+    });
+
+    it('strict manifest ignores non-persistent query_source used as join', async () => {
+      const modelCode = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        query: carrier_map is flights -> {
+          group_by: carrier
+        }
+
+        source: extended is by_carrier extend {
+          join_many: carrier_map on carrier = carrier_map.carrier
+          dimension: mapped_carrier is carrier_map.carrier
+        }
+
+        run: extended -> { where: mapped_carrier = 'WN'; select: * }
+      `;
+
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      const {manifest} = await buildManifestFor(
+        plan,
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      manifest.strict = true;
+
+      // Should not throw — carrier_map is not persistent, just a joined query
+      const sql = await runtimeWithManifest(manifest)
+        .loadQuery(modelCode)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
+    });
+
+    it('strict manifest ignores named non-persistent source used as join', async () => {
+      const modelCode = `${PERSIST_ANNOTATION}
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+
+        source: carrier_summary is flights -> {
+          group_by: carrier
+        }
+
+        source: extended is by_carrier extend {
+          join_many: carrier_summary on carrier = carrier_summary.carrier
+          dimension: summary_carrier is carrier_summary.carrier
+        }
+
+        run: extended -> { where: summary_carrier = 'WN'; select: * }
+      `;
+
+      const {plan} = await getPersistPlan(`
+        ${FLIGHTS_SOURCE}
+
+        #@ persist
+        source: by_carrier is flights -> {
+          group_by: carrier
+          aggregate: flight_count is count()
+        }
+      `);
+
+      const {manifest} = await buildManifestFor(
+        plan,
+        'by_carrier',
+        'cached.by_carrier'
+      );
+      manifest.strict = true;
+
+      // Should not throw — carrier_summary has a sourceID but is not persistent
+      const sql = await runtimeWithManifest(manifest)
+        .loadQuery(modelCode)
+        .getSQL();
+      expect(sql).toContain('cached.by_carrier');
     });
   });
 });

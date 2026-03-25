@@ -39,7 +39,7 @@ function resolveSource(
  * Check if a source has the #@ persist annotation.
  * Returns both the persist flag and any tag parse errors.
  */
-function checkPersistAnnotation(source: SourceDef): {
+export function checkPersistAnnotation(source: SourceDef): {
   persist: boolean;
   log: LogMessage[];
 } {

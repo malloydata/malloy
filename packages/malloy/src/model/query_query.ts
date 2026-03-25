@@ -806,8 +806,8 @@ export class QueryQuery extends QueryField {
         const {buildManifest, connectionDigests} =
           qs.prepareResultOptions ?? {};
 
-        // Check manifest for this source
-        if (buildManifest && connectionDigests) {
+        // Check manifest for this source (only if it was marked persistent at definition time)
+        if (buildManifest && connectionDigests && qs.structDef.persistent) {
           const connDigest = safeRecordGet(
             connectionDigests,
             qs.structDef.connection

@@ -88,8 +88,8 @@ function expandPersistableSource(
 ): string {
   const {buildManifest, connectionDigests} = opts;
 
-  // Try manifest lookup if we have the required info
-  if (buildManifest && connectionDigests) {
+  // Try manifest lookup if we have the required info (only for persistent sources)
+  if (buildManifest && connectionDigests && source.persistent) {
     const connDigest = safeRecordGet(connectionDigests, source.connection);
     if (connDigest) {
       // Get the SQL for this source to compute BuildID (no opts = full SQL)

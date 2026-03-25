@@ -95,6 +95,7 @@ export function mkQuerySourceDef(
     // PersistableSourceProperties - explicitly NOT copied
     // sourceID: undefined,
     // extends: undefined,
+    // persistent: undefined,
   };
 }
 
@@ -146,6 +147,7 @@ export function mkSQLSourceDef(
     // PersistableSourceProperties - explicitly NOT copied
     // sourceID: undefined,
     // extends: undefined,
+    // persistent: undefined,
   };
 }
 
