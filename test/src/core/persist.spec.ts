@@ -1522,6 +1522,155 @@ describe('source persistence', () => {
       expect(sql).toContain('cached.carrier_stats_table');
       expect(sql).not.toContain('COUNT(');
     });
+
+    it('cross-model join of imported persistent sources works with manifest', async () => {
+      // Matches IMDB pattern: transform.malloy defines chained persistent
+      // sources (titles_base, principals_base joins titles_base), imdb.malloy
+      // imports them and joins them into a non-persistent source.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+
+      try {
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const carriersPath = 'test/data/malloytest-parquet/carriers.parquet';
+
+        // model1 = "transform.malloy": defines persistent sources
+        // Uses SQL sources as base (like IMDB's raw_* sources)
+        testFileSpace.setFile(
+          new URL('test://model1.malloy'),
+          `${PERSIST_ANNOTATION}
+            ##! experimental.virtual_source
+            source: raw_flights is ${tstDB}.sql("""
+              SELECT * FROM '${flightsPath}'
+            """)
+
+            source: raw_carriers is ${tstDB}.sql("""
+              SELECT * FROM '${carriersPath}'
+            """)
+
+            type: stats_type is {
+              carrier:: string,
+              flight_count:: number
+            }
+
+            #@ persist name=by_carrier
+            source: by_carrier is raw_flights -> {
+              group_by: carrier
+              aggregate: flight_count is count()
+            }::stats_type extend {
+              view: test is { select: *; limit: 10 }
+            }
+
+            type: principal_type is {
+              code:: string,
+              carrier:: string,
+              flight_count:: number
+            }
+
+            #@ persist name=carrier_principals
+            source: carrier_principals is raw_carriers -> {
+              join_one: stats is by_carrier on stats.carrier = code
+              where: stats.carrier is not null
+              select:
+                code
+                stats.carrier
+                stats.flight_count
+            }::principal_type extend {
+              view: test is { select: *; limit: 10 }
+            }
+          `
+        );
+
+        // model2 = "imdb.malloy": imports, extends persistent sources
+        // with added joins, then queries through them.
+        // Matches IMDB: people extends people_base (persistent) with ::type,
+        // principals extends principals_base (persistent) with join to people,
+        // movies extends titles_base (persistent) with join to principals.
+        testFileSpace.setFile(
+          new URL('test://model2.malloy'),
+          `${PERSIST_ANNOTATION}
+            ##! experimental.virtual_source
+            import "test://model1.malloy"
+
+            source: people is by_carrier::stats_type extend {
+              primary_key: carrier
+            }
+
+            source: principals is carrier_principals extend {
+              join_one: people on people.carrier = carrier
+            }
+
+            source: movies is by_carrier extend {
+              join_one: cp is principals on cp.carrier = carrier
+            }
+
+            run: movies -> {
+              select: carrier, cp.flight_count
+              order_by: carrier
+              limit: 5
+            }
+          `
+        );
+
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+
+        // Build manifest from model1
+        const model1 = await rwRuntime
+          .loadModel(new URL('test://model1.malloy'))
+          .getModel();
+        const plan = model1.getBuildPlan();
+        const connectionDigest = rwConn.getDigest();
+
+        const manifest = createManifest();
+        for (const source of Object.values(plan.sources)) {
+          const buildSQL = source.getSQL();
+          const buildId = source.makeBuildId(connectionDigest, buildSQL);
+          await rwConn.runSQL(
+            `CREATE TABLE ${source.name} AS ${buildSQL}`
+          );
+          addManifestEntry(manifest, buildId, source.name);
+        }
+        manifest.strict = true;
+        rwRuntime.buildManifest = manifest;
+
+        // Run model2 query with strict manifest
+        const resultManifest = await rwRuntime
+          .loadQuery(new URL('test://model2.malloy'))
+          .run();
+        // Run without manifest
+        const resultPlain = await rwRuntime
+          .loadQuery(new URL('test://model2.malloy'), {
+            buildManifest: EMPTY_BUILD_MANIFEST,
+          })
+          .run();
+
+        const dataManifest = resultManifest.data.toObject();
+        const dataPlain = resultPlain.data.toObject();
+
+        expect(dataManifest.length).toBeGreaterThan(0);
+        expect(dataManifest.length).toBe(dataPlain.length);
+
+        type Row = {carrier: string; flight_count: number};
+        const rowsManifest = (dataManifest as Row[]);
+        const rowsPlain = (dataPlain as Row[]);
+        for (let i = 0; i < rowsPlain.length; i++) {
+          expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
+          expect(rowsManifest[i].flight_count).toBe(
+            rowsPlain[i].flight_count
+          );
+        }
+      } finally {
+        testFileSpace.deleteFile(new URL('test://model1.malloy'));
+        testFileSpace.deleteFile(new URL('test://model2.malloy'));
+        await rwConn.close();
+      }
+    });
   });
 
   describe('tagParseLog', () => {
@@ -1716,6 +1865,113 @@ describe('source persistence', () => {
         const sort = (a: Row, b: Row) => a.carrier.localeCompare(b.carrier);
         const rowsManifest = (dataManifest as Row[]).sort(sort);
         const rowsPlain = (dataPlain as Row[]).sort(sort);
+        for (let i = 0; i < rowsPlain.length; i++) {
+          expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
+          expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);
+        }
+      } finally {
+        await rwConn.close();
+      }
+    });
+
+    it('join of persistent source works with manifest', async () => {
+      // Matches the IMDB pattern: persistent source A (by_carrier) is joined
+      // by persistent source B (carrier_principals), which is cast to a type
+      // and extended. A non-persistent source (movies) extends A and joins B.
+      const rwConn = new DuckDBConnection({
+        name: tstDB,
+        databasePath: ':memory:',
+        workingDirectory: 'test/data/duckdb',
+      });
+
+      try {
+        const flightsPath = 'test/data/malloytest-parquet/flights.parquet';
+        const carriersPath = 'test/data/malloytest-parquet/carriers.parquet';
+        const modelCode = `${PERSIST_ANNOTATION}
+          ##! experimental.virtual_source
+          source: flights is ${tstDB}.table('${flightsPath}') extend {
+            measure: flight_count is count()
+          }
+
+          type: stats_type is {
+            carrier:: string,
+            flight_count:: number
+          }
+
+          #@ persist name=by_carrier
+          source: by_carrier is flights -> {
+            group_by: carrier
+            aggregate: flight_count
+          }::stats_type extend {
+            view: test is { select: *; limit: 10 }
+          }
+
+          type: principal_type is {
+            code:: string,
+            carrier:: string,
+            flight_count:: number
+          }
+
+          #@ persist name=carrier_principals
+          source: carrier_principals is ${tstDB}.table('${carriersPath}') -> {
+            join_one: stats is by_carrier on stats.carrier = code
+            where: stats.carrier is not null
+            select:
+              code
+              stats.carrier
+              stats.flight_count
+          }::principal_type extend {
+            view: test is { select: *; limit: 10 }
+          }
+
+          source: movies is by_carrier extend {
+            join_one: cp is carrier_principals on cp.carrier = carrier
+          }
+
+          run: movies -> {
+            select: carrier, cp.flight_count
+            order_by: carrier
+            limit: 5
+          }
+        `;
+
+        const rwRuntime = new SingleConnectionRuntime({
+          connection: rwConn,
+          urlReader: testFileSpace,
+        });
+        const model = await rwRuntime.loadModel(modelCode).getModel();
+        const plan = model.getBuildPlan();
+        const connectionDigest = rwConn.getDigest();
+
+        // Build all persistent sources
+        const manifest = createManifest();
+        for (const source of Object.values(plan.sources)) {
+          const buildSQL = source.getSQL();
+          const buildId = source.makeBuildId(connectionDigest, buildSQL);
+          await rwConn.runSQL(
+            `CREATE TABLE ${source.name} AS ${buildSQL}`
+          );
+          addManifestEntry(manifest, buildId, source.name);
+        }
+        manifest.strict = true;
+        rwRuntime.buildManifest = manifest;
+
+        // Run with manifest (joins read from persisted tables)
+        const resultManifest = await rwRuntime.loadQuery(modelCode).run();
+        // Run without manifest (joins inline the queries)
+        const resultPlain = await rwRuntime
+          .loadQuery(modelCode, {buildManifest: EMPTY_BUILD_MANIFEST})
+          .run();
+
+        const dataManifest = resultManifest.data.toObject();
+        const dataPlain = resultPlain.data.toObject();
+
+        expect(dataManifest.length).toBeGreaterThan(0);
+        expect(dataManifest.length).toBe(dataPlain.length);
+
+        type Row = {carrier: string; flight_count: number};
+        const rowsManifest = dataManifest as Row[];
+        const rowsPlain = dataPlain as Row[];
         for (let i = 0; i < rowsPlain.length; i++) {
           expect(rowsManifest[i].carrier).toBe(rowsPlain[i].carrier);
           expect(rowsManifest[i].flight_count).toBe(rowsPlain[i].flight_count);

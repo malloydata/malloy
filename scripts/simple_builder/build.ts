@@ -141,12 +141,14 @@ export async function build(opts: BuildOptions): Promise<void> {
       const parsed = source.tagParse({prefix: /^#@ /});
       const explicitName = parsed.tag.text('name');
 
+      // BuildID must use no-opts SQL (fully inlined) to match the runtime,
+      // which always compiles with empty options for BuildID computation.
+      // The manifest-substituted SQL is used for CREATE TABLE (more efficient).
+      const buildId = source.makeBuildId(connectionDigest, source.getSQL());
       const sql = source.getSQL({
         buildManifest: manifest.buildManifest,
         connectionDigests,
       });
-
-      const buildId = source.makeBuildId(connectionDigest, sql);
       const nameProvided = !!explicitName;
       const tableName = explicitName || `persist_${buildId.substring(0, 12)}`;
       validateTableName(tableName);
