@@ -29,7 +29,7 @@
     "generate-flow": "node ../../scripts/femto-build.js flow"
   },
   "dependencies": {
-    "@malloydata/motly-ts-parser": "^0.7.1",
+    "@malloydata/motly-ts-parser": "^0.8.0",
     "assert": "^2.0.0"
   },
   "devDependencies": {

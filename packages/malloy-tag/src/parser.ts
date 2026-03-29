@@ -172,12 +172,12 @@ export class TagParser {
       });
     }
     const tagErrors = errors.map(mapMOTLYError);
-    const value = this.session.getValue();
-    return {tag: hydrate(value, undefined, this.origins), log: tagErrors};
+    return {tag: new Tag(), log: tagErrors};
   }
 
   finish(): Tag {
-    const value = this.session.getValue();
+    const result = this.session.finish();
+    const value = result.getValue();
     this.session.dispose();
     return hydrate(value, undefined, this.origins);
   }
@@ -194,7 +194,8 @@ export class TagParser {
 export function parseTag(source: string | string[]): TagParse {
   const session = new TagParser();
   if (typeof source === 'string') {
-    return session.parse(source);
+    const {log} = session.parse(source);
+    return {tag: session.finish(), log};
   }
 
   const allErrs: TagError[] = [];
@@ -220,7 +221,8 @@ export function parseTag(source: string | string[]): TagParse {
 export function parseAnnotation(source: string | string[]): TagParse {
   const session = new TagParser();
   if (typeof source === 'string') {
-    return session.parseAnnotation(source);
+    const {log} = session.parseAnnotation(source);
+    return {tag: session.finish(), log};
   }
 
   const allErrs: TagError[] = [];
