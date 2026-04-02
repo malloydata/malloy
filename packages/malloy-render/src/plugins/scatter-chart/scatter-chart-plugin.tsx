@@ -124,7 +124,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
               ? {
                   field: colorField.name,
                   type: colorType,
-                  axis: {title: colorField.name},
+                  axis: {title: colorField.getLabel()},
                   scale: getColorScale(colorType, false),
                 }
               : {value: '#4285F4'};
@@ -133,7 +133,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
             ? {
                 field: sizeField.name,
                 type: sizeType,
-                axis: {title: sizeField.name},
+                axis: {title: sizeField.getLabel()},
               }
             : undefined;
 
@@ -141,7 +141,7 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
             ? {
                 field: shapeField.name,
                 type: shapeType,
-                axis: {title: shapeField.name},
+                axis: {title: shapeField.getLabel()},
               }
             : undefined;
 
@@ -158,14 +158,14 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
                 field: xField.name,
                 type: xType,
                 sort: xSort,
-                axis: {title: xField.name},
+                axis: {title: xField.getLabel()},
                 scale: {zero: false},
               },
               y: {
                 field: yField.name,
                 type: yType,
                 sort: ySort,
-                axis: {title: yField.name},
+                axis: {title: yField.getLabel()},
                 scale: {zero: false},
               },
               size: sizeDef,

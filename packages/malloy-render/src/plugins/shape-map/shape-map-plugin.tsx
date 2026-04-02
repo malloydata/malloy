@@ -157,7 +157,7 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
               ? {
                   field: colorField.name,
                   type: colorType,
-                  axis: {title: colorField.name},
+                  axis: {title: colorField.getLabel()},
                   scale: getColorScale(colorType, false),
                 }
               : undefined;

@@ -138,7 +138,7 @@ export const SegmentMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstanc
               ? {
                   field: colorField.name,
                   type: colorType,
-                  axis: {title: colorField.name},
+                  axis: {title: colorField.getLabel()},
                   scale: getColorScale(colorType, false),
                 }
               : undefined;

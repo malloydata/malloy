@@ -44,15 +44,6 @@ export interface BigValuePluginInstance
   field: NestField;
 }
 
-/**
- * Convert snake_case to Title Case
- */
-function snakeToTitleCase(str: string): string {
-  return str
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
 
 /**
  * Extract Big Value settings from field tags
@@ -92,7 +83,7 @@ function resolveChildFieldTags(childField: Field): BigValueFieldConfig {
   const tag = childField.tag;
 
   // Label: # label annotation or snake_case conversion
-  const label = tag.text('label') || snakeToTitleCase(childField.name);
+  const label = tag.text('label') || childField.getLabel();
 
   // Description: # description annotation
   const description = tag.text('description') || null;

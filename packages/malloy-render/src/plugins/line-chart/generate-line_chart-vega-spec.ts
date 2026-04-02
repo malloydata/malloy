@@ -235,7 +235,7 @@ export function generateLineChartVegaSpecV2(
     ? createMeasureAxis({
         type: 'y',
         title: settings.yChannel.fields
-          .map(f => explore.fieldAt(f).name)
+          .map(f => explore.fieldAt(f).getLabel())
           .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
@@ -786,7 +786,7 @@ export function generateLineChartVegaSpecV2(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xField.name,
+        title: xField.getLabel(),
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -865,7 +865,7 @@ export function generateLineChartVegaSpecV2(
     spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
-      title: seriesField ? seriesField.name : '',
+      title: seriesField ? seriesField.getLabel() : '',
       orient: 'right',
       ...legendSettings,
       values:

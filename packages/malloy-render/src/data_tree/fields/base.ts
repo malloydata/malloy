@@ -30,6 +30,14 @@ import {
 } from '.';
 import type {RenderPluginInstance} from '@/api/plugin-types';
 
+/** Convert snake_case to Title Case for display labels. */
+function snakeToTitleCase(str: string): string {
+  return str
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
@@ -71,11 +79,12 @@ export abstract class FieldBase {
 
   /**
    * Get the resolved display label for this field.
-   * Returns the custom label from # label tag if set, otherwise the field name.
+   * Returns the custom label from # label tag if set,
+   * otherwise converts field name from snake_case to Title Case.
    * Resolved at setup time so components never read the label tag.
    */
   getLabel(): string {
-    return this._resolvedLabel ?? this.name;
+    return this._resolvedLabel ?? snakeToTitleCase(this.name);
   }
 
   setResolvedLabel(label: string | undefined): void {
