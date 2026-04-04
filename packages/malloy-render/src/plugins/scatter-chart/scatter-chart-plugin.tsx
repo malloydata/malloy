@@ -9,6 +9,7 @@ import type {
   RenderPluginFactory,
   RenderProps,
   DOMRenderPluginInstance,
+  RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, type Cell, type RecordCell, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
@@ -63,6 +64,11 @@ function getSize(field: Field): {height: number; width: number} {
 export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInstance> =
   {
     name: 'scatter_chart',
+
+    getValidationSpec: (): RendererValidationSpec => ({
+      renderer: 'scatter_chart',
+      ownedPaths: [['scatter_chart']],
+    }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       const hasTag = fieldTag.has('scatter_chart');
@@ -193,8 +199,6 @@ export const ScatterChartPluginFactory: RenderPluginFactory<DOMRenderPluginInsta
         },
 
         getMetadata: () => ({type: 'scatter_chart', field}),
-
-        getDeclaredTagPaths: () => [['scatter_chart']],
       };
     },
   };

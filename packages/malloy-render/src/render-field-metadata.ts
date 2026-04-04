@@ -3,6 +3,7 @@ import {type Field, RootField, getFieldType, FieldType} from '@/data_tree';
 import type {
   RenderPluginFactory,
   RenderPluginInstance,
+  RendererValidationSpec,
 } from '@/api/plugin-types';
 import type {
   RenderFieldRegistryEntry,
@@ -10,6 +11,7 @@ import type {
 } from '@/registry/types';
 import {RenderLogCollector} from '@/component/render-log-collector';
 import {resolveBuiltInTags} from '@/component/tag-configs';
+import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -23,6 +25,7 @@ export type OnPluginCreateError = (
 export class RenderFieldMetadata {
   private registry: RenderFieldRegistry;
   private rootField: RootField;
+  private warnedLegacyDeclaredPathPlugins = new Set<string>();
   readonly logCollector: RenderLogCollector;
 
   constructor(
@@ -59,12 +62,17 @@ export class RenderFieldMetadata {
   }
 
   // Instantiate plugins for a field that match
-  private instantiatePluginsForField(field: Field): RenderPluginInstance[] {
+  private instantiatePluginsForField(field: Field): {
+    plugins: RenderPluginInstance[];
+    matchingFactories: RenderPluginFactory[];
+  } {
     const plugins: RenderPluginInstance[] = [];
+    const matchingFactories: RenderPluginFactory[] = [];
 
     for (const factory of this.pluginRegistry) {
       try {
         if (factory.matches(field, field.tag, getFieldType(field))) {
+          matchingFactories.push(factory);
           const pluginOptions = this.pluginOptions[factory.name];
           const modelTag = this.rootField.modelTag;
           const pluginInstance = factory.create(field, pluginOptions, modelTag);
@@ -83,7 +91,7 @@ export class RenderFieldMetadata {
 
     field.setPlugins(plugins);
 
-    return plugins;
+    return {plugins, matchingFactories};
   }
 
   // Recursively register fields in the registry
@@ -91,7 +99,8 @@ export class RenderFieldMetadata {
     const fieldKey = field.key;
     if (!this.registry.has(fieldKey)) {
       // Instantiate plugins for this field
-      const plugins = this.instantiatePluginsForField(field);
+      const {plugins, matchingFactories} =
+        this.instantiatePluginsForField(field);
 
       const renderFieldEntry: RenderFieldRegistryEntry = {
         field,
@@ -119,10 +128,9 @@ export class RenderFieldMetadata {
       // Run semantic validation on this field's tags
       this.validateFieldTags(field);
 
-      // Mark tags declared by plugins + built-in renderers as read
-      // so they don't produce false-positive "unknown tag" warnings
-      // when components haven't rendered yet (e.g. virtualized).
-      this.markDeclaredTags(field, plugins);
+      // Mark renderer-owned tag paths as read so semantic ownership,
+      // not literal render-time access, drives unread-tag warnings.
+      this.markOwnedTagPaths(field, plugins, matchingFactories);
     }
     // Recurse for nested fields
     if (field.isNest()) {
@@ -397,8 +405,35 @@ export class RenderFieldMetadata {
       }
     }
 
+    const hasBigValueChildConfig =
+      bigValueTag !== undefined &&
+      [
+        'comparison_field',
+        'comparison_label',
+        'comparison_format',
+        'down_is_good',
+        'sparkline',
+      ].some(prop => bigValueTag.has(prop));
+    if (hasBigValueChildConfig) {
+      // Parent plugins are already set because registerFields() processes
+      // each parent before recursing into its children.
+      const isBigValueChildContext =
+        field.isBasic() &&
+        field.parent?.getPlugins().some(plugin => plugin.name === 'big_value');
+      if (!isBigValueChildContext) {
+        log.error(
+          `Tag 'big_value' on field '${field.name}' is only valid on basic fields inside big_value.`,
+          bigValueTag
+        );
+      }
+    }
+
     // --- Big value with group_by fields ---
-    if (tag.has('big_value') && field.isNest()) {
+    if (
+      tag.has('big_value') &&
+      field.isNest() &&
+      field.getPlugins().some(plugin => plugin.name === 'big_value')
+    ) {
       const dimensionFields = field.fields.filter(
         f => f.isBasic() && f.wasDimension()
       );
@@ -447,24 +482,59 @@ export class RenderFieldMetadata {
   }
 
   /**
-   * Mark tag paths declared by plugins as read.
-   * This prevents false-positive "unknown tag" warnings for tags that
-   * are consumed at render time or interaction time but may not have
-   * been read yet (e.g. virtualized charts, hover tooltips).
+   * Mark renderer-owned tag paths as read.
    *
-   * Built-in renderer tags are now handled by resolveBuiltInTags()
-   * which reads all tags at setup time via typed config resolvers.
+   * This is ownership bookkeeping, not config resolution. A renderer may
+   * still read tags at setup time or render time, but unread-tag warnings
+   * are suppressed based on semantic ownership declared via
+   * RendererValidationSpec.
    */
-  private markDeclaredTags(
+  private markOwnedTagPaths(
     field: Field,
-    plugins: RenderPluginInstance[]
+    plugins: RenderPluginInstance[],
+    matchingFactories: RenderPluginFactory[]
   ): void {
     const tag = field.tag;
 
     for (const plugin of plugins) {
-      if (plugin.getDeclaredTagPaths) {
-        for (const path of plugin.getDeclaredTagPaths()) {
-          tag.find(path);
+      const declaredPaths = plugin.getDeclaredTagPaths?.() ?? [];
+      if (
+        declaredPaths.length > 0 &&
+        !this.warnedLegacyDeclaredPathPlugins.has(plugin.name)
+      ) {
+        this.warnedLegacyDeclaredPathPlugins.add(plugin.name);
+        this.logCollector.warn(
+          `Plugin '${plugin.name}' uses deprecated getDeclaredTagPaths(); migrate to getValidationSpec().`
+        );
+      }
+      for (const path of declaredPaths) {
+        tag.find(path);
+      }
+    }
+
+    const specs: RendererValidationSpec[] = matchingFactories
+      .map(factory => factory.getValidationSpec?.())
+      .filter((spec): spec is RendererValidationSpec => spec !== undefined);
+
+    const builtInSpec = getBuiltInRendererValidationSpec(field.renderAs());
+    if (builtInSpec) {
+      specs.push(builtInSpec);
+    }
+
+    for (const spec of specs) {
+      // Apply child-owned paths during the parent's registration pass,
+      // before recursing into the children. This lets a parent renderer
+      // claim context-sensitive child tags (for example dashboard `break`
+      // or chart child `tooltip`) while the parent renderer is in scope.
+      for (const path of spec.ownedPaths ?? []) {
+        tag.find(path);
+      }
+
+      if (field.isNest()) {
+        for (const child of field.fields) {
+          for (const path of spec.childOwnedPaths ?? []) {
+            child.tag.find(path);
+          }
         }
       }
     }

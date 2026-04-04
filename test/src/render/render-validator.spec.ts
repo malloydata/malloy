@@ -106,6 +106,7 @@ describe('render tag validation', () => {
         }
       `);
       expectNoErrors(logs);
+      expectNoWarnings(logs);
     });
   });
 
@@ -333,6 +334,55 @@ describe('render tag validation', () => {
       `);
       expectNoErrors(logs);
     });
+
+    it('errors when big_value child config is on a nested child field', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val, DATE '2024-01-01' as dt") extend {
+          # big_value
+          view: q is {
+            aggregate: total is count()
+            # big_value { comparison_field=total }
+            nest: trend is {
+              group_by: dt
+              aggregate: c is count()
+            }
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'only valid on basic fields');
+      expectNoWarnings(logs);
+    });
+
+    it('errors when big_value child config is on the big_value parent field', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val") extend {
+          # big_value { comparison_field=total }
+          view: q is {
+            aggregate: total is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'only valid on basic fields');
+      expectNoWarnings(logs);
+    });
+
+    it('errors when big_value child config is outside big_value context', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as val") extend {
+          view: q is {
+            aggregate:
+              total is count()
+              # big_value { comparison_field=total }
+              prior is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'only valid on basic fields');
+      expectNoWarnings(logs);
+    });
   });
 
   describe('no errors for valid tags', () => {
@@ -370,7 +420,7 @@ describe('render tag validation', () => {
     });
   });
 
-  describe('declared tag paths suppress unread warnings', () => {
+  describe('owned paths suppress unread warnings', () => {
     it('no warnings for # image with alt.field', async () => {
       const logs = await getValidationLogs(`
         query: q is duckdb.sql("SELECT 'http://img.png' as logo, 'Alt text' as alt_text") -> {
@@ -408,6 +458,42 @@ describe('render tag validation', () => {
       expectNoWarnings(logs);
     });
 
+    it('no warnings for # break on dashboard child fields', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          # dashboard
+          view: q is {
+            group_by: grp is 'all'
+            aggregate:
+              a_total is a.sum()
+              # break
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for # tooltip on chart child fields', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as category, 1 as value, 'hello' as note") extend {
+          # viz=bar
+          view: q is {
+            group_by:
+              category
+              # tooltip
+              note
+            aggregate: value is value.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
     it('no warnings for embedded channel tags on child fields', async () => {
       const logs = await getValidationLogs(`
         source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
@@ -440,6 +526,40 @@ describe('render tag validation', () => {
       const warnings = logs.filter(l => l.severity === 'warn');
       expect(warnings.length).toBeGreaterThan(0);
       expect(warnings[0].message).toContain('xyzzy');
+    });
+
+    it('warns on # break outside dashboard context', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as a, 2 as b") extend {
+          view: q is {
+            aggregate:
+              a_total is a.sum()
+              # break
+              b_total is b.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings.some(w => w.message.includes('break'))).toBe(true);
+    });
+
+    it('warns on # tooltip outside chart context', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as category, 'hello' as note") extend {
+          view: q is {
+            group_by:
+              category
+              # tooltip
+              note
+          }
+        }
+        query: q is s -> q
+      `);
+      const warnings = logs.filter(l => l.severity === 'warn');
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings.some(w => w.message.includes('tooltip'))).toBe(true);
     });
   });
 });

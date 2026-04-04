@@ -7,6 +7,7 @@ import type {
   RenderPluginFactory,
   RenderProps,
   CoreVizPluginInstance,
+  RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, FieldType, type NestField} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
@@ -43,6 +44,27 @@ export interface BigValuePluginInstance
   extends CoreVizPluginInstance<BigValuePluginMetadata> {
   field: NestField;
 }
+
+const BIG_VALUE_CHILD_TAG_PATHS: string[][] = [
+  ['big_value', 'comparison_field'],
+  ['big_value', 'comparison_label'],
+  ['big_value', 'comparison_format'],
+  ['big_value', 'down_is_good'],
+  ['big_value', 'sparkline'],
+];
+
+const BIG_VALUE_OWNED_PATHS: string[][] = [
+  ['big_value', 'size'],
+  ['big_value', 'neutral_threshold'],
+];
+
+const BIG_VALUE_PARENT_TAG_PROPS = ['size', 'neutral_threshold'];
+
+const BIG_VALUE_VALIDATION_SPEC: RendererValidationSpec = {
+  renderer: 'big_value',
+  ownedPaths: BIG_VALUE_OWNED_PATHS,
+  childOwnedPaths: BIG_VALUE_CHILD_TAG_PATHS,
+};
 
 /**
  * Convert snake_case to Title Case
@@ -83,12 +105,9 @@ function getBigValueSettings(field: Field): BigValueSettings {
   };
 }
 
-/**
- * Resolve all tag data for a child field at setup time.
- * This reads every tag the big_value component needs for this field,
- * so the component never accesses tags directly at render time.
- */
-function resolveChildFieldTags(childField: Field): BigValueFieldConfig {
+function resolveChildDisplayTags(
+  childField: Field
+): Pick<BigValueFieldConfig, 'label' | 'description'> {
   const tag = childField.tag;
 
   // Label: # label annotation or snake_case conversion
@@ -96,6 +115,14 @@ function resolveChildFieldTags(childField: Field): BigValueFieldConfig {
 
   // Description: # description annotation
   const description = tag.text('description') || null;
+
+  return {label, description};
+}
+
+function resolveBigValueChildConfig(
+  childField: Field
+): Pick<BigValueFieldConfig, 'comparison' | 'sparklineRef'> {
+  const tag = childField.tag;
 
   // Comparison info: # big_value { comparison_field=... }
   let comparison: BigValueComparisonInfo | null = null;
@@ -117,40 +144,7 @@ function resolveChildFieldTags(childField: Field): BigValueFieldConfig {
   // Sparkline reference: # big_value { sparkline=nest_name }
   const sparklineRef = tag.text('big_value', 'sparkline') || null;
 
-  return {label, description, comparison, sparklineRef};
-}
-
-/**
- * Resolve all tag data for the big_value nest at setup time.
- * Walks child fields and extracts their tag data so the component
- * never needs to access tags at render time.
- */
-function resolveBigValueTags(field: Field): BigValueTagConfig {
-  const fieldConfigs = new Map<string, BigValueFieldConfig>();
-  const sparklineNestNames = new Set<string>();
-
-  if (!field.isNest()) return {fieldConfigs, sparklineNestNames};
-
-  for (const childField of field.fields) {
-    // Resolve tag data for every child field
-    fieldConfigs.set(childField.name, resolveChildFieldTags(childField));
-
-    // Detect sparkline nests: child nests with line_chart/bar_chart size=spark
-    if (childField.isNest()) {
-      const childTag = childField.tag;
-      const isLineSpark =
-        childTag.has('line_chart') &&
-        childTag.text('line_chart', 'size') === 'spark';
-      const isBarSpark =
-        childTag.has('bar_chart') &&
-        childTag.text('bar_chart', 'size') === 'spark';
-      if (isLineSpark || isBarSpark) {
-        sparklineNestNames.add(childField.name);
-      }
-    }
-  }
-
-  return {fieldConfigs, sparklineNestNames};
+  return {comparison, sparklineRef};
 }
 
 /**
@@ -179,11 +173,25 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
   {
     name: 'big_value',
 
+    getValidationSpec: (): RendererValidationSpec => BIG_VALUE_VALIDATION_SPEC,
+
     /**
      * Match fields with the # big_value annotation
      */
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       const hasBigValueTag = fieldTag.has('big_value');
+      const bigValueTag = fieldTag.tag('big_value');
+      const hasChildConfigTag = BIG_VALUE_CHILD_TAG_PATHS.some(
+        ([, childProp]) =>
+          childProp !== undefined && bigValueTag?.has(childProp)
+      );
+      const hasParentConfigTag = BIG_VALUE_PARENT_TAG_PROPS.some(prop =>
+        bigValueTag?.has(prop)
+      );
+
+      if (hasChildConfigTag && !hasParentConfigTag) {
+        return false;
+      }
 
       // Big Value works with RepeatedRecord (query results) or Record (single row)
       const isValidType =
@@ -193,11 +201,7 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
       if (hasBigValueTag && !isValidType) {
         // Child config tags (sparkline, comparison_field) are read by the
         // parent big_value plugin — not a match request for this field.
-        const bigValueTag = fieldTag.tag('big_value');
-        if (
-          bigValueTag?.has('sparkline') ||
-          bigValueTag?.has('comparison_field')
-        ) {
+        if (hasChildConfigTag) {
           return false;
         }
         throw new Error(
@@ -221,7 +225,34 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
       }
 
       const settings = getBigValueSettings(field);
-      const tagConfig = resolveBigValueTags(field);
+      const fieldConfigs = new Map<string, BigValueFieldConfig>();
+      const sparklineNestNames = new Set<string>();
+
+      // Seed each child with globally meaningful display metadata first.
+      // Renderer-owned big_value child config is applied in a second pass.
+      for (const childField of field.fields) {
+        fieldConfigs.set(childField.name, {
+          ...resolveChildDisplayTags(childField),
+          comparison: null,
+          sparklineRef: null,
+        });
+
+        // Detect sparkline nests: child nests with line_chart/bar_chart size=spark
+        if (childField.isNest()) {
+          const childTag = childField.tag;
+          const isLineSpark =
+            childTag.has('line_chart') &&
+            childTag.text('line_chart', 'size') === 'spark';
+          const isBarSpark =
+            childTag.has('bar_chart') &&
+            childTag.text('bar_chart', 'size') === 'spark';
+          if (isLineSpark || isBarSpark) {
+            sparklineNestNames.add(childField.name);
+          }
+        }
+      }
+
+      const tagConfig: BigValueTagConfig = {fieldConfigs, sparklineNestNames};
 
       const pluginInstance: BigValuePluginInstance = {
         name: 'big_value',
@@ -272,6 +303,12 @@ export const BigValuePluginFactory: RenderPluginFactory<BigValuePluginInstance> 
           return bigValueSettingsToTag(s as unknown as BigValueSettings);
         },
       };
+
+      for (const childField of field.fields) {
+        const config = fieldConfigs.get(childField.name);
+        if (!config) continue;
+        Object.assign(config, resolveBigValueChildConfig(childField));
+      }
 
       return pluginInstance;
     },

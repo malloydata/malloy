@@ -141,17 +141,41 @@ export const MyPluginFactory: RenderPluginFactory = {
       },
 
       getMetadata: () => ({ /* plugin-specific metadata */ }),
-
-      // Optional: declare tag paths this plugin reads at render/interaction time.
-      // Prevents false-positive "unknown tag" warnings for tags not read during setResult().
-      getDeclaredTagPaths: () => [
-        ['my_plugin', 'some_option'],
-        ['my_plugin', 'nested', 'prop'],
-      ],
     };
   },
 };
 ```
+
+#### Renderer Validation Spec
+
+Plugins and built-in renderers can declare semantic tag ownership with `RendererValidationSpec`.
+
+Use it to declare:
+- tags owned on the renderer field itself (`ownedPaths`)
+- context-sensitive tags owned on direct children (`childOwnedPaths`)
+
+```typescript
+export const MyPluginFactory: RenderPluginFactory = {
+  name: 'my_plugin',
+
+  getValidationSpec: () => ({
+    renderer: 'my_plugin',
+    ownedPaths: [['my_plugin']],
+    childOwnedPaths: [['tooltip']],
+  }),
+
+  matches: (field, fieldTag, fieldType) => {
+    return fieldTag.has('my_plugin');
+  },
+
+  create: (field) => { /* ... */ },
+};
+```
+
+Important:
+- declare tags this renderer **owns**, not every tag it might incidentally read
+- if removing this renderer would make the tag meaningless, declare it here
+- do not declare globally meaningful tags like `label`, `hidden`, `description`, `column`
 
 #### 2. Register the Plugin
 
@@ -174,6 +198,7 @@ setResult()
       → factory.matches(field, tag, fieldType)  — can the plugin handle this?
       → factory.create(field)                   — create instance (may throw)
       → validateFieldTags(field)                — semantic tag validation
+      → markOwnedTagPaths(field, factories)     — mark renderer-owned tag paths
 render(element)
   → Solid.js mounts component tree
     → plugin.beforeRender(metadata, options)    — pre-render setup (e.g. generate Vega spec)
@@ -270,19 +295,31 @@ Preferred pattern:
 2. Store resolved values on fields (`setTagConfig`, `setResolvedLabel`, `setColumnConfig`).
 3. In components, read resolved values (`getTagConfig`, `getLabel`, `getColumnConfig`) instead of reading `field.tag.*` directly at render time.
 
-If a plugin intentionally reads tags during render/interaction, declare those paths via `getDeclaredTagPaths()` so they are marked as consumed.
+If a renderer owns tags that may only be read later during render/interaction, declare them in `getValidationSpec()` so they are marked as consumed based on ownership.
+
+`getDeclaredTagPaths()` still exists only as a compatibility fallback for older plugins. Using it now emits a warning during validation so plugin authors migrate to `getValidationSpec()`.
+
+This is intentionally not a full read schema. `RendererValidationSpec` is for semantic ownership:
+- tags this renderer gives meaning to
+- tags this renderer validates
+- tags that should not trigger unknown-tag warnings when this renderer is active
+
+It is not for:
+- every incidental `field.tag.*` read in implementation code
+- globally meaningful tags that many renderers may read
 
 ### Unread Tag Detection
 
 Tags track whether they've been accessed. Unread properties are logged as warnings to catch misspellings and unknown tags.
 
 Current lifecycle:
-1. `setResult()` builds `RenderFieldMetadata`, which runs setup-time resolution/validation and marks declared plugin paths (`getDeclaredTagPaths()` via `markDeclaredTags()`).
+1. `setResult()` builds `RenderFieldMetadata`, which runs setup-time resolution/validation and marks renderer-owned paths via `RendererValidationSpec`.
 2. `getLogs()` and `onReady` both trigger unread-tag collection in `MalloyViz` (collection is one-time and idempotent).
 3. Logs include semantic validation messages plus unread-tag warnings.
 
 Notes:
 - For built-in renderer tags, prefer setup-time reads in `resolveBuiltInTags()` over component-time reads.
+- Child-owned paths are applied during the parent field's registration pass, before recursing into children. This lets a parent renderer claim direct-child tags like dashboard `break` or chart child `tooltip`.
 - `onReady` is useful for UI flow completeness, but it is not strictly required to include unread-tag warnings in logs.
 
 ### Error Message Pattern (LLM-Friendly Guideline)
