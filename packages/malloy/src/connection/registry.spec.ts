@@ -73,6 +73,30 @@ describe('connection registry', () => {
         },
       ],
     });
+    registerConnectionType('filedb', {
+      displayName: 'FileDB',
+      factory: async (config: ConnectionConfig) =>
+        mockConnection(config.name, config),
+      properties: [
+        {name: 'host', displayName: 'Host', type: 'string', optional: true},
+        {
+          name: 'certFile',
+          displayName: 'Certificate',
+          type: 'file',
+          optional: true,
+          fileFilters: {
+            'Certificate Files': ['pem', 'crt'],
+            'All Files': ['*'],
+          },
+        },
+        {
+          name: 'keyFile',
+          displayName: 'Private Key',
+          type: 'file',
+          optional: true,
+        },
+      ],
+    });
     registerConnectionType('jsondb', {
       displayName: 'JsonDB',
       factory: async (config: ConnectionConfig) =>
@@ -346,6 +370,81 @@ describe('connection registry', () => {
         _config: ConnectionConfig;
       };
       expect(conn._config['password']).toBeUndefined();
+    });
+  });
+
+  describe('file config values', () => {
+    test('passes file path strings through to factory', async () => {
+      const config = {
+        connections: {
+          mydb: {
+            is: 'filedb',
+            host: 'localhost',
+            certFile: '/path/to/cert.pem',
+            keyFile: '/path/to/key.pem',
+          },
+        },
+      };
+      const lookup = createConnectionsFromConfig(config);
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      expect(conn._config['certFile']).toBe('/path/to/cert.pem');
+      expect(conn._config['keyFile']).toBe('/path/to/key.pem');
+    });
+
+    test('resolves env references on file properties', async () => {
+      process.env['TEST_CERT_PATH'] = '/from/env/cert.pem';
+      try {
+        const config = {
+          connections: {
+            mydb: {
+              is: 'filedb',
+              certFile: {env: 'TEST_CERT_PATH'},
+            },
+          },
+        };
+        const lookup = createConnectionsFromConfig(config);
+        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+          _config: ConnectionConfig;
+        };
+        expect(conn._config['certFile']).toBe('/from/env/cert.pem');
+      } finally {
+        delete process.env['TEST_CERT_PATH'];
+      }
+    });
+
+    test('omits file property when env var is missing', async () => {
+      delete process.env['MISSING_CERT'];
+      const config = {
+        connections: {
+          mydb: {
+            is: 'filedb',
+            certFile: {env: 'MISSING_CERT'},
+          },
+        },
+      };
+      const lookup = createConnectionsFromConfig(config);
+      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
+        _config: ConnectionConfig;
+      };
+      expect(conn._config['certFile']).toBeUndefined();
+    });
+
+    test('round-trips file values through read/write', () => {
+      const original = {
+        connections: {
+          mydb: {
+            is: 'filedb',
+            host: 'localhost',
+            certFile: '/path/to/cert.pem',
+            keyFile: '/path/to/key.pem',
+          },
+        },
+      };
+      const json = writeConnectionsConfig(original);
+      const parsed = readConnectionsConfig(json);
+      expect(parsed).toEqual(original);
     });
   });
 
