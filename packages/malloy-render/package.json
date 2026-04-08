@@ -58,7 +58,7 @@
     "@types/luxon": "^3.5.0",
     "esbuild": "0.25.0",
     "storybook": "^8.6.15",
-    "vite": "^5.1.5",
+    "vite": "^6.4.2",
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-solid": "^2.10.1",
     "vite-tsconfig-paths": "^5.1.4"
