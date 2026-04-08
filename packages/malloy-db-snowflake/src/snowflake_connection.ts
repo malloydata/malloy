@@ -265,7 +265,7 @@ export class SnowflakeConnection
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
     this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
-    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs ?? 120_000;
+    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs ?? 15_000;
   }
 
   get dialectName(): string {

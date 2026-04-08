@@ -108,7 +108,7 @@ registerConnectionType('snowflake', {
       type: 'number',
       optional: true,
       description:
-        'Timeout for the query that samples variant columns to detect their schema (default 120000)',
+        'Timeout for the query that samples variant columns to detect their schema (default 15000)',
     },
     {
       name: 'setupSQL',
