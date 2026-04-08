@@ -126,6 +126,27 @@ describe('db:Snowflake', () => {
     ]);
   });
 
+  it('discovers variant schema through a view', async () => {
+    // Create a view with a variant column, then fetch its schema.
+    // This exercises the TABLESAMPLE fallback path — TABLESAMPLE fails
+    // on views, so the code should fall back to LIMIT 100.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_view_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"a": 1, "b": "hello"}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      // Should have discovered the inner structure, not fallen back to sql native
+      expect(dataField!.type).toBe('record');
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
   it('maps integer types to bigint', async () => {
     const x: malloy.SQLSourceDef = {
       type: 'sql_select',
