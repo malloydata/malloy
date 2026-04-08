@@ -384,6 +384,9 @@ export class SnowflakeConnection
       // * remove null values
       // * remove fields for which we have multiple types
       //   ( requires folding decimal to integer )
+      // Only construct an object from the variant/array/object columns,
+      // not every column in the table — avoids flattening the entire row.
+      const variantArgs = variants.map(v => `'${v}', "${v}"`).join(', ');
       const sampleQuery = `
         select path, min(type) as type
         from (
@@ -394,7 +397,7 @@ export class SnowflakeConnection
               when typeof(value) = 'DOUBLE' then 'decimal'
             else lower(typeof(value)) end as type
           from
-            (select object_construct(*) o from ${tablePath} limit 100)
+            (select object_construct(${variantArgs}) o from ${tablePath} limit 100)
               ,table(flatten(input => o, recursive => true)) as meta
           group by 1,2
         )
