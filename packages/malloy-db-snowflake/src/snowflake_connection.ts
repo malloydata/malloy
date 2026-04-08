@@ -406,26 +406,39 @@ export class SnowflakeConnection
         having count(*) <=1
         order by path;
       `;
-      const fieldPathRows = await this.executor.batch(sampleQuery);
+      const SCHEMA_SAMPLE_TIMEOUT_MS = 120_000;
+      try {
+        const fieldPathRows = await this.executor.batch(
+          sampleQuery,
+          {},
+          SCHEMA_SAMPLE_TIMEOUT_MS
+        );
 
-      // take the schema in list form an convert it into a tree.
+        // take the schema in list form an convert it into a tree.
 
-      const rootObject = new SnowObject('__root__', this.dialect);
+        const rootObject = new SnowObject('__root__', this.dialect);
 
-      for (const f of fieldPathRows) {
-        const pathString = f['PATH']?.valueOf().toString();
-        const fieldType = f['TYPE']?.valueOf().toString();
-        if (pathString === undefined || fieldType === undefined) continue;
-        const pathParser = new PathParser(pathString);
-        const path = pathParser.pathChain();
-        if ('name' in path && notVariant.get(path.name)) {
-          // Name will already be in the structdef
-          continue;
+        for (const f of fieldPathRows) {
+          const pathString = f['PATH']?.valueOf().toString();
+          const fieldType = f['TYPE']?.valueOf().toString();
+          if (pathString === undefined || fieldType === undefined) continue;
+          const pathParser = new PathParser(pathString);
+          const path = pathParser.pathChain();
+          if ('name' in path && notVariant.get(path.name)) {
+            // Name will already be in the structdef
+            continue;
+          }
+          // Walk the path and mark the type at the end
+          rootObject.walk(path, fieldType);
         }
-        // Walk the path and mark the type at the end
-        rootObject.walk(path, fieldType);
+        structDef.fields.push(...rootObject.fields);
+      } catch {
+        // If the sampling query times out or fails, fall back to
+        // treating variant columns as opaque sql native types.
+        for (const name of variants) {
+          structDef.fields.push({type: 'sql native', name});
+        }
       }
-      structDef.fields.push(...rootObject.fields);
     }
   }
 
