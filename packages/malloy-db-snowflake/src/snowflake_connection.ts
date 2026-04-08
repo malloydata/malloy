@@ -357,8 +357,7 @@ export class SnowflakeConnection
 
   private async schemaFromTablePath(
     tablePath: string,
-    structDef: StructDef,
-    tryTablesample = true
+    structDef: StructDef
   ): Promise<void> {
     const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
@@ -418,28 +417,17 @@ export class SnowflakeConnection
       const limitClause =
         `select object_construct(${variantArgs}) o` +
         ` from ${tablePath} limit 100`;
-      let fieldPathRows: QueryRecord[] | undefined;
-      if (tryTablesample) {
-        // Try TABLESAMPLE first — it picks random micro-partitions without
-        // scanning the whole table, which avoids the full-scan problem on
-        // large partitioned tables. TABLESAMPLE only works on base tables,
-        // not views, so if it fails we fall back to a plain LIMIT 100.
-        // IMPORTANT: Don't try TABLESAMPLE on temp views (fetchSelectSchema
-        // path) — the failure destroys the pool connection, and the
-        // replacement connection can't see the session-scoped temp view.
-        const tablesampleClause =
-          `select object_construct(${variantArgs}) o` +
-          ` from ${tablePath} TABLESAMPLE BLOCK (1) limit 100`;
-        fieldPathRows = await this.runSchemaSample(
-          makeSampleQuery(tablesampleClause),
-          makeSampleQuery(limitClause)
-        );
-      } else {
-        fieldPathRows = await this.runSchemaSample(
-          makeSampleQuery(limitClause),
-          makeSampleQuery(limitClause)
-        );
-      }
+      // Try TABLESAMPLE first — it picks random micro-partitions without
+      // scanning the whole table, which avoids the full-scan problem on
+      // large partitioned tables. TABLESAMPLE only works on base tables,
+      // not views, so if it fails we fall back to a plain LIMIT 100.
+      const tablesampleClause =
+        `select object_construct(${variantArgs}) o` +
+        ` from ${tablePath} TABLESAMPLE BLOCK (1) limit 100`;
+      const fieldPathRows = await this.runSchemaSample(
+        makeSampleQuery(tablesampleClause),
+        makeSampleQuery(limitClause)
+      );
 
       if (fieldPathRows === undefined) {
         // Both attempts failed or timed out — treat variants as opaque.
@@ -468,38 +456,37 @@ export class SnowflakeConnection
   /**
    * Try to run a schema sampling query, with fallback.
    * First tries the primary query (e.g. using TABLESAMPLE for speed).
-   * If that fails (e.g. because the target is a view), tries the
-   * fallback query (plain LIMIT). If both fail or time out, returns
-   * undefined so the caller can degrade to sql native types.
+   * If that fails or returns no rows, tries the fallback query (plain
+   * LIMIT). If both fail or time out, returns undefined so the caller
+   * can degrade to sql native types.
+   *
+   * Uses tryBatch for the primary query so that a failure (e.g.
+   * TABLESAMPLE on a view) doesn't destroy the pool connection —
+   * session-scoped temp views would be lost otherwise.
    */
   private async runSchemaSample(
     primaryQuery: string,
     fallbackQuery: string
   ): Promise<QueryRecord[] | undefined> {
-    try {
-      const rows = await this.executor.batch(
-        primaryQuery,
-        {},
-        this.schemaSampleTimeoutMs
-      );
-      // TABLESAMPLE BLOCK can return 0 rows on small tables (1% of
-      // micro-partitions rounds to 0) — fall through to LIMIT fallback.
-      if (rows.length > 0) {
-        return rows;
-      }
-    } catch {
-      // Primary failed (TABLESAMPLE doesn't work on views) — try fallback.
+    // tryBatch catches errors inside the pool callback, preserving the
+    // connection and any session state (temp views, session params).
+    const rows = await this.executor.tryBatch(
+      primaryQuery,
+      {},
+      this.schemaSampleTimeoutMs
+    );
+    if (rows && rows.length > 0) {
+      return rows;
     }
-    try {
-      return await this.executor.batch(
+    // Primary failed or returned no rows — try the fallback.
+    // Also use tryBatch so a timeout doesn't destroy the connection.
+    return (
+      (await this.executor.tryBatch(
         fallbackQuery,
         {},
         this.schemaSampleTimeoutMs
-      );
-    } catch {
-      // Fallback also failed or timed out — caller will degrade gracefully.
-      return undefined;
-    }
+      )) ?? undefined
+    );
   }
 
   async fetchTableSchema(
@@ -532,7 +519,7 @@ export class SnowflakeConnection
       `CREATE OR REPLACE TEMP VIEW ${tempTableName} AS (${sqlRef.selectStr});`
     );
 
-    await this.schemaFromTablePath(tempTableName, structDef, false);
+    await this.schemaFromTablePath(tempTableName, structDef);
     return structDef;
   }
 

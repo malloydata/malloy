@@ -248,6 +248,29 @@ export class SnowflakeExecutor {
     });
   }
 
+  /**
+   * Like batch(), but returns undefined on failure instead of throwing.
+   * This keeps the pool connection alive — generic-pool destroys
+   * connections when pool.use() sees a thrown error, which is wrong
+   * for SQL errors (the connection itself is fine). Use this for
+   * speculative queries where failure is expected and the connection
+   * may hold session state (e.g. temp views) that must be preserved.
+   */
+  public async tryBatch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData | undefined> {
+    return await this.pool_.use(async (conn: Connection) => {
+      await this.ensureSessionInitialized(conn);
+      try {
+        return await this._execute(sqlText, conn, options, timeoutMs);
+      } catch {
+        return undefined;
+      }
+    });
+  }
+
   public async stream(
     sqlText: string,
     options?: RunSQLOptions
