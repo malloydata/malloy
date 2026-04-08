@@ -357,7 +357,8 @@ export class SnowflakeConnection
 
   private async schemaFromTablePath(
     tablePath: string,
-    structDef: StructDef
+    structDef: StructDef,
+    tryTablesample = true
   ): Promise<void> {
     const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
@@ -414,20 +415,31 @@ export class SnowflakeConnection
         having count(*) <=1
         order by path;
       `;
-      // Try TABLESAMPLE first — it picks random micro-partitions without
-      // scanning the whole table, which avoids the full-scan problem on
-      // large partitioned tables. TABLESAMPLE only works on base tables,
-      // not views, so if it fails we fall back to a plain LIMIT 100.
-      const tablesampleClause =
-        `select object_construct(${variantArgs}) o` +
-        ` from ${tablePath} TABLESAMPLE BLOCK (1) limit 100`;
       const limitClause =
         `select object_construct(${variantArgs}) o` +
         ` from ${tablePath} limit 100`;
-      const fieldPathRows = await this.runSchemaSample(
-        makeSampleQuery(tablesampleClause),
-        makeSampleQuery(limitClause)
-      );
+      let fieldPathRows: QueryRecord[] | undefined;
+      if (tryTablesample) {
+        // Try TABLESAMPLE first — it picks random micro-partitions without
+        // scanning the whole table, which avoids the full-scan problem on
+        // large partitioned tables. TABLESAMPLE only works on base tables,
+        // not views, so if it fails we fall back to a plain LIMIT 100.
+        // IMPORTANT: Don't try TABLESAMPLE on temp views (fetchSelectSchema
+        // path) — the failure destroys the pool connection, and the
+        // replacement connection can't see the session-scoped temp view.
+        const tablesampleClause =
+          `select object_construct(${variantArgs}) o` +
+          ` from ${tablePath} TABLESAMPLE BLOCK (1) limit 100`;
+        fieldPathRows = await this.runSchemaSample(
+          makeSampleQuery(tablesampleClause),
+          makeSampleQuery(limitClause)
+        );
+      } else {
+        fieldPathRows = await this.runSchemaSample(
+          makeSampleQuery(limitClause),
+          makeSampleQuery(limitClause)
+        );
+      }
 
       if (fieldPathRows === undefined) {
         // Both attempts failed or timed out — treat variants as opaque.
@@ -520,7 +532,7 @@ export class SnowflakeConnection
       `CREATE OR REPLACE TEMP VIEW ${tempTableName} AS (${sqlRef.selectStr});`
     );
 
-    await this.schemaFromTablePath(tempTableName, structDef);
+    await this.schemaFromTablePath(tempTableName, structDef, false);
     return structDef;
   }
 
