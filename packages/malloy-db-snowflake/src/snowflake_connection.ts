@@ -137,16 +137,18 @@ class SnowObject extends SnowField {
     if ('name' in path) {
       const field = this.fieldMap.get(path.name);
       if (path.next) {
-        if (field) {
+        if (field instanceof SnowObject || field instanceof SnowArray) {
           field.walk(path.next, fieldType);
           return;
         }
-        throw new Error(
-          'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
+        // Field is missing or is a scalar leaf — the variant data has
+        // inconsistent structure across rows. Degrade to opaque variant.
+        this.fieldMap.set(
+          path.name,
+          new SnowField(path.name, 'variant', this.dialect)
         );
+        return;
       } else {
-        // If we get multiple type for a field, ignore them, should
-        // which will do until we support viarant data
         if (!field) {
           this.fieldMap.set(
             path.name,
@@ -155,10 +157,10 @@ class SnowObject extends SnowField {
           return;
         }
       }
+      return;
     }
-    throw new Error(
-      'SNOWFLAKE SCHEMA PARSER ERROR: Walk object reference through array reference'
-    );
+    // Array reference in an object context — inconsistent structure.
+    // Ignore this path; the object keeps whatever fields it already has.
   }
 }
 
@@ -208,15 +210,18 @@ class SnowArray extends SnowField {
           next.walk(path.next, fieldType);
           return;
         }
-        throw new Error(
-          'SNOWFLAKE SCHEMA PARSER ERROR: Array walk through leaf'
-        );
+        // Array elements were scalars but now we see deeper structure —
+        // inconsistent variant data. Degrade to variant array.
+        this.arrayOf = 'variant';
+        return;
       } else {
         this.isArrayOf(fieldType);
         return;
       }
     }
-    throw new Error('SNOWFLAKE SCHEMA PARSER ERROR: Array walk through name');
+    // Name reference in an array context — inconsistent structure.
+    // Degrade to variant array.
+    this.arrayOf = 'variant';
   }
 }
 
@@ -432,7 +437,7 @@ export class SnowflakeConnection
       if (fieldPathRows === undefined) {
         // Both attempts failed or timed out — treat variants as opaque.
         for (const name of variants) {
-          structDef.fields.push({type: 'sql native', name});
+          structDef.fields.push({type: 'sql native', rawType: 'variant', name});
         }
       } else {
         // Take the schema in list form and convert it into a tree.

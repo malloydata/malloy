@@ -169,6 +169,136 @@ describe('db:Snowflake', () => {
       {name: 'NUMBER_VAL', type: 'number', numberType: 'bigint'},
     ]);
   });
+
+  it('degrades variant field to sql native when types conflict across rows', async () => {
+    // data.foo is a scalar in one row and an object in another.
+    // Schema discovery should not throw — foo should degrade to sql native.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_conflict_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"foo": {"bar": 1}}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": "oops"}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const fooField = dataField!.fields.find(f => f.name === 'foo');
+        expect(fooField).toEqual({
+          type: 'sql native',
+          rawType: 'variant',
+          name: 'foo',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('degrades nested object inside array when types conflict', async () => {
+    // Array analogue of the customer bug: items[*].foo is an object in
+    // one row and a scalar in another. foo should degrade to sql native.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_array_obj_conflict_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"items": [{"foo": {"bar": 1}}]}') AS data
+       UNION ALL
+       SELECT parse_json('{"items": [{"foo": "oops"}]}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const itemsField = dataField!.fields.find(f => f.name === 'items');
+        expect(itemsField).toBeDefined();
+        expect(itemsField!.type).toBe('array');
+        if (itemsField!.type === 'array') {
+          expect(itemsField!.elementTypeDef).toEqual({
+            type: 'record_element',
+          });
+          const fooField = itemsField!.fields.find(f => f.name === 'foo');
+          expect(fooField).toEqual({
+            type: 'sql native',
+            rawType: 'variant',
+            name: 'foo',
+          });
+        }
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('degrades when same path is object in one row and array in another', async () => {
+    // foo is an object in one row and an array in another.
+    // foo should degrade to sql native.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_obj_array_conflict_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"foo": {"bar": 1}}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": [1, 2, 3]}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const fooField = dataField!.fields.find(f => f.name === 'foo');
+        expect(fooField).toEqual({
+          type: 'sql native',
+          rawType: 'variant',
+          name: 'foo',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('preserves sibling fields when one field degrades', async () => {
+    // foo has conflicting types but stable is consistent.
+    // stable should come through normally.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_variant_sibling_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT parse_json('{"foo": {"bar": 1}, "stable": 7}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": "oops", "stable": 8}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        const fooField = dataField!.fields.find(f => f.name === 'foo');
+        expect(fooField).toEqual({
+          type: 'sql native',
+          rawType: 'variant',
+          name: 'foo',
+        });
+        const stableField = dataField!.fields.find(f => f.name === 'stable');
+        expect(stableField).toEqual({
+          type: 'number',
+          numberType: 'bigint',
+          name: 'stable',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
 });
 
 /**
