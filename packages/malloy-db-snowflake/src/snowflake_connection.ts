@@ -71,6 +71,9 @@ export interface SnowflakeConnectionOptions {
   // Timeout for the statement
   timeoutMs?: number;
 
+  // Timeout for the variant schema sampling query (default 2 minutes)
+  schemaSampleTimeoutMs?: number;
+
   // SQL statements to run when a connection is acquired from the pool
   setupSQL?: string;
 }
@@ -239,6 +242,7 @@ export class SnowflakeConnection
   private scratchSpace?: namespace;
   private queryOptions: RunSQLOptions;
   private timeoutMs: number;
+  private schemaSampleTimeoutMs: number;
   private setupSQL: string | undefined;
 
   constructor(
@@ -261,6 +265,7 @@ export class SnowflakeConnection
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
     this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
+    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs ?? 120_000;
   }
 
   get dialectName(): string {
@@ -406,12 +411,11 @@ export class SnowflakeConnection
         having count(*) <=1
         order by path;
       `;
-      const SCHEMA_SAMPLE_TIMEOUT_MS = 120_000;
       try {
         const fieldPathRows = await this.executor.batch(
           sampleQuery,
           {},
-          SCHEMA_SAMPLE_TIMEOUT_MS
+          this.schemaSampleTimeoutMs
         );
 
         // take the schema in list form an convert it into a tree.
