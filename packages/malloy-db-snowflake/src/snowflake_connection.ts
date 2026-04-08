@@ -465,11 +465,16 @@ export class SnowflakeConnection
     fallbackQuery: string
   ): Promise<QueryRecord[] | undefined> {
     try {
-      return await this.executor.batch(
+      const rows = await this.executor.batch(
         primaryQuery,
         {},
         this.schemaSampleTimeoutMs
       );
+      // TABLESAMPLE BLOCK can return 0 rows on small tables (1% of
+      // micro-partitions rounds to 0) — fall through to LIMIT fallback.
+      if (rows.length > 0) {
+        return rows;
+      }
     } catch {
       // Primary failed (TABLESAMPLE doesn't work on views) — try fallback.
     }
