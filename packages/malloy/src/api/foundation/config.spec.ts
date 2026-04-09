@@ -4,13 +4,16 @@
  */
 
 import {MalloyConfig} from './config';
+import {contextOverlay} from './config_overlays';
+import {discoverConfig} from './config_discover';
 import {registerConnectionType} from '../../connection/registry';
 import type {ConnectionConfig, Connection} from '../../connection/types';
+import type {URLReader} from '../../runtime_types';
 
-function mockConnection(name: string): Connection {
+function mockConnection(name: string, dialectName = 'mock'): Connection {
   return {
     name,
-    dialectName: 'mock',
+    dialectName,
     getDigest: () => 'mock-digest',
     fetchSchemaForTables: jest.fn(),
     fetchSchemaForSQLStruct: jest.fn(),
@@ -25,44 +28,63 @@ function mockConnection(name: string): Connection {
   } as unknown as Connection;
 }
 
-describe('MalloyConfig.log', () => {
-  beforeEach(() => {
-    registerConnectionType('mockdb', {
-      displayName: 'MockDB',
-      factory: async (config: ConnectionConfig) => mockConnection(config.name),
-      properties: [
-        {name: 'host', displayName: 'Host', type: 'string', optional: true},
-        {name: 'port', displayName: 'Port', type: 'number', optional: true},
-        {
-          name: 'databasePath',
-          displayName: 'Database Path',
-          type: 'string',
-          optional: true,
-        },
-      ],
-    });
-    registerConnectionType('jsondb', {
-      displayName: 'JsonDB',
-      factory: async (config: ConnectionConfig) => mockConnection(config.name),
-      properties: [
-        {name: 'host', displayName: 'Host', type: 'string', optional: true},
-        {name: 'ssl', displayName: 'SSL', type: 'json', optional: true},
-      ],
-    });
-  });
+/**
+ * Build a minimal URLReader backed by an in-memory map of URL→contents.
+ * POJO values are JSON-stringified; string values are returned raw (useful
+ * for injecting malformed JSON). Unknown URLs throw, which `discoverConfig`
+ * interprets as "not found".
+ */
+function mockReader(files: Record<string, unknown>): URLReader {
+  return {
+    async readURL(url: URL): Promise<string> {
+      const key = url.toString();
+      if (!(key in files)) {
+        throw new Error(`Not found: ${key}`);
+      }
+      const value = files[key];
+      return typeof value === 'string' ? value : JSON.stringify(value);
+    },
+  };
+}
 
-  function configLog(json: string) {
-    return new MalloyConfig(json).log;
+beforeEach(() => {
+  registerConnectionType('mockdb', {
+    displayName: 'MockDB',
+    factory: async (config: ConnectionConfig) =>
+      mockConnection(config.name, 'mockdb-dialect'),
+    properties: [
+      {name: 'host', displayName: 'Host', type: 'string', optional: true},
+      {name: 'port', displayName: 'Port', type: 'number', optional: true},
+      {
+        name: 'databasePath',
+        displayName: 'Database Path',
+        type: 'string',
+        optional: true,
+      },
+    ],
+  });
+  registerConnectionType('jsondb', {
+    displayName: 'JsonDB',
+    factory: async (config: ConnectionConfig) =>
+      mockConnection(config.name, 'jsondb-dialect'),
+    properties: [
+      {name: 'host', displayName: 'Host', type: 'string', optional: true},
+      {name: 'ssl', displayName: 'SSL', type: 'json', optional: true},
+    ],
+  });
+});
+
+describe('MalloyConfig.log validation warnings', () => {
+  function configLog(pojo: object) {
+    return new MalloyConfig(pojo).log;
   }
 
   it('accepts a valid config', () => {
-    expect(
-      configLog(JSON.stringify({connections: {mydb: {is: 'mockdb'}}}))
-    ).toEqual([]);
+    expect(configLog({connections: {mydb: {is: 'mockdb'}}})).toEqual([]);
   });
 
-  it('reports JSON parse errors', () => {
-    const log = configLog('not json at all');
+  it('reports JSON parse errors (string form)', () => {
+    const log = new MalloyConfig('not json at all').log;
     expect(log).toHaveLength(1);
     expect(log[0].severity).toBe('error');
     expect(log[0].code).toBe('config-validation');
@@ -70,147 +92,372 @@ describe('MalloyConfig.log', () => {
   });
 
   it('reports non-object config', () => {
-    const log = configLog('"just a string"');
+    const log = new MalloyConfig('"just a string"').log;
     expect(log).toHaveLength(1);
     expect(log[0].severity).toBe('error');
     expect(log[0].message).toContain('not a JSON object');
   });
 
   it('warns on unknown top-level keys', () => {
-    const log = configLog(JSON.stringify({connections: {}, notAKey: 'hello'}));
+    const log = configLog({connections: {}, notAKey: 'hello'});
     expect(log).toHaveLength(1);
     expect(log[0].severity).toBe('warn');
     expect(log[0].message).toContain('unknown config key');
   });
 
   it('warns on unknown connection type', () => {
-    const log = configLog(
-      JSON.stringify({connections: {mydb: {is: 'faketype'}}})
-    );
+    const log = configLog({connections: {mydb: {is: 'faketype'}}});
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('unknown connection type');
   });
 
   it('warns on missing "is" field', () => {
-    const log = configLog(JSON.stringify({connections: {mydb: {}}}));
+    const log = configLog({connections: {mydb: {}}});
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('missing required "is"');
   });
 
   it('warns on unknown property for a connection type', () => {
-    const log = configLog(
-      JSON.stringify({connections: {mydb: {is: 'mockdb', notARealProp: 'x'}}})
-    );
+    const log = configLog({
+      connections: {mydb: {is: 'mockdb', notARealProp: 'x'}},
+    });
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('unknown property');
   });
 
   it('suggests closest match for misspelled property', () => {
-    const log = configLog(
-      JSON.stringify({
-        connections: {mydb: {is: 'mockdb', databsePath: '/tmp/test.db'}},
-      })
-    );
+    const log = configLog({
+      connections: {mydb: {is: 'mockdb', databsePath: '/tmp/test.db'}},
+    });
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('Did you mean "databasePath"');
   });
 
   it('suggests closest match for misspelled connection type', () => {
-    const log = configLog(
-      JSON.stringify({connections: {mydb: {is: 'mockbd'}}})
-    );
+    const log = configLog({connections: {mydb: {is: 'mockbd'}}});
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('Did you mean "mockdb"');
   });
 
   it('suggests closest match for misspelled top-level key', () => {
-    const log = configLog(JSON.stringify({conections: {}}));
+    const log = configLog({conections: {}});
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('Did you mean "connections"');
   });
 
   it('warns on wrong value type', () => {
-    const log = configLog(
-      JSON.stringify({connections: {mydb: {is: 'mockdb', databasePath: 123}}})
-    );
+    const log = configLog({
+      connections: {mydb: {is: 'mockdb', databasePath: 123}},
+    });
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('should be a string');
   });
 
-  it('accepts env var references when variable is set', () => {
-    process.env['TEST_VALIDATE_DB_PATH'] = '/tmp/test.db';
-    try {
-      const log = configLog(
-        JSON.stringify({
-          connections: {
-            mydb: {is: 'mockdb', databasePath: {env: 'TEST_VALIDATE_DB_PATH'}},
-          },
-        })
-      );
-      expect(log).toEqual([]);
-    } finally {
-      delete process.env['TEST_VALIDATE_DB_PATH'];
-    }
-  });
-
-  it('warns when env var reference points to unset variable', () => {
-    delete process.env['DEFINITELY_NOT_SET_12345'];
-    const log = configLog(
-      JSON.stringify({
-        connections: {
-          mydb: {
-            is: 'mockdb',
-            databasePath: {env: 'DEFINITELY_NOT_SET_12345'},
-          },
-        },
-      })
-    );
-    expect(log).toHaveLength(1);
-    expect(log[0].message).toContain('DEFINITELY_NOT_SET_12345');
-    expect(log[0].message).toContain('not set');
-  });
-
   it('accepts valid manifestPath', () => {
-    expect(configLog(JSON.stringify({manifestPath: 'custom/path'}))).toEqual(
-      []
-    );
+    expect(configLog({manifestPath: 'custom/path'})).toEqual([]);
   });
 
   it('returns no warnings for empty config', () => {
-    expect(configLog('{}')).toEqual([]);
+    expect(configLog({})).toEqual([]);
   });
 
   it('accepts virtualMap as a valid top-level key', () => {
-    expect(
-      configLog(JSON.stringify({virtualMap: {someFile: 'someContent'}}))
-    ).toEqual([]);
+    expect(configLog({virtualMap: {someFile: 'someContent'}})).toEqual([]);
   });
 
   it('warns when connections is not an object', () => {
-    const log = configLog(JSON.stringify({connections: ''}));
+    const log = configLog({connections: ''});
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('should be an object');
   });
 
-  it('does not treat objects with extra keys as env refs', () => {
-    const log = configLog(
-      JSON.stringify({
-        connections: {
-          mydb: {is: 'mockdb', databasePath: {env: 'X', extra: true}},
-        },
-      })
-    );
+  it('does not treat objects with extra keys as references', () => {
+    const log = configLog({
+      connections: {
+        mydb: {is: 'mockdb', databasePath: {env: 'X', extra: true}},
+      },
+    });
     expect(log).toHaveLength(1);
     expect(log[0].message).toContain('should be a string');
   });
 
-  it('does not warn about env refs on json-type properties', () => {
-    const log = configLog(
-      JSON.stringify({
-        connections: {mydb: {is: 'jsondb', ssl: {env: 'UNSET_ENV_FOR_TEST'}}},
-      })
-    );
+  it('does not warn about reference shapes on json-type properties', () => {
+    const log = configLog({
+      connections: {mydb: {is: 'jsondb', ssl: {env: 'UNSET_ENV_FOR_TEST'}}},
+    });
     const sslWarnings = log.filter(w => w.message.includes('.ssl'));
     expect(sslWarnings).toEqual([]);
+  });
+});
+
+describe('MalloyConfig constructor forms', () => {
+  it('accepts a POJO as the first argument', () => {
+    const config = new MalloyConfig({
+      connections: {mydb: {is: 'mockdb'}},
+    });
+    expect(config.log).toEqual([]);
+  });
+
+  it('accepts a JSON string as the first argument', () => {
+    const config = new MalloyConfig(
+      JSON.stringify({connections: {mydb: {is: 'mockdb'}}})
+    );
+    expect(config.log).toEqual([]);
+  });
+
+  it('exposes manifestPath as a readonly field', () => {
+    const config = new MalloyConfig({manifestPath: 'my/manifest'});
+    expect(config.manifestPath).toBe('my/manifest');
+  });
+
+  it('exposes virtualMap converted to Map-of-Maps', () => {
+    const config = new MalloyConfig({
+      virtualMap: {duckdb: {flights: 'malloytest.flights'}},
+    });
+    expect(config.virtualMap?.get('duckdb')?.get('flights')).toBe(
+      'malloytest.flights'
+    );
+  });
+
+  it('exposes an empty Manifest after construction', () => {
+    const config = new MalloyConfig({});
+    expect(config.manifest).toBeDefined();
+    expect(config.manifest.buildManifest.entries).toEqual({});
+  });
+});
+
+describe('MalloyConfig overlay resolution', () => {
+  it('resolves env references via the default stack', async () => {
+    process.env['TEST_DB_PATH_ENV'] = '/tmp/test.db';
+    try {
+      const config = new MalloyConfig({
+        connections: {
+          mydb: {is: 'mockdb', databasePath: {env: 'TEST_DB_PATH_ENV'}},
+        },
+      });
+      expect(config.log).toEqual([]);
+      const conn = await config.connections.lookupConnection('mydb');
+      expect(conn.name).toBe('mydb');
+    } finally {
+      delete process.env['TEST_DB_PATH_ENV'];
+    }
+  });
+
+  it('silently drops unresolved env references', () => {
+    delete process.env['DEFINITELY_NOT_SET_12345'];
+    const config = new MalloyConfig({
+      connections: {
+        mydb: {
+          is: 'mockdb',
+          databasePath: {env: 'DEFINITELY_NOT_SET_12345'},
+        },
+      },
+    });
+    // Silent drop: the reference resolves to undefined and the field is
+    // omitted. No warning in the log.
+    expect(config.log).toEqual([]);
+  });
+
+  it('warns on unknown overlay source', () => {
+    const config = new MalloyConfig({
+      connections: {
+        mydb: {is: 'mockdb', databasePath: {nosuch: 'whatever'}},
+      },
+    });
+    const warnings = config.log.filter(l => l.code === 'config-overlay');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('unknown overlay source "nosuch"');
+  });
+
+  it('resolves {config: ...} references from a host-supplied stack', () => {
+    const config = new MalloyConfig(
+      {
+        connections: {
+          mydb: {is: 'mockdb', databasePath: {config: 'rootDirectory'}},
+        },
+      },
+      {config: contextOverlay({rootDirectory: '/project'})}
+    );
+    expect(config.log).toEqual([]);
+  });
+
+  it('passes reference-shaped values through on json-typed slots', async () => {
+    const config = new MalloyConfig({
+      connections: {
+        mydb: {is: 'jsondb', ssl: {env: 'SOME_ENV_VAR'}},
+      },
+    });
+    expect(config.log).toEqual([]);
+    // ssl is json-typed — the object passes through literally, no env lookup.
+    const conn = (await config.connections.lookupConnection(
+      'mydb'
+    )) as unknown as {name: string};
+    expect(conn.name).toBe('mydb');
+  });
+});
+
+describe('MalloyConfig wrapConnections', () => {
+  it('replaces the connections lookup in place', async () => {
+    const config = new MalloyConfig({
+      connections: {mydb: {is: 'mockdb'}},
+    });
+    const fake = mockConnection('wrapped');
+    config.wrapConnections(() => ({
+      lookupConnection: async () => fake,
+    }));
+    const conn = await config.connections.lookupConnection('mydb');
+    expect(conn.name).toBe('wrapped');
+  });
+});
+
+describe('discoverConfig', () => {
+  it('walks up from start to find a config at the ceiling', async () => {
+    const reader = mockReader({
+      'file:///project/malloy-config.json': {
+        connections: {mydb: {is: 'mockdb'}},
+      },
+    });
+    const result = await discoverConfig(
+      new URL('file:///project/sub/deep/'),
+      new URL('file:///project/'),
+      reader
+    );
+    expect(result).not.toBeNull();
+    expect(result?.configURL.toString()).toBe(
+      'file:///project/malloy-config.json'
+    );
+    expect(result?.pojo['connections']).toEqual({mydb: {is: 'mockdb'}});
+  });
+
+  it('returns null when startURL is not under the ceiling', async () => {
+    const reader = mockReader({
+      'file:///project/malloy-config.json': {connections: {}},
+    });
+    const result = await discoverConfig(
+      new URL('file:///elsewhere/'),
+      new URL('file:///project/'),
+      reader
+    );
+    expect(result).toBeNull();
+  });
+
+  it('throws when a matched config file has malformed JSON', async () => {
+    const reader = mockReader({
+      'file:///project/malloy-config.json': '{not valid json',
+    });
+    await expect(
+      discoverConfig(
+        new URL('file:///project/'),
+        new URL('file:///project/'),
+        reader
+      )
+    ).rejects.toThrow(/Malformed JSON.*malloy-config\.json/);
+  });
+
+  it('merges shared+local with local winning on connection entries', async () => {
+    const reader = mockReader({
+      'file:///project/malloy-config.json': {
+        connections: {
+          shared_only: {is: 'mockdb', host: 'shared-host'},
+          both: {is: 'mockdb', host: 'from-shared'},
+        },
+      },
+      'file:///project/malloy-config-local.json': {
+        connections: {
+          local_only: {is: 'mockdb'},
+          both: {is: 'mockdb', host: 'from-local'},
+        },
+      },
+    });
+    const result = await discoverConfig(
+      new URL('file:///project/'),
+      new URL('file:///project/'),
+      reader
+    );
+    expect(result).not.toBeNull();
+    // When both files exist at the same level, configURL points to local.
+    expect(result?.configURL.toString()).toBe(
+      'file:///project/malloy-config-local.json'
+    );
+    const conns = result?.pojo['connections'] as Record<
+      string,
+      {host?: string}
+    >;
+    expect(Object.keys(conns).sort()).toEqual([
+      'both',
+      'local_only',
+      'shared_only',
+    ]);
+    expect(conns['both'].host).toBe('from-local');
+    expect(conns['shared_only'].host).toBe('shared-host');
+  });
+});
+
+describe('MalloyConfig includeDefaults', () => {
+  let capturedRoot: unknown;
+
+  beforeEach(() => {
+    capturedRoot = undefined;
+    registerConnectionType('refdb', {
+      displayName: 'RefDB',
+      factory: async (config: ConnectionConfig) => {
+        capturedRoot = config['root'];
+        return mockConnection(config.name, 'refdb-dialect');
+      },
+      properties: [
+        {
+          name: 'root',
+          displayName: 'Root',
+          type: 'string',
+          optional: true,
+          default: {config: 'rootDirectory'},
+        },
+      ],
+    });
+  });
+
+  it('adds an entry for a registered type not present in connections', async () => {
+    const config = new MalloyConfig({includeDefaults: true});
+    expect(config.log).toEqual([]);
+    // mockdb wasn't listed in connections, so includeDefaults adds it.
+    const conn = await config.connections.lookupConnection('mockdb');
+    expect(conn.name).toBe('mockdb');
+    expect(conn.dialectName).toBe('mockdb-dialect');
+  });
+
+  it('does not add an entry when the type is already used', async () => {
+    const config = new MalloyConfig({
+      connections: {mydb: {is: 'mockdb'}},
+      includeDefaults: true,
+    });
+    // mockdb is used by 'mydb', so no auto-added connection named 'mockdb'.
+    await expect(
+      config.connections.lookupConnection('mockdb')
+    ).rejects.toThrow();
+    const conn = await config.connections.lookupConnection('mydb');
+    expect(conn.name).toBe('mydb');
+  });
+
+  it('does not clobber a user-named connection that collides with a type name', async () => {
+    const config = new MalloyConfig({
+      connections: {mockdb: {is: 'jsondb'}},
+      includeDefaults: true,
+    });
+    // The user's 'mockdb'-named entry (actually a jsondb) is preserved;
+    // includeDefaults must not overwrite it with a mockdb-type default.
+    const conn = await config.connections.lookupConnection('mockdb');
+    expect(conn.dialectName).toBe('jsondb-dialect');
+  });
+
+  it('resolves reference-shaped property defaults through the overlay stack', async () => {
+    const config = new MalloyConfig(
+      {includeDefaults: true},
+      {config: contextOverlay({rootDirectory: '/my/project'})}
+    );
+    // refdb's `root` default is {config: 'rootDirectory'} — the resolver
+    // walks the overlay stack at includeDefaults time and passes the
+    // resolved value through to the factory.
+    await config.connections.lookupConnection('refdb');
+    expect(capturedRoot).toBe('/my/project');
   });
 });

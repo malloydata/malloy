@@ -11,7 +11,6 @@ import {
   readConnectionsConfig,
   writeConnectionsConfig,
   createConnectionsFromConfig,
-  resolveValue,
 } from './registry';
 import type {ConnectionConfig, Connection} from './types';
 
@@ -52,26 +51,6 @@ describe('connection registry', () => {
       factory: async (config: ConnectionConfig) =>
         mockConnection(config.name, config),
       properties: [],
-    });
-    registerConnectionType('secretdb', {
-      displayName: 'SecretDB',
-      factory: async (config: ConnectionConfig) =>
-        mockConnection(config.name, config),
-      properties: [
-        {name: 'host', displayName: 'Host', type: 'string', optional: true},
-        {
-          name: 'password',
-          displayName: 'Password',
-          type: 'password',
-          optional: true,
-        },
-        {
-          name: 'token',
-          displayName: 'Token',
-          type: 'secret',
-          optional: true,
-        },
-      ],
     });
     registerConnectionType('jsondb', {
       displayName: 'JsonDB',
@@ -249,106 +228,6 @@ describe('connection registry', () => {
     expect(conn1).toBe(conn2);
   });
 
-  describe('resolveValue', () => {
-    test('resolves env references', () => {
-      process.env['TEST_SECRET_VALUE'] = 'from-env';
-      try {
-        expect(resolveValue({env: 'TEST_SECRET_VALUE'})).toBe('from-env');
-      } finally {
-        delete process.env['TEST_SECRET_VALUE'];
-      }
-    });
-
-    test('returns undefined for missing env var', () => {
-      delete process.env['NONEXISTENT_SECRET_VAR'];
-      expect(resolveValue({env: 'NONEXISTENT_SECRET_VAR'})).toBeUndefined();
-    });
-  });
-
-  describe('env resolution in createConnectionsFromConfig', () => {
-    test('resolves env reference on password field', async () => {
-      process.env['TEST_DB_PASSWORD'] = 'secret-pw';
-      try {
-        const config = {
-          connections: {
-            mydb: {is: 'secretdb', password: {env: 'TEST_DB_PASSWORD'}},
-          },
-        };
-        const lookup = createConnectionsFromConfig(config);
-        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-          _config: ConnectionConfig;
-        };
-        expect(conn._config['password']).toBe('secret-pw');
-      } finally {
-        delete process.env['TEST_DB_PASSWORD'];
-      }
-    });
-
-    test('resolves env reference on secret field', async () => {
-      process.env['TEST_API_TOKEN'] = 'my-token';
-      try {
-        const config = {
-          connections: {
-            mydb: {is: 'secretdb', token: {env: 'TEST_API_TOKEN'}},
-          },
-        };
-        const lookup = createConnectionsFromConfig(config);
-        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-          _config: ConnectionConfig;
-        };
-        expect(conn._config['token']).toBe('my-token');
-      } finally {
-        delete process.env['TEST_API_TOKEN'];
-      }
-    });
-
-    test('resolves env reference on string field', async () => {
-      process.env['TEST_HOST_VAR'] = 'resolved-host';
-      try {
-        const config = {
-          connections: {
-            mydb: {is: 'secretdb', host: {env: 'TEST_HOST_VAR'}},
-          },
-        };
-        const lookup = createConnectionsFromConfig(config);
-        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-          _config: ConnectionConfig;
-        };
-        expect(conn._config['host']).toBe('resolved-host');
-      } finally {
-        delete process.env['TEST_HOST_VAR'];
-      }
-    });
-
-    test('passes through plain string values', async () => {
-      const config = {
-        connections: {
-          mydb: {is: 'secretdb', password: 'plain-pw', token: 'plain-tok'},
-        },
-      };
-      const lookup = createConnectionsFromConfig(config);
-      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-        _config: ConnectionConfig;
-      };
-      expect(conn._config['password']).toBe('plain-pw');
-      expect(conn._config['token']).toBe('plain-tok');
-    });
-
-    test('omits field when env var is missing', async () => {
-      delete process.env['MISSING_VAR'];
-      const config = {
-        connections: {
-          mydb: {is: 'secretdb', password: {env: 'MISSING_VAR'}},
-        },
-      };
-      const lookup = createConnectionsFromConfig(config);
-      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-        _config: ConnectionConfig;
-      };
-      expect(conn._config['password']).toBeUndefined();
-    });
-  });
-
   describe('JSON config values', () => {
     test('passes JSON objects through to factory', async () => {
       const sslConfig = {rejectUnauthorized: false};
@@ -370,66 +249,6 @@ describe('connection registry', () => {
       expect(conn._config['host']).toBe('localhost');
       expect(conn._config['ssl']).toEqual({rejectUnauthorized: false});
       expect(conn._config['headers']).toEqual({'X-Custom': 'value'});
-    });
-
-    test('does not treat JSON objects as env references', async () => {
-      const config = {
-        connections: {
-          mydb: {
-            is: 'jsondb',
-            ssl: {rejectUnauthorized: false, ca: 'cert-data'},
-          },
-        },
-      };
-      const lookup = createConnectionsFromConfig(config);
-      const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-        _config: ConnectionConfig;
-      };
-      // Should pass through as-is, not attempt env resolution
-      expect(conn._config['ssl']).toEqual({
-        rejectUnauthorized: false,
-        ca: 'cert-data',
-      });
-    });
-
-    test('does not resolve {env: "..."} on json-typed properties', async () => {
-      process.env['production'] = 'should-not-resolve';
-      try {
-        const config = {
-          connections: {
-            mydb: {
-              is: 'jsondb',
-              ssl: {env: 'production'},
-            },
-          },
-        };
-        const lookup = createConnectionsFromConfig(config);
-        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-          _config: ConnectionConfig;
-        };
-        // ssl is type:'json', so {env: "production"} is data, not a ValueRef
-        expect(conn._config['ssl']).toEqual({env: 'production'});
-      } finally {
-        delete process.env['production'];
-      }
-    });
-
-    test('still resolves single-key env references', async () => {
-      process.env['TEST_JSON_HOST'] = 'from-env';
-      try {
-        const config = {
-          connections: {
-            mydb: {is: 'jsondb', host: {env: 'TEST_JSON_HOST'}},
-          },
-        };
-        const lookup = createConnectionsFromConfig(config);
-        const conn = (await lookup.lookupConnection('mydb')) as unknown as {
-          _config: ConnectionConfig;
-        };
-        expect(conn._config['host']).toBe('from-env');
-      } finally {
-        delete process.env['TEST_JSON_HOST'];
-      }
     });
 
     test('round-trips JSON values through read/write', () => {

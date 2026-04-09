@@ -27,13 +27,18 @@ export type ConnectionPropertyType =
 
 /**
  * Describes a single configuration property for a connection type.
+ *
+ * `default` accepts either a literal value or a single-key object that names an
+ * overlay source: e.g. `{config: 'rootDirectory'}` or `{env: 'HOME'}`. Reference
+ * defaults are resolved through the same overlay stack as inline references at
+ * `includeDefaults` time.
  */
 export interface ConnectionPropertyDefinition {
   name: string;
   displayName: string;
   type: ConnectionPropertyType;
   optional?: true;
-  default?: string;
+  default?: string | number | boolean | {[source: string]: string | string[]};
   description?: string;
   /** For type 'file': extension filters for picker dialogs. */
   fileFilters?: Record<string, string[]>;
@@ -49,11 +54,6 @@ export interface ConnectionTypeDef {
 }
 
 /**
- * An environment variable reference in a config file.
- */
-export type ValueRef = {env: string};
-
-/**
  * A JSON-compatible value for structured config properties (e.g. SSL options).
  */
 export type JsonConfigValue =
@@ -65,45 +65,13 @@ export type JsonConfigValue =
   | {[key: string]: JsonConfigValue};
 
 /**
- * The type of a config property value: a literal, an env reference, a JSON
- * object, or undefined.
- */
-export type ConfigValue =
-  | string
-  | number
-  | boolean
-  | ValueRef
-  | JsonConfigValue
-  | undefined;
-
-/**
- * Type guard for ValueRef.
- */
-export function isValueRef(value: unknown): value is ValueRef {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.keys(value).length === 1 &&
-    'env' in value &&
-    typeof value.env === 'string'
-  );
-}
-
-/**
- * Resolve a ValueRef to a string by looking up the environment variable.
- * Returns undefined if the env var is not set.
- */
-export function resolveValue(vr: ValueRef): string | undefined {
-  return process.env[vr.env];
-}
-
-/**
- * A single connection entry in a JSON config.
+ * A single connection entry passed to `createConnectionsFromConfig`. All
+ * values here are already fully resolved — overlay references are expanded
+ * by the config compiler/resolver before the registry ever sees them.
  */
 export interface ConnectionConfigEntry {
   is: string;
-  [key: string]: ConfigValue;
+  [key: string]: unknown;
 }
 
 /**
@@ -248,22 +216,14 @@ export function createConnectionsFromConfig(
         );
       }
 
-      const jsonKeys = new Set(
-        typeDef.properties.filter(p => p.type === 'json').map(p => p.name)
-      );
-
+      // Values are already resolved — the config compiler/resolver handles
+      // overlay references, default expansion, and `includeDefaults`. The
+      // registry's only job is to hand them to the factory.
       const connConfig: ConnectionConfig = {name: connectionName};
       for (const [key, value] of Object.entries(entry)) {
         if (key === 'is') continue;
         if (value !== undefined && value !== null) {
-          if (!jsonKeys.has(key) && isValueRef(value)) {
-            const resolved = resolveValue(value);
-            if (resolved !== undefined) {
-              connConfig[key] = resolved;
-            }
-          } else {
-            connConfig[key] = value;
-          }
+          connConfig[key] = value as ConnectionConfig[string];
         }
       }
 

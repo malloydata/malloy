@@ -39,6 +39,11 @@ registerConnectionType('duckdb', {
       displayName: 'Working Directory',
       type: 'string',
       optional: true,
+      // Binds to the project root (discovery ceiling) when the host has
+      // populated `config.rootDirectory`. Lets Malloy files use relative
+      // data paths that stay stable regardless of where the config file
+      // happens to live inside the project.
+      default: {config: 'rootDirectory'},
     },
     {
       name: 'motherDuckToken',

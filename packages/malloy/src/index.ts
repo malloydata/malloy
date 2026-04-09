@@ -248,8 +248,6 @@ export {
   getConnectionTypeDisplayName,
   getRegisteredConnectionTypes,
   createConnectionsFromConfig,
-  isValueRef,
-  resolveValue,
 } from './connection/registry';
 export type {
   ConnectionTypeFactory,
@@ -258,9 +256,7 @@ export type {
   ConnectionTypeDef,
   ConnectionConfigEntry,
   ConnectionsConfig,
-  ConfigValue,
   JsonConfigValue,
-  ValueRef,
   ManagedConnectionLookup,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';

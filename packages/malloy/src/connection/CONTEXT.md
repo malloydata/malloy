@@ -53,7 +53,11 @@ Each registered backend provides:
 }
 ```
 
-The `is` field identifies the backend. Any property value can be a `{env: "VAR"}` reference — `createConnectionsFromConfig()` resolves all `ValueRef`s before passing config to factories, so connection constructors only see plain resolved values. If an env var is not set, that property is omitted. Properties declared as `type: 'json'` are never treated as env references — `{env: "production"}` on a json property passes through as data.
+The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against an **overlay stack** during construction, so the registry and connection factories only ever see plain resolved values. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent.
+
+Properties declared as `type: 'json'` are never interpreted as references — the entire value passes through literally. This is the security invariant that keeps structured config (SSL options, headers, session objects) from ever invoking overlay lookups.
+
+See `packages/malloy/src/api/foundation/config_overlays.ts` for the overlay stack type and the built-in `env` + `config` overlays.
 
 ## API Functions
 
@@ -65,8 +69,6 @@ The `is` field identifies the backend. Any property value can be a `{env: "VAR"}
 | `getRegisteredConnectionTypes()` | Returns all registered backend names |
 | `getConnectionTypeDisplayName(typeName)` | Returns human-readable display name |
 | `getConnectionProperties(typeName)` | Returns `ConnectionPropertyDefinition[]` for a backend |
-| `isValueRef(value)` | Type guard: is this a `{env: string}` reference? |
-| `resolveValue(vr)` | Resolve a `ValueRef` from `process.env` |
 
 ### Internal (used by `MalloyConfig`, not re-exported)
 
@@ -78,14 +80,25 @@ The `is` field identifies the backend. Any property value can be a `{env: "VAR"}
 
 ### Usage Pattern
 
-The standard way to get connections is through `MalloyConfig`, which reads a `malloy-config.json` file and uses the registry internally:
+The standard way to get connections is through `MalloyConfig`. The constructor takes either a JSON config string or a pre-loaded POJO. For local hosts that want to walk up the filesystem looking for `malloy-config.json`, use `discoverConfig()` from `@malloydata/malloy` to get a POJO + ceiling URL, then pass them in:
 
 ```typescript
 import '@malloydata/malloy-connections';  // registers all backends
-import {Runtime, MalloyConfig} from '@malloydata/malloy';
+import {
+  Runtime,
+  MalloyConfig,
+  contextOverlay,
+  discoverConfig,
+} from '@malloydata/malloy';
 
-const config = new MalloyConfig(urlReader, configURL);
-await config.load();  // reads config JSON + manifest
+// Discover and load the config (browser-safe via URLReader).
+const discovered = await discoverConfig(startURL, ceilingURL, urlReader);
+const config = new MalloyConfig(discovered?.pojo ?? {}, {
+  config: contextOverlay({rootDirectory: ceilingURL.toString()}),
+});
+
+// Or from a JSON string (sync, no discovery):
+// const config = new MalloyConfig(configJsonText);
 
 const runtime = new Runtime({
   urlReader,
@@ -94,7 +107,7 @@ const runtime = new Runtime({
 });
 ```
 
-`MalloyConfig.connections` calls `createConnectionsFromConfig()` internally. Each access creates a fresh `LookupConnection` snapshot from the current `connectionMap`.
+`MalloyConfig` constructs the connection lookup once during `new MalloyConfig(...)` by compiling the input into a typed tree, resolving references through the overlay stack, and handing fully resolved entries to `createConnectionsFromConfig()`. The `connections` getter returns the same `LookupConnection` object across calls. Hosts that want to decorate the lookup (layering settings, session-specific behavior, fallbacks) use `config.wrapConnections(base => wrapped)` which replaces the cached lookup in place.
 
 ## Property Type System
 
@@ -144,16 +157,29 @@ All backends support `setupSQL` (text) — SQL statements run when the connectio
 ## Key Types
 
 ```typescript
-type ValueRef = {env: string};
 type JsonConfigValue = string | number | boolean | null | JsonConfigValue[] | {[key: string]: JsonConfigValue};
-type ConfigValue = string | number | boolean | ValueRef | JsonConfigValue | undefined;
 
 interface ConnectionPropertyDefinition {
   name: string;
   displayName: string;
   type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
   optional?: true;
-  default?: string;
+  // Literal default, or a single-key reference-shaped object that the
+  // MalloyConfig resolver expands against the overlay stack at
+  // includeDefaults time (e.g. {config: 'rootDirectory'}).
+  //
+  // Note: defaults only apply to auto-generated entries added by
+  // `includeDefaults: true`. A user-listed connection entry is taken as
+  // authoritative — unspecified properties stay unset, they are not
+  // back-filled from `default`. A user who writes
+  // `{duckdb: {is: 'duckdb'}}` without `includeDefaults: true` gets no
+  // workingDirectory. This asymmetry is deliberate: explicit entries
+  // should be predictable from their literal text.
+  default?:
+    | string
+    | number
+    | boolean
+    | {[source: string]: string | string[]};
   description?: string;
   fileFilters?: Record<string, string[]>;
 }
