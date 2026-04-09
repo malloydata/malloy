@@ -243,6 +243,12 @@ export class MalloyConfig {
    * Notify every connection this config has handed out that it is time to
    * release its resources, then drop them from the internal cache.
    *
+   * Most callers should use `Runtime.releaseConnections()` instead — the
+   * expected contract is one MalloyConfig per Runtime, and the runtime is
+   * the natural handle for lifecycle. This method exists because Runtime
+   * forwards to it, and for the rare case of a MalloyConfig constructed
+   * without an accompanying Runtime.
+   *
    * MalloyConfig does not own any connection resources itself — pools,
    * sockets, file handles, and in-process databases all live inside the
    * individual Connection objects. What the managed lookup owns is a cache
@@ -255,10 +261,6 @@ export class MalloyConfig {
    * nothing to release; they are skipped. Wrapping lookups installed via
    * `wrapConnections()` do not interfere — the managed lookup under the
    * wrap is the one holding the cache.
-   *
-   * Long-running hosts (Publisher, a VS Code extension tearing down a
-   * project) should call this when a config goes out of scope. One-shot
-   * CLIs can skip it; process exit will clean up.
    */
   async releaseConnections(): Promise<void> {
     await this._managedLookup.close();

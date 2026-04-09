@@ -214,6 +214,22 @@ export class Runtime {
   }
 
   /**
+   * Notify every connection this runtime's config has handed out that it
+   * is time to release its resources (pools, sockets, file handles,
+   * in-process databases). A no-op for runtimes constructed without a
+   * MalloyConfig — in that case the caller owns the connections they
+   * passed in and is responsible for closing them.
+   *
+   * The expected contract is one MalloyConfig per Runtime. Long-running
+   * hosts (Publisher, a VS Code extension tearing down a project) should
+   * call this when a runtime goes out of scope; one-shot CLIs can skip it
+   * and let process exit clean up.
+   */
+  public async releaseConnections(): Promise<void> {
+    await this._config?.releaseConnections();
+  }
+
+  /**
    * Load a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.

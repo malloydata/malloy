@@ -286,12 +286,13 @@ describe('MalloyConfig connections lifecycle', () => {
     expect(config.connections).toBe(override);
   });
 
-  it('releaseConnections() shuts down managed connections', async () => {
+  it('runtime.releaseConnections() shuts down managed connections', async () => {
     const config = new MalloyConfig(
       JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
     );
-    await config.connections.lookupConnection(tstDB);
-    await config.releaseConnections();
+    const runtime = new Runtime({config});
+    await runtime.connections.lookupConnection(tstDB);
+    await runtime.releaseConnections();
   });
 });
 
