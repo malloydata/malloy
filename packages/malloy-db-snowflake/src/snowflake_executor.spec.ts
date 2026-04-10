@@ -33,10 +33,14 @@ class SnowflakeExecutorTestSetup {
     this.executor_ = executor;
   }
 
-  async runBatch(sqlText: string): Promise<QueryData> {
+  async runBatch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
     let ret: QueryData = [];
     await (async () => {
-      const rows = await this.executor_.batch(sqlText);
+      const rows = await this.executor_.batch(sqlText, options, timeoutMs);
       return rows;
     })().then((rows: QueryData) => {
       ret = rows;
@@ -99,5 +103,37 @@ describe('db:SnowflakeExecutor', () => {
   it('verifies stream iterable', async () => {
     const rows = await db.runStreaming(query, {rowLimit: 2});
     expect(rows.length).toBe(2);
+  });
+
+  it('aborts batch immediately when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      db.runBatch('select 1 as one', {abortSignal: controller.signal})
+    ).rejects.toThrow('Query aborted');
+  });
+
+  it('aborts stream immediately when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      db.runStreaming('select 1 as one', {abortSignal: controller.signal})
+    ).rejects.toThrow('Query aborted');
+  });
+
+  it('cancels long-running batch on timeout and does not hang', async () => {
+    // Use a long-running statement so the client-side timeout triggers
+    // rather than the query finishing first.
+    const longRunningSql = 'CALL SYSTEM$WAIT(60)';
+    const start = Date.now();
+    await expect(db.runBatch(longRunningSql, {}, 500)).rejects.toBeInstanceOf(
+      Error
+    );
+    const elapsed = Date.now() - start;
+    // Should fail well before the Jest 100s timeout; give a generous upper bound.
+    expect(elapsed).toBeLessThan(30_000);
+    // Subsequent queries should still work after a timeout-induced cancel.
+    const rows = await db.runBatch('select 1 as one');
+    expect(rows.length).toBe(1);
   });
 });
