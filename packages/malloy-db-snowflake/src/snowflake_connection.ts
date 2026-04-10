@@ -71,7 +71,7 @@ export interface SnowflakeConnectionOptions {
   // Timeout for the statement
   timeoutMs?: number;
 
-  // Timeout for the variant schema sampling query (default 2 minutes)
+  // Timeout for the variant schema sampling query (default 15 seconds)
   schemaSampleTimeoutMs?: number;
 
   // SQL statements to run when a connection is acquired from the pool
@@ -331,8 +331,12 @@ export class SnowflakeConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const rowLimit = options?.rowLimit ?? this.queryOptions?.rowLimit;
-    let rows = await this.executor.batch(sql, options, this.timeoutMs);
+    const effectiveOptions: RunSQLOptions = {
+      ...this.queryOptions,
+      ...options,
+    };
+    const rowLimit = effectiveOptions.rowLimit;
+    let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
