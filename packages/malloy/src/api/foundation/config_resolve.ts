@@ -23,17 +23,36 @@ import type {ConfigOverlays} from './config_overlays';
  * `connections` uses the registry's `ConnectionConfigEntry` shape directly —
  * a resolved entry is precisely what the registry consumes, so there's no
  * reason to invent a local alias and cast across the boundary.
+ *
+ * Note: `includeDefaultConnections` is an input directive, not a resolved
+ * value — by the time `resolveConfig` returns, fabrication has already
+ * happened. It intentionally does not appear on this interface.
  */
 export interface ResolvedConfig {
   connections: Record<string, ConnectionConfigEntry>;
   manifestPath?: string;
   virtualMap?: unknown;
-  includeDefaults?: boolean;
 }
 
 /**
  * Walk a compiled tree against the overlay dict and produce a plain
- * resolved POJO. Applies `includeDefaults` if set in the compiled tree.
+ * resolved POJO.
+ *
+ * Two distinct "defaults" mechanisms, deliberately separated:
+ *
+ *   1. **Property defaults** (`applyPropertyDefaults`) — fill in missing
+ *      properties on *every* connection entry, user-listed or fabricated.
+ *      This is a uniform per-property rule; there is no asymmetry between
+ *      explicit and auto-generated entries.
+ *
+ *   2. **`includeDefaultConnections`** (`fabricateMissingConnections`) —
+ *      fabricate a bare `{is: typeName}` entry for each registered backend
+ *      not already represented. Property defaults then fill in their
+ *      properties via (1).
+ *
+ *   Order matters: fabrication runs before property defaults so that
+ *   fabricated entries pick up defaults in the same pass as user-listed
+ *   ones.
  *
  * Three unresolved-reference cases, each with different handling:
  *   1. Unknown overlay source    → warning, drop property
@@ -47,6 +66,7 @@ export function resolveConfig(
   log: LogMessage[]
 ): ResolvedConfig {
   const resolved: ResolvedConfig = {connections: {}};
+  let includeDefaultConnections = false;
 
   for (const [key, node] of Object.entries(compiled.entries)) {
     switch (key) {
@@ -66,17 +86,22 @@ export function resolveConfig(
         resolved.virtualMap = resolveNode(node, overlays, log);
         break;
       }
-      case 'includeDefaults': {
+      case 'includeDefaultConnections': {
         const v = resolveNode(node, overlays, log);
-        if (typeof v === 'boolean') resolved.includeDefaults = v;
+        if (typeof v === 'boolean') includeDefaultConnections = v;
         break;
       }
     }
   }
 
-  if (resolved.includeDefaults) {
-    applyIncludeDefaults(resolved.connections, overlays);
+  if (includeDefaultConnections) {
+    fabricateMissingConnections(resolved.connections);
   }
+
+  // Property defaults apply to every entry — user-listed and fabricated
+  // alike. This is the fix for the earlier bug where defaults only fired
+  // during fabrication, leaving explicit entries silently underconfigured.
+  applyPropertyDefaults(resolved.connections, overlays);
 
   return resolved;
 }
@@ -156,36 +181,76 @@ function resolveConnections(
 }
 
 // =============================================================================
-// includeDefaults
+// Fabrication and property defaults
 // =============================================================================
 
 /**
- * For each registered connection type not already represented in
- * `connections`, add a default entry. Property defaults are either literals
- * (pass through) or reference-shaped (resolve through the overlays, silent
- * drop if unresolved).
+ * Fabricate a bare `{is: typeName}` entry for each registered connection
+ * type not already represented in `connections`. Only runs when the
+ * `includeDefaultConnections` flag is set on the config. Property values
+ * are *not* filled in here — that is the job of `applyPropertyDefaults`,
+ * which runs unconditionally on every entry in a later pass.
+ *
+ * A user-named connection that happens to share the type name but points
+ * at a different backend is left alone.
+ *
+ * Mutates `connections` in place. Called only by `resolveConfig` on its
+ * own freshly-built object.
  */
-function applyIncludeDefaults(
-  connections: Record<string, ConnectionConfigEntry>,
-  overlays: ConfigOverlays
+function fabricateMissingConnections(
+  connections: Record<string, ConnectionConfigEntry>
 ): void {
   const presentTypes = new Set<string>();
   for (const entry of Object.values(connections)) {
     if (typeof entry.is === 'string') presentTypes.add(entry.is);
   }
   for (const typeName of getRegisteredConnectionTypes()) {
+    // `presentTypes` catches {mydb: {is: 'duckdb'}}; the name check catches
+    // {duckdb: {is: 'jsondb'}}. Both cases leave the registered `duckdb`
+    // type alone — the first because it's already represented, the second
+    // because we can't use the obvious name without clobbering.
     if (presentTypes.has(typeName)) continue;
-    // Don't clobber a user-named connection that happens to share the
-    // type name but points at a different backend.
     if (connections[typeName]) continue;
+    connections[typeName] = {is: typeName};
+  }
+}
+
+/**
+ * For every connection entry, fill in any property that the user didn't
+ * specify and whose `ConnectionPropertyDefinition` declares a `default`.
+ * Runs uniformly on both user-listed and fabricated entries — the earlier
+ * behavior of only firing during fabrication was a bug that left explicit
+ * entries silently underconfigured (e.g. a user-listed `duckdb` never
+ * picked up `workingDirectory: {config: 'rootDirectory'}`).
+ *
+ * Defaults that are reference-shaped resolve through the overlays via
+ * `resolveDefault`. Unresolved defaults are silently dropped (case 3).
+ * User-specified values are never overwritten.
+ *
+ * Interaction with inline references: if the user specified a property
+ * as a reference-shaped value that failed to resolve (e.g. `{env: 'UNSET'}`),
+ * `resolveConnections` already dropped it before we see the entry. From
+ * our perspective the property is simply absent, so the default applies —
+ * effectively turning inline references into "try this first, else fall
+ * back to the default." This is almost always what users want.
+ *
+ * Mutates `connections` in place. Called only by `resolveConfig` on its
+ * own freshly-built object.
+ */
+function applyPropertyDefaults(
+  connections: Record<string, ConnectionConfigEntry>,
+  overlays: ConfigOverlays
+): void {
+  for (const entry of Object.values(connections)) {
+    const typeName = entry.is;
+    if (typeof typeName !== 'string') continue;
     const props = getConnectionProperties(typeName) ?? [];
-    const entry: ConnectionConfigEntry = {is: typeName};
     for (const prop of props) {
       if (prop.default === undefined) continue;
+      if (entry[prop.name] !== undefined) continue;
       const v = resolveDefault(prop.default, overlays);
       if (v !== undefined) entry[prop.name] = v;
     }
-    connections[typeName] = entry;
   }
 }
 
@@ -202,8 +267,12 @@ function resolveDefault(
   const keys = Object.keys(def);
   if (keys.length !== 1) return undefined;
   const source = keys[0];
-  const raw = (def as Record<string, string | string[]>)[source];
+  const raw = (def as Record<string, unknown>)[source];
   const path = typeof raw === 'string' ? [raw] : raw;
+  // The type says `raw` is `string | string[]`, but `default` comes from
+  // registered backend definitions which are runtime-dynamic — a
+  // malformed registration would blow up inside the overlay otherwise.
+  if (!Array.isArray(path)) return undefined;
   const overlay = overlays[source];
   if (!overlay) return undefined;
   return overlay(path);

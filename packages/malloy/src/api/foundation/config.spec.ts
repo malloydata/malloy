@@ -520,15 +520,18 @@ describe('discoverConfig', () => {
   });
 });
 
-describe('MalloyConfig includeDefaults', () => {
+describe('MalloyConfig property defaults and includeDefaultConnections', () => {
   let capturedRoot: unknown;
+  let capturedFlavor: unknown;
 
   beforeEach(() => {
     capturedRoot = undefined;
+    capturedFlavor = undefined;
     registerConnectionType('refdb', {
       displayName: 'RefDB',
       factory: async (config: ConnectionConfig) => {
         capturedRoot = config['root'];
+        capturedFlavor = config['flavor'];
         return mockConnection(config.name, 'refdb-dialect');
       },
       properties: [
@@ -539,23 +542,30 @@ describe('MalloyConfig includeDefaults', () => {
           optional: true,
           default: {config: 'rootDirectory'},
         },
+        {
+          name: 'flavor',
+          displayName: 'Flavor',
+          type: 'string',
+          optional: true,
+          default: 'vanilla',
+        },
       ],
     });
   });
 
-  it('adds an entry for a registered type not present in connections', async () => {
-    const config = new MalloyConfig({includeDefaults: true});
+  it('fabricates an entry for a registered type not present in connections', async () => {
+    const config = new MalloyConfig({includeDefaultConnections: true});
     expect(config.log).toEqual([]);
-    // mockdb wasn't listed in connections, so includeDefaults adds it.
+    // mockdb wasn't listed, so fabrication adds a {is: 'mockdb'} entry.
     const conn = await config.connections.lookupConnection('mockdb');
     expect(conn.name).toBe('mockdb');
     expect(conn.dialectName).toBe('mockdb-dialect');
   });
 
-  it('does not add an entry when the type is already used', async () => {
+  it('does not fabricate when the type is already used', async () => {
     const config = new MalloyConfig({
       connections: {mydb: {is: 'mockdb'}},
-      includeDefaults: true,
+      includeDefaultConnections: true,
     });
     // mockdb is used by 'mydb', so no auto-added connection named 'mockdb'.
     await expect(
@@ -568,23 +578,64 @@ describe('MalloyConfig includeDefaults', () => {
   it('does not clobber a user-named connection that collides with a type name', async () => {
     const config = new MalloyConfig({
       connections: {mockdb: {is: 'jsondb'}},
-      includeDefaults: true,
+      includeDefaultConnections: true,
     });
     // The user's 'mockdb'-named entry (actually a jsondb) is preserved;
-    // includeDefaults must not overwrite it with a mockdb-type default.
+    // fabrication must not overwrite it with a mockdb-type default.
     const conn = await config.connections.lookupConnection('mockdb');
     expect(conn.dialectName).toBe('jsondb-dialect');
   });
 
-  it('resolves reference-shaped property defaults through the config overlays', async () => {
+  it('applies reference-shaped property defaults to fabricated entries', async () => {
     const config = new MalloyConfig(
-      {includeDefaults: true},
+      {includeDefaultConnections: true},
       {config: contextOverlay({rootDirectory: '/my/project'})}
     );
-    // refdb's `root` default is {config: 'rootDirectory'} — the resolver
-    // walks the config overlays at includeDefaults time and passes the
-    // resolved value through to the factory.
+    // refdb's `root` default is {config: 'rootDirectory'}. Fabrication
+    // creates the bare entry; applyPropertyDefaults then fills in `root`.
     await config.connections.lookupConnection('refdb');
     expect(capturedRoot).toBe('/my/project');
+  });
+
+  it('applies property defaults to user-listed entries too', async () => {
+    const config = new MalloyConfig(
+      {connections: {myref: {is: 'refdb'}}},
+      {config: contextOverlay({rootDirectory: '/my/project'})}
+    );
+    // This is the fix for the earlier bug: property defaults used to only
+    // fire during fabrication, leaving explicit entries underconfigured.
+    // A user-listed refdb with no `root` should still pick up the default.
+    await config.connections.lookupConnection('myref');
+    expect(capturedRoot).toBe('/my/project');
+  });
+
+  it('user-specified values override property defaults', async () => {
+    const config = new MalloyConfig(
+      {connections: {myref: {is: 'refdb', root: '/explicit'}}},
+      {config: contextOverlay({rootDirectory: '/my/project'})}
+    );
+    await config.connections.lookupConnection('myref');
+    expect(capturedRoot).toBe('/explicit');
+  });
+
+  it('applies literal property defaults to user-listed entries', async () => {
+    // refdb's `flavor` property has `default: 'vanilla'` — a literal, not
+    // a reference. A user-listed refdb without flavor should pick it up.
+    const config = new MalloyConfig({connections: {myref: {is: 'refdb'}}});
+    expect(config.log).toEqual([]);
+    await config.connections.lookupConnection('myref');
+    expect(capturedFlavor).toBe('vanilla');
+  });
+
+  it('silently drops unresolved reference-shaped defaults', async () => {
+    // No `rootDirectory` in the config overlay (default overlay returns
+    // undefined for everything) — refdb's `root` default resolves to
+    // undefined and the property is silently omitted, no warning in the
+    // log. The `flavor` literal default still fires independently.
+    const config = new MalloyConfig({connections: {myref: {is: 'refdb'}}});
+    expect(config.log).toEqual([]);
+    await config.connections.lookupConnection('myref');
+    expect(capturedRoot).toBeUndefined();
+    expect(capturedFlavor).toBe('vanilla');
   });
 });

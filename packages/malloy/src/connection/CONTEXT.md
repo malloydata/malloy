@@ -154,16 +154,16 @@ interface ConnectionPropertyDefinition {
   type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
   optional?: true;
   // Literal default, or a single-key reference-shaped object that the
-  // MalloyConfig resolver expands against the config overlays at
-  // includeDefaults time (e.g. {config: 'rootDirectory'}).
+  // MalloyConfig resolver expands against the config overlays
+  // (e.g. {config: 'rootDirectory'}).
   //
-  // Note: defaults only apply to auto-generated entries added by
-  // `includeDefaults: true`. A user-listed connection entry is taken as
-  // authoritative — unspecified properties stay unset, they are not
-  // back-filled from `default`. A user who writes
-  // `{duckdb: {is: 'duckdb'}}` without `includeDefaults: true` gets no
-  // workingDirectory. This asymmetry is deliberate: explicit entries
-  // should be predictable from their literal text.
+  // Defaults apply uniformly: every connection entry that doesn't specify
+  // the property gets the default, whether it was user-listed or fabricated
+  // by `includeDefaultConnections: true`. A user who writes
+  // `{duckdb: {is: 'duckdb'}}` still picks up `workingDirectory` from its
+  // default. Reference-shaped defaults that fail to resolve (unknown overlay
+  // source, or the overlay returns undefined) are silently dropped — a
+  // default is a hint, not a requirement.
   default?:
     | string
     | number

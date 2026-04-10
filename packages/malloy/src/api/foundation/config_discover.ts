@@ -104,8 +104,8 @@ async function tryReadAtLevel(
     // shop workflow is shared credentials as env refs in git, local
     // overrides with literal values outside git.
     //
-    // All other sections (virtualMap, manifestPath, includeDefaults) are
-    // replaced wholesale when present in the local file. If you want to
+    // All other sections (virtualMap, manifestPath, includeDefaultConnections)
+    // are replaced wholesale when present in the local file. If you want to
     // augment a shared virtualMap from the local file, you have to copy
     // the shared entries into the local file explicitly.
     const sharedConns = isRecord(sharedPOJO['connections'])

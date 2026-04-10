@@ -58,7 +58,7 @@ const TOP_LEVEL_SECTIONS: Record<string, SectionCompiler> = {
   connections: compileConnections,
   manifestPath: compileManifestPath,
   virtualMap: compileVirtualMap,
-  includeDefaults: compileIncludeDefaults,
+  includeDefaultConnections: compileIncludeDefaultConnections,
 };
 
 const KNOWN_TOP_LEVEL_KEYS = new Set(Object.keys(TOP_LEVEL_SECTIONS));
@@ -262,7 +262,7 @@ function compileVirtualMap(
   return {kind: 'value', value};
 }
 
-function compileIncludeDefaults(
+function compileIncludeDefaultConnections(
   value: unknown,
   _log: LogMessage[]
 ): ConfigNode | undefined {

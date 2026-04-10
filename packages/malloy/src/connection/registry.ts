@@ -29,9 +29,11 @@ export type ConnectionPropertyType =
  * Describes a single configuration property for a connection type.
  *
  * `default` accepts either a literal value or a single-key object that names an
- * overlay source: e.g. `{config: 'rootDirectory'}` or `{env: 'HOME'}`. Reference
- * defaults are resolved through the same config overlays as inline references at
- * `includeDefaults` time.
+ * overlay source: e.g. `{config: 'rootDirectory'}` or `{env: 'HOME'}`. Defaults
+ * apply uniformly to every connection entry that doesn't specify the property —
+ * both user-listed entries and entries fabricated by `includeDefaultConnections`.
+ * Reference-shaped defaults are resolved through the same config overlays as
+ * inline references.
  */
 export interface ConnectionPropertyDefinition {
   name: string;
@@ -217,8 +219,9 @@ export function createConnectionsFromConfig(
       }
 
       // Values are already resolved — the config compiler/resolver handles
-      // overlay references, default expansion, and `includeDefaults`. The
-      // registry's only job is to hand them to the factory.
+      // overlay references, property defaults, and entry fabrication via
+      // `includeDefaultConnections`. The registry's only job is to hand them
+      // to the factory.
       const connConfig: ConnectionConfig = {name: connectionName};
       for (const [key, value] of Object.entries(entry)) {
         if (key === 'is') continue;
