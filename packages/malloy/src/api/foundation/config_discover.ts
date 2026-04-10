@@ -103,35 +103,12 @@ async function tryReadAtLevel(
     tryReadJSON(localURL, urlReader),
   ]);
 
-  if (!sharedPOJO && !localPOJO) return null;
-
-  if (sharedPOJO && localPOJO) {
-    // Shallow-merge top-level keys, local wins. `connections` is the one
-    // section we deep-merge by entry name (local winning) — the documented
-    // shop workflow is shared credentials as env refs in git, local
-    // overrides with literal values outside git.
-    //
-    // All other sections (virtualMap, manifestPath, includeDefaultConnections)
-    // are replaced wholesale when present in the local file. If you want to
-    // augment a shared virtualMap from the local file, you have to copy
-    // the shared entries into the local file explicitly.
-    const sharedConns = isRecord(sharedPOJO['connections'])
-      ? sharedPOJO['connections']
-      : {};
-    const localConns = isRecord(localPOJO['connections'])
-      ? localPOJO['connections']
-      : {};
-    const merged: Record<string, unknown> = {
-      ...sharedPOJO,
-      ...localPOJO,
-      connections: {...sharedConns, ...localConns},
-    };
-    return {configURL: localURL, pojo: merged};
-  }
-
+  // Local supersedes shared entirely when both exist — no merging of any
+  // kind. The person writing a local file is responsible for including
+  // everything they need.
   if (localPOJO) return {configURL: localURL, pojo: localPOJO};
-  // Narrowed: sharedPOJO is truthy here.
-  return {configURL: sharedURL, pojo: sharedPOJO as Record<string, unknown>};
+  if (sharedPOJO) return {configURL: sharedURL, pojo: sharedPOJO};
+  return null;
 }
 
 /**

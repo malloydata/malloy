@@ -460,7 +460,7 @@ describe('discoverConfig', () => {
     ).rejects.toThrow(/Malformed JSON.*malloy-config\.json/);
   });
 
-  it('merges shared+local with local winning on connection entries', async () => {
+  it('local supersedes shared entirely when both exist', async () => {
     const reader = mockReader({
       'file:///project/malloy-config.json': {
         connections: {
@@ -482,12 +482,13 @@ describe('discoverConfig', () => {
     );
     expect(config).not.toBeNull();
     expect(config?.log).toEqual([]);
-    // All three connections are reachable — local's `both` wins.
-    await config!.connections.lookupConnection('shared_only');
+    // Only local's connections are present — shared is not merged in.
     await config!.connections.lookupConnection('local_only');
     await config!.connections.lookupConnection('both');
-    // When both files exist at the same level, manifestURL hangs off the
-    // local file's directory (same directory as shared here).
+    await expect(
+      config!.connections.lookupConnection('shared_only')
+    ).rejects.toThrow();
+    // manifestURL hangs off the local file's directory.
     expect(config?.manifestURL?.toString()).toBe(
       'file:///project/MANIFESTS/malloy-manifest.json'
     );
