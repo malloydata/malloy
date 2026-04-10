@@ -181,6 +181,7 @@ export class MalloyConfig {
 
   private _connections: LookupConnection<Connection>;
   private readonly _managedLookup: ManagedConnectionLookup;
+  private readonly _overlays: ConfigOverlays;
 
   constructor(source: string);
   constructor(pojo: object, overlays?: ConfigOverlays);
@@ -224,6 +225,7 @@ export class MalloyConfig {
     });
     this._connections = this._managedLookup;
 
+    this._overlays = mergedOverlays;
     this.virtualMap = toVirtualMap(resolved.virtualMap);
     this.manifestPath = resolved.manifestPath;
     this.manifestURL = computeManifestURL(
@@ -283,6 +285,20 @@ export class MalloyConfig {
    */
   async releaseConnections(): Promise<void> {
     await this._managedLookup.close();
+  }
+
+  /**
+   * Query a value from the overlays used to resolve this config.
+   *
+   * Returns the value the named overlay produces for the given path,
+   * or `undefined` if the overlay doesn't exist or the path has no value.
+   *
+   *   config.readOverlay('config', 'rootDirectory')
+   *   config.readOverlay('config', 'configURL')
+   *   config.readOverlay('env', 'PG_PASSWORD')
+   */
+  readOverlay(overlayName: string, ...path: string[]): unknown {
+    return this._overlays[overlayName]?.(path);
   }
 }
 

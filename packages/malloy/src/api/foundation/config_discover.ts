@@ -26,6 +26,13 @@ const LOCAL_FILENAME = 'malloy-config-local.json';
  * `MANIFESTS/malloy-manifest.json` relative to the file the config came
  * from (not the project root).
  *
+ * Callers can inspect what discovery found via `readOverlay` on the
+ * returned config:
+ *
+ *   const config = await discoverConfig(startURL, ceilingURL, urlReader);
+ *   config?.readOverlay('config', 'rootDirectory')  // the ceiling URL
+ *   config?.readOverlay('config', 'configURL')       // the matched file URL
+ *
  * Hosts that want to layer additional overlays on top of discovery's
  * `config` overlay (e.g. a `session` overlay for per-request data) pass
  * them via `extraOverlays`. The merge is plain object-spread: extras with
