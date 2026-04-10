@@ -264,7 +264,9 @@ export async function build(opts: BuildOptions): Promise<void> {
         if (existingEntry) {
           manifest.touch(buildId);
 
-          console.log(`  Exists: ${persistSource.name} -> ${existingEntry.tableName}`);
+          console.log(
+            `  Exists: ${persistSource.name} -> ${existingEntry.tableName}`
+          );
           logEntries.push({
             action: 'exists',
             buildId,
