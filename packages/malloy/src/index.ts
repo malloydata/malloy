@@ -192,6 +192,10 @@ export {
   CacheManager,
   Manifest,
   MalloyConfig,
+  envOverlay,
+  contextOverlay,
+  defaultConfigOverlays,
+  discoverConfig,
 } from './api/foundation';
 export type {
   PreparedQuery,
@@ -220,6 +224,7 @@ export type {
   DateField,
   TimestampField,
 } from './api/foundation';
+export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,
