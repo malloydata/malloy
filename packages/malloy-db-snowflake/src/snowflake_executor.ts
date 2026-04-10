@@ -168,6 +168,10 @@ export class SnowflakeExecutor {
     options?: RunSQLOptions,
     timeoutMs?: number
   ): Promise<QueryData> {
+    // Fail fast if already aborted before we even start executing
+    if (options?.abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
     let _statement: RowStatement | undefined;
     const cancel = () => {
       _statement?.cancel();
@@ -275,99 +279,117 @@ export class SnowflakeExecutor {
     sqlText: string,
     options?: RunSQLOptions
   ): Promise<AsyncIterableIterator<QueryRecord>> {
+    // Fail fast if already aborted before we acquire a connection
+    if (options?.abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
+
     const pool: Pool<Connection> = this.pool_;
-    return await pool.acquire().then(async (conn: Connection) => {
+    const conn: Connection = await pool.acquire();
+
+    const releaseOnce = (() => {
       let released = false;
-      const releaseOnce = () => {
+      return () => {
         if (!released) {
           released = true;
           pool.release(conn).catch(() => {});
         }
       };
+    })();
 
-      try {
-        await this.ensureSessionInitialized(conn);
-      } catch (initErr) {
-        releaseOnce();
-        throw initErr;
-      }
+    try {
+      await this.ensureSessionInitialized(conn);
+    } catch (err) {
+      releaseOnce();
+      throw err;
+    }
 
-      return new Promise((resolve, reject) => {
-        const cancel = () => {
-          statement?.cancel();
-        };
-        options?.abortSignal?.addEventListener('abort', cancel);
+    // Check again after the awaits — signal may have fired while we were blocked
+    if (options?.abortSignal?.aborted) {
+      releaseOnce();
+      throw new Error('Query aborted');
+    }
 
-        const statement = conn.execute({
-          sqlText,
-          streamResult: true,
-          complete: (err: SnowflakeError | undefined, stmt: RowStatement) => {
-            if (err) {
-              options?.abortSignal?.removeEventListener('abort', cancel);
+    return new Promise((resolve, reject) => {
+      conn.execute({
+        sqlText,
+        streamResult: true,
+        complete: (err: SnowflakeError | undefined, _stmt: RowStatement) => {
+          if (err) {
+            releaseOnce();
+            reject(err);
+            return;
+          }
+
+          const stream: Readable = _stmt.streamRows();
+
+          function streamSnowflake(
+            onError: (error: Error) => void,
+            onData: (data: QueryRecord) => void,
+            onEnd: () => void
+          ) {
+            let streamEnded = false;
+
+            function handleEnd() {
+              if (streamEnded) return;
+              streamEnded = true;
+              stream.removeListener('data', handleData);
+              stream.removeListener('error', handleError);
+              stream.removeListener('end', handleEnd);
+              // Stop server-side streaming if still active
+              if (!stream.destroyed) {
+                stream.destroy();
+              }
+              onEnd();
               releaseOnce();
-              reject(err);
-              return;
             }
 
-            const stream: Readable = stmt.streamRows();
-            function streamSnowflake(
-              onError: (error: Error) => void,
-              onData: (data: QueryRecord) => void,
-              onEnd: () => void
-            ) {
-              let streamEnded = false;
-              function handleEnd(cancelled = false) {
-                if (streamEnded) {
-                  return;
-                }
-                streamEnded = true;
-                options?.abortSignal?.removeEventListener('abort', onAbort);
-                if (cancelled) {
-                  stmt.cancel();
-                }
+            function handleError(error: Error) {
+              if (streamEnded) return;
+              streamEnded = true;
+              stream.removeListener('data', handleData);
+              stream.removeListener('end', handleEnd);
+              if (!stream.destroyed) {
                 stream.destroy();
-                onEnd();
-                releaseOnce();
               }
-
-              function onAbort() {
-                handleEnd(true);
-              }
-
-              options?.abortSignal?.addEventListener('abort', onAbort);
-
-              let index = 0;
-              function handleData(this: Readable, row: QueryRecord) {
-                if (streamEnded) {
-                  return;
-                }
-                onData(row);
-                index += 1;
-                if (
-                  options?.rowLimit !== undefined &&
-                  index >= options.rowLimit
-                ) {
-                  handleEnd(true);
-                }
-              }
-              stream.on('error', streamErr => {
-                if (streamEnded) {
-                  return;
-                }
-                streamEnded = true;
-                options?.abortSignal?.removeEventListener('abort', onAbort);
-                stream.destroy();
-                releaseOnce();
-                onError(streamErr);
-              });
-              stream.on('data', handleData);
-              stream.on('end', handleEnd);
+              onError(error);
+              releaseOnce();
             }
-            // Remove the pre-stream abort listener; streamSnowflake installs its own.
-            options?.abortSignal?.removeEventListener('abort', cancel);
-            return resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
-          },
-        });
+
+            function handleData(this: Readable, row: QueryRecord) {
+              if (streamEnded) return;
+              onData(row);
+              if (
+                options?.rowLimit !== undefined &&
+                ++index >= options.rowLimit
+              ) {
+                handleEnd();
+              }
+            }
+
+            let index = 0;
+            stream.on('error', handleError);
+            stream.on('data', handleData);
+            stream.on('end', handleEnd);
+
+            // Wire abort signal to cancel the stream
+            if (options?.abortSignal) {
+              const onAbort = () => {
+                _stmt.cancel();
+                handleEnd();
+              };
+              if (options.abortSignal.aborted) {
+                onAbort();
+              } else {
+                options.abortSignal.addEventListener('abort', onAbort, {
+                  once: true,
+                });
+              }
+            }
+          }
+
+          resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
+        },
       });
     });
   }

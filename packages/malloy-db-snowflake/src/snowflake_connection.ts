@@ -96,7 +96,7 @@ class SnowField {
   }
   walk(_path: PathChain, _fieldType: string): void {
     throw new Error(
-      'SNOWWFLAKE SCHEMA PARSE ERROR: Should not walk through fields'
+      'SNOWFLAKE SCHEMA PARSE ERROR: Should not walk through fields'
     );
   }
   static make(name: string, fieldType: string, d: Dialect) {
