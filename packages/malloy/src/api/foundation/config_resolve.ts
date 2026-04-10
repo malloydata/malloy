@@ -13,7 +13,7 @@ import type {
   ConnectionPropertyDefinition,
 } from '../../connection/registry';
 import type {ConfigDict, ConfigNode, ConfigReference} from './config_compile';
-import type {OverlayStack} from './config_overlays';
+import type {ConfigOverlays} from './config_overlays';
 
 /**
  * The shape the class body consumes: a plain POJO with the same top-level
@@ -32,7 +32,7 @@ export interface ResolvedConfig {
 }
 
 /**
- * Walk a compiled tree against the overlay stack and produce a plain
+ * Walk a compiled tree against the overlay dict and produce a plain
  * resolved POJO. Applies `includeDefaults` if set in the compiled tree.
  *
  * Three unresolved-reference cases, each with different handling:
@@ -43,7 +43,7 @@ export interface ResolvedConfig {
  */
 export function resolveConfig(
   compiled: ConfigDict,
-  stack: OverlayStack,
+  overlays: ConfigOverlays,
   log: LogMessage[]
 ): ResolvedConfig {
   const resolved: ResolvedConfig = {connections: {}};
@@ -52,22 +52,22 @@ export function resolveConfig(
     switch (key) {
       case 'connections': {
         if (node.kind !== 'dict') break;
-        resolved.connections = resolveConnections(node, stack, log);
+        resolved.connections = resolveConnections(node, overlays, log);
         break;
       }
       case 'manifestPath': {
-        const v = resolveNode(node, stack, log);
+        const v = resolveNode(node, overlays, log);
         if (typeof v === 'string') resolved.manifestPath = v;
         break;
       }
       case 'virtualMap': {
         // virtualMap is literal data — the class body converts it to the
         // runtime Map-of-Maps representation.
-        resolved.virtualMap = resolveNode(node, stack, log);
+        resolved.virtualMap = resolveNode(node, overlays, log);
         break;
       }
       case 'includeDefaults': {
-        const v = resolveNode(node, stack, log);
+        const v = resolveNode(node, overlays, log);
         if (typeof v === 'boolean') resolved.includeDefaults = v;
         break;
       }
@@ -75,7 +75,7 @@ export function resolveConfig(
   }
 
   if (resolved.includeDefaults) {
-    applyIncludeDefaults(resolved.connections, stack);
+    applyIncludeDefaults(resolved.connections, overlays);
   }
 
   return resolved;
@@ -92,18 +92,18 @@ export function resolveConfig(
  */
 function resolveNode(
   node: ConfigNode,
-  stack: OverlayStack,
+  overlays: ConfigOverlays,
   log: LogMessage[]
 ): unknown {
   switch (node.kind) {
     case 'value':
       return node.value;
     case 'reference':
-      return resolveReference(node, stack, log);
+      return resolveReference(node, overlays, log);
     case 'dict': {
       const out: Record<string, unknown> = {};
       for (const [k, child] of Object.entries(node.entries)) {
-        const r = resolveNode(child, stack, log);
+        const r = resolveNode(child, overlays, log);
         if (r !== undefined) out[k] = r;
       }
       return out;
@@ -113,10 +113,10 @@ function resolveNode(
 
 function resolveReference(
   ref: ConfigReference,
-  stack: OverlayStack,
+  overlays: ConfigOverlays,
   log: LogMessage[]
 ): unknown {
-  const overlay = stack[ref.source];
+  const overlay = overlays[ref.source];
   if (!overlay) {
     // Case 1: unknown overlay source — warn and drop.
     log.push({
@@ -136,13 +136,13 @@ function resolveReference(
 
 function resolveConnections(
   node: ConfigDict,
-  stack: OverlayStack,
+  overlays: ConfigOverlays,
   log: LogMessage[]
 ): Record<string, ConnectionConfigEntry> {
   const result: Record<string, ConnectionConfigEntry> = {};
   for (const [name, connNode] of Object.entries(node.entries)) {
     if (connNode.kind !== 'dict') continue;
-    const resolved = resolveNode(connNode, stack, log) as Record<
+    const resolved = resolveNode(connNode, overlays, log) as Record<
       string,
       unknown
     >;
@@ -162,12 +162,12 @@ function resolveConnections(
 /**
  * For each registered connection type not already represented in
  * `connections`, add a default entry. Property defaults are either literals
- * (pass through) or reference-shaped (resolve through the stack, silent
+ * (pass through) or reference-shaped (resolve through the overlays, silent
  * drop if unresolved).
  */
 function applyIncludeDefaults(
   connections: Record<string, ConnectionConfigEntry>,
-  stack: OverlayStack
+  overlays: ConfigOverlays
 ): void {
   const presentTypes = new Set<string>();
   for (const entry of Object.values(connections)) {
@@ -182,7 +182,7 @@ function applyIncludeDefaults(
     const entry: ConnectionConfigEntry = {is: typeName};
     for (const prop of props) {
       if (prop.default === undefined) continue;
-      const v = resolveDefault(prop.default, stack);
+      const v = resolveDefault(prop.default, overlays);
       if (v !== undefined) entry[prop.name] = v;
     }
     connections[typeName] = entry;
@@ -191,12 +191,12 @@ function applyIncludeDefaults(
 
 /**
  * Resolve a property `default` field. Literals pass through; single-key
- * reference-shaped objects are resolved through the overlay stack. Case 3:
+ * reference-shaped objects are resolved through the overlays. Case 3:
  * an unresolved default is a hint, not a requirement — always silent drop.
  */
 function resolveDefault(
   def: NonNullable<ConnectionPropertyDefinition['default']>,
-  stack: OverlayStack
+  overlays: ConfigOverlays
 ): unknown {
   if (typeof def !== 'object') return def;
   const keys = Object.keys(def);
@@ -204,7 +204,7 @@ function resolveDefault(
   const source = keys[0];
   const raw = (def as Record<string, string | string[]>)[source];
   const path = typeof raw === 'string' ? [raw] : raw;
-  const overlay = stack[source];
+  const overlay = overlays[source];
   if (!overlay) return undefined;
   return overlay(path);
 }

@@ -53,11 +53,11 @@ Each registered backend provides:
 }
 ```
 
-The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against an **overlay stack** during construction, so the registry and connection factories only ever see plain resolved values. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent.
+The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** during construction, so the registry and connection factories only ever see plain resolved values. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent.
 
 Properties declared as `type: 'json'` are never interpreted as references — the entire value passes through literally. This is the security invariant that keeps structured config (SSL options, headers, session objects) from ever invoking overlay lookups.
 
-See `packages/malloy/src/api/foundation/config_overlays.ts` for the overlay stack type and the built-in `env` + `config` overlays.
+See `packages/malloy/src/api/foundation/config_overlays.ts` for the `ConfigOverlays` type and the built-in `env` + `config` overlays.
 
 ## API Functions
 
@@ -80,34 +80,23 @@ See `packages/malloy/src/api/foundation/config_overlays.ts` for the overlay stac
 
 ### Usage Pattern
 
-The standard way to get connections is through `MalloyConfig`. The constructor takes either a JSON config string or a pre-loaded POJO. For local hosts that want to walk up the filesystem looking for `malloy-config.json`, use `discoverConfig()` from `@malloydata/malloy` to get a POJO + ceiling URL, then pass them in:
+The standard way to get connections is through `MalloyConfig`. The constructor takes either a JSON config string or a pre-loaded POJO. For local hosts that want to walk up the filesystem looking for `malloy-config.json`, use `discoverConfig()` from `@malloydata/malloy` — it returns a fully-constructed `MalloyConfig` with the `config` overlay already wired:
 
 ```typescript
 import '@malloydata/malloy-connections';  // registers all backends
-import {
-  Runtime,
-  MalloyConfig,
-  contextOverlay,
-  discoverConfig,
-} from '@malloydata/malloy';
+import {Runtime, MalloyConfig, discoverConfig} from '@malloydata/malloy';
 
-// Discover and load the config (browser-safe via URLReader).
-const discovered = await discoverConfig(startURL, ceilingURL, urlReader);
-const config = new MalloyConfig(discovered?.pojo ?? {}, {
-  config: contextOverlay({rootDirectory: ceilingURL.toString()}),
-});
+// Discover and build the config (browser-safe via URLReader).
+const config = await discoverConfig(startURL, ceilingURL, urlReader);
+if (!config) throw new Error('No malloy-config.json found');
 
-// Or from a JSON string (sync, no discovery):
+// Or from a JSON string (sync, no discovery, no overlays):
 // const config = new MalloyConfig(configJsonText);
 
-const runtime = new Runtime({
-  urlReader,
-  connections: config.connections,
-  buildManifest: config.manifest.buildManifest,
-});
+const runtime = new Runtime({config, urlReader});
 ```
 
-`MalloyConfig` constructs the connection lookup once during `new MalloyConfig(...)` by compiling the input into a typed tree, resolving references through the overlay stack, and handing fully resolved entries to `createConnectionsFromConfig()`. The `connections` getter returns the same `LookupConnection` object across calls. Hosts that want to decorate the lookup (layering settings, session-specific behavior, fallbacks) use `config.wrapConnections(base => wrapped)` which replaces the cached lookup in place.
+`Runtime` pulls `connections` off the config and lazily reads any build manifest from `config.manifestURL` on first persistence query. `MalloyConfig` constructs the connection lookup once during `new MalloyConfig(...)` by compiling the input into a typed tree, resolving references through the config overlays, and handing fully resolved entries to `createConnectionsFromConfig()`. The `connections` getter returns the same `LookupConnection` object across calls. Hosts that want to decorate the lookup (layering settings, session-specific behavior, fallbacks) use `config.wrapConnections(base => wrapped)` which replaces the cached lookup in place.
 
 ## Property Type System
 
@@ -165,7 +154,7 @@ interface ConnectionPropertyDefinition {
   type: 'string' | 'number' | 'boolean' | 'password' | 'secret' | 'file' | 'json' | 'text';
   optional?: true;
   // Literal default, or a single-key reference-shaped object that the
-  // MalloyConfig resolver expands against the overlay stack at
+  // MalloyConfig resolver expands against the config overlays at
   // includeDefaults time (e.g. {config: 'rootDirectory'}).
   //
   // Note: defaults only apply to auto-generated entries added by

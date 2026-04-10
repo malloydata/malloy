@@ -15,8 +15,8 @@ import type {
 } from '../../model/malloy_types';
 import {compileConfig} from './config_compile';
 import {resolveConfig} from './config_resolve';
-import {defaultOverlayStack} from './config_overlays';
-import type {OverlayStack} from './config_overlays';
+import {defaultConfigOverlays} from './config_overlays';
+import type {ConfigOverlays} from './config_overlays';
 
 /**
  * In-memory manifest store. Reads, updates, and serializes manifest data.
@@ -126,16 +126,22 @@ export class Manifest {
 
 /**
  * A resolved Malloy runtime configuration. The constructor takes either a
- * JSON string (legacy/compat) or a POJO plus an optional overlay stack,
- * compiles the input into a typed tree, resolves all overlay references,
- * and builds the connection lookup via the connection registry.
+ * JSON string (legacy/compat) or a POJO plus an optional `ConfigOverlays`
+ * dict, compiles the input into a typed tree, resolves all overlay
+ * references, and builds the connection lookup via the connection registry.
  *
  * After construction:
  *   - `connections` — the `LookupConnection` runtime consumes. Starts as the
  *     lookup created from the resolved connections; `wrapConnections()` replaces
  *     it with a wrapped version for host-specific behavior.
- *   - `manifest` — the mutable manifest (builders call update/touch/loadText).
- *   - `virtualMap` / `manifestPath` — extracted from the POJO as-is.
+ *   - `virtualMap` — extracted from the POJO as-is.
+ *   - `manifestPath` — extracted from the POJO as-is (the raw string).
+ *   - `manifestURL` — resolved URL of `malloy-manifest.json`, computed from
+ *     `manifestPath` + the `configURL` carried on the `config` overlay (if
+ *     any). `undefined` when no `configURL` is available. Runtime uses this
+ *     to lazily read the manifest on the first persistence query. Builders
+ *     that want to construct or mutate manifest state use the standalone
+ *     `Manifest` class directly — they don't go through MalloyConfig.
  *   - `log` — validation warnings and overlay-resolution warnings.
  *
  * Typical usage:
@@ -147,7 +153,7 @@ export class Manifest {
  *   // From a JSON string:
  *   const config = new MalloyConfig(configText);
  *
- *   // With a host-supplied overlay stack (local hosts after discovery):
+ *   // With host-supplied overlays (local hosts after discovery):
  *   const config = new MalloyConfig(pojo, {
  *     config: contextOverlay({rootDirectory: ceilingURL}),
  *   });
@@ -161,17 +167,24 @@ export class Manifest {
  * sync string form after reading the file.
  */
 export class MalloyConfig {
-  readonly manifest: Manifest;
   readonly virtualMap?: VirtualMap;
   readonly manifestPath?: string;
+  /**
+   * Resolved URL of the manifest file (`malloy-manifest.json`), if a
+   * `configURL` was provided in the `config` overlay. Computed once in the
+   * constructor from `manifestPath` (default `'MANIFESTS'`) joined to
+   * `configURL`. Stays `undefined` for callers that didn't supply a
+   * `configURL` — Runtime treats that as "no auto-read."
+   */
+  readonly manifestURL?: URL;
   readonly log: readonly LogMessage[];
 
   private _connections: LookupConnection<Connection>;
   private readonly _managedLookup: ManagedConnectionLookup;
 
   constructor(source: string);
-  constructor(pojo: object, stack?: OverlayStack);
-  constructor(sourceOrPojo: string | object, stack?: OverlayStack) {
+  constructor(pojo: object, overlays?: ConfigOverlays);
+  constructor(sourceOrPojo: string | object, overlays?: ConfigOverlays) {
     const log: LogMessage[] = [];
 
     // Normalize input to a POJO.
@@ -195,11 +208,14 @@ export class MalloyConfig {
     const compiled = compileConfig(pojo);
     log.push(...compiled.log);
 
-    // Resolve against the merged overlay stack. Entries from the passed
-    // stack replace same-named entries in the default stack; anything new
+    // Resolve against the merged config overlays. Entries from the passed
+    // overlays replace same-named entries in the defaults; anything new
     // is added.
-    const mergedStack: OverlayStack = {...defaultOverlayStack(), ...stack};
-    const resolved = resolveConfig(compiled.compiled, mergedStack, log);
+    const mergedOverlays: ConfigOverlays = {
+      ...defaultConfigOverlays(),
+      ...overlays,
+    };
+    const resolved = resolveConfig(compiled.compiled, mergedOverlays, log);
 
     // Hand fully-resolved connection entries to the registry — factories
     // never see raw references.
@@ -208,9 +224,12 @@ export class MalloyConfig {
     });
     this._connections = this._managedLookup;
 
-    this.manifest = new Manifest();
     this.virtualMap = toVirtualMap(resolved.virtualMap);
     this.manifestPath = resolved.manifestPath;
+    this.manifestURL = computeManifestURL(
+      resolved.manifestPath,
+      mergedOverlays
+    );
     this.log = log;
   }
 
@@ -270,6 +289,64 @@ export class MalloyConfig {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/**
+ * Default directory (relative to the config file) where the manifest lives
+ * when `manifestPath` is not explicitly set. ALL CAPS signals a generated
+ * artifact, not a hand-authored file. No dot prefix — visible and
+ * discoverable in `ls`.
+ */
+const DEFAULT_MANIFEST_PATH = 'MANIFESTS';
+
+/**
+ * The filename inside the manifest directory.
+ */
+const MANIFEST_FILENAME = 'malloy-manifest.json';
+
+/**
+ * Compute the resolved URL of the manifest file from the raw `manifestPath`
+ * string and the merged overlays (which may carry a `configURL`).
+ *
+ * Rules:
+ *   - If there's no `configURL` in the `config` overlay → undefined.
+ *   - `manifestPath` defaults to `'MANIFESTS'`.
+ *   - `new URL(manifestPath, configURL)` handles three shapes uniformly:
+ *       "MANIFESTS"               → relative to configURL's directory
+ *       "../shared/MANIFESTS"     → parent-relative
+ *       "/project/malloy/MANIFESTS" → absolute path within configURL's scheme
+ *       "file:///elsewhere/stuff" → full URL, ignores configURL base
+ *   - A trailing slash is forced onto the directory portion so that the
+ *     final `new URL(MANIFEST_FILENAME, dir)` joins correctly.
+ */
+function computeManifestURL(
+  manifestPath: string | undefined,
+  overlays: ConfigOverlays
+): URL | undefined {
+  const configOverlay = overlays['config'];
+  const configURLValue = configOverlay?.(['configURL']);
+  if (typeof configURLValue !== 'string') return undefined;
+
+  let configURL: URL;
+  try {
+    configURL = new URL(configURLValue);
+  } catch {
+    return undefined;
+  }
+
+  const path = manifestPath ?? DEFAULT_MANIFEST_PATH;
+  let manifestRoot: URL;
+  try {
+    manifestRoot = new URL(path, configURL);
+  } catch {
+    return undefined;
+  }
+
+  const asString = manifestRoot.toString();
+  const dirURL = asString.endsWith('/')
+    ? manifestRoot
+    : new URL(asString + '/');
+  return new URL(MANIFEST_FILENAME, dirURL);
+}
 
 /**
  * Convert the raw virtualMap POJO shape (a dict of dicts of strings) into

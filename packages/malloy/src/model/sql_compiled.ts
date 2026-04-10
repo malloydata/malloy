@@ -104,8 +104,11 @@ function expandPersistableSource(
 
       // Not in manifest
       if (buildManifest.strict) {
+        const base = `Persist source '${source.sourceID}' not found in manifest (buildId: ${buildId})`;
         throw new Error(
-          `Persist source '${source.sourceID}' not found in manifest (buildId: ${buildId})`
+          buildManifest.loadError
+            ? `${base}\n  ${buildManifest.loadError}`
+            : base
         );
       }
     }

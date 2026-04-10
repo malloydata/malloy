@@ -4,37 +4,45 @@
  */
 
 import type {URLReader} from '../../runtime_types';
+import {MalloyConfig} from './config';
+import {contextOverlay} from './config_overlays';
+import type {ConfigOverlays} from './config_overlays';
 
 const SHARED_FILENAME = 'malloy-config.json';
 const LOCAL_FILENAME = 'malloy-config-local.json';
 
-export interface DiscoveredConfig {
-  /** The URL of the config file that was found. If both shared and local
-   * files were found at the same level, this is the local URL. */
-  configURL: URL;
-  /** The parsed POJO. If both shared and local were found, `connections`
-   * is shallow-merged with the local file's entries winning. */
-  pojo: Record<string, unknown>;
-}
-
 /**
  * Walk upward from `startURL` toward `ceilingURL`, looking for a
  * `malloy-config.json` (or `malloy-config-local.json`) at each directory
- * level. Returns the first match, or `null` if no config file is found
- * between `startURL` and `ceilingURL` (inclusive).
+ * level. On a hit, build a `MalloyConfig` from the parsed POJO with a
+ * `config` overlay carrying `rootDirectory` (the ceiling) and `configURL`
+ * (the actual location of the file that matched). Returns `null` if no
+ * config file is found between `startURL` and `ceilingURL` (inclusive).
  *
  * `ceilingURL` is the host-supplied project root — discovery stops at that
  * level, and it is what `config.rootDirectory` binds to in the typical
- * overlay wiring. The config file's actual location is incidental and is
- * exposed separately as `configURL` for tools that care.
+ * overlay wiring. The matched config file's actual location rides on
+ * `config.configURL` so that `MalloyConfig.manifestURL` can resolve
+ * `MANIFESTS/malloy-manifest.json` relative to the file the config came
+ * from (not the project root).
+ *
+ * Hosts that want to layer additional overlays on top of discovery's
+ * `config` overlay (e.g. a `session` overlay for per-request data) pass
+ * them via `extraOverlays`. The merge is plain object-spread: extras with
+ * the same key as discovery's entries replace them wholesale. In
+ * particular, passing `{config: myConfigOverlay}` will clobber the
+ * `rootDirectory` + `configURL` discovery built — callers who want to
+ * extend discovery's `config` should read the keys back off and re-include
+ * them, or skip `discoverConfig` and build `MalloyConfig` directly.
  *
  * URL-based, so it works in browser-safe environments through `URLReader`.
  */
 export async function discoverConfig(
   startURL: URL,
   ceilingURL: URL,
-  urlReader: URLReader
-): Promise<DiscoveredConfig | null> {
+  urlReader: URLReader,
+  extraOverlays?: ConfigOverlays
+): Promise<MalloyConfig | null> {
   // Normalize both to directory form.
   let current = new URL('.', startURL);
   const ceiling = new URL('.', ceilingURL);
@@ -45,7 +53,7 @@ export async function discoverConfig(
 
   for (;;) {
     const found = await tryReadAtLevel(current, urlReader);
-    if (found) return found;
+    if (found) return buildConfig(found, ceilingURL, extraOverlays);
     if (current.toString() === ceiling.toString()) break;
     const parent = new URL('..', current);
     // URL scheme roots (`file:///`, `http://host/`) return themselves when
@@ -56,10 +64,30 @@ export async function discoverConfig(
   return null;
 }
 
+interface DiscoveryHit {
+  configURL: URL;
+  pojo: Record<string, unknown>;
+}
+
+function buildConfig(
+  hit: DiscoveryHit,
+  ceilingURL: URL,
+  extraOverlays: ConfigOverlays | undefined
+): MalloyConfig {
+  const discoveryOverlays: ConfigOverlays = {
+    config: contextOverlay({
+      rootDirectory: ceilingURL.toString(),
+      configURL: hit.configURL.toString(),
+    }),
+  };
+  const merged: ConfigOverlays = {...discoveryOverlays, ...extraOverlays};
+  return new MalloyConfig(hit.pojo, merged);
+}
+
 async function tryReadAtLevel(
   dirURL: URL,
   urlReader: URLReader
-): Promise<DiscoveredConfig | null> {
+): Promise<DiscoveryHit | null> {
   const sharedURL = new URL(SHARED_FILENAME, dirURL);
   const localURL = new URL(LOCAL_FILENAME, dirURL);
 

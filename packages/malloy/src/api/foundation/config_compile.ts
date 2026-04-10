@@ -19,7 +19,7 @@ import type {
 
 /**
  * A compiled config node. The compiler produces a tree of these; the resolver
- * walks the tree against an overlay stack and produces a plain POJO.
+ * walks the tree against a ConfigOverlays dict and produces a plain POJO.
  */
 export type ConfigNode = ConfigDict | ConfigLiteral | ConfigReference;
 

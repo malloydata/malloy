@@ -218,11 +218,100 @@ describe('MalloyConfig constructor forms', () => {
       'malloytest.flights'
     );
   });
+});
 
-  it('exposes an empty Manifest after construction', () => {
+describe('MalloyConfig manifestURL resolution', () => {
+  function configWith(
+    pojo: object,
+    configURL: string | undefined
+  ): MalloyConfig {
+    return new MalloyConfig(
+      pojo,
+      configURL === undefined
+        ? undefined
+        : {config: contextOverlay({configURL})}
+    );
+  }
+
+  it('defaults to MANIFESTS/ next to the config file', () => {
+    const config = configWith(
+      {},
+      'file:///home/user/project/malloy-config.json'
+    );
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///home/user/project/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('honors an explicit relative manifestPath', () => {
+    const config = configWith(
+      {manifestPath: 'build/MANIFESTS'},
+      'file:///home/user/project/malloy-config.json'
+    );
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///home/user/project/build/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('honors a parent-relative manifestPath', () => {
+    const config = configWith(
+      {manifestPath: '../shared/MANIFESTS'},
+      'file:///home/user/project/malloy-config.json'
+    );
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///home/user/shared/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('honors an absolute filesystem-style manifestPath', () => {
+    const config = configWith(
+      {manifestPath: '/project/malloy/MANIFESTS'},
+      'file:///home/user/whatever/malloy-config.json'
+    );
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///project/malloy/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('honors a full URL manifestPath, ignoring the configURL base', () => {
+    const config = configWith(
+      {manifestPath: 'file:///elsewhere/stuff'},
+      'file:///home/user/project/malloy-config.json'
+    );
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///elsewhere/stuff/malloy-manifest.json'
+    );
+  });
+
+  it('handles a trailing slash on manifestPath', () => {
+    const config = configWith(
+      {manifestPath: 'MANIFESTS/'},
+      'file:///home/user/project/malloy-config.json'
+    );
+    expect(config.manifestURL?.toString()).toBe(
+      'file:///home/user/project/MANIFESTS/malloy-manifest.json'
+    );
+  });
+
+  it('is undefined when no configURL is in the overlays', () => {
     const config = new MalloyConfig({});
-    expect(config.manifest).toBeDefined();
-    expect(config.manifest.buildManifest.entries).toEqual({});
+    expect(config.manifestURL).toBeUndefined();
+  });
+
+  it('is undefined when overlays are present but configURL is missing', () => {
+    const config = new MalloyConfig(
+      {},
+      {config: contextOverlay({rootDirectory: 'file:///home/user/project/'})}
+    );
+    expect(config.manifestURL).toBeUndefined();
+  });
+
+  it('keeps manifestPath as the raw string for app inspection', () => {
+    const config = configWith(
+      {manifestPath: 'build/MANIFESTS'},
+      'file:///home/user/project/malloy-config.json'
+    );
+    expect(config.manifestPath).toBe('build/MANIFESTS');
   });
 });
 
@@ -317,28 +406,45 @@ describe('discoverConfig', () => {
         connections: {mydb: {is: 'mockdb'}},
       },
     });
-    const result = await discoverConfig(
+    const config = await discoverConfig(
       new URL('file:///project/sub/deep/'),
       new URL('file:///project/'),
       reader
     );
-    expect(result).not.toBeNull();
-    expect(result?.configURL.toString()).toBe(
-      'file:///project/malloy-config.json'
+    expect(config).not.toBeNull();
+    // Resolved config exposes the connection.
+    expect(config?.log).toEqual([]);
+    const conn = await config!.connections.lookupConnection('mydb');
+    expect(conn.name).toBe('mydb');
+  });
+
+  it('resolves manifestURL relative to the matched config file', async () => {
+    const reader = mockReader({
+      'file:///project/sub/malloy-config.json': {
+        connections: {mydb: {is: 'mockdb'}},
+      },
+    });
+    const config = await discoverConfig(
+      new URL('file:///project/sub/deep/'),
+      new URL('file:///project/'),
+      reader
     );
-    expect(result?.pojo['connections']).toEqual({mydb: {is: 'mockdb'}});
+    // manifestURL hangs off the file that matched, not the ceiling.
+    expect(config?.manifestURL?.toString()).toBe(
+      'file:///project/sub/MANIFESTS/malloy-manifest.json'
+    );
   });
 
   it('returns null when startURL is not under the ceiling', async () => {
     const reader = mockReader({
       'file:///project/malloy-config.json': {connections: {}},
     });
-    const result = await discoverConfig(
+    const config = await discoverConfig(
       new URL('file:///elsewhere/'),
       new URL('file:///project/'),
       reader
     );
-    expect(result).toBeNull();
+    expect(config).toBeNull();
   });
 
   it('throws when a matched config file has malformed JSON', async () => {
@@ -369,27 +475,48 @@ describe('discoverConfig', () => {
         },
       },
     });
-    const result = await discoverConfig(
+    const config = await discoverConfig(
       new URL('file:///project/'),
       new URL('file:///project/'),
       reader
     );
-    expect(result).not.toBeNull();
-    // When both files exist at the same level, configURL points to local.
-    expect(result?.configURL.toString()).toBe(
-      'file:///project/malloy-config-local.json'
+    expect(config).not.toBeNull();
+    expect(config?.log).toEqual([]);
+    // All three connections are reachable — local's `both` wins.
+    await config!.connections.lookupConnection('shared_only');
+    await config!.connections.lookupConnection('local_only');
+    await config!.connections.lookupConnection('both');
+    // When both files exist at the same level, manifestURL hangs off the
+    // local file's directory (same directory as shared here).
+    expect(config?.manifestURL?.toString()).toBe(
+      'file:///project/MANIFESTS/malloy-manifest.json'
     );
-    const conns = result?.pojo['connections'] as Record<
-      string,
-      {host?: string}
-    >;
-    expect(Object.keys(conns).sort()).toEqual([
-      'both',
-      'local_only',
-      'shared_only',
-    ]);
-    expect(conns['both'].host).toBe('from-local');
-    expect(conns['shared_only'].host).toBe('shared-host');
+  });
+
+  it('merges caller-supplied extraOverlays on top of discovery overlays', async () => {
+    const reader = mockReader({
+      'file:///project/malloy-config.json': {
+        connections: {
+          mydb: {
+            is: 'mockdb',
+            databasePath: {session: 'dbPath'},
+          },
+        },
+      },
+    });
+    const config = await discoverConfig(
+      new URL('file:///project/'),
+      new URL('file:///project/'),
+      reader,
+      {session: () => '/tmp/session.db'}
+    );
+    expect(config?.log).toEqual([]);
+    // Session overlay was merged in alongside discovery's `config` overlay.
+    // And manifestURL still resolves — extraOverlays did not clobber
+    // discovery's `config` entry.
+    expect(config?.manifestURL?.toString()).toBe(
+      'file:///project/MANIFESTS/malloy-manifest.json'
+    );
   });
 });
 
@@ -449,13 +576,13 @@ describe('MalloyConfig includeDefaults', () => {
     expect(conn.dialectName).toBe('jsondb-dialect');
   });
 
-  it('resolves reference-shaped property defaults through the overlay stack', async () => {
+  it('resolves reference-shaped property defaults through the config overlays', async () => {
     const config = new MalloyConfig(
       {includeDefaults: true},
       {config: contextOverlay({rootDirectory: '/my/project'})}
     );
     // refdb's `root` default is {config: 'rootDirectory'} — the resolver
-    // walks the overlay stack at includeDefaults time and passes the
+    // walks the config overlays at includeDefaults time and passes the
     // resolved value through to the factory.
     await config.connections.lookupConnection('refdb');
     expect(capturedRoot).toBe('/my/project');

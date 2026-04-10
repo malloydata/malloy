@@ -30,7 +30,7 @@ export type ConnectionPropertyType =
  *
  * `default` accepts either a literal value or a single-key object that names an
  * overlay source: e.g. `{config: 'rootDirectory'}` or `{env: 'HOME'}`. Reference
- * defaults are resolved through the same overlay stack as inline references at
+ * defaults are resolved through the same config overlays as inline references at
  * `includeDefaults` time.
  */
 export interface ConnectionPropertyDefinition {

@@ -829,8 +829,11 @@ export class QueryQuery extends QueryField {
             }
 
             if (buildManifest.strict) {
+              const base = `Persist source '${qs.structDef.sourceID}' not found in manifest (buildId: ${buildId})`;
               throw new Error(
-                `Persist source '${qs.structDef.sourceID}' not found in manifest (buildId: ${buildId})`
+                buildManifest.loadError
+                  ? `${base}\n  ${buildManifest.loadError}`
+                  : base
               );
             }
           }
