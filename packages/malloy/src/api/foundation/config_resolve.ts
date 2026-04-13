@@ -4,276 +4,141 @@
  */
 
 import type {LogMessage} from '../../lang/parse-log';
-import {
-  getConnectionProperties,
-  getRegisteredConnectionTypes,
-} from '../../connection/registry';
-import type {
-  ConnectionConfigEntry,
-  ConnectionPropertyDefinition,
-} from '../../connection/registry';
-import type {ConfigDict, ConfigNode, ConfigReference} from './config_compile';
-import type {ConfigOverlays} from './config_overlays';
+import {getRegisteredConnectionTypes} from '../../connection/registry';
+import type {ConfigDict} from './config_compile';
 
 /**
- * The shape the class body consumes: a plain POJO with the same top-level
- * sections as the input, but with all references resolved and defaults
- * applied. This is fed into the connection registry to build connections.
+ * The synchronous slice of config preparation. What the `MalloyConfig`
+ * constructor needs *before* any overlay IO happens:
  *
- * `connections` uses the registry's `ConnectionConfigEntry` shape directly —
- * a resolved entry is precisely what the registry consumes, so there's no
- * reason to invent a local alias and cast across the boundary.
+ *   - `compiledConnections` — per-connection compiled subtrees. References
+ *     inside these are resolved lazily at `lookupConnection` time, not here.
+ *     Fabricated bare `{is: typeName}` entries are included when the POJO
+ *     opts in via `includeDefaultConnections`.
+ *   - `manifestPath` — raw string (never a reference; section compiler only
+ *     produces value nodes).
+ *   - `virtualMap` — raw literal POJO (same — virtualMap is a literal slot).
  *
- * Note: `includeDefaultConnections` is an input directive, not a resolved
- * value — by the time `resolveConfig` returns, fabrication has already
- * happened. It intentionally does not appear on this interface.
+ * `includeDefaultConnections` is an input directive, not an output value —
+ * fabrication has already happened by the time this returns.
  */
-export interface ResolvedConfig {
-  connections: Record<string, ConnectionConfigEntry>;
+export interface PreparedConfig {
+  compiledConnections: Record<string, ConfigDict>;
   manifestPath?: string;
   virtualMap?: unknown;
 }
 
 /**
- * Walk a compiled tree against the overlay dict and produce a plain
- * resolved POJO.
+ * Synchronous top-level walk of a compiled config tree. Extracts the
+ * non-connection sections (which only contain literals — see the section
+ * compilers) and hands back the compiled connection subtrees untouched.
  *
- * Two distinct "defaults" mechanisms, deliberately separated:
+ * Reference resolution for connection properties is *not* done here. It is
+ * deferred until `lookupConnection` is called, at which point the async
+ * walker in `config_lookup.ts` can `await` overlays that do IO (secret
+ * stores, session fetches, etc.). This keeps `MalloyConfig` construction
+ * synchronous and zero-IO.
  *
- *   1. **Property defaults** (`applyPropertyDefaults`) — fill in missing
- *      properties on *every* connection entry, user-listed or fabricated.
- *      This is a uniform per-property rule; there is no asymmetry between
- *      explicit and auto-generated entries.
- *
- *   2. **`includeDefaultConnections`** (`fabricateMissingConnections`) —
- *      fabricate a bare `{is: typeName}` entry for each registered backend
- *      not already represented. Property defaults then fill in their
- *      properties via (1).
- *
- *   Order matters: fabrication runs before property defaults so that
- *   fabricated entries pick up defaults in the same pass as user-listed
- *   ones.
- *
- * Three unresolved-reference cases, each with different handling:
- *   1. Unknown overlay source    → warning, drop property
- *   2. Known overlay → undefined → silent drop
- *   3. Property default → unresolved (either of the above inside a default)
- *                                → silent drop (a default is a hint, not a requirement)
+ * Fabrication of bare `{is: typeName}` compiled entries for registered
+ * backends not otherwise represented happens here when the config opts in
+ * via `includeDefaultConnections`. Property defaults are filled in at
+ * lookup time alongside reference resolution.
  */
-export function resolveConfig(
+export function prepareConfig(
   compiled: ConfigDict,
-  overlays: ConfigOverlays,
-  log: LogMessage[]
-): ResolvedConfig {
-  const resolved: ResolvedConfig = {connections: {}};
+  _log: LogMessage[]
+): PreparedConfig {
+  let compiledConnections: Record<string, ConfigDict> = {};
+  let manifestPath: string | undefined;
+  let virtualMap: unknown;
   let includeDefaultConnections = false;
 
   for (const [key, node] of Object.entries(compiled.entries)) {
     switch (key) {
       case 'connections': {
         if (node.kind !== 'dict') break;
-        resolved.connections = resolveConnections(node, overlays, log);
+        compiledConnections = extractCompiledConnections(node);
         break;
       }
       case 'manifestPath': {
-        const v = resolveNode(node, overlays, log);
-        if (typeof v === 'string') resolved.manifestPath = v;
+        if (node.kind === 'value' && typeof node.value === 'string') {
+          manifestPath = node.value;
+        }
         break;
       }
       case 'virtualMap': {
-        // virtualMap is literal data — the class body converts it to the
-        // runtime Map-of-Maps representation.
-        resolved.virtualMap = resolveNode(node, overlays, log);
+        // virtualMap is a literal dict slot — compileVirtualMap never
+        // produces a reference node. MalloyConfig converts the raw POJO
+        // into its runtime Map-of-Maps representation.
+        if (node.kind === 'value') virtualMap = node.value;
         break;
       }
       case 'includeDefaultConnections': {
-        const v = resolveNode(node, overlays, log);
-        if (typeof v === 'boolean') includeDefaultConnections = v;
+        if (node.kind === 'value' && typeof node.value === 'boolean') {
+          includeDefaultConnections = node.value;
+        }
         break;
       }
     }
   }
 
   if (includeDefaultConnections) {
-    fabricateMissingConnections(resolved.connections);
+    fabricateMissingConnections(compiledConnections);
   }
 
-  // Property defaults apply to every entry — user-listed and fabricated
-  // alike. This is the fix for the earlier bug where defaults only fired
-  // during fabrication, leaving explicit entries silently underconfigured.
-  applyPropertyDefaults(resolved.connections, overlays);
-
-  return resolved;
+  return {compiledConnections, manifestPath, virtualMap};
 }
 
-// =============================================================================
-// Generic walk
-// =============================================================================
-
 /**
- * Walk a single node and produce its resolved value. References that fail
- * to resolve return `undefined`; the parent dict walker then drops the
- * corresponding property.
+ * Pull each well-formed compiled connection entry out of the `connections`
+ * subtree. Entries are already validated by `compileConnections` — anything
+ * shaped wrong was dropped or reported during compile. We defensively skip
+ * non-dict children here anyway.
  */
-function resolveNode(
-  node: ConfigNode,
-  overlays: ConfigOverlays,
-  log: LogMessage[]
-): unknown {
-  switch (node.kind) {
-    case 'value':
-      return node.value;
-    case 'reference':
-      return resolveReference(node, overlays, log);
-    case 'dict': {
-      const out: Record<string, unknown> = {};
-      for (const [k, child] of Object.entries(node.entries)) {
-        const r = resolveNode(child, overlays, log);
-        if (r !== undefined) out[k] = r;
-      }
-      return out;
-    }
+function extractCompiledConnections(
+  node: ConfigDict
+): Record<string, ConfigDict> {
+  const out: Record<string, ConfigDict> = {};
+  for (const [name, child] of Object.entries(node.entries)) {
+    if (child.kind === 'dict') out[name] = child;
   }
+  return out;
 }
-
-function resolveReference(
-  ref: ConfigReference,
-  overlays: ConfigOverlays,
-  log: LogMessage[]
-): unknown {
-  const overlay = overlays[ref.source];
-  if (!overlay) {
-    // Case 1: unknown overlay source — warn and drop.
-    log.push({
-      message: `unknown overlay source "${ref.source}" for reference path ${JSON.stringify(ref.path)}`,
-      severity: 'warn',
-      code: 'config-overlay',
-    });
-    return undefined;
-  }
-  // Case 2: overlay returns undefined — silent drop (no log push).
-  return overlay(ref.path);
-}
-
-// =============================================================================
-// Connections
-// =============================================================================
-
-function resolveConnections(
-  node: ConfigDict,
-  overlays: ConfigOverlays,
-  log: LogMessage[]
-): Record<string, ConnectionConfigEntry> {
-  const result: Record<string, ConnectionConfigEntry> = {};
-  for (const [name, connNode] of Object.entries(node.entries)) {
-    if (connNode.kind !== 'dict') continue;
-    const resolved = resolveNode(connNode, overlays, log) as Record<
-      string,
-      unknown
-    >;
-    // compileConnectionEntry guarantees `is` is a string value node, and
-    // resolveNode preserves it. Any connection without `is` is a bug in the
-    // compiler; skip it defensively.
-    if (typeof resolved['is'] !== 'string') continue;
-    result[name] = resolved as ConnectionConfigEntry;
-  }
-  return result;
-}
-
-// =============================================================================
-// Fabrication and property defaults
-// =============================================================================
 
 /**
- * Fabricate a bare `{is: typeName}` entry for each registered connection
- * type not already represented in `connections`. Only runs when the
- * `includeDefaultConnections` flag is set on the config. Property values
- * are *not* filled in here — that is the job of `applyPropertyDefaults`,
- * which runs unconditionally on every entry in a later pass.
+ * Add a bare `{is: typeName}` compiled entry for each registered connection
+ * type not already represented in `compiledConnections`. Only runs when the
+ * POJO sets `includeDefaultConnections: true`. Property values (including
+ * reference-shaped defaults like DuckDB's `{config: 'rootDirectory'}`) are
+ * *not* filled in here — that is the job of the async lookup resolver.
  *
- * A user-named connection that happens to share the type name but points
- * at a different backend is left alone.
+ * Skip rules:
+ *   - Type already in use: some existing entry has `is: typeName`.
+ *   - Name already taken: some existing entry is *named* `typeName`, even
+ *     if its `is` points elsewhere. This protects a user who writes
+ *     `{duckdb: {is: 'postgres', ...}}` — naming an entry after a type but
+ *     pointing at a different backend — from being clobbered.
  *
- * Mutates `connections` in place. Called only by `resolveConfig` on its
- * own freshly-built object.
+ * Mutates `compiledConnections` in place.
  */
 function fabricateMissingConnections(
-  connections: Record<string, ConnectionConfigEntry>
+  compiledConnections: Record<string, ConfigDict>
 ): void {
   const presentTypes = new Set<string>();
-  for (const entry of Object.values(connections)) {
-    if (typeof entry.is === 'string') presentTypes.add(entry.is);
-  }
-  for (const typeName of getRegisteredConnectionTypes()) {
-    // `presentTypes` catches {mydb: {is: 'duckdb'}}; the name check catches
-    // {duckdb: {is: 'jsondb'}}. Both cases leave the registered `duckdb`
-    // type alone — the first because it's already represented, the second
-    // because we can't use the obvious name without clobbering.
-    if (presentTypes.has(typeName)) continue;
-    if (connections[typeName]) continue;
-    connections[typeName] = {is: typeName};
-  }
-}
-
-/**
- * For every connection entry, fill in any property that the user didn't
- * specify and whose `ConnectionPropertyDefinition` declares a `default`.
- * Runs uniformly on both user-listed and fabricated entries — the earlier
- * behavior of only firing during fabrication was a bug that left explicit
- * entries silently underconfigured (e.g. a user-listed `duckdb` never
- * picked up `workingDirectory: {config: 'rootDirectory'}`).
- *
- * Defaults that are reference-shaped resolve through the overlays via
- * `resolveDefault`. Unresolved defaults are silently dropped (case 3).
- * User-specified values are never overwritten.
- *
- * Interaction with inline references: if the user specified a property
- * as a reference-shaped value that failed to resolve (e.g. `{env: 'UNSET'}`),
- * `resolveConnections` already dropped it before we see the entry. From
- * our perspective the property is simply absent, so the default applies —
- * effectively turning inline references into "try this first, else fall
- * back to the default." This is almost always what users want.
- *
- * Mutates `connections` in place. Called only by `resolveConfig` on its
- * own freshly-built object.
- */
-function applyPropertyDefaults(
-  connections: Record<string, ConnectionConfigEntry>,
-  overlays: ConfigOverlays
-): void {
-  for (const entry of Object.values(connections)) {
-    const typeName = entry.is;
-    if (typeof typeName !== 'string') continue;
-    const props = getConnectionProperties(typeName) ?? [];
-    for (const prop of props) {
-      if (prop.default === undefined) continue;
-      if (entry[prop.name] !== undefined) continue;
-      const v = resolveDefault(prop.default, overlays);
-      if (v !== undefined) entry[prop.name] = v;
+  for (const entry of Object.values(compiledConnections)) {
+    const isNode = entry.entries['is'];
+    if (isNode?.kind === 'value' && typeof isNode.value === 'string') {
+      presentTypes.add(isNode.value);
     }
   }
-}
-
-/**
- * Resolve a property `default` field. Literals pass through; single-key
- * reference-shaped objects are resolved through the overlays. Case 3:
- * an unresolved default is a hint, not a requirement — always silent drop.
- */
-function resolveDefault(
-  def: NonNullable<ConnectionPropertyDefinition['default']>,
-  overlays: ConfigOverlays
-): unknown {
-  if (typeof def !== 'object') return def;
-  const keys = Object.keys(def);
-  if (keys.length !== 1) return undefined;
-  const source = keys[0];
-  const raw = (def as Record<string, unknown>)[source];
-  const path = typeof raw === 'string' ? [raw] : raw;
-  // The type says `raw` is `string | string[]`, but `default` comes from
-  // registered backend definitions which are runtime-dynamic — a
-  // malformed registration would blow up inside the overlay otherwise.
-  if (!Array.isArray(path)) return undefined;
-  const overlay = overlays[source];
-  if (!overlay) return undefined;
-  return overlay(path);
+  for (const typeName of getRegisteredConnectionTypes()) {
+    if (presentTypes.has(typeName)) continue;
+    if (compiledConnections[typeName]) continue;
+    compiledConnections[typeName] = {
+      kind: 'dict',
+      entries: {
+        is: {kind: 'value', value: typeName},
+      },
+    };
+  }
 }

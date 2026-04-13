@@ -7,13 +7,20 @@
  * An overlay is a lambda that takes a compiled reference path and returns
  * a value (or undefined if the path is not present in the overlay source).
  *
+ * Overlays may return synchronously or asynchronously — the return type is
+ * `unknown | Promise<unknown>`. The reference resolver awaits every overlay
+ * result, so a sync overlay and an async overlay are interchangeable from
+ * the caller's perspective. Use sync for purely in-memory values (env vars,
+ * host context dicts) and async for anything that touches IO (secret stores,
+ * session fetches, enterprise-managed injected values).
+ *
  * The path is an array because references can address nested data:
  *   {env: "HOME"}             -> path = ["HOME"]
  *   {user: ["address", "zip"]} -> path = ["address", "zip"]
  *
  * Overlay values should resolve to ordinary JSON-compatible values.
  */
-export type Overlay = (path: string[]) => unknown;
+export type Overlay = (path: string[]) => unknown | Promise<unknown>;
 
 /**
  * A dict keyed by overlay name. A config reference like

@@ -5,7 +5,6 @@
 
 import type {Connection, LookupConnection} from '../../connection/types';
 import type {ManagedConnectionLookup} from '../../connection/registry';
-import {createConnectionsFromConfig} from '../../connection/registry';
 import type {LogMessage} from '../../lang/parse-log';
 import type {
   BuildID,
@@ -14,7 +13,8 @@ import type {
   VirtualMap,
 } from '../../model/malloy_types';
 import {compileConfig} from './config_compile';
-import {resolveConfig} from './config_resolve';
+import {prepareConfig} from './config_resolve';
+import {buildManagedLookup} from './config_lookup';
 import {defaultConfigOverlays} from './config_overlays';
 import type {ConfigOverlays} from './config_overlays';
 
@@ -209,28 +209,35 @@ export class MalloyConfig {
     const compiled = compileConfig(pojo);
     log.push(...compiled.log);
 
-    // Resolve against the merged config overlays. Entries from the passed
-    // overlays replace same-named entries in the defaults; anything new
-    // is added.
+    // Merge the host-supplied overlays onto the defaults. Same-named
+    // entries replace defaults; new keys are added.
     const mergedOverlays: ConfigOverlays = {
       ...defaultConfigOverlays(),
       ...overlays,
     };
-    const resolved = resolveConfig(compiled.compiled, mergedOverlays, log);
 
-    // Hand fully-resolved connection entries to the registry — factories
-    // never see raw references.
-    this._managedLookup = createConnectionsFromConfig({
-      connections: resolved.connections,
-    });
+    // Synchronous prep: extract literal sections (manifestPath, virtualMap),
+    // pull out compiled connection subtrees, fabricate bare entries for
+    // missing registered types when `includeDefaultConnections` is set.
+    // Reference resolution for connection properties is *not* done here —
+    // it happens async at `lookupConnection` time, so overlays that touch
+    // IO (secret stores, session reads) have a natural async seam.
+    const prepared = prepareConfig(compiled.compiled, log);
+
+    this._managedLookup = buildManagedLookup(
+      prepared.compiledConnections,
+      mergedOverlays,
+      log
+    );
     this._connections = this._managedLookup;
 
     this._overlays = mergedOverlays;
-    this.virtualMap = toVirtualMap(resolved.virtualMap);
-    this.manifestPath = resolved.manifestPath;
+    this.virtualMap = toVirtualMap(prepared.virtualMap);
+    this.manifestPath = prepared.manifestPath;
     this.manifestURL = computeManifestURL(
-      resolved.manifestPath,
-      mergedOverlays
+      prepared.manifestPath,
+      mergedOverlays,
+      log
     );
     this.log = log;
   }
@@ -292,13 +299,15 @@ export class MalloyConfig {
    *
    * Returns the value the named overlay produces for the given path,
    * or `undefined` if the overlay doesn't exist or the path has no value.
+   * Async because overlays may be async (secret stores, session readers);
+   * `await` tolerates both sync and Promise return types.
    *
-   *   config.readOverlay('config', 'rootDirectory')
-   *   config.readOverlay('config', 'configURL')
-   *   config.readOverlay('env', 'PG_PASSWORD')
+   *   await config.readOverlay('config', 'rootDirectory')
+   *   await config.readOverlay('config', 'configURL')
+   *   await config.readOverlay('env', 'PG_PASSWORD')
    */
-  readOverlay(overlayName: string, ...path: string[]): unknown {
-    return this._overlays[overlayName]?.(path);
+  async readOverlay(overlayName: string, ...path: string[]): Promise<unknown> {
+    return await this._overlays[overlayName]?.(path);
   }
 }
 
@@ -325,6 +334,14 @@ const MANIFEST_FILENAME = 'malloy-manifest.json';
  *
  * Rules:
  *   - If there's no `configURL` in the `config` overlay → undefined.
+ *   - **The `config` overlay MUST resolve `configURL` synchronously.** This
+ *     is the one construction-time overlay call; it runs before the first
+ *     `lookupConnection` and must return a plain string (or undefined). If
+ *     it returns a Promise, `manifestURL` would be `undefined` — persistence
+ *     would silently stop working. To avoid the silent failure, we warn on
+ *     Promise returns so hosts discover the mistake. Other fields inside the
+ *     `config` overlay (`rootDirectory`, etc.) can still be async; only
+ *     `configURL` is sync-only.
  *   - `manifestPath` defaults to `'MANIFESTS'`.
  *   - `new URL(manifestPath, configURL)` handles three shapes uniformly:
  *       "MANIFESTS"               → relative to configURL's directory
@@ -336,10 +353,20 @@ const MANIFEST_FILENAME = 'malloy-manifest.json';
  */
 function computeManifestURL(
   manifestPath: string | undefined,
-  overlays: ConfigOverlays
+  overlays: ConfigOverlays,
+  log: LogMessage[]
 ): URL | undefined {
   const configOverlay = overlays['config'];
   const configURLValue = configOverlay?.(['configURL']);
+  if (isThenable(configURLValue)) {
+    log.push({
+      message:
+        'the `config` overlay returned a Promise for `configURL`; `configURL` must be resolved synchronously. manifestURL will be undefined and persistence will not work.',
+      severity: 'warn',
+      code: 'config-overlay',
+    });
+    return undefined;
+  }
   if (typeof configURLValue !== 'string') return undefined;
 
   let configURL: URL;
@@ -386,6 +413,14 @@ function toVirtualMap(raw: unknown): VirtualMap | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as {then?: unknown}).then === 'function'
+  );
 }
 
 function isBuildManifestEntry(value: unknown): value is BuildManifestEntry {

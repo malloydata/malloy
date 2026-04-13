@@ -144,6 +144,17 @@ export function getRegisteredConnectionTypes(): string[] {
 }
 
 /**
+ * Get the full definition (factory + properties + displayName) for a
+ * registered connection type. Used by the foundation layer's connection
+ * lookup to hand fully-resolved configs to the right factory.
+ */
+export function getConnectionTypeDef(
+  typeName: string
+): ConnectionTypeDef | undefined {
+  return registry.get(typeName);
+}
+
+/**
  * Parse a JSON config string into a ConnectionsConfig.
  * Entries without a valid `is` field are silently dropped.
  */

@@ -53,7 +53,7 @@ Each registered backend provides:
 }
 ```
 
-The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** during construction, so the registry and connection factories only ever see plain resolved values. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent.
+The `is` field identifies the backend. Any non-`json` property value can be a reference-shaped object — a single-key dict whose value is a string or string[], e.g. `{env: "VAR"}` or `{config: "rootDirectory"}` or `{session: ["credentials", "token"]}`. References are resolved by `MalloyConfig` against a **`ConfigOverlays` dict** at **`lookupConnection()` time** (not at construction), so the registry and connection factories still only ever see plain resolved values. Overlays may be sync or async (`(path) => unknown | Promise<unknown>`); deferring resolution to lookup gives async overlays a natural seam. If a reference fails to resolve (unknown overlay source, or overlay returns undefined), the property is silently dropped — the factory sees the field as absent. Unknown-overlay-source warnings land on `config.log` when the affected connection is looked up.
 
 Properties declared as `type: 'json'` are never interpreted as references — the entire value passes through literally. This is the security invariant that keeps structured config (SSL options, headers, session objects) from ever invoking overlay lookups.
 
@@ -76,7 +76,8 @@ See `packages/malloy/src/api/foundation/config_overlays.ts` for the `ConfigOverl
 |----------|---------|
 | `readConnectionsConfig(jsonText)` | Parse JSON config string, validate `is` fields |
 | `writeConnectionsConfig(config)` | Serialize config to JSON (2-space indent) |
-| `createConnectionsFromConfig(config)` | Returns `LookupConnection<Connection>` with lazy creation + caching |
+| `createConnectionsFromConfig(config)` | Returns `LookupConnection<Connection>` with lazy creation + caching. Assumes entries are already fully resolved — used by hosts that have their own resolution path. `MalloyConfig` does **not** use this; it builds its own managed lookup in `api/foundation/config_lookup.ts` that performs per-lookup async reference resolution. |
+| `getConnectionTypeDef(typeName)` | Returns the full `ConnectionTypeDef` (factory + properties + displayName). Used by the foundation layer's managed lookup to hand resolved configs to the right factory. |
 
 ### Usage Pattern
 
@@ -96,7 +97,7 @@ if (!config) throw new Error('No malloy-config.json found');
 const runtime = new Runtime({config, urlReader});
 ```
 
-`Runtime` pulls `connections` off the config and lazily reads any build manifest from `config.manifestURL` on first persistence query. `MalloyConfig` constructs the connection lookup once during `new MalloyConfig(...)` by compiling the input into a typed tree, resolving references through the config overlays, and handing fully resolved entries to `createConnectionsFromConfig()`. The `connections` getter returns the same `LookupConnection` object across calls. Hosts that want to decorate the lookup (layering settings, session-specific behavior, fallbacks) use `config.wrapConnections(base => wrapped)` which replaces the cached lookup in place.
+`Runtime` pulls `connections` off the config and lazily reads any build manifest from `config.manifestURL` on first persistence query. `MalloyConfig` construction is synchronous and does no overlay IO: it compiles the input into a typed tree, extracts the non-connection sections, and packages the compiled connection subtrees into a managed `LookupConnection`. The overlay references inside those subtrees stay un-resolved until `lookupConnection()` is called, at which point the walker `await`s each overlay, applies property defaults (including reference-shaped ones like DuckDB's `workingDirectory: {default: {config: 'rootDirectory'}}`), and hands the resulting plain POJO to the registered factory. The resolved `Connection` is cached by name. The `connections` getter returns the same `LookupConnection` object across calls. Hosts that want to decorate the lookup (layering settings, session-specific behavior, fallbacks) use `config.wrapConnections(base => wrapped)` which replaces the cached lookup in place.
 
 ## Property Type System
 
