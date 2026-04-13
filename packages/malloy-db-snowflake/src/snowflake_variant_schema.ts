@@ -28,7 +28,7 @@ import type {
   FieldDef,
 } from '@malloydata/malloy';
 import {mkArrayDef, TinyParser} from '@malloydata/malloy';
-import {mkArrayTypeDef} from '@malloydata/malloy/internal';
+import {mkArrayTypeDef, pathToKey} from '@malloydata/malloy/internal';
 
 export type NestedColumnKind = 'variant' | 'array' | 'object';
 
@@ -37,9 +37,7 @@ export interface NestedColumn {
   name: string;
 }
 
-export type Segment =
-  | {kind: 'name'; name: string}
-  | {kind: 'array'};
+export type Segment = {kind: 'name'; name: string} | {kind: 'array'};
 
 export type Shape =
   | {kind: 'object'}
@@ -280,7 +278,11 @@ function nextSegmentToShape(segment: Segment): Shape {
 function observedTypeToShape(fieldType: string): Shape {
   // Defensive: production callers only pass Snowflake TYPEOF() results, which
   // are expected to be array/object or scalar leaf types, not "variant".
-  if (fieldType === 'array' || fieldType === 'object' || fieldType === 'variant') {
+  if (
+    fieldType === 'array' ||
+    fieldType === 'object' ||
+    fieldType === 'variant'
+  ) {
     return {kind: fieldType};
   }
   return {kind: 'leaf', type: fieldType};
@@ -313,5 +315,12 @@ function opaqueVariantType(): AtomicTypeDef {
 }
 
 function prefixKey(segments: Segment[]): PrefixKey {
-  return JSON.stringify(segments);
+  const [first, ...rest] = segments;
+  if (first?.kind !== 'name') {
+    throw new Error('Snowflake schema path must start with a named segment');
+  }
+  return pathToKey(
+    first.name,
+    rest.map(segment => (segment.kind === 'array' ? '[*]' : segment.name))
+  );
 }

@@ -42,20 +42,21 @@ describe('snowflake variant schema helper', () => {
     const state = createVariantSchemaState();
     seedTopLevelShape(state, nestedColumn);
     for (const row of rows) {
-      accumulateVariantPath(state, new PathParser(row.path).segments(), row.type);
+      accumulateVariantPath(
+        state,
+        new PathParser(row.path).segments(),
+        row.type
+      );
     }
     return buildTopLevelField(nestedColumn, state, dialect);
   }
 
   test('reconstructs object shape from descendant-only evidence', () => {
     expect(
-      inferField(
-        {kind: 'variant', name: 'BASE_TOUCHPOINT'},
-        [
-          {path: 'BASE_TOUCHPOINT.NETWORK', type: 'varchar'},
-          {path: 'BASE_TOUCHPOINT.PLATFORM', type: 'varchar'},
-        ]
-      )
+      inferField({kind: 'variant', name: 'BASE_TOUCHPOINT'}, [
+        {path: 'BASE_TOUCHPOINT.NETWORK', type: 'varchar'},
+        {path: 'BASE_TOUCHPOINT.PLATFORM', type: 'varchar'},
+      ])
     ).toEqual({
       type: 'record',
       name: 'BASE_TOUCHPOINT',
@@ -69,13 +70,10 @@ describe('snowflake variant schema helper', () => {
 
   test('degrades object-array conflict at a shared prefix', () => {
     expect(
-      inferField(
-        {kind: 'variant', name: 'X'},
-        [
-          {path: 'X.Y', type: 'varchar'},
-          {path: 'X[*].Z', type: 'decimal'},
-        ]
-      )
+      inferField({kind: 'variant', name: 'X'}, [
+        {path: 'X.Y', type: 'varchar'},
+        {path: 'X[*].Z', type: 'decimal'},
+      ])
     ).toEqual({
       type: 'sql native',
       rawType: 'variant',
@@ -85,13 +83,10 @@ describe('snowflake variant schema helper', () => {
 
   test('builds array of records from stable descendants', () => {
     expect(
-      inferField(
-        {kind: 'variant', name: 'ITEMS'},
-        [
-          {path: 'ITEMS[*].FOO', type: 'varchar'},
-          {path: 'ITEMS[*].BAR', type: 'boolean'},
-        ]
-      )
+      inferField({kind: 'variant', name: 'ITEMS'}, [
+        {path: 'ITEMS[*].FOO', type: 'varchar'},
+        {path: 'ITEMS[*].BAR', type: 'boolean'},
+      ])
     ).toEqual({
       type: 'array',
       name: 'ITEMS',
@@ -124,10 +119,9 @@ describe('snowflake variant schema helper', () => {
 
   test('top-level DESCRIBE seed stays authoritative over conflicting sample', () => {
     expect(
-      inferField(
-        {kind: 'array', name: 'DIMENSION_SET_IDS'},
-        [{path: 'DIMENSION_SET_IDS.foo', type: 'varchar'}]
-      )
+      inferField({kind: 'array', name: 'DIMENSION_SET_IDS'}, [
+        {path: 'DIMENSION_SET_IDS.foo', type: 'varchar'},
+      ])
     ).toEqual({
       type: 'array',
       name: 'DIMENSION_SET_IDS',
@@ -155,10 +149,9 @@ describe('snowflake variant schema helper', () => {
 
   test('quoted path names with punctuation are preserved', () => {
     expect(
-      inferField(
-        {kind: 'variant', name: 'DATA'},
-        [{path: "DATA['a.b'][*]['c[d]']", type: 'varchar'}]
-      )
+      inferField({kind: 'variant', name: 'DATA'}, [
+        {path: "DATA['a.b'][*]['c[d]']", type: 'varchar'},
+      ])
     ).toEqual({
       type: 'record',
       name: 'DATA',

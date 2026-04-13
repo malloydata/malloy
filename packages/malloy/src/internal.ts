@@ -31,4 +31,5 @@ export {
   mkQuerySourceDef,
   mkSQLSourceDef,
   mkTableSourceDef,
+  pathToKey,
 } from './model';
