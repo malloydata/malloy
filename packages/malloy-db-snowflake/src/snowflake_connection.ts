@@ -312,6 +312,8 @@ export class SnowflakeConnection
         }
       }
 
+      // Always emit one field per top-level nested column from DESCRIBE, even
+      // if sampling produced no usable descendant paths.
       for (const nestedColumn of nestedColumns) {
         structDef.fields.push(
           buildTopLevelField(nestedColumn, state, this.dialect)

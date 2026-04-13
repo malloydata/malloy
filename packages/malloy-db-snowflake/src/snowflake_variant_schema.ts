@@ -21,6 +21,32 @@
  * SOFTWARE.
  */
 
+// Infers Malloy types for Snowflake VARIANT / ARRAY / OBJECT columns from
+// sampled (path, type) evidence in two phases:
+//
+//   1. Accumulate. Each sampled path implies a shape for every one of its
+//      prefixes (a `.field` step implies the parent is an object; a `[*]`
+//      step implies an array; the terminal step is a leaf of the observed
+//      SQL type). `VariantSchemaState` stores a `shapes` map keyed by
+//      prefix and a `children` adjacency map. `seedTopLevelShape` pre-seeds
+//      top-level ARRAY/OBJECT from DESCRIBE as authoritative — sample rows
+//      cannot override those shapes.
+//   2. Build. `buildTopLevelField` walks the accumulated state and emits a
+//      Malloy `FieldDef`. Any prefix whose shape is `variant` (or absent)
+//      degrades locally to `sql native` variant; stable siblings are kept.
+//
+// Vocabulary: `Segment` is one step in a path; `Shape` is what we've
+// concluded a prefix must be (`object | array | leaf | variant`, where
+// `variant` is the absorbing state); `VariantSchemaState` is the whole
+// accumulator. All consistency decisions flow through `mergeShape`.
+//
+// Snowflake-specific invariant: path access on a VARIANT whose actual
+// value doesn't match the path returns NULL rather than raising. That is
+// what makes reconstructing an object shape from descendant-only evidence
+// safe here — rows where the parent is a scalar still evaluate cleanly
+// against the inferred record schema. This assumption is not portable to
+// dialects that error on incompatible path access.
+
 import type {AtomicTypeDef, Dialect, FieldDef} from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy';
 import {
@@ -111,6 +137,8 @@ export function createVariantSchemaState(): VariantSchemaState {
   };
 }
 
+// The single consistency-policy point: any shape conflict across samples
+// collapses to `variant`, and `variant` is absorbing (monotonic).
 export function mergeShape(
   existing: Shape | undefined,
   incoming: Shape
@@ -195,9 +223,15 @@ export function buildTopLevelField(
   // - descendant paths imply ancestor shape
   // - conflicting shapes degrade only that prefix to variant
   // - every top-level nested column still produces a field
+  //
+  // Snowflake-specific semantic note: reconstructing object shape from
+  // descendant paths is safe because path access on an incompatible VARIANT
+  // value yields NULL rather than raising an error.
   const key = prefixKey([{kind: 'name', name: nestedColumn.name}]);
   const shape = state.shapes.get(key);
   if (shape === undefined) {
+    // Top-level ARRAY with no usable descendants still stays queryable as
+    // array<variant>; top-level OBJECT/VARIANT degrades to opaque variant.
     return mkFieldDef(
       nestedColumn.kind === 'array'
         ? mkArrayTypeDef(opaqueVariantType())
