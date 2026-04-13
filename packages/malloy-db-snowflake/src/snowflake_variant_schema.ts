@@ -21,14 +21,13 @@
  * SOFTWARE.
  */
 
-import type {
-  AtomicFieldDef,
-  AtomicTypeDef,
-  Dialect,
-  FieldDef,
-} from '@malloydata/malloy';
-import {mkArrayDef, TinyParser} from '@malloydata/malloy';
-import {mkArrayTypeDef, pathToKey} from '@malloydata/malloy/internal';
+import type {AtomicTypeDef, Dialect, FieldDef} from '@malloydata/malloy';
+import {TinyParser} from '@malloydata/malloy';
+import {
+  mkArrayTypeDef,
+  mkFieldDef,
+  pathToKey,
+} from '@malloydata/malloy/internal';
 
 export type NestedColumnKind = 'variant' | 'array' | 'object';
 
@@ -199,45 +198,14 @@ export function buildTopLevelField(
   const key = prefixKey([{kind: 'name', name: nestedColumn.name}]);
   const shape = state.shapes.get(key);
   if (shape === undefined) {
-    return nestedColumn.kind === 'array'
-      ? mkArrayDef(opaqueVariantType(), nestedColumn.name)
-      : opaqueVariantField(nestedColumn.name);
+    return mkFieldDef(
+      nestedColumn.kind === 'array'
+        ? mkArrayTypeDef(opaqueVariantType())
+        : opaqueVariantType(),
+      nestedColumn.name
+    );
   }
-  return buildFieldForKey(nestedColumn.name, key, state, dialect);
-}
-
-function buildFieldForKey(
-  name: string,
-  key: PrefixKey,
-  state: VariantSchemaState,
-  dialect: Dialect
-): FieldDef {
-  const shape = state.shapes.get(key);
-  if (shape === undefined || shape.kind === 'variant') {
-    return opaqueVariantField(name);
-  }
-  if (shape.kind === 'leaf') {
-    return {...dialect.sqlTypeToMalloyType(shape.type), name};
-  }
-  if (shape.kind === 'object') {
-    const namedChildren = state.children.get(key)?.named;
-    if (!namedChildren || namedChildren.size === 0) {
-      return opaqueVariantField(name);
-    }
-    return {
-      type: 'record',
-      name,
-      fields: [...namedChildren.entries()].map(([childName, childKey]) =>
-        buildFieldForKey(childName, childKey, state, dialect)
-      ),
-      join: 'one',
-    };
-  }
-  const elemKey = state.children.get(key)?.elem;
-  const elementType = elemKey
-    ? buildTypeForKey(elemKey, state, dialect)
-    : opaqueVariantType();
-  return mkArrayDef(elementType, name);
+  return mkFieldDef(buildTypeForKey(key, state, dialect), nestedColumn.name);
 }
 
 function buildTypeForKey(
@@ -260,7 +228,7 @@ function buildTypeForKey(
     return {
       type: 'record',
       fields: [...namedChildren.entries()].map(([childName, childKey]) =>
-        buildFieldForKey(childName, childKey, state, dialect)
+        mkFieldDef(buildTypeForKey(childKey, state, dialect), childName)
       ),
     };
   }
@@ -304,10 +272,6 @@ function recordChild(
   } else {
     children.named.set(segment.name, childKey);
   }
-}
-
-function opaqueVariantField(name: string): AtomicFieldDef {
-  return {type: 'sql native', rawType: 'variant', name};
 }
 
 function opaqueVariantType(): AtomicTypeDef {
