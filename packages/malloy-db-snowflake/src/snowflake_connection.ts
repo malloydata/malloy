@@ -34,22 +34,20 @@ import type {
   StructDef,
   QueryRecord,
   TestableConnection,
-  Dialect,
-  RecordDef,
-  AtomicFieldDef,
-  ArrayDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {
-  SnowflakeDialect,
-  TinyParser,
-  mkArrayDef,
-  sqlKey,
-  makeDigest,
-} from '@malloydata/malloy';
+import {SnowflakeDialect, sqlKey, makeDigest} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {SnowflakeExecutor} from './snowflake_executor';
+import {
+  accumulateVariantPath,
+  buildTopLevelField,
+  createVariantSchemaState,
+  PathParser,
+  seedTopLevelShape,
+} from './snowflake_variant_schema';
+import type {NestedColumn} from './snowflake_variant_schema';
 import type {ConnectionOptions} from 'snowflake-sdk';
 import type {Options as PoolOptions} from 'generic-pool';
 
@@ -76,153 +74,6 @@ export interface SnowflakeConnectionOptions {
 
   // SQL statements to run when a connection is acquired from the pool
   setupSQL?: string;
-}
-
-type PathChain =
-  | {arrayRef: true; next?: PathChain}
-  | {name: string; next?: PathChain};
-
-class SnowField {
-  constructor(
-    readonly name: string,
-    readonly type: string,
-    readonly dialect: Dialect
-  ) {}
-  fieldDef(): AtomicFieldDef {
-    return {
-      ...this.dialect.sqlTypeToMalloyType(this.type),
-      name: this.name,
-    };
-  }
-  walk(_path: PathChain, _fieldType: string): void {
-    throw new Error(
-      'SNOWWFLAKE SCHEMA PARSE ERROR: Should not walk through fields'
-    );
-  }
-  static make(name: string, fieldType: string, d: Dialect) {
-    if (fieldType === 'array') {
-      return new SnowArray(name, d);
-    } else if (fieldType === 'object') {
-      return new SnowObject(name, d);
-    }
-    return new SnowField(name, fieldType, d);
-  }
-}
-
-class SnowObject extends SnowField {
-  fieldMap = new Map<string, SnowField>();
-  constructor(name: string, d: Dialect) {
-    super(name, 'object', d);
-  }
-
-  get fields(): AtomicFieldDef[] {
-    const fields: AtomicFieldDef[] = [];
-    for (const [_, fieldObj] of this.fieldMap) {
-      fields.push(fieldObj.fieldDef());
-    }
-    return fields;
-  }
-
-  fieldDef(): RecordDef {
-    const rec: RecordDef = {
-      type: 'record',
-      name: this.name,
-      fields: this.fields,
-      join: 'one',
-    };
-    return rec;
-  }
-
-  walk(path: PathChain, fieldType: string) {
-    if ('name' in path) {
-      const field = this.fieldMap.get(path.name);
-      if (path.next) {
-        if (field instanceof SnowObject || field instanceof SnowArray) {
-          field.walk(path.next, fieldType);
-          return;
-        }
-        // Field is missing or is a scalar leaf — the variant data has
-        // inconsistent structure across rows. Degrade to opaque variant.
-        this.fieldMap.set(
-          path.name,
-          new SnowField(path.name, 'variant', this.dialect)
-        );
-        return;
-      } else {
-        if (!field) {
-          this.fieldMap.set(
-            path.name,
-            SnowField.make(path.name, fieldType, this.dialect)
-          );
-          return;
-        }
-      }
-      return;
-    }
-    // Array reference in an object context — inconsistent structure.
-    // Ignore this path; the object keeps whatever fields it already has.
-  }
-}
-
-class SnowArray extends SnowField {
-  arrayOf = 'unknown';
-  objectChild?: SnowObject;
-  arrayChild?: SnowArray;
-  constructor(name: string, d: Dialect) {
-    super(name, 'array', d);
-  }
-
-  isArrayOf(type: string) {
-    if (this.arrayOf !== 'unknown') {
-      this.arrayOf = 'variant';
-      return;
-    }
-    this.arrayOf = type;
-    if (type === 'object') {
-      this.objectChild = new SnowObject('', this.dialect);
-    } else if (type === 'array') {
-      this.arrayChild = new SnowArray('', this.dialect);
-    }
-  }
-
-  fieldDef(): ArrayDef {
-    if (this.objectChild) {
-      const t = mkArrayDef(
-        {type: 'record', fields: this.objectChild.fields},
-        this.name
-      );
-      return t;
-    }
-    if (this.arrayChild) {
-      return mkArrayDef(this.arrayChild.fieldDef(), this.name);
-    }
-    return mkArrayDef(
-      this.dialect.sqlTypeToMalloyType(this.arrayOf),
-      this.name
-    );
-  }
-
-  walk(path: PathChain, fieldType: string) {
-    if ('arrayRef' in path) {
-      if (path.next) {
-        const next = this.arrayChild || this.objectChild;
-        if (next) {
-          next.walk(path.next, fieldType);
-          return;
-        }
-        // Array elements were scalars but now we see deeper structure —
-        // inconsistent variant data. Degrade to variant array.
-        this.arrayOf = 'variant';
-        return;
-      } else {
-        this.isArrayOf(fieldType);
-        return;
-      }
-    }
-    // Name reference in an array context — inconsistent structure.
-    // Degrade to variant array.
-    this.arrayOf = 'variant';
-  }
 }
 
 /**
@@ -366,7 +217,7 @@ export class SnowflakeConnection
   ): Promise<void> {
     const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
-    const variants: string[] = [];
+    const nestedColumns: NestedColumn[] = [];
     const notVariant = new Map<string, boolean>();
     for (const row of rows) {
       // data types look like `VARCHAR(1234)` or `NUMBER(10,2)`
@@ -375,7 +226,7 @@ export class SnowflakeConnection
       const name = row['name'] as string;
 
       if (['variant', 'array', 'object'].includes(baseType)) {
-        variants.push(name);
+        nestedColumns.push({kind: baseType as NestedColumn['kind'], name});
       } else {
         notVariant.set(name, true);
         // For NUMBER types, pass full string so dialect can inspect scale
@@ -393,10 +244,12 @@ export class SnowflakeConnection
     // we have to sample actual data and inspect it to discover the structure.
     // This is inherently heuristic (we only look at 100 rows) and can be
     // slow on large partitioned tables or expensive views.
-    if (variants.length > 0) {
-      const variantArgs = variants.map(v => `'${v}', "${v}"`).join(', ');
+    if (nestedColumns.length > 0) {
+      const variantArgs = nestedColumns
+        .map(v => `'${v.name}', "${v.name}"`)
+        .join(', ');
       // Build the analysis query that flattens sampled rows and detects
-      // the type of each leaf path. We only construct from variant columns
+      // the type of each leaf path. We only construct from nested columns
       // (not *) to avoid flattening the entire row on wide tables.
       // Paths with multiple types across the sample are dropped (HAVING
       // count(*) <= 1), and nulls are ignored.
@@ -434,26 +287,35 @@ export class SnowflakeConnection
         makeSampleQuery(limitClause)
       );
 
-      if (fieldPathRows === undefined) {
-        // Both attempts failed or timed out — treat variants as opaque.
-        for (const name of variants) {
-          structDef.fields.push({type: 'sql native', rawType: 'variant', name});
-        }
-      } else {
-        // Take the schema in list form and convert it into a tree.
-        const rootObject = new SnowObject('__root__', this.dialect);
+      const state = createVariantSchemaState();
+      // Snowflake nested-schema inference follows these rules:
+      // - top-level ARRAY/OBJECT from DESCRIBE are authoritative
+      // - descendant paths imply ancestor shape
+      // - conflicting shapes degrade only that prefix to variant
+      // - every top-level nested column still produces a field
+      for (const nestedColumn of nestedColumns) {
+        seedTopLevelShape(state, nestedColumn);
+      }
+
+      if (fieldPathRows !== undefined) {
         for (const f of fieldPathRows) {
           const pathString = f['PATH']?.valueOf().toString();
           const fieldType = f['TYPE']?.valueOf().toString();
           if (pathString === undefined || fieldType === undefined) continue;
           const pathParser = new PathParser(pathString);
-          const path = pathParser.pathChain();
-          if ('name' in path && notVariant.get(path.name)) {
+          const segments = pathParser.segments();
+          const topLevel = segments[0];
+          if (topLevel?.kind !== 'name' || notVariant.get(topLevel.name)) {
             continue;
           }
-          rootObject.walk(path, fieldType);
+          accumulateVariantPath(state, segments, fieldType);
         }
-        structDef.fields.push(...rootObject.fields);
+      }
+
+      for (const nestedColumn of nestedColumns) {
+        structDef.fields.push(
+          buildTopLevelField(nestedColumn, state, this.dialect)
+        );
       }
     }
   }
@@ -533,56 +395,5 @@ export class SnowflakeConnection
     const cmd = `CREATE OR REPLACE TEMP TABLE ${tableName} AS (${sqlCommand});`;
     await this.runSQL(cmd);
     return tableName;
-  }
-}
-
-export class PathParser extends TinyParser {
-  constructor(pathName: string) {
-    super(pathName, {
-      quoted: /^'(\\'|[^'])*'/,
-      array_of: /^\[\*]/,
-      char: /^[[.\]]/,
-      number: /^\d+/,
-      word: /^\w+/,
-    });
-  }
-
-  getName() {
-    const nameStart = this.next();
-    if (nameStart.type === 'word') {
-      return nameStart.text;
-    }
-    if (nameStart.type === '[') {
-      const quotedName = this.next('quoted');
-      this.next(']');
-      return quotedName.text;
-    }
-    throw this.parseError('Expected column name');
-  }
-
-  pathChain(): PathChain {
-    const chain: PathChain = {name: this.getName()};
-    let node: PathChain = chain;
-    for (;;) {
-      const sep = this.next();
-      if (sep.type === 'eof') {
-        return chain;
-      }
-      if (sep.type === '.') {
-        node.next = {name: this.next('word').text};
-        node = node.next;
-      } else if (sep.type === 'array_of') {
-        node.next = {arrayRef: true};
-        node = node.next;
-      } else if (sep.type === '[') {
-        // Actually a dot access through a quoted name
-        const quoted = this.next('quoted');
-        node.next = {name: quoted.text};
-        node = node.next;
-        this.next(']');
-      } else {
-        throw this.parseError(`Unexpected ${sep.type}`);
-      }
-    }
   }
 }

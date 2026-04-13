@@ -147,6 +147,38 @@ describe('db:Snowflake', () => {
     }
   });
 
+  it('preserves top-level array shape when sample rows have no descendants', async () => {
+    // ARRAY comes from DESCRIBE TABLE, so even if recursive flatten sees no
+    // element paths we should still return an array<variant> field.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const viewName = `malloytest.test_array_seed_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE VIEW ${viewName} AS
+       SELECT ARRAY_CONSTRUCT() AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(viewName, viewName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toEqual({
+        type: 'array',
+        name: 'DATA',
+        join: 'many',
+        elementTypeDef: {type: 'sql native', rawType: 'variant'},
+        fields: [
+          {name: 'value', type: 'sql native', rawType: 'variant'},
+          {
+            name: 'each',
+            type: 'sql native',
+            rawType: 'variant',
+            e: {node: 'field', path: ['value']},
+          },
+        ],
+      });
+    } finally {
+      await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
   it('maps integer types to bigint', async () => {
     const x: malloy.SQLSourceDef = {
       type: 'sql_select',
@@ -170,9 +202,11 @@ describe('db:Snowflake', () => {
     ]);
   });
 
-  it('degrades variant field to sql native when types conflict across rows', async () => {
+  it('reconstructs variant object field from descendant paths when parent is absent', async () => {
     // data.foo is a scalar in one row and an object in another.
-    // Schema discovery should not throw — foo should degrade to sql native.
+    // Snowflake path access on scalar variants returns NULL, so when the
+    // parent path is filtered out of the sample we still reconstruct foo
+    // from stable descendant paths.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_conflict_${salt}`;
     await conn.runSQL(
@@ -189,9 +223,10 @@ describe('db:Snowflake', () => {
       if (dataField!.type === 'record') {
         const fooField = dataField!.fields.find(f => f.name === 'foo');
         expect(fooField).toEqual({
-          type: 'sql native',
-          rawType: 'variant',
+          type: 'record',
           name: 'foo',
+          join: 'one',
+          fields: [{type: 'number', numberType: 'bigint', name: 'bar'}],
         });
       }
     } finally {
@@ -199,9 +234,10 @@ describe('db:Snowflake', () => {
     }
   });
 
-  it('degrades nested object inside array when types conflict', async () => {
+  it('reconstructs nested object inside array from descendant paths', async () => {
     // Array analogue of the customer bug: items[*].foo is an object in
-    // one row and a scalar in another. foo should degrade to sql native.
+    // one row and a scalar in another. Stable descendant paths should
+    // still reconstruct foo as a record.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_array_obj_conflict_${salt}`;
     await conn.runSQL(
@@ -225,9 +261,10 @@ describe('db:Snowflake', () => {
           });
           const fooField = itemsField!.fields.find(f => f.name === 'foo');
           expect(fooField).toEqual({
-            type: 'sql native',
-            rawType: 'variant',
+            type: 'record',
             name: 'foo',
+            join: 'one',
+            fields: [{type: 'number', numberType: 'bigint', name: 'bar'}],
           });
         }
       }
@@ -265,9 +302,10 @@ describe('db:Snowflake', () => {
     }
   });
 
-  it('preserves sibling fields when one field degrades', async () => {
-    // foo has conflicting types but stable is consistent.
-    // stable should come through normally.
+  it('preserves sibling fields when one field is reconstructed from descendants', async () => {
+    // foo is scalar in one row and object in another, while stable is
+    // always consistent. The rescue should stay local to foo and keep
+    // stable untouched.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_sibling_${salt}`;
     await conn.runSQL(
@@ -284,9 +322,10 @@ describe('db:Snowflake', () => {
       if (dataField!.type === 'record') {
         const fooField = dataField!.fields.find(f => f.name === 'foo');
         expect(fooField).toEqual({
-          type: 'sql native',
-          rawType: 'variant',
+          type: 'record',
           name: 'foo',
+          join: 'one',
+          fields: [{type: 'number', numberType: 'bigint', name: 'bar'}],
         });
         const stableField = dataField!.fields.find(f => f.name === 'stable');
         expect(stableField).toEqual({
