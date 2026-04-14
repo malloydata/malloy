@@ -22,10 +22,18 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import {createTestRuntime, mkTestModel} from '@malloydata/malloy/test';
+import type {QueryData, RunSQLOptions} from '@malloydata/malloy';
+import {
+  createTestRuntime,
+  describeIfDatabaseAvailable,
+  mkTestModel,
+} from '@malloydata/malloy/test';
 import '@malloydata/malloy/test/matchers';
+import crypto from 'crypto';
 import {SnowflakeConnection} from './snowflake_connection';
 import {SnowflakeExecutor} from './snowflake_executor';
+
+const [describeSnowflakeExecutor] = describeIfDatabaseAvailable(['snowflake']);
 
 describe('db:Snowflake', () => {
   const connOptions =
@@ -420,5 +428,127 @@ describe('numeric value reading', () => {
         ).toMatchResult(testModel, {F: 10.5});
       }
     );
+  });
+});
+
+class SnowflakeExecutorTestSetup {
+  private executor_: SnowflakeExecutor;
+  constructor(executor: SnowflakeExecutor) {
+    this.executor_ = executor;
+  }
+
+  async runBatch(sqlText: string): Promise<QueryData> {
+    let ret: QueryData = [];
+    await (async () => {
+      const rows = await this.executor_.batch(sqlText);
+      return rows;
+    })().then((rows: QueryData) => {
+      ret = rows;
+    });
+    return ret;
+  }
+
+  async runStreaming(sqlText: string, queryOptions?: RunSQLOptions) {
+    const rows: QueryData = [];
+    await (async () => {
+      for await (const row of await this.executor_.stream(
+        sqlText,
+        queryOptions
+      )) {
+        rows.push(row);
+      }
+    })();
+    return rows;
+  }
+
+  async done() {
+    await this.executor_.done();
+  }
+}
+
+describeSnowflakeExecutor('db:SnowflakeExecutor', () => {
+  let db: SnowflakeExecutorTestSetup;
+  let query: string;
+
+  beforeAll(() => {
+    const connOptions =
+      SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+      SnowflakeExecutor.getConnectionOptionsFromToml();
+    const executor = new SnowflakeExecutor(connOptions);
+    db = new SnowflakeExecutorTestSetup(executor);
+    query = `
+    select
+    *
+  from
+    (
+      values
+        (1, 'one'),
+        (2, 'two'),
+        (3, 'three'),
+        (4, 'four'),
+        (5, 'five')
+    );
+    `;
+  });
+
+  afterAll(async () => {
+    await db.done();
+  });
+
+  it('verifies batch execute', async () => {
+    const rows = await db.runBatch(query);
+    expect(rows.length).toBe(5);
+  });
+
+  it('verifies stream iterable', async () => {
+    const rows = await db.runStreaming(query, {rowLimit: 2});
+    expect(rows.length).toBe(2);
+  });
+});
+
+describe('setupSQL', () => {
+  const connOptions =
+    SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+    SnowflakeExecutor.getConnectionOptionsFromToml();
+  const uid = crypto.randomBytes(4).toString('hex');
+  const connections: SnowflakeConnection[] = [];
+
+  function makeConn(name: string, setupSQL: string): SnowflakeConnection {
+    const conn = new SnowflakeConnection(name, {connOptions, setupSQL});
+    connections.push(conn);
+    return conn;
+  }
+
+  afterAll(async () => {
+    await Promise.all(connections.map(c => c.close()));
+  });
+
+  it('runs a single setup statement', async () => {
+    const conn = makeConn(
+      'snowflake_setup_single',
+      `SET setup_test_${uid} = 42`
+    );
+    const result = await conn.runSQL(`SELECT $setup_test_${uid} AS V`);
+    expect(malloy.API.rowDataToNumber(result.rows[0]['V'])).toBe(42);
+  });
+
+  it('runs multiple semicolon-newline-separated statements', async () => {
+    const conn = makeConn(
+      'snowflake_setup_multi',
+      [`SET setup_a_${uid} = 10`, `SET setup_b_${uid} = 20`].join(';\n')
+    );
+    const result = await conn.runSQL(
+      `SELECT $setup_a_${uid} + $setup_b_${uid} AS V`
+    );
+    expect(malloy.API.rowDataToNumber(result.rows[0]['V'])).toBe(30);
+  });
+
+  it('handles multi-line statements', async () => {
+    const conn = makeConn(
+      'snowflake_setup_multiline',
+      `SET\n  setup_ml_${uid} = 99`
+    );
+    const result = await conn.runSQL(`SELECT $setup_ml_${uid} AS V`);
+    expect(malloy.API.rowDataToNumber(result.rows[0]['V'])).toBe(99);
   });
 });
