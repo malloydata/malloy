@@ -37,6 +37,8 @@ registerConnectionType('snowflake', {
       setupSQL,
       timeoutMs,
       schemaSampleTimeoutMs,
+      schemaSampleRowLimit,
+      schemaSampleFullScanMaxBytes,
       ...props
     } = config;
     // ConnectionConfig values are trusted to match ConnectionOptions fields
@@ -59,6 +61,18 @@ registerConnectionType('snowflake', {
           ? schemaSampleTimeoutMs
           : typeof schemaSampleTimeoutMs === 'string'
             ? parseInt(schemaSampleTimeoutMs, 10)
+            : undefined,
+      schemaSampleRowLimit:
+        typeof schemaSampleRowLimit === 'number'
+          ? schemaSampleRowLimit
+          : typeof schemaSampleRowLimit === 'string'
+            ? parseInt(schemaSampleRowLimit, 10)
+            : undefined,
+      schemaSampleFullScanMaxBytes:
+        typeof schemaSampleFullScanMaxBytes === 'number'
+          ? schemaSampleFullScanMaxBytes
+          : typeof schemaSampleFullScanMaxBytes === 'string'
+            ? parseInt(schemaSampleFullScanMaxBytes, 10)
             : undefined,
     });
   },
@@ -101,14 +115,33 @@ registerConnectionType('snowflake', {
       displayName: 'Timeout (ms)',
       type: 'number',
       optional: true,
+      default: 600000,
     },
     {
       name: 'schemaSampleTimeoutMs',
       displayName: 'Schema Sample Timeout (ms)',
       type: 'number',
       optional: true,
+      default: 15000,
       description:
-        'Timeout for the query that samples variant columns to detect their schema (default 15000)',
+        'Timeout for the query that samples variant columns to detect their schema.',
+    },
+    {
+      name: 'schemaSampleRowLimit',
+      displayName: 'Schema Sample Row Limit',
+      type: 'number',
+      optional: true,
+      default: 1000,
+      description:
+        'Row limit for the variant schema sample. Ignored for tables small enough to full-scan.',
+    },
+    {
+      name: 'schemaSampleFullScanMaxBytes',
+      displayName: 'Schema Full-Scan Max Bytes',
+      type: 'number',
+      optional: true,
+      description:
+        'Tables with BYTES at or below this value are full-scanned during variant schema inference instead of sampled. When unset, the connection uses an internal threshold; picking a value here is a policy choice tied to the size-probe behavior.',
     },
     {
       name: 'setupSQL',

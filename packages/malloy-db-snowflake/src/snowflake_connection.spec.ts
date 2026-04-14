@@ -129,7 +129,7 @@ describe('db:Snowflake', () => {
   it('discovers variant schema through a view', async () => {
     // Create a view with a variant column, then fetch its schema.
     // This exercises the TABLESAMPLE fallback path — TABLESAMPLE fails
-    // on views, so the code should fall back to LIMIT 100.
+    // on views, so the code should fall back to a plain LIMIT sample.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_view_${salt}`;
     await conn.runSQL(
@@ -202,18 +202,18 @@ describe('db:Snowflake', () => {
     ]);
   });
 
-  it('reconstructs variant object field from descendant paths when parent is absent', async () => {
-    // data.foo is a scalar in one row and an object in another.
-    // Snowflake path access on scalar variants returns NULL, so when the
-    // parent path is filtered out of the sample we still reconstruct foo
-    // from stable descendant paths.
+  it('degrades scalar-vs-object field to sql native without losing siblings', async () => {
+    // data.foo is an object in one row and a scalar in another. Honest
+    // policy: foo becomes sql native variant (caller must cast with
+    // `foo :: {bar :: number}` to query bar). The enclosing record is
+    // unaffected — sibling fields keep their inferred types.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_conflict_${salt}`;
     await conn.runSQL(
       `CREATE OR REPLACE VIEW ${viewName} AS
-       SELECT parse_json('{"foo": {"bar": 1}}') AS data
+       SELECT parse_json('{"foo": {"bar": 1}, "sib": "hello"}') AS data
        UNION ALL
-       SELECT parse_json('{"foo": "oops"}') AS data`
+       SELECT parse_json('{"foo": "oops", "sib": "world"}') AS data`
     );
     try {
       const schema = await conn.fetchTableSchema(viewName, viewName);
@@ -223,28 +223,28 @@ describe('db:Snowflake', () => {
       if (dataField!.type === 'record') {
         const fooField = dataField!.fields.find(f => f.name === 'foo');
         expect(fooField).toEqual({
-          type: 'record',
+          type: 'sql native',
+          rawType: 'variant',
           name: 'foo',
-          join: 'one',
-          fields: [{type: 'number', numberType: 'bigint', name: 'bar'}],
         });
+        const sibField = dataField!.fields.find(f => f.name === 'sib');
+        expect(sibField).toEqual({type: 'string', name: 'sib'});
       }
     } finally {
       await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
     }
   });
 
-  it('reconstructs nested object inside array from descendant paths', async () => {
-    // Array analogue of the customer bug: items[*].foo is an object in
-    // one row and a scalar in another. Stable descendant paths should
-    // still reconstruct foo as a record.
+  it('degrades scalar-vs-object inside an array element without losing the array', async () => {
+    // Array analogue: items[*].foo is an object in one row and a scalar
+    // in another. foo degrades to variant; items stays array<record>.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_array_obj_conflict_${salt}`;
     await conn.runSQL(
       `CREATE OR REPLACE VIEW ${viewName} AS
-       SELECT parse_json('{"items": [{"foo": {"bar": 1}}]}') AS data
+       SELECT parse_json('{"items": [{"foo": {"bar": 1}, "sib": "a"}]}') AS data
        UNION ALL
-       SELECT parse_json('{"items": [{"foo": "oops"}]}') AS data`
+       SELECT parse_json('{"items": [{"foo": "oops", "sib": "b"}]}') AS data`
     );
     try {
       const schema = await conn.fetchTableSchema(viewName, viewName);
@@ -261,15 +261,51 @@ describe('db:Snowflake', () => {
           });
           const fooField = itemsField!.fields.find(f => f.name === 'foo');
           expect(fooField).toEqual({
-            type: 'record',
+            type: 'sql native',
+            rawType: 'variant',
             name: 'foo',
-            join: 'one',
-            fields: [{type: 'number', numberType: 'bigint', name: 'bar'}],
           });
+          const sibField = itemsField!.fields.find(f => f.name === 'sib');
+          expect(sibField).toEqual({type: 'string', name: 'sib'});
         }
       }
     } finally {
       await conn.runSQL(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+  });
+
+  it('full-scans a small base table with variant columns under the byte threshold', async () => {
+    // Base table (not view) small enough that BYTES lands under the
+    // default 100 MB schemaSampleFullScanMaxBytes. The probe sees the
+    // size and the code takes the full-scan branch — no TABLESAMPLE,
+    // no LIMIT. Every row contributes to the (path, type) histogram,
+    // so rare fields are caught.
+    const salt = Math.random().toString(36).slice(2, 10);
+    const tableName = `malloytest.test_variant_fullscan_${salt}`;
+    await conn.runSQL(
+      `CREATE OR REPLACE TABLE ${tableName} AS
+       SELECT parse_json('{"foo": 1, "bar": "hi"}') AS data
+       UNION ALL
+       SELECT parse_json('{"foo": 2, "bar": "bye"}') AS data`
+    );
+    try {
+      const schema = await conn.fetchTableSchema(tableName, tableName);
+      const dataField = schema.fields.find(f => f.name === 'DATA');
+      expect(dataField).toBeDefined();
+      expect(dataField!.type).toBe('record');
+      if (dataField!.type === 'record') {
+        expect(dataField!.fields.find(f => f.name === 'foo')).toEqual({
+          name: 'foo',
+          type: 'number',
+          numberType: 'bigint',
+        });
+        expect(dataField!.fields.find(f => f.name === 'bar')).toEqual({
+          name: 'bar',
+          type: 'string',
+        });
+      }
+    } finally {
+      await conn.runSQL(`DROP TABLE IF EXISTS ${tableName}`);
     }
   });
 
@@ -302,10 +338,10 @@ describe('db:Snowflake', () => {
     }
   });
 
-  it('preserves sibling fields when one field is reconstructed from descendants', async () => {
+  it('preserves sibling fields when one field degrades to variant', async () => {
     // foo is scalar in one row and object in another, while stable is
-    // always consistent. The rescue should stay local to foo and keep
-    // stable untouched.
+    // always consistent. The degradation should stay local to foo and
+    // keep stable untouched.
     const salt = Math.random().toString(36).slice(2, 10);
     const viewName = `malloytest.test_variant_sibling_${salt}`;
     await conn.runSQL(
@@ -322,10 +358,9 @@ describe('db:Snowflake', () => {
       if (dataField!.type === 'record') {
         const fooField = dataField!.fields.find(f => f.name === 'foo');
         expect(fooField).toEqual({
-          type: 'record',
+          type: 'sql native',
+          rawType: 'variant',
           name: 'foo',
-          join: 'one',
-          fields: [{type: 'number', numberType: 'bigint', name: 'bar'}],
         });
         const stableField = dataField!.fields.find(f => f.name === 'stable');
         expect(stableField).toEqual({

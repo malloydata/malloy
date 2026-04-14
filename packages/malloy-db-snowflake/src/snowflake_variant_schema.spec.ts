@@ -157,6 +157,29 @@ describe('snowflake variant schema helper', () => {
     expect(mergeShape(first, second)).toEqual({kind: 'variant'});
   });
 
+  test('scalar-vs-object at same path degrades that field only', () => {
+    // The sample emits both the scalar observation and the object
+    // observation (same path, two rows from the distinct (path, type)
+    // query). mergeShape collapses DATA.foo to variant; the parent
+    // DATA stays a record and siblings keep their types.
+    expect(
+      inferField({kind: 'variant', name: 'DATA'}, [
+        {path: 'DATA.foo', type: 'object'},
+        {path: 'DATA.foo', type: 'varchar'},
+        {path: 'DATA.foo.bar', type: 'decimal'},
+        {path: 'DATA.sib', type: 'varchar'},
+      ])
+    ).toEqual({
+      type: 'record',
+      name: 'DATA',
+      join: 'one',
+      fields: [
+        {type: 'sql native', rawType: 'variant', name: 'foo'},
+        {type: 'string', name: 'sib'},
+      ],
+    });
+  });
+
   test('variant shape is monotonic', () => {
     expect(mergeShape({kind: 'variant'}, {kind: 'object'})).toEqual({
       kind: 'variant',

@@ -53,6 +53,49 @@ import type {Options as PoolOptions} from 'generic-pool';
 
 type namespace = {database: string; schema: string};
 
+/**
+ * Output of the INFORMATION_SCHEMA.TABLES probe. Undefined when the
+ * probe didn't run (non-parseable name) or couldn't find numeric size
+ * info (views, missing permissions).
+ */
+export interface TableSizeProbe {
+  bytes: number;
+  rowCount: number;
+}
+
+/**
+ * Three-way tier that drives variant schema sampling. Extracted as a
+ * pure function so cost-policy decisions are unit-testable.
+ *
+ *   full-scan-then-sample: probe confirmed a small base table. One
+ *     full scan catches rare fields. On failure, fall through to the
+ *     sample chain rather than accept opaque variant.
+ *
+ *   tablesample-only: probe confirmed a base table above the small
+ *     threshold. TABLESAMPLE BLOCK is safe (reads a few micro
+ *     partitions). Plain LIMIT without a WHERE is unsafe on large
+ *     partitioned tables, so we skip the LIMIT fallback — we'd rather
+ *     degrade to variant than issue a runaway query.
+ *
+ *   tablesample-then-limit: probe gave no size info (views, temp
+ *     views, exotic names). We can't distinguish a small view from a
+ *     view over a petabyte table, so we do best-effort sampling. This
+ *     is the acknowledged "can't help you" case from the design doc.
+ */
+export type SampleStrategy =
+  | 'full-scan-then-sample'
+  | 'tablesample-only'
+  | 'tablesample-then-limit';
+
+export function pickSampleStrategy(
+  probe: TableSizeProbe | undefined,
+  fullScanMaxBytes: number
+): SampleStrategy {
+  if (probe === undefined) return 'tablesample-then-limit';
+  if (probe.bytes <= fullScanMaxBytes) return 'full-scan-then-sample';
+  return 'tablesample-only';
+}
+
 export interface SnowflakeConnectionOptions {
   // snowflake sdk connection options
   connOptions?: ConnectionOptions;
@@ -71,6 +114,16 @@ export interface SnowflakeConnectionOptions {
 
   // Timeout for the variant schema sampling query (default 2 minutes)
   schemaSampleTimeoutMs?: number;
+
+  // Row limit used inside the variant schema sample (default 1000). When the
+  // probe reports the table is small enough to full-scan, this limit is
+  // ignored.
+  schemaSampleRowLimit?: number;
+
+  // Byte threshold below which variant schema inference skips sampling and
+  // full-scans the table instead (default 100 MB). A full scan catches rare
+  // fields that a sample would miss.
+  schemaSampleFullScanMaxBytes?: number;
 
   // SQL statements to run when a connection is acquired from the pool
   setupSQL?: string;
@@ -99,6 +152,8 @@ export class SnowflakeConnection
   private queryOptions: RunSQLOptions;
   private timeoutMs: number;
   private schemaSampleTimeoutMs: number;
+  private schemaSampleRowLimit: number;
+  private schemaSampleFullScanMaxBytes: number;
   private setupSQL: string | undefined;
 
   constructor(
@@ -122,6 +177,9 @@ export class SnowflakeConnection
     this.queryOptions = options?.queryOptions ?? {};
     this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
     this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs ?? 15_000;
+    this.schemaSampleRowLimit = options?.schemaSampleRowLimit ?? 1000;
+    this.schemaSampleFullScanMaxBytes =
+      options?.schemaSampleFullScanMaxBytes ?? 100_000_000;
   }
 
   get dialectName(): string {
@@ -245,51 +303,87 @@ export class SnowflakeConnection
       }
     }
     // VARIANT, ARRAY, and OBJECT columns don't have schema in metadata —
-    // we have to sample actual data and inspect it to discover the structure.
-    // This is inherently heuristic (we only look at 100 rows) and can be
-    // slow on large partitioned tables or expensive views.
+    // we have to sample actual data and inspect it to discover the
+    // structure. Cost control happens in two places:
+    //   1. project only the nested columns (via object_construct), so
+    //      bytes-on-wire are bounded by actual variant content.
+    //   2. tier the sampling strategy by probeTableSize (see
+    //      pickSampleStrategy) — small base tables get a full scan;
+    //      large base tables get TABLESAMPLE only (no unsafe LIMIT
+    //      fallback); unknown-size sources (views, temp views) get
+    //      the best-effort TABLESAMPLE→LIMIT chain.
     if (nestedColumns.length > 0) {
       const variantArgs = nestedColumns
         .map(v => `'${v.name}', "${v.name}"`)
         .join(', ');
-      // Build the analysis query that flattens sampled rows and detects
-      // the type of each leaf path. We only construct from nested columns
-      // (not *) to avoid flattening the entire row on wide tables.
-      // Paths with multiple types across the sample are dropped (HAVING
-      // count(*) <= 1), and nulls are ignored.
+      // Flatten sampled rows and emit each distinct (path, type) pair.
+      // Conflicting pairs at the same path flow through to mergeShape,
+      // which collapses them to variant — that is how we honestly
+      // surface mixed-type fields to the user.
       const makeSampleQuery = (sampleClause: string) => `
-        select path, min(type) as type
-        from (
-          select
-            regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
-            case
-              when typeof(value) = 'INTEGER' then 'decimal'
-              when typeof(value) = 'DOUBLE' then 'decimal'
-            else lower(typeof(value)) end as type
-          from
-            (${sampleClause})
-              ,table(flatten(input => o, recursive => true)) as meta
-          group by 1,2
-        )
-        where type != 'null_value'
-        group BY 1
-        having count(*) <=1
-        order by path;
+        select
+          regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
+          case
+            when typeof(value) = 'INTEGER' then 'decimal'
+            when typeof(value) = 'DOUBLE' then 'decimal'
+          else lower(typeof(value)) end as type
+        from
+          (${sampleClause})
+            ,table(flatten(input => o, recursive => true)) as meta
+        where typeof(value) != 'NULL_VALUE'
+        group by 1, 2
+        order by 1;
       `;
-      const limitClause =
-        `select object_construct(${variantArgs}) o` +
-        ` from ${tablePath} limit 100`;
-      // Try TABLESAMPLE first — it picks random micro-partitions without
-      // scanning the whole table, which avoids the full-scan problem on
-      // large partitioned tables. TABLESAMPLE only works on base tables,
-      // not views, so if it fails we fall back to a plain LIMIT 100.
-      const tablesampleClause =
-        `select object_construct(${variantArgs}) o` +
-        ` from ${tablePath} TABLESAMPLE BLOCK (1) limit 100`;
-      const fieldPathRows = await this.runSchemaSample(
-        makeSampleQuery(tablesampleClause),
-        makeSampleQuery(limitClause)
+      const projectVariants = `select object_construct(${variantArgs}) o`;
+      const probe = await this.probeTableSize(tablePath);
+      const strategy = pickSampleStrategy(
+        probe,
+        this.schemaSampleFullScanMaxBytes
       );
+      const n = this.schemaSampleRowLimit;
+      let fieldPathRows: QueryRecord[] | undefined;
+
+      if (strategy === 'full-scan-then-sample') {
+        // Small base table: one full scan catches rare fields that
+        // sampling would miss. tryBatch so a failure doesn't poison
+        // the pool connection (temp views live on it). On failure we
+        // fall through to the sample path so a slow or timed-out full
+        // scan still gets partial structure.
+        fieldPathRows =
+          (await this.executor.tryBatch(
+            makeSampleQuery(`${projectVariants} from ${tablePath}`),
+            {},
+            this.schemaSampleTimeoutMs
+          )) ?? undefined;
+      }
+
+      if (fieldPathRows === undefined) {
+        const tablesampleQuery = makeSampleQuery(
+          `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (1) limit ${n}`
+        );
+        if (strategy === 'tablesample-only') {
+          // Known-large base table: TABLESAMPLE is safe (reads a few
+          // micro-partitions), plain LIMIT without a WHERE can be
+          // catastrophic on large partitioned tables. If TABLESAMPLE
+          // fails here we accept variant rather than risk an unbounded
+          // scan.
+          fieldPathRows =
+            (await this.executor.tryBatch(
+              tablesampleQuery,
+              {},
+              this.schemaSampleTimeoutMs
+            )) ?? undefined;
+        } else {
+          // Unknown size (view, temp view, non-parseable name) or
+          // full-scan fallback: best-effort TABLESAMPLE→LIMIT chain.
+          // The LIMIT fallback is the acknowledged "can't help" case
+          // for views over large partitioned tables.
+          fieldPathRows = await this.runSchemaSample(
+            tablesampleQuery,
+            makeSampleQuery(`${projectVariants} from ${tablePath} limit ${n}`)
+          );
+        }
+      }
 
       const state = createVariantSchemaState();
       // Snowflake nested-schema inference follows these rules:
@@ -324,6 +418,53 @@ export class SnowflakeConnection
         );
       }
     }
+  }
+
+  /**
+   * Cheap metadata probe: ask INFORMATION_SCHEMA.TABLES for the row count
+   * and byte size of tablePath. Returns undefined when the name doesn't
+   * parse as a two- or three-part identifier (temp views, exotic quoted
+   * names), when the probe query fails, or when the row has no numeric
+   * BYTES (views and external tables typically report NULL).
+   *
+   * Two-part `schema.table` names use the current database's
+   * INFORMATION_SCHEMA; three-part `db.schema.table` names address
+   * INFORMATION_SCHEMA in the named database. Identifier parts are
+   * validated against a strict regex before interpolation; values that
+   * don't match cause the probe to skip.
+   */
+  private async probeTableSize(
+    tablePath: string
+  ): Promise<TableSizeProbe | undefined> {
+    const parts = tablePath.split('.');
+    if (parts.length !== 2 && parts.length !== 3) return undefined;
+    const identifier = /^[A-Za-z_][A-Za-z0-9_$]*$/;
+    if (!parts.every(p => identifier.test(p))) return undefined;
+    const [db, schema, table] =
+      parts.length === 3 ? parts : [undefined, parts[0], parts[1]];
+    const dbQualifier = db !== undefined ? `${db}.` : '';
+    const rows = await this.executor.tryBatch(
+      `select row_count as rc, bytes as by
+       from ${dbQualifier}information_schema.tables
+       where upper(table_schema) = upper('${schema}')
+         and upper(table_name) = upper('${table}')
+       limit 1`,
+      {},
+      this.schemaSampleTimeoutMs
+    );
+    if (!rows || rows.length === 0) return undefined;
+    const row = rows[0];
+    const bytesRaw = row['BY'] ?? row['by'];
+    const rowsRaw = row['RC'] ?? row['rc'];
+    // Views and external tables surface null BYTES / ROW_COUNT; treat
+    // that as "unknown size" so we don't classify them as small and
+    // launch a full scan against something potentially huge.
+    if (bytesRaw === null || bytesRaw === undefined) return undefined;
+    if (rowsRaw === null || rowsRaw === undefined) return undefined;
+    const bytes = Number(bytesRaw);
+    const rowCount = Number(rowsRaw);
+    if (!Number.isFinite(bytes) || !Number.isFinite(rowCount)) return undefined;
+    return {bytes, rowCount};
   }
 
   /**
