@@ -23,9 +23,9 @@ import {
   DatabricksDialect,
   sqlKey,
   makeDigest,
-  TinyParser,
   mkFieldDef,
 } from '@malloydata/malloy';
+import {TinyParser} from '@malloydata/malloy/internal';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {DBSQLClient, DBSQLLogger, LogLevel} from '@databricks/sql';
 
@@ -45,32 +45,28 @@ class DatabricksTypeParser extends TinyParser {
   }
 
   typeDef(): AtomicTypeDef {
-    const typToken = this.next();
+    const typToken = this.read();
     if (typToken.type === 'eof') {
       throw this.parseError('Unexpected EOF parsing type');
     }
     const typText = typToken.text.toLowerCase();
 
-    if (typText === 'struct' && this.peek().text === '<') {
-      this.next('<');
+    if (typText === 'struct' && this.match('<')) {
       const fields: FieldDef[] = [];
       for (;;) {
-        const name = this.next('id');
-        this.next(':');
+        const name = this.expect('id');
+        this.expect(':');
         const fieldType = this.typeDef();
         fields.push(mkFieldDef(fieldType, name.text));
-        const sep = this.next();
-        if (sep.text === '>') break;
-        if (sep.text === ',') continue;
-        throw this.parseError(`Expected '>' or ',', got '${sep.text}'`);
+        if (this.match('>')) break;
+        this.expect(',');
       }
       return {type: 'record', fields} as RecordTypeDef;
     }
 
-    if (typText === 'array' && this.peek().text === '<') {
-      this.next('<');
+    if (typText === 'array' && this.match('<')) {
       const elType = this.typeDef();
-      this.next('>');
+      this.expect('>');
       return elType.type === 'record'
         ? {
             type: 'array',
@@ -80,34 +76,30 @@ class DatabricksTypeParser extends TinyParser {
         : {type: 'array', elementTypeDef: elType};
     }
 
-    if (typText === 'map' && this.peek().text === '<') {
-      this.next('<');
+    if (typText === 'map' && this.match('<')) {
       this.typeDef(); // key type
-      this.next(',');
+      this.expect(',');
       this.typeDef(); // value type
-      this.next('>');
+      this.expect('>');
       return {type: 'sql native'};
     }
 
     // Atomic type — parse parameters for DECIMAL, skip for others
     if (typToken.type === 'id') {
-      if (typText === 'decimal' && this.peek().text === '(') {
-        this.next('(');
-        this.next('id'); // precision
+      if (typText === 'decimal' && this.match('(')) {
+        this.expect('id'); // precision
         let numberType: 'integer' | 'float' = 'integer';
-        if (this.peek().text === ',') {
-          this.next(',');
-          const scale = this.next('id');
+        if (this.match(',')) {
+          const scale = this.expect('id');
           if (scale.text !== '0') numberType = 'float';
         }
-        this.next(')');
+        this.expect(')');
         return {type: 'number', numberType};
       }
-      if (this.peek().text === '(') {
-        this.next('(');
+      if (this.match('(')) {
         let depth = 1;
         while (depth > 0) {
-          const t = this.next();
+          const t = this.read();
           if (t.text === '(') depth++;
           else if (t.text === ')') depth--;
         }

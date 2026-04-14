@@ -4,6 +4,7 @@
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
+    "./internal": "./dist/internal.js",
     "./test": "./dist/test/index.js",
     "./test/matchers": "./dist/test/matchers.js",
     "./connection": "./dist/connection/index.js",
@@ -13,6 +14,9 @@
     "*": {
       "index": [
         "./dist/index.d.ts"
+      ],
+      "internal": [
+        "./dist/internal.d.ts"
       ],
       "test": [
         "./dist/test/index.d.ts"

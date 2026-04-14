@@ -537,23 +537,16 @@ class DuckDBTypeParser extends TinyParser {
   }
 
   typeDef(): AtomicTypeDef {
-    const wantID = this.next('id');
+    const wantID = this.expect('id');
     const id = this.sqlID(wantID);
     let baseType: AtomicTypeDef;
     if (id === 'VARCHAR') {
-      if (this.peek().type === 'size') {
-        this.next();
-      }
+      this.match('size');
     }
-    if (
-      (id === 'DECIMAL' || id === 'NUMERIC') &&
-      this.peek().type === 'precision'
-    ) {
-      this.next();
+    if ((id === 'DECIMAL' || id === 'NUMERIC') && this.match('precision')) {
       baseType = {type: 'number', numberType: 'float'};
     } else if (id === 'TIMESTAMP') {
-      if (this.peek().text.toUpperCase() === 'WITH') {
-        this.nextText('WITH', 'TIME', 'ZONE');
+      if (this.matchText('WITH', 'TIME', 'ZONE')) {
         baseType = {type: 'timestamptz'};
       } else {
         baseType = {type: 'timestamp'};
@@ -561,27 +554,24 @@ class DuckDBTypeParser extends TinyParser {
     } else if (duckDBToMalloyTypes[id]) {
       baseType = duckDBToMalloyTypes[id];
     } else if (id === 'STRUCT') {
-      this.next('(');
+      this.expect('(');
       baseType = {type: 'record', fields: []};
       for (;;) {
-        const fieldName = this.next();
-        if (
-          fieldName.type === 'qsingle' ||
-          fieldName.type === 'qdouble' ||
-          fieldName.type === 'id'
-        ) {
-          const fieldType = this.typeDef();
-          baseType.fields.push(
-            mkFieldDef(fieldType, this.unquoteName(fieldName))
-          );
-        } else {
-          if (fieldName.type !== ')') {
+        const fieldName =
+          this.match('qsingle') ?? this.match('qdouble') ?? this.match('id');
+        if (!fieldName) {
+          if (!this.match(')')) {
             throw this.parseError('Expected identifier or ) to end STRUCT');
           }
           break;
         }
-        if (this.peek().type === ',') {
-          this.next();
+        const fieldType = this.typeDef();
+        baseType.fields.push(
+          mkFieldDef(fieldType, this.unquoteName(fieldName))
+        );
+        if (!this.match(',')) {
+          this.expect(')');
+          break;
         }
       }
     } else {
@@ -589,9 +579,7 @@ class DuckDBTypeParser extends TinyParser {
         // unknown field type, strip all type decorations, there was a regex for this
         // in the pre-parser code, but no tests, so this is also untested
         let idEnd = wantID.cursor + wantID.text.length;
-        if (this.peek().type === 'precision') {
-          this.next();
-        }
+        this.match('precision');
         if (this.peek().type === 'eof') {
           idEnd = this.input.length;
         }
@@ -603,8 +591,7 @@ class DuckDBTypeParser extends TinyParser {
         throw this.parseError('Could not understand type');
       }
     }
-    while (this.peek().type === 'arrayOf') {
-      this.next();
+    while (this.match('arrayOf')) {
       if (baseType.type === 'record') {
         baseType = {
           type: 'array',

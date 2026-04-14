@@ -42,11 +42,11 @@ import type {
 } from '@malloydata/malloy';
 import {
   SnowflakeDialect,
-  TinyParser,
   mkArrayDef,
   sqlKey,
   makeDigest,
 } from '@malloydata/malloy';
+import {TinyParser} from '@malloydata/malloy/internal';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {SnowflakeExecutor} from './snowflake_executor';
@@ -548,13 +548,13 @@ export class PathParser extends TinyParser {
   }
 
   getName() {
-    const nameStart = this.next();
+    const nameStart = this.read();
     if (nameStart.type === 'word') {
       return nameStart.text;
     }
     if (nameStart.type === '[') {
-      const quotedName = this.next('quoted');
-      this.next(']');
+      const quotedName = this.expect('quoted');
+      this.expect(']');
       return quotedName.text;
     }
     throw this.parseError('Expected column name');
@@ -564,22 +564,22 @@ export class PathParser extends TinyParser {
     const chain: PathChain = {name: this.getName()};
     let node: PathChain = chain;
     for (;;) {
-      const sep = this.next();
+      const sep = this.read();
       if (sep.type === 'eof') {
         return chain;
       }
       if (sep.type === '.') {
-        node.next = {name: this.next('word').text};
+        node.next = {name: this.expect('word').text};
         node = node.next;
       } else if (sep.type === 'array_of') {
         node.next = {arrayRef: true};
         node = node.next;
       } else if (sep.type === '[') {
         // Actually a dot access through a quoted name
-        const quoted = this.next('quoted');
+        const quoted = this.expect('quoted');
         node.next = {name: quoted.text};
         node = node.next;
-        this.next(']');
+        this.expect(']');
       } else {
         throw this.parseError(`Unexpected ${sep.type}`);
       }
