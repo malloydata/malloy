@@ -39,12 +39,7 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {
-  TrinoDialect,
-  mkFieldDef,
-  sqlKey,
-  makeDigest,
-} from '@malloydata/malloy';
+import {TrinoDialect, mkFieldDef, sqlKey, makeDigest} from '@malloydata/malloy';
 import {TinyParser} from '@malloydata/malloy/internal';
 
 import {BaseConnection} from '@malloydata/malloy/connection';

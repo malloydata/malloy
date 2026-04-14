@@ -68,7 +68,7 @@ describe('TinyParser', () => {
     });
 
     parser.expect('id');
-    expect(() => parser.expect('(')).toThrow(`abc )\n    ^`);
+    expect(() => parser.expect('(')).toThrow('abc )\n    ^');
   });
 
   test('skipTo consumes until the requested token', () => {
@@ -92,7 +92,7 @@ describe('TinyParser', () => {
   });
 
   test('dump applies special token conventions', () => {
-    const parser = new TinyParser(` "abc",x`, {
+    const parser = new TinyParser(' "abc",x', {
       space: /^\s+/,
       qstr: /^"[^"]*"/,
       char: /^[,]/,

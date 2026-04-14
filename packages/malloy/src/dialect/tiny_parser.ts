@@ -154,7 +154,9 @@ export class TinyParser {
       );
     }
     for (let index = 0; index < texts.length; index += 1) {
-      if (this.peekAt(index).text.toUpperCase() !== texts[index].toUpperCase()) {
+      if (
+        this.peekAt(index).text.toUpperCase() !== texts[index].toUpperCase()
+      ) {
         return undefined;
       }
     }
