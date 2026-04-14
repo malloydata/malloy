@@ -225,8 +225,12 @@ export class SnowflakeConnection
       const baseType = fullType.split('(')[0];
       const name = row['name'] as string;
 
-      if (['variant', 'array', 'object'].includes(baseType)) {
-        nestedColumns.push({kind: baseType as NestedColumn['kind'], name});
+      if (
+        baseType === 'variant' ||
+        baseType === 'array' ||
+        baseType === 'object'
+      ) {
+        nestedColumns.push({kind: baseType, name});
       } else {
         notVariant.set(name, true);
         // For NUMBER types, pass full string so dialect can inspect scale
