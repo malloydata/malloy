@@ -48,6 +48,7 @@ import {
   seedTopLevelShape,
 } from './snowflake_variant_schema';
 import type {NestedColumn} from './snowflake_variant_schema';
+import {parseSnowflakeTableName} from './snowflake_table_name';
 import type {ConnectionOptions} from 'snowflake-sdk';
 import type {Options as PoolOptions} from 'generic-pool';
 
@@ -423,31 +424,28 @@ export class SnowflakeConnection
   /**
    * Cheap metadata probe: ask INFORMATION_SCHEMA.TABLES for the row count
    * and byte size of tablePath. Returns undefined when the name doesn't
-   * parse as a two- or three-part identifier (temp views, exotic quoted
-   * names), when the probe query fails, or when the row has no numeric
-   * BYTES (views and external tables typically report NULL).
+   * parse as a two- or three-part identifier, when the probe query fails,
+   * or when the row has no numeric BYTES (views and external tables
+   * typically report NULL).
    *
    * Two-part `schema.table` names use the current database's
    * INFORMATION_SCHEMA; three-part `db.schema.table` names address
-   * INFORMATION_SCHEMA in the named database. Identifier parts are
-   * validated against a strict regex before interpolation; values that
-   * don't match cause the probe to skip.
+   * INFORMATION_SCHEMA in the named database. Identifiers are parsed
+   * with Snowflake's quoting rules so bare parts case-fold to upper and
+   * quoted parts are compared verbatim against the catalog.
    */
   private async probeTableSize(
     tablePath: string
   ): Promise<TableSizeProbe | undefined> {
-    const parts = tablePath.split('.');
-    if (parts.length !== 2 && parts.length !== 3) return undefined;
-    const identifier = /^[A-Za-z_][A-Za-z0-9_$]*$/;
-    if (!parts.every(p => identifier.test(p))) return undefined;
-    const [db, schema, table] =
-      parts.length === 3 ? parts : [undefined, parts[0], parts[1]];
-    const dbQualifier = db !== undefined ? `${db}.` : '';
+    const parsed = parseSnowflakeTableName(tablePath);
+    if (parsed === undefined || parsed.schema === undefined) return undefined;
+    const quoteLit = (s: string) => s.replace(/'/g, "''");
+    const dbQualifier = parsed.database ? `${parsed.database.sql}.` : '';
     const rows = await this.executor.tryBatch(
       `select row_count as rc, bytes as by
        from ${dbQualifier}information_schema.tables
-       where upper(table_schema) = upper('${schema}')
-         and upper(table_name) = upper('${table}')
+       where table_schema = '${quoteLit(parsed.schema.literal)}'
+         and table_name = '${quoteLit(parsed.table.literal)}'
        limit 1`,
       {},
       this.schemaSampleTimeoutMs
