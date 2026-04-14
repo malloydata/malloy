@@ -43,7 +43,6 @@ export {
   literal,
   spread,
   Dialect,
-  TinyParser,
 } from './dialect';
 export type {
   DialectFieldList,
@@ -53,7 +52,6 @@ export type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
-  TinyToken,
 } from './dialect';
 // TODO tighten up exports
 export type {

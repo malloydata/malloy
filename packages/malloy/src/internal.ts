@@ -15,3 +15,5 @@ export {
   mkTableSourceDef,
   pathToKey,
 } from './model';
+export {TinyParseError, TinyParser} from './dialect/tiny_parser';
+export type {TinyToken} from './dialect/tiny_parser';

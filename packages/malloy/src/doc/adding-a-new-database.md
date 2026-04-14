@@ -70,7 +70,7 @@ Create `packages/malloy-db-{name}/`. See [connection CONTEXT.md](../connection/C
 
 ### Implementation notes
 
-**Schema fetching**: Most databases support `DESCRIBE` or dry-run queries. Map raw type strings to Malloy types via `dialect.sqlTypeToMalloyType()`. For complex types you'll likely need a type-string parser — see `TinyParser` in the dialect package.
+**Schema fetching**: Most databases support `DESCRIBE` or dry-run queries. Map raw type strings to Malloy types via `dialect.sqlTypeToMalloyType()`. For complex types you'll likely need a type-string parser — see [`TinyParser`](../dialect/tiny_parser.ts) in `@malloydata/malloy/internal`. The class comment is the reference for token rules and parser helpers.
 
 **Async initialization**: You can't `await` in a constructor. Use the standard pattern: store an `init()` promise in the constructor, `await` it at the top of every public method.
 

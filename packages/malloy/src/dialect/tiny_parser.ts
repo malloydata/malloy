@@ -12,28 +12,54 @@ export interface TinyToken {
 }
 
 /**
- * Simple framework for writing schema parsers. The parsers using this felt
- * better than the more ad-hoc code they replaced, and are smaller than
- * using a parser generator.
+ * Tiny combined lexer/parser for short recursive-descent parsers.
+ *
+ * TinyParser is intentionally small and biased toward readability over
+ * framework features. It is primarily used for schema and type parsers where
+ * a hand-written parser is clearer than ad-hoc regex matching, but a parser
+ * generator would be overkill.
+ *
+ * Design goals:
+ * - Keep parser implementations short and readable.
+ * - Support custom tokenization rules per parser.
+ * - Make parser intent obvious at call sites.
+ * - Minimize hidden consumption and parser-state surprises.
+ *
+ * Core parser API:
+ * - peek(): inspect the next token without consuming it.
+ * - read(): consume and return the next token, regardless of type.
+ * - expect(...types): consume a required sequence of token types.
+ * - expectText(...texts): consume a required sequence of token texts.
+ * - match(...types): consume an optional sequence of token types.
+ * - matchText(...texts): consume an optional sequence of token texts.
+ *
+ * Semantics:
+ * - expect*() is for required grammar and throws on failure.
+ * - match*() is for optional grammar and is atomic. If the full sequence does
+ *   not match, nothing is consumed.
+ * - peek() remains available, but most optional syntax should prefer match*().
+ *
+ * Token rules are tested in order. The first matching rule wins.
+ *
+ * Special token rule names:
+ * - space: matched text is skipped and never returned.
+ * - char: matched text becomes both token.type and token.text.
+ * - q*: any token name starting with q is treated as quoted text and has its
+ *   first and last characters stripped from token.text.
  *
  * NOTE: All parse errors are exceptions.
  */
 export class TinyParseError extends Error {}
 export class TinyParser {
-  private tokens: Generator<TinyToken>;
+  private readonly tokens: TinyToken[] = [];
+  private tokenCursor = 0;
+  private scanCursor = 0;
+  private scanState: 'scanning' | 'afterUnexpected' | 'done' = 'scanning';
   protected parseCursor = 0;
-  private lookAhead?: TinyToken;
-  private tokenMap: Record<string, RegExp>;
+  private readonly tokenMap: Record<string, RegExp>;
 
   /**
-   * The token map is tested in order. Return TinyToken
-   * is {type: tokenMapKey, text: matchingText }, except
-   * for the special tokenMapKeys:
-   * * space: skipped and never returned
-   * * char: matched string return in both .type and .text
-   * * q*: any token name starting with 'q' is assumed to be
-   *   a quoted string and the text will have the first and
-   *   last characters stripped
+   * The token map is tested in order and the first matching rule wins.
    */
   constructor(
     readonly input: string,
@@ -45,10 +71,10 @@ export class TinyParser {
       id: /^\w+/,
       qstr: /^"\w+"/,
     };
-    this.tokens = this.tokenize(input);
   }
 
   parseError(str: string) {
+    this.parseCursor = this.peek().cursor;
     const errText =
       `INTERNAL ERROR parsing schema: ${str}\n` +
       `${this.input}\n` +
@@ -57,20 +83,18 @@ export class TinyParser {
   }
 
   peek(): TinyToken {
-    if (this.lookAhead) {
-      return this.lookAhead;
-    } else {
-      const {value} = this.tokens.next();
-      const peekVal = value ?? {type: 'eof', text: ''};
-      this.lookAhead = peekVal;
-      return peekVal;
-    }
+    return this.peekAt(0);
   }
 
-  private getNext(): TinyToken {
-    const next = this.lookAhead ?? this.peek();
-    this.lookAhead = undefined;
-    return next;
+  read(): TinyToken {
+    return this.consume();
+  }
+
+  private peekAt(offset: number): TinyToken {
+    this.fillBufferTo(this.tokenCursor + offset);
+    const token = this.tokens[this.tokenCursor + offset] ?? this.eofToken();
+    this.parseCursor = token.cursor;
+    return token;
   }
 
   /**
@@ -79,41 +103,69 @@ export class TinyParser {
    * @param types list of token types
    * @returns The last token read
    */
-  next(...types: string[]): TinyToken {
-    if (types.length === 0) return this.getNext();
-    let next: TinyToken | undefined = undefined;
-    let expected = types[0];
-    for (const typ of types) {
-      next = this.getNext();
-      expected = typ;
-      if (next.type !== typ) {
-        next = undefined;
-        break;
-      }
+  expect(...types: string[]): TinyToken {
+    if (types.length === 0) {
+      throw new Error('TinyParser.expect() requires at least one token type');
     }
-    if (next) return next;
-    throw this.parseError(`Expected token type '${expected}'`);
+    let next: TinyToken | undefined;
+    for (const typ of types) {
+      next = this.peek();
+      if (next.type !== typ) {
+        throw this.parseError(`Expected token type '${typ}'`);
+      }
+      this.consume();
+    }
+    return next!;
   }
 
-  nextText(...texts: string[]): TinyToken {
-    if (texts.length === 0) return this.getNext();
-    let next: TinyToken | undefined = undefined;
-    let expected = texts[0];
+  expectText(...texts: string[]): TinyToken {
+    if (texts.length === 0) {
+      throw new Error(
+        'TinyParser.expectText() requires at least one token text'
+      );
+    }
+    let next: TinyToken | undefined;
     for (const txt of texts) {
-      next = this.getNext();
-      expected = txt;
+      next = this.peek();
       if (next.text.toUpperCase() !== txt.toUpperCase()) {
-        next = undefined;
-        break;
+        throw this.parseError(`Expected '${txt}'`);
+      }
+      this.consume();
+    }
+    return next!;
+  }
+
+  match(...types: string[]): TinyToken | undefined {
+    if (types.length === 0) {
+      throw new Error('TinyParser.match() requires at least one token type');
+    }
+    for (let index = 0; index < types.length; index += 1) {
+      if (this.peekAt(index).type !== types[index]) {
+        return undefined;
       }
     }
-    if (next) return next;
-    throw this.parseError(`Expected '${expected}'`);
+    return this.consume(types.length);
+  }
+
+  matchText(...texts: string[]): TinyToken | undefined {
+    if (texts.length === 0) {
+      throw new Error(
+        'TinyParser.matchText() requires at least one token text'
+      );
+    }
+    for (let index = 0; index < texts.length; index += 1) {
+      if (
+        this.peekAt(index).text.toUpperCase() !== texts[index].toUpperCase()
+      ) {
+        return undefined;
+      }
+    }
+    return this.consume(texts.length);
   }
 
   skipTo(type: string) {
     for (;;) {
-      const next = this.next();
+      const next = this.read();
       if (next.type === 'eof') {
         throw this.parseError(`Expected token '${type}`);
       }
@@ -124,41 +176,119 @@ export class TinyParser {
   }
 
   dump(): TinyToken[] {
-    const p = this.parseCursor;
-    const parts = [...this.tokenize(this.input)];
-    this.parseCursor = p;
+    const parts: TinyToken[] = [];
+    let cursor = 0;
+    let state: 'scanning' | 'afterUnexpected' | 'done' = 'scanning';
+    while (state !== 'done') {
+      const {token, nextCursor, nextState} = this.scanToken(cursor, state);
+      if (token.type === 'eof') {
+        break;
+      }
+      parts.push(token);
+      cursor = nextCursor;
+      state = nextState;
+    }
     return parts;
   }
 
-  private *tokenize(src: string): Generator<TinyToken> {
-    const tokenList = this.tokenMap;
-    while (this.parseCursor < src.length) {
-      let notFound = true;
-      for (const tokenType in tokenList) {
-        const srcAtCursor = src.slice(this.parseCursor);
-        const foundToken = srcAtCursor.match(tokenList[tokenType]);
+  private fillBufferTo(index: number) {
+    while (this.tokens.length <= index) {
+      this.tokens.push(this.readNextToken());
+    }
+  }
+
+  private consume(count = 1): TinyToken {
+    let token = this.peek();
+    for (let index = 0; index < count; index += 1) {
+      token = this.peek();
+      this.tokenCursor += 1;
+    }
+    this.parseCursor = this.peek().cursor;
+    return token;
+  }
+
+  private readNextToken(): TinyToken {
+    const {token, nextCursor, nextState} = this.scanToken(
+      this.scanCursor,
+      this.scanState
+    );
+    this.scanCursor = nextCursor;
+    this.scanState = nextState;
+    return token;
+  }
+
+  private scanToken(
+    cursor: number,
+    state: 'scanning' | 'afterUnexpected' | 'done'
+  ): {
+    token: TinyToken;
+    nextCursor: number;
+    nextState: 'scanning' | 'afterUnexpected' | 'done';
+  } {
+    if (state === 'done') {
+      return {
+        token: this.eofToken(),
+        nextCursor: this.input.length,
+        nextState: 'done',
+      };
+    }
+    if (state === 'afterUnexpected' || cursor >= this.input.length) {
+      return {
+        token: this.eofToken(),
+        nextCursor: this.input.length,
+        nextState: 'done',
+      };
+    }
+
+    let nextCursor = cursor;
+    while (nextCursor < this.input.length) {
+      const srcAtCursor = this.input.slice(nextCursor);
+      let matched = false;
+      for (const tokenType in this.tokenMap) {
+        const foundToken = srcAtCursor.match(this.tokenMap[tokenType]);
         if (foundToken) {
-          notFound = false;
+          matched = true;
           let tokenText = foundToken[0];
-          const cursor = this.parseCursor;
-          this.parseCursor += tokenText.length;
-          if (tokenType !== 'space') {
-            if (tokenType[0] === 'q') {
-              tokenText = tokenText.slice(1, -1); // strip quotes
-            }
-            yield {
-              cursor,
-              type: tokenType === 'char' ? tokenText : tokenType,
-              text: tokenText,
-            };
+          const tokenCursor = nextCursor;
+          nextCursor += tokenText.length;
+          if (tokenType === 'space') {
             break;
           }
+          if (tokenType[0] === 'q') {
+            tokenText = tokenText.slice(1, -1);
+          }
+          return {
+            token: {
+              cursor: tokenCursor,
+              type: tokenType === 'char' ? tokenText : tokenType,
+              text: tokenText,
+            },
+            nextCursor,
+            nextState: 'scanning',
+          };
         }
       }
-      if (notFound) {
-        yield {cursor: this.parseCursor, type: 'unexpected token', text: src};
-        return;
+      if (!matched) {
+        return {
+          token: {
+            cursor: nextCursor,
+            type: 'unexpected token',
+            text: this.input,
+          },
+          nextCursor: this.input.length,
+          nextState: 'afterUnexpected',
+        };
       }
     }
+
+    return {
+      token: this.eofToken(),
+      nextCursor: this.input.length,
+      nextState: 'done',
+    };
+  }
+
+  private eofToken(): TinyToken {
+    return {cursor: this.input.length, type: 'eof', text: ''};
   }
 }
