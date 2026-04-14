@@ -306,6 +306,18 @@ describe('MalloyConfig manifestURL resolution', () => {
     expect(config.manifestURL).toBeUndefined();
   });
 
+  it('warns loudly when the config overlay returns a Promise for configURL', () => {
+    const config = new MalloyConfig(
+      {},
+      {config: async () => 'file:///home/user/project/malloy-config.json'}
+    );
+    expect(config.manifestURL).toBeUndefined();
+    const warnings = config.log.filter(l => l.code === 'config-overlay');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('Promise');
+    expect(warnings[0].message).toContain('configURL');
+  });
+
   it('keeps manifestPath as the raw string for app inspection', () => {
     const config = configWith(
       {manifestPath: 'build/MANIFESTS'},
@@ -347,15 +359,37 @@ describe('MalloyConfig overlay resolution', () => {
     expect(config.log).toEqual([]);
   });
 
-  it('warns on unknown overlay source', () => {
+  it('warns on unknown overlay source at lookup time', async () => {
     const config = new MalloyConfig({
       connections: {
         mydb: {is: 'mockdb', databasePath: {nosuch: 'whatever'}},
       },
     });
+    // Reference resolution is deferred — no warning yet.
+    expect(config.log.filter(l => l.code === 'config-overlay')).toHaveLength(0);
+    await config.connections.lookupConnection('mydb');
     const warnings = config.log.filter(l => l.code === 'config-overlay');
     expect(warnings).toHaveLength(1);
     expect(warnings[0].message).toContain('unknown overlay source "nosuch"');
+  });
+
+  it('supports async overlays returning a Promise', async () => {
+    const config = new MalloyConfig(
+      {
+        connections: {
+          mydb: {is: 'mockdb', databasePath: {secret: 'db_path'}},
+        },
+      },
+      {
+        secret: async path =>
+          path[0] === 'db_path' ? '/async/path' : undefined,
+      }
+    );
+    expect(config.log).toEqual([]);
+    const conn = (await config.connections.lookupConnection(
+      'mydb'
+    )) as unknown as {name: string};
+    expect(conn.name).toBe('mydb');
   });
 
   it('resolves {config: ...} references from a host-supplied stack', () => {

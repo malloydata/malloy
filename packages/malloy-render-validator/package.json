@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render-validator",
-  "version": "0.0.375",
+  "version": "0.0.376",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,7 @@
     "clean": "tsc --build --clean && rm -f tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@malloydata/malloy-interfaces": "0.0.375",
-    "@malloydata/render": "0.0.375"
+    "@malloydata/malloy-interfaces": "0.0.376",
+    "@malloydata/render": "0.0.376"
   }
 }
