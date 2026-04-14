@@ -580,7 +580,7 @@ class DuckDBTypeParser extends TinyParser {
         // in the pre-parser code, but no tests, so this is also untested
         let idEnd = wantID.cursor + wantID.text.length;
         this.match('precision');
-        if (this.peek().type === 'eof') {
+        if (this.eof()) {
           idEnd = this.input.length;
         }
         baseType = {

@@ -28,6 +28,7 @@ export interface TinyToken {
  * Core parser API:
  * - peek(): inspect the next token without consuming it.
  * - read(): consume and return the next token, regardless of type.
+ * - eof(): true if the next token is end-of-input.
  * - expect(...types): consume a required sequence of token types.
  * - expectText(...texts): consume a required sequence of token texts.
  * - match(...types): consume an optional sequence of token types.
@@ -88,6 +89,10 @@ export class TinyParser {
 
   read(): TinyToken {
     return this.consume();
+  }
+
+  eof(): boolean {
+    return this.peek().type === 'eof';
   }
 
   private peekAt(offset: number): TinyToken {

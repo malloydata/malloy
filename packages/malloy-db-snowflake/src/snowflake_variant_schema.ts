@@ -30,8 +30,8 @@
 // dialects that error on incompatible path access.
 
 import type {AtomicTypeDef, Dialect, FieldDef} from '@malloydata/malloy';
-import {TinyParser} from '@malloydata/malloy';
 import {
+  TinyParser,
   mkArrayTypeDef,
   mkFieldDef,
   pathToKey,
@@ -77,13 +77,11 @@ export class PathParser extends TinyParser {
   }
 
   getName() {
-    const nameStart = this.next();
-    if (nameStart.type === 'word') {
-      return nameStart.text;
-    }
-    if (nameStart.type === '[') {
-      const quotedName = this.next('quoted');
-      this.next(']');
+    const word = this.match('word');
+    if (word) return word.text;
+    if (this.match('[')) {
+      const quotedName = this.expect('quoted');
+      this.expect(']');
       return quotedName.text;
     }
     throw this.parseError('Expected column name');
@@ -91,23 +89,20 @@ export class PathParser extends TinyParser {
 
   segments(): Segment[] {
     const segments: Segment[] = [{kind: 'name', name: this.getName()}];
-    for (;;) {
-      const sep = this.next();
-      if (sep.type === 'eof') {
-        return segments;
-      }
-      if (sep.type === '.') {
-        segments.push({kind: 'name', name: this.next('word').text});
-      } else if (sep.type === 'array_of') {
+    while (!this.eof()) {
+      if (this.match('.')) {
+        segments.push({kind: 'name', name: this.expect('word').text});
+      } else if (this.match('array_of')) {
         segments.push({kind: 'array'});
-      } else if (sep.type === '[') {
-        const quoted = this.next('quoted');
+      } else if (this.match('[')) {
+        const quoted = this.expect('quoted');
+        this.expect(']');
         segments.push({kind: 'name', name: quoted.text});
-        this.next(']');
       } else {
-        throw this.parseError(`Unexpected ${sep.type}`);
+        throw this.parseError(`Unexpected ${this.peek().type}`);
       }
     }
+    return segments;
   }
 }
 
