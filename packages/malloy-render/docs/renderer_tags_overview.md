@@ -778,13 +778,27 @@ dimension: product_id is ...
 
 ### `# hidden`
 
-Hides a field from being rendered in tables or dashboards, though it remains in the data.
+Hides a field from being rendered in tables or dashboards, though it remains in the data. In charts, hidden dimensions are excluded from automatic channel assignment (x, y, series), so they won't appear as axes or series — but they can still be used for `order_by`. A hidden field with an explicit channel tag (e.g., `# hidden # x`) will still be assigned to that channel.
 
 **Example:**
 
 ```
 # hidden
 dimension: internal_id is id
+```
+
+**Chart example — use a hidden dimension for sort order without rendering it:**
+
+```
+# bar_chart
+view: by_brand is {
+  group_by:
+    brand
+    # hidden
+    sort_key
+  aggregate: total_sales
+  order_by: sort_key
+}
 ```
 
 ### `# label`

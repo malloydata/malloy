@@ -142,6 +142,9 @@ export function getBarChartSettings(
     walkFields(explore, field => {
       const tag = field.tag;
       const pathTo = explore.pathTo(field);
+      // Skip hidden fields unless they have an explicit channel tag
+      const hasChannelTag = tag.has('x') || tag.has('y') || tag.has('series');
+      if (field.isHidden() && !hasChannelTag) return;
       if (tag.has('x')) {
         embeddedX.push(pathTo);
       }
@@ -175,16 +178,18 @@ export function getBarChartSettings(
     });
   }
 
+  // Exclude hidden dimensions from chart channel assignment and validation;
+  // they remain in the data (e.g. for order_by) but aren't rendered.
   const dimensions = explore.fields.filter(
-    f => f.isBasic() && f.wasDimension()
+    f => f.isBasic() && f.wasDimension() && !f.isHidden()
   );
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     let fieldToUse: Field | undefined;
-    // Pick date/time field first if it exists
+    // Pick date/time field first if it exists (skip hidden)
     const dateTimeField = explore.fields.find(
-      f => f.wasDimension() && f.isTime()
+      f => f.wasDimension() && f.isTime() && !f.isHidden()
     );
     if (dateTimeField) fieldToUse = dateTimeField;
     // Pick first dimension field for x
