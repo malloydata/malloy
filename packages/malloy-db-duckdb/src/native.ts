@@ -16,13 +16,6 @@ registerConnectionType('duckdb', {
       options['databasePath'] = options['path'];
       delete options['path'];
     }
-    // Parse comma-separated extensions string into array
-    if (typeof options['additionalExtensions'] === 'string') {
-      options['additionalExtensions'] = options['additionalExtensions']
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-    }
     return new DuckDBConnection(options);
   },
   properties: [
@@ -44,6 +37,92 @@ registerConnectionType('duckdb', {
       // data paths that stay stable regardless of where the config file
       // happens to live inside the project.
       default: {config: 'rootDirectory'},
+    },
+    {
+      name: 'filesystemPolicy',
+      displayName: 'Filesystem Policy',
+      type: 'string',
+      optional: true,
+      requireLiteralString: true,
+    },
+    {
+      name: 'networkPolicy',
+      displayName: 'Network Policy',
+      type: 'string',
+      optional: true,
+      requireLiteralString: true,
+    },
+    {
+      name: 'allowedDirectories',
+      displayName: 'Allowed Directories',
+      type: 'json',
+      optional: true,
+    },
+    {
+      name: 'enableExternalAccess',
+      displayName: 'Enable External Access',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'lockConfiguration',
+      displayName: 'Lock Configuration',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'autoloadKnownExtensions',
+      displayName: 'Autoload Known Extensions',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'autoinstallKnownExtensions',
+      displayName: 'Autoinstall Known Extensions',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'allowCommunityExtensions',
+      displayName: 'Allow Community Extensions',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'allowUnsignedExtensions',
+      displayName: 'Allow Unsigned Extensions',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'tempFileEncryption',
+      displayName: 'Temp File Encryption',
+      type: 'boolean',
+      optional: true,
+    },
+    {
+      name: 'threads',
+      displayName: 'Threads',
+      type: 'number',
+      optional: true,
+    },
+    {
+      name: 'memoryLimit',
+      displayName: 'Memory Limit',
+      type: 'string',
+      optional: true,
+    },
+    {
+      name: 'tempDirectory',
+      displayName: 'Temp Directory',
+      type: 'file',
+      optional: true,
+    },
+    {
+      name: 'extensionDirectory',
+      displayName: 'Extension Directory',
+      type: 'file',
+      optional: true,
     },
     {
       name: 'motherDuckToken',

@@ -116,9 +116,9 @@ describe('DuckDBConnection', () => {
       );
 
       expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
-      expect(DuckDBConnection.activeDBs[':memory:'].connections.length).toEqual(
-        3
-      );
+      expect(
+        Object.values(DuckDBConnection.activeDBs)[0].connections.length
+      ).toEqual(3);
       expect(val1).toEqual({rows: [{val: '/home/user1'}], totalRows: 1});
       expect(val2).toEqual({rows: [{val: '/home/user2'}], totalRows: 1});
 

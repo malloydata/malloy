@@ -81,14 +81,13 @@ class SnowflakeTableNameParser extends TinyParser {
 export function parseSnowflakeTableName(
   src: string
 ): ParsedSnowflakeTableName | undefined {
-  let parts: SnowflakeIdentPart[];
   try {
-    parts = new SnowflakeTableNameParser(src).parts();
+    const parts = new SnowflakeTableNameParser(src).parts();
+    if (parts.length < 1 || parts.length > 3) return undefined;
+    if (parts.length === 1) return {table: parts[0]};
+    if (parts.length === 2) return {schema: parts[0], table: parts[1]};
+    return {database: parts[0], schema: parts[1], table: parts[2]};
   } catch {
     return undefined;
   }
-  if (parts.length < 1 || parts.length > 3) return undefined;
-  if (parts.length === 1) return {table: parts[0]};
-  if (parts.length === 2) return {schema: parts[0], table: parts[1]};
-  return {database: parts[0], schema: parts[1], table: parts[2]};
 }

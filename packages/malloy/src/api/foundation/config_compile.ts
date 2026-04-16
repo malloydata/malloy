@@ -226,11 +226,29 @@ function compileConnectionProperty(
 
   const ref = asReferenceShape(value);
   if (ref !== undefined) {
+    if (propDef.requireLiteralString) {
+      log.push(
+        makeWarning(
+          path,
+          'must be a literal string and cannot use an overlay reference'
+        )
+      );
+      return {kind: 'value', value};
+    }
     return ref;
   }
 
   const typeError = checkValueType(value, propDef.type);
   if (typeError) {
+    if (propDef.requireLiteralString) {
+      log.push(
+        makeWarning(
+          path,
+          `must be a literal string, got ${describeConfigValue(value)}`
+        )
+      );
+      return {kind: 'value', value};
+    }
     log.push(makeWarning(path, `${typeError} (expected ${propDef.type})`));
     return undefined;
   }
@@ -312,6 +330,11 @@ function makeWarning(path: string, message: string): LogMessage {
     severity: 'warn',
     code: 'config-validation',
   };
+}
+
+function describeConfigValue(value: unknown): string {
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
 }
 
 function checkValueType(

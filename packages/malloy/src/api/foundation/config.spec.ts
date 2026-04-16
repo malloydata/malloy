@@ -6,9 +6,15 @@
 import {MalloyConfig} from './config';
 import {contextOverlay} from './config_overlays';
 import {discoverConfig} from './config_discover';
-import {registerConnectionType} from '../../connection/registry';
+import {
+  createConnectionsFromConfig,
+  registerConnectionType,
+} from '../../connection/registry';
 import type {ConnectionConfig, Connection} from '../../connection/types';
 import type {URLReader} from '../../runtime_types';
+
+let capturedStrictMode: unknown;
+let strictFactoryCalls = 0;
 
 function mockConnection(name: string, dialectName = 'mock'): Connection {
   return {
@@ -48,6 +54,8 @@ function mockReader(files: Record<string, unknown>): URLReader {
 }
 
 beforeEach(() => {
+  capturedStrictMode = undefined;
+  strictFactoryCalls = 0;
   registerConnectionType('mockdb', {
     displayName: 'MockDB',
     factory: async (config: ConnectionConfig) =>
@@ -70,6 +78,23 @@ beforeEach(() => {
     properties: [
       {name: 'host', displayName: 'Host', type: 'string', optional: true},
       {name: 'ssl', displayName: 'SSL', type: 'json', optional: true},
+    ],
+  });
+  registerConnectionType('strictdb', {
+    displayName: 'StrictDB',
+    factory: async (config: ConnectionConfig) => {
+      strictFactoryCalls += 1;
+      capturedStrictMode = config['mode'];
+      return mockConnection(config.name, 'strictdb-dialect');
+    },
+    properties: [
+      {
+        name: 'mode',
+        displayName: 'Mode',
+        type: 'string',
+        optional: true,
+        requireLiteralString: true,
+      },
     ],
   });
 });
@@ -672,5 +697,59 @@ describe('MalloyConfig property defaults and includeDefaultConnections', () => {
     await config.connections.lookupConnection('myref');
     expect(capturedRoot).toBeUndefined();
     expect(capturedFlavor).toBe('vanilla');
+  });
+});
+
+describe('MalloyConfig fail-closed literal string properties', () => {
+  it('passes through exact literal strings', async () => {
+    const config = new MalloyConfig({
+      connections: {strict: {is: 'strictdb', mode: 'sandboxed'}},
+    });
+
+    await config.connections.lookupConnection('strict');
+    expect(capturedStrictMode).toBe('sandboxed');
+    expect(strictFactoryCalls).toBe(1);
+  });
+
+  it('does not silently drop mistyped values', async () => {
+    const config = new MalloyConfig({
+      connections: {strict: {is: 'strictdb', mode: true}},
+    });
+
+    await expect(config.connections.lookupConnection('strict')).rejects.toThrow(
+      'Connection "strict" property "mode" must be a literal string'
+    );
+    expect(capturedStrictMode).toBeUndefined();
+    expect(strictFactoryCalls).toBe(0);
+    expect(config.log.map(entry => entry.message)).toContain(
+      'connections.strict.mode: must be a literal string, got boolean'
+    );
+  });
+
+  it('does not accept reference-shaped values', async () => {
+    const config = new MalloyConfig({
+      connections: {strict: {is: 'strictdb', mode: {env: 'STRICT_MODE'}}},
+    });
+
+    await expect(config.connections.lookupConnection('strict')).rejects.toThrow(
+      'Connection "strict" property "mode" must be a literal string'
+    );
+    expect(capturedStrictMode).toBeUndefined();
+    expect(strictFactoryCalls).toBe(0);
+    expect(config.log.map(entry => entry.message)).toContain(
+      'connections.strict.mode: must be a literal string and cannot use an overlay reference'
+    );
+  });
+
+  it('enforces literal string properties in resolved registry configs', async () => {
+    const lookup = createConnectionsFromConfig({
+      connections: {strict: {is: 'strictdb', mode: {env: 'STRICT_MODE'}}},
+    });
+
+    await expect(lookup.lookupConnection('strict')).rejects.toThrow(
+      'Connection "strict" property "mode" must be a literal string'
+    );
+    expect(capturedStrictMode).toBeUndefined();
+    expect(strictFactoryCalls).toBe(0);
   });
 });
