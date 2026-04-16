@@ -79,8 +79,18 @@ function isENOENT(error: unknown): boolean {
 }
 
 function stripTrailingSeparator(value: string): string {
-  if (value === path.parse(value).root) {
+  const root = path.parse(value).root;
+  if (value === root) {
     return value;
   }
-  return value.replace(/[\\/]+$/, '');
+
+  let end = value.length;
+  while (end > root.length && isPathSeparator(value.charCodeAt(end - 1))) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+}
+
+function isPathSeparator(charCode: number): boolean {
+  return charCode === 47 || charCode === 92;
 }
