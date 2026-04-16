@@ -85,7 +85,7 @@ interface BigQueryConnectionConfiguration {
   maximumBytesBilled?: string;
   timeoutMs?: string;
   billingProjectId?: string;
-  credentials?: CredentialBody;
+  credentials?: CredentialBody | Record<string, unknown>;
   setupSQL?: string;
 }
 
@@ -93,6 +93,7 @@ interface BigQueryConnectionOptions extends ConnectionConfig {
   /** This ID is used for Bigquery Table Normalization */
   projectId?: string;
   serviceAccountKeyPath?: string;
+  serviceAccountKey?: Record<string, unknown>;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
@@ -193,10 +194,12 @@ export class BigQueryConnection
     if (typeof arg === 'string') {
       this.name = arg;
     } else {
-      const {name, client_email, private_key, ...args} = arg;
+      const {name, client_email, private_key, serviceAccountKey, ...args} = arg;
       this.name = name;
       config = args;
-      if (client_email || private_key) {
+      if (serviceAccountKey) {
+        config.credentials = serviceAccountKey;
+      } else if (client_email || private_key) {
         config.credentials = {
           client_email,
           private_key,

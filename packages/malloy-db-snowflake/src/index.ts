@@ -105,6 +105,12 @@ registerConnectionType('snowflake', {
       },
     },
     {
+      name: 'privateKey',
+      displayName: 'Private Key',
+      type: 'password',
+      optional: true,
+    },
+    {
       name: 'privateKeyPass',
       displayName: 'Private Key Passphrase',
       type: 'password',
