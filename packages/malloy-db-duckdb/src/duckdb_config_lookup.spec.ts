@@ -12,39 +12,39 @@ describe('DuckDB config lookup validation', () => {
     DuckDBConnection.closeAllInstances();
   });
 
-  it('rejects reference-shaped filesystemPolicy before DuckDB construction', async () => {
+  it('rejects reference-shaped securityPolicy before DuckDB construction', async () => {
     const config = new MalloyConfig({
       connections: {
         duckdb: {
           is: 'duckdb',
-          filesystemPolicy: {env: 'FS_POLICY'},
+          securityPolicy: {env: 'SECURITY_POLICY'},
         },
       },
     });
 
     await expect(config.connections.lookupConnection('duckdb')).rejects.toThrow(
-      'Connection "duckdb" property "filesystemPolicy" must be a literal string'
+      'Connection "duckdb" property "securityPolicy" must be a literal string'
     );
     expect(config.log.map(entry => entry.message)).toContain(
-      'connections.duckdb.filesystemPolicy: must be a literal string and cannot use an overlay reference'
+      'connections.duckdb.securityPolicy: must be a literal string and cannot use an overlay reference'
     );
   });
 
-  it('rejects non-string networkPolicy before DuckDB construction', async () => {
+  it('rejects non-string securityPolicy before DuckDB construction', async () => {
     const config = new MalloyConfig({
       connections: {
         duckdb: {
           is: 'duckdb',
-          networkPolicy: 42,
+          securityPolicy: 42,
         },
       },
     });
 
     await expect(config.connections.lookupConnection('duckdb')).rejects.toThrow(
-      'Connection "duckdb" property "networkPolicy" must be a literal string'
+      'Connection "duckdb" property "securityPolicy" must be a literal string'
     );
     expect(config.log.map(entry => entry.message)).toContain(
-      'connections.duckdb.networkPolicy: must be a literal string, got number'
+      'connections.duckdb.securityPolicy: must be a literal string, got number'
     );
   });
 });

@@ -83,7 +83,7 @@ describe('normalizeDuckDBConfig', () => {
   it('derives sandboxed defaults from workingDirectory', () => {
     const normalized = normalizeDuckDBConfig(
       baseConfig({
-        filesystemPolicy: 'sandboxed',
+        securityPolicy: 'sandboxed',
         workingDirectory,
       })
     );
@@ -99,12 +99,28 @@ describe('normalizeDuckDBConfig', () => {
     );
     expect(normalized.lockConfiguration).toBe(true);
     expect(normalized.tempFileEncryption).toBe(true);
+    expect(normalized.enableExternalAccess).toBe(false);
   });
 
-  it('derives a working-directory scoped secret directory for network-only restricted mode', () => {
+  it('derives enableExternalAccess=false and lockConfiguration=true for local mode', () => {
     const normalized = normalizeDuckDBConfig(
       baseConfig({
-        networkPolicy: 'closed',
+        securityPolicy: 'local',
+        workingDirectory,
+      })
+    );
+
+    expect(normalized.enableExternalAccess).toBe(false);
+    expect(normalized.lockConfiguration).toBe(true);
+    expect(normalized.tempFileEncryption).toBe(true);
+    expect(normalized.allowedDirectories).toBeUndefined();
+    expect(normalized.tempDirectory).toBeUndefined();
+  });
+
+  it('derives a working-directory scoped secret directory for local mode', () => {
+    const normalized = normalizeDuckDBConfig(
+      baseConfig({
+        securityPolicy: 'local',
         workingDirectory,
       })
     );
@@ -119,7 +135,7 @@ describe('normalizeDuckDBConfig', () => {
     expect(() =>
       normalizeDuckDBConfig(
         baseConfig({
-          networkPolicy: 'closed',
+          securityPolicy: 'local',
         })
       )
     ).toThrow(
@@ -131,11 +147,11 @@ describe('normalizeDuckDBConfig', () => {
     expect(() =>
       normalizeDuckDBConfig(
         baseConfig({
-          filesystemPolicy: 'sandboxed',
+          securityPolicy: 'sandboxed',
         })
       )
     ).toThrow(
-      'filesystemPolicy "sandboxed" requires either allowedDirectories or workingDirectory'
+      'securityPolicy "sandboxed" requires either allowedDirectories or workingDirectory'
     );
   });
 
@@ -145,86 +161,101 @@ describe('normalizeDuckDBConfig', () => {
     expect(() =>
       normalizeDuckDBConfig(
         baseConfig({
-          filesystemPolicy: 'sandboxed',
+          securityPolicy: 'sandboxed',
           workingDirectory,
         })
       )
-    ).toThrow('filesystemPolicy "sandboxed" is only supported on POSIX hosts');
+    ).toThrow('securityPolicy "sandboxed" is only supported on POSIX hosts');
   });
 
   it('rejects tempDirectory outside the sandbox boundary', () => {
     expect(() =>
       normalizeDuckDBConfig(
         baseConfig({
-          filesystemPolicy: 'sandboxed',
+          securityPolicy: 'sandboxed',
           workingDirectory,
           allowedDirectories: [workingDirectory],
           tempDirectory: allowedA,
         })
       )
     ).toThrow(
-      'tempDirectory must be contained within allowedDirectories when filesystemPolicy is "sandboxed"'
+      'tempDirectory must be contained within allowedDirectories when securityPolicy is "sandboxed"'
     );
   });
 
-  it('rejects network-requiring database paths when networkPolicy is closed', () => {
+  it('rejects network-requiring database paths when securityPolicy is local', () => {
     expect(() =>
       normalizeDuckDBConfig(
         baseConfig({
-          networkPolicy: 'closed',
+          securityPolicy: 'local',
+          workingDirectory,
           databasePath: 'md:malloy',
         })
       )
     ).toThrow(
-      'databasePath "md:malloy" is not allowed when networkPolicy is "closed"'
+      'databasePath "md:malloy" is not allowed when securityPolicy is "local"'
+    );
+  });
+
+  it('rejects network-requiring database paths when securityPolicy is sandboxed', () => {
+    expect(() =>
+      normalizeDuckDBConfig(
+        baseConfig({
+          securityPolicy: 'sandboxed',
+          workingDirectory,
+          databasePath: 'md:malloy',
+        })
+      )
+    ).toThrow(
+      'databasePath "md:malloy" is not allowed when securityPolicy is "sandboxed"'
     );
   });
 
   it.each([
     [
       'enableExternalAccess',
-      {networkPolicy: 'closed', enableExternalAccess: true},
-      'enableExternalAccess cannot be true when networkPolicy "closed" is enabled',
+      {securityPolicy: 'local', enableExternalAccess: true},
+      'enableExternalAccess cannot be true when securityPolicy "local" is enabled',
     ],
     [
       'autoloadKnownExtensions',
-      {networkPolicy: 'closed', autoloadKnownExtensions: true},
-      'autoloadKnownExtensions cannot be true when networkPolicy "closed" is enabled',
+      {securityPolicy: 'local', autoloadKnownExtensions: true},
+      'autoloadKnownExtensions cannot be true when securityPolicy "local" is enabled',
     ],
     [
       'autoinstallKnownExtensions',
-      {networkPolicy: 'closed', autoinstallKnownExtensions: true},
-      'autoinstallKnownExtensions cannot be true when networkPolicy "closed" is enabled',
+      {securityPolicy: 'local', autoinstallKnownExtensions: true},
+      'autoinstallKnownExtensions cannot be true when securityPolicy "local" is enabled',
     ],
     [
       'allowCommunityExtensions',
-      {networkPolicy: 'closed', allowCommunityExtensions: true},
-      'allowCommunityExtensions cannot be true when networkPolicy "closed" is enabled',
+      {securityPolicy: 'local', allowCommunityExtensions: true},
+      'allowCommunityExtensions cannot be true when securityPolicy "local" is enabled',
     ],
     [
       'allowUnsignedExtensions',
-      {networkPolicy: 'closed', allowUnsignedExtensions: true},
-      'allowUnsignedExtensions cannot be true when networkPolicy "closed" is enabled',
+      {securityPolicy: 'local', allowUnsignedExtensions: true},
+      'allowUnsignedExtensions cannot be true when securityPolicy "local" is enabled',
     ],
     [
       'lockConfiguration',
-      {filesystemPolicy: 'sandboxed', lockConfiguration: false},
-      'lockConfiguration cannot be false when filesystemPolicy or networkPolicy requires a locked DuckDB baseline',
+      {securityPolicy: 'sandboxed', lockConfiguration: false},
+      'lockConfiguration cannot be false when securityPolicy is "sandboxed"',
     ],
     [
       'tempFileEncryption',
-      {filesystemPolicy: 'sandboxed', tempFileEncryption: false},
-      'tempFileEncryption cannot be false when filesystemPolicy or networkPolicy requires a locked DuckDB baseline',
+      {securityPolicy: 'sandboxed', tempFileEncryption: false},
+      'tempFileEncryption cannot be false when securityPolicy is "sandboxed"',
     ],
     [
       'additionalExtensions',
-      {filesystemPolicy: 'sandboxed', additionalExtensions: ['spatial']},
-      'additionalExtensions is not allowed when filesystemPolicy or networkPolicy requires a locked DuckDB baseline',
+      {securityPolicy: 'sandboxed', additionalExtensions: ['spatial']},
+      'additionalExtensions is not allowed when securityPolicy is "sandboxed"',
     ],
     [
       'motherDuckToken',
-      {networkPolicy: 'closed', motherDuckToken: 'token'},
-      'motherDuckToken is not allowed when networkPolicy is "closed"',
+      {securityPolicy: 'local', motherDuckToken: 'token'},
+      'motherDuckToken is not allowed when securityPolicy is "local"',
     ],
   ] satisfies Array<[string, Partial<ConnectionConfig>, string]>)(
     'rejects conflicting restricted setting %s',
@@ -249,19 +280,36 @@ describe('normalizeDuckDBConfig', () => {
   it('builds the same share key for semantically identical allowedDirectories lists', () => {
     const configA = normalizeDuckDBConfig(
       baseConfig({
-        filesystemPolicy: 'sandboxed',
+        securityPolicy: 'sandboxed',
         workingDirectory,
         allowedDirectories: [workingDirectory, allowedA, allowedB],
       })
     );
     const configB = normalizeDuckDBConfig(
       baseConfig({
-        filesystemPolicy: 'sandboxed',
+        securityPolicy: 'sandboxed',
         workingDirectory,
         allowedDirectories: [allowedB, allowedA, workingDirectory, allowedA],
       })
     );
 
     expect(buildDuckDBShareKey(configA)).toBe(buildDuckDBShareKey(configB));
+  });
+
+  it('builds different share keys for different securityPolicy values', () => {
+    const configNone = normalizeDuckDBConfig(baseConfig());
+    const configLocal = normalizeDuckDBConfig(
+      baseConfig({securityPolicy: 'local', workingDirectory})
+    );
+    const configSandboxed = normalizeDuckDBConfig(
+      baseConfig({securityPolicy: 'sandboxed', workingDirectory})
+    );
+
+    const keys = new Set([
+      buildDuckDBShareKey(configNone),
+      buildDuckDBShareKey(configLocal),
+      buildDuckDBShareKey(configSandboxed),
+    ]);
+    expect(keys.size).toBe(3);
   });
 });

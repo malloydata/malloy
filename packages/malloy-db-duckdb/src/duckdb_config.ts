@@ -11,8 +11,7 @@ import type {
 } from '@malloydata/malloy';
 import * as pathSecurity from './path_security';
 
-export type DuckDBFilesystemPolicy = 'open' | 'sandboxed';
-export type DuckDBNetworkPolicy = 'open' | 'closed';
+export type DuckDBSecurityPolicy = 'none' | 'local' | 'sandboxed';
 
 export interface NormalizedDuckDBSafetyPolicy {
   requiresPosixHost: boolean;
@@ -22,7 +21,6 @@ export interface NormalizedDuckDBSafetyPolicy {
   requiresTempFileEncryption: boolean;
   requiresSecretNeutralization: boolean;
   requiredBaselineExtensions: readonly ['icu', 'json'];
-  allowHttpfs: boolean;
   forbidAdditionalExtensions: boolean;
   derivedTempDirectoryName: '.tmp';
 }
@@ -32,8 +30,7 @@ export interface NormalizedDuckDBConfig {
   databasePath: string;
   readOnly: boolean;
   workingDirectory?: string;
-  filesystemPolicy: DuckDBFilesystemPolicy;
-  networkPolicy: DuckDBNetworkPolicy;
+  securityPolicy: DuckDBSecurityPolicy;
   safetyPolicy?: NormalizedDuckDBSafetyPolicy;
   allowedDirectories?: string[];
   enableExternalAccess?: boolean;
@@ -67,20 +64,11 @@ const DERIVED_SECRET_DIRECTORY_NAME = '.duckdb-secrets' as const;
 export function normalizeDuckDBConfig(
   config: ConnectionConfig
 ): NormalizedDuckDBConfig {
-  const filesystemPolicy = parsePolicyValue(
-    config['filesystemPolicy'],
-    'filesystemPolicy',
-    ['open', 'sandboxed']
-  );
-  const networkPolicy = parsePolicyValue(
-    config['networkPolicy'],
-    'networkPolicy',
-    ['open', 'closed']
-  );
+  const securityPolicy = parseSecurityPolicy(config['securityPolicy']);
 
-  if (filesystemPolicy === 'sandboxed' && !pathSecurity.isPosixHost()) {
+  if (securityPolicy === 'sandboxed' && !pathSecurity.isPosixHost()) {
     throw new DuckDBConfigValidationError(
-      'filesystemPolicy "sandboxed" is only supported on POSIX hosts'
+      'securityPolicy "sandboxed" is only supported on POSIX hosts'
     );
   }
 
@@ -134,18 +122,16 @@ export function normalizeDuckDBConfig(
     'allowedDirectories'
   );
 
-  const restricted =
-    filesystemPolicy === 'sandboxed' || networkPolicy === 'closed';
+  const restricted = securityPolicy !== 'none';
   const safetyPolicy = restricted
     ? {
-        requiresPosixHost: filesystemPolicy === 'sandboxed',
+        requiresPosixHost: securityPolicy === 'sandboxed',
         requiresLockedConfiguration: true,
         requiresNoSetupSQL: true,
-        requiresSandboxedPaths: filesystemPolicy === 'sandboxed',
+        requiresSandboxedPaths: securityPolicy === 'sandboxed',
         requiresTempFileEncryption: true,
         requiresSecretNeutralization: true,
         requiredBaselineExtensions: REQUIRED_BASELINE_EXTENSIONS,
-        allowHttpfs: networkPolicy === 'open',
         forbidAdditionalExtensions: true,
         derivedTempDirectoryName: DERIVED_TEMP_DIRECTORY_NAME,
       }
@@ -153,7 +139,7 @@ export function normalizeDuckDBConfig(
 
   if (safetyPolicy?.requiresNoSetupSQL && rawSetupSQL !== undefined) {
     throw new DuckDBConfigValidationError(
-      'setupSQL is not allowed when filesystemPolicy or networkPolicy requires a locked DuckDB baseline'
+      `setupSQL is not allowed when securityPolicy is "${securityPolicy}"`
     );
   }
 
@@ -162,56 +148,56 @@ export function normalizeDuckDBConfig(
     additionalExtensions.length > 0
   ) {
     throw new DuckDBConfigValidationError(
-      'additionalExtensions is not allowed when filesystemPolicy or networkPolicy requires a locked DuckDB baseline'
+      `additionalExtensions is not allowed when securityPolicy is "${securityPolicy}"`
     );
   }
 
   if (restricted && lockConfiguration === false) {
     throw new DuckDBConfigValidationError(
-      'lockConfiguration cannot be false when filesystemPolicy or networkPolicy requires a locked DuckDB baseline'
+      `lockConfiguration cannot be false when securityPolicy is "${securityPolicy}"`
     );
   }
 
   if (restricted && tempFileEncryption === false) {
     throw new DuckDBConfigValidationError(
-      'tempFileEncryption cannot be false when filesystemPolicy or networkPolicy requires a locked DuckDB baseline'
+      `tempFileEncryption cannot be false when securityPolicy is "${securityPolicy}"`
     );
   }
 
-  if (networkPolicy === 'closed') {
+  if (restricted) {
     rejectConflictingBoolean(
       enableExternalAccess,
       'enableExternalAccess',
       true,
-      'networkPolicy "closed"'
+      `securityPolicy "${securityPolicy}"`
     );
     rejectConflictingBoolean(
       autoloadKnownExtensions,
       'autoloadKnownExtensions',
       true,
-      'networkPolicy "closed"'
+      `securityPolicy "${securityPolicy}"`
     );
     rejectConflictingBoolean(
       autoinstallKnownExtensions,
       'autoinstallKnownExtensions',
       true,
-      'networkPolicy "closed"'
+      `securityPolicy "${securityPolicy}"`
     );
     rejectConflictingBoolean(
       allowCommunityExtensions,
       'allowCommunityExtensions',
       true,
-      'networkPolicy "closed"'
+      `securityPolicy "${securityPolicy}"`
     );
     rejectConflictingBoolean(
       allowUnsignedExtensions,
       'allowUnsignedExtensions',
       true,
-      'networkPolicy "closed"'
+      `securityPolicy "${securityPolicy}"`
     );
     if (rawMotherDuckToken !== undefined) {
       throw new DuckDBConfigValidationError(
-        'motherDuckToken is not allowed when networkPolicy is "closed"'
+        `motherDuckToken is not allowed when securityPolicy is "${securityPolicy}"`
       );
     }
   }
@@ -222,25 +208,22 @@ export function normalizeDuckDBConfig(
       rawWorkingDirectory,
       'workingDirectory',
       {
-        mustExist: filesystemPolicy === 'sandboxed',
+        mustExist: securityPolicy === 'sandboxed',
       }
     );
   }
 
   const databasePath = canonicalizeDatabasePath(rawDatabasePath);
   const isMotherDuck = isMotherDuckPath(databasePath);
-  if (
-    networkPolicy === 'closed' &&
-    !isAllowedClosedNetworkDatabasePath(databasePath)
-  ) {
+  if (restricted && !isAllowedClosedNetworkDatabasePath(databasePath)) {
     throw new DuckDBConfigValidationError(
-      `databasePath "${rawDatabasePath}" is not allowed when networkPolicy is "closed"`
+      `databasePath "${rawDatabasePath}" is not allowed when securityPolicy is "${securityPolicy}"`
     );
   }
 
-  if (networkPolicy === 'closed' && isMotherDuck) {
+  if (restricted && isMotherDuck) {
     throw new DuckDBConfigValidationError(
-      'MotherDuck database paths are not allowed when networkPolicy is "closed"'
+      `MotherDuck database paths are not allowed when securityPolicy is "${securityPolicy}"`
     );
   }
 
@@ -250,11 +233,11 @@ export function normalizeDuckDBConfig(
       : canonicalizeConfigPathList(rawAllowedDirectories, 'allowedDirectories');
 
   let allowedDirectories = normalizedAllowedDirectories;
-  if (filesystemPolicy === 'sandboxed') {
+  if (securityPolicy === 'sandboxed') {
     if (allowedDirectories === undefined) {
       if (workingDirectory === undefined) {
         throw new DuckDBConfigValidationError(
-          'filesystemPolicy "sandboxed" requires either allowedDirectories or workingDirectory. If you expected workingDirectory to come from config.rootDirectory, verify that overlay is available.'
+          'securityPolicy "sandboxed" requires either allowedDirectories or workingDirectory. If you expected workingDirectory to come from config.rootDirectory, verify that overlay is available.'
         );
       }
       allowedDirectories = [workingDirectory];
@@ -266,7 +249,7 @@ export function normalizeDuckDBConfig(
       )
     ) {
       throw new DuckDBConfigValidationError(
-        'workingDirectory must be contained within allowedDirectories when filesystemPolicy is "sandboxed"'
+        'workingDirectory must be contained within allowedDirectories when securityPolicy is "sandboxed"'
       );
     }
   }
@@ -274,24 +257,24 @@ export function normalizeDuckDBConfig(
   let tempDirectory: string | undefined;
   if (rawTempDirectory !== undefined) {
     tempDirectory = canonicalizeConfigPath(rawTempDirectory, 'tempDirectory');
-  } else if (filesystemPolicy === 'sandboxed') {
+  } else if (securityPolicy === 'sandboxed') {
     if (workingDirectory === undefined) {
       throw new DuckDBConfigValidationError(
-        'filesystemPolicy "sandboxed" requires tempDirectory or workingDirectory so Malloy can derive a safe temp directory'
+        'securityPolicy "sandboxed" requires tempDirectory or workingDirectory so Malloy can derive a safe temp directory'
       );
     }
     tempDirectory = path.join(workingDirectory, DERIVED_TEMP_DIRECTORY_NAME);
   }
 
-  if (filesystemPolicy === 'sandboxed') {
+  if (securityPolicy === 'sandboxed') {
     if (allowedDirectories === undefined) {
       throw new DuckDBConfigValidationError(
-        'filesystemPolicy "sandboxed" requires allowedDirectories'
+        'securityPolicy "sandboxed" requires allowedDirectories'
       );
     }
     if (tempDirectory === undefined) {
       throw new DuckDBConfigValidationError(
-        'filesystemPolicy "sandboxed" requires tempDirectory'
+        'securityPolicy "sandboxed" requires tempDirectory'
       );
     }
     if (
@@ -300,7 +283,7 @@ export function normalizeDuckDBConfig(
       )
     ) {
       throw new DuckDBConfigValidationError(
-        'tempDirectory must be contained within allowedDirectories when filesystemPolicy is "sandboxed"'
+        'tempDirectory must be contained within allowedDirectories when securityPolicy is "sandboxed"'
       );
     }
   }
@@ -322,23 +305,17 @@ export function normalizeDuckDBConfig(
     databasePath,
     readOnly: databasePath === ':memory:' ? false : readOnly,
     workingDirectory,
-    filesystemPolicy,
-    networkPolicy,
+    securityPolicy,
     safetyPolicy,
     allowedDirectories,
-    enableExternalAccess:
-      networkPolicy === 'closed' ? false : enableExternalAccess,
+    enableExternalAccess: restricted ? false : enableExternalAccess,
     lockConfiguration: safetyPolicy?.requiresLockedConfiguration
       ? true
       : lockConfiguration,
-    autoloadKnownExtensions:
-      networkPolicy === 'closed' ? false : autoloadKnownExtensions,
-    autoinstallKnownExtensions:
-      networkPolicy === 'closed' ? false : autoinstallKnownExtensions,
-    allowCommunityExtensions:
-      networkPolicy === 'closed' ? false : allowCommunityExtensions,
-    allowUnsignedExtensions:
-      networkPolicy === 'closed' ? false : allowUnsignedExtensions,
+    autoloadKnownExtensions: restricted ? false : autoloadKnownExtensions,
+    autoinstallKnownExtensions: restricted ? false : autoinstallKnownExtensions,
+    allowCommunityExtensions: restricted ? false : allowCommunityExtensions,
+    allowUnsignedExtensions: restricted ? false : allowUnsignedExtensions,
     tempFileEncryption: safetyPolicy?.requiresTempFileEncryption
       ? true
       : tempFileEncryption,
@@ -357,11 +334,10 @@ export function buildDuckDBShareKey(config: NormalizedDuckDBConfig): string {
   // secretDirectory is derived from policy + workingDirectory/tempDirectory,
   // which already participate in the share key.
   return makeDigest(
-    'duckdb-share-key-v1',
+    'duckdb-share-key-v2',
     config.databasePath,
     String(config.readOnly),
-    config.filesystemPolicy,
-    config.networkPolicy,
+    config.securityPolicy,
     config.setupSQL ?? '',
     ...(config.allowedDirectories ?? []),
     config.enableExternalAccess === undefined
@@ -409,28 +385,32 @@ export function stringifyDuckDBOption(
   return String(value);
 }
 
-function parsePolicyValue<T extends string>(
-  rawValue: ConnectionParameterValue | undefined,
-  fieldName: string,
-  allowedValues: readonly T[]
-): T | 'open' {
+const SECURITY_POLICY_VALUES: readonly string[] = [
+  'none',
+  'local',
+  'sandboxed',
+];
+
+function isSecurityPolicy(value: string): value is DuckDBSecurityPolicy {
+  return SECURITY_POLICY_VALUES.includes(value);
+}
+
+function parseSecurityPolicy(
+  rawValue: ConnectionParameterValue | undefined
+): DuckDBSecurityPolicy {
   if (rawValue === undefined) {
-    return 'open';
+    return 'none';
   }
   if (typeof rawValue !== 'string') {
     throw new DuckDBConfigValidationError(
-      `${fieldName} must be one of ${allowedValues
-        .map(v => `"${v}"`)
-        .join(' or ')}, got ${typeof rawValue}`
+      `securityPolicy must be one of ${SECURITY_POLICY_VALUES.map(v => `"${v}"`).join(', ')}, got ${typeof rawValue}`
     );
   }
-  if ((allowedValues as readonly string[]).includes(rawValue)) {
-    return rawValue as T;
+  if (isSecurityPolicy(rawValue)) {
+    return rawValue;
   }
   throw new DuckDBConfigValidationError(
-    `${fieldName} must be one of ${allowedValues
-      .map(v => `"${v}"`)
-      .join(' or ')}, got "${rawValue}"`
+    `securityPolicy must be one of ${SECURITY_POLICY_VALUES.map(v => `"${v}"`).join(', ')}, got "${rawValue}"`
   );
 }
 

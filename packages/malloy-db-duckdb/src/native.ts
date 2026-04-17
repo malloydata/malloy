@@ -39,15 +39,8 @@ registerConnectionType('duckdb', {
       default: {config: 'rootDirectory'},
     },
     {
-      name: 'filesystemPolicy',
-      displayName: 'Filesystem Policy',
-      type: 'string',
-      optional: true,
-      requireLiteralString: true,
-    },
-    {
-      name: 'networkPolicy',
-      displayName: 'Network Policy',
+      name: 'securityPolicy',
+      displayName: 'Security Policy',
       type: 'string',
       optional: true,
       requireLiteralString: true,

@@ -10,20 +10,29 @@ must not depend on them for essential context.
 
 ## Mental Model
 
-Malloy exposes two user-facing policy axes for native DuckDB:
+Malloy exposes one user-facing policy property for native DuckDB:
 
-- `filesystemPolicy: "open" | "sandboxed"`
-- `networkPolicy: "open" | "closed"`
+- `securityPolicy: "none" | "local" | "sandboxed"`
 
-Those fields are Malloy policy controls. They are not raw DuckDB option names
-and they are not a general policy language.
+This field is a Malloy policy control. It is not a raw DuckDB option name
+and it is not a general policy language.
 
-The reviewed strict recipe for untrusted Malloy is:
+The three levels form a strict escalation:
 
-- `filesystemPolicy: "sandboxed"`
-- `networkPolicy: "closed"`
+- `"none"` — no security policy applied. Ordinary DuckDB behavior.
+- `"local"` — no network access. DuckDB cannot reach the network, but local
+  filesystem access is not sandboxed to specific directories.
+- `"sandboxed"` — no network access AND filesystem confined to
+  `allowedDirectories`. The reviewed strict recipe.
 
-The implementation compiles those public policy values into an internal
+DuckDB's `enable_external_access` is a single toggle that gates both filesystem
+reach beyond the working directory and network reach. Setting
+`allowed_directories` without disabling `enable_external_access` has no effect.
+This is why the policy is a single axis rather than two independent axes — the
+underlying DuckDB mechanism does not support independent filesystem and network
+control.
+
+The implementation compiles the public policy value into an internal
 `NormalizedDuckDBSafetyPolicy`. That internal object records the derived
 enforcement requirements, such as locked configuration, no setup SQL,
 temp-file encryption, extension restrictions, and secret neutralization. Keep
@@ -41,9 +50,9 @@ process isolation, query cancellation, and host-level quotas separately.
 
 - Native connection schema: `src/native.ts`
   - Registers native DuckDB properties.
-  - `filesystemPolicy` and `networkPolicy` are `requireLiteralString` so
-    invalid reference-shaped or non-string values reach registry validation
-    instead of being silently dropped by generic config compilation.
+  - `securityPolicy` is `requireLiteralString` so invalid reference-shaped or
+    non-string values reach registry validation instead of being silently
+    dropped by generic config compilation.
 - Config compiler literal guard: `../malloy/src/api/foundation/config_compile.ts`
   - Preserves invalid literal-required values as values after warning, allowing
     registry lookup to fail closed before the DuckDB factory runs.
@@ -72,7 +81,7 @@ process isolation, query cancellation, and host-level quotas separately.
   baseline must fail connection creation.
 - Policy validation must run early enough that invalid raw values such as
   `true`, `42`, or `{env: "POLICY"}` cannot be silently dropped and interpreted
-  as the default `"open"` policy.
+  as the default `"none"` policy.
 - A restricted DuckDB connection must never share a live instance with a less
   restrictive or otherwise semantically different connection.
 - The fixed baseline must be established before any Malloy-derived SQL runs.
@@ -85,22 +94,11 @@ process isolation, query cancellation, and host-level quotas separately.
 
 ## User-Facing Policy Behavior
 
-`filesystemPolicy: "open"` means Malloy does not derive a filesystem sandbox.
+`securityPolicy: "none"` means no security policy is applied. Ordinary DuckDB
+behavior.
 
-`filesystemPolicy: "sandboxed"` means Malloy derives and enforces a native
-DuckDB filesystem boundary:
-
-- `allowedDirectories` is required or derived.
-- `tempDirectory` is required or derived.
-- `workingDirectory`, when present, must be inside `allowedDirectories`.
-- `tempDirectory` must be inside `allowedDirectories`.
-- Non-POSIX hosts are rejected. Do not approximate Windows path behavior for
-  the current policy.
-
-`networkPolicy: "open"` means network-capable DuckDB behavior may remain
-available.
-
-`networkPolicy: "closed"` means Malloy disables network-capable DuckDB behavior:
+`securityPolicy: "local"` means Malloy disables network-capable DuckDB
+behavior:
 
 - `enableExternalAccess` is forced to `false`.
 - `httpfs` must not load.
@@ -108,14 +106,20 @@ available.
 - network-requiring `databasePath` values, including MotherDuck paths, are
   rejected.
 - `motherDuckToken` is rejected.
+- configuration is locked after baseline setup.
+- `setupSQL` is not allowed.
+- temp-file encryption is required.
+- secrets are neutralized.
 
-The two axes can be used independently:
+`securityPolicy: "sandboxed"` means everything in `"local"`, plus Malloy
+derives and enforces a native DuckDB filesystem boundary:
 
-- sandboxed filesystem plus open network is allowed, but it is not the reviewed
-  strict recipe.
-- open filesystem plus closed network is allowed, for hosts that trust an
-  external filesystem/container boundary but want Malloy to close DuckDB's
-  network-capable surface.
+- `allowedDirectories` is required or derived.
+- `tempDirectory` is required or derived.
+- `workingDirectory`, when present, must be inside `allowedDirectories`.
+- `tempDirectory` must be inside `allowedDirectories`.
+- Non-POSIX hosts are rejected. Do not approximate Windows path behavior for
+  the current policy.
 
 ## Registered Config Surface
 
@@ -128,10 +132,9 @@ Native DuckDB supports the existing Malloy-facing properties:
 - `readOnly`
 - `setupSQL`
 
-The config extension adds policy properties:
+The config extension adds the policy property:
 
-- `filesystemPolicy`
-- `networkPolicy`
+- `securityPolicy`
 
 It also adds curated DuckDB-level properties:
 
@@ -153,7 +156,7 @@ connection property model does not yet have a first-class string-array type.
 Even though the registry metadata says `json`, DuckDB normalization must require
 the value to be a JSON array of strings. Do not add a registry default for
 `allowedDirectories`; its only defaulting behavior belongs to
-`filesystemPolicy: "sandboxed"` normalization.
+`securityPolicy: "sandboxed"` normalization.
 
 `workingDirectory` defaults to `{config: "rootDirectory"}` in the native DuckDB
 registry. Hosts that know the project root should populate `config.rootDirectory`
@@ -171,28 +174,28 @@ All policy reasoning belongs in `normalizeDuckDBConfig()`.
 
 Policy parsing:
 
-- Missing `filesystemPolicy` defaults to `"open"`.
-- Missing `networkPolicy` defaults to `"open"`.
-- Accepted policy values are exact documented strings only.
+- Missing `securityPolicy` defaults to `"none"`.
+- Accepted policy values are exact documented strings only: `"none"`, `"local"`,
+  `"sandboxed"`.
 - Unknown strings, strings with whitespace or different casing, non-strings,
   and reference-shaped values must fail closed.
 
 Derived safety policy:
 
-- If either policy is restricted, derive:
+- If `securityPolicy` is `"local"` or `"sandboxed"` (i.e., restricted), derive:
   - `requiresLockedConfiguration: true`
   - `requiresNoSetupSQL: true`
   - `requiresTempFileEncryption: true`
   - `requiresSecretNeutralization: true`
   - `forbidAdditionalExtensions: true`
+  - `allowHttpfs: false`
+  - `enableExternalAccess: false`
   - required baseline extensions `icu` and `json`
-- If `filesystemPolicy === "sandboxed"`, also derive:
+  - no extension install or auto-install/autoload expansion
+- If `securityPolicy === "sandboxed"`, also derive:
   - POSIX host required
   - sandboxed path validation required
   - derived temp directory name `.tmp`
-- If `networkPolicy === "closed"`, also derive:
-  - `allowHttpfs: false`
-  - no extension install or auto-install/autoload expansion
 
 Conflict checks:
 
@@ -201,7 +204,7 @@ Conflict checks:
   extension broadening.
 - Reject `lockConfiguration: false` under any restricted policy.
 - Reject `tempFileEncryption: false` under any restricted policy.
-- Under `networkPolicy: "closed"`, reject:
+- Under any restricted policy, reject:
   - `enableExternalAccess: true`
   - `autoloadKnownExtensions: true`
   - `autoinstallKnownExtensions: true`
@@ -210,26 +213,25 @@ Conflict checks:
   - `motherDuckToken`
   - remote or network-requiring `databasePath`
 - Redundant matching values are allowed. For example,
-  `networkPolicy: "closed"` plus `enableExternalAccess: false` is valid.
+  `securityPolicy: "local"` plus `enableExternalAccess: false` is valid.
 
 Derived defaults:
 
-- Under `networkPolicy: "closed"`, force:
+- Under any restricted policy, force:
   - `enableExternalAccess = false`
+  - `lockConfiguration = true`
+  - `tempFileEncryption = true`
   - `autoloadKnownExtensions = false`
   - `autoinstallKnownExtensions = false`
   - `allowCommunityExtensions = false`
   - `allowUnsignedExtensions = false`
-- Under any restricted policy, force:
-  - `lockConfiguration = true`
-  - `tempFileEncryption = true`
-- Under `filesystemPolicy: "sandboxed"`:
+- Under `securityPolicy: "sandboxed"`:
   - If `allowedDirectories` is omitted, derive it to exactly the canonical
     `workingDirectory`, and nothing broader.
   - If `tempDirectory` is omitted, derive it to `workingDirectory/.tmp`.
   - If Malloy cannot derive the required paths safely, fail closed with a
     field-specific error.
-- Outside `filesystemPolicy: "sandboxed"`, do not invent an
+- Outside `securityPolicy: "sandboxed"`, do not invent an
   `allowedDirectories` default.
 - With `databasePath: ":memory:"`, normalize `readOnly` to `false`.
   This intentionally preserves existing behavior. A user-facing warning for
@@ -278,8 +280,7 @@ effective setting that can affect runtime behavior, safety, or semantics:
 
 - `databasePath`
 - `readOnly`
-- `filesystemPolicy`
-- `networkPolicy`
+- `securityPolicy`
 - `setupSQL`
 - canonicalized `allowedDirectories`
 - `enableExternalAccess`
@@ -346,7 +347,7 @@ Current baseline mapping:
   - must be established before lock
 - built-in extension loading
   - preserve ordinary compatibility outside restricted modes
-  - under `networkPolicy: "closed"`, do not `INSTALL`, do not load `httpfs`,
+  - under any restricted policy, do not `INSTALL`, do not load `httpfs`,
     and load only the fixed Malloy baseline extensions
 - `setupSQL`
   - preserve outside restricted modes
@@ -361,9 +362,9 @@ configuration after `lock_configuration=true`.
 `icu` and `json` are part of the fixed Malloy DuckDB baseline.
 
 `httpfs` is not part of that baseline. It broadens remote/network-capable
-behavior and is controlled by `networkPolicy`.
+behavior and is controlled by `securityPolicy`.
 
-Under `networkPolicy: "closed"`:
+Under any restricted policy (`"local"` or `"sandboxed"`):
 
 - do not load `httpfs`
 - do not `INSTALL` extensions
@@ -371,7 +372,7 @@ Under `networkPolicy: "closed"`:
 - load only fixed baseline extensions `icu` and `json`
 - fail closed if a required baseline extension is unavailable locally
 
-Outside `networkPolicy: "closed"`, preserve ordinary compatibility unless a
+Outside restricted policies, preserve ordinary compatibility unless a
 separate product decision changes it.
 
 ## Secrets
@@ -400,11 +401,10 @@ restricted-mode tests.
 
 The policy system described here targets native DuckDB.
 
-Do not register native-only policy fields in the `duckdb_wasm` connection
+Do not register the native-only policy field in the `duckdb_wasm` connection
 schema in this pass:
 
-- `filesystemPolicy`
-- `networkPolicy`
+- `securityPolicy`
 - native-only hardening properties
 
 Do not add native restricted-policy behavior to `DuckDBWASMConnection` as a
@@ -422,7 +422,7 @@ When adding a new native DuckDB config property, update all relevant layers:
 
 - Register the property in `src/native.ts` with the correct config metadata.
 - Parse and validate it in `normalizeDuckDBConfig()`.
-- Decide whether it conflicts with `filesystemPolicy` or `networkPolicy`.
+- Decide whether it conflicts with `securityPolicy`.
 - Decide whether any restricted policy must derive or force a value.
 - If it is path-like, canonicalize it before validation and identity
   comparison.
@@ -440,8 +440,8 @@ forced to a safe value under restricted policies.
 
 ## Changing Policy Behavior
 
-When changing `filesystemPolicy`, `networkPolicy`, or
-`NormalizedDuckDBSafetyPolicy`, review these together:
+When changing `securityPolicy` or `NormalizedDuckDBSafetyPolicy`, review these
+together:
 
 - user-facing policy contract
 - normalizer parsing and conflict checks
@@ -468,8 +468,7 @@ Keep focused tests for:
 - `allowedDirectories` accepted as a JSON array of strings
 - `allowedDirectories` rejected for non-array or non-string JSON values
 - exact policy value parsing
-- policy fields rejected when provided as non-literal or reference-shaped
-  values
+- policy field rejected when provided as non-literal or reference-shaped value
 - missing policy-required values failing closed
 - conflict checks
 - redundant matching explicit values accepted
@@ -478,10 +477,11 @@ Keep focused tests for:
 - network-requiring `databasePath` rejection
 - `readOnly: true` with `:memory:` normalizing to `false`
 - share keys differing when safety-relevant settings differ
+- different `securityPolicy` values producing different share keys
 - semantically identical allowlists sharing
 - restricted baseline order
-- `networkPolicy: "closed"` not loading `httpfs`
-- `networkPolicy: "closed"` not running `INSTALL`
+- restricted policies not loading `httpfs`
+- restricted policies not running `INSTALL`
 - required baseline extensions loaded or failing closed
 - later config-changing `SET` statements failing after lock
 - `closeAllInstances()` clearing all share-keyed native instances

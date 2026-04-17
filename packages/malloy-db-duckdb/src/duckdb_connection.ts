@@ -48,8 +48,7 @@ export interface DuckDBConnectionOptions extends ConnectionConfig {
   workingDirectory?: string;
   readOnly?: boolean;
   setupSQL?: string;
-  filesystemPolicy?: 'open' | 'sandboxed';
-  networkPolicy?: 'open' | 'closed';
+  securityPolicy?: 'none' | 'local' | 'sandboxed';
   allowedDirectories?: string[];
   enableExternalAccess?: boolean;
   lockConfiguration?: boolean;
@@ -301,7 +300,7 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async loadBaselineExtensions(): Promise<void> {
-    if (this.normalized.networkPolicy === 'closed') {
+    if (this.normalized.securityPolicy !== 'none') {
       await this.loadExtension('json', {allowInstall: false, required: true});
       await this.loadExtension('icu', {allowInstall: false, required: true});
       return;
@@ -311,7 +310,7 @@ export class DuckDBConnection extends DuckDBCommon {
     await this.loadExtension('json', {allowInstall, required: false});
     await this.loadExtension('icu', {allowInstall, required: false});
 
-    if (this.shouldLoadHttpfs()) {
+    if (this.normalized.enableExternalAccess !== false) {
       await this.loadExtension('httpfs', {allowInstall, required: false});
     }
 
@@ -322,13 +321,6 @@ export class DuckDBConnection extends DuckDBCommon {
     if (this.isMotherDuck) {
       await this.loadExtension('motherduck', {allowInstall, required: false});
     }
-  }
-
-  private shouldLoadHttpfs(): boolean {
-    if (this.normalized.networkPolicy === 'closed') {
-      return false;
-    }
-    return this.normalized.enableExternalAccess !== false;
   }
 
   private async loadExtension(

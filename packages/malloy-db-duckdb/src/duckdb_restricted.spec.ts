@@ -34,14 +34,14 @@ describe('DuckDB restricted configuration', () => {
     DuckDBConnection.closeAllInstances();
   });
 
-  it('rejects setupSQL when a restricted policy requires a locked baseline', () => {
+  it('rejects setupSQL when securityPolicy requires a locked baseline', () => {
     const createSpy = jest.spyOn(DuckDBInstance, 'create');
 
     expect(
       () =>
         new DuckDBConnection({
           name: 'duckdb',
-          filesystemPolicy: 'sandboxed',
+          securityPolicy: 'sandboxed',
           workingDirectory,
           setupSQL: 'SET FILE_SEARCH_PATH=/tmp',
         })
@@ -49,11 +49,23 @@ describe('DuckDB restricted configuration', () => {
     expect(createSpy).not.toHaveBeenCalled();
   });
 
-  it('passes enable_external_access=false at open time when no allowlist SET is needed', async () => {
+  it('rejects setupSQL for local securityPolicy too', () => {
+    expect(
+      () =>
+        new DuckDBConnection({
+          name: 'duckdb',
+          securityPolicy: 'local',
+          workingDirectory,
+          setupSQL: 'SET FILE_SEARCH_PATH=/tmp',
+        })
+    ).toThrow(DuckDBConfigValidationError);
+  });
+
+  it('passes enable_external_access=false at open time for local policy when no allowlist SET is needed', async () => {
     const createSpy = jest.spyOn(DuckDBInstance, 'create');
     const connection = new DuckDBConnection({
-      name: 'duckdb-network-closed',
-      networkPolicy: 'closed',
+      name: 'duckdb-local',
+      securityPolicy: 'local',
       workingDirectory,
     });
 
@@ -83,7 +95,7 @@ describe('DuckDB restricted configuration', () => {
         name: 'duckdb-closed',
         databasePath: sharedDatabasePath,
         workingDirectory,
-        networkPolicy: 'closed',
+        securityPolicy: 'local',
       });
       await closedConnection.runSQL('SELECT 1');
 
@@ -97,13 +109,13 @@ describe('DuckDB restricted configuration', () => {
   it('does share native instances for semantically identical allowlists', async () => {
     const firstConnection = new DuckDBConnection({
       name: 'duckdb-first',
-      filesystemPolicy: 'sandboxed',
+      securityPolicy: 'sandboxed',
       workingDirectory,
       allowedDirectories: [workingDirectory, secondAllowedDirectory],
     });
     const secondConnection = new DuckDBConnection({
       name: 'duckdb-second',
-      filesystemPolicy: 'sandboxed',
+      securityPolicy: 'sandboxed',
       workingDirectory,
       allowedDirectories: [
         secondAllowedDirectory,
@@ -138,8 +150,7 @@ describe('DuckDB restricted configuration', () => {
 
     const connection = new DuckDBConnection({
       name: 'duckdb-restricted',
-      filesystemPolicy: 'sandboxed',
-      networkPolicy: 'closed',
+      securityPolicy: 'sandboxed',
       workingDirectory,
     });
 
@@ -173,11 +184,10 @@ describe('DuckDB restricted configuration', () => {
     }
   });
 
-  it('locks down the session and keeps httpfs unloaded when networkPolicy is closed', async () => {
+  it('locks down the session and keeps httpfs unloaded for sandboxed policy', async () => {
     const connection = new DuckDBConnection({
       name: 'duckdb-restricted',
-      filesystemPolicy: 'sandboxed',
-      networkPolicy: 'closed',
+      securityPolicy: 'sandboxed',
       workingDirectory,
     });
 
@@ -214,10 +224,10 @@ describe('DuckDB restricted configuration', () => {
     }
   });
 
-  it('isolates secrets for network-only restricted mode', async () => {
+  it('locks down the session for local policy without filesystem sandbox', async () => {
     const connection = new DuckDBConnection({
-      name: 'duckdb-network-closed',
-      networkPolicy: 'closed',
+      name: 'duckdb-local',
+      securityPolicy: 'local',
       workingDirectory,
     });
 
@@ -225,7 +235,6 @@ describe('DuckDB restricted configuration', () => {
       const settings = await connection.runSQL(`
         SELECT
           current_setting('secret_directory') AS secret_directory,
-          current_setting('temp_directory') AS temp_directory,
           current_setting('enable_external_access') AS enable_external_access,
           current_setting('lock_configuration') AS lock_configuration
       `);
@@ -233,9 +242,12 @@ describe('DuckDB restricted configuration', () => {
       expect(settings.rows[0]['secret_directory']).toBe(
         `${canonical(workingDirectory)}/.duckdb-secrets`
       );
-      expect(settings.rows[0]['temp_directory']).toBe('.tmp');
       expect(settings.rows[0]['enable_external_access']).toBe(false);
       expect(settings.rows[0]['lock_configuration']).toBe(true);
+
+      await expect(
+        connection.runRawSQL('SET enable_external_access=true')
+      ).rejects.toThrow('configuration has been locked');
     } finally {
       await connection.close();
     }
@@ -257,7 +269,7 @@ describe('DuckDB restricted configuration', () => {
 
     const connection = new DuckDBConnection({
       name: 'duckdb-restricted',
-      networkPolicy: 'closed',
+      securityPolicy: 'local',
       workingDirectory,
     });
 
