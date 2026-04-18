@@ -349,92 +349,122 @@ export class SnowflakeExecutor {
       throw new Error('Query aborted');
     }
 
+    // Track the statement so abort can cancel it during conn.execute()
+    let _statement: RowStatement | undefined;
+    const abortSignal = options?.abortSignal;
+    const cancelFromAbort = abortSignal
+      ? () => {
+          _statement?.cancel();
+        }
+      : undefined;
+
+    if (cancelFromAbort) {
+      abortSignal!.addEventListener('abort', cancelFromAbort, {once: true});
+    }
+
     return new Promise((resolve, reject) => {
-      conn.execute({
-        sqlText,
-        streamResult: true,
-        complete: (err: SnowflakeError | undefined, _stmt: RowStatement) => {
-          if (err) {
-            releaseOnce();
-            reject(err);
-            return;
-          }
+      try {
+        _statement = conn.execute({
+          sqlText,
+          streamResult: true,
+          complete: (err: SnowflakeError | undefined, _stmt: RowStatement) => {
+            if (err) {
+              if (cancelFromAbort) {
+                abortSignal!.removeEventListener('abort', cancelFromAbort);
+              }
+              releaseOnce();
+              reject(err);
+              return;
+            }
 
-          const stream: Readable = _stmt.streamRows();
+            const stream: Readable = _stmt.streamRows();
 
-          function streamSnowflake(
-            onError: (error: Error) => void,
-            onData: (data: QueryRecord) => void,
-            onEnd: () => void
-          ) {
-            let streamEnded = false;
+            function streamSnowflake(
+              onError: (error: Error) => void,
+              onData: (data: QueryRecord) => void,
+              onEnd: () => void
+            ) {
+              let streamEnded = false;
 
-            // Hoisted so handleEnd/handleError can remove it
-            const onAbort = options?.abortSignal
-              ? () => {
+              // Replace the pre-execute abort listener with one that also
+              // tears down the stream.
+              const onAbort = abortSignal
+                ? () => {
+                    _stmt.cancel();
+                    handleEnd();
+                  }
+                : undefined;
+
+              if (cancelFromAbort) {
+                abortSignal!.removeEventListener('abort', cancelFromAbort);
+              }
+
+              function cleanup() {
+                streamEnded = true;
+                stream.removeListener('data', handleData);
+                stream.removeListener('error', handleError);
+                stream.removeListener('end', handleEnd);
+                if (onAbort) {
+                  abortSignal?.removeEventListener('abort', onAbort);
+                }
+                if (!stream.destroyed) {
+                  stream.destroy();
+                }
+              }
+
+              function handleEnd() {
+                if (streamEnded) return;
+                cleanup();
+                onEnd();
+                releaseOnce();
+              }
+
+              function handleError(error: Error) {
+                if (streamEnded) return;
+                cleanup();
+                onError(error);
+                releaseOnce();
+              }
+
+              function handleData(this: Readable, row: QueryRecord) {
+                if (streamEnded) return;
+                onData(row);
+                if (
+                  options?.rowLimit !== undefined &&
+                  ++index >= options.rowLimit
+                ) {
                   _stmt.cancel();
                   handleEnd();
                 }
-              : undefined;
+              }
 
-            function cleanup() {
-              streamEnded = true;
-              stream.removeListener('data', handleData);
-              stream.removeListener('error', handleError);
-              stream.removeListener('end', handleEnd);
+              let index = 0;
+              stream.on('error', handleError);
+              stream.on('data', handleData);
+              stream.on('end', handleEnd);
+
+              // Wire abort signal to cancel the stream
               if (onAbort) {
-                options?.abortSignal?.removeEventListener('abort', onAbort);
-              }
-              if (!stream.destroyed) {
-                stream.destroy();
-              }
-            }
-
-            function handleEnd() {
-              if (streamEnded) return;
-              cleanup();
-              onEnd();
-              releaseOnce();
-            }
-
-            function handleError(error: Error) {
-              if (streamEnded) return;
-              cleanup();
-              onError(error);
-              releaseOnce();
-            }
-
-            function handleData(this: Readable, row: QueryRecord) {
-              if (streamEnded) return;
-              onData(row);
-              if (
-                options?.rowLimit !== undefined &&
-                ++index >= options.rowLimit
-              ) {
-                handleEnd();
+                if (abortSignal?.aborted) {
+                  onAbort();
+                } else {
+                  abortSignal?.addEventListener('abort', onAbort, {
+                    once: true,
+                  });
+                }
               }
             }
 
-            let index = 0;
-            stream.on('error', handleError);
-            stream.on('data', handleData);
-            stream.on('end', handleEnd);
-
-            // Wire abort signal to cancel the stream
-            if (onAbort) {
-              if (options?.abortSignal?.aborted) {
-                onAbort();
-              } else {
-                options?.abortSignal?.addEventListener('abort', onAbort, {
-                  once: true,
-                });
-              }
-            }
-          }
-
-          resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
-        },
-      });
+            resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
+          },
+        });
+      } catch (err) {
+        if (cancelFromAbort) {
+          abortSignal!.removeEventListener('abort', cancelFromAbort);
+        }
+        releaseOnce();
+        reject(err);
+      }
     });
   }
 }
