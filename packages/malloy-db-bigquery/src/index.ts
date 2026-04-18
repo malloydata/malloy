@@ -41,10 +41,16 @@ registerConnectionType('bigquery', {
     },
     {
       name: 'serviceAccountKeyPath',
-      displayName: 'Service Account Key',
+      displayName: 'Service Account Key Path',
       type: 'file',
       optional: true,
       fileFilters: {JSON: ['json']},
+    },
+    {
+      name: 'serviceAccountKey',
+      displayName: 'Service Account Key',
+      type: 'json',
+      optional: true,
     },
     {
       name: 'location',

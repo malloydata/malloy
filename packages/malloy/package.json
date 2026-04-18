@@ -1,9 +1,10 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.376",
+  "version": "0.0.381",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
+    "./internal": "./dist/internal.js",
     "./test": "./dist/test/index.js",
     "./test/matchers": "./dist/test/matchers.js",
     "./connection": "./dist/connection/index.js",
@@ -13,6 +14,9 @@
     "*": {
       "index": [
         "./dist/index.d.ts"
+      ],
+      "internal": [
+        "./dist/internal.d.ts"
       ],
       "test": [
         "./dist/test/index.d.ts"
@@ -47,9 +51,9 @@
     "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
   "dependencies": {
-    "@malloydata/malloy-filter": "0.0.376",
-    "@malloydata/malloy-interfaces": "0.0.376",
-    "@malloydata/malloy-tag": "0.0.376",
+    "@malloydata/malloy-filter": "0.0.381",
+    "@malloydata/malloy-interfaces": "0.0.381",
+    "@malloydata/malloy-tag": "0.0.381",
     "@noble/hashes": "^1.8.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",

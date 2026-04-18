@@ -39,13 +39,8 @@ import type {
   TestableConnection,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {
-  TrinoDialect,
-  mkFieldDef,
-  TinyParser,
-  sqlKey,
-  makeDigest,
-} from '@malloydata/malloy';
+import {TrinoDialect, mkFieldDef, sqlKey, makeDigest} from '@malloydata/malloy';
+import {TinyParser} from '@malloydata/malloy/internal';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
 import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
@@ -603,21 +598,15 @@ class TrinoPrestoSchemaParser extends TinyParser {
 
   fieldNameList(): string[] {
     this.skipTo(']'); // Skip to end of plan
-    this.next('['); // Expect start of name list
+    this.expect('['); // Expect start of name list
     const fieldNames: string[] = [];
     for (;;) {
-      const nmToken = this.next('id');
+      const nmToken = this.expect('id');
       fieldNames.push(nmToken.text);
-      const sep = this.next();
-      if (sep.type === ',') {
-        continue;
+      if (!this.match(',')) {
+        this.expect(']');
+        break;
       }
-      if (sep.type !== ']') {
-        throw this.parseError(
-          `Unexpected '${sep.text}' while getting field name list`
-        );
-      }
-      break;
     }
     return fieldNames;
   }
@@ -625,20 +614,16 @@ class TrinoPrestoSchemaParser extends TinyParser {
   parseQueryPlan(): FieldDef[] {
     const fieldNames = this.fieldNameList();
     const fields: FieldDef[] = [];
-    this.next('arrow', '[');
+    this.expect('arrow', '[');
     for (let nameIndex = 0; ; nameIndex += 1) {
       const name = fieldNames[nameIndex];
-      this.next('id', ':');
+      this.expect('id', ':');
       const nextType = this.typeDef();
       fields.push(mkFieldDef(nextType, name));
-      const sep = this.next();
-      if (sep.text === ',') {
-        continue;
+      if (!this.match(',')) {
+        this.expect(']');
+        break;
       }
-      if (sep.text !== ']') {
-        throw this.parseError(`Unexpected '${sep.text}' between field types`);
-      }
-      break;
     }
     if (fields.length !== fieldNames.length) {
       throw new Error(
@@ -649,26 +634,24 @@ class TrinoPrestoSchemaParser extends TinyParser {
   }
 
   typeDef(): AtomicTypeDef {
-    const typToken = this.next();
+    const typToken = this.read();
     if (typToken.type === 'eof') {
       throw this.parseError(
         'Unexpected EOF parsing type, expected a type name'
       );
-    } else if (typToken.text === 'row' && this.next('(')) {
+    } else if (typToken.text === 'row') {
+      this.expect('(');
       const fields: FieldDef[] = [];
       for (;;) {
-        const name = this.next();
-        if (name.type !== 'id' && name.type !== 'quoted_name') {
-          throw this.parseError(`Expected property name, got '${name.type}'`);
+        const name = this.match('id') ?? this.match('quoted_name');
+        if (!name) {
+          throw this.parseError('Expected property name');
         }
         const getDef = this.typeDef();
         fields.push(mkFieldDef(getDef, name.text));
-        const sep = this.next();
-        if (sep.text === ')') {
+        if (!this.match(',')) {
+          this.expect(')');
           break;
-        }
-        if (sep.text === ',') {
-          continue;
         }
       }
       const def: RecordTypeDef = {
@@ -676,9 +659,10 @@ class TrinoPrestoSchemaParser extends TinyParser {
         fields,
       };
       return def;
-    } else if (typToken.text === 'array' && this.next('(')) {
+    } else if (typToken.text === 'array') {
+      this.expect('(');
       const elType = this.typeDef();
-      this.next(')');
+      this.expect(')');
       return elType.type === 'record'
         ? {
             type: 'array',
@@ -686,38 +670,33 @@ class TrinoPrestoSchemaParser extends TinyParser {
             fields: elType.fields,
           }
         : {type: 'array', elementTypeDef: elType};
-    } else if (typToken.text === 'map' && this.next('(')) {
+    } else if (typToken.text === 'map') {
+      this.expect('(');
       const _keyType = this.typeDef();
-      this.next(',');
+      this.expect(',');
       const _valType = this.typeDef();
-      this.next(')');
+      this.expect(')');
       return {type: 'sql native'};
     } else if (typToken.type === 'id') {
       const sqlType = typToken.text.toLowerCase();
       if (sqlType === 'varchar') {
-        if (this.peek().type === '(') {
-          this.next('(', 'id', ')');
-        }
+        if (this.match('(')) this.expect('id', ')');
       } else if (sqlType === 'timestamp') {
-        if (this.peek().text === '(') {
-          this.next('(', 'id', ')');
-        }
-        if (this.peek().text === 'with') {
-          this.nextText('with', 'time', 'zone');
+        if (this.match('(')) this.expect('id', ')');
+        if (this.matchText('with', 'time', 'zone')) {
           return {type: 'timestamptz'};
         }
         return {type: 'timestamp'};
       }
       const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
       if (typeDef.type === 'number' && sqlType === 'decimal') {
-        this.next('(', 'id');
-        if (this.peek().type === ',') {
-          this.next(',', 'id');
+        this.expect('(', 'id');
+        if (this.match(',', 'id')) {
           typeDef.numberType = 'float';
         } else {
           typeDef.numberType = 'integer';
         }
-        this.next(')');
+        this.expect(')');
       }
       if (typeDef === undefined) {
         throw this.parseError(`Can't parse presto type ${sqlType}`);

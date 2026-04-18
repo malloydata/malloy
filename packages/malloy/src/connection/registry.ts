@@ -44,6 +44,13 @@ export interface ConnectionPropertyDefinition {
   description?: string;
   /** For type 'file': extension filters for picker dialogs. */
   fileFilters?: Record<string, string[]>;
+  /**
+   * For security-sensitive string slots, preserve malformed/reference-shaped
+   * raw values so registry lookup can fail closed instead of silently dropping
+   * the property during generic compilation. Factories must not rely on this
+   * metadata as their only validation layer.
+   */
+  requireLiteralString?: true;
 }
 
 /**
@@ -155,6 +162,27 @@ export function getConnectionTypeDef(
 }
 
 /**
+ * Enforce registry-level literal-string requirements after overlay resolution
+ * and before a connection factory sees the config.
+ */
+export function validateConnectionConfigProperties(
+  connectionName: string,
+  typeName: string,
+  config: ConnectionConfig
+): void {
+  const props = registry.get(typeName)?.properties ?? [];
+  for (const prop of props) {
+    if (!prop.requireLiteralString) continue;
+    const value = config[prop.name];
+    if (value !== undefined && typeof value !== 'string') {
+      throw new Error(
+        `Connection "${connectionName}" property "${prop.name}" must be a literal string`
+      );
+    }
+  }
+}
+
+/**
  * Parse a JSON config string into a ConnectionsConfig.
  * Entries without a valid `is` field are silently dropped.
  */
@@ -241,6 +269,7 @@ export function createConnectionsFromConfig(
         }
       }
 
+      validateConnectionConfigProperties(connectionName, entry.is, connConfig);
       const connection = await typeDef.factory(connConfig);
       if (onConnectionCreated) {
         onConnectionCreated(connectionName, connection);

@@ -7,6 +7,7 @@ import type {LogMessage} from '../../lang/parse-log';
 import {
   getConnectionProperties,
   getConnectionTypeDef,
+  validateConnectionConfigProperties,
 } from '../../connection/registry';
 import type {
   ConnectionConfigEntry,
@@ -99,6 +100,11 @@ export function buildManagedLookup(
         }
       }
 
+      validateConnectionConfigProperties(
+        connectionName,
+        resolved.is,
+        connConfig
+      );
       const connection = await typeDef.factory(connConfig);
       cache.set(connectionName, connection);
       return connection;
