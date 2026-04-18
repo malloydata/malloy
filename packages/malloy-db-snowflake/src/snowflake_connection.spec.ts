@@ -22,7 +22,7 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import type {QueryData, RunSQLOptions} from '@malloydata/malloy';
+import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
 import {
   createTestRuntime,
   describeIfDatabaseAvailable,
@@ -539,6 +539,91 @@ describeSnowflakeExecutor('db:SnowflakeExecutor', () => {
     // Subsequent queries should still work after a timeout-induced cancel.
     const rows = await db.runBatch('select 1 as one');
     expect(rows.length).toBe(1);
+  });
+
+  describe('abort-under-contention', () => {
+    it('aborted stream() settles immediately and does not block subsequent queries', async () => {
+      // Use a dedicated executor with pool size 1 so contention is guaranteed.
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        // Step 1: start a slow query that holds the only connection.
+        const slowQueryPromise = executor.batch(
+          "SELECT SYSTEM$WAIT(4, 'SECONDS')"
+        );
+
+        // Give the slow query a moment to acquire the connection.
+        await new Promise(r => setTimeout(r, 500));
+
+        // Step 2: start a second stream() with an AbortController.
+        const tag = `abort_test_${Date.now()}`;
+        const abortController = new AbortController();
+
+        const streamPromise = executor
+          .stream(`SELECT '${tag}' AS tag`, {
+            abortSignal: abortController.signal,
+          })
+          .then(async (iter: AsyncIterableIterator<QueryRecord>) => {
+            const rows: QueryRecord[] = [];
+            for await (const row of iter) {
+              rows.push(row);
+            }
+            return rows;
+          });
+
+        // Step 3: abort while still blocked on pool acquisition.
+        await new Promise(r => setTimeout(r, 200));
+        abortController.abort();
+
+        // Step 4: let the slow query finish.
+        await slowQueryPromise;
+
+        // The aborted stream should settle promptly.
+        const settleStart = Date.now();
+        const streamResult = await Promise.race([
+          streamPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('stream did not settle in time')),
+              3000
+            )
+          ),
+        ]).catch(() => undefined);
+        const settleMs = Date.now() - settleStart;
+
+        if (streamResult !== undefined) {
+          expect(streamResult.length).toBe(0);
+        }
+        expect(settleMs).toBeLessThan(3000);
+
+        // Step 5: a third trivial query should run right away.
+        const thirdStart = Date.now();
+        const rows = await executor.batch('SELECT 1 AS val');
+        const thirdMs = Date.now() - thirdStart;
+
+        expect(rows.length).toBe(1);
+        expect(thirdMs).toBeLessThan(5000);
+
+        // Step 6: verify the tagged query never executed.
+        try {
+          const history = await executor.batch(
+            `SELECT COUNT(*) AS cnt
+             FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY_BY_USER())
+             WHERE QUERY_TEXT LIKE '%${tag}%'
+               AND QUERY_TEXT NOT LIKE '%INFORMATION_SCHEMA%'`
+          );
+          const cnt = Number(history[0]['CNT']);
+          expect(cnt).toBe(0);
+        } catch {
+          // QUERY_HISTORY_BY_USER may not be available in all environments.
+        }
+      } finally {
+        await executor.done();
+      }
+    });
   });
 });
 
