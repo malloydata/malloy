@@ -625,6 +625,69 @@ describeSnowflakeExecutor('db:SnowflakeExecutor', () => {
       }
     });
   });
+
+  /**
+   * test that abort fires after the connection is acquired and
+   * `conn.execute()` has been entered, but before Snowflake invokes the
+   * `complete` callback. This is distinct from `abort-under-contention`,
+   * which aborts while still waiting on `pool.acquire()`.
+   */
+  describe('abort-mid-execute', () => {
+    it('batch: abort cancels in-flight execute and returns the pool', async () => {
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        const slowSql = "SELECT SYSTEM$WAIT(30, 'SECONDS')";
+        const abortController = new AbortController();
+        const batchPromise = executor.batch(slowSql, {
+          abortSignal: abortController.signal,
+        });
+
+        // Past session init + pool handoff; the long statement should be in flight.
+        await new Promise(r => setTimeout(r, 1000));
+        abortController.abort();
+
+        const settleStart = Date.now();
+        await expect(batchPromise).rejects.toBeInstanceOf(Error);
+        expect(Date.now() - settleStart).toBeLessThan(20_000);
+
+        const rows = await executor.batch('SELECT 1 AS val');
+        expect(rows.length).toBe(1);
+      } finally {
+        await executor.done();
+      }
+    });
+
+    it('stream: abort cancels in-flight execute and returns the pool', async () => {
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        const slowSql = "SELECT SYSTEM$WAIT(30, 'SECONDS')";
+        const abortController = new AbortController();
+        const streamPromise = executor.stream(slowSql, {
+          abortSignal: abortController.signal,
+        });
+
+        await new Promise(r => setTimeout(r, 800));
+        abortController.abort();
+
+        const settleStart = Date.now();
+        await expect(streamPromise).rejects.toBeInstanceOf(Error);
+        expect(Date.now() - settleStart).toBeLessThan(20_000);
+
+        const rows = await executor.batch('SELECT 1 AS val');
+        expect(rows.length).toBe(1);
+      } finally {
+        await executor.done();
+      }
+    });
+  });
 });
 
 describe('setupSQL', () => {
