@@ -18,6 +18,7 @@ type MeasureAxisOptions = {
   fieldRef: string | undefined;
   brushMeasureRangeSourceId: string;
   showBrushes?: boolean;
+  horizontal?: boolean;
   axisSettings: ChartLayoutSettings['yAxis'];
   vegaConfig?: Config;
 };
@@ -29,87 +30,113 @@ export function createMeasureAxis({
   labelLimit,
   fieldPath,
   showBrushes = true,
+  horizontal = false,
   axisSettings,
   vegaConfig,
 }: MeasureAxisOptions) {
-  const axis: Axis = {
-    orient: 'left',
-    scale: 'yscale',
-    title: title,
-    tickCount: {'signal': `${tickCount}`},
-
-    labelLimit: labelLimit,
-    labelOverlap: true,
-    labelSeparation: 8,
-    ...axisSettings,
-    // Only set defaults if not provided in axisSettings
-    ...(axisSettings.minExtent === undefined && {minExtent: labelLimit}),
-    ...(axisSettings.maxExtent === undefined && {maxExtent: labelLimit}),
-    titleX: -axisSettings.width + axisSettings.titlePadding,
-    titleBaseline: 'top',
-    encode: {
-      labels: {
-        enter: {
-          text: {
-            signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
-          },
-        },
-        update: {
-          text: {
-            signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
-          },
-          fillOpacity: [
-            ...(showBrushes
-              ? [
-                  {
-                    test: 'brushMeasureIn !== null ? (datum.index !== 0 && datum.index !== 1) : false',
-                    value: 0,
-                  },
-                  {
-                    test: 'brushMeasureRangeIn && datum.value >= (brushMeasureRangeIn[0] - (invert("yscale", 0)-invert("yscale", 20))) && datum.value <= (brushMeasureRangeIn[1] + (invert("yscale", 0)-invert("yscale", 20)))',
-                    value: 0,
-                  },
-                ]
-              : []),
-            {
-              value: 1,
+  const axis: Axis = horizontal
+    ? {
+        orient: 'bottom',
+        scale: 'yscale',
+        title: title,
+        tickCount: {'signal': `${tickCount}`},
+        labelOverlap: 'greedy',
+        labelSeparation: 4,
+        encode: {
+          labels: {
+            enter: {
+              text: {
+                signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value)`,
+              },
             },
-          ],
+            update: {
+              text: {
+                signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value)`,
+              },
+              fillOpacity: [
+                ...(showBrushes
+                  ? [
+                      {
+                        test: 'brushMeasureIn !== null ? (datum.index !== 0 && datum.index !== 1) : false',
+                        value: 0,
+                      },
+                    ]
+                  : []),
+                {
+                  value: 1,
+                },
+              ],
+            },
+          },
         },
-      },
-    },
-  };
+      }
+    : {
+        orient: 'left' as const,
+        scale: 'yscale',
+        title: title,
+        tickCount: {'signal': `${tickCount}`},
 
-  const yAxisReferenceLines = createAxisReferenceLines({
+        labelLimit: labelLimit,
+        labelOverlap: true,
+        labelSeparation: 8,
+        ...axisSettings,
+        // Only set defaults if not provided in axisSettings
+        ...(axisSettings.minExtent === undefined && {minExtent: labelLimit}),
+        ...(axisSettings.maxExtent === undefined && {maxExtent: labelLimit}),
+        titleX: -axisSettings.width + axisSettings.titlePadding,
+        titleBaseline: 'top' as const,
+        encode: {
+          labels: {
+            enter: {
+              text: {
+                signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
+              },
+            },
+            update: {
+              text: {
+                signal: `renderMalloyNumber(malloyExplore, '${fieldPath}', datum.value, datum, item)`,
+              },
+              fillOpacity: [
+                ...(showBrushes
+                  ? [
+                      {
+                        test: 'brushMeasureIn !== null ? (datum.index !== 0 && datum.index !== 1) : false',
+                        value: 0,
+                      },
+                      {
+                        test: 'brushMeasureRangeIn && datum.value >= (brushMeasureRangeIn[0] - (invert("yscale", 0)-invert("yscale", 20))) && datum.value <= (brushMeasureRangeIn[1] + (invert("yscale", 0)-invert("yscale", 20)))',
+                        value: 0,
+                      },
+                    ]
+                  : []),
+                {
+                  value: 1,
+                },
+              ],
+            },
+          },
+        },
+      };
+
+  const referenceLines = createAxisReferenceLines({
     type,
     fieldPath,
+    horizontal,
     axisSettings,
     vegaConfig,
   });
-  const axisOverlayMark = createAxisOverlay({type, axisSettings});
-  // TODO: For now, don't do range brushes as there are some issues to work through
-  // const yAxisRangeBrush = createAxisRangeBrush({
-  //   type,
-  //   axisSettings,
-  //   fieldPath,
-  //   fieldRef,
-  //   brushMeasureRangeSourceId,
-  // });
-  const interactiveMarks = [
-    yAxisReferenceLines,
-    axisOverlayMark,
-    // yAxisRangeBrush.mark,
-  ];
+  const axisOverlayMark = createAxisOverlay({type, horizontal, axisSettings});
+
+  const interactiveMarks = [referenceLines, axisOverlayMark];
 
   const interactiveSignals = [];
-  // TODO: For now, disabling range brushes
-  // const interactiveSignals = [...yAxisRangeBrush.signals];
 
+  // For horizontal, brush uses x position; for vertical, y position
+  const posFunc = horizontal ? 'x' : 'y';
   const brushMeasureEvents = [
     {
       events: '@y_axis_overlay:mousemove',
-      update:
-        "yIsBrushing ? null : { fieldRefId: measureFieldRefId, sourceId: brushMeasureSourceId, value: event.shiftKey ? invert('yscale',y(item())) : snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert('yscale',y(item()))), type: 'measure'}",
+      update: `yIsBrushing ? null : { fieldRefId: measureFieldRefId, sourceId: brushMeasureSourceId, value: event.shiftKey ? invert('yscale',${posFunc}(item())) : snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert('yscale',${posFunc}(item()))), type: 'measure'}`,
     },
     {
       events: '@y_axis_overlay:mouseout',
@@ -127,6 +154,7 @@ export function createMeasureAxis({
 
 type AxisOverlayOptions = {
   type: 'y';
+  horizontal?: boolean;
   axisSettings: Partial<ChartLayoutSettings['yAxis']>;
 };
 
@@ -135,18 +163,29 @@ function createAxisOverlay(options: AxisOverlayOptions) {
     name: `${options.type}_axis_overlay`,
     type: 'rect',
     encode: {
-      enter: {},
+      enter: options.horizontal
+        ? {
+            // Horizontal: overlay strip along the bottom axis area
+            x: {value: 0},
+            x2: {signal: 'width'},
+            y: {signal: 'height'},
+            y2: {
+              signal: `height + ${options.axisSettings.width! - options.axisSettings.yTitleSize!}`,
+            },
+            fill: {value: 'transparent'},
+          }
+        : {
+            // Vertical: overlay strip along the left axis area
+            x: {
+              value:
+                -options.axisSettings.width! + options.axisSettings.yTitleSize!,
+            },
+            x2: {value: 0},
+            y: {value: 0},
+            y2: {signal: 'height'},
+            fill: {value: 'transparent'},
+          },
     },
-  };
-
-  axisOverlay.encode!.enter = {
-    x: {
-      value: -options.axisSettings.width! + options.axisSettings.yTitleSize!,
-    },
-    x2: {value: 0},
-    y: {value: 0},
-    y2: {signal: 'height'},
-    fill: {value: 'transparent'},
   };
 
   return axisOverlay;
@@ -155,6 +194,7 @@ function createAxisOverlay(options: AxisOverlayOptions) {
 type AxisReferenceLineOptions = {
   type: 'y';
   fieldPath: string;
+  horizontal?: boolean;
   axisSettings: {
     width: number;
     yTitleSize: number;
@@ -167,13 +207,109 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
     signal: 'brushMeasureIn === null || yIsBrushing ? 0 : 1',
   };
 
+  const backgroundColor = (options.vegaConfig?.background as string) || 'white';
+  const textSignal = `brushMeasureIn ? renderMalloyNumber(malloyExplore, '${options.fieldPath}', brushMeasureIn) : ''`;
+
+  if (options.horizontal) {
+    // Horizontal: vertical reference line at x = scale(value)
+    const xPosSignal = (offset = 0) =>
+      `brushMeasureIn !== null ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
+
+    const referenceLines: GroupMark = {
+      name: 'y_reference_line_group',
+      type: 'group',
+      marks: [
+        {
+          name: 'y_reference_lines_backdrop',
+          type: 'rect',
+          encode: {
+            enter: {
+              // Small backdrop behind the text label at the top of the chart
+              y: {value: -2},
+              height: {value: 16},
+              fill: {value: backgroundColor},
+              width: {value: 80},
+            },
+            update: {
+              x: {signal: xPosSignal(2)},
+              opacity: opacityRefLineSignal,
+            },
+          },
+        },
+        {
+          name: 'y_reference_lines',
+          type: 'rule',
+          encode: {
+            enter: {
+              y: {value: 0},
+              y2: {signal: 'height'},
+              stroke: {value: 'black'},
+              strokeOpacity: {value: 0.5},
+              strokeDash: {value: [4, 2]},
+            },
+            update: {
+              x: {signal: xPosSignal()},
+              x2: {signal: xPosSignal(0)},
+              opacity: opacityRefLineSignal,
+            },
+          },
+        },
+        {
+          name: 'y_reference_line_label_backdrop',
+          type: 'text',
+          encode: {
+            enter: {
+              dx: {value: 4},
+              y: {value: 0},
+              align: {value: 'left'},
+              baseline: {value: 'top'},
+              fill: {value: backgroundColor},
+              stroke: {value: backgroundColor},
+              strokeWidth: {value: 3},
+              fontSize: {value: 10},
+              fontWeight: {value: 'normal'},
+              font: {signal: 'referenceLineFont'},
+              strokeOpacity: {value: 1},
+            },
+            update: {
+              x: {signal: xPosSignal()},
+              text: {signal: textSignal},
+              opacity: opacityRefLineSignal,
+            },
+          },
+        },
+        {
+          name: 'y_reference_line_label',
+          type: 'text',
+          encode: {
+            enter: {
+              dx: {value: 4},
+              y: {value: 0},
+              align: {value: 'left'},
+              baseline: {value: 'top'},
+              fill: {value: grayMedium},
+              fontSize: {value: 10},
+              fontWeight: {value: 'normal'},
+              font: {signal: 'referenceLineFont'},
+            },
+            update: {
+              x: {signal: xPosSignal()},
+              text: {signal: textSignal},
+              opacity: opacityRefLineSignal,
+            },
+          },
+        },
+      ],
+    };
+    return referenceLines;
+  }
+
+  // Vertical: horizontal reference line at y = scale(value)
   const startingXPosition =
     -options.axisSettings.width + options.axisSettings.yTitleSize;
 
   const yPositionSignalWithOffset = (offset = 0) =>
     `brushMeasureIn !== null ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
-
-  const backgroundColor = (options.vegaConfig?.background as string) || 'white';
 
   const referenceLines: GroupMark = {
     name: 'y_reference_line_group',
@@ -246,9 +382,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             y: {
               signal: yPositionSignalWithOffset(),
             },
-            text: {
-              signal: `brushMeasureIn ? renderMalloyNumber(malloyExplore, '${options.fieldPath}', brushMeasureIn) : ''`,
-            },
+            text: {signal: textSignal},
             opacity: opacityRefLineSignal,
           },
         },
@@ -273,9 +407,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             y: {
               signal: yPositionSignalWithOffset(),
             },
-            text: {
-              signal: `brushMeasureIn ? renderMalloyNumber(malloyExplore, '${options.fieldPath}', brushMeasureIn) : ''`,
-            },
+            text: {signal: textSignal},
             opacity: opacityRefLineSignal,
           },
         },

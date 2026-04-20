@@ -57,6 +57,11 @@ export function barChartSettingsToTag(settings: BarChartSettings): Tag {
     tag = tag.set(['viz', 'stack'], null);
   }
 
+  // Add horizontal if different from default
+  if (settings.horizontal !== defaultBarChartSettings.horizontal) {
+    tag = tag.set(['viz', 'horizontal'], null);
+  }
+
   // Add hide references if different from default
   if (settings.hideReferences !== defaultBarChartSettings.hideReferences) {
     if (settings.hideReferences) {

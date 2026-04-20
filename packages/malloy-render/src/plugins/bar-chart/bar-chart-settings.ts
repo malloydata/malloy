@@ -20,6 +20,7 @@ export interface BarChartSettings extends Record<string, unknown> {
   yChannel: YChannel;
   seriesChannel: SeriesChannel;
   isStack: boolean;
+  horizontal: boolean;
   interactive: boolean;
   hideReferences: boolean;
   disableEmbedded: boolean;
@@ -44,6 +45,7 @@ export const defaultBarChartSettings: BarChartSettings = {
     limit: 'auto',
   },
   isStack: false,
+  horizontal: false,
   interactive: true,
   hideReferences: false,
   disableEmbedded: false,
@@ -81,6 +83,7 @@ export interface IBarChartSettingsSchema extends JSONSchemaObject {
       };
     };
     isStack: JSONSchemaBoolean;
+    horizontal: JSONSchemaBoolean;
     interactive: JSONSchemaBoolean;
     hideReferences: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
@@ -212,6 +215,13 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
       type: 'boolean',
       default: false,
     },
+    horizontal: {
+      title: 'Horizontal Orientation',
+      description:
+        'Whether to render bars horizontally (categories on y-axis, values on x-axis)',
+      type: 'boolean',
+      default: false,
+    },
     interactive: {
       title: 'Interactive',
       description:
@@ -238,6 +248,7 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
     'yChannel',
     'seriesChannel',
     'isStack',
+    'horizontal',
     'interactive',
     'hideReferences',
     'disableEmbedded',

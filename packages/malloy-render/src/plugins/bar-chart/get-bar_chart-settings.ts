@@ -97,6 +97,7 @@ export function getBarChartSettings(
   }
 
   const isStack = vizTag.has('stack');
+  const horizontal = vizTag.has('horizontal');
 
   // Parse top level tags from viz properties
   if (vizTag.text('x')) {
@@ -259,6 +260,7 @@ export function getBarChartSettings(
     yChannel,
     seriesChannel,
     isStack,
+    horizontal,
     interactive,
     hideReferences,
     disableEmbedded,

@@ -23,6 +23,8 @@ Renders the data as a bar chart. If `x`, `y`, and `series` fields aren't explici
 
 - `.stack`: Stacks bars when a series is present.
   - Syntax: `# bar_chart.stack` or `# bar_chart { stack }`
+- `.horizontal`: Renders bars horizontally (categories on the y-axis, values on the x-axis).
+  - Syntax: `# bar_chart.horizontal` or `# bar_chart { horizontal }`
 - `.size`: Controls chart size presets.
   - Values: `spark`, `xs`, `sm`, `md`, `lg`, `xl`, `2xl`.
   - Syntax: `# bar_chart { size=lg }` or `# bar_chart.size=lg` (Legacy: `# size=lg` on the view)
@@ -76,6 +78,15 @@ view: sales_by_month is { ... }
 // Measure-based series
 # bar_chart { x=brand y=['Sales $', 'Cost $'] }
 view: sales_vs_cost is { ... }
+
+// Horizontal bar chart
+# bar_chart { horizontal }
+view: top_brands is {
+  group_by: brand
+  aggregate: total_sales
+  order_by: total_sales desc
+  limit: 10
+}
 
 // Independent Y-axis in a nested chart
 view: parent_view is {

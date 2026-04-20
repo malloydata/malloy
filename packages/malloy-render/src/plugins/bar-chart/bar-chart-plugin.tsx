@@ -285,6 +285,7 @@ const BAR_CHART_TAG_PATHS: string[][] = [
   ['viz', 'mode'],
   ['viz', 'size'],
   ['viz', 'stack'],
+  ['viz', 'horizontal'],
   ['viz', 'disable_embedded'],
   ['viz', 'disableEmbedded'],
   // Channel settings

@@ -42,6 +42,7 @@ type XAxisSettings = {
   minExtent: number;
   maxExtent: number;
   height: number;
+  labelWidth: number;
   titleSize: number;
   titleBaseline: TextBaselineValue;
   titleY: number;
@@ -264,6 +265,7 @@ export function getXAxisSettings({
     labelBaseline: 'top',
     labelAlign,
     height: xAxisHeight,
+    labelWidth: maxStringSize,
     titleSize: xTitleSize,
     titleBaseline: 'middle',
     titleY: xAxisHeight - titleArea / 2,
@@ -280,6 +282,7 @@ export type ChartLayoutSettings = {
     labelBaseline?: TextBaselineValue;
     labelLimit: number;
     height: number;
+    labelWidth: number;
     titleSize: number;
     titleY: number;
     hidden: boolean;
