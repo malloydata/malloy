@@ -22,7 +22,7 @@
  */
 
 import * as malloy from '@malloydata/malloy';
-import type {QueryData, RunSQLOptions} from '@malloydata/malloy';
+import type {QueryData, QueryRecord, RunSQLOptions} from '@malloydata/malloy';
 import {
   createTestRuntime,
   describeIfDatabaseAvailable,
@@ -437,10 +437,14 @@ class SnowflakeExecutorTestSetup {
     this.executor_ = executor;
   }
 
-  async runBatch(sqlText: string): Promise<QueryData> {
+  async runBatch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
     let ret: QueryData = [];
     await (async () => {
-      const rows = await this.executor_.batch(sqlText);
+      const rows = await this.executor_.batch(sqlText, options, timeoutMs);
       return rows;
     })().then((rows: QueryData) => {
       ret = rows;
@@ -503,6 +507,186 @@ describeSnowflakeExecutor('db:SnowflakeExecutor', () => {
   it('verifies stream iterable', async () => {
     const rows = await db.runStreaming(query, {rowLimit: 2});
     expect(rows.length).toBe(2);
+  });
+
+  it('aborts batch immediately when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      db.runBatch('select 1 as one', {abortSignal: controller.signal})
+    ).rejects.toThrow('Query aborted');
+  });
+
+  it('aborts stream immediately when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      db.runStreaming('select 1 as one', {abortSignal: controller.signal})
+    ).rejects.toThrow('Query aborted');
+  });
+
+  it('cancels long-running batch on timeout and does not hang', async () => {
+    // Use a long-running statement so the client-side timeout triggers
+    // rather than the query finishing first.
+    const longRunningSql = 'CALL SYSTEM$WAIT(60)';
+    const start = Date.now();
+    await expect(db.runBatch(longRunningSql, {}, 500)).rejects.toBeInstanceOf(
+      Error
+    );
+    const elapsed = Date.now() - start;
+    // Should fail well before the Jest 100s timeout; give a generous upper bound.
+    expect(elapsed).toBeLessThan(30_000);
+    // Subsequent queries should still work after a timeout-induced cancel.
+    const rows = await db.runBatch('select 1 as one');
+    expect(rows.length).toBe(1);
+  });
+
+  describe('abort-under-contention', () => {
+    it('aborted stream() settles immediately and does not block subsequent queries', async () => {
+      // Use a dedicated executor with pool size 1 so contention is guaranteed.
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        // Step 1: start a slow query that holds the only connection.
+        const slowQueryPromise = executor.batch(
+          "SELECT SYSTEM$WAIT(4, 'SECONDS')"
+        );
+
+        // Give the slow query a moment to acquire the connection.
+        await new Promise(r => setTimeout(r, 500));
+
+        // Step 2: start a second stream() with an AbortController.
+        const tag = `abort_test_${Date.now()}`;
+        const abortController = new AbortController();
+
+        const streamPromise = executor
+          .stream(`SELECT '${tag}' AS tag`, {
+            abortSignal: abortController.signal,
+          })
+          .then(async (iter: AsyncIterableIterator<QueryRecord>) => {
+            const rows: QueryRecord[] = [];
+            for await (const row of iter) {
+              rows.push(row);
+            }
+            return rows;
+          });
+
+        // Step 3: abort while still blocked on pool acquisition.
+        await new Promise(r => setTimeout(r, 200));
+        abortController.abort();
+
+        // Step 4: let the slow query finish.
+        await slowQueryPromise;
+
+        // The aborted stream should settle promptly.
+        const settleStart = Date.now();
+        const streamResult = await Promise.race([
+          streamPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('stream did not settle in time')),
+              3000
+            )
+          ),
+        ]).catch(() => undefined);
+        const settleMs = Date.now() - settleStart;
+
+        if (streamResult !== undefined) {
+          expect(streamResult.length).toBe(0);
+        }
+        expect(settleMs).toBeLessThan(3000);
+
+        // Step 5: a third trivial query should run right away.
+        const thirdStart = Date.now();
+        const rows = await executor.batch('SELECT 1 AS val');
+        const thirdMs = Date.now() - thirdStart;
+
+        expect(rows.length).toBe(1);
+        expect(thirdMs).toBeLessThan(5000);
+
+        // Step 6: verify the tagged query never executed.
+        try {
+          const history = await executor.batch(
+            `SELECT COUNT(*) AS cnt
+             FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY_BY_USER())
+             WHERE QUERY_TEXT LIKE '%${tag}%'
+               AND QUERY_TEXT NOT LIKE '%INFORMATION_SCHEMA%'`
+          );
+          const cnt = Number(history[0]['CNT']);
+          expect(cnt).toBe(0);
+        } catch {
+          // QUERY_HISTORY_BY_USER may not be available in all environments.
+        }
+      } finally {
+        await executor.done();
+      }
+    });
+  });
+
+  /**
+   * test that abort fires after the connection is acquired and
+   * `conn.execute()` has been entered, but before Snowflake invokes the
+   * `complete` callback. This is distinct from `abort-under-contention`,
+   * which aborts while still waiting on `pool.acquire()`.
+   */
+  describe('abort-mid-execute', () => {
+    it('batch: abort cancels in-flight execute and returns the pool', async () => {
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        const slowSql = "SELECT SYSTEM$WAIT(30, 'SECONDS')";
+        const abortController = new AbortController();
+        const batchPromise = executor.batch(slowSql, {
+          abortSignal: abortController.signal,
+        });
+
+        // Past session init + pool handoff; the long statement should be in flight.
+        await new Promise(r => setTimeout(r, 1000));
+        abortController.abort();
+
+        const settleStart = Date.now();
+        await expect(batchPromise).rejects.toBeInstanceOf(Error);
+        expect(Date.now() - settleStart).toBeLessThan(20_000);
+
+        const rows = await executor.batch('SELECT 1 AS val');
+        expect(rows.length).toBe(1);
+      } finally {
+        await executor.done();
+      }
+    });
+
+    it('stream: abort cancels in-flight execute and returns the pool', async () => {
+      const connOptions =
+        SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+        SnowflakeExecutor.getConnectionOptionsFromToml();
+      const executor = new SnowflakeExecutor(connOptions, {min: 1, max: 1});
+
+      try {
+        const slowSql = "SELECT SYSTEM$WAIT(30, 'SECONDS')";
+        const abortController = new AbortController();
+        const streamPromise = executor.stream(slowSql, {
+          abortSignal: abortController.signal,
+        });
+
+        await new Promise(r => setTimeout(r, 800));
+        abortController.abort();
+
+        const settleStart = Date.now();
+        await expect(streamPromise).rejects.toBeInstanceOf(Error);
+        expect(Date.now() - settleStart).toBeLessThan(20_000);
+
+        const rows = await executor.batch('SELECT 1 AS val');
+        expect(rows.length).toBe(1);
+      } finally {
+        await executor.done();
+      }
+    });
   });
 });
 
