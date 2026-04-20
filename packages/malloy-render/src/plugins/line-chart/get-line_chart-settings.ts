@@ -202,9 +202,29 @@ export function getLineChartSettings(
     xChannel.fields.push(getField(vizTag.text('x')!));
   }
   if (vizTag.text('y')) {
-    yChannel.fields.push(getField(vizTag.text('y')!));
+    const yFieldRef = vizTag.text('y')!;
+    const yFieldPath = getField(yFieldRef);
+    const yField = explore.fieldAt(yFieldPath);
+
+    if (!yField.isNumber() && !yField.wasCalculation()) {
+      throw new Error(
+        `Malloy Line Chart: Field "${yField.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
+      );
+    }
+    yChannel.fields.push(yFieldPath);
   } else if (vizTag.textArray('y')) {
-    yChannel.fields.push(...vizTag.textArray('y')!.map(getField));
+    const yFieldRefs = vizTag.textArray('y')!;
+    yFieldRefs.forEach(ref => {
+      const fieldPath = getField(ref);
+      const field = explore.fieldAt(fieldPath);
+
+      if (!field.isNumber() && !field.wasCalculation()) {
+        throw new Error(
+          `Malloy Line Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
+        );
+      }
+      yChannel.fields.push(fieldPath);
+    });
   }
   if (vizTag.text('series')) {
     seriesChannel.fields.push(getField(vizTag.text('series')!));
@@ -224,6 +244,11 @@ export function getLineChartSettings(
         embeddedX.push(pathTo);
       }
       if (tag.has('y')) {
+        if (!field.isNumber() && !field.wasCalculation()) {
+          throw new Error(
+            `Malloy Line Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
+          );
+        }
         embeddedY.push(pathTo);
       }
       if (tag.has('series')) {
@@ -251,8 +276,6 @@ export function getLineChartSettings(
     f => f.isBasic() && f.wasDimension()
   );
 
-  const measures = explore.fields.filter(f => f.wasCalculation());
-
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     // Pick date/time field first if it exists
@@ -273,29 +296,38 @@ export function getLineChartSettings(
     if (numberField) yChannel.fields.push(explore.pathTo(numberField));
   }
   // If no series defined and multiple dimensions, use leftover dimension
+  // (one not already assigned to x or y channels)
   if (seriesChannel.fields.length === 0 && dimensions.length > 1) {
     const dimension = dimensions.find(d => {
       const path = explore.pathTo(d);
-      return !xChannel.fields.includes(path);
+      return (
+        !xChannel.fields.includes(path) && !yChannel.fields.includes(path)
+      );
     });
     if (dimension) {
       seriesChannel.fields.push(explore.pathTo(dimension));
     }
   }
 
-  if (dimensions.length > 2) {
+  // Account for dimensions explicitly assigned to y channel
+  const yDimensionsCount = yChannel.fields.filter(path => {
+    const field = explore.fieldAt(path);
+    return field.wasDimension();
+  }).length;
+
+  if (dimensions.length - yDimensionsCount > 2) {
     throw new Error(
       'Malloy Line Chart: Too many dimensions. A line chart can have at most 2 dimensions: 1 for the x axis, and 1 for the series.'
     );
   }
-  if (dimensions.length === 0) {
+  if (dimensions.length - yDimensionsCount === 0) {
     throw new Error(
       'Malloy Line Chart: No dimensions found. A line chart must have at least 1 dimension for the x axis.'
     );
   }
-  if (measures.length === 0) {
+  if (yChannel.fields.length === 0) {
     throw new Error(
-      'Malloy Line Chart: No measures found. A line chart must have at least 1 measure for the y axis.'
+      'Malloy Line Chart: No measures found and no y channel specified. A line chart must have at least 1 measure or explicitly tagged numeric dimension for the y axis.'
     );
   }
 
