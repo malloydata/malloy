@@ -2,6 +2,8 @@
 
 The `malloy-render` package handles visualization and rendering of Malloy query results. It transforms query results into rich, interactive visualizations and tables.
 
+**Related docs:** [README.md](./README.md) for public-facing installation and usage, [DEVELOPING.md](./DEVELOPING.md) for the local development workflow, [docs/validation.md](./docs/validation.md) for the renderer validation contract.
+
 ## Purpose
 
 Malloy queries return structured data with metadata about how it should be displayed. The render package:

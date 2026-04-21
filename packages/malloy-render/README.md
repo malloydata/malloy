@@ -56,4 +56,5 @@ The Malloy Renderer supports a plugin system for creating custom visualizations.
 
 # Developing
 
-See the [Developing README](./DEVELOPING.md)
+- [DEVELOPING.md](./DEVELOPING.md) — how to run Storybook, add stories, and debug renderers locally
+- [CONTEXT.md](./CONTEXT.md) — architectural overview for contributors and AI agents
