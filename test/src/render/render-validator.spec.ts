@@ -486,6 +486,77 @@ describe('render tag validation', () => {
       expectNoErrors(logs);
     });
 
+    it('errors when legacy # bar_chart has # y on a non-numeric dimension', async () => {
+      // Legacy # bar_chart { ... } tag must be validated through the same
+      // rules as # viz=bar.
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
+          # bar_chart
+          view: q is {
+            group_by:
+              cat
+              # y
+              label
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "Field 'label' is tagged '# y'");
+    });
+
+    it('errors when legacy # line_chart references a non-numeric y via viz.y', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as x_val, 'B' as label, 1 as val") extend {
+          # line_chart { y=label }
+          view: q is {
+            group_by: x_val, label
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "y-channel field 'label'");
+    });
+
+    it('logs (not throws) when # viz.x references a nonexistent field', async () => {
+      // Missing field refs should be reported via validateFieldTags with a
+      // source location — the chart must still render rather than replacing
+      // itself with a red-box plugin-creation error.
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+          # viz=bar { x=nonexistent }
+          view: q is {
+            group_by: cat
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "'nonexistent'");
+      // The error must be the validator's, not the wrapped plugin throw.
+      const wrapped = logs.filter(l => l.message.includes('Plugin bar failed'));
+      expect(wrapped).toHaveLength(0);
+    });
+
+    it('logs (not throws) when # viz.y references a nonexistent field on a line chart', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as x_val, 1 as val") extend {
+          # viz=line { y=nonexistent }
+          view: q is {
+            group_by: x_val
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "'nonexistent'");
+      const wrapped = logs.filter(l =>
+        l.message.includes('Plugin line failed')
+      );
+      expect(wrapped).toHaveLength(0);
+    });
+
     it('the only dimension being tagged # y leaves no dimension for x (instead of silently using it for both)', async () => {
       // Sharper regression: if the sole dimension is claimed as y, auto-x
       // should skip it and leave xChannel empty. Bar chart then correctly

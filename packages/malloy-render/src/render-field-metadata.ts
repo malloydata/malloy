@@ -12,6 +12,7 @@ import type {
 import {RenderLogCollector} from '@/component/render-log-collector';
 import {resolveBuiltInTags} from '@/component/tag-configs';
 import {getBuiltInRendererValidationSpec} from '@/component/renderer-validation-specs';
+import {convertLegacyToVizTag} from '@/component/tag-utils';
 
 import type * as Malloy from '@malloydata/malloy-interfaces';
 
@@ -313,8 +314,12 @@ export class RenderFieldMetadata {
     }
 
     // --- Chart field references ---
+    // Normalize legacy # bar_chart { ... } / # line_chart { ... } into the
+    // viz namespace so this check catches both old and new tag forms —
+    // matching what the chart settings builders do.
     if (field.isNest()) {
-      const vizTag = tag.tag('viz');
+      const normalizedTag = convertLegacyToVizTag(tag);
+      const vizTag = normalizedTag.tag('viz');
       if (vizTag) {
         const childByName = new Map(field.fields.map(f => [f.name, f]));
         for (const channelName of ['x', 'y', 'series'] as const) {
@@ -394,8 +399,10 @@ export class RenderFieldMetadata {
     }
 
     // --- Chart mode ---
+    // Normalize legacy # bar_chart / # line_chart so mode validation
+    // catches both old and new tag forms.
     if (field.isNest()) {
-      const vizTag = tag.tag('viz');
+      const vizTag = convertLegacyToVizTag(tag).tag('viz');
       if (vizTag) {
         const modeVal = vizTag.text('mode');
         if (modeVal !== undefined) {

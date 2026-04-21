@@ -97,31 +97,42 @@ export function getBarChartSettings(
     limit: seriesLimit,
   };
 
-  function getField(ref: string) {
-    return explore.pathTo(explore.fieldAt([ref]));
+  // Returns undefined for unknown field refs instead of throwing so bad
+  // references are silently skipped here and reported by
+  // RenderFieldMetadata.validateFieldTags() with a source location.
+  function getField(ref: string): string | undefined {
+    try {
+      return explore.pathTo(explore.fieldAt([ref]));
+    } catch {
+      return undefined;
+    }
   }
 
   const isStack = vizTag.has('stack');
 
   // Parse top level tags from viz properties
   if (vizTag.text('x')) {
-    xChannel.fields.push(getField(vizTag.text('x')!));
+    const xPath = getField(vizTag.text('x')!);
+    if (xPath !== undefined) xChannel.fields.push(xPath);
   }
   if (vizTag.text('y')) {
     const yFieldRef = vizTag.text('y')!;
     const yFieldPath = getField(yFieldRef);
-    const yField = explore.fieldAt(yFieldPath);
 
     // Non-numeric y fields are skipped here and logged as validation errors
     // in RenderFieldMetadata.validateFieldTags() so the user gets a
     // source-located error instead of the red-box tile.
-    if (yField.isNumber() || yField.wasCalculation()) {
-      yChannel.fields.push(yFieldPath);
+    if (yFieldPath !== undefined) {
+      const yField = explore.fieldAt(yFieldPath);
+      if (yField.isNumber() || yField.wasCalculation()) {
+        yChannel.fields.push(yFieldPath);
+      }
     }
   } else if (vizTag.textArray('y')) {
     const yFieldRefs = vizTag.textArray('y')!;
     yFieldRefs.forEach(ref => {
       const fieldPath = getField(ref);
+      if (fieldPath === undefined) return;
       const field = explore.fieldAt(fieldPath);
       if (field.isNumber() || field.wasCalculation()) {
         yChannel.fields.push(fieldPath);
@@ -129,7 +140,8 @@ export function getBarChartSettings(
     });
   }
   if (vizTag.text('series')) {
-    seriesChannel.fields.push(getField(vizTag.text('series')!));
+    const seriesPath = getField(vizTag.text('series')!);
+    if (seriesPath !== undefined) seriesChannel.fields.push(seriesPath);
   }
 
   // Parse embedded tags

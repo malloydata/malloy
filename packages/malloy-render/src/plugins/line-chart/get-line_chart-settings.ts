@@ -193,13 +193,21 @@ export function getLineChartSettings(
     limit: seriesLimit,
   };
 
-  function getField(ref: string) {
-    return explore.pathTo(explore.fieldAt([ref]));
+  // Returns undefined for unknown field refs instead of throwing so bad
+  // references are silently skipped here and reported by
+  // RenderFieldMetadata.validateFieldTags() with a source location.
+  function getField(ref: string): string | undefined {
+    try {
+      return explore.pathTo(explore.fieldAt([ref]));
+    } catch {
+      return undefined;
+    }
   }
 
   // Parse top level tags
   if (vizTag.text('x')) {
-    xChannel.fields.push(getField(vizTag.text('x')!));
+    const xPath = getField(vizTag.text('x')!);
+    if (xPath !== undefined) xChannel.fields.push(xPath);
   }
   // Non-numeric y fields are skipped here and logged as validation errors
   // in RenderFieldMetadata.validateFieldTags() so the user gets a
@@ -210,15 +218,16 @@ export function getLineChartSettings(
   };
   if (vizTag.text('y')) {
     const path = getField(vizTag.text('y')!);
-    if (isValidYField(path)) yChannel.fields.push(path);
+    if (path !== undefined && isValidYField(path)) yChannel.fields.push(path);
   } else if (vizTag.textArray('y')) {
     vizTag.textArray('y')!.forEach(ref => {
       const path = getField(ref);
-      if (isValidYField(path)) yChannel.fields.push(path);
+      if (path !== undefined && isValidYField(path)) yChannel.fields.push(path);
     });
   }
   if (vizTag.text('series')) {
-    seriesChannel.fields.push(getField(vizTag.text('series')!));
+    const seriesPath = getField(vizTag.text('series')!);
+    if (seriesPath !== undefined) seriesChannel.fields.push(seriesPath);
   }
 
   // Parse embedded tags
