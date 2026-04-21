@@ -2169,10 +2169,18 @@ export interface BuildManifestEntry {
  *
  * When `strict` is true, a missing entry for a persist source throws an error
  * instead of falling through to inline SQL.
+ *
+ * `loadError` is set by Runtime's auto-read path when the manifest file was
+ * present but unreadable or unparseable. In that case `entries` is `{}` so
+ * non-strict compiles still soft-fall-through to inline SQL, but strict
+ * compiles can surface the underlying load error in their "not found in
+ * manifest" message — telling the user *why* every entry is missing instead
+ * of just *that* it is.
  */
 export interface BuildManifest {
   entries: Record<BuildID, BuildManifestEntry>;
   strict?: boolean;
+  loadError?: string;
 }
 
 // clang-format on

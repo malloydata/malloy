@@ -334,7 +334,7 @@ function resolveDashboardTags(field: Field): DashboardNestConfig {
  * Run the appropriate tag resolver for a field based on its renderAs type
  * and store the result on the field. Called during registerFields().
  *
- * Also resolves cross-cutting tag properties (label, column, tooltip, break)
+ * Also resolves cross-cutting tag properties (label, column)
  * for ALL fields, ensuring all tag access happens at setup time.
  * Components use the resolved configs instead of reading tags directly.
  */
@@ -353,12 +353,6 @@ export function resolveBuiltInTags(field: Field): void {
   if (columnConfig) {
     field.setColumnConfig(columnConfig);
   }
-
-  // Cross-cutting: touch tags that are read at render time by
-  // parent components (charts read tooltip on child fields,
-  // dashboards read break on child fields).
-  tag.tag('tooltip');
-  tag.tag('break');
 
   // Touch size.height which is read by chart-layout-settings
   // (size and size.width are already read by validateFieldTags)

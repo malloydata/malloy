@@ -73,6 +73,9 @@ export class SnowflakeExecutor {
 
   private pool_: Pool<Connection>;
   private setupSQL: string | undefined;
+
+  private sessionInitialized = new WeakMap<Connection, Promise<void>>();
+
   constructor(
     connOptions: ConnectionOptions,
     poolOptions?: PoolOptions,
@@ -165,58 +168,116 @@ export class SnowflakeExecutor {
     options?: RunSQLOptions,
     timeoutMs?: number
   ): Promise<QueryData> {
+    const abortSignal = options?.abortSignal;
+    // Fail fast if already aborted before we even start executing
+    if (abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
     let _statement: RowStatement | undefined;
     const cancel = () => {
       _statement?.cancel();
     };
     const timeoutId = timeoutMs ? setTimeout(cancel, timeoutMs) : undefined;
-    options?.abortSignal?.addEventListener('abort', cancel);
+    if (abortSignal) {
+      abortSignal.addEventListener('abort', cancel, {once: true});
+    }
     return await new Promise((resolve, reject) => {
-      _statement = conn.execute({
-        sqlText,
-        complete: (
-          err: SnowflakeError | undefined,
-          _stmt: RowStatement,
-          rows?: QueryData
-        ) => {
-          options?.abortSignal?.removeEventListener('abort', cancel);
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          if (err) {
-            reject(err);
-          } else if (rows) {
-            resolve(rows);
-          }
-        },
-      });
+      try {
+        _statement = conn.execute({
+          sqlText,
+          complete: (
+            err: SnowflakeError | undefined,
+            _stmt: RowStatement,
+            rows?: QueryData
+          ) => {
+            if (abortSignal) {
+              abortSignal.removeEventListener('abort', cancel);
+            }
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+            if (err) {
+              reject(err);
+            } else {
+              // Snowflake occasionally calls complete with no rows (e.g. DDL); without this branch
+              // the Promise never settles and generic-pool holds the connection forever.
+              resolve(rows ?? []);
+            }
+          },
+        });
+      } catch (err) {
+        if (abortSignal) {
+          abortSignal.removeEventListener('abort', cancel);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        reject(err);
+      }
     });
   }
 
-  private async _setSessionParams(conn: Connection) {
+  private async _setSessionParams(
+    conn: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ) {
     // set some default session parameters
     // ensure we do not ignore case for quoted identifiers
     await this._execute(
       'ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = FALSE;',
-      conn
+      conn,
+      options,
+      timeoutMs
     );
     // set utc as the default timezone which is the malloy convention
-    await this._execute("ALTER SESSION SET TIMEZONE = 'UTC';", conn);
+    await this._execute(
+      "ALTER SESSION SET TIMEZONE = 'UTC';",
+      conn,
+      options,
+      timeoutMs
+    );
     // ensure week starts on Sunday which is the malloy convention
-    await this._execute('ALTER SESSION SET WEEK_START = 7;', conn);
+    await this._execute(
+      'ALTER SESSION SET WEEK_START = 7;',
+      conn,
+      options,
+      timeoutMs
+    );
     // so javascript can parse the dates
     await this._execute(
       "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
-      conn
+      conn,
+      options,
+      timeoutMs
     );
     if (this.setupSQL) {
       for (const stmt of this.setupSQL.split(';\n')) {
         const trimmed = stmt.trim();
         if (trimmed) {
-          await this._execute(trimmed, conn);
+          await this._execute(trimmed, conn, options, timeoutMs);
         }
       }
     }
+  }
+
+  private ensureSessionInitialized(
+    connection: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<void> {
+    const existing = this.sessionInitialized.get(connection);
+    if (existing) {
+      return existing;
+    }
+    const init = this._setSessionParams(connection, options, timeoutMs).catch(
+      err => {
+        this.sessionInitialized.delete(connection);
+        throw err;
+      }
+    );
+    this.sessionInitialized.set(connection, init);
+    return init;
   }
 
   public async batch(
@@ -225,8 +286,31 @@ export class SnowflakeExecutor {
     timeoutMs?: number
   ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
-      await this._setSessionParams(conn);
+      await this.ensureSessionInitialized(conn, options, timeoutMs);
       return await this._execute(sqlText, conn, options, timeoutMs);
+    });
+  }
+
+  /**
+   * Like batch(), but returns undefined on failure instead of throwing.
+   * This keeps the pool connection alive — generic-pool destroys
+   * connections when pool.use() sees a thrown error, which is wrong
+   * for SQL errors (the connection itself is fine). Use this for
+   * speculative queries where failure is expected and the connection
+   * may hold session state (e.g. temp views) that must be preserved.
+   */
+  public async tryBatch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData | undefined> {
+    return await this.pool_.use(async (conn: Connection) => {
+      await this.ensureSessionInitialized(conn, options, timeoutMs);
+      try {
+        return await this._execute(sqlText, conn, options, timeoutMs);
+      } catch {
+        return undefined;
+      }
     });
   }
 
@@ -234,49 +318,153 @@ export class SnowflakeExecutor {
     sqlText: string,
     options?: RunSQLOptions
   ): Promise<AsyncIterableIterator<QueryRecord>> {
-    const pool: Pool<Connection> = this.pool_;
-    return await pool.acquire().then(async (conn: Connection) => {
-      await this._setSessionParams(conn);
+    // Fail fast if already aborted before we acquire a connection
+    if (options?.abortSignal?.aborted) {
+      throw new Error('Query aborted');
+    }
 
-      return new Promise((resolve, reject) => {
-        conn.execute({
+    const pool: Pool<Connection> = this.pool_;
+    const conn: Connection = await pool.acquire();
+
+    const releaseOnce = (() => {
+      let released = false;
+      return () => {
+        if (!released) {
+          released = true;
+          pool.release(conn).catch(() => {});
+        }
+      };
+    })();
+
+    try {
+      await this.ensureSessionInitialized(conn, options);
+    } catch (err) {
+      releaseOnce();
+      throw err;
+    }
+
+    // Check again after the awaits — signal may have fired while we were blocked
+    if (options?.abortSignal?.aborted) {
+      releaseOnce();
+      throw new Error('Query aborted');
+    }
+
+    // Track the statement so abort can cancel it during conn.execute()
+    let _statement: RowStatement | undefined;
+    const abortSignal = options?.abortSignal;
+    const cancelFromAbort = abortSignal
+      ? () => {
+          _statement?.cancel();
+        }
+      : undefined;
+
+    if (cancelFromAbort) {
+      abortSignal!.addEventListener('abort', cancelFromAbort, {once: true});
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        _statement = conn.execute({
           sqlText,
           streamResult: true,
-          complete: (err: SnowflakeError | undefined, stmt: RowStatement) => {
+          complete: (err: SnowflakeError | undefined, _stmt: RowStatement) => {
             if (err) {
+              if (cancelFromAbort) {
+                abortSignal!.removeEventListener('abort', cancelFromAbort);
+              }
+              releaseOnce();
               reject(err);
+              return;
             }
 
-            const stream: Readable = stmt.streamRows();
+            const stream: Readable = _stmt.streamRows();
+
             function streamSnowflake(
               onError: (error: Error) => void,
               onData: (data: QueryRecord) => void,
               onEnd: () => void
             ) {
+              let streamEnded = false;
+
+              // Replace the pre-execute abort listener with one that also
+              // tears down the stream.
+              const onAbort = abortSignal
+                ? () => {
+                    _stmt.cancel();
+                    handleEnd();
+                  }
+                : undefined;
+
+              if (cancelFromAbort) {
+                abortSignal!.removeEventListener('abort', cancelFromAbort);
+              }
+
+              function cleanup() {
+                streamEnded = true;
+                stream.removeListener('data', handleData);
+                stream.removeListener('error', handleError);
+                stream.removeListener('end', handleEnd);
+                if (onAbort) {
+                  abortSignal?.removeEventListener('abort', onAbort);
+                }
+                if (!stream.destroyed) {
+                  stream.destroy();
+                }
+              }
+
               function handleEnd() {
+                if (streamEnded) return;
+                cleanup();
                 onEnd();
-                pool.release(conn);
+                releaseOnce();
+              }
+
+              function handleError(error: Error) {
+                if (streamEnded) return;
+                cleanup();
+                onError(error);
+                releaseOnce();
+              }
+
+              function handleData(this: Readable, row: QueryRecord) {
+                if (streamEnded) return;
+                onData(row);
+                if (
+                  options?.rowLimit !== undefined &&
+                  ++index >= options.rowLimit
+                ) {
+                  _stmt.cancel();
+                  handleEnd();
+                }
               }
 
               let index = 0;
-              function handleData(this: Readable, row: QueryRecord) {
-                onData(row);
-                index += 1;
-                if (
-                  options?.rowLimit !== undefined &&
-                  index >= options.rowLimit
-                ) {
-                  onEnd();
-                }
-              }
-              stream.on('error', onError);
+              stream.on('error', handleError);
               stream.on('data', handleData);
               stream.on('end', handleEnd);
+
+              // Wire abort signal to cancel the stream
+              if (onAbort) {
+                if (abortSignal?.aborted) {
+                  onAbort();
+                } else {
+                  abortSignal?.addEventListener('abort', onAbort, {
+                    once: true,
+                  });
+                }
+              }
             }
-            return resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
+
+            resolve(toAsyncGenerator<QueryRecord>(streamSnowflake));
           },
         });
-      });
+      } catch (err) {
+        if (cancelFromAbort) {
+          abortSignal!.removeEventListener('abort', cancelFromAbort);
+        }
+        releaseOnce();
+        reject(err);
+      }
     });
   }
 }

@@ -43,7 +43,6 @@ export {
   literal,
   spread,
   Dialect,
-  TinyParser,
 } from './dialect';
 export type {
   DialectFieldList,
@@ -53,7 +52,6 @@ export type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
-  TinyToken,
 } from './dialect';
 // TODO tighten up exports
 export type {
@@ -192,6 +190,10 @@ export {
   CacheManager,
   Manifest,
   MalloyConfig,
+  envOverlay,
+  contextOverlay,
+  defaultConfigOverlays,
+  discoverConfig,
 } from './api/foundation';
 export type {
   PreparedQuery,
@@ -220,6 +222,7 @@ export type {
   DateField,
   TimestampField,
 } from './api/foundation';
+export type {Overlay, ConfigOverlays} from './api/foundation';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   EventStream,
@@ -248,8 +251,6 @@ export {
   getConnectionTypeDisplayName,
   getRegisteredConnectionTypes,
   createConnectionsFromConfig,
-  isValueRef,
-  resolveValue,
 } from './connection/registry';
 export type {
   ConnectionTypeFactory,
@@ -258,9 +259,7 @@ export type {
   ConnectionTypeDef,
   ConnectionConfigEntry,
   ConnectionsConfig,
-  ConfigValue,
   JsonConfigValue,
-  ValueRef,
   ManagedConnectionLookup,
 } from './connection/registry';
 export {toAsyncGenerator} from './connection_utils';

@@ -265,7 +265,7 @@ describe('ManagedConnectionLookup', () => {
   });
 });
 
-describe('MalloyConfig connection caching', () => {
+describe('MalloyConfig connections lifecycle', () => {
   it('connections getter returns same object on repeated access', () => {
     const config = new MalloyConfig(
       JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
@@ -275,48 +275,24 @@ describe('MalloyConfig connection caching', () => {
     expect(a).toBe(b);
   });
 
-  it('connectionMap setter invalidates cached connections', () => {
-    const config = new MalloyConfig(
-      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
-    );
-    const a = config.connections;
-    config.connectionMap = {[tstDB]: {is: 'duckdb'}};
-    const b = config.connections;
-    expect(a).not.toBe(b);
-  });
-
-  it('connectionLookup override is returned by connections getter', () => {
+  it('wrapConnections replaces the connections lookup', () => {
     const config = new MalloyConfig(
       JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
     );
     const override = {
       lookupConnection: () => Promise.resolve(tstRuntime.connection),
     };
-    config.connectionLookup = override;
+    config.wrapConnections(() => override);
     expect(config.connections).toBe(override);
   });
 
-  it('onConnectionCreated fires through MalloyConfig', async () => {
-    const created: string[] = [];
+  it('runtime.releaseConnections() shuts down managed connections', async () => {
     const config = new MalloyConfig(
       JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
     );
-    config.onConnectionCreated = (name, _conn) => created.push(name);
-    await config.connections.lookupConnection(tstDB);
-    expect(created).toEqual([tstDB]);
-  });
-
-  it('close() shuts down managed connections', async () => {
-    const config = new MalloyConfig(
-      JSON.stringify({connections: {[tstDB]: {is: 'duckdb'}}})
-    );
-    // Force connection creation
-    await config.connections.lookupConnection(tstDB);
-    // close() should not throw
-    await config.close();
-    // After close, next access creates a fresh lookup
-    const fresh = config.connections;
-    expect(fresh).toBeDefined();
+    const runtime = new Runtime({config});
+    await runtime.connections.lookupConnection(tstDB);
+    await runtime.releaseConnections();
   });
 });
 

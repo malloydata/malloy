@@ -9,6 +9,7 @@ import type {
   RenderPluginFactory,
   RenderProps,
   DOMRenderPluginInstance,
+  RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, type Cell, type RecordCell, FieldType} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
@@ -104,6 +105,11 @@ const SHAPE_MAP_VEGA_CONFIG: lite.Config = {
 export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance> =
   {
     name: 'shape_map',
+
+    getValidationSpec: (): RendererValidationSpec => ({
+      renderer: 'shape_map',
+      ownedPaths: [['shape_map']],
+    }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       const hasTag = fieldTag.has('shape_map');
@@ -221,8 +227,6 @@ export const ShapeMapPluginFactory: RenderPluginFactory<DOMRenderPluginInstance>
         },
 
         getMetadata: () => ({type: 'shape_map', field}),
-
-        getDeclaredTagPaths: () => [['shape_map']],
       };
     },
   };

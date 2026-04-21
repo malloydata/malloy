@@ -34,26 +34,68 @@ import type {
   StructDef,
   QueryRecord,
   TestableConnection,
-  Dialect,
-  RecordDef,
-  AtomicFieldDef,
-  ArrayDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {
-  SnowflakeDialect,
-  TinyParser,
-  mkArrayDef,
-  sqlKey,
-  makeDigest,
-} from '@malloydata/malloy';
+import {SnowflakeDialect, sqlKey, makeDigest} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {SnowflakeExecutor} from './snowflake_executor';
+import {
+  accumulateVariantPath,
+  buildTopLevelField,
+  createVariantSchemaState,
+  PathParser,
+  seedTopLevelShape,
+} from './snowflake_variant_schema';
+import type {NestedColumn} from './snowflake_variant_schema';
+import {parseSnowflakeTableName} from './snowflake_table_name';
 import type {ConnectionOptions} from 'snowflake-sdk';
 import type {Options as PoolOptions} from 'generic-pool';
 
 type namespace = {database: string; schema: string};
+
+/**
+ * Output of the INFORMATION_SCHEMA.TABLES probe. Undefined when the
+ * probe didn't run (non-parseable name) or couldn't find numeric size
+ * info (views, missing permissions).
+ */
+export interface TableSizeProbe {
+  bytes: number;
+  rowCount: number;
+}
+
+/**
+ * Three-way tier that drives variant schema sampling. Extracted as a
+ * pure function so cost-policy decisions are unit-testable.
+ *
+ *   full-scan-then-sample: probe confirmed a small base table. One
+ *     full scan catches rare fields. On failure, fall through to the
+ *     sample chain rather than accept opaque variant.
+ *
+ *   tablesample-only: probe confirmed a base table above the small
+ *     threshold. TABLESAMPLE BLOCK is safe (reads a few micro
+ *     partitions). Plain LIMIT without a WHERE is unsafe on large
+ *     partitioned tables, so we skip the LIMIT fallback — we'd rather
+ *     degrade to variant than issue a runaway query.
+ *
+ *   tablesample-then-limit: probe gave no size info (views, temp
+ *     views, exotic names). We can't distinguish a small view from a
+ *     view over a petabyte table, so we do best-effort sampling. This
+ *     is the acknowledged "can't help you" case from the design doc.
+ */
+export type SampleStrategy =
+  | 'full-scan-then-sample'
+  | 'tablesample-only'
+  | 'tablesample-then-limit';
+
+export function pickSampleStrategy(
+  probe: TableSizeProbe | undefined,
+  fullScanMaxBytes: number
+): SampleStrategy {
+  if (probe === undefined) return 'tablesample-then-limit';
+  if (probe.bytes <= fullScanMaxBytes) return 'full-scan-then-sample';
+  return 'tablesample-only';
+}
 
 export interface SnowflakeConnectionOptions {
   // snowflake sdk connection options
@@ -71,150 +113,21 @@ export interface SnowflakeConnectionOptions {
   // Timeout for the statement
   timeoutMs?: number;
 
+  // Timeout for the variant schema sampling query (default 15 seconds)
+  schemaSampleTimeoutMs?: number;
+
+  // Row limit used inside the variant schema sample (default 1000). When the
+  // probe reports the table is small enough to full-scan, this limit is
+  // ignored.
+  schemaSampleRowLimit?: number;
+
+  // Byte threshold below which variant schema inference skips sampling and
+  // full-scans the table instead (default 100 MB). A full scan catches rare
+  // fields that a sample would miss.
+  schemaSampleFullScanMaxBytes?: number;
+
   // SQL statements to run when a connection is acquired from the pool
   setupSQL?: string;
-}
-
-type PathChain =
-  | {arrayRef: true; next?: PathChain}
-  | {name: string; next?: PathChain};
-
-class SnowField {
-  constructor(
-    readonly name: string,
-    readonly type: string,
-    readonly dialect: Dialect
-  ) {}
-  fieldDef(): AtomicFieldDef {
-    return {
-      ...this.dialect.sqlTypeToMalloyType(this.type),
-      name: this.name,
-    };
-  }
-  walk(_path: PathChain, _fieldType: string): void {
-    throw new Error(
-      'SNOWWFLAKE SCHEMA PARSE ERROR: Should not walk through fields'
-    );
-  }
-  static make(name: string, fieldType: string, d: Dialect) {
-    if (fieldType === 'array') {
-      return new SnowArray(name, d);
-    } else if (fieldType === 'object') {
-      return new SnowObject(name, d);
-    }
-    return new SnowField(name, fieldType, d);
-  }
-}
-
-class SnowObject extends SnowField {
-  fieldMap = new Map<string, SnowField>();
-  constructor(name: string, d: Dialect) {
-    super(name, 'object', d);
-  }
-
-  get fields(): AtomicFieldDef[] {
-    const fields: AtomicFieldDef[] = [];
-    for (const [_, fieldObj] of this.fieldMap) {
-      fields.push(fieldObj.fieldDef());
-    }
-    return fields;
-  }
-
-  fieldDef(): RecordDef {
-    const rec: RecordDef = {
-      type: 'record',
-      name: this.name,
-      fields: this.fields,
-      join: 'one',
-    };
-    return rec;
-  }
-
-  walk(path: PathChain, fieldType: string) {
-    if ('name' in path) {
-      const field = this.fieldMap.get(path.name);
-      if (path.next) {
-        if (field) {
-          field.walk(path.next, fieldType);
-          return;
-        }
-        throw new Error(
-          'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
-        );
-      } else {
-        // If we get multiple type for a field, ignore them, should
-        // which will do until we support viarant data
-        if (!field) {
-          this.fieldMap.set(
-            path.name,
-            SnowField.make(path.name, fieldType, this.dialect)
-          );
-          return;
-        }
-      }
-    }
-    throw new Error(
-      'SNOWFLAKE SCHEMA PARSER ERROR: Walk object reference through array reference'
-    );
-  }
-}
-
-class SnowArray extends SnowField {
-  arrayOf = 'unknown';
-  objectChild?: SnowObject;
-  arrayChild?: SnowArray;
-  constructor(name: string, d: Dialect) {
-    super(name, 'array', d);
-  }
-
-  isArrayOf(type: string) {
-    if (this.arrayOf !== 'unknown') {
-      this.arrayOf = 'variant';
-      return;
-    }
-    this.arrayOf = type;
-    if (type === 'object') {
-      this.objectChild = new SnowObject('', this.dialect);
-    } else if (type === 'array') {
-      this.arrayChild = new SnowArray('', this.dialect);
-    }
-  }
-
-  fieldDef(): ArrayDef {
-    if (this.objectChild) {
-      const t = mkArrayDef(
-        {type: 'record', fields: this.objectChild.fields},
-        this.name
-      );
-      return t;
-    }
-    if (this.arrayChild) {
-      return mkArrayDef(this.arrayChild.fieldDef(), this.name);
-    }
-    return mkArrayDef(
-      this.dialect.sqlTypeToMalloyType(this.arrayOf),
-      this.name
-    );
-  }
-
-  walk(path: PathChain, fieldType: string) {
-    if ('arrayRef' in path) {
-      if (path.next) {
-        const next = this.arrayChild || this.objectChild;
-        if (next) {
-          next.walk(path.next, fieldType);
-          return;
-        }
-        throw new Error(
-          'SNOWFLAKE SCHEMA PARSER ERROR: Array walk through leaf'
-        );
-      } else {
-        this.isArrayOf(fieldType);
-        return;
-      }
-    }
-    throw new Error('SNOWFLAKE SCHEMA PARSER ERROR: Array walk through name');
-  }
 }
 
 /**
@@ -226,6 +139,7 @@ export class SnowflakeConnection
   extends BaseConnection
   implements
     Connection,
+    PooledConnection,
     PersistSQLResults,
     StreamingConnection,
     TestableConnection
@@ -238,6 +152,9 @@ export class SnowflakeConnection
   private scratchSpace?: namespace;
   private queryOptions: RunSQLOptions;
   private timeoutMs: number;
+  private schemaSampleTimeoutMs: number;
+  private schemaSampleRowLimit: number;
+  private schemaSampleFullScanMaxBytes: number;
   private setupSQL: string | undefined;
 
   constructor(
@@ -260,6 +177,10 @@ export class SnowflakeConnection
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
     this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
+    this.schemaSampleTimeoutMs = options?.schemaSampleTimeoutMs ?? 15_000;
+    this.schemaSampleRowLimit = options?.schemaSampleRowLimit ?? 1000;
+    this.schemaSampleFullScanMaxBytes =
+      options?.schemaSampleFullScanMaxBytes ?? 100_000_000;
   }
 
   get dialectName(): string {
@@ -303,8 +224,12 @@ export class SnowflakeConnection
     return {};
   }
 
-  async close(): Promise<void> {
+  public async drain(): Promise<void> {
     await this.executor.done();
+  }
+
+  async close(): Promise<void> {
+    await this.drain();
   }
 
   private getTempViewName(sqlCommand: string): string {
@@ -316,8 +241,12 @@ export class SnowflakeConnection
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const rowLimit = options?.rowLimit ?? this.queryOptions?.rowLimit;
-    let rows = await this.executor.batch(sql, options, this.timeoutMs);
+    const effectiveOptions: RunSQLOptions = {
+      ...this.queryOptions,
+      ...options,
+    };
+    const rowLimit = effectiveOptions.rowLimit;
+    let rows = await this.executor.batch(sql, effectiveOptions, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
@@ -351,7 +280,7 @@ export class SnowflakeConnection
   ): Promise<void> {
     const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
-    const variants: string[] = [];
+    const nestedColumns: NestedColumn[] = [];
     const notVariant = new Map<string, boolean>();
     for (const row of rows) {
       // data types look like `VARCHAR(1234)` or `NUMBER(10,2)`
@@ -359,8 +288,12 @@ export class SnowflakeConnection
       const baseType = fullType.split('(')[0];
       const name = row['name'] as string;
 
-      if (['variant', 'array', 'object'].includes(baseType)) {
-        variants.push(name);
+      if (
+        baseType === 'variant' ||
+        baseType === 'array' ||
+        baseType === 'object'
+      ) {
+        nestedColumns.push({kind: baseType, name});
       } else {
         notVariant.set(name, true);
         // For NUMBER types, pass full string so dialect can inspect scale
@@ -374,51 +307,202 @@ export class SnowflakeConnection
         structDef.fields.push({...malloyType, name});
       }
     }
-    // For these things, we need to sample the data to know the schema
-    if (variants.length > 0) {
-      // * remove null values
-      // * remove fields for which we have multiple types
-      //   ( requires folding decimal to integer )
-      const sampleQuery = `
-        select path, min(type) as type
-        from (
-          select
-            regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
-            case
-              when typeof(value) = 'INTEGER' then 'decimal'
-              when typeof(value) = 'DOUBLE' then 'decimal'
-            else lower(typeof(value)) end as type
-          from
-            (select object_construct(*) o from ${tablePath} limit 100)
-              ,table(flatten(input => o, recursive => true)) as meta
-          group by 1,2
-        )
-        where type != 'null_value'
-        group BY 1
-        having count(*) <=1
-        order by path;
+    // VARIANT, ARRAY, and OBJECT columns don't have schema in metadata —
+    // we have to sample actual data and inspect it to discover the
+    // structure. Cost control happens in two places:
+    //   1. project only the nested columns (via object_construct), so
+    //      bytes-on-wire are bounded by actual variant content.
+    //   2. tier the sampling strategy by probeTableSize (see
+    //      pickSampleStrategy) — small base tables get a full scan;
+    //      large base tables get TABLESAMPLE only (no unsafe LIMIT
+    //      fallback); unknown-size sources (views, temp views) get
+    //      the best-effort TABLESAMPLE→LIMIT chain.
+    if (nestedColumns.length > 0) {
+      const variantArgs = nestedColumns
+        .map(v => `'${v.name}', "${v.name}"`)
+        .join(', ');
+      // Flatten sampled rows and emit each distinct (path, type) pair.
+      // Conflicting pairs at the same path flow through to mergeShape,
+      // which collapses them to variant — that is how we honestly
+      // surface mixed-type fields to the user.
+      const makeSampleQuery = (sampleClause: string) => `
+        select
+          regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
+          case
+            when typeof(value) = 'INTEGER' then 'decimal'
+            when typeof(value) = 'DOUBLE' then 'decimal'
+          else lower(typeof(value)) end as type
+        from
+          (${sampleClause})
+            ,table(flatten(input => o, recursive => true)) as meta
+        where typeof(value) != 'NULL_VALUE'
+        group by 1, 2
+        order by 1;
       `;
-      const fieldPathRows = await this.executor.batch(sampleQuery);
+      const projectVariants = `select object_construct(${variantArgs}) o`;
+      const probe = await this.probeTableSize(tablePath);
+      const strategy = pickSampleStrategy(
+        probe,
+        this.schemaSampleFullScanMaxBytes
+      );
+      const n = this.schemaSampleRowLimit;
+      let fieldPathRows: QueryRecord[] | undefined;
 
-      // take the schema in list form an convert it into a tree.
-
-      const rootObject = new SnowObject('__root__', this.dialect);
-
-      for (const f of fieldPathRows) {
-        const pathString = f['PATH']?.valueOf().toString();
-        const fieldType = f['TYPE']?.valueOf().toString();
-        if (pathString === undefined || fieldType === undefined) continue;
-        const pathParser = new PathParser(pathString);
-        const path = pathParser.pathChain();
-        if ('name' in path && notVariant.get(path.name)) {
-          // Name will already be in the structdef
-          continue;
-        }
-        // Walk the path and mark the type at the end
-        rootObject.walk(path, fieldType);
+      if (strategy === 'full-scan-then-sample') {
+        // Small base table: one full scan catches rare fields that
+        // sampling would miss. tryBatch so a failure doesn't poison
+        // the pool connection (temp views live on it). On failure we
+        // fall through to the sample path so a slow or timed-out full
+        // scan still gets partial structure.
+        fieldPathRows =
+          (await this.executor.tryBatch(
+            makeSampleQuery(`${projectVariants} from ${tablePath}`),
+            {},
+            this.schemaSampleTimeoutMs
+          )) ?? undefined;
       }
-      structDef.fields.push(...rootObject.fields);
+
+      if (fieldPathRows === undefined) {
+        const tablesampleQuery = makeSampleQuery(
+          `${projectVariants} from ${tablePath} TABLESAMPLE BLOCK (1) limit ${n}`
+        );
+        if (strategy === 'tablesample-only') {
+          // Known-large base table: TABLESAMPLE is safe (reads a few
+          // micro-partitions), plain LIMIT without a WHERE can be
+          // catastrophic on large partitioned tables. If TABLESAMPLE
+          // fails here we accept variant rather than risk an unbounded
+          // scan.
+          fieldPathRows =
+            (await this.executor.tryBatch(
+              tablesampleQuery,
+              {},
+              this.schemaSampleTimeoutMs
+            )) ?? undefined;
+        } else {
+          // Unknown size (view, temp view, non-parseable name) or
+          // full-scan fallback: best-effort TABLESAMPLE→LIMIT chain.
+          // The LIMIT fallback is the acknowledged "can't help" case
+          // for views over large partitioned tables.
+          fieldPathRows = await this.runSchemaSample(
+            tablesampleQuery,
+            makeSampleQuery(`${projectVariants} from ${tablePath} limit ${n}`)
+          );
+        }
+      }
+
+      const state = createVariantSchemaState();
+      // Snowflake nested-schema inference follows these rules:
+      // - top-level ARRAY/OBJECT from DESCRIBE are authoritative
+      // - descendant paths imply ancestor shape
+      // - conflicting shapes degrade only that prefix to variant
+      // - every top-level nested column still produces a field
+      for (const nestedColumn of nestedColumns) {
+        seedTopLevelShape(state, nestedColumn);
+      }
+
+      if (fieldPathRows !== undefined) {
+        for (const f of fieldPathRows) {
+          const pathString = f['PATH']?.valueOf().toString();
+          const fieldType = f['TYPE']?.valueOf().toString();
+          if (pathString === undefined || fieldType === undefined) continue;
+          const pathParser = new PathParser(pathString);
+          const segments = pathParser.segments();
+          const topLevel = segments[0];
+          if (topLevel?.kind !== 'name' || notVariant.get(topLevel.name)) {
+            continue;
+          }
+          accumulateVariantPath(state, segments, fieldType);
+        }
+      }
+
+      // Always emit one field per top-level nested column from DESCRIBE, even
+      // if sampling produced no usable descendant paths.
+      for (const nestedColumn of nestedColumns) {
+        structDef.fields.push(
+          buildTopLevelField(nestedColumn, state, this.dialect)
+        );
+      }
     }
+  }
+
+  /**
+   * Cheap metadata probe: ask INFORMATION_SCHEMA.TABLES for the row count
+   * and byte size of tablePath. Returns undefined when the name doesn't
+   * parse as a two- or three-part identifier, when the probe query fails,
+   * or when the row has no numeric BYTES (views and external tables
+   * typically report NULL).
+   *
+   * Two-part `schema.table` names use the current database's
+   * INFORMATION_SCHEMA; three-part `db.schema.table` names address
+   * INFORMATION_SCHEMA in the named database. Identifiers are parsed
+   * with Snowflake's quoting rules so bare parts case-fold to upper and
+   * quoted parts are compared verbatim against the catalog.
+   */
+  private async probeTableSize(
+    tablePath: string
+  ): Promise<TableSizeProbe | undefined> {
+    const parsed = parseSnowflakeTableName(tablePath);
+    if (parsed === undefined || parsed.schema === undefined) return undefined;
+    const quoteLit = (s: string) => s.replace(/'/g, "''");
+    const dbQualifier = parsed.database ? `${parsed.database.sql}.` : '';
+    const rows = await this.executor.tryBatch(
+      `select row_count as rc, bytes as by
+       from ${dbQualifier}information_schema.tables
+       where table_schema = '${quoteLit(parsed.schema.literal)}'
+         and table_name = '${quoteLit(parsed.table.literal)}'
+       limit 1`,
+      {},
+      this.schemaSampleTimeoutMs
+    );
+    if (!rows || rows.length === 0) return undefined;
+    const row = rows[0];
+    const bytesRaw = row['BY'] ?? row['by'];
+    const rowsRaw = row['RC'] ?? row['rc'];
+    // Views and external tables surface null BYTES / ROW_COUNT; treat
+    // that as "unknown size" so we don't classify them as small and
+    // launch a full scan against something potentially huge.
+    if (bytesRaw === null || bytesRaw === undefined) return undefined;
+    if (rowsRaw === null || rowsRaw === undefined) return undefined;
+    const bytes = Number(bytesRaw);
+    const rowCount = Number(rowsRaw);
+    if (!Number.isFinite(bytes) || !Number.isFinite(rowCount)) return undefined;
+    return {bytes, rowCount};
+  }
+
+  /**
+   * Try to run a schema sampling query, with fallback.
+   * First tries the primary query (e.g. using TABLESAMPLE for speed).
+   * If that fails or returns no rows, tries the fallback query (plain
+   * LIMIT). If both fail or time out, returns undefined so the caller
+   * can degrade to sql native types.
+   *
+   * Uses tryBatch for the primary query so that a failure (e.g.
+   * TABLESAMPLE on a view) doesn't destroy the pool connection —
+   * session-scoped temp views would be lost otherwise.
+   */
+  private async runSchemaSample(
+    primaryQuery: string,
+    fallbackQuery: string
+  ): Promise<QueryRecord[] | undefined> {
+    // tryBatch catches errors inside the pool callback, preserving the
+    // connection and any session state (temp views, session params).
+    const rows = await this.executor.tryBatch(
+      primaryQuery,
+      {},
+      this.schemaSampleTimeoutMs
+    );
+    if (rows && rows.length > 0) {
+      return rows;
+    }
+    // Primary failed or returned no rows — try the fallback.
+    // Also use tryBatch so a timeout doesn't destroy the connection.
+    return (
+      (await this.executor.tryBatch(
+        fallbackQuery,
+        {},
+        this.schemaSampleTimeoutMs
+      )) ?? undefined
+    );
   }
 
   async fetchTableSchema(
@@ -447,7 +531,7 @@ export class SnowflakeConnection
     };
     // create temp table with same schema as the query
     const tempTableName = this.getTempViewName(sqlRef.selectStr);
-    this.runSQL(
+    await this.runSQL(
       `CREATE OR REPLACE TEMP VIEW ${tempTableName} AS (${sqlRef.selectStr});`
     );
 
@@ -460,56 +544,5 @@ export class SnowflakeConnection
     const cmd = `CREATE OR REPLACE TEMP TABLE ${tableName} AS (${sqlCommand});`;
     await this.runSQL(cmd);
     return tableName;
-  }
-}
-
-export class PathParser extends TinyParser {
-  constructor(pathName: string) {
-    super(pathName, {
-      quoted: /^'(\\'|[^'])*'/,
-      array_of: /^\[\*]/,
-      char: /^[[.\]]/,
-      number: /^\d+/,
-      word: /^\w+/,
-    });
-  }
-
-  getName() {
-    const nameStart = this.next();
-    if (nameStart.type === 'word') {
-      return nameStart.text;
-    }
-    if (nameStart.type === '[') {
-      const quotedName = this.next('quoted');
-      this.next(']');
-      return quotedName.text;
-    }
-    throw this.parseError('Expected column name');
-  }
-
-  pathChain(): PathChain {
-    const chain: PathChain = {name: this.getName()};
-    let node: PathChain = chain;
-    for (;;) {
-      const sep = this.next();
-      if (sep.type === 'eof') {
-        return chain;
-      }
-      if (sep.type === '.') {
-        node.next = {name: this.next('word').text};
-        node = node.next;
-      } else if (sep.type === 'array_of') {
-        node.next = {arrayRef: true};
-        node = node.next;
-      } else if (sep.type === '[') {
-        // Actually a dot access through a quoted name
-        const quoted = this.next('quoted');
-        node.next = {name: quoted.text};
-        node = node.next;
-        this.next(']');
-      } else {
-        throw this.parseError(`Unexpected ${sep.type}`);
-      }
-    }
   }
 }

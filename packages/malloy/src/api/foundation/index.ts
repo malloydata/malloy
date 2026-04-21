@@ -100,6 +100,13 @@ export {
 
 // Config and Manifest
 export {Manifest, MalloyConfig} from './config';
+export type {Overlay, ConfigOverlays} from './config_overlays';
+export {
+  envOverlay,
+  contextOverlay,
+  defaultConfigOverlays,
+} from './config_overlays';
+export {discoverConfig} from './config_discover';
 
 // Compile (Malloy static class)
 export {

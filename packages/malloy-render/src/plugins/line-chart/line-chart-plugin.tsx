@@ -9,6 +9,7 @@ import type {
   RenderPluginFactory,
   RenderProps,
   CoreVizPluginInstance,
+  RendererValidationSpec,
 } from '@/api/plugin-types';
 import {type Field, FieldType, type NestField} from '@/data_tree';
 import type {Tag} from '@malloydata/malloy-tag';
@@ -59,6 +60,12 @@ interface LineChartPluginInstance
 export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance> =
   {
     name: 'line',
+
+    getValidationSpec: (): RendererValidationSpec => ({
+      renderer: 'line',
+      ownedPaths: LINE_CHART_TAG_PATHS,
+      childOwnedPaths: [['tooltip']],
+    }),
 
     matches: (field: Field, fieldTag: Tag, fieldType: FieldType): boolean => {
       // Match repeated record fields with line chart tags
@@ -304,8 +311,6 @@ export const LineChartPluginFactory: RenderPluginFactory<LineChartPluginInstance
             .slice(0, maxSeries)
             .map(entry => entry[0]);
         },
-
-        getDeclaredTagPaths: () => LINE_CHART_TAG_PATHS,
       };
 
       return pluginInstance;

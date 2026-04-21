@@ -20,6 +20,12 @@ export interface RenderProps {
   customProps?: Record<string, unknown>;
 }
 
+export interface RendererValidationSpec {
+  readonly renderer: string;
+  readonly ownedPaths?: string[][];
+  readonly childOwnedPaths?: string[][];
+}
+
 interface BaseRenderPluginInstance<TMetadata = unknown> {
   readonly name: string;
   readonly field: Field;
@@ -34,11 +40,9 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
   getStyleOverrides?(): Record<string, string>;
 
   /**
-   * Declare tag paths this plugin reads during render or interaction.
-   * Each entry is a path of tag property names, e.g. ['viz', 'title'].
-   * The framework marks these as read at registration time so they
-   * don't produce false-positive "unknown tag" warnings when the
-   * component hasn't rendered yet (e.g. virtualized off-screen).
+   * Legacy compatibility for plugins that still declare self-owned paths
+   * from the instance. New code should use factory.getValidationSpec().
+   * @deprecated Use RenderPluginFactory.getValidationSpec() instead.
    */
   getDeclaredTagPaths?(): string[][];
 }
@@ -75,6 +79,30 @@ export interface RenderPluginFactory<
 > {
   readonly name: string;
 
+  /**
+   * IMPORTANT: Declare the tags this renderer OWNS, not every tag it might
+   * ever read.
+   *
+   * Own a tag here if this renderer is the authority for its meaning:
+   * - the tag is only meaningful when this renderer is active
+   * - this renderer is responsible for validating it
+   * - this renderer should suppress "unknown render tag" warnings for it
+   *
+   * This applies to:
+   * - tags on the renderer field itself
+   * - context-sensitive tags on child fields
+   *
+   * Do NOT declare globally meaningful field tags just because this renderer
+   * happens to read them during implementation. Examples: `label`, `hidden`,
+   * `description`, `column`.
+   *
+   * Rule:
+   * - if the tag would be meaningless without this renderer, declare it here
+   * - if the tag is meaningful independently of this renderer, do not
+   *
+   * Think in terms of semantic ownership, not literal runtime reads.
+   */
+  getValidationSpec?(): RendererValidationSpec;
   matches(field: Field, fieldTag: Tag, fieldType: FieldType): boolean;
   create(field: Field, pluginOptions?: unknown, modelTag?: Tag): TInstance;
 }

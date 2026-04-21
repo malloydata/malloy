@@ -1,6 +1,8 @@
 # Malloy Compiler
 
-The compiler is the second phase of the Malloy compilation process. It takes the Intermediate Representation (IR) produced by the translator and generates executable SQL for specific database dialects.
+Malloy compilation has two phases: the **translator** ([`../lang/CONTEXT.md`](../lang/CONTEXT.md) — `src/lang/`, source → IR) and the **compiler** (this document — `src/model/`, IR → SQL). They live in sibling directories and communicate only through the IR.
+
+This document covers the compiler: it takes the Intermediate Representation (IR) produced by the translator and generates executable SQL for specific database dialects.
 
 ## Intermediate Representation (IR)
 

@@ -23,6 +23,11 @@ registerConnectionType('duckdb_wasm', {
       displayName: 'Working Directory',
       type: 'string',
       optional: true,
+      // Binds to the project root (discovery ceiling) when the host has
+      // populated `config.rootDirectory`. Symmetric with the native
+      // DuckDB default — resolves to undefined in browser hosts that
+      // don't wire a `config` overlay, which is fine.
+      default: {config: 'rootDirectory'},
     },
     {
       name: 'motherDuckToken',

@@ -2021,6 +2021,21 @@ describe('source persistence', () => {
       ).rejects.toThrow('not found in manifest');
     });
 
+    it('strict manifest with loadError surfaces the load error in the throw', async () => {
+      // Simulates the runtime auto-read path producing an empty manifest
+      // because the file was unparseable. The strict throw should mention
+      // the underlying parse failure so the user knows the manifest is
+      // broken, not just empty.
+      const manifest = createManifest();
+      manifest.strict = true;
+      manifest.loadError =
+        'Manifest file at file:///MANIFESTS/malloy-manifest.json could not be parsed: Unexpected token x';
+
+      await expect(
+        runtimeWithManifest(manifest).loadQuery(strictModelCode).getSQL()
+      ).rejects.toThrow(/could not be parsed: Unexpected token x/);
+    });
+
     it('strict manifest succeeds when persist source is in manifest', async () => {
       const {plan} = await getPersistPlan(`
         ${FLIGHTS_SOURCE}
