@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Channel, SeriesChannel, YChannel} from '@/component/types';
+import type {XChannel, SeriesChannel, YChannel} from '@/component/types';
 import type {
   JSONSchemaObject,
   JSONSchemaArray,
@@ -16,7 +16,7 @@ import type {
 
 // TypeScript type definition
 export interface BarChartSettings extends Record<string, unknown> {
-  xChannel: Channel;
+  xChannel: XChannel;
   yChannel: YChannel;
   seriesChannel: SeriesChannel;
   isStack: boolean;
@@ -31,6 +31,7 @@ export const defaultBarChartSettings: BarChartSettings = {
     fields: [],
     type: 'nominal',
     independent: 'auto',
+    limit: 'auto',
   },
   yChannel: {
     fields: [],
@@ -59,6 +60,7 @@ export interface IBarChartSettingsSchema extends JSONSchemaObject {
         };
         type: JSONSchemaString;
         independent: JSONSchemaString;
+        limit: JSONSchemaOneOf;
       };
     };
     yChannel: JSONSchemaObject & {
@@ -119,6 +121,23 @@ export const barChartSettingsSchema: IBarChartSettingsSchema = {
             'Whether X-axis domains should be independent across chart rows. "auto" means shared when ≤20 distinct values',
           type: 'string',
           enum: ['auto', 'true', 'false'],
+          default: 'auto',
+        },
+        limit: {
+          title: 'X-Axis Limit',
+          description:
+            'Maximum number of x-axis values to display. "auto" means chart determines optimal limit from plot width',
+          type: 'oneOf',
+          oneOf: [
+            {
+              type: 'string',
+              enum: ['auto'],
+            },
+            {
+              type: 'number',
+              minimum: 1,
+            },
+          ],
           default: 'auto',
         },
       },

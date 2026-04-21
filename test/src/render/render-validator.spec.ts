@@ -385,6 +385,126 @@ describe('render tag validation', () => {
     });
   });
 
+  describe('chart y-channel must be numeric', () => {
+    it('errors when # y is on a non-numeric dimension in a bar chart', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
+          # viz=bar
+          view: q is {
+            group_by:
+              cat
+              # y
+              label
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "Field 'label' is tagged '# y'");
+    });
+
+    it('errors when # y is on a non-numeric dimension in a line chart', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as x_val, 'B' as label, 1 as val") extend {
+          # viz=line
+          view: q is {
+            group_by:
+              x_val
+              # y
+              label
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "Field 'label' is tagged '# y'");
+    });
+
+    it('errors when viz.y references a non-numeric field', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as label, 1 as val") extend {
+          # viz=bar { y=label }
+          view: q is {
+            group_by: cat, label
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, "y-channel field 'label'");
+    });
+
+    it('no error when # y is on a numeric dimension in a bar chart', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 5 as num_dim, 1 as val") extend {
+          # viz=bar
+          view: q is {
+            group_by:
+              cat
+              # y
+              num_dim
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
+
+    it('no error when # y is on a measure in a bar chart', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+          # viz=bar
+          view: q is {
+            group_by: cat
+            aggregate:
+              # y
+              total is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
+
+    it('no error and no silent mis-render when a numeric dimension tagged # y precedes the intended x dimension', async () => {
+      // Regression: when a numeric dimension is tagged # y and appears before
+      // the intended x dimension, the implicit-x picker must skip the y-tagged
+      // field rather than double-assigning it as both x and y.
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 100 as total_sales, 'A' as brand") extend {
+          # viz=bar
+          view: q is {
+            group_by:
+              # y
+              total_sales
+              brand
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+    });
+
+    it('the only dimension being tagged # y leaves no dimension for x (instead of silently using it for both)', async () => {
+      // Sharper regression: if the sole dimension is claimed as y, auto-x
+      // should skip it and leave xChannel empty. Bar chart then correctly
+      // reports that no x dimension is available.
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 100 as total_sales") extend {
+          # viz=bar
+          view: q is {
+            group_by:
+              # y
+              total_sales
+          }
+        }
+        query: q is s -> q
+      `);
+      expectError(logs, 'requires a dimension for the x axis');
+    });
+  });
+
   describe('no errors for valid tags', () => {
     it('no errors for # currency=usd on a number', async () => {
       const logs = await getValidationLogs(`
@@ -505,6 +625,111 @@ describe('render tag validation', () => {
             aggregate:
               # y
               b is count()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for bar chart top-level channel tags', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as series_val, 1 as val") extend {
+          # viz=bar { x=cat y=val series=series_val stack }
+          view: q is {
+            group_by: cat, series_val
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for bar chart channel settings (independent and limits)', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 'B' as series_val, 1 as val") extend {
+          # viz=bar { x.independent=true y.independent=true series.independent=false series.limit=5 x.limit=10 }
+          view: q is {
+            group_by: cat, series_val
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for bar chart disable_embedded and mode tags', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+          # viz=bar { disable_embedded mode=normal }
+          view: q is {
+            group_by: cat
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for line chart channel settings and mode', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+          # viz=line { x.independent=true y.independent=true series.independent=false series.limit=5 zero_baseline=true mode=normal disableEmbedded }
+          view: q is {
+            group_by: cat
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for bar chart legacy bar_chart tag', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+          # bar_chart
+          view: q is {
+            group_by: cat
+            aggregate: val is val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for line chart legacy line_chart tag', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 1 as x_val, 2 as y_val") extend {
+          # line_chart
+          view: q is {
+            group_by: x_val
+            aggregate: y_val is y_val.sum()
+          }
+        }
+        query: q is s -> q
+      `);
+      expectNoErrors(logs);
+      expectNoWarnings(logs);
+    });
+
+    it('no warnings for chart title and subtitle', async () => {
+      const logs = await getValidationLogs(`
+        source: s is duckdb.sql("SELECT 'A' as cat, 1 as val") extend {
+          # viz=bar { title="My Chart" subtitle="Some data" }
+          view: q is {
+            group_by: cat
+            aggregate: val is val.sum()
           }
         }
         query: q is s -> q

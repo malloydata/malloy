@@ -37,7 +37,6 @@ import {getCustomTooltipEntries} from '@/component/bar-chart/get-custom-tooltips
 import type {CellValue, RecordCell} from '@/data_tree';
 import {Field} from '@/data_tree';
 import {NULL_SYMBOL, type RenderTimeStringOptions} from '@/util';
-import {convertLegacyToVizTag} from '@/component/tag-utils';
 import type {RenderMetadata} from '@/component/render-result-metadata';
 import type {LineChartPluginInstance} from '@/plugins/line-chart/line-chart-plugin';
 
@@ -96,13 +95,6 @@ export function generateLineChartVegaSpecV2(
   const pluginMetadata = plugin.getMetadata();
   const settings = pluginMetadata.settings;
   const {getTopNSeries, field: explore} = plugin;
-  const tag = convertLegacyToVizTag(explore.tag);
-  const chartTag = tag.tag('viz');
-
-  if (!chartTag)
-    throw new Error(
-      'Malloy Line Chart: Tried to render a line chart, but no viz=line tag was found'
-    );
 
   /**************************************
    *
@@ -193,7 +185,8 @@ export function generateLineChartVegaSpecV2(
     seriesField && seriesField.valueSet.size > maxSeries
   );
 
-  const chartSettings = getChartLayoutSettings(explore, chartTag, {
+  const chartSettings = getChartLayoutSettings(explore, {
+    size: plugin.chartDisplay.size,
     metadata, // No legacy metadata in V2
     xField,
     yField,
@@ -1086,7 +1079,8 @@ export function generateLineChartVegaSpecV2(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'line',
-    chartTag,
+    title: plugin.chartDisplay.title,
+    subtitle: plugin.chartDisplay.subtitle,
     mapMalloyDataToChartData,
     getTooltipData(item, view) {
       if (tooltipEntryMemo.has(item)) {

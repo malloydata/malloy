@@ -38,13 +38,6 @@ interface BaseRenderPluginInstance<TMetadata = unknown> {
     options: GetResultMetadataOptions
   ): void;
   getStyleOverrides?(): Record<string, string>;
-
-  /**
-   * Legacy compatibility for plugins that still declare self-owned paths
-   * from the instance. New code should use factory.getValidationSpec().
-   * @deprecated Use RenderPluginFactory.getValidationSpec() instead.
-   */
-  getDeclaredTagPaths?(): string[][];
 }
 
 export interface SolidJSRenderPluginInstance<TMetadata = unknown>

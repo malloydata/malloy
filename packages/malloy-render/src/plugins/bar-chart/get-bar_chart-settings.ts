@@ -6,7 +6,7 @@
  */
 
 import type {Tag} from '@malloydata/malloy-tag';
-import type {Channel, SeriesChannel, YChannel} from '@/component/types';
+import type {XChannel, SeriesChannel, YChannel} from '@/component/types';
 import type {Field, NestField} from '@/data_tree';
 import {walkFields} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
@@ -69,14 +69,19 @@ export function getBarChartSettings(
     vizTag.numeric('series', 'limit') ??
     defaultBarChartSettings.seriesChannel.limit;
 
+  // X-axis limit
+  const xLimit: number | 'auto' =
+    vizTag.numeric('x', 'limit') ?? defaultBarChartSettings.xChannel.limit;
+
   // Disable embedded field tags
   const disableEmbedded =
     vizTag.has('disable_embedded') || defaultBarChartSettings.disableEmbedded;
 
-  const xChannel: Channel = {
+  const xChannel: XChannel = {
     fields: [],
     type: defaultBarChartSettings.xChannel.type,
     independent: xIndependent,
+    limit: xLimit,
   };
 
   const yChannel: YChannel = {
@@ -107,25 +112,20 @@ export function getBarChartSettings(
     const yFieldPath = getField(yFieldRef);
     const yField = explore.fieldAt(yFieldPath);
 
-    // Validate Y field
-    if (!yField.isNumber() && !yField.wasCalculation()) {
-      throw new Error(
-        `Malloy Bar Chart: Field "${yField.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
-      );
+    // Non-numeric y fields are skipped here and logged as validation errors
+    // in RenderFieldMetadata.validateFieldTags() so the user gets a
+    // source-located error instead of the red-box tile.
+    if (yField.isNumber() || yField.wasCalculation()) {
+      yChannel.fields.push(yFieldPath);
     }
-    yChannel.fields.push(yFieldPath);
   } else if (vizTag.textArray('y')) {
     const yFieldRefs = vizTag.textArray('y')!;
     yFieldRefs.forEach(ref => {
       const fieldPath = getField(ref);
       const field = explore.fieldAt(fieldPath);
-
-      if (!field.isNumber() && !field.wasCalculation()) {
-        throw new Error(
-          `Malloy Bar Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
-        );
+      if (field.isNumber() || field.wasCalculation()) {
+        yChannel.fields.push(fieldPath);
       }
-      yChannel.fields.push(fieldPath);
     });
   }
   if (vizTag.text('series')) {
@@ -146,13 +146,10 @@ export function getBarChartSettings(
         embeddedX.push(pathTo);
       }
       if (tag.has('y')) {
-        // Validate y field
-        if (!field.isNumber() && !field.wasCalculation()) {
-          throw new Error(
-            `Malloy Bar Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
-          );
+        // Non-numeric y fields skipped here; logged in validateFieldTags.
+        if (field.isNumber() || field.wasCalculation()) {
+          embeddedY.push(pathTo);
         }
-        embeddedY.push(pathTo);
       }
       if (tag.has('series')) {
         embeddedSeries.push(pathTo);
@@ -179,21 +176,26 @@ export function getBarChartSettings(
     f => f.isBasic() && f.wasDimension()
   );
 
-  // If still no x or y, attempt to pick the best choice
+  // If still no x, attempt to pick the best choice — skipping any field
+  // the user has already claimed for another channel either by # y / # series
+  // tag or by viz.y / viz.series reference.
   if (xChannel.fields.length === 0) {
-    let fieldToUse: Field | undefined;
+    const isClaimed = (f: Field): boolean => {
+      const path = explore.pathTo(f);
+      if (yChannel.fields.includes(path)) return true;
+      if (seriesChannel.fields.includes(path)) return true;
+      if (f.tag.has('y') || f.tag.has('series')) return true;
+      return false;
+    };
     // Pick date/time field first if it exists
-    const dateTimeField = explore.fields.find(
-      f => f.wasDimension() && f.isTime()
+    let fieldToUse: Field | undefined = explore.fields.find(
+      f => f.wasDimension() && f.isTime() && !isClaimed(f)
     );
-    if (dateTimeField) fieldToUse = dateTimeField;
-    // Pick first dimension field for x
-    else if (dimensions.length > 0) {
-      fieldToUse = dimensions[0];
+    // Pick first unclaimed dimension field for x
+    if (!fieldToUse) {
+      fieldToUse = dimensions.find(f => !isClaimed(f));
     }
-    const fieldToUseTags = fieldToUse?.tag;
-    const isSeries = fieldToUseTags?.has('series');
-    if (fieldToUse && !isSeries) {
+    if (fieldToUse) {
       xChannel.fields.push(explore.pathTo(fieldToUse));
     }
   }

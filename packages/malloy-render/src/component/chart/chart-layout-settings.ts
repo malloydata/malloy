@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import type {Tag} from '@malloydata/malloy-tag';
 import type {
   AlignValue,
   TextBaselineValue,
@@ -33,6 +32,7 @@ import {getTextWidthDOM, getTextHeightDOM} from '@/component/util';
 import {renderNumericField} from '@/component/render-numeric-field';
 import type {Field, NestField} from '@/data_tree';
 import type {RenderMetadata} from '@/component/render-result-metadata';
+import type {ChartSizeConfig} from '@/component/chart/resolve-chart-display';
 
 type XAxisSettings = {
   labelAngle: number;
@@ -329,8 +329,8 @@ const ROW_HEIGHT = 28;
 
 export function getChartLayoutSettings(
   field: NestField,
-  chartTag: Tag,
   options: {
+    size: ChartSizeConfig;
     metadata: RenderMetadata;
     xField?: Field;
     yField?: Field;
@@ -345,14 +345,10 @@ export function getChartLayoutSettings(
   // may not need this anymore if we enforce the options, so each chart passes its specific needs for calculating layout
   const xField = options?.xField ?? field.fields[0];
   const yField = options?.yField ?? field.fields[1];
-  const tag = field.tag;
 
-  // For now, support legacy API of size being its own tag
-  const taggedWidth =
-    chartTag.numeric('size', 'width') ?? tag.numeric('size', 'width');
-  const taggedHeight =
-    chartTag.numeric('size', 'height') ?? tag.numeric('size', 'height');
-  const taggedPresetSize = chartTag.text('size') ?? tag.text('size');
+  const taggedWidth = options.size.width;
+  const taggedHeight = options.size.height;
+  const taggedPresetSize = options.size.preset;
   const hasNoDefinedSize = !taggedWidth && !taggedHeight && !taggedPresetSize;
   const isFillMode =
     taggedPresetSize === 'fill' || (hasNoDefinedSize && field.isRoot());
@@ -484,8 +480,7 @@ export function getChartLayoutSettings(
     }
   }
 
-  const isSpark =
-    tag.text('viz', 'size') === 'spark' || tag.text('size') === 'spark';
+  const isSpark = options.size.preset === 'spark';
 
   const xAxisSettings = getXAxisSettings({
     maxString: xField.maxString!,

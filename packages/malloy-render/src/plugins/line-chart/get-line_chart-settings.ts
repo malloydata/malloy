@@ -7,7 +7,7 @@
 
 import type {Tag} from '@malloydata/malloy-tag';
 import type {Channel, YChannel, SeriesChannel} from '@/component/types';
-import type {NestField} from '@/data_tree';
+import type {Field, NestField} from '@/data_tree';
 import {walkFields, deepMerge} from '@/util';
 import {convertLegacyToVizTag} from '@/component/tag-utils';
 import {
@@ -253,16 +253,25 @@ export function getLineChartSettings(
 
   const measures = explore.fields.filter(f => f.wasCalculation());
 
-  // If still no x or y, attempt to pick the best choice
+  // If still no x, attempt to pick the best choice — skipping any field
+  // the user has already claimed for another channel either by # y / # series
+  // tag or by viz.y / viz.series reference.
   if (xChannel.fields.length === 0) {
-    // Pick date/time field first if it exists
-    const dateTimeField = explore.fields.find(
-      f => f.wasDimension() && f.isTime()
+    const isClaimed = (f: Field): boolean => {
+      const path = explore.pathTo(f);
+      if (yChannel.fields.includes(path)) return true;
+      if (seriesChannel.fields.includes(path)) return true;
+      if (f.tag.has('y') || f.tag.has('series')) return true;
+      return false;
+    };
+    let fieldToUse = explore.fields.find(
+      f => f.wasDimension() && f.isTime() && !isClaimed(f)
     );
-    if (dateTimeField) xChannel.fields.push(explore.pathTo(dateTimeField));
-    // Pick first dimension field for x
-    else if (dimensions.length > 0) {
-      xChannel.fields.push(explore.pathTo(dimensions[0]));
+    if (!fieldToUse) {
+      fieldToUse = dimensions.find(f => !isClaimed(f));
+    }
+    if (fieldToUse) {
+      xChannel.fields.push(explore.pathTo(fieldToUse));
     }
   }
   if (yChannel.fields.length === 0) {

@@ -7,6 +7,7 @@
 ```typescript
 interface RenderPluginFactory<TInstance extends RenderPluginInstance> {
   readonly name: string;
+  getValidationSpec?(): RendererValidationSpec;
   matches(field: Field, fieldTag: Tag, fieldType: FieldType): boolean;
   create(field: Field, pluginOptions?: unknown, modelTag?: Tag): TInstance;
 }
@@ -16,17 +17,33 @@ interface RenderPluginFactory<TInstance extends RenderPluginInstance> {
 - `name`: Unique identifier for the plugin
 
 #### Methods
+- `getValidationSpec()`: Declares which tag paths this plugin semantically owns, so the unread-tag detector does not false-warn on valid uses. Required for plugins that read tags at render time. See [validation.md](validation.md) for the ownership model.
+
 - `matches()`: Determines if plugin should handle a field
   - `field`: Field metadata and structure
   - `fieldTag`: Field annotations/tags
   - `fieldType`: Enumerated field type
   - Returns: `boolean`
+  - Throw when the user's tag asks for this plugin but the field cannot support it — the user sees a red error tile. See [validation.md](validation.md) for the throw-vs-log rule.
 
 - `create()`: Instantiates plugin for a matched field
   - `field`: Field to render
   - `pluginOptions`: Configuration from renderer options
   - `modelTag`: Model-level annotations
   - Returns: Plugin instance
+  - Do all tag reads here (setup time), not in `renderComponent()` or `beforeRender()` — setup-time reads are validated and marked as consumed automatically.
+
+### RendererValidationSpec
+
+```typescript
+interface RendererValidationSpec {
+  readonly renderer: string;
+  readonly ownedPaths?: string[][];
+  readonly childOwnedPaths?: string[][];
+}
+```
+
+Declares the tag paths a renderer owns — tags whose meaning depends on this renderer being active. See [validation.md](validation.md) for when to declare ownership.
 
 ### RenderPluginInstance
 
