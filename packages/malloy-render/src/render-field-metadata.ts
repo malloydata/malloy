@@ -317,21 +317,51 @@ export class RenderFieldMetadata {
     if (field.isNest()) {
       const vizTag = tag.tag('viz');
       if (vizTag) {
-        const childNames = new Set(field.fields.map(f => f.name));
+        const childByName = new Map(field.fields.map(f => [f.name, f]));
+        const isLineChart = vizTag.text() === 'line';
         for (const channelName of ['x', 'y', 'series'] as const) {
           const refArray = vizTag.textArray(channelName);
           const refs = refArray ?? [];
           const singleRef = vizTag.text(channelName);
           if (singleRef && !refArray) refs.push(singleRef);
           for (const ref of refs) {
-            if (!childNames.has(ref)) {
+            const child = childByName.get(ref);
+            if (!child) {
               log.error(
-                `Chart field reference '${ref}' for '${channelName}' on '${field.name}' does not match any field. Available fields: ${[...childNames].join(', ')}`,
+                `Chart field reference '${ref}' for '${channelName}' on '${field.name}' does not match any field. Available fields: ${[...childByName.keys()].join(', ')}`,
                 vizTag.tag(channelName)
+              );
+              continue;
+            }
+            if (
+              channelName === 'y' &&
+              isLineChart &&
+              !child.isNumber() &&
+              !child.wasCalculation()
+            ) {
+              log.error(
+                `Field '${ref}' tagged as y on '${field.name}' is not numeric. Only numeric fields can be used as y channel.`,
+                vizTag.tag('y')
               );
             }
           }
         }
+      }
+    }
+
+    // --- Embedded `# y` tag on non-numeric dimension ---
+    if (
+      field.isBasic() &&
+      tag.has('y') &&
+      !field.isNumber() &&
+      !field.wasCalculation()
+    ) {
+      const parentVizTag = field.parent?.tag.tag('viz');
+      if (parentVizTag?.text() === 'line') {
+        log.error(
+          `Field '${field.name}' tagged as y but is not numeric. Only numeric fields can be used as y channel.`,
+          tag.tag('y')
+        );
       }
     }
 

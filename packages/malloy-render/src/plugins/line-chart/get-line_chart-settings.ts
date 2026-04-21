@@ -202,28 +202,10 @@ export function getLineChartSettings(
     xChannel.fields.push(getField(vizTag.text('x')!));
   }
   if (vizTag.text('y')) {
-    const yFieldRef = vizTag.text('y')!;
-    const yFieldPath = getField(yFieldRef);
-    const yField = explore.fieldAt(yFieldPath);
-
-    if (!yField.isNumber() && !yField.wasCalculation()) {
-      throw new Error(
-        `Malloy Line Chart: Field "${yField.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
-      );
-    }
-    yChannel.fields.push(yFieldPath);
+    yChannel.fields.push(getField(vizTag.text('y')!));
   } else if (vizTag.textArray('y')) {
-    const yFieldRefs = vizTag.textArray('y')!;
-    yFieldRefs.forEach(ref => {
-      const fieldPath = getField(ref);
-      const field = explore.fieldAt(fieldPath);
-
-      if (!field.isNumber() && !field.wasCalculation()) {
-        throw new Error(
-          `Malloy Line Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
-        );
-      }
-      yChannel.fields.push(fieldPath);
+    vizTag.textArray('y')!.forEach(ref => {
+      yChannel.fields.push(getField(ref));
     });
   }
   if (vizTag.text('series')) {
@@ -244,11 +226,6 @@ export function getLineChartSettings(
         embeddedX.push(pathTo);
       }
       if (tag.has('y')) {
-        if (!field.isNumber() && !field.wasCalculation()) {
-          throw new Error(
-            `Malloy Line Chart: Field "${field.name}" is tagged as y but is not numeric. Only numeric fields can be used as y channel.`
-          );
-        }
         embeddedY.push(pathTo);
       }
       if (tag.has('series')) {
@@ -278,14 +255,21 @@ export function getLineChartSettings(
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
+    const isClaimed = (f: (typeof explore.fields)[number]) => {
+      const path = explore.pathTo(f);
+      return (
+        yChannel.fields.includes(path) || seriesChannel.fields.includes(path)
+      );
+    };
     // Pick date/time field first if it exists
     const dateTimeField = explore.fields.find(
-      f => f.wasDimension() && f.isTime()
+      f => f.wasDimension() && f.isTime() && !isClaimed(f)
     );
     if (dateTimeField) xChannel.fields.push(explore.pathTo(dateTimeField));
-    // Pick first dimension field for x
-    else if (dimensions.length > 0) {
-      xChannel.fields.push(explore.pathTo(dimensions[0]));
+    // Pick first dimension field not already claimed by y or series
+    else {
+      const firstFree = dimensions.find(d => !isClaimed(d));
+      if (firstFree) xChannel.fields.push(explore.pathTo(firstFree));
     }
   }
   if (yChannel.fields.length === 0) {
