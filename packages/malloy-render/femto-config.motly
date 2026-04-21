@@ -3,11 +3,15 @@ build: {
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.css",
-    "vite.config.mts",
+    "vite.config.base.mts",
+    "vite.config.esm.mts",
+    "vite.config.umd.mts",
     "tsconfig.json"
   ]
-  outputs = ["dist/module/index.mjs"]
+  outputs = ["dist/module/index.mjs", "dist/module/index.umd.js"]
   commands = [
-    "npx vite build --outDir 'dist/module' --config vite.config.mts"
+    "rm -rf dist/module",
+    "npx vite build --outDir 'dist/module' --config vite.config.esm.mts",
+    "npx vite build --outDir 'dist/module' --config vite.config.umd.mts"
   ]
 }
