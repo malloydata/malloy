@@ -24,6 +24,15 @@ export interface LineChartSettings extends Record<string, unknown> {
   interactive: boolean;
   disableEmbedded: boolean;
   mode?: 'yoy' | 'normal';
+  size?:
+    | 'fill'
+    | 'xs'
+    | 'sm'
+    | 'md'
+    | 'lg'
+    | 'xl'
+    | '2xl'
+    | {width: number; height: number};
 }
 
 // Plugin options interface for JavaScript API
@@ -53,6 +62,7 @@ export const defaultLineChartSettings: LineChartSettings = {
   interactive: true,
   disableEmbedded: false,
   mode: 'normal',
+  size: 'fill',
 };
 
 // Specific typed interface for the line chart schema
@@ -90,6 +100,7 @@ export interface ILineChartSettingsSchema extends JSONSchemaObject {
     interactive: JSONSchemaBoolean;
     disableEmbedded: JSONSchemaBoolean;
     mode: JSONSchemaString;
+    size?: JSONSchemaOneOf;
   };
 }
 
@@ -239,6 +250,32 @@ export const lineChartSettingsSchema: ILineChartSettingsSchema = {
       type: 'string',
       enum: ['normal', 'yoy'],
       default: 'normal',
+    },
+    size: {
+      title: 'Chart Size',
+      description:
+        'Size preset (xs, sm, md, lg, xl, 2xl) or custom dimensions with width and height',
+      type: 'oneOf',
+      oneOf: [
+        {
+          type: 'string',
+          enum: ['fill', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'],
+        },
+        {
+          type: 'object',
+          properties: {
+            width: {
+              type: 'number',
+              minimum: 1,
+            },
+            height: {
+              type: 'number',
+              minimum: 1,
+            },
+          },
+          required: ['width', 'height'],
+        },
+      ],
     },
   },
   required: [
